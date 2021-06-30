@@ -1,0 +1,122 @@
+AT_BANNER([datapath offloads])
+
+# DUMP_CLEAN_SORTED([])
+#
+# Normilizes output ports, recirc_id, packets and macs.
+#
+m4_define([DUMP_CLEAN_SORTED], [sed -e 's/used:[[0-9]].[[0-9]]*s/used:0.001s/;s/eth(src=[[a-z0-9:]]*,dst=[[a-z0-9:]]*)/eth(macs)/;s/actions:[[0-9,]]*/actions:output/;s/recirc_id(0),//' | sort])
+
+AT_SETUP([offloads - ping between two ports - offloads disabled])
+OVS_TRAFFIC_VSWITCHD_START()
+
+AT_CHECK([ovs-ofctl add-flow br0 "actions=normal"])
+
+ADD_NAMESPACES(at_ns0, at_ns1)
+
+ADD_VETH(p0, at_ns0, br0, "10.1.1.1/24")
+ADD_VETH(p1, at_ns1, br0, "10.1.1.2/24")
+
+NS_CHECK_EXEC([at_ns0], [ping -q -c 10 -i 0.1 -w 2 10.1.1.2 | FORMAT_PING], [0], [dnl
+10 packets transmitted, 10 received, 0% packet loss, time 0ms
+])
+
+AT_CHECK([ovs-appctl dpctl/dump-flows | grep "eth_type(0x0800)" | DUMP_CLEAN_SORTED], [0], [dnl
+in_port(2),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:882, used:0.001s, actions:output
+in_port(3),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:882, used:0.001s, actions:output
+])
+
+AT_CHECK([ovs-appctl dpctl/dump-flows type=ovs | grep "eth_type(0x0800)" | DUMP_CLEAN_SORTED], [0], [dnl
+in_port(2),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:882, used:0.001s, actions:output
+in_port(3),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:882, used:0.001s, actions:output
+])
+
+AT_CHECK([ovs-appctl dpctl/dump-flows type=offloaded], [0], [])
+
+AT_CHECK([test $(ovs-appctl upcall/show | grep -c "offloaded flows") -eq 0], [0], [ignore])
+
+OVS_TRAFFIC_VSWITCHD_STOP
+AT_CLEANUP
+
+
+AT_SETUP([offloads - ping between two ports - offloads enabled])
+OVS_TRAFFIC_VSWITCHD_START()
+
+AT_CHECK([ovs-vsctl set Open_vSwitch . other_config:hw-offload=true])
+AT_CHECK([ovs-ofctl add-flow br0 "actions=normal"])
+
+ADD_NAMESPACES(at_ns0, at_ns1)
+
+ADD_VETH(p0, at_ns0, br0, "10.1.1.1/24")
+ADD_VETH(p1, at_ns1, br0, "10.1.1.2/24")
+AT_CHECK([ovs-appctl dpctl/dump-flows], [0], [ignore])
+
+NS_CHECK_EXEC([at_ns0], [ping -q -c 10 -i 0.1 -w 2 10.1.1.2 | FORMAT_PING], [0], [dnl
+10 packets transmitted, 10 received, 0% packet loss, time 0ms
+])
+
+AT_CHECK([ovs-appctl dpctl/dump-flows | grep "eth_type(0x0800)" | DUMP_CLEAN_SORTED], [0], [dnl
+in_port(2),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:756, used:0.001s, actions:output
+in_port(3),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:756, used:0.001s, actions:output
+])
+
+AT_CHECK([ovs-appctl dpctl/dump-flows type=ovs | grep "eth_type(0x0800)" | DUMP_CLEAN_SORTED], [0], [])
+
+AT_CHECK([ovs-appctl dpctl/dump-flows type=tc,offloaded | grep "eth_type(0x0800)" | DUMP_CLEAN_SORTED], [0], [dnl
+in_port(2),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:756, used:0.001s, actions:output
+in_port(3),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:756, used:0.001s, actions:output
+])
+
+AT_CHECK([ovs-appctl upcall/show | grep -E "offloaded flows : [[1-9]]"], [0], [ignore])
+
+OVS_TRAFFIC_VSWITCHD_STOP
+AT_CLEANUP
+
+AT_SETUP([offloads - set ingress_policing_rate and ingress_policing_burst - offloads disabled])
+AT_KEYWORDS([ingress_policing])
+AT_SKIP_IF([test $HAVE_TC = "no"])
+OVS_TRAFFIC_VSWITCHD_START()
+AT_CHECK([ovs-vsctl set Open_vSwitch . other_config:hw-offload=false])
+AT_CHECK([ovs-ofctl add-flow br0 "actions=normal"])
+ADD_NAMESPACES(at_ns0)
+ADD_VETH(p0, at_ns0, br0, "10.1.1.1/24")
+AT_CHECK([ovs-vsctl set interface ovs-p0 ingress_policing_rate=100])
+AT_CHECK([ovs-vsctl set interface ovs-p0 ingress_policing_burst=10])
+AT_CHECK([ovs-vsctl --columns=other_config list open], [0], [dnl
+other_config        : {hw-offload="false"}
+])
+AT_CHECK([tc -o -s -d filter show dev ovs-p0 ingress |
+  sed -n 's/.*\(rate [[0-9]]*[[a-zA-Z]]* burst [[0-9]]*[[a-zA-Z]]*\).*/\1/; T; p; q'],
+  [0],[dnl
+rate 100Kbit burst 1280b
+])
+AT_CHECK([tc -s -d filter show dev ovs-p0 ingress | grep basic |
+  sed -n 's/.*\(basic\).*/\1/; T; p; q'], [0], [dnl
+basic
+])
+OVS_TRAFFIC_VSWITCHD_STOP
+AT_CLEANUP
+
+AT_SETUP([offloads - set ingress_policing_rate and ingress_policing_burst - offloads enabled])
+AT_KEYWORDS([ingress_policing])
+AT_SKIP_IF([test $HAVE_TC = "no"])
+OVS_TRAFFIC_VSWITCHD_START()
+AT_CHECK([ovs-vsctl set Open_vSwitch . other_config:hw-offload=true])
+AT_CHECK([ovs-ofctl add-flow br0 "actions=normal"])
+ADD_NAMESPACES(at_ns0)
+ADD_VETH(p0, at_ns0, br0, "10.1.1.1/24")
+AT_CHECK([ovs-vsctl set interface ovs-p0 ingress_policing_rate=100])
+AT_CHECK([ovs-vsctl set interface ovs-p0 ingress_policing_burst=10])
+AT_CHECK([ovs-vsctl --columns=other_config list open], [0], [dnl
+other_config        : {hw-offload="true"}
+])
+AT_CHECK([tc -o -s -d filter show dev ovs-p0 ingress |
+  sed -n 's/.*\(rate [[0-9]]*[[a-zA-Z]]* burst [[0-9]]*[[a-zA-Z]]*\).*/\1/; T; p; q'],
+  [0],[dnl
+rate 100Kbit burst 1280b
+])
+AT_CHECK([tc -o -s -d filter show dev ovs-p0 ingress | grep matchall |
+  sed -n 's/.*\(matchall\).*/\1/; T; p; q'], [0], [dnl
+matchall
+])
+OVS_TRAFFIC_VSWITCHD_STOP
+AT_CLEANUP

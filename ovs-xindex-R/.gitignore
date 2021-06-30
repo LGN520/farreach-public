@@ -1,0 +1,11 @@
+build/
+.vscode/
+CMakeFiles/
+*.cmake
+CMakeCache.txt
+Makefile
+client
+microbench
+prepare
+*.log
+*.out
