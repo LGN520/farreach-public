@@ -57,6 +57,8 @@
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
+#define MAX_BUFSIZE 256
+
 inline void memory_fence() { asm volatile("mfence" : : : "memory"); }
 
 /** @brief Compiler fence.

@@ -11,9 +11,10 @@ enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ,
 typedef PacketType packet_type_t;
 
 template<class key_t>
-class Request {
+class Packet {
 	public:
-		Request(packet_type_t type, uint32_t thread_id, key_t key);
+		Packet();
+		Packet(packet_type_t type, uint32_t thread_id, key_t key);
 
 		packet_type_t type() const;
 		uint32_t thread_id() const;
@@ -30,7 +31,7 @@ class Request {
 };
 
 template<class key_t>
-class GetRequest : public Request<key_t> {
+class GetRequest : public Packet<key_t> {
 	public: 
 		GetRequest(uint32_t thread_id, key_t key);
 		GetRequest(const char * data, uint32_t recv_size);
@@ -39,6 +40,22 @@ class GetRequest : public Request<key_t> {
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t, class val_t>
+class GetResponse : public Packet<key_t> {
+	public:
+		GetResponse(uint32_t thread_id, key_t key, val_t val);
+		GetResponse(const char * data, uint32_t recv_size);
+
+		val_t val() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+	private:
+		val_t _val;
 };
 
 // APIs

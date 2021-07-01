@@ -132,7 +132,7 @@ void save() {
 	std::ofstream fd("exist_keys.out", std::ios::out | std::ios::trunc | std::ios::binary);
 	INVARIANT(fd);
 	for (size_t exist_i = 0; exist_i < exist_keys.size(); exist_i++) {
-		fd.write((char *)&exist_keys[exist_i], sizeof(double));
+		fd.write((char *)&exist_keys[exist_i], sizeof(index_key_t));
 	}
 	fd.close();
 	COUT_THIS("[prepare] Save exist keys into exist_keys.out")
@@ -140,7 +140,7 @@ void save() {
 	fd.open("nonexist_keys.out", std::ios::out | std::ios::trunc | std::ios::binary);
 	INVARIANT(fd);
 	for (size_t nonexist_i = 0; nonexist_i < non_exist_keys.size(); nonexist_i++) {
-		fd.write((char *)&non_exist_keys[nonexist_i], sizeof(double));
+		fd.write((char *)&non_exist_keys[nonexist_i], sizeof(index_key_t));
 	}
 	fd.close();
 	COUT_THIS("[prepare] Save nonexist keys into nonexist_keys.out")

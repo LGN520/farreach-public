@@ -59,3 +59,8 @@ add_executable(prepare ${CMAKE_CURRENT_SOURCE_DIR}/prepare.cpp)
 # client
 add_executable(client ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp)
 target_link_libraries(client PRIVATE -lpthread)
+
+# server
+add_executable(server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
+target_link_libraries(server PRIVATE -lpthread mkl_rt)
+target_compile_definitions(server PRIVATE NDEBUGGING)

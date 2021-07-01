@@ -5,6 +5,7 @@ CMakeFiles/
 CMakeCache.txt
 Makefile
 client
+server
 microbench
 prepare
 *.log
