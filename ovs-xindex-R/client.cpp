@@ -24,7 +24,13 @@ typedef FGParam fg_param_t;
 typedef Key index_key_t;
 typedef uint64_t val_t;
 typedef GetRequest<index_key_t> get_request_t;
+typedef PutRequest<index_key_t, val_t> put_request_t;
+typedef DelRequest<index_key_t> del_request_t;
+typedef ScanRequest<index_key_t> scan_request_t;
 typedef GetResponse<index_key_t, val_t> get_response_t;
+typedef PutResponse<index_key_t> put_response_t;
+typedef DelResponse<index_key_t> del_response_t;
+typedef ScanResponse<index_key_t, val_t> scan_response_t;
 
 inline void parse_args(int, char **);
 void load();
@@ -304,6 +310,7 @@ void *run_fg(void *param) {
   int req_size = 0;
   int res = 0;
   int recv_size = 0;
+  val_t dummy_value = 1234;
   uint32_t sockaddr_len = sizeof(struct sockaddr);
   char buf[MAX_BUFSIZE];
 
@@ -312,11 +319,11 @@ void *run_fg(void *param) {
 
   while (running) {
     double d = ratio_dis(gen);
+	//int tmprun = 4;
     if (d <= read_ratio) {  // get
-      //res = table->get(op_keys[(query_i + delete_i) % op_keys.size()],
-      //                 dummy_value, thread_id);
+    //if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
-	  COUT_THIS("[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key)
+	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key)
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
@@ -325,46 +332,85 @@ void *run_fg(void *param) {
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
 	  get_response_t rsp(buf, recv_size);
-	  val_t tmp_val = rsp.val();
-	  COUT_THIS("[client " << thread_id << "] val = " << tmp_val)
+	  //COUT_THIS("[client " << thread_id << "] val = " << rsp.val())
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
       }
     } else if (d <= read_ratio + update_ratio) {  // update
-      //res = table->put(op_keys[(update_i + delete_i) % op_keys.size()],
-      //                 dummy_value, thread_id);
-      /*update_i++;
+    //} else if (tmprun == 1) {  // update
+	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
+	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val())
+	  req_size = req.serialize(buf, MAX_BUFSIZE);
+	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  INVARIANT(res != -1);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  INVARIANT(recv_size != -1);
+	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
+	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
+	  put_response_t rsp(buf, recv_size);
+	  //COUT_THIS("[client " << thread_id << "] stat = " << rsp.stat())
+      update_i++;
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
-      }*/
-	  continue;
+      }
     } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
-      //res = table->put(op_keys[insert_i], dummy_value, thread_id);
-      /*insert_i++;
+    //} else if (tmprun == 2) {  // insert
+	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
+	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val())
+	  req_size = req.serialize(buf, MAX_BUFSIZE);
+	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  INVARIANT(res != -1);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  INVARIANT(recv_size != -1);
+	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
+	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
+	  put_response_t rsp(buf, recv_size);
+	  //COUT_THIS("[client " << thread_id << "] stat = " << rsp.stat())
+      insert_i++;
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
-      }*/
-	  continue;
-    } else if (d <= read_ratio + update_ratio + insert_ratio +
-                        delete_ratio) {  // remove
-      //res = table->remove(op_keys[delete_i], thread_id);
-      /*delete_i++;
+      }
+    } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
+    //} else if (tmprun == 3) {  // remove
+	  del_request_t req(thread_id, op_keys[delete_i]);
+	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[delete_i].key)
+	  req_size = req.serialize(buf, MAX_BUFSIZE);
+	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  INVARIANT(res != -1);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  INVARIANT(recv_size != -1);
+	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
+	  INVARIANT(pkt_type == packet_type_t::DEL_RES);
+	  del_response_t rsp(buf, recv_size);
+	  //COUT_THIS("[client " << thread_id << "] stat = " << rsp.stat())
+      delete_i++;
       if (unlikely(delete_i == op_keys.size())) {
         delete_i = 0;
-      }*/
-	  continue;
+      }
     } else {  // scan
-      //std::vector<std::pair<index_key_t, uint64_t>> results;
-      //table->scan(op_keys[(query_i + delete_i) % op_keys.size()], 10, results,
-      //            thread_id);
-      /*query_i++;
+	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], 10);
+	  //COUT_THIS("[client " << thread_id << "] key = " << req.key().key)
+	  req_size = req.serialize(buf, MAX_BUFSIZE);
+	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  INVARIANT(res != -1);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  INVARIANT(recv_size != -1);
+	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
+	  INVARIANT(pkt_type == packet_type_t::SCAN_RES);
+	  scan_response_t rsp(buf, recv_size);
+	  /*COUT_THIS("[client " << thread_id << "] num = " << rsp.num())
+	  for (uint32_t val_i = 0; val_i < rsp.num(); val_i++) {
+		  COUT_VAR(rsp.pairs()[val_i].first.key)
+		  COUT_VAR(rsp.pairs()[val_i].second)
+	  }*/
+      query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
-      }*/
-	  continue;
+      }
     }
     thread_param.throughput++;
+	//break; // TMPTMP
   }
 
   close(sockfd);

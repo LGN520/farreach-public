@@ -43,6 +43,50 @@ class GetRequest : public Packet<key_t> {
 };
 
 template<class key_t, class val_t>
+class PutRequest : public Packet<key_t> {
+	public:
+		PutRequest(uint32_t thread_id, key_t key, val_t val);
+		PutRequest(const char * data, uint32_t recv_size);
+
+		val_t val() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+	private:
+		val_t _val;
+};
+
+template<class key_t>
+class DelRequest : public Packet<key_t> {
+	public: 
+		DelRequest(uint32_t thread_id, key_t key);
+		DelRequest(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t>
+class ScanRequest : public Packet<key_t> {
+	public: 
+		ScanRequest(uint32_t thread_id, key_t key, uint32_t num);
+		ScanRequest(const char * data, uint32_t recv_size);
+
+		uint32_t num() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+	private:
+		uint32_t _num;
+};
+
+template<class key_t, class val_t>
 class GetResponse : public Packet<key_t> {
 	public:
 		GetResponse(uint32_t thread_id, key_t key, val_t val);
@@ -57,6 +101,57 @@ class GetResponse : public Packet<key_t> {
 	private:
 		val_t _val;
 };
+
+template<class key_t>
+class PutResponse : public Packet<key_t> {
+	public: 
+		PutResponse(uint32_t thread_id, key_t key, bool stat);
+		PutResponse(const char * data, uint32_t recv_size);
+
+		bool stat() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+	private:
+		bool _stat;
+};
+
+template<class key_t>
+class DelResponse : public Packet<key_t> {
+	public: 
+		DelResponse(uint32_t thread_id, key_t key, bool stat);
+		DelResponse(const char * data, uint32_t recv_size);
+
+		bool stat() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+	private:
+		bool _stat;
+};
+
+template<class key_t, class val_t>
+class ScanResponse : public Packet<key_t> {
+	public: 
+		ScanResponse(uint32_t thread_id, key_t key, uint32_t num, std::vector<std::pair<key_t, val_t>> pairs);
+		ScanResponse(const char * data, uint32_t recv_size);
+
+		uint32_t num() const;
+		std::vector<std::pair<key_t, val_t>> pairs() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+	private:
+		uint32_t _num;
+		std::vector<std::pair<key_t, val_t>> _pairs;
+};
+
 
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size);

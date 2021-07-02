@@ -26,7 +26,13 @@ typedef Key index_key_t;
 typedef uint64_t val_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
+typedef PutRequest<index_key_t, val_t> put_request_t;
+typedef DelRequest<index_key_t> del_request_t;
+typedef ScanRequest<index_key_t> scan_request_t;
 typedef GetResponse<index_key_t, val_t> get_response_t;
+typedef PutResponse<index_key_t> put_response_t;
+typedef DelResponse<index_key_t> del_response_t;
+typedef ScanResponse<index_key_t, val_t> scan_response_t;
 
 inline void parse_args(int, char **);
 void load();
@@ -227,9 +233,7 @@ void run_server(xindex_t *table) {
   int rsp_size = 0;
   uint32_t sockaddr_len = sizeof(struct sockaddr);
   while (!killed) {
-	COUT_VAR(sockaddr_len)
 	recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
-	COUT_VAR(sockaddr_len)
 	if (recv_size == -1) {
 		if (errno == EWOULDBLOCK || errno == EINTR) {
 			continue; // timeout or interrupted system call
@@ -240,26 +244,60 @@ void run_server(xindex_t *table) {
 		}
 	}
 	else {
-		COUT_THIS("[server] Receive packet!")
+		//COUT_THIS("[server] Receive packet!")
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
 		switch (pkt_type) {
 			case packet_type_t::GET_REQ: 
 				{
 					get_request_t req(buf, recv_size);
-					COUT_THIS("[server] key = " << req.key().key)
+					//COUT_THIS("[server] key = " << req.key().key)
 					val_t tmp_val;
-					table->get(req.key(), tmp_val, req.thread_id());
-					COUT_THIS("[server] val = " << tmp_val)
+					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
+					if (!tmp_stat) {
+						tmp_val = 0;
+					}
+					//COUT_THIS("[server] val = " << tmp_val)
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
-
-					char tmpip[20];
-					memset(tmpip, '\0', 20);
-					inet_ntop(AF_INET, (void *)&server_sockaddr.sin_addr, tmpip, 16);
-					COUT_THIS("[server] received ip: " << std::string(tmpip) << " port: " << server_sockaddr.sin_port);
-					COUT_THIS("[server] res of sendto: " << res << " rsp val: " << rsp.val())
-					INVARIANT(res != -1);
+					break;
+				}
+			case packet_type_t::PUT_REQ:
+				{
+					put_request_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().key << " val = " << req.val())
+					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					break;
+				}
+			case packet_type_t::DEL_REQ:
+				{
+					del_request_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().key)
+					bool tmp_stat = table->remove(req.key(), req.thread_id());
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					break;
+				}
+			case packet_type_t::SCAN_REQ:
+				{
+					scan_request_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().key << " num = " << req.num())
+					std::vector<std::pair<index_key_t, val_t>> results;
+					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
+					/*COUT_THIS("[server] num = " << tmp_num)
+					for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
+						COUT_VAR(results[val_i].first.key)
+						COUT_VAR(results[val_i].second)
+					}*/
+					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, results);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					break;
 				}
 			default:

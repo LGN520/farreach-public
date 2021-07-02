@@ -31,6 +31,8 @@
 - Add start_client.sh, kill_client.sh, and start_server.sh to launch client and server in netns
 - Add start_network.sh and kill_network.sh
 	+ Construct the virtual network topology: client (veth0) -> (veth0s) OVS (veth1s) -> (veth1) server
+- Update packet_format.h, packet_format_impl.h, client.cpp, and server.cpp
+	+ Support all APIs including get, put, del, and scan
 
 ### Run
 
@@ -40,15 +42,15 @@
 	+ `make prepare`
 	+ `./prepare`
 - Construct virtual network
-	+ `bash start_network.sh`
+	+ `sudo bash start_network.sh`
 - Launch server in background
-	+ `sudo ip netns exec ns1 start_server.sh`
+	+ `sudo ip netns exec ns1 bash start_server.sh`
 - Launch client in background
-	+ `sudo ip netns exec ns0 start_client.sh`
+	+ `sudo ip netns exec ns0 bash start_client.sh`
 - Clean up the mess
-	+ `sudo ip netns exec ns0 kill_server.sh`
-	+ `sudo ip netns exec ns0 kill_client.sh`
-	+ `sudo ip netns exec ns0 kill_network.sh`
+	+ `sudo ip netns exec ns0 bash kill_server.sh`
+	+ `sudo ip netns exec ns0 bash kill_client.sh`
+	+ `sudo ip netns exec ns0 bash kill_network.sh`
 
 ## Fixed Issues
 
