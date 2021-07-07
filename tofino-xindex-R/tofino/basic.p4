@@ -44,11 +44,11 @@ header_type udp_t {
 	}
 }
 
-header_type metadata_t {
+/*header_type metadata_t {
 	fields {
-		/* TODO: Your Metadata */
+		// TODO: Your Metadata
 	}
-}
+}*/
 
 header ethernet_t ethernet_hdr;
 header ipv4_t ipv4_hdr;
