@@ -39,7 +39,7 @@
 - NOTE: the arguments must be consistent for each executable module
 - Prepare randomly-generated keys
 	+ `cmake . -DCMAKE_BUILD_TYPE=Release`
-	+ `make prepare`
+	+ `make all`
 	+ `./prepare`
 - Construct virtual network
 	+ `sudo bash start_network.sh`
@@ -54,8 +54,17 @@
 
 ## Tofino + XIndex (tofino-xindex-R)
 
+
+### Configuration
+
+The same as ovs-index.
+
 ### Run
 
+- Prepare randomly-generated keys
+	+ `cmake . -DCMAKE_BUILD_TYPE=Release`
+	+ `make all`
+	+ `./prepare`
 - Run `cd tofino`
 	+ Run `su` to enter root account
 	+ Run `bash compile.sh` to compile p4 into binary code
@@ -69,7 +78,19 @@
 - XIndex
 	+ Run `make microbench` -> Cannot support compile option `-faligned-new`
 		* Update g++ from g++-5 to g++-7
+			- `sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 10`
+			- `sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 10`
+			- `sudo add-apt-repository ppa:ubuntu-toolchain-r/test`
+			- `sudo apt-get update`
+			- `sudo apt-get install g++-7`
+			- `sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 20`
+			- `sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 20`
 - OVS + XIndex
 	+ NOTE: To support RCU mechanism, each frontend worker must send request one-by-one
 	+ NOTE: For template programming, you must implement template class in header file to compile in one time, or explicitly tell the compiler which kinds of specified classes you will use for compiling individually as a library
 	+ NOTE: SIGKILL cannot be catched or ignored by custom handler
+- Test connectness of tofino by ping
+	+ Must set correct IP and mask for each interface
+	+ Must enable ports in tofino
+	+ Must set correct ARP in hosts
+	+ Must keep correct IP checksum, otherwise no ICMP reply

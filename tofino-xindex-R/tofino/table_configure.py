@@ -45,13 +45,13 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 #   ex: ["1/0", "1/1"]
 #
 fp_ports = ["1/0", "3/0"]
-src_ip = "10.30.0.31"
-dst_ip = "10.30.14.29"
+src_ip = "10.0.0.31"
+dst_ip = "10.0.0.32"
 
 class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
-        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["basic"])
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["xindex"])
 
     def setUp(self):
         print '\nSetup'

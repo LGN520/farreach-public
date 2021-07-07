@@ -10,3 +10,4 @@ microbench
 prepare
 *.log
 *.out
+*.pyc

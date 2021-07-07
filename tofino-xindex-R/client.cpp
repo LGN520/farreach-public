@@ -45,7 +45,7 @@ double delete_ratio = 0;
 double scan_ratio = 0;
 size_t runtime = 10;
 size_t fg_n = 1;
-std::string server_addr = "10.30.14.29";
+std::string server_addr = "10.0.0.32";
 int server_port = 1111;
 
 volatile bool running = false;

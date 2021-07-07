@@ -92,9 +92,14 @@ action droppkt() {
 	drop();
 }
 
+action mac_forward(port) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
+
 action ipv4_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-	add_to_field(ipv4_hdr.ttl, -1);
+	//add_to_field(ipv4_hdr.ttl, -1);
 }
 
 table ipv4_lpm {
@@ -113,9 +118,9 @@ table ipv4_lpm {
 /* Ingress Processing */
 
 control ingress {
-	if (valid(udp_hdr)) {
-		apply(ipv4_lpm);
-	}
+	/*if (valid(udp_hdr)) {
+	}*/
+	apply(ipv4_lpm);
 }
 
 /* Egress Processing */
