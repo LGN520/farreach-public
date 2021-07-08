@@ -1,6 +1,6 @@
 # Tech Report
 
-## OVS + XIndex (ovs-xindex-R)
+## Part 1. OVS + XIndex (ovs-xindex-R)
 
 ### Configuration
 
@@ -52,12 +52,16 @@
 	+ `sudo ip netns exec ns0 bash kill_client.sh`
 	+ `sudo ip netns exec ns0 bash kill_network.sh`
 
-## Tofino + XIndex (tofino-xindex-R)
-
+## Part 2. Tofino + XIndex (tofino-xindex-R)
 
 ### Configuration
 
 The same as ovs-index.
+
+### Implementation Log
+
+- Add tofino-xindex-R
+- Add update/register_update.py, controller.cpp, and test_controller.cpp
 
 ### Run
 
@@ -72,6 +76,23 @@ The same as ovs-index.
 	+ Create a new terminal and run `bash configure.sh` to configure data plane
 - Run `bash start_server.sh` in server host
 - Run `bash start_client.sh` in client host
+
+## Part 3. Tofino-based NetBuffer (tofino-netbuffer)
+
+### Configuration
+
+The same as above
+
+### Implementation Log
+
+- Add tofino-netbuffer
+
+## NOTES
+
+- Ports usage
+	+ Storage server: listen client requests on 1111
+	+ NetBuffer controller: listen storage server notification on 2222
+	+ Ptf: listen controller msg on 3333
 
 ## Fixed Issues
 
