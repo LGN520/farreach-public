@@ -4,17 +4,19 @@
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // inetaddr conversion
+#include <signal.h> // for signal and raise
 
 void listen_server();
 void sendto_ptf(const char *buf, int size);
 
 uint32_t controller_port = 2222;
-std::string ptf_addr = "localhost";
+std::string ptf_addr = "127.0.0.1";
 uint32_t ptf_port = 3333;
 
-std::string cmd = "bash tofino/update.sh &"
+std::string cmd = "bash tofino/update.sh &";
 
 bool killed = false;
+void kill(int signum);
 
 int main(int argc, char **argv) {
 	// register signal handler
@@ -43,7 +45,7 @@ void listen_server() {
 		recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 		INVARIANT(recv_size > 0);
 
-		system(cmd);
+		system(cmd.c_str());
 		sendto_ptf(buf, recv_size);
 	}
 }
@@ -56,7 +58,7 @@ void sendto_ptf(const char *buf, int size) {
 	ptf_sockaddr.sin_family = AF_INET;
 	INVARIANT(inet_pton(AF_INET, ptf_addr.c_str(), &ptf_sockaddr.sin_addr));
 	ptf_sockaddr.sin_port = htons(ptf_port);
-	int res = sendto(ptf_sockfd, buf, recv_size, 0, (struct sockaddr *)&ptf_sockaddr, sizeof(struct sockaddr));
+	int res = sendto(ptf_sockfd, buf, size, 0, (struct sockaddr *)&ptf_sockaddr, sizeof(struct sockaddr));
 	INVARIANT(res != -1);
 }
 

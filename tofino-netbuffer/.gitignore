@@ -6,6 +6,8 @@ CMakeCache.txt
 Makefile
 client
 server
+controller
+test_controller
 microbench
 prepare
 *.log

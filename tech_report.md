@@ -4,6 +4,13 @@
 
 ### Configuration
 
+- Install cmake
+	+ `wget http://www.cmake.org/files/v3.5/cmake-3.5.1.tar.gz`
+	+ `tar xf cmake-3.5.1.tar.gz`
+	+ `cd cmake-3.5.1`
+	+ `./configure`
+	+ `make`
+	+ `make install`
 - Install OVS
 	+ `git clone https://github.com/openvswitch/ovs.git`
 	+ `./boot.sh`
@@ -61,7 +68,6 @@ The same as ovs-index.
 ### Implementation Log
 
 - Add tofino-xindex-R
-- Add update/register_update.py, controller.cpp, and test_controller.cpp
 
 ### Run
 
@@ -86,6 +92,22 @@ The same as above
 ### Implementation Log
 
 - Add tofino-netbuffer
+- Add update/register_update.py, controller.cpp, and test_controller.cpp
+
+### Run
+
+- Prepare randomly-generated keys
+	+ `cmake . -DCMAKE_BUILD_TYPE=Release`
+	+ `make all`
+	+ `./prepare`
+- Run `cd tofino`
+	+ Run `su` to enter root account
+	+ Run `bash compile.sh` to compile p4 into binary code
+	+ Run `bash start_switch.sh` to launch Tofino
+	+ Create a new terminal and run `bash configure.sh` to configure data plane
+- Run `bash start_server.sh` in server host
+- Run `bash start_controller.sh` in Tofino OS
+- Run `bash start_client.sh` in client host
 
 ## NOTES
 
