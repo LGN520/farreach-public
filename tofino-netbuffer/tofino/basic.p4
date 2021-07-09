@@ -7,14 +7,16 @@
 #define PROTOTYPE_UDP 0x11
 
 #define OP_PORT 1111
-#define GETREQ_TYPE 0
-#define PUTREQ_TYPE 1
-#define DELREQ_TYPE 2
-#define SCANREQ_TYPE 3
-#define GETRES_TYPE 4
-#define PUTRES_TYPE 5
-#define DELRES_TYPE 6
-#define SCANRES_TYPE 7
+
+// NOTE: Big Endian of type (not use threadid by now; big endian of key does not make sense)
+#define GETREQ_TYPE 0x00000000
+#define PUTREQ_TYPE 0x01000000
+#define DELREQ_TYPE 0x02000000
+#define SCANREQ_TYPE 0x03000000
+#define GETRES_TYPE 0x04000000
+#define PUTRES_TYPE 0x05000000
+#define DELRES_TYPE 0x06000000
+#define SCANRES_TYPE 0x07000000
 
 #define KV_BUCKET_COUNT 16
 
@@ -514,41 +516,35 @@ table update_putreq_tbl {
 
 control ingress {
 	if (valid(op_hdr)) {
-		if (op_hdr.optype == GETREQ_TYPE or op_hdr.optype == PUTREQ_TYPE) {
-			apply(calculate_hash_tbl);
-			if (op_hdr.optype == GETREQ_TYPE) {
-				apply(get_valid_tbl);
-				apply(get_match_keylo_tbl);
-				apply(get_match_keyhi_tbl);
-				if (meta.isvalid == 1) {
-					if (meta.ismatch_keylo == 1 and meta.ismatch_keyhi == 1) {
-						apply(get_vallo_tbl);
-						apply(get_valhi_tbl);
-						apply(sendback_getres_tbl);
-					}
-					else {
-						apply(ipv4_lpm);
-					}
+		apply(calculate_hash_tbl);
+		if (op_hdr.optype == GETREQ_TYPE) {
+			apply(get_valid_tbl);
+			apply(get_match_keylo_tbl);
+			apply(get_match_keyhi_tbl);
+			if (meta.isvalid == 1) {
+				if (meta.ismatch_keylo == 1 and meta.ismatch_keyhi == 1) {
+					apply(get_vallo_tbl);
+					apply(get_valhi_tbl);
+					apply(sendback_getres_tbl);
 				}
 				else {
 					apply(ipv4_lpm);
 				}
 			}
 			else {
-				apply(set_valid_tbl);
-				apply(put_match_keylo_tbl);
-				apply(put_match_keyhi_tbl);
-				if (meta.isvalid == 1) {
-					if (meta.origin_keylo == op_hdr.keylo) { 
-						if (meta.origin_keyhi == op_hdr.keyhi) {
-							apply(put_vallo_tbl);
-							apply(put_valhi_tbl);
-							apply(sendback_putres_tbl);
-						}
-						else {
-							apply(update_putreq_tbl);
-							apply(ipv4_lpm);
-						}
+				apply(ipv4_lpm);
+			}
+		}
+		else if (op_hdr.optype == PUTREQ_TYPE) {
+			apply(set_valid_tbl);
+			apply(put_match_keylo_tbl);
+			apply(put_match_keyhi_tbl);
+			if (meta.isvalid == 1) {
+				if (meta.origin_keylo == op_hdr.keylo) { 
+					if (meta.origin_keyhi == op_hdr.keyhi) {
+						apply(put_vallo_tbl);
+						apply(put_valhi_tbl);
+						apply(sendback_putres_tbl);
 					}
 					else {
 						apply(update_putreq_tbl);
@@ -556,12 +552,22 @@ control ingress {
 					}
 				}
 				else {
-					apply(put_vallo_tbl);
-					apply(put_valhi_tbl);
-					apply(sendback_putres_tbl);
+					apply(update_putreq_tbl);
+					apply(ipv4_lpm);
 				}
 			}
+			else {
+				apply(put_vallo_tbl);
+				apply(put_valhi_tbl);
+				apply(sendback_putres_tbl);
+			}
 		}
+		else {
+			apply(ipv4_lpm);
+		}
+	}
+	else {
+		apply(ipv4_lpm);
 	}
 }
 

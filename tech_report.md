@@ -98,6 +98,8 @@ The same as above
 - Modify tofino-netbuffer/tofino/basic.p4
 	+ Due to outputing up to 32-bit metadata, we must store key/val_lo/hi independently
 	+ Add KV component (key_lo/hi, value_lo/hi, and valid bit)
+		* Support get
+		* TODO: support put (maybe due to ipv4 checksum or upd checksum)
 
 ### Run
 
@@ -105,6 +107,7 @@ The same as above
 	+ `cmake . -DCMAKE_BUILD_TYPE=Release`
 	+ `make all`
 	+ `./prepare`
+	+ NOTE: We must keep the same exist_keys.out and nonexist_keys.out for client/server
 - Run `cd tofino`
 	+ Run `su` to enter root account
 	+ Run `bash compile.sh` to compile p4 into binary code
