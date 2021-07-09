@@ -137,3 +137,6 @@ The same as above
 	+ Must enable ports in tofino
 	+ Must set correct ARP in hosts
 	+ Must keep correct IP checksum, otherwise no ICMP reply
+- Tofino + NetBuffer
+	+ Get error of "free invalid pointer" after running ptf -> bf_switchd_pd_lib_init: Assertion failed
+		* Cannot upgrade g++/gcc to version 7. Rollback to g++/gcc version 4.9 is ok.
