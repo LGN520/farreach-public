@@ -64,9 +64,3 @@ target_link_libraries(client PRIVATE -lpthread)
 add_executable(server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 target_link_libraries(server PRIVATE -lpthread mkl_rt)
 target_compile_definitions(server PRIVATE NDEBUGGING)
-
-# controller
-add_executable(controller ${CMAKE_CURRENT_SOURCE_DIR}/controller.cpp)
-
-# test controller
-add_executable(test_controller ${CMAKE_CURRENT_SOURCE_DIR}/test_controller.cpp)
