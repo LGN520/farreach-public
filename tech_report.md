@@ -93,6 +93,11 @@ The same as above
 
 - Add tofino-netbuffer
 - Add update/register_update.py, controller.cpp, and test_controller.cpp
+- Add tofino-netbuffer/controller
+	+ Avoid the dependency on cmake 3.5 and gcc/g++ 7.0 (uncompatible in Tofino Debian OS)
+- Modify tofino-netbuffer/tofino/basic.p4
+	+ Due to outputing up to 32-bit metadata, we must store key/val_lo/hi independently
+	+ Add KV component (key_lo/hi, value_lo/hi, and valid bit)
 
 ### Run
 

@@ -326,7 +326,8 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
@@ -343,7 +344,8 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
@@ -360,7 +362,8 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
@@ -377,7 +380,8 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::DEL_RES);
@@ -393,7 +397,8 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::SCAN_RES);
