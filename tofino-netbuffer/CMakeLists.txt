@@ -53,12 +53,15 @@ message(STATUS "Setting build type to '${CMAKE_BUILD_TYPE}' ")
 #        -lpthread
 #)
 
+# raw_socket
+add_library(raw_socket STATIC ${CMAKE_CURRENT_SOURCE_DIR}/raw_socket.cpp)
+
 # prepare
 add_executable(prepare ${CMAKE_CURRENT_SOURCE_DIR}/prepare.cpp)
 
 # client
 add_executable(client ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp)
-target_link_libraries(client PRIVATE -lpthread)
+target_link_libraries(client PRIVATE -lpthread raw_socket.a)
 
 # server
 add_executable(server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)

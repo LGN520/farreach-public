@@ -20,6 +20,19 @@
 	+ `ovs-ctl start`
 	+ Check whether with successful install: `ovs-vsctl show`
 	+ After modifying source code of OVS: `sudo ./remake.sh`
+- Install DPDK
+	+ Check environment
+		* `lspci | grep Ethernet`
+		* `enstool -i <if>`
+		* Check [supported hardware](http://core.dpdk.org/supported/)
+		* `wget https://fast.dpdk.org/rel/dpdk-20.08.tar.xz`
+		* `xz -d dpdk-20.08.tar.xz`
+		* `tar -xvf dpdk-20.08.tar`
+		* `apt-get install numactl libnuma-dev`
+		* `cd dpdk-20.08/usertools`
+		* `./dpdk-setup.sh`
+			- Select option: 45 -> ERROR: Target does not have the DPDK UIO Kernel Module.
+			- (TODO) Solution: set `CONFIG_RTE_EAL_IGB_UIO=y` and `CONFIG_RTE_LIBRTE_IEEE1588=y` in dpdk-20.08/config
 
 ### Implementation Log
 

@@ -28,7 +28,7 @@ import sys
 import time
 import unittest
 
-from C1.p4_pd_rpc.ttypes import *
+from netbuffer.p4_pd_rpc.ttypes import *
 from pltfm_pm_rpc.ttypes import *
 from pal_rpc.ttypes import *
 from ptf import config
@@ -88,20 +88,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # create data structures
             # match on ipaddr and set output to self.devPorts[1]
-            #macaddr = macAddr_to_string("00:11:11:11:11:11")
-            ipv4addr0 = ipv4Addr_to_i32(src_ip)
-            matchspec0 = C1_ipv4_lpm_match_spec_t(ipv4_hdr_dstAddr=ipv4addr0, ipv4_hdr_dstAddr_prefix_length=32)
-            actnspec0 = C1_ipv4_forward_action_spec_t(self.devPorts[0])
-            ipv4addr1 = ipv4Addr_to_i32(dst_ip)
-            matchspec1 = C1_ipv4_lpm_match_spec_t(ipv4_hdr_dstAddr=ipv4addr1, ipv4_hdr_dstAddr_prefix_length=32)
-            actnspec1 = C1_ipv4_forward_action_spec_t(self.devPorts[1])
+            # macaddr = macAddr_to_string("00:11:11:11:11:11")
+            #ipv4addr0 = ipv4Addr_to_i32(src_ip)
+            #matchspec0 = netbuffer_ipv4_lpm_match_spec_t(ipv4_hdr_dstAddr=ipv4addr0, ipv4_hdr_dstAddr_prefix_length=32)
+            #actnspec0 = netbuffer_ipv4_forward_action_spec_t(self.devPorts[0])
+            #ipv4addr1 = ipv4Addr_to_i32(dst_ip)
+            #matchspec1 = netbuffer_ipv4_lpm_match_spec_t(ipv4_hdr_dstAddr=ipv4addr1, ipv4_hdr_dstAddr_prefix_length=32)
+            #actnspec1 = netbuffer_ipv4_forward_action_spec_t(self.devPorts[1])
 
             # program match and action spec entries
-            print "Populating table entries"
-            result0 = self.client.ipv4_lpm_table_add_with_ipv4_forward(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            result1 = self.client.ipv4_lpm_table_add_with_ipv4_forward(\
-                    self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
+            #print "Populating table entries"
+            #result0 = self.client.ipv4_lpm_table_add_with_ipv4_forward(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            #result1 = self.client.ipv4_lpm_table_add_with_ipv4_forward(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
 
