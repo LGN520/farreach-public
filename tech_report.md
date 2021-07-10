@@ -148,3 +148,7 @@ The same as above
 - Tofino + NetBuffer
 	+ Get error of "free invalid pointer" after running ptf -> bf_switchd_pd_lib_init: Assertion failed
 		* Cannot upgrade g++/gcc to version 7. Rollback to g++/gcc version 4.9 is ok.
+	+ Change egress_port as ingress_port to send the packet back: [Error] tofino increases TX packet, but the host cannot receive the packet (RX packet does not rise, and no error packet like CRC, frame, overrun, and dropped)
+		* Swap MAC address: still fail
+		* Enable PROMISC by `ifconfig <if> promisc`: still fail
+		* Use DPDK instead of kernel: DOING
