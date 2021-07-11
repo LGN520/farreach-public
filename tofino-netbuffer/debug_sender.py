@@ -14,6 +14,7 @@ from time import sleep
 ETHERTYPE_IPV4 = 0x0800
 PROTOTYPE_TCP = 0x06
 PROTOTYPE_UDP = 0x11
+OP_PORT = 1111
 
 src_mac = "9c:69:b4:60:ef:a4"
 dst_mac = "9c:69:b4:60:ef:8d"
@@ -36,7 +37,7 @@ bind_layers(UDP, Custom, dport=OP_PORT)
 def main():
     print("Send custom packet to query...")
     pkt = Ether(src=src_mac, dst=dst_mac, type=ETHERTYPE_IPV4) / \
-            IP(src=src_ip, dst=dst_ip, proto=PROTOTYPE_UDP) / UDP() / Custom() #TODO
+            IP(src=src_ip, dst=dst_ip, proto=PROTOTYPE_UDP) / UDP(dport=OP_PORT) / Custom() #TODO
     sendp(pkt, iface=src_if, verbose=0)
 
 if __name__ == "__main__":

@@ -164,4 +164,8 @@ The same as above
 	+ Change egress_port as ingress_port to send the packet back: [Error] tofino increases TX packet, but the host cannot receive the packet (RX packet does not rise, and no error packet like CRC, frame, overrun, and dropped)
 		* Swap MAC address: still fail
 		* Enable PROMISC by `ifconfig <if> promisc`: still fail
-		* Use DPDK instead of kernel: DOING
+		* Use raw socket: still fail
+		* Use DPDK instead of kernel: TODO
+		* SOLVED!
+			- (1) Ethernet's src mac address cannot be the mac address of the receiver's interface (promisc mode only tolerates dst mac address)
+			- (2) Tofino hardware error?: Cannot swap src/dst mac address -> no packet will be sent back with a large possibility
