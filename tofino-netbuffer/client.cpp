@@ -316,8 +316,8 @@ void *run_fg(void *param) {
   // Prepare socket (raw socket)
   int raw_sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
   INVARIANT(raw_sockfd != -1);
-  struct ifreq dst_ifidx = get_ifidx(dst_ifname);
-  struct sockaddr_ll raw_socket_address = get_raw_sockaddr(dst_ifidx, dst_macaddr);
+  struct ifreq ifidx = get_ifidx(src_ifname);
+  struct sockaddr_ll raw_socket_address = get_raw_sockaddr(ifidx, src_macaddr);
   char totalbuf[MAX_BUFSIZE];
 
   COUT_THIS("[client " << thread_id << "] Ready.");
