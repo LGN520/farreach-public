@@ -30,7 +30,25 @@ header_type ethernet_t {
 	}
 }
 
+header_type ipv4_t {
+	fields {
+		version: 4;
+		ihl: 4;
+		diffserv: 8;
+		totalLen: 16;
+		identification: 16;
+		flags: 3;
+		fragOffset: 13;
+		ttl: 8;
+		protocol: 8;
+		hdrChecksum: 16;
+		srcAddr: 32;
+		dstAddr: 32;
+	}
+}
+
 header ethernet_t ethernet_hdr;
+header ipv4_t ipv4_hdr;
 
 /* Parser */
 
@@ -40,10 +58,39 @@ parser start {
 
 parser parse_ethernet {
 	extract(ethernet_hdr);
+	return select(ethernet_hdr.etherType) {
+		ETHERTYPE_IPV4: parse_ipv4;
+		default: ingress;
+	}
+}
+
+parser parse_ipv4 {
+	extract(ipv4_hdr);
 	return ingress;
 }
 
 /* Ingress Processing (Normal Operation) */
+
+action droppkt() {
+	drop();
+}
+
+action ipv4_forward(port) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+	//add_to_field(ipv4_hdr.ttl, -1);
+}
+
+table ipv4_lpm {
+	reads {
+		ipv4_hdr.dstAddr: lpm;
+	}
+	actions {
+		ipv4_forward;
+		droppkt;
+	}
+	default_action: droppkt();
+	size: 1024;
+}
 
 action sendback_putres() {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
@@ -57,7 +104,8 @@ table sendback_putres_tbl {
 }
 
 control ingress {
-	apply(sendback_putres_tbl);
+	//apply(sendback_putres_tbl);
+	apply(ipv4_lpm);
 }
 
 /* Egress Processing */
