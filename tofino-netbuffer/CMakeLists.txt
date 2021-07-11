@@ -61,7 +61,7 @@ add_executable(prepare ${CMAKE_CURRENT_SOURCE_DIR}/prepare.cpp)
 
 # client
 add_executable(client ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp)
-target_link_libraries(client PRIVATE -lpthread raw_socket.a)
+target_link_libraries(client PRIVATE -lpthread raw_socket)
 
 # server
 add_executable(server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
