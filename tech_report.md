@@ -112,7 +112,9 @@ The same as above
 	+ Due to outputing up to 32-bit metadata, we must store key/val_lo/hi independently
 	+ Add KV component (key_lo/hi, value_lo/hi, and valid bit)
 		* Support get
-		* TODO: support put (maybe due to ipv4 checksum or upd checksum)
+		* Support put (fix the bug with 3 days)
+- TODO: (1) Update IP length and UDP length in tofino (2) [MAYBE] use raw socket for recvfrom in client and recvfrom in server
+
 
 ### Run
 
