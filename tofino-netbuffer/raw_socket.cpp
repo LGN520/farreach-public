@@ -27,13 +27,18 @@ int lookup_if(int sockfd, std::string ifname, uint8_t *src_macaddr)
 		perror("SIOCGIFINDEX");
 	}
 	int ifidx = ifr.ifr_ifindex;
-	memcpy(src_macaddr, ifr.ifr_hwaddr.sa_data, 6 * sizeof (uint8_t));
+	if (src_macaddr != NULL) {
+		memcpy(src_macaddr, ifr.ifr_hwaddr.sa_data, 6 * sizeof (uint8_t));
+	}
 	return ifidx;
 }
 
 void init_raw_sockaddr(struct sockaddr_ll *socket_address, int ifidx, uint8_t *macaddr)
 {
+	memset(socket_address, 0, sizeof(struct sockaddr_ll));
+	socket_address->sll_family = AF_PACKET;
 	socket_address->sll_ifindex = ifidx; 
+	socket_address->sll_protocol = htons(ETH_P_ALL);
     socket_address->sll_halen = ETH_ALEN; // 48-bit address
     socket_address->sll_addr[0] = macaddr[0];
     socket_address->sll_addr[1] = macaddr[1];

@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <errno.h>
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // inetaddr conversion
@@ -52,8 +53,8 @@ int server_port = 1111;
 // Raw socket
 std::string src_ifname = "ens3f0";
 //std::string dst_ifname = "ens3f1";
-uint8_t src_macaddr[8];// = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
-uint8_t dst_macaddr[8] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
+uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
+uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
 std::string src_ipaddr = "10.0.0.31";
 std::string dst_ipaddr = "10.0.0.32";
 short src_port_start = 8888;
@@ -315,16 +316,20 @@ void *run_fg(void *param) {
   setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));*/
 
   // Prepare socket (raw socket)
-  int raw_sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
+  //int raw_sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
+  int raw_sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   INVARIANT(raw_sockfd != -1);
   int optval = 7; // valid values are in the range [1,7]  // 1- low priority, 7 - high priority  
   if (setsockopt(raw_sockfd, SOL_SOCKET, SO_PRIORITY, &optval, sizeof(optval)) < 0) {
 	perror("setsockopt");
   }
-  int ifidx = lookup_if(raw_sockfd, src_ifname, src_macaddr);
+  int ifidx = lookup_if(raw_sockfd, src_ifname, NULL);
   struct sockaddr_ll raw_socket_address;
   init_raw_sockaddr(&raw_socket_address, ifidx, src_macaddr); // set target interface for sendto
-  int res = bind(raw_sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr)); // bind target interface for recvfrom
+
+  int res = bind(raw_sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
+  std::cout << errno << std::endl;
+  INVARIANT(res != -1);
   char totalbuf[MAX_BUFSIZE]; // headers + payload
   short src_port = src_port_start + thread_id;
 
@@ -354,7 +359,7 @@ void *run_fg(void *param) {
 	  
 	  // Raw socket
 	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
-	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr));
+	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 
 	  INVARIANT(res != -1);
 

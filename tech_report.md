@@ -174,3 +174,5 @@ The same as above
 		* SOLVED!
 			- (1) Ethernet's src mac address cannot be the mac address of the receiver's interface (promisc mode only tolerates dst mac address)
 			- (2) Tofino hardware error?: Cannot swap src/dst mac address -> no packet will be sent back with a large possibility
+	+ Errno 22 of bind/sendto: wrong parameter
+		* NOTE: sizeof(struct sockaddr) != sizeof(struct sockaddr_ll), you must give precise length
