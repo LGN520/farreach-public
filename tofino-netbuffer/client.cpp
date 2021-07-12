@@ -52,7 +52,7 @@ int server_port = 1111;
 // Raw socket
 std::string src_ifname = "ens3f0";
 //std::string dst_ifname = "ens3f1";
-uint8_t src_macaddr[8] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
+uint8_t src_macaddr[8];// = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
 uint8_t dst_macaddr[8] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
 std::string src_ipaddr = "10.0.0.31";
 std::string dst_ipaddr = "10.0.0.32";
@@ -321,13 +321,10 @@ void *run_fg(void *param) {
   if (setsockopt(raw_sockfd, SOL_SOCKET, SO_PRIORITY, &optval, sizeof(optval)) < 0) {
 	perror("setsockopt");
   }
-  struct ifreq ifidx;
-  init_ifidx(&ifidx, src_ifname);
-  if (ioctl(raw_sockfd, SIOCGIFINDEX, &ifidx) < 0) {
-  	perror("SIOCGIFINDEX");
-  }
+  int ifidx = lookup_if(raw_sockfd, src_ifname, src_macaddr);
   struct sockaddr_ll raw_socket_address;
-  init_raw_sockaddr(&raw_socket_address, ifidx, src_macaddr);
+  init_raw_sockaddr(&raw_socket_address, ifidx, src_macaddr); // set target interface for sendto
+  int res = bind(raw_sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr)); // bind target interface for recvfrom
   char totalbuf[MAX_BUFSIZE]; // headers + payload
   short src_port = src_port_start + thread_id;
 
@@ -335,7 +332,6 @@ void *run_fg(void *param) {
   char buf[MAX_BUFSIZE]; // payload
   ready_threads++;
   int req_size = 0;
-  int res = 0;
   int recv_size = 0;
   val_t dummy_value = 1234;
   COUT_THIS("[client " << thread_id << "] Ready.");
@@ -358,9 +354,7 @@ void *run_fg(void *param) {
 	  
 	  // Raw socket
 	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
-	  struct msghdr msg;
-	  init_msghdr(&msg, &raw_socket_address, totalbuf, totalsize);
-	  res = sendmsg(raw_sockfd, &msg, 0);
+	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr));
 
 	  INVARIANT(res != -1);
 
@@ -370,10 +364,9 @@ void *run_fg(void *param) {
 	  
 	  // Raw socket
 	  while (true) {
-	  	recv_size = recvmsg(raw_sockfd, &msg, 0);
+		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 		COUT_VAR(recv_size);
 	  	INVARIANT(recv_size != -1);
-	  	//recv_buf(totalbuf, MAX_BUFSIZE, msg, recv_size);
 		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
 		if (recv_size != -1) break;
 	  }

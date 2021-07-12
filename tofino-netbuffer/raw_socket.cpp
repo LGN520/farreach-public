@@ -17,15 +17,23 @@ unsigned short csum16(unsigned short *buf, int nwords, bool isodd)
     return (unsigned short)(~sum);
 }
 
-void init_ifidx(struct ifreq * ifidx, std::string ifname)
+int lookup_if(int sockfd, std::string ifname, uint8_t *src_macaddr)
 {
-    memset(ifidx, 0, sizeof(struct ifreq));
-    strncpy(ifidx->ifr_name, ifname.c_str(), IFNAMSIZ-1);
+	struct ifreq ifr;
+    memset(&ifr, 0, sizeof(struct ifreq));
+    strncpy(ifr.ifr_name, ifname.c_str(), IFNAMSIZ-1);
+	// lookup ifidx and macaddr based on ifname
+	if (ioctl(sockfd, SIOCGIFINDEX, &ifr) < 0) { 
+		perror("SIOCGIFINDEX");
+	}
+	int ifidx = ifr.ifr_ifindex;
+	memcpy(src_macaddr, ifr.ifr_hwaddr.sa_data, 6 * sizeof (uint8_t));
+	return ifidx;
 }
 
-void init_raw_sockaddr(struct sockaddr_ll *socket_address, struct ifreq& if_idx, uint8_t *macaddr)
+void init_raw_sockaddr(struct sockaddr_ll *socket_address, int ifidx, uint8_t *macaddr)
 {
-	socket_address->sll_ifindex = if_idx.ifr_ifindex;
+	socket_address->sll_ifindex = ifidx; 
     socket_address->sll_halen = ETH_ALEN; // 48-bit address
     socket_address->sll_addr[0] = macaddr[0];
     socket_address->sll_addr[1] = macaddr[1];
@@ -64,7 +72,7 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
     iph->ihl = 7;
     iph->version = 4;
     iph->tos = 0; // Low delay
-    iph->id = htons(11111);
+    iph->id = htons(0);
     iph->frag_off = 0x00;
     iph->ttl = 0xff; // hops
     //iph->protocol = IPPROTO_TCP;
@@ -100,7 +108,13 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 	return tx_len;
 }
 
-void init_msghdr(struct msghdr *msg, struct sockaddr_ll *socket_address, char *buf, size_t bufsize)
+/*	[Usage]
+ *	struct msghdr msg;
+ * 	init_msghdr(&msg, &raw_socket_address, totalbuf, totalsize);
+ * 	res = sendmsg(raw_sockfd, &msg, 0);
+ * 	recv_size = recvmsg(raw_sockfd, &msg, 0);
+ */
+/*void init_msghdr(struct msghdr *msg, struct sockaddr_ll *socket_address, char *buf, size_t bufsize)
 {
 	memset(msg, 0, sizeof(struct msghdr));
 
@@ -114,8 +128,12 @@ void init_msghdr(struct msghdr *msg, struct sockaddr_ll *socket_address, char *b
 	msg->msg_iovlen = 1;
 	msg->msg_name = socket_address;
 	msg->msg_namelen = sizeof(struct sockaddr_ll);
-}
+}*/
 
+/*	[Usage]
+ * 	recv_size = recvmsg(raw_sockfd, &msg, 0);
+ *	recv_buf(totalbuf, MAX_BUFSIZE, msg, recv_size);
+ */
 /*void recv_buf(char *buf, uint32_t maxsize, struct msghdr *msg, uint32_t recvsize)
 {
 	assert(recvsize <= maxsize);

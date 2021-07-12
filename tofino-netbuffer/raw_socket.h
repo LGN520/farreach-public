@@ -12,8 +12,8 @@
 #include <iostream>
 
 unsigned short csum16(unsigned short *buf, int nwords, bool isodd = false);
-void init_ifidx(struct ifreq * ifidx, std::string ifname);
-void init_raw_sockaddr(struct sockaddr_ll *socket_address, struct ifreq& if_idx, uint8_t *macaddr);
+int lookup_if(int sockfd, std::string ifname, uint8_t *src_macaddr);
+void init_raw_sockaddr(struct sockaddr_ll *socket_address, int ifidx, uint8_t *macaddr);
 size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_macaddr, 
 		std::string src_ipaddr, std::string dst_ipaddr, short src_port, 
 		short dst_port, char *payload, uint32_t payload_size);

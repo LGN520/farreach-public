@@ -49,7 +49,7 @@ int server_port = 1111;
 //std::string src_ifname = "ens3f0";
 std::string dst_ifname = "ens3f1";
 //uint8_t src_macaddr[8] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
-uint8_t dst_macaddr[8] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
+uint8_t dst_macaddr[8]; // = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
 //std::string src_ipaddr = "10.0.0.31";
 std::string dst_ipaddr = "10.0.0.32";
 //short src_port_start = 8888;
@@ -237,24 +237,20 @@ void run_server(xindex_t *table) {
   if (setsockopt(sockfd, SOL_SOCKET, SO_PRIORITY, &optval, sizeof(optval)) < 0) {
 	perror("setsockopt");
   }
-  struct ifreq ifidx;
-  init_ifidx(&ifidx, dst_ifname);
-  if (ioctl(sockfd, SIOCGIFINDEX, &ifidx) < 0) {
-  	perror("SIOCGIFINDEX");
-  }
+  int ifidx = lookup_if(sockfd, dst_ifname, dst_macaddr);
   struct sockaddr_ll raw_socket_address;
   init_raw_sockaddr(&raw_socket_address, ifidx, dst_macaddr);
+  int res = bind(sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr)); // bind target interface for recvfrom
   char totalbuf[MAX_BUFSIZE]; // headers + payload
   uint8_t src_macaddr[6];
   char src_ipaddr[5] = {'\0', '\0', '\0', '\0', '\0'};
   short src_port;
-  struct msghdr msg;
 
   // Set timeout
   struct timeval tv;
   tv.tv_sec = 1;
   tv.tv_usec =  0;
-  int res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+  res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   INVARIANT(res >= 0);
 
   running = true;
@@ -268,8 +264,7 @@ void run_server(xindex_t *table) {
 	//recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 	
 	// Raw socket
-	init_msghdr(&msg, &raw_socket_address, totalbuf, MAX_BUFSIZE);
-	recv_size = recvmsg(sockfd, &msg, 0);
+	recv_size = recvfrom(sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 
 	if (recv_size == -1) {
 		if (errno == EWOULDBLOCK || errno == EINTR) {
@@ -307,8 +302,7 @@ void run_server(xindex_t *table) {
 					// Raw socket
 					size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), dst_port, src_port, buf, rsp_size);
 					COUT_VAR(std::string(src_ipaddr));
-					init_msghdr(&msg, &raw_socket_address, totalbuf, totalsize);
-					res = sendmsg(sockfd, &msg, 0);
+					res = sendto(sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr));
 					break;
 				}
 			case packet_type_t::PUT_REQ:
