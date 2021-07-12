@@ -237,9 +237,9 @@ void run_server(xindex_t *table) {
   if (setsockopt(sockfd, SOL_SOCKET, SO_PRIORITY, &optval, sizeof(optval)) < 0) {
 	perror("setsockopt");
   }
-  int ifidx = lookup_if(sockfd, dst_ifname, dst_macaddr);
+  int ifidx = lookup_if(sockfd, dst_ifname, NULL);
   struct sockaddr_ll raw_socket_address;
-  init_raw_sockaddr(&raw_socket_address, ifidx, NULL);
+  init_raw_sockaddr(&raw_socket_address, ifidx, dst_macaddr);
   int res = bind(sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
   char totalbuf[MAX_BUFSIZE]; // headers + payload
   uint8_t src_macaddr[6];

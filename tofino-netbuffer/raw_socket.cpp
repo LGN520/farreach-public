@@ -169,7 +169,7 @@ int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short cli
 		struct iphdr *iph = (struct iphdr *) (totalbuf + parsed_size);
 		if (iph->protocol == IPPROTO_UDP) {
 			struct udphdr *udph = (struct udphdr *) (totalbuf + parsed_size);
-			if (udph->source == server_port && udph->dest == client_port) {
+			if (udph->source == htons(server_port) && udph->dest == htons(client_port)) {
 				int payload_size = totalsize - parsed_size;
 				memcpy(buf, totalbuf + parsed_size, payload_size);
 				return payload_size;
@@ -191,7 +191,7 @@ int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short ser
 		struct iphdr *iph = (struct iphdr *) (totalbuf + parsed_size);
 		if (iph->protocol == IPPROTO_UDP) {
 			struct udphdr *udph = (struct udphdr *) (totalbuf + parsed_size);
-			if (udph->dest == server_port) {
+			if (udph->dest == htons(server_port)) {
 				int payload_size = totalsize - parsed_size;
 				memcpy(buf, totalbuf + parsed_size, payload_size);
 				memcpy(src_mac, eh->ether_shost, 6);
