@@ -18,3 +18,5 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 		std::string src_ipaddr, std::string dst_ipaddr, short src_port, 
 		short dst_port, char *payload, uint32_t payload_size);
 void init_msghdr(struct msghdr *msg, struct sockaddr_ll *socket_address, char *buf, size_t bufsize);
+void recv_buf(char *buf, uint32_t maxsize, struct msghdr *msg, uint32_t recvsize);
+int32_t recv_payload(char *& payloadbuf, char *totalbuf, uint32_t totalsize, short dst_port);

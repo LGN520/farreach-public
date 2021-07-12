@@ -8,7 +8,7 @@
 
 #define OP_PORT 1111
 
-// NOTE: Big Endian of type (not use threadid by now; big endian of key does not make sense)
+// NOTE: convert type into Big Endian (not use threadid by now; big endian of key does not make sense)
 #define GETREQ_TYPE 0x00000000
 #define PUTREQ_TYPE 0x01000000
 #define DELREQ_TYPE 0x02000000
@@ -496,16 +496,31 @@ table put_valhi_tbl {
 
 /* Ingress Processing */
 
+action save_dstinfo() {
+	//modify_field(meta.tmp_macaddr, ethernet_hdr.dstAddr);
+	modify_field(meta.tmp_ipaddr, ipv4_hdr.dstAddr);
+	modify_field(meta.tmp_port, udp_hdr.dstPort);
+}
+
+table save_dstinfo_tbl {
+	actions {
+		save_dstinfo;
+	}
+	default_action: save_dstinfo();
+}
+
 action sendback_getres() {
 	modify_field(ethernet_hdr.srcAddr, ethernet_hdr.dstAddr);
 
 	// Swap ip address
 	modify_field(ipv4_hdr.dstAddr, ipv4_hdr.srcAddr);
 	modify_field(ipv4_hdr.srcAddr, meta.tmp_ipaddr);
+	add_to_field(ipv4_hdr.totalLen, 8); // ip len is big endian
 	
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
 	modify_field(udp_hdr.srcPort, meta.tmp_port);
+	modify_field(udp_hdr.hdrLength, 0x2000); // Convert 0x0020 into big endian
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 
@@ -522,29 +537,18 @@ table sendback_getres_tbl {
 	default_action: sendback_getres();
 }
 
-action save_dstinfo() {
-	//modify_field(meta.tmp_macaddr, ethernet_hdr.dstAddr);
-	modify_field(meta.tmp_ipaddr, ipv4_hdr.dstAddr);
-	modify_field(meta.tmp_port, udp_hdr.dstPort);
-}
-
-table save_dstinfo_tbl {
-	actions {
-		save_dstinfo;
-	}
-	default_action: save_dstinfo();
-}
-
 action sendback_putres() {
 	modify_field(ethernet_hdr.srcAddr, ethernet_hdr.dstAddr);
 
 	// Swap ip address
 	modify_field(ipv4_hdr.dstAddr, ipv4_hdr.srcAddr);
 	modify_field(ipv4_hdr.srcAddr, meta.tmp_ipaddr);
+	add_to_field(ipv4_hdr.totalLen, 1); // ip len is big endian
 	
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
 	modify_field(udp_hdr.srcPort, meta.tmp_port);
+	modify_field(udp_hdr.hdrLength, 0x1900); // Convert 0x0019 into big endian
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 

@@ -113,6 +113,8 @@ The same as above
 	+ Add KV component (key_lo/hi, value_lo/hi, and valid bit)
 		* Support get
 		* Support put (fix the bug with 3 days)
+- Modify basic.p4
+	+ Update IP length and UDP length when sending back packet from switch to client
 - TODO: (1) Update IP length and UDP length in tofino (2) [MAYBE] use raw socket for recvfrom in client and recvfrom in server
 
 

@@ -303,11 +303,11 @@ void *run_fg(void *param) {
   int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
   struct sockaddr_in remote_sockaddr;
+  uint32_t sockaddr_len = sizeof(struct sockaddr);
   memset(&remote_sockaddr, 0, sizeof(struct sockaddr_in));
   remote_sockaddr.sin_family = AF_INET;
   INVARIANT(inet_pton(AF_INET, server_addr.c_str(), &remote_sockaddr.sin_addr) > 0);
   remote_sockaddr.sin_port = htons(server_port);
-  char buf[MAX_BUFSIZE]; // payload
   // Set timeout
   /*struct timeval tv;
   tv.tv_sec = 1;
@@ -332,12 +332,12 @@ void *run_fg(void *param) {
   short src_port = src_port_start++;
 
   // exsiting keys fall within range [delete_i, insert_i)
+  char buf[MAX_BUFSIZE]; // payload
   ready_threads++;
   int req_size = 0;
   int res = 0;
   int recv_size = 0;
   val_t dummy_value = 1234;
-  uint32_t sockaddr_len = sizeof(struct sockaddr);
   COUT_THIS("[client " << thread_id << "] Ready.");
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
 
@@ -353,6 +353,7 @@ void *run_fg(void *param) {
 	  DEBUG_THIS("[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key);
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
+	  // UDP socket
 	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  
 	  // Raw socket
@@ -362,9 +363,21 @@ void *run_fg(void *param) {
 	  res = sendmsg(raw_sockfd, &msg, 0);
 
 	  INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  INVARIANT(recv_size != -1);
+
+	  // UDP socket
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  //INVARIANT(recv_size != -1);
+	  
+	  // Raw socket
+	  while (true) {
+	  	recv_size = recvmsg(raw_sockfd, &msg, 0);
+		COUT_VAR(recv_size);
+	  	INVARIANT(recv_size != -1);
+	  	//recv_buf(totalbuf, MAX_BUFSIZE, msg, recv_size);
+		recv_size = recv_payload(buf, totalbuf, recv_size, dst_port);
+		if (recv_size != -1) break;
+	  }
+
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
 	  get_response_t rsp(buf, recv_size);
