@@ -115,7 +115,8 @@ The same as above
 		* Support put (fix the bug with 3 days)
 - Modify basic.p4
 	+ Update IP length and UDP length when sending back packet from switch to client
-- TODO: (1) Update IP length and UDP length in tofino (2) [MAYBE] use raw socket for recvfrom in client and recvfrom in server
+- Modify client.cpp, server,cpp, raw_socket.cpp
+	+ Use raw socket for sendto and recvfrom in client and server
 
 
 ### Run
