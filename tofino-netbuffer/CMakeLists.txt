@@ -65,5 +65,5 @@ target_link_libraries(client PRIVATE -lpthread raw_socket)
 
 # server
 add_executable(server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
-target_link_libraries(server PRIVATE -lpthread mkl_rt)
+target_link_libraries(server PRIVATE -lpthread mkl_rt raw_socket)
 target_compile_definitions(server PRIVATE NDEBUGGING)

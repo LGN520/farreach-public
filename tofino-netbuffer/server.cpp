@@ -19,6 +19,7 @@
 #include "xindex.h"
 #include "xindex_impl.h"
 #include "packet_format_impl.h"
+#include "raw_socket.h"
 
 class Key;
 
@@ -43,6 +44,16 @@ void kill(int signum);
 size_t fg_n = 1;
 size_t bg_n = 1;
 int server_port = 1111;
+
+// Raw socket
+//std::string src_ifname = "ens3f0";
+std::string dst_ifname = "ens3f1";
+//uint8_t src_macaddr[8] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
+uint8_t dst_macaddr[8] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
+//std::string src_ipaddr = "10.0.0.31";
+std::string dst_ipaddr = "10.0.0.32";
+//short src_port_start = 8888;
+short dst_port = 1111;
 
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
@@ -208,8 +219,8 @@ void load() {
 }
 
 void run_server(xindex_t *table) {
-  // prepare socket
-  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  // prepare socket (UDP socket)
+  /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
   struct sockaddr_in server_sockaddr;
   memset(&server_sockaddr, 0, sizeof(struct sockaddr_in));
@@ -217,23 +228,49 @@ void run_server(xindex_t *table) {
   server_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
   server_sockaddr.sin_port = htons(server_port);
   int res = bind(sockfd, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
-  INVARIANT(res != -1);
+  INVARIANT(res != -1);*/
+
+  // prepare socket (raw socket)
+  int sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
+  INVARIANT(sockfd != -1);
+  int optval = 7; // valid values are in the range [1,7]  // 1- low priority, 7 - high priority  
+  if (setsockopt(sockfd, SOL_SOCKET, SO_PRIORITY, &optval, sizeof(optval)) < 0) {
+	perror("setsockopt");
+  }
+  struct ifreq ifidx;
+  init_ifidx(&ifidx, dst_ifname);
+  if (ioctl(sockfd, SIOCGIFINDEX, &ifidx) < 0) {
+  	perror("SIOCGIFINDEX");
+  }
+  struct sockaddr_ll raw_socket_address;
+  init_raw_sockaddr(&raw_socket_address, ifidx, dst_macaddr);
+  char totalbuf[MAX_BUFSIZE]; // headers + payload
+  uint8_t src_macaddr[6];
+  char src_ipaddr[5] = {'\0', '\0', '\0', '\0', '\0'};
+  short src_port;
+  struct msghdr msg;
 
   // Set timeout
   struct timeval tv;
   tv.tv_sec = 1;
   tv.tv_usec =  0;
-  res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+  int res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   INVARIANT(res >= 0);
 
   running = true;
 
-  char buf[MAX_BUFSIZE];
+  char buf[MAX_BUFSIZE]; // payload
   int recv_size = 0;
   int rsp_size = 0;
   uint32_t sockaddr_len = sizeof(struct sockaddr);
   while (!killed) {
-	recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
+	// UDP socket
+	//recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
+	
+	// Raw socket
+	init_msghdr(&msg, &raw_socket_address, totalbuf, MAX_BUFSIZE);
+	recv_size = recvmsg(sockfd, &msg, 0);
+
 	if (recv_size == -1) {
 		if (errno == EWOULDBLOCK || errno == EINTR) {
 			continue; // timeout or interrupted system call
@@ -244,6 +281,10 @@ void run_server(xindex_t *table) {
 		}
 	}
 	else {
+		// Raw socket
+		recv_size = server_recv_payload(buf, totalbuf, recv_size, dst_port, src_macaddr, src_ipaddr, &src_port);
+		if (recv_size == -1) continue;
+
 		//COUT_THIS("[server] Receive packet!")
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
 		switch (pkt_type) {
@@ -259,7 +300,15 @@ void run_server(xindex_t *table) {
 					//COUT_THIS("[server] val = " << tmp_val)
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+
+					// UDP socket
+					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					
+					// Raw socket
+					size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), dst_port, src_port, buf, rsp_size);
+					COUT_VAR(std::string(src_ipaddr));
+					init_msghdr(&msg, &raw_socket_address, totalbuf, totalsize);
+					res = sendmsg(sockfd, &msg, 0);
 					break;
 				}
 			case packet_type_t::PUT_REQ:
@@ -270,7 +319,7 @@ void run_server(xindex_t *table) {
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					break;
 				}
 			case packet_type_t::DEL_REQ:
@@ -281,7 +330,7 @@ void run_server(xindex_t *table) {
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					break;
 				}
 			case packet_type_t::SCAN_REQ:
@@ -297,7 +346,7 @@ void run_server(xindex_t *table) {
 					}*/
 					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, results);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					break;
 				}
 			default:

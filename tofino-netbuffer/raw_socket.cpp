@@ -116,42 +116,65 @@ void init_msghdr(struct msghdr *msg, struct sockaddr_ll *socket_address, char *b
 	msg->msg_namelen = sizeof(struct sockaddr_ll);
 }
 
-void recv_buf(char *buf, uint32_t maxsize, struct msghdr *msg, uint32_t recvsize)
+/*void recv_buf(char *buf, uint32_t maxsize, struct msghdr *msg, uint32_t recvsize)
 {
 	assert(recvsize <= maxsize);
 	memset(buf, 0, maxsize);
 	uint32_t remain_size = recvsize;
 	for (uint32_t iovidx = 0; iovidx < msg->msg_iovlen; iovidx++) {
-		struct iovec *cur_content = msg->msg_iov[iovidx];
+		struct iovec *cur_content = &msg->msg_iov[iovidx];
 		char *cur_buf = (char *)cur_content->iov_base;
 		uint32_t cur_bufsize = cur_content->iov_len;
 		if (cur_bufsize < remain_size) {
-			memcpy(buf + recvsize - remain_size, cur_bf, cur_bufsize);
+			memcpy(buf + recvsize - remain_size, cur_buf, cur_bufsize);
 			remain_size -= cur_bufsize;
 		}
 		else {
-			memcpy(buf + recvsize - remain_size, cur_bf, remain_size);
+			memcpy(buf + recvsize - remain_size, cur_buf, remain_size);
 		}
 	}
-}
+}*/
 
-int32_t recv_payload(char *& payloadbuf, char *totalbuf, uint32_t totalsize, short dst_port) 
+int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short client_port, short server_port) 
 {
-	if (totalsize < (sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr))) {
+	uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr);
+	if (totalsize < parsed_size) {
 		return -1;
 	}
-	uint32_t parsed_size = 0;
 	struct ether_header *eh = (struct ether_header *) totalbuf;
 	if (eh->ether_type == htons(ETH_P_IP)) {
-		parsed_size += sizeof(struct ether_header);
 		struct iphdr *iph = (struct iphdr *) (totalbuf + parsed_size);
 		if (iph->protocol == IPPROTO_UDP) {
-			parsed_size += sizeof(struct iphdr);
 			struct udphdr *udph = (struct udphdr *) (totalbuf + parsed_size);
-			if (udph->source == htons(dst_port)) {
-				parsed_size += sizeof(struct udphdr);
-				payloadbuf = totalbuf + parsed_size;
-				return int32_t(totalsize - parsed_size);
+			if (udph->source == server_port && udph->dest == client_port) {
+				int payload_size = totalsize - parsed_size;
+				memcpy(buf, totalbuf + parsed_size, payload_size);
+				return payload_size;
+			}
+		}
+	}
+	return -1;
+}
+
+int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short server_port, 
+		uint8_t *src_mac, char *src_ip, short *src_port)
+{
+	uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr);
+	if (totalsize < parsed_size) {
+		return -1;
+	}
+	struct ether_header *eh = (struct ether_header *) totalbuf;
+	if (eh->ether_type == htons(ETH_P_IP)) {
+		struct iphdr *iph = (struct iphdr *) (totalbuf + parsed_size);
+		if (iph->protocol == IPPROTO_UDP) {
+			struct udphdr *udph = (struct udphdr *) (totalbuf + parsed_size);
+			if (udph->dest == server_port) {
+				int payload_size = totalsize - parsed_size;
+				memcpy(buf, totalbuf + parsed_size, payload_size);
+				memcpy(src_mac, eh->ether_shost, 6);
+				inet_ntop(AF_INET, (struct in_addr *)&iph->saddr, src_ip, INET_ADDRSTRLEN);
+				*src_port = udph->source;
+				return payload_size;
 			}
 		}
 	}

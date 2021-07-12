@@ -51,7 +51,7 @@ int server_port = 1111;
 
 // Raw socket
 std::string src_ifname = "ens3f0";
-std::string dst_ifname = "ens3f1";
+//std::string dst_ifname = "ens3f1";
 uint8_t src_macaddr[8] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
 uint8_t dst_macaddr[8] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
 std::string src_ipaddr = "10.0.0.31";
@@ -329,7 +329,7 @@ void *run_fg(void *param) {
   struct sockaddr_ll raw_socket_address;
   init_raw_sockaddr(&raw_socket_address, ifidx, src_macaddr);
   char totalbuf[MAX_BUFSIZE]; // headers + payload
-  short src_port = src_port_start++;
+  short src_port = src_port_start + thread_id;
 
   // exsiting keys fall within range [delete_i, insert_i)
   char buf[MAX_BUFSIZE]; // payload
@@ -374,7 +374,7 @@ void *run_fg(void *param) {
 		COUT_VAR(recv_size);
 	  	INVARIANT(recv_size != -1);
 	  	//recv_buf(totalbuf, MAX_BUFSIZE, msg, recv_size);
-		recv_size = recv_payload(buf, totalbuf, recv_size, dst_port);
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
 		if (recv_size != -1) break;
 	  }
 
