@@ -188,9 +188,9 @@ int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short ser
 	}
 	struct ether_header *eh = (struct ether_header *) totalbuf;
 	if (eh->ether_type == htons(ETH_P_IP)) {
-		struct iphdr *iph = (struct iphdr *) (totalbuf + parsed_size);
+		struct iphdr *iph = (struct iphdr *) (totalbuf + sizeof(ether_header));
 		if (iph->protocol == IPPROTO_UDP) {
-			struct udphdr *udph = (struct udphdr *) (totalbuf + parsed_size);
+			struct udphdr *udph = (struct udphdr *) (totalbuf + sizeof(ether_header) + sizeof(iphdr));
 			if (udph->dest == htons(server_port)) {
 				int payload_size = totalsize - parsed_size;
 				memcpy(buf, totalbuf + parsed_size, payload_size);
