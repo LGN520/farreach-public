@@ -328,7 +328,6 @@ void *run_fg(void *param) {
   init_raw_sockaddr(&raw_socket_address, ifidx, src_macaddr); // set target interface for sendto
 
   int res = bind(raw_sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
-  std::cout << errno << std::endl;
   INVARIANT(res != -1);
   char totalbuf[MAX_BUFSIZE]; // headers + payload
   short src_port = src_port_start + thread_id;
@@ -370,7 +369,6 @@ void *run_fg(void *param) {
 	  // Raw socket
 	  while (true) {
 		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
-		COUT_VAR(recv_size);
 	  	INVARIANT(recv_size != -1);
 		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
 		if (recv_size != -1) break;

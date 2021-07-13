@@ -11,7 +11,8 @@
 #include <arpa/inet.h> // htons htonl
 #include <iostream>
 
-unsigned short csum16(unsigned short *buf, int nwords, bool isodd = false);
+uint16_t checksum (uint16_t *addr, int len);
+uint16_t udp4_checksum (struct iphdr* iph, struct udphdr* udph, char *payload, int payloadlen);
 int lookup_if(int sockfd, std::string ifname, uint8_t *src_macaddr);
 void init_raw_sockaddr(struct sockaddr_ll *socket_address, int ifidx, uint8_t *macaddr);
 size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_macaddr, 
@@ -22,3 +23,4 @@ void init_msghdr(struct msghdr *msg, struct sockaddr_ll *socket_address, char *b
 int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short client_port, short server_port);
 int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short server_port, 
 		uint8_t *src_mac, char *src_ip, short *src_port);
+void dump_buf(char *buf, uint32_t bufsize);

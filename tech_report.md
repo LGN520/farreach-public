@@ -117,6 +117,9 @@ The same as above
 	+ Update IP length and UDP length when sending back packet from switch to client
 - Modify client.cpp, server,cpp, raw_socket.cpp
 	+ Use raw socket for sendto and recvfrom in client and server
+- Update raw_socket.cpp
+	+ Update IP checksum alg and UDP checksum alg
+- TODO: (1) extra two bytes after IP (check basic.p4) (2) ip checksum error (raw_socket.cpp)
 
 
 ### Run

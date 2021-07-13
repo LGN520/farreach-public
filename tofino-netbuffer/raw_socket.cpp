@@ -1,20 +1,101 @@
 #include "raw_socket.h"
 
-unsigned short csum16(unsigned short *buf, int nwords, bool isodd)
-{
-    unsigned long sum;
-    for(sum=0; nwords>0; nwords--)
-        sum += *buf++;
-	if (isodd) {
-		unsigned short tail = 0;
-		tail = tail | (*(uint8_t *)buf);
-		sum += tail;
+uint16_t checksum (uint16_t *addr, int len) {
+	int count = len;
+	register uint32_t sum = 0;
+	uint16_t answer = 0;
+
+	// Sum up 2-byte values until none or only one byte left.
+	while (count > 1) {
+	sum += *(addr++);
+	count -= 2;
 	}
 
-    sum = (sum >> 16) + (sum &0xffff);
-    sum += (sum >> 16);
+	// Add left-over byte, if any.
+	if (count > 0) {
+	sum += *(uint8_t *) addr;
+	}
 
-    return (unsigned short)(~sum);
+	// Fold 32-bit sum into 16 bits; we lose information by doing this,
+	// increasing the chances of a collision.
+	// sum = (lower 16 bits) + (upper 16 bits shifted right 16 bits)
+	while (sum >> 16) {
+	sum = (sum & 0xffff) + (sum >> 16);
+	}
+
+	// Checksum is one's compliment of sum.
+	answer = ~sum;
+
+	return (answer);
+}
+
+uint16_t udp4_checksum (struct iphdr* iph, struct udphdr* udph, char *payload, int payloadlen) {
+	char buf[1024];
+	char *ptr;
+	int chksumlen = 0;
+	int i;
+
+	ptr = &buf[0];  // ptr points to beginning of buffer buf
+
+	// Copy source IP address into buf (32 bits)
+	memcpy (ptr, &iph->saddr, sizeof (struct in_addr));
+	ptr += sizeof (struct in_addr);
+	chksumlen += sizeof (struct in_addr);
+
+	// Copy destination IP address into buf (32 bits)
+	memcpy (ptr, &iph->daddr, sizeof (struct in_addr));
+	ptr += sizeof (struct in_addr);
+	chksumlen += sizeof (struct in_addr);
+
+	// Copy zero field to buf (8 bits)
+	*ptr = 0; 
+	ptr++;
+	chksumlen += 1;
+
+	// Copy transport layer protocol to buf (8 bits)
+	memcpy (ptr, &iph->protocol, sizeof (iph->protocol));
+	ptr += sizeof (iph->protocol);
+	chksumlen += sizeof (iph->protocol);
+
+	// Copy UDP length to buf (16 bits)
+	memcpy (ptr, &udph->len, sizeof (udph->len));
+	ptr += sizeof (udph->len);
+	chksumlen += sizeof (udph->len);
+
+	// Copy UDP source port to buf (16 bits)
+	memcpy (ptr, &udph->source, sizeof (udph->source));
+	ptr += sizeof (udph->source);
+	chksumlen += sizeof (udph->source);
+
+	// Copy UDP destination port to buf (16 bits)
+	memcpy (ptr, &udph->dest, sizeof (udph->dest));
+	ptr += sizeof (udph->dest);
+	chksumlen += sizeof (udph->dest);
+
+	// Copy UDP length again to buf (16 bits)
+	memcpy (ptr, &udph->len, sizeof (udph->len));
+	ptr += sizeof (udph->len);
+	chksumlen += sizeof (udph->len);
+
+	// Copy UDP checksum to buf (16 bits)
+	// Zero, since we don't know it yet
+	*ptr = 0; ptr++;
+	*ptr = 0; ptr++;
+	chksumlen += 2;
+
+	// Copy payload to buf
+	memcpy (ptr, payload, payloadlen);
+	ptr += payloadlen;
+	chksumlen += payloadlen;
+
+	// Pad to the next 16-bit boundary
+	for (i=0; i<payloadlen%2; i++, ptr++) {
+		*ptr = 0;
+		ptr++;
+		chksumlen++;
+	}
+
+	return checksum ((uint16_t *) buf, chksumlen);
 }
 
 int lookup_if(int sockfd, std::string ifname, uint8_t *src_macaddr)
@@ -104,12 +185,15 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 	iph->tot_len = htons(tx_len - sizeof(struct ether_header));
 
 	// Set IP checksum
-	iph->check = csum16((unsigned short *)(buf + sizeof(ether_header)), sizeof(iphdr)/2);
+	iph->check = 0;
+	iph->check = checksum((uint16_t *)iph, sizeof(iphdr));
+	std::cout << int(sizeof(iphdr)) << std::endl;
 	size_t remain_bytes = tx_len - sizeof(ether_header) - sizeof(iphdr);
 	std::cout << "udp:" << udph->len << " ip:" << ntohs(iph->tot_len) << " pkt:" << tx_len << " remain:" << remain_bytes << std::endl;
-	bool isodd = (remain_bytes % 2) == 1;
-	udph->check = csum16((unsigned short *)(buf + sizeof(ether_header) + sizeof(iphdr)), remain_bytes/2, isodd);
+	udph->check = udp4_checksum(iph, udph, payload, payload_size);
 
+	std::cout <<"ip:" << int(iph->protocol) << std::endl;
+	dump_buf(buf, tx_len);
 	return tx_len;
 }
 
@@ -160,15 +244,20 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 
 int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short client_port, short server_port) 
 {
+	dump_buf(totalbuf, totalsize);
 	uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr);
+	std::cout << "recvsize:" << totalsize << " parsed_size:" << parsed_size << std::endl;
 	if (totalsize < parsed_size) {
 		return -1;
 	}
 	struct ether_header *eh = (struct ether_header *) totalbuf;
+	std::cout << "eth:" << int(eh->ether_type) << " " << int(htons(ETH_P_IP)) << std::endl;
 	if (eh->ether_type == htons(ETH_P_IP)) {
-		struct iphdr *iph = (struct iphdr *) (totalbuf + parsed_size);
+		struct iphdr *iph = (struct iphdr *) (totalbuf + sizeof(struct ether_header));
+		std::cout << "ip:" << int(iph->protocol) << " " << int(IPPROTO_UDP) << std::endl;
 		if (iph->protocol == IPPROTO_UDP) {
-			struct udphdr *udph = (struct udphdr *) (totalbuf + parsed_size);
+			struct udphdr *udph = (struct udphdr *) (totalbuf + sizeof(struct ether_header) + sizeof(struct iphdr));
+			std::cout << "iplen:" << ntohs(iph->tot_len) << " udplen:" << udph->len << std::endl;
 			if (udph->source == htons(server_port) && udph->dest == htons(client_port)) {
 				int payload_size = totalsize - parsed_size;
 				memcpy(buf, totalbuf + parsed_size, payload_size);
@@ -202,4 +291,12 @@ int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short ser
 		}
 	}
 	return -1;
+}
+
+void dump_buf(char *buf, uint32_t bufsize)
+{
+	for (uint32_t byteidx = 0; byteidx < bufsize; byteidx++) {
+		printf("0x%02x ", uint8_t(buf[byteidx]));
+	}
+	std::cout << std::endl;
 }
