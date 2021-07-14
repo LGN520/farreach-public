@@ -301,14 +301,14 @@ void *run_fg(void *param) {
   }
 
   // Prepare socket (UDP socket)
-  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
   struct sockaddr_in remote_sockaddr;
   uint32_t sockaddr_len = sizeof(struct sockaddr);
   memset(&remote_sockaddr, 0, sizeof(struct sockaddr_in));
   remote_sockaddr.sin_family = AF_INET;
   INVARIANT(inet_pton(AF_INET, server_addr.c_str(), &remote_sockaddr.sin_addr) > 0);
-  remote_sockaddr.sin_port = htons(server_port);
+  remote_sockaddr.sin_port = htons(server_port);*/
   // Set timeout
   /*struct timeval tv;
   tv.tv_sec = 1;
@@ -355,18 +355,14 @@ void *run_fg(void *param) {
 
 	  // UDP socket
 	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  
-	  // Raw socket
-	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
-	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
-
-	  INVARIANT(res != -1);
-
-	  // UDP socket
+	  //INVARIANT(res != -1);
 	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  //INVARIANT(recv_size != -1);
 	  
 	  // Raw socket
+	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
+	  INVARIANT(res != -1);
 	  while (true) {
 		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 	  	INVARIANT(recv_size != -1);
@@ -382,16 +378,29 @@ void *run_fg(void *param) {
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio) {  // update
-    //} else if (tmprun == 1) {  // update
+    //} else if (d <= read_ratio + update_ratio) {  // update
+    } else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
 	  DEBUG_THIS("[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
-	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+
+	  // UDP socket
+	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  //INVARIANT(res != -1);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  //INVARIANT(recv_size != -1);
+	  
+	  // Raw socket
+	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  INVARIANT(recv_size != -1);
+	  while (true) {
+		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
+	  	INVARIANT(recv_size != -1);
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		if (recv_size != -1) break;
+	  }
+
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
 	  put_response_t rsp(buf, recv_size);
@@ -400,16 +409,29 @@ void *run_fg(void *param) {
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
-    //} else if (tmprun == 2) {  // insert
+    //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
+    } else if (tmprun == 2) {  // insert
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
 	  DEBUG_THIS("[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
-	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+
+	  // UDP socket
+	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  //INVARIANT(res != -1);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  //INVARIANT(recv_size != -1);
+	  
+	  // Raw socket
+	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  INVARIANT(recv_size != -1);
+	  while (true) {
+		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
+	  	INVARIANT(recv_size != -1);
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		if (recv_size != -1) break;
+	  }
+
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
 	  put_response_t rsp(buf, recv_size);
@@ -418,16 +440,29 @@ void *run_fg(void *param) {
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
-    //} else if (tmprun == 3) {  // remove
+    //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
+    } else if (tmprun == 3) {  // remove
 	  del_request_t req(thread_id, op_keys[delete_i]);
 	  DEBUG_THIS("[client " << thread_id << "] key = " << op_keys[delete_i].key);
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
-	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+
+	  // UDP socket
+	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  //INVARIANT(res != -1);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  //INVARIANT(recv_size != -1);
+	  
+	  // Raw socket
+	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  INVARIANT(recv_size != -1);
+	  while (true) {
+		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
+	  	INVARIANT(recv_size != -1);
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		if (recv_size != -1) break;
+	  }
+
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::DEL_RES);
 	  del_response_t rsp(buf, recv_size);
@@ -440,11 +475,24 @@ void *run_fg(void *param) {
 	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], 10);
 	  DEBUG_THIS("[client " << thread_id << "] key = " << req.key().key);
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
-	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+
+	  // UDP socket
+	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  //INVARIANT(res != -1);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  //INVARIANT(recv_size != -1);
+	  
+	  // Raw socket
+	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  INVARIANT(recv_size != -1);
+	  while (true) {
+		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
+	  	INVARIANT(recv_size != -1);
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		if (recv_size != -1) break;
+	  }
+
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::SCAN_RES);
 	  scan_response_t rsp(buf, recv_size);
@@ -462,6 +510,7 @@ void *run_fg(void *param) {
 	break; // TMPTMP
   }
 
-  close(sockfd);
+  //close(sockfd);
+  close(raw_sockfd);
   pthread_exit(nullptr);
 }

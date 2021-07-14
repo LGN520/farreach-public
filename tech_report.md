@@ -123,9 +123,11 @@ The same as above
 	+ Fix UDP length error (udp length must be in big endian)
 - Update prepare.cpp
 	+ To make sure the consistency of existing keys and non-existing keys
-- Test correctness
+- Test correctness under one socket in server
 	+ Pass get
-
+- TODO: create the same number of sockets in server to enable concurrency
+- TODO: add CBF for existence index
+- TODO: add backup KV for scan
 
 ### Run
 

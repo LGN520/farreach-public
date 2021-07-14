@@ -515,7 +515,7 @@ action sendback_getres() {
 	// Swap ip address
 	modify_field(ipv4_hdr.dstAddr, ipv4_hdr.srcAddr);
 	modify_field(ipv4_hdr.srcAddr, meta.tmp_ipaddr);
-	add_to_field(ipv4_hdr.totalLen, 8); // ip len is big endian
+	add_to_field(ipv4_hdr.totalLen, 8); // Big endian: add an 8B value
 	
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
@@ -543,7 +543,7 @@ action sendback_putres() {
 	// Swap ip address
 	modify_field(ipv4_hdr.dstAddr, ipv4_hdr.srcAddr);
 	modify_field(ipv4_hdr.srcAddr, meta.tmp_ipaddr);
-	add_to_field(ipv4_hdr.totalLen, 1); // ip len is big endian
+	modify_field(ipv4_hdr.totalLen, 45); // Big endian: 20B IP + 8B UDP + 16B OP + 1B status
 	
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
