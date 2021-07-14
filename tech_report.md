@@ -125,9 +125,13 @@ The same as above
 	+ To make sure the consistency of existing keys and non-existing keys
 - Test correctness under one socket in server
 	+ Get pass
-	+ Put pass (without eviction)
+		* KV hit pass
+		* KV miss pass
+	+ Put pass
+		* Without eviction pass
 	+ TODO: Put pass (with eviction)
 		* Need to clone a packet: how to distinguish cloned packet?
+- TODO: Use MAT to replace complex if-else
 - TODO: create the same number of sockets in server to enable concurrency
 - TODO: add CBF for existence index
 - TODO: add backup KV for scan
