@@ -81,8 +81,7 @@ header_type getres_t {
 
 header_type putres_t {
 	fields {
-		stat: 1;
-		pad: 7;
+		stat: 8;
 	}
 }
 
@@ -520,7 +519,7 @@ action sendback_getres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
 	modify_field(udp_hdr.srcPort, meta.tmp_port);
-	modify_field(udp_hdr.hdrLength, 0x2000); // Convert 0x0020 into big endian
+	modify_field(udp_hdr.hdrLength, 0x20); 
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 
@@ -548,7 +547,7 @@ action sendback_putres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
 	modify_field(udp_hdr.srcPort, meta.tmp_port);
-	modify_field(udp_hdr.hdrLength, 0x1900); // Convert 0x0019 into big endian
+	modify_field(udp_hdr.hdrLength, 0x19);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 

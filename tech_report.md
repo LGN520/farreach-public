@@ -124,7 +124,8 @@ The same as above
 - Update prepare.cpp
 	+ To make sure the consistency of existing keys and non-existing keys
 - Test correctness under one socket in server
-	+ Pass get
+	+ Get pass
+	+ Put pass (without eviction)
 - TODO: create the same number of sockets in server to enable concurrency
 - TODO: add CBF for existence index
 - TODO: add backup KV for scan
@@ -187,3 +188,5 @@ The same as above
 	+ Errno 22 of bind/sendto: wrong parameter
 		* NOTE: sizeof(struct sockaddr) != sizeof(struct sockaddr_ll), you must give precise length
 	+ Sth adds two extra bytes (both of zero) at the end of packet: unkown reason
+	+ Invalid status of 128
+		* Small/big endian is based on byte not bit
