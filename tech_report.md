@@ -126,6 +126,8 @@ The same as above
 - Test correctness under one socket in server
 	+ Get pass
 	+ Put pass (without eviction)
+	+ TODO: Put pass (with eviction)
+		* Need to clone a packet: how to distinguish cloned packet?
 - TODO: create the same number of sockets in server to enable concurrency
 - TODO: add CBF for existence index
 - TODO: add backup KV for scan
@@ -190,3 +192,6 @@ The same as above
 	+ Sth adds two extra bytes (both of zero) at the end of packet: unkown reason
 	+ Invalid status of 128
 		* Small/big endian is based on byte not bit
+	+ If key 0 is evicted by key 1, get key 0 will not arrive storage server
+		* Reason: if you do not assign value to condition_hi, it could be either 0 or 1
+		* NOTE: predicate is 4-bit instead of 2-bit, which can only be 1/2/4/8

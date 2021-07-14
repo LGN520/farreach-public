@@ -45,23 +45,6 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 #   ex: ["1/0", "1/1"]
 #
 
-import socket
-import struct
-
-ptf_port = 3333
-
-bf_cnt = 0
-bf_idxes = []
-
-def extract_bloomfilter(msg):
-    global bf_cnt, bf_idxes
-    msglen = len(msg)
-    bf_cnt, remain = struct.unpack("I{}s".format(msglen-4), msg)
-    for i in range(bf_cnt):
-        bf_idx, remain = struct.unpack("I{}s".format(msglen-4), msg)
-        bf_idxes.append(bf_idx)
-    return remain
-
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -84,15 +67,25 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
     def runTest(self):
-        sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-        sockfd.bind(("", ptf_port))
-        msg = sockfd.recvfrom(1024)
-        msg = extract_bloomfilter(msg)
-
-        global bf_cnt, bf_idxes
-        res = self.client.register_reset_all_bloomfilter_reg(self.sess_hdl, self.dev_tgt)
-        for i in bf_cnt:
-            res = self.client.register_write_bloomfilter_reg(self.sess_hdl, self.dev_tgt, bf_idxes[i], 1)
+        flags = netbuffer_register_flags_t(read_hw_sync=True)
+        keylo = self.client.register_read_keylo_reg(self.sess_hdl, self.dev_tgt, 0, flags)
+        keyhi = self.client.register_read_keyhi_reg(self.sess_hdl, self.dev_tgt, 0, flags)
+        vallo = self.client.register_read_vallo_reg(self.sess_hdl, self.dev_tgt, 0, flags)
+        valhi = self.client.register_read_valhi_reg(self.sess_hdl, self.dev_tgt, 0, flags)
+        valid = self.client.register_read_valid_reg(self.sess_hdl, self.dev_tgt, 0, flags)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
+
+        if keylo[1] < 0:
+            keylo[1] += 2**32
+        print "keylo: {}".format(hex(keylo[1]))
+        if keyhi[1] < 0:
+            keyhi[1] += 2**32
+        print "keyhi: {}".format(hex(keyhi[1]))
+        if vallo[1] < 0:
+            vallo[1] += 2**32
+        print "vallo: {}".format(hex(vallo[1]))
+        if valhi[1] < 0:
+            valhi[1] += 2**32
+        print "valhi: {}".format(hex(valhi[1]))
+        print "valid: {}".format(valid[1])

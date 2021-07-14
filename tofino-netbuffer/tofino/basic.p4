@@ -18,7 +18,7 @@
 #define DELRES_TYPE 0x06000000
 #define SCANRES_TYPE 0x07000000
 
-#define KV_BUCKET_COUNT 16
+#define KV_BUCKET_COUNT 1
 
 /* Packet Header Types */
 
@@ -88,8 +88,8 @@ header_type putres_t {
 header_type metadata_t {
 	fields {
 		hashidx: 32;
-		ismatch_keylo: 1;
-		ismatch_keyhi: 1;
+		ismatch_keylo: 4; // predicate 
+		ismatch_keyhi: 4; // predicate
 		isvalid: 1;
 		origin_keylo: 32;
 		origin_keyhi: 32;
@@ -201,13 +201,6 @@ action droppkt() {
 	drop();
 }
 
-table droppkt_tbl {
-	actions {
-		droppkt;
-	}
-	default_action: droppkt();
-}
-
 action ipv4_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 	//add_to_field(ipv4_hdr.ttl, -1);
@@ -265,19 +258,12 @@ blackbox stateful_alu get_match_keylo_alu {
 
 	update_lo_1_value: register_lo;
 	
-	output_value: combined_predicate;
+	output_value: predicate;
 	output_dst: meta.ismatch_keylo;
 }
 
 action get_match_keylo() {
 	get_match_keylo_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table get_match_keylo_tbl {
-	actions {
-		get_match_keylo;
-	}
-	default_action: get_match_keylo();
 }
 
 blackbox stateful_alu put_match_keylo_alu {
@@ -298,11 +284,14 @@ action put_match_keylo() {
 	put_match_keylo_alu.execute_stateful_alu(meta.hashidx);
 }
 
-table put_match_keylo_tbl {
+table match_keylo_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
 	actions {
+		get_match_keylo;
 		put_match_keylo;
 	}
-	default_action: put_match_keylo();
 }
 
 register keyhi_reg {
@@ -317,19 +306,12 @@ blackbox stateful_alu get_match_keyhi_alu {
 
 	update_lo_1_value: register_lo;
 	
-	output_value: combined_predicate;
+	output_value: predicate;
 	output_dst: meta.ismatch_keyhi;
 }
 
 action get_match_keyhi() {
 	get_match_keyhi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table get_match_keyhi_tbl {
-	actions {
-		get_match_keyhi;
-	}
-	default_action: get_match_keyhi();
 }
 
 blackbox stateful_alu put_match_keyhi_alu {
@@ -350,11 +332,14 @@ action put_match_keyhi() {
 	put_match_keyhi_alu.execute_stateful_alu(meta.hashidx);
 }
 
-table put_match_keyhi_tbl {
+table match_keyhi_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
 	actions {
+		get_match_keyhi;
 		put_match_keyhi;
 	}
-	default_action: put_match_keyhi();
 }
 
 register valid_reg {
@@ -375,13 +360,6 @@ action get_valid() {
 	get_valid_alu.execute_stateful_alu(meta.hashidx);
 }
 
-table get_valid_tbl {
-	actions {
-		get_valid;
-	}
-	default_action: get_valid();
-}
-
 blackbox stateful_alu set_valid_alu {
 	reg: valid_reg;
 
@@ -395,11 +373,14 @@ action set_valid() {
 	set_valid_alu.execute_stateful_alu(meta.hashidx);
 }
 
-table set_valid_tbl {
+table access_valid_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
 	actions {
+		get_valid;
 		set_valid;
 	}
-	default_action: set_valid();
 }
 
 register vallo_reg {
@@ -582,12 +563,15 @@ control ingress {
 	if (valid(op_hdr)) {
 		apply(calculate_hash_tbl);
 		apply(save_dstinfo_tbl);
+
+		// Different MAT entries for getreq/putreq
+		apply(access_valid_tbl);
+		apply(match_keylo_tbl);
+		apply(match_keyhi_tbl);
+
 		if (op_hdr.optype == GETREQ_TYPE) {
-			apply(get_valid_tbl);
-			apply(get_match_keylo_tbl);
-			apply(get_match_keyhi_tbl);
 			if (meta.isvalid == 1) {
-				if (meta.ismatch_keylo == 1 and meta.ismatch_keyhi == 1) {
+				if (meta.ismatch_keylo == 2 and meta.ismatch_keyhi == 2) {
 					apply(get_vallo_tbl);
 					apply(get_valhi_tbl);
 					apply(sendback_getres_tbl);
@@ -601,9 +585,6 @@ control ingress {
 			}
 		}
 		else if (op_hdr.optype == PUTREQ_TYPE) {
-			apply(set_valid_tbl);
-			apply(put_match_keylo_tbl);
-			apply(put_match_keyhi_tbl);
 			apply(put_vallo_tbl);
 			apply(put_valhi_tbl);
 			if (meta.isvalid == 1) {

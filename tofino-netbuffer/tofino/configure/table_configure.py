@@ -48,6 +48,15 @@ fp_ports = ["1/0", "3/0"]
 src_ip = "10.0.0.31"
 dst_ip = "10.0.0.32"
 
+GETREQ_TYPE = 0x00000000
+PUTREQ_TYPE = 0x01000000
+DELREQ_TYPE = 0x02000000
+SCANREQ_TYPE = 0x03000000
+GETRES_TYPE = 0x04000000
+PUTRES_TYPE = 0x05000000
+DELRES_TYPE = 0x06000000
+SCANRES_TYPE = 0x07000000
+
 class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
@@ -86,51 +95,47 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                      pal_fec_type_t.BF_FEC_TYP_NONE)
                self.pal.pal_port_enable(0, i)
 
-            # create data structures
-            # match on ipaddr and set output to self.devPorts[1]
-            # macaddr = macAddr_to_string("00:11:11:11:11:11")
+            # Table: ipv4_lpm
+            print "Populating table entries"
             ipv4addr0 = ipv4Addr_to_i32(src_ip)
             matchspec0 = netbuffer_ipv4_lpm_match_spec_t(ipv4_hdr_dstAddr=ipv4addr0, ipv4_hdr_dstAddr_prefix_length=32)
             actnspec0 = netbuffer_ipv4_forward_action_spec_t(self.devPorts[0])
             ipv4addr1 = ipv4Addr_to_i32(dst_ip)
             matchspec1 = netbuffer_ipv4_lpm_match_spec_t(ipv4_hdr_dstAddr=ipv4addr1, ipv4_hdr_dstAddr_prefix_length=32)
             actnspec1 = netbuffer_ipv4_forward_action_spec_t(self.devPorts[1])
-
-            # program match and action spec entries
-            print "Populating table entries"
-            result0 = self.client.ipv4_lpm_table_add_with_ipv4_forward(\
+            self.client.ipv4_lpm_table_add_with_ipv4_forward(\
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            result1 = self.client.ipv4_lpm_table_add_with_ipv4_forward(\
+            self.client.ipv4_lpm_table_add_with_ipv4_forward(\
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
 
-            self.conn_mgr.complete_operations(self.sess_hdl)
+            # Table: match_keylo_tbl
+            print "Matching keylo"
+            matchspec0 = netbuffer_match_keylo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            matchspec1 = netbuffer_match_keylo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            self.client.match_keylo_tbl_table_add_with_get_match_keylo(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.client.match_keylo_tbl_table_add_with_put_match_keylo(\
+                    self.sess_hdl, self.dev_tgt, matchspec1)
 
-            #port0 = self.pal.pal_port_dev_port_to_front_panel_port_get(0, self.devPorts[0])
-            #port1 = self.pal.pal_port_dev_port_to_front_panel_port_get(0, self.devPorts[1])
-            #fpport0 = str(port0.pal_front_port) + "/" + str(port0.pal_front_chnl)
-            #fpport1 = str(port1.pal_front_port) + "/" + str(port1.pal_front_chnl)
-            #print "Sending packet port %s -> port %s \
-            #       (%s -> %s [id = 101])" % \
-            #       (fpport0, fpport1, src_ip, dst_ip)
-            #pkt = simple_tcp_packet(eth_dst=dst_mac,
-            #                        eth_src=src_mac,
-            #                        ip_dst=dst_ip,
-            #                        ip_src=src_ip,
-            #                        ip_id=101,
-            #                        ip_ttl=64,
-            #                        ip_ihl=5)
-            #forwarded_pkt = simple_tcp_packet(eth_dst=dst_mac,
-            #                        eth_src=src_mac,
-            #                        ip_dst=dst_ip,
-            #                        ip_src=src_ip,
-            #                        ip_id=101,
-            #                        ip_ttl=63,
-            #                        ip_ihl=5)
-            #send_packet(self, self.devPorts[0], str(pkt)) # Send pkt from PCIe port to port0-ingress-buffer
-            #print "Expecting packet with ttl 63 on port %s" % fpport1
-            #verify_packets(self, forwarded_pkt, [self.devPorts[1]]) # Check pkt in port1-egress-buffer by polling
-            #print "Expecting packet with ttl 64 on port %s" % fpport1
-            #verify_packets(self, pkt, [self.devPorts[1]]) # Check pkt in port1-egress-buffer by polling
+            # Table: match_keyhi_tbl
+            print "Matching keyhi"
+            matchspec0 = netbuffer_match_keyhi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            matchspec1 = netbuffer_match_keyhi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            self.client.match_keyhi_tbl_table_add_with_get_match_keyhi(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.client.match_keyhi_tbl_table_add_with_put_match_keyhi(\
+                    self.sess_hdl, self.dev_tgt, matchspec1)
+
+            # Table: access_valid_tbl
+            print "Accessing valid"
+            matchspec0 = netbuffer_access_valid_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            matchspec1 = netbuffer_access_valid_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            self.client.access_valid_tbl_table_add_with_get_valid(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.client.access_valid_tbl_table_add_with_set_valid(\
+                    self.sess_hdl, self.dev_tgt, matchspec1)
+
+            self.conn_mgr.complete_operations(self.sess_hdl)
 
     def tearDown(self):
         if test_param_get('cleanup') == True:
