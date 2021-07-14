@@ -286,7 +286,7 @@ int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short ser
 				memcpy(buf, totalbuf + parsed_size, payload_size);
 				memcpy(src_mac, eh->ether_shost, 6);
 				inet_ntop(AF_INET, (struct in_addr *)&iph->saddr, src_ip, INET_ADDRSTRLEN);
-				*src_port = udph->source;
+				*src_port = ntohs(udph->source);
 				return payload_size;
 			}
 		}
