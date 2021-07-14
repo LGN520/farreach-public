@@ -121,7 +121,9 @@ The same as above
 	+ Update IP checksum alg and UDP checksum alg
 	+ Fix IP checksum error (ihl must be 4 for IPv4)
 	+ Fix UDP length error (udp length must be in big endian)
-- TODO: (1) extra two bytes after IP (check basic.p4)
+- Update prepare.cpp
+	+ To make sure the consistency of existing keys and non-existing keys
+- Test correctness
 
 
 ### Run
@@ -181,3 +183,4 @@ The same as above
 			- (2) Tofino hardware error?: Cannot swap src/dst mac address -> no packet will be sent back with a large possibility
 	+ Errno 22 of bind/sendto: wrong parameter
 		* NOTE: sizeof(struct sockaddr) != sizeof(struct sockaddr_ll), you must give precise length
+	+ Sth adds two extra bytes (both of zero) at the end of packet: unkown reason

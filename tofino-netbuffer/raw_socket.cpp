@@ -190,11 +190,10 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 	iph->check = checksum((uint16_t *)iph, sizeof(iphdr));
 	std::cout << int(sizeof(iphdr)) << std::endl;
 	size_t remain_bytes = tx_len - sizeof(ether_header) - sizeof(iphdr);
-	std::cout << "udp:" << ntohs(udph->len) << " ip:" << ntohs(iph->tot_len) << " pkt:" << tx_len << " remain:" << remain_bytes << std::endl;
+	//std::cout << "udp:" << ntohs(udph->len) << " ip:" << ntohs(iph->tot_len) << " pkt:" << tx_len << " remain:" << remain_bytes << std::endl;
 	udph->check = udp4_checksum(iph, udph, payload, payload_size);
 
-	std::cout <<"ip:" << int(iph->protocol) << std::endl;
-	dump_buf(buf, tx_len);
+	//dump_buf(buf, tx_len);
 	return tx_len;
 }
 
@@ -245,20 +244,20 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 
 int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short client_port, short server_port) 
 {
-	dump_buf(totalbuf, totalsize);
+	//dump_buf(totalbuf, totalsize);
 	uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr);
-	std::cout << "recvsize:" << totalsize << " parsed_size:" << parsed_size << std::endl;
+	//std::cout << "recvsize:" << totalsize << " parsed_size:" << parsed_size << std::endl;
 	if (totalsize < parsed_size) {
 		return -1;
 	}
 	struct ether_header *eh = (struct ether_header *) totalbuf;
-	std::cout << "eth:" << int(eh->ether_type) << " " << int(htons(ETH_P_IP)) << std::endl;
+	//std::cout << "eth:" << int(eh->ether_type) << " " << int(htons(ETH_P_IP)) << std::endl;
 	if (eh->ether_type == htons(ETH_P_IP)) {
 		struct iphdr *iph = (struct iphdr *) (totalbuf + sizeof(struct ether_header));
-		std::cout << "ip:" << int(iph->protocol) << " " << int(IPPROTO_UDP) << std::endl;
+		//std::cout << "ip:" << int(iph->protocol) << " " << int(IPPROTO_UDP) << std::endl;
 		if (iph->protocol == IPPROTO_UDP) {
 			struct udphdr *udph = (struct udphdr *) (totalbuf + sizeof(struct ether_header) + sizeof(struct iphdr));
-			std::cout << "iplen:" << ntohs(iph->tot_len) << " udplen:" << ntohs(udph->len) << std::endl;
+			//std::cout << "iplen:" << ntohs(iph->tot_len) << " udplen:" << ntohs(udph->len) << std::endl;
 			if (udph->source == htons(server_port) && udph->dest == htons(client_port)) {
 				int payload_size = totalsize - parsed_size;
 				memcpy(buf, totalbuf + parsed_size, payload_size);

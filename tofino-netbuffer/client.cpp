@@ -346,7 +346,7 @@ void *run_fg(void *param) {
 
   while (running) {
     double d = ratio_dis(gen);
-	int tmprun = 0;
+	int tmprun = 1;
     //if (d <= read_ratio) {  // get
     if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);

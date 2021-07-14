@@ -105,8 +105,9 @@ inline void parse_args(int argc, char **argv) {
 
 inline void prepare() {
   // prepare data
-  std::random_device rd;
-  std::mt19937 gen(rd());
+  //std::random_device rd;
+  //std::mt19937 gen(rd());
+  std::mt19937 gen(0);
   std::uniform_int_distribution<int64_t> rand_int64(
       0, std::numeric_limits<int64_t>::max());
 
@@ -123,7 +124,11 @@ inline void prepare() {
   }
 
   COUT_VAR(exist_keys.size());
+  COUT_VAR(exist_keys[0].key);
   COUT_VAR(non_exist_keys.size());
+  if (insert_ratio > 0) {
+	COUT_VAR(non_exist_keys[0].key);
+  }
 
   std::sort(exist_keys.begin(), exist_keys.end());
 }
