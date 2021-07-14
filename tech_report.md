@@ -124,6 +124,7 @@ The same as above
 - Update prepare.cpp
 	+ To make sure the consistency of existing keys and non-existing keys
 - Test correctness
+	+ Pass get
 
 
 ### Run

@@ -188,7 +188,6 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 	// Set IP checksum
 	iph->check = 0;
 	iph->check = checksum((uint16_t *)iph, sizeof(iphdr));
-	std::cout << int(sizeof(iphdr)) << std::endl;
 	size_t remain_bytes = tx_len - sizeof(ether_header) - sizeof(iphdr);
 	//std::cout << "udp:" << ntohs(udph->len) << " ip:" << ntohs(iph->tot_len) << " pkt:" << tx_len << " remain:" << remain_bytes << std::endl;
 	udph->check = udp4_checksum(iph, udph, payload, payload_size);

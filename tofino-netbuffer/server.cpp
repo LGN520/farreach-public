@@ -301,7 +301,6 @@ void run_server(xindex_t *table) {
 					
 					// Raw socket
 					size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), dst_port, src_port, buf, rsp_size);
-					COUT_VAR(std::string(src_ipaddr));
 					res = sendto(sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 					break;
 				}

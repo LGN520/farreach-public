@@ -123,14 +123,14 @@ inline void prepare() {
     }
   }
 
+  std::sort(exist_keys.begin(), exist_keys.end());
+
   COUT_VAR(exist_keys.size());
   COUT_VAR(exist_keys[0].key);
   COUT_VAR(non_exist_keys.size());
   if (insert_ratio > 0) {
 	COUT_VAR(non_exist_keys[0].key);
   }
-
-  std::sort(exist_keys.begin(), exist_keys.end());
 }
 
 void save() {
