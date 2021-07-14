@@ -119,7 +119,9 @@ The same as above
 	+ Use raw socket for sendto and recvfrom in client and server
 - Update raw_socket.cpp
 	+ Update IP checksum alg and UDP checksum alg
-- TODO: (1) extra two bytes after IP (check basic.p4) (2) ip checksum error (raw_socket.cpp)
+	+ Fix IP checksum error (ihl must be 4 for IPv4)
+	+ Fix UDP length error (udp length must be in big endian)
+- TODO: (1) extra two bytes after IP (check basic.p4)
 
 
 ### Run

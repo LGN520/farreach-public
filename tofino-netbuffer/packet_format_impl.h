@@ -63,7 +63,7 @@ uint32_t GetRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 template<class key_t>
 void GetRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
-	INVARIANT(my_size == recv_size);
+	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(packet_type_t));
 	begin += sizeof(packet_type_t);
@@ -114,7 +114,7 @@ uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 template<class key_t, class val_t>
 void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
-	INVARIANT(my_size == recv_size);
+	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(packet_type_t));
 	begin += sizeof(packet_type_t);
@@ -159,7 +159,7 @@ uint32_t DelRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 template<class key_t>
 void DelRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
-	INVARIANT(my_size == recv_size);
+	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(packet_type_t));
 	begin += sizeof(packet_type_t);
@@ -209,7 +209,7 @@ uint32_t ScanRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 template<class key_t>
 void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
-	INVARIANT(my_size == recv_size);
+	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(packet_type_t));
 	begin += sizeof(packet_type_t);
@@ -263,7 +263,7 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 template<class key_t, class val_t>
 void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
-	INVARIANT(my_size == recv_size);
+	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(packet_type_t));
 	begin += sizeof(packet_type_t);
@@ -316,7 +316,7 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 template<class key_t>
 void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
-	INVARIANT(my_size == recv_size);
+	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(packet_type_t));
 	begin += sizeof(packet_type_t);
@@ -369,7 +369,7 @@ uint32_t DelResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 template<class key_t>
 void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
-	INVARIANT(my_size == recv_size);
+	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(packet_type_t));
 	begin += sizeof(packet_type_t);
@@ -450,7 +450,7 @@ void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	begin += sizeof(uint32_t);
 
 	uint32_t my_size = this->size();
-	INVARIANT(recv_size == my_size);
+	INVARIANT(recv_size >= my_size);
 	key_t tmp_key;
 	val_t tmp_val;
 	this->_pairs.reserve(this->_num);

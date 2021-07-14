@@ -155,12 +155,13 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 
 	// IP Header
     struct iphdr *iph = (struct iphdr *) (buf + sizeof(struct ether_header));
-    iph->ihl = 7;
+    iph->ihl = 5; // 5 * 32-bit words in IP header
     iph->version = 4;
     iph->tos = 0; // Low delay
-    iph->id = htons(0);
+    iph->id = htons(1); // the first IP packet for UDP flow
     iph->frag_off = 0x00;
-    iph->ttl = 0xff; // hops
+    //iph->ttl = 0xff; // hops
+    iph->ttl = 0x40; // hops
     //iph->protocol = IPPROTO_TCP;
     iph->protocol = IPPROTO_UDP;
     /* Source IP address */
@@ -181,7 +182,7 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 	tx_len += payload_size;
 
 	// Set sizes
-	udph->len = sizeof(struct udphdr) + payload_size;
+	udph->len = htons(sizeof(struct udphdr) + payload_size);
 	iph->tot_len = htons(tx_len - sizeof(struct ether_header));
 
 	// Set IP checksum
@@ -189,7 +190,7 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 	iph->check = checksum((uint16_t *)iph, sizeof(iphdr));
 	std::cout << int(sizeof(iphdr)) << std::endl;
 	size_t remain_bytes = tx_len - sizeof(ether_header) - sizeof(iphdr);
-	std::cout << "udp:" << udph->len << " ip:" << ntohs(iph->tot_len) << " pkt:" << tx_len << " remain:" << remain_bytes << std::endl;
+	std::cout << "udp:" << ntohs(udph->len) << " ip:" << ntohs(iph->tot_len) << " pkt:" << tx_len << " remain:" << remain_bytes << std::endl;
 	udph->check = udp4_checksum(iph, udph, payload, payload_size);
 
 	std::cout <<"ip:" << int(iph->protocol) << std::endl;
@@ -257,7 +258,7 @@ int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short cli
 		std::cout << "ip:" << int(iph->protocol) << " " << int(IPPROTO_UDP) << std::endl;
 		if (iph->protocol == IPPROTO_UDP) {
 			struct udphdr *udph = (struct udphdr *) (totalbuf + sizeof(struct ether_header) + sizeof(struct iphdr));
-			std::cout << "iplen:" << ntohs(iph->tot_len) << " udplen:" << udph->len << std::endl;
+			std::cout << "iplen:" << ntohs(iph->tot_len) << " udplen:" << ntohs(udph->len) << std::endl;
 			if (udph->source == htons(server_port) && udph->dest == htons(client_port)) {
 				int payload_size = totalsize - parsed_size;
 				memcpy(buf, totalbuf + parsed_size, payload_size);
