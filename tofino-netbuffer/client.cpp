@@ -341,12 +341,26 @@ void *run_fg(void *param) {
   COUT_THIS("[client " << thread_id << "] Ready.");
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
 
+  // DEBUG
+  uint32_t curidx = 0;
+  uint32_t maxidx = 4;
+  int tmpruns[maxidx] = {1, 1, 0, 0};
+  size_t idxes[maxidx] = {0, 1, 0, 1};
+  val_t vals[maxidx] = {1233, 1234, 0, 0};
+
   while (!running)
     ;
 
   while (running) {
+	// DEBUG
+	if (curidx >= maxidx) break;
+	curidx++;
+	int tmprun = tmpruns[curidx];
+	if (vals[curidx] != 0) dummy_value = vals[curidx];
+	query_i = idxes[curidx];
+	update_i = idxes[curidx];
+
     double d = ratio_dis(gen);
-	int tmprun = 1;
     //if (d <= read_ratio) {  // get
     if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
@@ -507,7 +521,6 @@ void *run_fg(void *param) {
       }
     }
     thread_param.throughput++;
-	break; // TMPTMP
   }
 
   //close(sockfd);

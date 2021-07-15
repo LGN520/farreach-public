@@ -95,9 +95,10 @@ header_type metadata_t {
 		origin_keyhi: 32;
 		origin_vallo: 32;
 		origin_valhi: 32;
-		tmp_macaddr: 48;
+		//tmp_macaddr: 48;
 		tmp_ipaddr: 32;
 		tmp_port: 16;
+		is_clone: 1;
 	}
 }
 
@@ -545,18 +546,22 @@ table sendback_putres_tbl {
 	default_action: sendback_putres();
 }
 
-action update_putreq() {
-	modify_field(op_hdr.keylo, meta.origin_keylo);
-	modify_field(op_hdr.keyhi, meta.origin_keyhi);
-	modify_field(putreq_hdr.vallo, meta.origin_vallo);
-	modify_field(putreq_hdr.valhi, meta.origin_valhi);
+field_list clone_field_list {
+	meta.is_clone;
 }
 
-table update_putreq_tbl {
-	actions {
-		update_putreq;
+action clone_pkt(port) {
+	modify_field(meta.is_clone, 1);
+	clone_ingress_pkt_to_egress(port, clone_field_list);
+}
+
+table clone_pkt_tbl {
+	reads {
+		ig_intr_md.ingress_port;
 	}
-	default_action: update_putreq();
+	actions {
+		clone_pkt;
+	}
 }
 
 control ingress {
@@ -587,23 +592,14 @@ control ingress {
 		else if (op_hdr.optype == PUTREQ_TYPE) {
 			apply(put_vallo_tbl);
 			apply(put_valhi_tbl);
-			if (meta.isvalid == 1) {
-				if (meta.origin_keylo == op_hdr.keylo) { 
-					if (meta.origin_keyhi == op_hdr.keyhi) {
-						apply(sendback_putres_tbl);
-					}
-					else {
-						apply(update_putreq_tbl);
-						apply(ipv4_lpm);
-					}
+			apply(sendback_putres_tbl);
+			if (meta.isvalid == 1) { // pkt is cloned to egress and will not execute this code
+				if (meta.origin_keylo != op_hdr.keylo) {
+					apply(clone_pkt_tbl);
 				}
-				else {
-					apply(update_putreq_tbl);
-					apply(ipv4_lpm);
+				else if (meta.origin_keyhi != op_hdr.keyhi) {
+					apply(clone_pkt_tbl);
 				}
-			}
-			else {
-				apply(sendback_putres_tbl);
 			}
 		}
 		else {
@@ -617,6 +613,22 @@ control ingress {
 
 /* Egress Processing */
 
+action update_putreq() {
+	modify_field(op_hdr.keylo, meta.origin_keylo);
+	modify_field(op_hdr.keyhi, meta.origin_keyhi);
+	modify_field(putreq_hdr.vallo, meta.origin_vallo);
+	modify_field(putreq_hdr.valhi, meta.origin_valhi);
+}
+
+table update_putreq_tbl {
+	actions {
+		update_putreq;
+	}
+	default_action: update_putreq();
+}
+
 control egress {
-	// nothing
+	if (meta.is_clone) {
+		apply(update_putreq_tbl);
+	}
 }
