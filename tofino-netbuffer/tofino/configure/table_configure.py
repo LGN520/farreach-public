@@ -96,7 +96,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                self.pal.pal_port_enable(0, i)
 
             # Table: ipv4_lpm
-            print "Populating table entries"
+            print "Configuring ipv4_lpm"
             ipv4addr0 = ipv4Addr_to_i32(src_ip)
             matchspec0 = netbuffer_ipv4_lpm_match_spec_t(ipv4_hdr_dstAddr=ipv4addr0, ipv4_hdr_dstAddr_prefix_length=32)
             actnspec0 = netbuffer_ipv4_forward_action_spec_t(self.devPorts[0])
@@ -109,7 +109,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
 
             # Table: match_keylo_tbl
-            print "Matching keylo"
+            print "Configuring match_keylo_tbl"
             matchspec0 = netbuffer_match_keylo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
             matchspec1 = netbuffer_match_keylo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
             self.client.match_keylo_tbl_table_add_with_get_match_keylo(\
@@ -118,7 +118,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec1)
 
             # Table: match_keyhi_tbl
-            print "Matching keyhi"
+            print "Configuring match_keyhi_tbl"
             matchspec0 = netbuffer_match_keyhi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
             matchspec1 = netbuffer_match_keyhi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
             self.client.match_keyhi_tbl_table_add_with_get_match_keyhi(\
@@ -127,13 +127,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec1)
 
             # Table: access_valid_tbl
-            print "Accessing valid"
+            print "Configuring access_valid_tbl"
             matchspec0 = netbuffer_access_valid_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
             matchspec1 = netbuffer_access_valid_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
             self.client.access_valid_tbl_table_add_with_get_valid(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             self.client.access_valid_tbl_table_add_with_set_valid(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
+
+            # Table: clone_pkt_tbl
+            print "Configuring clone_pkt_tbl"
+            matchspec0 = netbuffer_clone_pkt_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
+            actnspec0 = netbuffer_clone_pkt_action_spec_t(self.devPorts[1])
+            self.client.clone_pkt_tbl_table_add_with_clone_pkt(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
 

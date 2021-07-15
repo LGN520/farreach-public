@@ -557,7 +557,7 @@ action clone_pkt(port) {
 
 table clone_pkt_tbl {
 	reads {
-		ig_intr_md.ingress_port;
+		ig_intr_md.ingress_port: exact;
 	}
 	actions {
 		clone_pkt;
@@ -628,7 +628,7 @@ table update_putreq_tbl {
 }
 
 control egress {
-	if (meta.is_clone) {
+	if (meta.is_clone == 1) {
 		apply(update_putreq_tbl);
 	}
 }
