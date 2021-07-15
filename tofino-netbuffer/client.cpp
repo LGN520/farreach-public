@@ -354,11 +354,11 @@ void *run_fg(void *param) {
   while (running) {
 	// DEBUG
 	if (curidx >= maxidx) break;
-	curidx++;
 	int tmprun = tmpruns[curidx];
 	if (vals[curidx] != 0) dummy_value = vals[curidx];
 	query_i = idxes[curidx];
 	update_i = idxes[curidx];
+	curidx++;
 
     double d = ratio_dis(gen);
     //if (d <= read_ratio) {  // get
