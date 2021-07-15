@@ -30,6 +30,7 @@ import unittest
 
 from netbuffer.p4_pd_rpc.ttypes import *
 from pltfm_pm_rpc.ttypes import *
+from mirror_pd_rpc.ttypes import *
 from pal_rpc.ttypes import *
 from ptf import config
 from ptf.testutils import *
@@ -56,6 +57,55 @@ GETRES_TYPE = 0x04000000
 PUTRES_TYPE = 0x05000000
 DELRES_TYPE = 0x06000000
 SCANRES_TYPE = 0x07000000
+
+if test_param_get("arch") == "tofino":
+  MIR_SESS_COUNT = 1024
+  MAX_SID_NORM = 1015
+  MAX_SID_COAL = 1023
+  BASE_SID_NORM = 1
+  BASE_SID_COAL = 1016
+  EXP_LEN1 = 127
+  EXP_LEN2 = 63
+elif test_param_get("arch") == "tofino2":
+  MIR_SESS_COUNT = 256
+  MAX_SID_NORM = 255
+  MAX_SID_COAL = 255
+  BASE_SID_NORM = 0
+  BASE_SID_COAL = 0
+  EXP_LEN1 = 127
+  EXP_LEN2 = 59
+else:
+  assert False, "Unsupported arch %s" % test_param_get("arch")
+
+def mirror_session(mir_type, mir_dir, sid, egr_port=0, egr_port_v=False,
+                   egr_port_queue=0, packet_color=0, mcast_grp_a=0,
+                   mcast_grp_a_v=False, mcast_grp_b=0, mcast_grp_b_v=False,
+                   max_pkt_len=0, level1_mcast_hash=0, level2_mcast_hash=0,
+                   mcast_l1_xid=0, mcast_l2_xid=0, mcast_rid=0, cos=0, c2c=False, extract_len=0, timeout=0,
+                   int_hdr=[], hdr_len=0):
+  return MirrorSessionInfo_t(mir_type,
+                             mir_dir,
+                             sid,
+                             egr_port,
+                             egr_port_v,
+                             egr_port_queue,
+                             packet_color,
+                             mcast_grp_a,
+                             mcast_grp_a_v,
+                             mcast_grp_b,
+                             mcast_grp_b_v,
+                             max_pkt_len,
+                             level1_mcast_hash,
+                             level2_mcast_hash,
+                             mcast_l1_xid,
+                             mcast_l2_xid,
+                             mcast_rid,
+                             cos,
+                             c2c,
+                             extract_len,
+                             timeout,
+                             int_hdr,
+                             hdr_len)
 
 class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -137,10 +187,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: clone_pkt_tbl
             print "Configuring clone_pkt_tbl"
+            sidnum = 1
+            sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
             matchspec0 = netbuffer_clone_pkt_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
-            actnspec0 = netbuffer_clone_pkt_action_spec_t(self.devPorts[1])
+            actnspec0 = netbuffer_clone_pkt_action_spec_t(sids[0])
             self.client.clone_pkt_tbl_table_add_with_clone_pkt(\
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            print "Binding sid {} with port {}".format(sids[0], self.devPorts[1])
+            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                  Direction_e.PD_DIR_INGRESS,
+                                  sids[0],
+                                  self.devPorts[1],
+                                  True)
+            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
 

@@ -547,12 +547,16 @@ table sendback_putres_tbl {
 }
 
 field_list clone_field_list {
+	meta.origin_keylo;
+	meta.origin_keyhi;
+	meta.origin_vallo;
+	meta.origin_valhi;
 	meta.is_clone;
 }
 
-action clone_pkt(port) {
+action clone_pkt(sid) {
 	modify_field(meta.is_clone, 1);
-	clone_ingress_pkt_to_egress(port, clone_field_list);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
 table clone_pkt_tbl {

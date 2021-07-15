@@ -129,9 +129,10 @@ The same as above
 		* KV miss pass
 	+ Put pass
 		* Without eviction pass
-	+ TODO: Put pass (with eviction)
-		* Need to clone a packet: how to distinguish cloned packet?
-- TODO: Use MAT to replace complex if-else
+		* With eviction pass
+			* Modify original packet as put response and send it back
+			* Clone a packet as put request for eviction
+				- TODO: use another type to notify server that it does not require a response
 - TODO: create the same number of sockets in server to enable concurrency
 - TODO: add CBF for existence index
 - TODO: add backup KV for scan
@@ -199,3 +200,6 @@ The same as above
 	+ If key 0 is evicted by key 1, get key 0 will not arrive storage server
 		* Reason: if you do not assign value to condition_hi, it could be either 0 or 1
 		* NOTE: predicate is 4-bit instead of 2-bit, which can only be 1/2/4/8
+	+ No cloned packet and meta fields are zero
+		* Must bind dev port and mirror id in control plane
+		* All meta fields will be reset unless those in field list (packet fields are copied)
