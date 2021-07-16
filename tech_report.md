@@ -132,7 +132,8 @@ The same as above
 		* With eviction pass
 			* Modify original packet as put response and send it back
 			* Clone a packet as put request for eviction (use PUT_REQ_S to notify servers that it does not require a response)
-	+ TODO: Del pass
+	+ Del pass
+		* STRANGE: client/server gets all requests/responses successfully, while tcpdump cannot capture all packets
 - TODO: add CBF for existence index
 - TODO: create the same number of sockets in server to enable concurrency
 - TODO: add backup KV for scan
