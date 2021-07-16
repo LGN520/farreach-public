@@ -131,8 +131,8 @@ The same as above
 		* Without eviction pass
 		* With eviction pass
 			* Modify original packet as put response and send it back
-			* Clone a packet as put request for eviction
-				- TODO: use another type to notify server that it does not require a response
+			* Clone a packet as put request for eviction (use PUT_REQ_S to notify servers that it does not require a response)
+	+ TODO: Del pass
 - TODO: create the same number of sockets in server to enable concurrency
 - TODO: add CBF for existence index
 - TODO: add backup KV for scan

@@ -375,6 +375,21 @@ action set_valid() {
 	set_valid_alu.execute_stateful_alu(meta.hashidx);
 }
 
+blackbox stateful_alu clear_valid_alu {
+	reg: valid_reg;
+
+	condition_lo: register_lo == 1 and meta.origin_keylo == op_hdr.keylo and meta.origin_keyhi == op_hdr.keyhi;
+
+	update_lo_1_predicate: condition_lo;
+	update_lo_1_value: clr_bit;
+	update_lo_2_predicate: not condition_lo;
+	update_lo_1_value: read_bit;
+}
+
+action clear_valid() {
+	clear_valid_alu.execute_stateful_alu(meta.hashidx);
+}
+
 table access_valid_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -571,13 +586,21 @@ table clone_pkt_tbl {
 
 control ingress {
 	if (valid(op_hdr)) {
+
+		/*** Stage 0 ***/
+
 		apply(calculate_hash_tbl);
 		apply(save_dstinfo_tbl);
 
+		/*** Stage 1 ***/
+
 		// Different MAT entries for getreq/putreq
-		apply(access_valid_tbl);
 		apply(match_keylo_tbl);
 		apply(match_keyhi_tbl);
+
+		/*** Stage 2 ***/
+
+		apply(access_valid_tbl);
 
 		if (op_hdr.optype == GETREQ_TYPE) {
 			if (meta.isvalid == 1) {
