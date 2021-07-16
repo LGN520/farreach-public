@@ -54,7 +54,6 @@ class PutRequest : public Packet<key_t> {
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-	private:
 		val_t _val;
 };
 
@@ -152,6 +151,16 @@ class ScanResponse : public Packet<key_t> {
 		std::vector<std::pair<key_t, val_t>> _pairs;
 };
 
+template<class key_t, class val_t>
+class PutRequestS : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestS(uint32_t thread_id, key_t key, val_t val);
+		PutRequestS(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
 
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size);

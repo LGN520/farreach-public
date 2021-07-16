@@ -465,6 +465,25 @@ void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	}
 }
 
+// PutRequestS
+
+template<class key_t, class val_t>
+PutRequestS<key_t, val_t>::PutRequestS(uint32_t thread_id, key_t key, val_t val) 
+	: PutRequestS<key_t, val_t>(PacketType::PUT_REQ_S, thread_id, key, val)
+{	
+}
+
+template<class key_t, class val_t>
+PutRequestS<key_t, val_t>::PutRequestS(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(this->_type == PacketType::PUT_REQ_S);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestS<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for PutReqestS");
+}
+
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size) {
 	INVARIANT(recv_size >= sizeof(packet_type_t));

@@ -34,6 +34,7 @@ typedef GetResponse<index_key_t, val_t> get_response_t;
 typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
+typedef PutRequestS<index_key_t, val_t> put_request_s_t;
 
 inline void parse_args(int, char **);
 void load();
@@ -362,7 +363,7 @@ void run_server(xindex_t *table) {
 				}
 			case packet_type_t::PUT_REQ_S:
 				{
-					put_request_t req(buf, recv_size);
+					put_request_s_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().key << " val = " << req.val())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)

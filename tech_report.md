@@ -153,6 +153,11 @@ The same as above
 - Run `bash start_controller.sh` in Tofino OS
 - Run `bash start_client.sh` in client host
 
+## How to debug
+
+- Use `ifconfig <if> promisc` to enable promisc mode
+- Use `tcpdump -i <if> -e -vvv -X` to listen raw packets
+
 ## NOTES
 
 - Ports usage
