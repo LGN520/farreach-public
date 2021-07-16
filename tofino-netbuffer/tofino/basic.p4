@@ -86,6 +86,12 @@ header_type putres_t {
 	}
 }
 
+header_type delres_t {
+	fields {
+		stat: 8;
+	}
+}
+
 header_type metadata_t {
 	fields {
 		hashidx: 32;
@@ -110,6 +116,7 @@ header op_t op_hdr;
 header putreq_t putreq_hdr;
 header getres_t getres_hdr;
 header putres_t putres_hdr;
+header delres_t delres_hdr;
 metadata metadata_t meta;
 
 /* Parser */
@@ -148,6 +155,7 @@ parser parse_op {
 		PUTREQ_TYPE: parse_putreq;
 		GETRES_TYPE: parse_getres;
 		PUTRES_TYPE: parse_putres;
+		DELRES_TYPE: parse_delres;
 		default: ingress;
 	}
 }
@@ -164,6 +172,10 @@ parser parse_getres {
 
 parser parse_putres {
 	extract(putres_hdr);
+	return ingress;
+}
+parser parse_delres {
+	extract(delres_hdr);
 	return ingress;
 }
 
@@ -378,18 +390,21 @@ action set_valid() {
 blackbox stateful_alu clear_valid_alu {
 	reg: valid_reg;
 
-	condition_lo: register_lo == 1 and meta.origin_keylo == op_hdr.keylo and meta.origin_keyhi == op_hdr.keyhi;
-
-	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: clr_bit;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_1_value: read_bit;
 }
 
 action clear_valid() {
 	clear_valid_alu.execute_stateful_alu(meta.hashidx);
 }
 
+table clear_valid_tbl {
+	actions {
+		clear_valid;
+	}
+	default_action: clear_valid();
+}
+
+@pragma stage 2
 table access_valid_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -438,7 +453,7 @@ action put_vallo() {
 	put_vallo_alu.execute_stateful_alu(meta.hashidx);
 }
 
-@pragma stage 2
+@pragma stage 3
 table put_vallo_tbl {
 	actions {
 		put_vallo;
@@ -562,6 +577,33 @@ table sendback_putres_tbl {
 	default_action: sendback_putres();
 }
 
+action sendback_delres() {
+	modify_field(ethernet_hdr.srcAddr, ethernet_hdr.dstAddr);
+
+	// Swap ip address
+	modify_field(ipv4_hdr.dstAddr, ipv4_hdr.srcAddr);
+	modify_field(ipv4_hdr.srcAddr, meta.tmp_ipaddr);
+	modify_field(ipv4_hdr.totalLen, 45); // Big endian: 20B IP + 8B UDP + 16B OP + 1B status
+	
+	// Swap udp port
+	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
+	modify_field(udp_hdr.srcPort, meta.tmp_port);
+	modify_field(udp_hdr.hdrLength, 0x19);
+
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+
+	modify_field(op_hdr.optype, DELRES_TYPE);
+	modify_field(delres_hdr.stat, 1);
+	add_header(delres_hdr);
+}
+
+table sendback_delres_tbl {
+	actions {
+		sendback_delres;
+	}
+	default_action: sendback_delres();
+}
+
 field_list clone_field_list {
 	meta.origin_keylo;
 	meta.origin_keyhi;
@@ -599,10 +641,10 @@ control ingress {
 		apply(match_keyhi_tbl);
 
 		/*** Stage 2 ***/
-
 		apply(access_valid_tbl);
 
 		if (op_hdr.optype == GETREQ_TYPE) {
+			/*** Stage 3 ***/
 			if (meta.isvalid == 1) {
 				if (meta.ismatch_keylo == 2 and meta.ismatch_keyhi == 2) {
 					apply(get_vallo_tbl);
@@ -618,15 +660,26 @@ control ingress {
 			}
 		}
 		else if (op_hdr.optype == PUTREQ_TYPE) {
+			/*** Stage 2 ***/
 			apply(put_vallo_tbl);
 			apply(put_valhi_tbl);
 			apply(sendback_putres_tbl);
+			/*** Stage 3 ***/
 			if (meta.isvalid == 1) { // pkt is cloned to egress and will not execute this code
 				if (meta.origin_keylo != op_hdr.keylo) {
 					apply(clone_pkt_tbl);
 				}
 				else if (meta.origin_keyhi != op_hdr.keyhi) {
 					apply(clone_pkt_tbl);
+				}
+			}
+		}
+		else if (op_hdr.optype == DELREQ_TYPE) {
+			/*** Stage 2 ***/
+			if (meta.origin_keylo == op_hdr.keylo) {
+				if (meta.origin_keyhi == op_hdr.keyhi) {
+					apply(clear_valid_tbl);
+					apply(sendback_delres_tbl);
 				}
 			}
 		}

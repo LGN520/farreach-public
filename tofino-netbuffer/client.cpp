@@ -344,9 +344,9 @@ void *run_fg(void *param) {
   // DEBUG
   uint32_t curidx = 0;
   uint32_t maxidx = 4;
-  int tmpruns[maxidx] = {1, 1, 0, 0};
-  size_t idxes[maxidx] = {0, 1, 0, 1};
-  val_t vals[maxidx] = {1233, 1234, 0, 0};
+  int tmpruns[maxidx] = {0, 3, 0};
+  size_t idxes[maxidx] = {0, 0, 0};
+  val_t vals[maxidx] = {1, 1, 1};
 
   while (!running)
     ;
@@ -357,6 +357,7 @@ void *run_fg(void *param) {
 	int tmprun = tmpruns[curidx];
 	if (vals[curidx] != 0) dummy_value = vals[curidx];
 	query_i = idxes[curidx];
+	delete_i = idxes[curidx];
 	update_i = idxes[curidx];
 	curidx++;
 
