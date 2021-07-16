@@ -360,6 +360,14 @@ void run_server(xindex_t *table) {
 					res = sendto(sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 					break;
 				}
+			case packet_type_t::PUT_REQ_S:
+				{
+					put_request_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().key << " val = " << req.val())
+					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					break;
+				}
 			default:
 				{
 					COUT_THIS("[server] Invalid packet type: " << int(pkt_type))

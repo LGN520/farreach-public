@@ -7,7 +7,7 @@
 #include "helper.h"
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, 
-	GET_RES, PUT_RES, DEL_RES, SCAN_RES};
+	GET_RES, PUT_RES, DEL_RES, SCAN_RES, PUT_REQ_S};
 typedef PacketType packet_type_t;
 
 template<class key_t>

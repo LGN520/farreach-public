@@ -17,6 +17,7 @@
 #define PUTRES_TYPE 0x05000000
 #define DELRES_TYPE 0x06000000
 #define SCANRES_TYPE 0x07000000
+#define PUTREQ_S_TYPE 0x08000000
 
 #define KV_BUCKET_COUNT 1
 
@@ -618,6 +619,8 @@ control ingress {
 /* Egress Processing */
 
 action update_putreq() {
+	modify_field(op_hdr.optype, PUTREQ_S_TYPE);
+
 	modify_field(op_hdr.keylo, meta.origin_keylo);
 	modify_field(op_hdr.keyhi, meta.origin_keyhi);
 	modify_field(putreq_hdr.vallo, meta.origin_vallo);

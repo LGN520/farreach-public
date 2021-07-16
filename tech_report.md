@@ -203,3 +203,4 @@ The same as above
 	+ No cloned packet and meta fields are zero
 		* Must bind dev port and mirror id in control plane
 		* All meta fields will be reset unless those in field list (packet fields are copied)
+			- NOTE: clone function just marks a flag without any data dependency; it copies the packet fields at the stage when being invoked; it copies the field list at the end of ingress/egress
