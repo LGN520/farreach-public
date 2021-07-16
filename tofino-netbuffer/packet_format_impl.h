@@ -75,6 +75,12 @@ void GetRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 // PutRequest
 
 template<class key_t, class val_t>
+PutRequest<key_t, val_t>::PutRequest()
+	: Packet<key_t>(), _val(0)
+{
+}
+
+template<class key_t, class val_t>
 PutRequest<key_t, val_t>::PutRequest(uint32_t thread_id, key_t key, val_t val) 
 	: Packet<key_t>(PacketType::PUT_REQ, thread_id, key), _val(val)
 {	
@@ -469,8 +475,9 @@ void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 
 template<class key_t, class val_t>
 PutRequestS<key_t, val_t>::PutRequestS(uint32_t thread_id, key_t key, val_t val) 
-	: PutRequestS<key_t, val_t>(PacketType::PUT_REQ_S, thread_id, key, val)
+	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
 {	
+	this->type = PacketType::PUT_REQ_S;
 }
 
 template<class key_t, class val_t>
