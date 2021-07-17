@@ -56,9 +56,10 @@ std::string src_ifname = "ens3f0";
 uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
 uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
 std::string src_ipaddr = "10.0.0.31";
-std::string dst_ipaddr = "10.0.0.32";
-short src_port_start = 8888;
-short dst_port_start = 1111;
+std::string dst_ipaddr_start = "10.0.0.32";
+// UDP
+//short src_port_start = 8888;
+//short dst_port_start = 1111;
 
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
@@ -300,6 +301,8 @@ void *run_fg(void *param) {
                    non_exist_keys.begin() + non_exist_key_end);
   }
 
+  int res = 0;
+
   // Prepare socket (UDP socket)
   /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
@@ -327,11 +330,20 @@ void *run_fg(void *param) {
   struct sockaddr_ll raw_socket_address;
   init_raw_sockaddr(&raw_socket_address, ifidx, src_macaddr); // set target interface for sendto
 
-  int res = bind(raw_sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
-  INVARIANT(res != -1);
+  /*res = bind(raw_sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
+  INVARIANT(res != -1);*/
+  bind_if(raw_sockfd, src_ifname);
+
   char totalbuf[MAX_BUFSIZE]; // headers + payload
-  short src_port = src_port_start + thread_id;
-  short dst_port = dst_port_start + thread_id;
+  // UDP
+  //short src_port = src_port_start + thread_id;
+  //short dst_port = dst_port_start + thread_id;
+  // IP
+  int ippos = strlen(dst_ipaddr_start.c_str())-2;
+  std::string iphead = dst_ipaddr_start.substr(0, ippos);
+  int iptail = std::stoi(dst_ipaddr_start.substr(ippos, 2)) + thread_id;
+  INVARIANT(iptail <= 255);
+  std::string dst_ipaddr = iphead + std::to_string(iptail);
 
   // exsiting keys fall within range [delete_i, insert_i)
   char buf[MAX_BUFSIZE]; // payload
@@ -377,13 +389,15 @@ void *run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 	  
 	  // Raw socket
-	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size); // UDP
+	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, buf, req_size); // IP
 	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
 	  while (true) {
 		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 	  	INVARIANT(recv_size != -1);
-		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		//recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port); // UDP
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, dst_ipaddr); // IP
 		if (recv_size != -1) break;
 	  }
 
@@ -408,13 +422,15 @@ void *run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 	  
 	  // Raw socket
-	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, buf, req_size); // IP
 	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
 	  while (true) {
 		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 	  	INVARIANT(recv_size != -1);
-		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		//recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, dst_ipaddr); // IP
 		if (recv_size != -1) break;
 	  }
 
@@ -439,13 +455,15 @@ void *run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 	  
 	  // Raw socket
-	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, buf, req_size); // IP
 	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
 	  while (true) {
 		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 	  	INVARIANT(recv_size != -1);
-		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		//recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, dst_ipaddr); // IP
 		if (recv_size != -1) break;
 	  }
 
@@ -470,13 +488,15 @@ void *run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 	  
 	  // Raw socket
-	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, buf, req_size); // IP
 	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
 	  while (true) {
 		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 	  	INVARIANT(recv_size != -1);
-		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		//recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, dst_ipaddr); // IP
 		if (recv_size != -1) break;
 	  }
 
@@ -500,13 +520,15 @@ void *run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 	  
 	  // Raw socket
-	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
+	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, buf, req_size); // IP
 	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
 	  while (true) {
 		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 	  	INVARIANT(recv_size != -1);
-		recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		//recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, dst_ipaddr); // IP
 		if (recv_size != -1) break;
 	  }
 

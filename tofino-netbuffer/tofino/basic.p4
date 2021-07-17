@@ -4,7 +4,8 @@
 #define ETHERTYPE_IPV4 0x0800
 #define ETHERTYPE_VLAN 0x8100
 #define PROTOTYPE_TCP 0x06
-#define PROTOTYPE_UDP 0x11
+//#define PROTOTYPE_UDP 0x11
+PROTOTYPE_NETBUFFER 0x90
 
 #define OP_PORT 1111
 
@@ -48,14 +49,14 @@ header_type ipv4_t {
 	}
 }
 
-header_type udp_t {
+/*header_type udp_t {
 	fields {
 		srcPort: 16;
 		dstPort: 16;
 		hdrLength: 16;
 		checksum: 16;
 	}
-}
+}*/
 
 header_type op_t {
 	fields {
@@ -136,18 +137,19 @@ parser parse_ethernet {
 parser parse_ipv4 {
 	extract(ipv4_hdr);
 	return select(ipv4_hdr.protocol) {
-		PROTOTYPE_UDP: parse_udp;
+		//PROTOTYPE_UDP: parse_udp;
+		PROTOTYPE_NETBUFFER: parse_op;
 		default: ingress;
 	}
 }
 
-parser parse_udp {
+/*parser parse_udp {
 	extract(udp_hdr);
 	return select(udp_hdr.dstPort) {
 		OP_PORT: parse_op;
 		default: ingress;
 	}
-}
+}*/
 
 parser parse_op {
 	extract(op_hdr);
@@ -511,7 +513,7 @@ table put_valhi_tbl {
 action save_dstinfo() {
 	//modify_field(meta.tmp_macaddr, ethernet_hdr.dstAddr);
 	modify_field(meta.tmp_ipaddr, ipv4_hdr.dstAddr);
-	modify_field(meta.tmp_port, udp_hdr.dstPort);
+	//modify_field(meta.tmp_port, udp_hdr.dstPort);
 }
 
 table save_dstinfo_tbl {
@@ -530,9 +532,9 @@ action sendback_getres() {
 	add_to_field(ipv4_hdr.totalLen, 8); // Big endian: add an 8B value
 	
 	// Swap udp port
-	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
-	modify_field(udp_hdr.srcPort, meta.tmp_port);
-	modify_field(udp_hdr.hdrLength, 0x20); 
+	//modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
+	//modify_field(udp_hdr.srcPort, meta.tmp_port);
+	//modify_field(udp_hdr.hdrLength, 0x20); 
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 
@@ -555,12 +557,13 @@ action sendback_putres() {
 	// Swap ip address
 	modify_field(ipv4_hdr.dstAddr, ipv4_hdr.srcAddr);
 	modify_field(ipv4_hdr.srcAddr, meta.tmp_ipaddr);
-	modify_field(ipv4_hdr.totalLen, 45); // Big endian: 20B IP + 8B UDP + 16B OP + 1B status
+	//modify_field(ipv4_hdr.totalLen, 45); // Big endian: 20B IP + 8B UDP + 16B OP + 1B status
+	modify_field(ipv4_hdr.totalLen, 37); // Big endian: 20B IP + 16B OP + 1B status
 	
 	// Swap udp port
-	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
-	modify_field(udp_hdr.srcPort, meta.tmp_port);
-	modify_field(udp_hdr.hdrLength, 0x19);
+	//modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
+	//modify_field(udp_hdr.srcPort, meta.tmp_port);
+	//modify_field(udp_hdr.hdrLength, 0x19);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 
@@ -583,12 +586,13 @@ action sendback_delres() {
 	// Swap ip address
 	modify_field(ipv4_hdr.dstAddr, ipv4_hdr.srcAddr);
 	modify_field(ipv4_hdr.srcAddr, meta.tmp_ipaddr);
-	modify_field(ipv4_hdr.totalLen, 45); // Big endian: 20B IP + 8B UDP + 16B OP + 1B status
+	//modify_field(ipv4_hdr.totalLen, 45); // Big endian: 20B IP + 8B UDP + 16B OP + 1B status
+	modify_field(ipv4_hdr.totalLen, 37); // Big endian: 20B IP + 16B OP + 1B status
 	
 	// Swap udp port
-	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
-	modify_field(udp_hdr.srcPort, meta.tmp_port);
-	modify_field(udp_hdr.hdrLength, 0x19);
+	//modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
+	//modify_field(udp_hdr.srcPort, meta.tmp_port);
+	//modify_field(udp_hdr.hdrLength, 0x19);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 

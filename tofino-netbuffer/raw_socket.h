@@ -11,16 +11,24 @@
 #include <arpa/inet.h> // htons htonl
 #include <iostream>
 
+#define IPPROTO_NETBUFFER 0x90
+
 uint16_t checksum (uint16_t *addr, int len);
 uint16_t udp4_checksum (struct iphdr* iph, struct udphdr* udph, char *payload, int payloadlen);
-int lookup_if(int sockfd, std::string ifname, uint8_t *src_macaddr);
+int lookup_if(int sockfd, std::string ifname, uint8_t *src_macaddr); // UDP
+void bind_if(int sockfd, std::string ifname); // IP
 void init_raw_sockaddr(struct sockaddr_ll *socket_address, int ifidx, uint8_t *macaddr);
-size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_macaddr, 
+/*size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_macaddr, 
 		std::string src_ipaddr, std::string dst_ipaddr, short src_port, 
-		short dst_port, char *payload, uint32_t payload_size);
+		short dst_port, char *payload, uint32_t payload_size);*/
+size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_macaddr, 
+		std::string src_ipaddr, std::string dst_ipaddr, char *payload, uint32_t payload_size);
 void init_msghdr(struct msghdr *msg, struct sockaddr_ll *socket_address, char *buf, size_t bufsize);
 //void recv_buf(char *buf, uint32_t maxsize, struct msghdr *msg, uint32_t recvsize);
-int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short client_port, short server_port);
-int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short server_port, 
-		uint8_t *src_mac, char *src_ip, short *src_port);
+//int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short client_port, short server_port); // UDP
+int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, std::string server_ipaddr); // IP 
+/*int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short server_port, 
+		uint8_t *src_mac, char *src_ip, short *src_port);*/
+int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, std::string server_ipaddr,
+		uint8_t *src_mac, char *src_ip);
 void dump_buf(char *buf, uint32_t bufsize);
