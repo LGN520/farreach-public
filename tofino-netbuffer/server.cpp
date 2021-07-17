@@ -47,21 +47,16 @@ void kill(int signum);
 // parameters
 size_t fg_n = 1;
 size_t bg_n = 1;
-//int server_port = 1111;
+int server_port = 1111;
 
 // Raw socket
-//std::string src_ifname = "ens3f0";
-std::string dst_ifname = "ens3f1";
-//uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
+/*std::string dst_ifname = "ens3f1";
 uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
-//std::string src_ipaddr = "10.0.0.31";
-//std::string dst_ipaddr = "10.0.0.32"; // UDP
-std::string dst_ipaddr_start = "10.0.0.32"; // IP
-//short src_port_start = 8888;
-//short dst_port_start = 1111; // UDP
+//std::string dst_ipaddr = "10.0.0.32"; // Packet socket
+std::string dst_ipaddr_start = "10.0.0.32"; // IP socket
+//short dst_port_start = 1111; // Packet socket*/
 
 std::vector<index_key_t> exist_keys;
-//std::vector<index_key_t> non_exist_keys;
 
 bool killed = false;
 volatile bool running = false;
@@ -278,19 +273,20 @@ void *run_sfg(void * param) {
   int res = 0;
 
   // prepare socket (UDP socket)
-  /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
   struct sockaddr_in server_sockaddr;
   memset(&server_sockaddr, 0, sizeof(struct sockaddr_in));
   server_sockaddr.sin_family = AF_INET;
   server_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
   server_sockaddr.sin_port = htons(server_port);
-  int res = bind(sockfd, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
-  INVARIANT(res != -1);*/
+  res = bind(sockfd, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+  INVARIANT(res != -1);
+  uint32_t sockaddr_len = sizeof(struct sockaddr);
 
   // prepare socket (raw socket)
   //int sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
-  int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  /*int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
   INVARIANT(sockfd != -1);
   int optval = 7; // valid values are in the range [1,7]  // 1- low priority, 7 - high priority  
   if (setsockopt(sockfd, SOL_SOCKET, SO_PRIORITY, &optval, sizeof(optval)) < 0) {
@@ -299,21 +295,21 @@ void *run_sfg(void * param) {
   int ifidx = lookup_if(sockfd, dst_ifname, NULL);
   struct sockaddr_ll raw_socket_address;
   init_raw_sockaddr(&raw_socket_address, ifidx, dst_macaddr);
-  //res = bind(sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
-  bind_if(sockfd, dst_ifname);
+  //res = bind(sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // Packet socket; bind target interface for recvfrom
+  bind_if(sockfd, dst_ifname); // IP socket
   INVARIANT(res != -1);
   char totalbuf[MAX_BUFSIZE]; // headers + payload
   uint8_t src_macaddr[6];
   char src_ipaddr[5] = {'\0', '\0', '\0', '\0', '\0'};
-  // UDP
+  // Packet socket
   //short src_port;
   //short dst_port = dst_port_start + thread_id;
-  // IP
+  // IP socket
   int ippos = strlen(dst_ipaddr_start.c_str())-2;
   std::string iphead = dst_ipaddr_start.substr(0, ippos);
   int iptail = std::stoi(dst_ipaddr_start.substr(ippos, 2)) + thread_id;
   INVARIANT(iptail <= 255);
-  std::string dst_ipaddr = iphead + std::to_string(iptail);
+  std::string dst_ipaddr = iphead + std::to_string(iptail);*/
 
   // Set timeout
   struct timeval tv;
@@ -325,7 +321,6 @@ void *run_sfg(void * param) {
   char buf[MAX_BUFSIZE]; // payload
   int recv_size = 0;
   int rsp_size = 0;
-  //uint32_t sockaddr_len = sizeof(struct sockaddr);
 
   ready_threads++;
 
@@ -334,10 +329,10 @@ void *run_sfg(void * param) {
 
   while (running) {
 	// UDP socket
-	//recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
+	recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 	
 	// Raw socket
-	recv_size = recvfrom(sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
+	//recv_size = recvfrom(sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 
 	if (recv_size == -1) {
 		if (errno == EWOULDBLOCK || errno == EINTR) {
@@ -350,9 +345,9 @@ void *run_sfg(void * param) {
 	}
 	else {
 		// Raw socket
-		//recv_size = server_recv_payload(buf, totalbuf, recv_size, dst_port, src_macaddr, src_ipaddr, &src_port); // UDP
-		recv_size = server_recv_payload(buf, totalbuf, recv_size, dst_ipaddr, src_macaddr, src_ipaddr); // IP
-		if (recv_size == -1) continue;
+		//recv_size = server_recv_payload(buf, totalbuf, recv_size, dst_port, src_macaddr, src_ipaddr, &src_port); // Packet socket
+		//recv_size = server_recv_payload(buf, totalbuf, recv_size, dst_ipaddr, src_macaddr, src_ipaddr); // IP socket
+		//if (recv_size == -1) continue;
 
 		//COUT_THIS("[server] Receive packet!")
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
@@ -371,12 +366,12 @@ void *run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 
 					// UDP socket
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// Raw socket
-					//size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), dst_port, src_port, buf, rsp_size); // UDP
-					size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), buf, rsp_size); // IP
-					res = sendto(sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
+					//size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), dst_port, src_port, buf, rsp_size); // Pakcet socket
+					//size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), buf, rsp_size); // IP socket
+					//res = sendto(sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 					break;
 				}
 			case packet_type_t::PUT_REQ:

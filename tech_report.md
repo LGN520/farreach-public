@@ -211,6 +211,8 @@ The same as above
 		* Must bind dev port and mirror id in control plane
 		* All meta fields will be reset unless those in field list (packet fields are copied)
 			- NOTE: clone function just marks a flag without any data dependency; it copies the packet fields at the stage when being invoked; it copies the field list at the end of ingress/egress
-	+ Use raw socket + different server IPs
-		* UDP: Tofino does not support UDP checksum calculation -> UDP checksum error after changing payload -> dropped by UDP socket
-		* Raw socket + port: raw socket is based on IP which cannot be bound into a specific port -> misbehavior under multiple client threads
+	+ Implementation choices
+		* UDP socket: Tofino does not support UDP checksum calculation -> UDP checksum error after changing payload -> dropped by UDP socket
+			- Solution: disable UDP checksum checking in kernel, or use dpdk and change its code
+		* IP socket (raw): can only bind IP address -> must use IP addresses to distinguish different client threads; need to configure ARP table; cannot modify ethernet information
+		* Packet socket (raw): can only bind a specific interface -> misbehavior under multiple client threads due to receving all packets

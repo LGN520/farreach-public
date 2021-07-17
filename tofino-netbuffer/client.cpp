@@ -47,17 +47,17 @@ double delete_ratio = 0;
 double scan_ratio = 0;
 size_t runtime = 10;
 size_t fg_n = 1;
-//std::string server_addr = "10.0.0.32";
-//int server_port = 1111;
+std::string server_addr = "10.0.0.32";
+int server_port = 1111;
 
 // Raw socket
-std::string src_ifname = "ens3f0";
+//std::string src_ifname = "ens3f0";
 //std::string dst_ifname = "ens3f1";
-uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
-uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
-std::string src_ipaddr = "10.0.0.31";
-std::string dst_ipaddr_start = "10.0.0.32";
-// UDP
+//uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
+//uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
+//std::string src_ipaddr = "10.0.0.31";
+//std::string dst_ipaddr = "10.0.0.32"; // Packet socket
+//std::string dst_ipaddr_start = "10.0.0.32"; // IP socket
 //short src_port_start = 8888;
 //short dst_port_start = 1111;
 
@@ -125,8 +125,8 @@ inline void parse_args(int argc, char **argv) {
       {"scan", required_argument, 0, 'e'},
       {"runtime", required_argument, 0, 'g'},
       {"fg", required_argument, 0, 'h'},
-	  //{"server-addr", required_argument, 0, 'i'},
-	  //{"server-port", required_argument, 0, 'j'},
+	  {"server-addr", required_argument, 0, 'i'},
+	  {"server-port", required_argument, 0, 'j'},
       {0, 0, 0, 0}};
   std::string ops = "a:b:c:d:e:g:h:";
   int option_index = 0;
@@ -168,14 +168,14 @@ inline void parse_args(int argc, char **argv) {
         fg_n = strtoul(optarg, NULL, 10);
         INVARIANT(fg_n > 0);
         break;
-	  /*case 'i':
+	  case 'i':
 		server_addr = std::string(optarg);
 		INVARIANT(server_addr.length() > 0);
 		break;
 	  case 'j':
 		server_port = atoi(optarg);
 		INVARIANT(server_port > 0);
-		break;*/
+		break;
       default:
         abort();
     }
@@ -304,14 +304,18 @@ void *run_fg(void *param) {
   int res = 0;
 
   // Prepare socket (UDP socket)
-  /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
+  int disable = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+	perror("Disable udp checksum failed");
+  }
   struct sockaddr_in remote_sockaddr;
   uint32_t sockaddr_len = sizeof(struct sockaddr);
   memset(&remote_sockaddr, 0, sizeof(struct sockaddr_in));
   remote_sockaddr.sin_family = AF_INET;
   INVARIANT(inet_pton(AF_INET, server_addr.c_str(), &remote_sockaddr.sin_addr) > 0);
-  remote_sockaddr.sin_port = htons(server_port);*/
+  remote_sockaddr.sin_port = htons(server_port);
   // Set timeout
   /*struct timeval tv;
   tv.tv_sec = 1;
@@ -321,28 +325,32 @@ void *run_fg(void *param) {
   // Prepare socket (raw socket)
   //int raw_sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
   //int raw_sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-  int raw_sockfd = socket(AF_INET, SOCK_RAW, htons(IPPROTO_RAW));
+  /*int raw_sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
   INVARIANT(raw_sockfd != -1);
   int optval = 7; // valid values are in the range [1,7]  // 1- low priority, 7 - high priority  
   if (setsockopt(raw_sockfd, SOL_SOCKET, SO_PRIORITY, &optval, sizeof(optval)) < 0) {
 	perror("setsockopt");
   }
+  const int opt_on = 1;
+  if (setsockopt(raw_sockfd, IPPROTO_IP, IP_HDRINCL, &opt_on, sizeof(opt_on)) < 0) {
+	  perror("Enable IP_HDRINCL error");
+  }
   int ifidx = lookup_if(raw_sockfd, src_ifname, NULL);
   struct sockaddr_ll raw_socket_address;
   init_raw_sockaddr(&raw_socket_address, ifidx, src_macaddr); // set target interface for sendto
-  //res = bind(raw_sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
-  bind_if(raw_sockfd, src_ifname);
+  //res = bind(raw_sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // Packet socket; bind target interface for recvfrom
+  bind_if(raw_sockfd, src_ifname); // IP socket; NOTE: not support packet socket; use sockaddr_in not sockaddr_ll
   INVARIANT(res != -1);
   char totalbuf[MAX_BUFSIZE]; // headers + payload
-  // UDP
+  // Packet socket
   //short src_port = src_port_start + thread_id;
   //short dst_port = dst_port_start + thread_id;
-  // IP
+  // IP socket
   int ippos = strlen(dst_ipaddr_start.c_str())-2;
   std::string iphead = dst_ipaddr_start.substr(0, ippos);
   int iptail = std::stoi(dst_ipaddr_start.substr(ippos, 2)) + thread_id;
   INVARIANT(iptail <= 255);
-  std::string dst_ipaddr = iphead + std::to_string(iptail);
+  std::string dst_ipaddr = iphead + std::to_string(iptail);*/
 
   // exsiting keys fall within range [delete_i, insert_i)
   char buf[MAX_BUFSIZE]; // payload
@@ -382,23 +390,23 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
-	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  //INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  //INVARIANT(recv_size != -1);
+	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  INVARIANT(res != -1);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  INVARIANT(recv_size != -1);
 	  
 	  // Raw socket
-	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size); // UDP
-	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, buf, req_size); // IP
+	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size); // Packet socket
+	  /*size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, buf, req_size); // IP socket
 	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
 	  while (true) {
 		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 	  	INVARIANT(recv_size != -1);
-		//recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port); // UDP
-		recv_size = client_recv_payload(buf, totalbuf, recv_size, dst_ipaddr); // IP
+		//recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port); // Packet socket
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, dst_ipaddr); // IP socket
 		if (recv_size != -1) break;
-	  }
+	  }*/
 
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
@@ -409,7 +417,7 @@ void *run_fg(void *param) {
         query_i = 0;
       }
     //} else if (d <= read_ratio + update_ratio) {  // update
-    } else if (tmprun == 1) {  // update
+    } /*else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
 	  DEBUG_THIS("[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -535,19 +543,19 @@ void *run_fg(void *param) {
 	  INVARIANT(pkt_type == packet_type_t::SCAN_RES);
 	  scan_response_t rsp(buf, recv_size);
 	  DEBUG_THIS("[client " << thread_id << "] num = " << rsp.num());
-	  /*for (uint32_t val_i = 0; val_i < rsp.num(); val_i++) {
-		  COUT_VAR(rsp.pairs()[val_i].first.key)
-		  COUT_VAR(rsp.pairs()[val_i].second)
-	  }*/
+	  //for (uint32_t val_i = 0; val_i < rsp.num(); val_i++) {
+	//	  COUT_VAR(rsp.pairs()[val_i].first.key)
+	//	  COUT_VAR(rsp.pairs()[val_i].second)
+	//  }
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
       }
-    }
+    }*/
     thread_param.throughput++;
   }
 
-  //close(sockfd);
-  close(raw_sockfd);
+  close(sockfd);
+  //close(raw_sockfd);
   pthread_exit(nullptr);
 }

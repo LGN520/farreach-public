@@ -142,19 +142,18 @@ void init_raw_sockaddr(struct sockaddr_ll *socket_address, int ifidx, uint8_t *m
     socket_address->sll_addr[5] = macaddr[5];
 }
 
-// UDP
+// Packet socket
 /*size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_macaddr, 
 		std::string src_ipaddr, std::string dst_ipaddr, short src_port, 
 		short dst_port, char *payload, uint32_t payload_size) {*/
-// IP
-size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_macaddr, 
-		std::string src_ipaddr, std::string dst_ipaddr, char *payload, uint32_t payload_size) {
+// IP socket
+size_t init_buf(char *buf, uint32_t maxsize, std::string src_ipaddr, std::string dst_ipaddr, char *payload, uint32_t payload_size) {
 	assert(buf != NULL);
 	memset(buf, 0, maxsize);
 	size_t tx_len = 0;
 
 	// Ethernet header
-	struct ether_header *eh = (struct ether_header *) buf;
+	/*struct ether_header *eh = (struct ether_header *) buf;
     eh->ether_shost[0] = src_macaddr[0];
     eh->ether_shost[1] = src_macaddr[1];
     eh->ether_shost[2] = src_macaddr[2];
@@ -168,7 +167,7 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
     eh->ether_dhost[4] = dst_macaddr[4];
     eh->ether_dhost[5] = dst_macaddr[5];
     eh->ether_type = htons(ETH_P_IP);
-    tx_len += sizeof(struct ether_header);
+    tx_len += sizeof(struct ether_header);*/
 
 	// IP Header
     struct iphdr *iph = (struct iphdr *) (buf + sizeof(struct ether_header));
@@ -180,8 +179,8 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
     //iph->ttl = 0xff; // hops
     iph->ttl = 0x40; // hops
     //iph->protocol = IPPROTO_TCP;
-    //iph->protocol = IPPROTO_UDP; // UDP
-    iph->protocol = IPPROTO_NETBUFFER; // IP
+    //iph->protocol = IPPROTO_UDP; // Packet socket
+    iph->protocol = IPPROTO_NETBUFFER; // IP socket
     /* Source IP address */
     iph->saddr = inet_addr(src_ipaddr.c_str());
     /* Destination IP address */
@@ -201,7 +200,8 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 
 	// Set sizes
 	//udph->len = htons(sizeof(struct udphdr) + payload_size);
-	iph->tot_len = htons(tx_len - sizeof(struct ether_header));
+	//iph->tot_len = htons(tx_len - sizeof(struct ether_header)); // Packet socket
+	iph->tot_len = htons(tx_len); // IP socket
 
 	// Set IP checksum
 	iph->check = 0;
@@ -257,13 +257,13 @@ size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_
 	}
 }*/
 
-//int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short client_port, short server_port)  // UDP
-int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, std::string server_ipaddr) // IP 
+//int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short client_port, short server_port)  // Packet socket
+int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, std::string server_ipaddr) // IP socket
 {
 	//dump_buf(totalbuf, totalsize);
 	
-	//uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr); // UDP
-	uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr);// IP
+	//uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr); // Packet socket
+	uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr);// IP socket
 
 	if (totalsize < parsed_size) {
 		return -1;
@@ -272,14 +272,14 @@ int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, std::stri
 	if (eh->ether_type == htons(ETH_P_IP)) {
 		struct iphdr *iph = (struct iphdr *) (totalbuf + sizeof(struct ether_header));
 
-		// IP
+		// IP socket
 		if (iph->protocol == IPPROTO_NETBUFFER && iph->saddr == inet_addr(server_ipaddr.c_str())) {
 			int payload_size = totalsize - parsed_size;
 			memcpy(buf, totalbuf + parsed_size, payload_size);
 			return payload_size;
 		}
 
-		// UDP
+		// Packet socket
 		/*if (iph->protocol == IPPROTO_UDP) {
 			struct udphdr *udph = (struct udphdr *) (totalbuf + sizeof(struct ether_header) + sizeof(struct iphdr));
 			if (udph->source == htons(server_port) && udph->dest == htons(client_port)) {
@@ -292,21 +292,23 @@ int client_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, std::stri
 	return -1;
 }
 
-// UDP
+// Packet socket
 /*int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, short server_port, 
 		uint8_t *src_mac, char *src_ip, short *src_port)*/
-// IP
+// IP socket
 int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, std::string server_ipaddr,
 		uint8_t *src_mac, char *src_ip)
 {
-	//uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr); // UDP
-	uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr);// IP
+	//uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr); // Packet socket
+	uint32_t parsed_size = sizeof(struct ether_header) + sizeof(struct iphdr);// IP socket
 	if (totalsize < parsed_size) {
 		return -1;
 	}
 	struct ether_header *eh = (struct ether_header *) totalbuf;
 	if (eh->ether_type == htons(ETH_P_IP)) {
 		struct iphdr *iph = (struct iphdr *) (totalbuf + sizeof(ether_header));
+		
+		// Packet socket
 		if (iph->protocol == IPPROTO_NETBUFFER && iph->daddr == inet_addr(server_ipaddr.c_str())) {
 			int payload_size = totalsize - parsed_size;
 			memcpy(buf, totalbuf + parsed_size, payload_size);
@@ -315,6 +317,7 @@ int server_recv_payload(char *buf, char *totalbuf, uint32_t totalsize, std::stri
 			return payload_size;
 		}
 		
+		// IP socket
 		/*if (iph->protocol == IPPROTO_UDP) {
 			struct udphdr *udph = (struct udphdr *) (totalbuf + sizeof(ether_header) + sizeof(iphdr));
 			if (udph->dest == htons(server_port)) {
