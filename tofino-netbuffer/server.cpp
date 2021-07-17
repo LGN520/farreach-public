@@ -21,10 +21,12 @@
 #include "packet_format_impl.h"
 #include "raw_socket.h"
 
+struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
 
 typedef Key index_key_t;
 typedef uint64_t val_t;
+typedef SFGParam sfg_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
 typedef PutRequest<index_key_t, val_t> put_request_t;
@@ -39,12 +41,13 @@ typedef PutRequestS<index_key_t, val_t> put_request_s_t;
 inline void parse_args(int, char **);
 void load();
 void run_server(xindex_t *table);
+void *run_sfg(void *param);
 void kill(int signum);
 
 // parameters
 size_t fg_n = 1;
 size_t bg_n = 1;
-int server_port = 1111;
+//int server_port = 1111;
 
 // Raw socket
 //std::string src_ifname = "ens3f0";
@@ -54,14 +57,19 @@ uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
 //std::string src_ipaddr = "10.0.0.31";
 std::string dst_ipaddr = "10.0.0.32";
 //short src_port_start = 8888;
-short dst_port = 1111;
+short dst_port_start = 1111;
 
-volatile bool running = false;
-std::atomic<size_t> ready_threads(0);
 std::vector<index_key_t> exist_keys;
-std::vector<index_key_t> non_exist_keys;
+//std::vector<index_key_t> non_exist_keys;
 
 bool killed = false;
+volatile bool running = false;
+std::atomic<size_t> ready_threads(0);
+
+struct alignas(CACHELINE_SIZE) SFGParam {
+  xindex_t *table;
+  uint32_t thread_id;
+};
 
 class Key {
   typedef std::array<double, 1> model_key_t;
@@ -110,10 +118,11 @@ int main(int argc, char **argv) {
   xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   // register signal handler
-  signal(SIGTERM, kill);
+  signal(SIGTERM, SIG_IGN); // Ignore SIGTERM for subthreads
 
   run_server(tab_xi);
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
+  COUT_THIS("[server] Exit successfully")
   exit(0);
 }
 
@@ -203,7 +212,7 @@ void load() {
 	fd.close();
 	COUT_THIS("[server] # of exist keys = " << exist_keys.size());
 
-	fd.open("nonexist_keys.out", std::ios::in | std::ios::binary);
+	/*fd.open("nonexist_keys.out", std::ios::in | std::ios::binary);
 	INVARIANT(fd);
 	while (true) {
 		index_key_t tmp;
@@ -216,10 +225,55 @@ void load() {
 		}
 	}
 	fd.close();
-	COUT_THIS("[server] # of nonexist keys = " << non_exist_keys.size());
+	COUT_THIS("[server] # of nonexist keys = " << non_exist_keys.size());*/
 }
 
 void run_server(xindex_t *table) {
+	pthread_t threads[fg_n];
+	sfg_param_t sfg_params[fg_n];
+	// check if parameters are cacheline aligned
+	for (size_t i = 0; i < fg_n; i++) {
+		if ((uint64_t)(&(sfg_params[i])) % CACHELINE_SIZE != 0) {
+			COUT_N_EXIT("wrong parameter address: " << &(sfg_params[i]));
+		}
+	}
+
+	for (size_t worker_i = 0; worker_i < fg_n; worker_i++) {
+		sfg_params[worker_i].table = table;
+		sfg_params[worker_i].thread_id = worker_i;
+		int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
+		if (ret) {
+		  COUT_N_EXIT("Error:" << ret);
+		}
+	}
+
+	COUT_THIS("[server] prepare server foreground threads...")
+	while (ready_threads < fg_n) sleep(1);
+
+	signal(SIGTERM, kill); // Set for main thread
+
+	running = true;
+
+	while (!killed) {
+		sleep(1);
+	}
+
+	running = false;
+	void *status;
+	for (size_t i = 0; i < fg_n; i++) {
+		int rc = pthread_join(threads[i], &status);
+		if (rc) {
+		  COUT_N_EXIT("Error:unable to join," << rc);
+		}
+	}
+}
+
+void *run_sfg(void * param) {
+  // Parse param
+  sfg_param_t &thread_param = *(sfg_param_t *)param;
+  uint32_t thread_id = thread_param.thread_id;
+  xindex_t *table = thread_param.table;
+
   // prepare socket (UDP socket)
   /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
@@ -246,6 +300,7 @@ void run_server(xindex_t *table) {
   uint8_t src_macaddr[6];
   char src_ipaddr[5] = {'\0', '\0', '\0', '\0', '\0'};
   short src_port;
+  short dst_port = dst_port_start + thread_id;
 
   // Set timeout
   struct timeval tv;
@@ -254,13 +309,17 @@ void run_server(xindex_t *table) {
   res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   INVARIANT(res >= 0);
 
-  running = true;
-
   char buf[MAX_BUFSIZE]; // payload
   int recv_size = 0;
   int rsp_size = 0;
-  uint32_t sockaddr_len = sizeof(struct sockaddr);
-  while (!killed) {
+  //uint32_t sockaddr_len = sizeof(struct sockaddr);
+
+  ready_threads++;
+
+  while (!running) {
+  }
+
+  while (running) {
 	// UDP socket
 	//recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 	
@@ -379,8 +438,9 @@ void run_server(xindex_t *table) {
 	}
   }
 
-  running = false; // bg_threads will not retrain (compact, model/group merge/split)
   close(sockfd);
+  COUT_THIS("[thread" << thread_id << "] exits")
+  pthread_exit(nullptr);
 }
 
 void kill(int signum) {

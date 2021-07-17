@@ -161,9 +161,10 @@ The same as above
 ## NOTES
 
 - Ports usage
-	+ Storage server: listen client requests on 1111
-	+ NetBuffer controller: listen storage server notification on 2222
-	+ Ptf: listen controller msg on 3333
+	+ Client: send requests out the ports from 8888 to 8888+fg_n
+	+ Storage server: listen client requests from 1111 to 1111+fg_n
+	+ NetBuffer controller: listen storage server notification on 2222 (unused)
+	+ Ptf: listen controller msg on 3333 (unused)
 
 ## Fixed Issues
 

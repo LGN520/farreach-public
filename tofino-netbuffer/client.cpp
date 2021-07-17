@@ -47,8 +47,8 @@ double delete_ratio = 0;
 double scan_ratio = 0;
 size_t runtime = 10;
 size_t fg_n = 1;
-std::string server_addr = "10.0.0.32";
-int server_port = 1111;
+//std::string server_addr = "10.0.0.32";
+//int server_port = 1111;
 
 // Raw socket
 std::string src_ifname = "ens3f0";
@@ -58,7 +58,7 @@ uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
 std::string src_ipaddr = "10.0.0.31";
 std::string dst_ipaddr = "10.0.0.32";
 short src_port_start = 8888;
-short dst_port = 1111;
+short dst_port_start = 1111;
 
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
@@ -124,10 +124,10 @@ inline void parse_args(int argc, char **argv) {
       {"scan", required_argument, 0, 'e'},
       {"runtime", required_argument, 0, 'g'},
       {"fg", required_argument, 0, 'h'},
-	  {"server-addr", required_argument, 0, 'i'},
-	  {"server-port", required_argument, 0, 'j'},
+	  //{"server-addr", required_argument, 0, 'i'},
+	  //{"server-port", required_argument, 0, 'j'},
       {0, 0, 0, 0}};
-  std::string ops = "a:b:c:d:e:g:h:i:j:";
+  std::string ops = "a:b:c:d:e:g:h:";
   int option_index = 0;
 
   while (1) {
@@ -167,14 +167,14 @@ inline void parse_args(int argc, char **argv) {
         fg_n = strtoul(optarg, NULL, 10);
         INVARIANT(fg_n > 0);
         break;
-	  case 'i':
+	  /*case 'i':
 		server_addr = std::string(optarg);
 		INVARIANT(server_addr.length() > 0);
 		break;
 	  case 'j':
 		server_port = atoi(optarg);
 		INVARIANT(server_port > 0);
-		break;
+		break;*/
       default:
         abort();
     }
@@ -331,6 +331,7 @@ void *run_fg(void *param) {
   INVARIANT(res != -1);
   char totalbuf[MAX_BUFSIZE]; // headers + payload
   short src_port = src_port_start + thread_id;
+  short dst_port = dst_port_start + thread_id;
 
   // exsiting keys fall within range [delete_i, insert_i)
   char buf[MAX_BUFSIZE]; // payload
@@ -343,10 +344,10 @@ void *run_fg(void *param) {
 
   // DEBUG
   uint32_t curidx = 0;
-  uint32_t maxidx = 4;
-  int tmpruns[maxidx] = {0, 3, 0};
-  size_t idxes[maxidx] = {0, 0, 0};
-  val_t vals[maxidx] = {1, 1, 1};
+  uint32_t maxidx = 5;
+  int tmpruns[maxidx] = {0, 3, 0, 2, 0};
+  size_t idxes[maxidx] = {0, 0, 0, 0, 0};
+  val_t vals[maxidx] = {1, 1, 1, 33, 1};
 
   while (!running)
     ;
@@ -358,6 +359,7 @@ void *run_fg(void *param) {
 	if (vals[curidx] != 0) dummy_value = vals[curidx];
 	query_i = idxes[curidx];
 	delete_i = idxes[curidx];
+	insert_i = idxes[curidx];
 	update_i = idxes[curidx];
 	curidx++;
 
