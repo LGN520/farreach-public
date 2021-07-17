@@ -681,6 +681,12 @@ control ingress {
 					apply(clear_valid_tbl);
 					apply(sendback_delres_tbl);
 				}
+				else {
+					apply(ipv4_lpm);
+				}
+			}
+			else {
+				apply(ipv4_lpm);
 			}
 		}
 		else {
