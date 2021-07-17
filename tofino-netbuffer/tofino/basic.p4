@@ -5,7 +5,7 @@
 #define ETHERTYPE_VLAN 0x8100
 #define PROTOTYPE_TCP 0x06
 //#define PROTOTYPE_UDP 0x11
-PROTOTYPE_NETBUFFER 0x90
+#define PROTOTYPE_NETBUFFER 0x90
 
 #define OP_PORT 1111
 
@@ -112,7 +112,7 @@ header_type metadata_t {
 
 header ethernet_t ethernet_hdr;
 header ipv4_t ipv4_hdr;
-header udp_t udp_hdr;
+//header udp_t udp_hdr;
 header op_t op_hdr;
 header putreq_t putreq_hdr;
 header getres_t getres_hdr;

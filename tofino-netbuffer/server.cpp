@@ -289,7 +289,8 @@ void *run_sfg(void * param) {
   INVARIANT(res != -1);*/
 
   // prepare socket (raw socket)
-  int sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
+  //int sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
+  int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
   INVARIANT(sockfd != -1);
   int optval = 7; // valid values are in the range [1,7]  // 1- low priority, 7 - high priority  
   if (setsockopt(sockfd, SOL_SOCKET, SO_PRIORITY, &optval, sizeof(optval)) < 0) {
@@ -298,8 +299,9 @@ void *run_sfg(void * param) {
   int ifidx = lookup_if(sockfd, dst_ifname, NULL);
   struct sockaddr_ll raw_socket_address;
   init_raw_sockaddr(&raw_socket_address, ifidx, dst_macaddr);
-  //int res = bind(sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
+  //res = bind(sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
   bind_if(sockfd, dst_ifname);
+  INVARIANT(res != -1);
   char totalbuf[MAX_BUFSIZE]; // headers + payload
   uint8_t src_macaddr[6];
   char src_ipaddr[5] = {'\0', '\0', '\0', '\0', '\0'};

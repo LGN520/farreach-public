@@ -320,7 +320,8 @@ void *run_fg(void *param) {
 
   // Prepare socket (raw socket)
   //int raw_sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
-  int raw_sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+  //int raw_sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+  int raw_sockfd = socket(AF_INET, SOCK_RAW, htons(IPPROTO_RAW));
   INVARIANT(raw_sockfd != -1);
   int optval = 7; // valid values are in the range [1,7]  // 1- low priority, 7 - high priority  
   if (setsockopt(raw_sockfd, SOL_SOCKET, SO_PRIORITY, &optval, sizeof(optval)) < 0) {
@@ -329,11 +330,9 @@ void *run_fg(void *param) {
   int ifidx = lookup_if(raw_sockfd, src_ifname, NULL);
   struct sockaddr_ll raw_socket_address;
   init_raw_sockaddr(&raw_socket_address, ifidx, src_macaddr); // set target interface for sendto
-
-  /*res = bind(raw_sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
-  INVARIANT(res != -1);*/
+  //res = bind(raw_sockfd, (struct sockaddr *)&raw_socket_address, sizeof(struct sockaddr_ll)); // bind target interface for recvfrom
   bind_if(raw_sockfd, src_ifname);
-
+  INVARIANT(res != -1);
   char totalbuf[MAX_BUFSIZE]; // headers + payload
   // UDP
   //short src_port = src_port_start + thread_id;
@@ -356,10 +355,10 @@ void *run_fg(void *param) {
 
   // DEBUG
   uint32_t curidx = 0;
-  uint32_t maxidx = 5;
-  int tmpruns[maxidx] = {0, 3, 0, 2, 0};
-  size_t idxes[maxidx] = {0, 0, 0, 0, 0};
-  val_t vals[maxidx] = {1, 1, 1, 33, 1};
+  uint32_t maxidx = 1;
+  int tmpruns[maxidx] = {0,};
+  size_t idxes[maxidx] = {0};
+  val_t vals[maxidx] = {1};
 
   while (!running)
     ;

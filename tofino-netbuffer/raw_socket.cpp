@@ -114,6 +114,7 @@ int lookup_if(int sockfd, std::string ifname, uint8_t *src_macaddr)
 	return ifidx;
 }
 
+// Not work now
 void bind_if(int sockfd, std::string ifname)
 {
 	struct ifreq ifr;
@@ -127,9 +128,11 @@ void bind_if(int sockfd, std::string ifname)
 void init_raw_sockaddr(struct sockaddr_ll *socket_address, int ifidx, uint8_t *macaddr)
 {
 	memset(socket_address, 0, sizeof(struct sockaddr_ll));
-	socket_address->sll_family = AF_PACKET;
+	//socket_address->sll_family = AF_PACKET;
+	socket_address->sll_family = AF_INET;
 	socket_address->sll_ifindex = ifidx; 
-	socket_address->sll_protocol = htons(ETH_P_ALL);
+	//socket_address->sll_protocol = htons(ETH_P_ALL);
+	socket_address->sll_protocol = htons(IPPROTO_RAW);
     socket_address->sll_halen = ETH_ALEN; // 48-bit address
     socket_address->sll_addr[0] = macaddr[0];
     socket_address->sll_addr[1] = macaddr[1];
