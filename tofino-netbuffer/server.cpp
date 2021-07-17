@@ -275,6 +275,10 @@ void *run_sfg(void * param) {
   // prepare socket (UDP socket)
   int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
+  int disable = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+	perror("Disable udp checksum failed");
+  }
   struct sockaddr_in server_sockaddr;
   memset(&server_sockaddr, 0, sizeof(struct sockaddr_in));
   server_sockaddr.sin_family = AF_INET;
