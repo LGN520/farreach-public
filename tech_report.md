@@ -145,6 +145,8 @@ The same as above
 	+ `make all`
 	+ `./prepare`
 	+ NOTE: We must keep the same exist_keys.out and nonexist_keys.out for client/server
+- Prepare arp entry
+	+ `arp -s <if-ip> <if-mac>`
 - Run `cd tofino`
 	+ Run `su` to enter root account
 	+ Run `bash compile.sh` to compile p4 into binary code
@@ -214,5 +216,5 @@ The same as above
 	+ Implementation choices
 		* UDP socket: Tofino does not support UDP checksum calculation -> UDP checksum error after changing payload -> dropped by UDP socket
 			- Solution: disable UDP checksum checking in kernel, or use dpdk and change its code
-		* IP socket (raw): can only bind IP address -> must use IP addresses to distinguish different client threads; need to configure ARP table; cannot modify ethernet information
+		* IP socket (raw): can only bind IP address -> must use IP addresses to distinguish different client threads; need to heavily configure ARP table; cannot modify ethernet information
 		* Packet socket (raw): can only bind a specific interface -> misbehavior under multiple client threads due to receving all packets
