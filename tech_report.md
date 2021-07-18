@@ -134,6 +134,7 @@ The same as above
 			* Clone a packet as put request for eviction (use PUT_REQ_S to notify servers that it does not require a response)
 	+ Del pass
 		* STRANGE: client/server gets all requests/responses successfully, while tcpdump cannot capture all packets
+- TODO: use MAT to swap info including MAC address
 - TODO: add CBF for existence index
 - TODO: create the same number of sockets in server to enable concurrency
 - TODO: add backup KV for scan
@@ -145,8 +146,10 @@ The same as above
 	+ `make all`
 	+ `./prepare`
 	+ NOTE: We must keep the same exist_keys.out and nonexist_keys.out for client/server
-- Prepare arp entry
-	+ `arp -s <if-ip> <if-mac>`
+- Prepare interface
+	+ Use `arp -s <if-ip> <if-mac>` to prepare arp table
+	+ Use `ifconfig <if> promisc` to enable promisc mode
+		* NOTE: promisc mode only works for packet socket (raw), since it only avoids the drop by interface device but not the ethernet protocol in kernel
 - Run `cd tofino`
 	+ Run `su` to enter root account
 	+ Run `bash compile.sh` to compile p4 into binary code
@@ -158,7 +161,6 @@ The same as above
 
 ## How to debug
 
-- Use `ifconfig <if> promisc` to enable promisc mode
 - Use `tcpdump -i <if> -e -vvv -X` to listen raw packets
 
 ## NOTES
@@ -216,5 +218,5 @@ The same as above
 	+ Implementation choices
 		* UDP socket: Tofino does not support UDP checksum calculation -> UDP checksum error after changing payload -> dropped by UDP socket
 			- Solution: disable UDP checksum checking in kernel, or use dpdk and change its code
-		* IP socket (raw): can only bind IP address -> must use IP addresses to distinguish different client threads; need to heavily configure ARP table; cannot modify ethernet information
+		* IP socket (raw): can only bind IP address -> must use IP addresses to distinguish different client threads; need to heavily configure ARP table; cannot modify ethernet information and must swap mac address yet it will be dropped by ehternet protocol in kernel stack
 		* Packet socket (raw): can only bind a specific interface -> misbehavior under multiple client threads due to receving all packets
