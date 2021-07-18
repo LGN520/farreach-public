@@ -363,10 +363,10 @@ void *run_fg(void *param) {
 
   // DEBUG
   uint32_t curidx = 0;
-  uint32_t maxidx = 1;
-  int tmpruns[maxidx] = {0,};
-  size_t idxes[maxidx] = {0};
-  val_t vals[maxidx] = {1};
+  uint32_t maxidx = 4;
+  int tmpruns[maxidx] = {1, 1, 0, 1};
+  size_t idxes[maxidx] = {0, 1, 0, 1};
+  val_t vals[maxidx] = {1233, 1234, 1, 1};
 
   while (!running)
     ;
@@ -417,29 +417,29 @@ void *run_fg(void *param) {
         query_i = 0;
       }
     //} else if (d <= read_ratio + update_ratio) {  // update
-    } /*else if (tmprun == 1) {  // update
+    } else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
 	  DEBUG_THIS("[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
-	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  //INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  //INVARIANT(recv_size != -1);
+	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  INVARIANT(res != -1);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  INVARIANT(recv_size != -1);
 	  
 	  // Raw socket
-	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size);
-	  size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, buf, req_size); // IP
+	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size); // Packet socket
+	  /*size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, buf, req_size); // IP socket
 	  res = sendto(raw_sockfd, totalbuf, totalsize, 0, (struct sockaddr *) &raw_socket_address, sizeof(struct sockaddr_ll));
 	  INVARIANT(res != -1);
 	  while (true) {
 		recv_size = recvfrom(raw_sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
 	  	INVARIANT(recv_size != -1);
-		//recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port);
-		recv_size = client_recv_payload(buf, totalbuf, recv_size, dst_ipaddr); // IP
+		//recv_size = client_recv_payload(buf, totalbuf, recv_size, src_port, dst_port); // Packet socket
+		recv_size = client_recv_payload(buf, totalbuf, recv_size, dst_ipaddr); // IP socket
 		if (recv_size != -1) break;
-	  }
+	  }*/
 
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
@@ -450,7 +450,7 @@ void *run_fg(void *param) {
         update_i = 0;
       }
     //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
-    } else if (tmprun == 2) {  // insert
+    } /*else if (tmprun == 2) {  // insert
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
 	  DEBUG_THIS("[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);

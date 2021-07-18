@@ -388,7 +388,7 @@ void *run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 
 					// UDP socket
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// Raw socket
 					//size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), dst_port, src_port, buf, rsp_size);
