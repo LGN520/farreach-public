@@ -46,9 +46,10 @@ double update_ratio = 0;
 double delete_ratio = 0;
 double scan_ratio = 0;
 size_t runtime = 10;
-size_t fg_n = 1;
+size_t fg_n = 2;
 std::string server_addr = "10.0.0.32";
-int server_port = 1111;
+short src_port_start = 8888;
+short dst_port_start = 1111;
 
 // Raw socket
 //std::string src_ifname = "ens3f0";
@@ -58,8 +59,6 @@ int server_port = 1111;
 //std::string src_ipaddr = "10.0.0.31";
 //std::string dst_ipaddr = "10.0.0.32"; // Packet socket
 //std::string dst_ipaddr_start = "10.0.0.32"; // IP socket
-//short src_port_start = 8888;
-//short dst_port_start = 1111;
 
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
@@ -126,7 +125,6 @@ inline void parse_args(int argc, char **argv) {
       {"runtime", required_argument, 0, 'g'},
       {"fg", required_argument, 0, 'h'},
 	  {"server-addr", required_argument, 0, 'i'},
-	  {"server-port", required_argument, 0, 'j'},
       {0, 0, 0, 0}};
   std::string ops = "a:b:c:d:e:g:h:";
   int option_index = 0;
@@ -172,9 +170,6 @@ inline void parse_args(int argc, char **argv) {
 		server_addr = std::string(optarg);
 		INVARIANT(server_addr.length() > 0);
 		break;
-	  case 'j':
-		server_port = atoi(optarg);
-		INVARIANT(server_port > 0);
 		break;
       default:
         abort();
@@ -310,12 +305,21 @@ void *run_fg(void *param) {
   if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
 	perror("Disable udp checksum failed");
   }
+  short src_port = src_port_start + thread_id;
+  short dst_port = dst_port_start + thread_id;
+  // Client address
+  struct sockaddr_in client_sockaddr;
+  memset(&client_sockaddr, 0, sizeof(struct sockaddr_in));
+  client_sockaddr.sin_family = AF_INET;
+  client_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  client_sockaddr.sin_port = htons(src_port);
+  bind(sockfd, (struct sockaddr *)&client_sockaddr, sizeof(struct sockaddr_in));
+  // Server address
   struct sockaddr_in remote_sockaddr;
-  uint32_t sockaddr_len = sizeof(struct sockaddr);
   memset(&remote_sockaddr, 0, sizeof(struct sockaddr_in));
   remote_sockaddr.sin_family = AF_INET;
   INVARIANT(inet_pton(AF_INET, server_addr.c_str(), &remote_sockaddr.sin_addr) > 0);
-  remote_sockaddr.sin_port = htons(server_port);
+  remote_sockaddr.sin_port = htons(dst_port);
   // Set timeout
   /*struct timeval tv;
   tv.tv_sec = 1;
@@ -364,7 +368,7 @@ void *run_fg(void *param) {
   // DEBUG
   uint32_t curidx = 0;
   uint32_t maxidx = 4;
-  int tmpruns[maxidx] = {1, 1, 0, 1};
+  int tmpruns[maxidx] = {1, 1, 0, 0};
   size_t idxes[maxidx] = {0, 1, 0, 1};
   val_t vals[maxidx] = {1233, 1234, 1, 1};
 

@@ -47,14 +47,13 @@ void kill(int signum);
 // parameters
 size_t fg_n = 1;
 size_t bg_n = 1;
-int server_port = 1111;
+short dst_port_start = 1111;
 
 // Raw socket
 /*std::string dst_ifname = "ens3f1";
 uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
 //std::string dst_ipaddr = "10.0.0.32"; // Packet socket
-std::string dst_ipaddr_start = "10.0.0.32"; // IP socket
-//short dst_port_start = 1111; // Packet socket*/
+std::string dst_ipaddr_start = "10.0.0.32"; // IP socket*/
 
 std::vector<index_key_t> exist_keys;
 
@@ -279,11 +278,12 @@ void *run_sfg(void * param) {
   if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
 	perror("Disable udp checksum failed");
   }
+  short dst_port = dst_port_start + thread_id;
   struct sockaddr_in server_sockaddr;
   memset(&server_sockaddr, 0, sizeof(struct sockaddr_in));
   server_sockaddr.sin_family = AF_INET;
   server_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  server_sockaddr.sin_port = htons(server_port);
+  server_sockaddr.sin_port = htons(dst_port);
   res = bind(sockfd, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
   INVARIANT(res != -1);
   uint32_t sockaddr_len = sizeof(struct sockaddr);
@@ -307,7 +307,6 @@ void *run_sfg(void * param) {
   char src_ipaddr[5] = {'\0', '\0', '\0', '\0', '\0'};
   // Packet socket
   //short src_port;
-  //short dst_port = dst_port_start + thread_id;
   // IP socket
   int ippos = strlen(dst_ipaddr_start.c_str())-2;
   std::string iphead = dst_ipaddr_start.substr(0, ippos);
