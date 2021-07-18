@@ -134,7 +134,9 @@ The same as above
 			* Clone a packet as put request for eviction (use PUT_REQ_S to notify servers that it does not require a response)
 	+ Del pass
 		* STRANGE: client/server gets all requests/responses successfully, while tcpdump cannot capture all packets
-- TODO: use MAT to swap info including MAC address
+			- Reason: raw packet socket listens on a specific interface, which receives all packets
+			- Solution: use UDP socket and disable checkusm calculation
+- Use MAT to swap MAC address and pass GET/PUT/DEL for multiple threads
 - TODO: add CBF for existence index
 - TODO: create the same number of sockets in server to enable concurrency
 - TODO: add backup KV for scan
