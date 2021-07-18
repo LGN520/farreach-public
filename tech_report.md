@@ -203,6 +203,8 @@ The same as above
 		* SOLVED!
 			- (1) Ethernet's src mac address cannot be the mac address of the receiver's interface (promisc mode only tolerates dst mac address)
 			- (2) Tofino hardware error?: Cannot swap src/dst mac address -> no packet will be sent back with a large possibility
+				+ Reason: Sequential operation in the same action, i.e., read and write src mac addr
+				+ Solution: use MAT to modify mac addr directly; NOTE: give two 48-bit mac addr and two 32-bit ip addr exceeds the parameter limitation of one action in tofino
 	+ Errno 22 of bind/sendto: wrong parameter
 		* NOTE: sizeof(struct sockaddr) != sizeof(struct sockaddr_ll), you must give precise length
 	+ Sth adds two extra bytes (both of zero) at the end of packet: unkown reason
