@@ -44,8 +44,10 @@
 
 #if defined(NDEBUGGING)
 #define DEBUG_THIS(this) 
+#define FDEBUG_THIS(ofs, this)
 #else
 #define DEBUG_THIS(this) std::cerr << this << std::endl
+#define FDEBUG_THIS(ofs, this) ofs << this << std::endl
 #endif
 
 #define UNUSED(var) ((void)var)

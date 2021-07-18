@@ -45,7 +45,7 @@ void *run_sfg(void *param);
 void kill(int signum);
 
 // parameters
-size_t fg_n = 1;
+size_t fg_n = 2;
 size_t bg_n = 1;
 short dst_port_start = 1111;
 
@@ -181,6 +181,7 @@ inline void parse_args(int argc, char **argv) {
     }
   }
 
+  COUT_VAR(fg_n);
   COUT_VAR(bg_n);
   COUT_VAR(xindex::config.root_error_bound);
   COUT_VAR(xindex::config.root_memory_constraint);
@@ -404,7 +405,7 @@ void *run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 
 					// UDP socket
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// Raw socket
 					//size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), dst_port, src_port, buf, rsp_size);
@@ -426,7 +427,7 @@ void *run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 
 					// UDP socket
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// Raw socket
 					//size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), dst_port, src_port, buf, rsp_size);

@@ -161,7 +161,7 @@ The same as above
 
 ## How to debug
 
-- Use `tcpdump -i <if> -e -vvv -X` to listen raw packets
+- Use `tcpdump -i <if> -e -vvv -X udp` to listen udp packets
 
 ## NOTES
 
