@@ -103,8 +103,10 @@ header_type metadata_t {
 		origin_keyhi: 32;
 		origin_vallo: 32;
 		origin_valhi: 32;
-		//tmp_macaddr: 48;
-		tmp_ipaddr: 32;
+		tmp_sipaddr: 32;
+		tmp_dipaddr: 32;
+		tmp_sport: 16;
+		tmp_dport: 16;
 		tmp_port: 16;
 		is_clone: 1;
 	}
@@ -213,6 +215,9 @@ calculated_field ipv4_hdr.hdrChecksum {
     update ipv4_chksum_calc;
 }
 
+action nop() {}
+
+
 action droppkt() {
 	drop();
 }
@@ -307,7 +312,9 @@ table match_keylo_tbl {
 	actions {
 		get_match_keylo;
 		put_match_keylo;
+		nop;
 	}
+	default_action: nop();
 }
 
 register keyhi_reg {
@@ -355,7 +362,9 @@ table match_keyhi_tbl {
 	actions {
 		get_match_keyhi;
 		put_match_keyhi;
+		nop;
 	}
+	default_action: nop();
 }
 
 register valid_reg {
@@ -414,7 +423,9 @@ table access_valid_tbl {
 	actions {
 		get_valid;
 		set_valid;
+		nop;
 	}
+	default_action: nop();
 }
 
 register vallo_reg {
@@ -510,30 +521,33 @@ table put_valhi_tbl {
 
 /* Ingress Processing */
 
-action save_dstinfo() {
-	//modify_field(meta.tmp_macaddr, ethernet_hdr.dstAddr);
-	modify_field(meta.tmp_ipaddr, ipv4_hdr.dstAddr);
-	modify_field(meta.tmp_port, udp_hdr.dstPort);
+action save_info() {
+	modify_field(meta.tmp_sipaddr, ipv4_hdr.srcAddr);
+	modify_field(meta.tmp_dipaddr, ipv4_hdr.dstAddr);
+	modify_field(meta.tmp_sport, udp_hdr.srcPort);
+	modify_field(meta.tmp_dport, udp_hdr.dstPort);
 }
 
-table save_dstinfo_tbl {
+table save_info_tbl {
 	actions {
-		save_dstinfo;
+		save_info;
 	}
-	default_action: save_dstinfo();
+	default_action: save_info();
 }
 
-action sendback_getres() {
-	modify_field(ethernet_hdr.srcAddr, ethernet_hdr.dstAddr);
+action sendback_getres(tmp_smacaddr, tmp_dmacaddr) {
+	// Swap mac address
+	modify_field(ethernet_hdr.srcAddr, tmp_dmacaddr);
+	modify_field(ethernet_hdr.dstAddr, tmp_smacaddr);
 
 	// Swap ip address
-	modify_field(ipv4_hdr.dstAddr, ipv4_hdr.srcAddr);
-	modify_field(ipv4_hdr.srcAddr, meta.tmp_ipaddr);
+	modify_field(ipv4_hdr.srcAddr, meta.tmp_dipaddr);
+	modify_field(ipv4_hdr.dstAddr, meta.tmp_sipaddr);
 	add_to_field(ipv4_hdr.totalLen, 8); // Big endian: add an 8B value
 	
 	// Swap udp port
-	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
-	modify_field(udp_hdr.srcPort, meta.tmp_port);
+	modify_field(udp_hdr.dstPort, meta.tmp_sport);
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
 	modify_field(udp_hdr.hdrLength, 0x20); 
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
@@ -545,24 +559,30 @@ action sendback_getres() {
 }
 
 table sendback_getres_tbl {
+	reads {
+		ig_intr_md.ingress_port: exact;
+	}
 	actions {
 		sendback_getres;
+		nop;
 	}
-	default_action: sendback_getres();
+	default_action: nop();
 }
 
-action sendback_putres() {
-	modify_field(ethernet_hdr.srcAddr, ethernet_hdr.dstAddr);
+action sendback_putres(tmp_smacaddr, tmp_dmacaddr) {
+	// Swap mac address
+	modify_field(ethernet_hdr.srcAddr, tmp_dmacaddr);
+	modify_field(ethernet_hdr.dstAddr, tmp_smacaddr);
 
 	// Swap ip address
-	modify_field(ipv4_hdr.dstAddr, ipv4_hdr.srcAddr);
-	modify_field(ipv4_hdr.srcAddr, meta.tmp_ipaddr);
+	modify_field(ipv4_hdr.srcAddr, meta.tmp_dipaddr);
+	modify_field(ipv4_hdr.dstAddr, meta.tmp_sipaddr);
 	modify_field(ipv4_hdr.totalLen, 45); // Big endian: 20B IP + 8B UDP + 16B OP + 1B status
 	//modify_field(ipv4_hdr.totalLen, 37); // Big endian: 20B IP + 16B OP + 1B status
 	
 	// Swap udp port
-	modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
-	modify_field(udp_hdr.srcPort, meta.tmp_port);
+	modify_field(udp_hdr.dstPort, meta.tmp_sport);
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
 	modify_field(udp_hdr.hdrLength, 0x19);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
@@ -574,25 +594,31 @@ action sendback_putres() {
 }
 
 table sendback_putres_tbl {
+	reads {
+		ig_intr_md.ingress_port: exact;
+	}
 	actions {
 		sendback_putres;
+		nop;
 	}
-	default_action: sendback_putres();
+	default_action: nop();
 }
 
-action sendback_delres() {
-	modify_field(ethernet_hdr.srcAddr, ethernet_hdr.dstAddr);
+action sendback_delres(tmp_smacaddr, tmp_dmacaddr) {
+	// Swap mac address
+	modify_field(ethernet_hdr.srcAddr, tmp_dmacaddr);
+	modify_field(ethernet_hdr.dstAddr, tmp_smacaddr);
 
 	// Swap ip address
-	modify_field(ipv4_hdr.dstAddr, ipv4_hdr.srcAddr);
-	modify_field(ipv4_hdr.srcAddr, meta.tmp_ipaddr);
+	modify_field(ipv4_hdr.srcAddr, meta.tmp_dipaddr);
+	modify_field(ipv4_hdr.dstAddr, meta.tmp_sipaddr);
 	modify_field(ipv4_hdr.totalLen, 45); // Big endian: 20B IP + 8B UDP + 16B OP + 1B status
 	//modify_field(ipv4_hdr.totalLen, 37); // Big endian: 20B IP + 16B OP + 1B status
 	
 	// Swap udp port
-	//modify_field(udp_hdr.dstPort, udp_hdr.srcPort);
-	//modify_field(udp_hdr.srcPort, meta.tmp_port);
-	//modify_field(udp_hdr.hdrLength, 0x19);
+	modify_field(udp_hdr.dstPort, meta.tmp_sport);
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	modify_field(udp_hdr.hdrLength, 0x19);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 
@@ -602,10 +628,14 @@ action sendback_delres() {
 }
 
 table sendback_delres_tbl {
+	reads {
+		ig_intr_md.ingress_port: exact;
+	}
 	actions {
 		sendback_delres;
+		nop;
 	}
-	default_action: sendback_delres();
+	default_action: nop();
 }
 
 field_list clone_field_list {
@@ -627,7 +657,9 @@ table clone_pkt_tbl {
 	}
 	actions {
 		clone_pkt;
+		nop;
 	}
+	default_action: nop();
 }
 
 control ingress {
@@ -636,7 +668,7 @@ control ingress {
 		/*** Stage 0 ***/
 
 		apply(calculate_hash_tbl);
-		apply(save_dstinfo_tbl);
+		apply(save_info_tbl);
 
 		/*** Stage 1 ***/
 

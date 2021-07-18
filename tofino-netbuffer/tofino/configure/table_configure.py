@@ -46,6 +46,8 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 #   ex: ["1/0", "1/1"]
 #
 fp_ports = ["1/0", "3/0"]
+src_mac = "9c:69:b4:60:ef:a4"
+dst_mac = "9c:69:b4:60:ef:8d"
 src_ip = "10.0.0.31"
 dst_ip = "10.0.0.32"
 
@@ -157,6 +159,33 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             self.client.ipv4_lpm_table_add_with_ipv4_forward(\
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
+
+            # Table: sendback_getres_tbl
+            print "Configuring sendback_getres_tbl"
+            matchspec0 = netbuffer_sendback_getres_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
+            actnspec0 = netbuffer_sendback_getres_action_spec_t(\
+                    macAddr_to_string(src_mac), \
+                    macAddr_to_string(dst_mac))
+            self.client.sendback_getres_tbl_table_add_with_sendback_getres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
+            # Table: sendback_putres_tbl
+            print "Configuring sendback_putres_tbl"
+            matchspec0 = netbuffer_sendback_putres_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
+            actnspec0 = netbuffer_sendback_putres_action_spec_t(\
+                    macAddr_to_string(src_mac), \
+                    macAddr_to_string(dst_mac))
+            self.client.sendback_putres_tbl_table_add_with_sendback_putres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
+            # Table: sendback_delres_tbl
+            print "Configuring sendback_delres_tbl"
+            matchspec0 = netbuffer_sendback_delres_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
+            actnspec0 = netbuffer_sendback_delres_action_spec_t(\
+                    macAddr_to_string(src_mac), \
+                    macAddr_to_string(dst_mac))
+            self.client.sendback_delres_tbl_table_add_with_sendback_delres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: match_keylo_tbl
             print "Configuring match_keylo_tbl"
