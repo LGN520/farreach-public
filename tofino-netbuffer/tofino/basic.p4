@@ -20,7 +20,7 @@
 #define SCANRES_TYPE 0x07000000
 #define PUTREQ_S_TYPE 0x08000000
 
-#define KV_BUCKET_COUNT 1
+#define KV_BUCKET_COUNT 1024*1024
 
 /* Packet Header Types */
 
