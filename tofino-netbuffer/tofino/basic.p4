@@ -20,7 +20,8 @@
 #define SCANRES_TYPE 0x07000000
 #define PUTREQ_S_TYPE 0x08000000
 
-#define KV_BUCKET_COUNT 1024*1024
+// 64K * (4B + 4B + 4B + 4B + 1B)
+#define KV_BUCKET_COUNT 65536
 
 /* Packet Header Types */
 
@@ -408,6 +409,7 @@ action clear_valid() {
 	clear_valid_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 2
 table clear_valid_tbl {
 	actions {
 		clear_valid;

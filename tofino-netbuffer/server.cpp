@@ -45,7 +45,7 @@ void *run_sfg(void *param);
 void kill(int signum);
 
 // parameters
-size_t fg_n = 2;
+size_t fg_n = 1;
 size_t bg_n = 1;
 short dst_port_start = 1111;
 

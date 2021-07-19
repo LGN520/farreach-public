@@ -225,3 +225,4 @@ The same as above
 			- Solution: disable UDP checksum checking in kernel, or use dpdk and change its code
 		* IP socket (raw): can only bind IP address -> must use IP addresses to distinguish different client threads; need to heavily configure ARP table; cannot modify ethernet information and must swap mac address yet it will be dropped by ehternet protocol in kernel stack
 		* Packet socket (raw): can only bind a specific interface -> misbehavior under multiple client threads due to receving all packets
+	+ NOTE: If reg exceeds the SRAM limitation of tofino, it tries to arrange each table into an individual stage and could cause invalid placement
