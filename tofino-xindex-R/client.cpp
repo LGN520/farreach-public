@@ -329,14 +329,25 @@ void *run_fg(void *param) {
   COUT_THIS("[client " << thread_id << "] Ready.");
   ready_threads++;
 
+  // DEBUG TEST
+  uint32_t debugtest_idx = 0;
+  uint32_t debugtest_i = 0;
+
   while (!running)
     ;
 
   while (running) {
+	// DEBUG TEST
+	int tmprun = 0;
+	query_i = debugtest_idx;
+	update_i = debugtest_idx;
+	if (debugtest_i == 0) tmprun = 1;
+	debugtest_i++;
+
     double d = ratio_dis(gen);
 	//int tmprun = 4;
-    if (d <= read_ratio) {  // get
-    //if (tmprun == 0) {  // get
+    //if (d <= read_ratio) {  // get
+    if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
 	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key)
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -352,8 +363,8 @@ void *run_fg(void *param) {
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio) {  // update
-    //} else if (tmprun == 1) {  // update
+    //} else if (d <= read_ratio + update_ratio) {  // update
+    } else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
 	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val())
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -369,8 +380,8 @@ void *run_fg(void *param) {
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
-    //} else if (tmprun == 2) {  // insert
+    //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
+    } else if (tmprun == 2) {  // insert
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
 	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val())
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -386,8 +397,8 @@ void *run_fg(void *param) {
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
-    //} else if (tmprun == 3) {  // remove
+    //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
+    } else if (tmprun == 3) {  // remove
 	  del_request_t req(thread_id, op_keys[delete_i]);
 	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[delete_i].key)
 	  req_size = req.serialize(buf, MAX_BUFSIZE);

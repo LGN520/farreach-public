@@ -14,7 +14,7 @@
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // inetaddr conversion
-//#include <sys/time.h> // struct timeval
+#include <sys/time.h> // struct timeval
 
 #include "helper.h"
 #include "raw_socket.h"
@@ -370,12 +370,17 @@ void *run_fg(void *param) {
   // DEBUG
   /*uint32_t curidx = 0;
   uint32_t maxidx = 3;
-  int tmpruns[maxidx] = {0, 3, 0};
+  int tmpruns[maxidx] = {0, 1, 0};
   size_t idxes[maxidx] = {0, 0, 0};
-  val_t vals[maxidx] = {1, 1, 1};
-  std::ostringstream ss;
-  ss << "tmp_client" << thread_id << ".out";
-  std::ofstream ofs(ss.str(), std::ofstream::out);*/
+  val_t vals[maxidx] = {1, 1234, 1};*/
+  //std::ostringstream ss;
+  //ss << "tmp_client" << thread_id << ".out";
+  //std::ofstream ofs(ss.str(), std::ofstream::out);
+  
+  /*struct timespec time0 = { 0, 0 };
+  struct timespec time1 = { 0, 0 };
+  struct timespec time2 = { 0, 0 };
+  struct timespec time3 = { 0, 0 };*/
 
   // DEBUG TEST
   uint32_t debugtest_idx = 0;
@@ -399,21 +404,28 @@ void *run_fg(void *param) {
 	int tmprun = 0;
 	query_i = debugtest_idx;
 	update_i = debugtest_idx;
-	if (debugtest_i == 0) tmprun = 1;
+	if (unlikely(debugtest_i == 0)) tmprun = 1;
 	debugtest_i++;
 
-    double d = ratio_dis(gen);
+    //double d = ratio_dis(gen);
     //if (d <= read_ratio) {  // get
     if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
 	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key);
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
+	  //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time0);
+
 	  // UDP socket
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
+
+	  //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time1);
+
 	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
+
+	  //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time2);
 	  
 	  // Raw socket
 	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size); // Packet socket
@@ -436,17 +448,30 @@ void *run_fg(void *param) {
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
       }
+
+	  //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time3);
+	  /*std::cout << "t0: " << time0.tv_sec << "s" << time0.tv_nsec << "ns" <<std::endl
+		<< "t1: " << time1.tv_sec << "s" << time1.tv_nsec << "ns" <<std::endl
+		<< "t2: " << time2.tv_sec << "s" << time2.tv_nsec << "ns" <<std::endl
+		<< "t3: " << time3.tv_sec << "s" << time3.tv_nsec << "ns" << std::endl;*/
     //} else if (d <= read_ratio + update_ratio) {  // update
     } else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
 	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
+	  //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time0);
+
 	  // UDP socket
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
+
+	  //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time1);
+
 	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
+
+	  //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time2);
 	  
 	  // Raw socket
 	  //size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, src_macaddr, dst_macaddr, src_ipaddr, dst_ipaddr, src_port, dst_port, buf, req_size); // Packet socket
@@ -469,6 +494,12 @@ void *run_fg(void *param) {
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
       }
+
+	  //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time3);
+	  /*std::cout << "t0: " << time0.tv_sec << "s" << time0.tv_nsec << "ns" <<std::endl
+		<< "t1: " << time1.tv_sec << "s" << time1.tv_nsec << "ns" <<std::endl
+		<< "t2: " << time2.tv_sec << "s" << time2.tv_nsec << "ns" <<std::endl
+		<< "t3: " << time3.tv_sec << "s" << time3.tv_nsec << "ns" << std::endl;*/
     //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     } else if (tmprun == 2) {  // insert
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
