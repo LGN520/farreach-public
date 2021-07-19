@@ -360,42 +360,42 @@ void *run_fg(void *param) {
 
   // exsiting keys fall within range [delete_i, insert_i)
   char buf[MAX_BUFSIZE]; // payload
-  ready_threads++;
   int req_size = 0;
   int recv_size = 0;
   val_t dummy_value = 1234;
-  COUT_THIS("[client " << thread_id << "] Ready.");
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
+  COUT_THIS("[client " << thread_id << "] Ready.");
+  ready_threads++;
 
   // DEBUG
-  uint32_t curidx = 0;
+  /*uint32_t curidx = 0;
   uint32_t maxidx = 3;
   int tmpruns[maxidx] = {0, 3, 0};
   size_t idxes[maxidx] = {0, 0, 0};
   val_t vals[maxidx] = {1, 1, 1};
   std::ostringstream ss;
   ss << "tmp_client" << thread_id << ".out";
-  std::ofstream ofs(ss.str(), std::ofstream::out);
+  std::ofstream ofs(ss.str(), std::ofstream::out);*/
 
   while (!running)
     ;
 
   while (running) {
 	// DEBUG
-	if (curidx >= maxidx) break;
+	/*if (curidx >= maxidx) break;
 	int tmprun = tmpruns[curidx];
 	if (vals[curidx] != 0) dummy_value = vals[curidx];
 	query_i = idxes[curidx];
 	delete_i = idxes[curidx];
 	insert_i = idxes[curidx];
 	update_i = idxes[curidx];
-	curidx++;
+	curidx++;*/
 
     double d = ratio_dis(gen);
-    //if (d <= read_ratio) {  // get
-    if (tmprun == 0) {  // get
+    if (d <= read_ratio) {  // get
+    //if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key);
+	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key);
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -420,15 +420,15 @@ void *run_fg(void *param) {
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
 	  get_response_t rsp(buf, recv_size);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] val = " << rsp.val());
+	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] val = " << rsp.val());
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
       }
-    //} else if (d <= read_ratio + update_ratio) {  // update
-    } else if (tmprun == 1) {  // update
+    } else if (d <= read_ratio + update_ratio) {  // update
+    //} else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val());
+	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -453,15 +453,15 @@ void *run_fg(void *param) {
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
 	  put_response_t rsp(buf, recv_size);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] stat = " << rsp.stat());
+	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] stat = " << rsp.stat());
       update_i++;
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
       }
-    //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
-    } else if (tmprun == 2) {  // insert
+    } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
+    //} else if (tmprun == 2) {  // insert
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val());
+	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -486,15 +486,15 @@ void *run_fg(void *param) {
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
 	  put_response_t rsp(buf, recv_size);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] stat = " << rsp.stat());
+	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] stat = " << rsp.stat());
       insert_i++;
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
       }
-    //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
-    } else if (tmprun == 3) {  // remove
+    } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
+    //} else if (tmprun == 3) {  // remove
 	  del_request_t req(thread_id, op_keys[delete_i]);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[delete_i].key);
+	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[delete_i].key);
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -519,14 +519,14 @@ void *run_fg(void *param) {
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::DEL_RES);
 	  del_response_t rsp(buf, recv_size);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] stat = " << rsp.stat());
+	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] stat = " << rsp.stat());
       delete_i++;
       if (unlikely(delete_i == op_keys.size())) {
         delete_i = 0;
       }
     } else {  // scan
 	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], 10);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << req.key().key);
+	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << req.key().key);
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -551,7 +551,7 @@ void *run_fg(void *param) {
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::SCAN_RES);
 	  scan_response_t rsp(buf, recv_size);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] num = " << rsp.num());
+	  //FDEBUG_THIS(ofs, "[client " << thread_id << "] num = " << rsp.num());
 	  //for (uint32_t val_i = 0; val_i < rsp.num(); val_i++) {
 	//	  COUT_VAR(rsp.pairs()[val_i].first.key)
 	//	  COUT_VAR(rsp.pairs()[val_i].second)
@@ -566,6 +566,6 @@ void *run_fg(void *param) {
 
   close(sockfd);
   //close(raw_sockfd);
-  ofs.close();
+  //ofs.close();
   pthread_exit(nullptr);
 }

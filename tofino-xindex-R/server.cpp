@@ -20,10 +20,12 @@
 #include "xindex_impl.h"
 #include "packet_format_impl.h"
 
+struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
 
 typedef Key index_key_t;
 typedef uint64_t val_t;
+typedef SFGParam sfg_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
 typedef PutRequest<index_key_t, val_t> put_request_t;
@@ -37,19 +39,24 @@ typedef ScanResponse<index_key_t, val_t> scan_response_t;
 inline void parse_args(int, char **);
 void load();
 void run_server(xindex_t *table);
+void *run_sfg(void *param);
 void kill(int signum);
 
 // parameters
 size_t fg_n = 1;
 size_t bg_n = 1;
-int server_port = 1111;
+short dst_port_start = 1111;
 
-volatile bool running = false;
-std::atomic<size_t> ready_threads(0);
 std::vector<index_key_t> exist_keys;
-std::vector<index_key_t> non_exist_keys;
 
 bool killed = false;
+volatile bool running = false;
+std::atomic<size_t> ready_threads(0);
+
+struct alignas(CACHELINE_SIZE) SFGParam {
+  xindex_t *table;
+  uint32_t thread_id;
+};
 
 class Key {
   typedef std::array<double, 1> model_key_t;
@@ -98,10 +105,11 @@ int main(int argc, char **argv) {
   xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   // register signal handler
-  signal(SIGTERM, kill);
+  signal(SIGTERM, SIG_IGN); // Ignore SIGTERM for subthreads
 
   run_server(tab_xi);
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
+  COUT_THIS("[server] Exit successfully")
   exit(0);
 }
 
@@ -165,6 +173,7 @@ inline void parse_args(int argc, char **argv) {
     }
   }
 
+  COUT_VAR(fg_n);
   COUT_VAR(bg_n);
   COUT_VAR(xindex::config.root_error_bound);
   COUT_VAR(xindex::config.root_memory_constraint);
@@ -191,7 +200,7 @@ void load() {
 	fd.close();
 	COUT_THIS("[server] # of exist keys = " << exist_keys.size());
 
-	fd.open("nonexist_keys.out", std::ios::in | std::ios::binary);
+	/*fd.open("nonexist_keys.out", std::ios::in | std::ios::binary);
 	INVARIANT(fd);
 	while (true) {
 		index_key_t tmp;
@@ -204,20 +213,73 @@ void load() {
 		}
 	}
 	fd.close();
-	COUT_THIS("[server] # of nonexist keys = " << non_exist_keys.size());
+	COUT_THIS("[server] # of nonexist keys = " << non_exist_keys.size());*/
 }
 
 void run_server(xindex_t *table) {
+	pthread_t threads[fg_n];
+	sfg_param_t sfg_params[fg_n];
+	// check if parameters are cacheline aligned
+	for (size_t i = 0; i < fg_n; i++) {
+		if ((uint64_t)(&(sfg_params[i])) % CACHELINE_SIZE != 0) {
+			COUT_N_EXIT("wrong parameter address: " << &(sfg_params[i]));
+		}
+	}
+
+	for (size_t worker_i = 0; worker_i < fg_n; worker_i++) {
+		sfg_params[worker_i].table = table;
+		sfg_params[worker_i].thread_id = worker_i;
+		int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
+		if (ret) {
+		  COUT_N_EXIT("Error:" << ret);
+		}
+	}
+
+	COUT_THIS("[server] prepare server foreground threads...")
+	while (ready_threads < fg_n) sleep(1);
+
+	signal(SIGTERM, kill); // Set for main thread
+
+	running = true;
+
+	while (!killed) {
+		sleep(1);
+	}
+
+	running = false;
+	void *status;
+	for (size_t i = 0; i < fg_n; i++) {
+		int rc = pthread_join(threads[i], &status);
+		if (rc) {
+		  COUT_N_EXIT("Error:unable to join," << rc);
+		}
+	}
+}
+
+void *run_sfg(void * param) {
+  // Parse param
+  sfg_param_t &thread_param = *(sfg_param_t *)param;
+  uint32_t thread_id = thread_param.thread_id;
+  xindex_t *table = thread_param.table;
+
+  int res = 0;
+
   // prepare socket
   int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
+  int disable = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+	perror("Disable udp checksum failed");
+  }
+  short dst_port = dst_port_start + thread_id;
   struct sockaddr_in server_sockaddr;
   memset(&server_sockaddr, 0, sizeof(struct sockaddr_in));
   server_sockaddr.sin_family = AF_INET;
   server_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  server_sockaddr.sin_port = htons(server_port);
-  int res = bind(sockfd, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+  server_sockaddr.sin_port = htons(dst_port);
+  res = bind(sockfd, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
   INVARIANT(res != -1);
+  uint32_t sockaddr_len = sizeof(struct sockaddr);
 
   // Set timeout
   struct timeval tv;
@@ -226,13 +288,16 @@ void run_server(xindex_t *table) {
   res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   INVARIANT(res >= 0);
 
-  running = true;
-
   char buf[MAX_BUFSIZE];
   int recv_size = 0;
   int rsp_size = 0;
-  uint32_t sockaddr_len = sizeof(struct sockaddr);
-  while (!killed) {
+
+  ready_threads++;
+
+  while (!running) {
+  }
+
+  while (running) {
 	recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 	if (recv_size == -1) {
 		if (errno == EWOULDBLOCK || errno == EINTR) {
@@ -310,8 +375,9 @@ void run_server(xindex_t *table) {
 	}
   }
 
-  running = false; // bg_threads will not retrain (compact, model/group merge/split)
   close(sockfd);
+  COUT_THIS("[thread" << thread_id << "] exits")
+  pthread_exit(nullptr);
 }
 
 void kill(int signum) {

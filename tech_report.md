@@ -137,6 +137,7 @@ The same as above
 			- Reason: raw packet socket listens on a specific interface, which receives all packets
 			- Solution: use UDP socket and disable checkusm calculation
 - Use MAT to swap MAC address and pass GET/PUT/DEL for multiple threads
+- TODO: test multiple threads for XIndex and NetBuffer
 - TODO: add CBF for existence index
 - TODO: create the same number of sockets in server to enable concurrency
 - TODO: add backup KV for scan

@@ -46,7 +46,8 @@ double scan_ratio = 0;
 size_t runtime = 10;
 size_t fg_n = 1;
 std::string server_addr = "10.0.0.32";
-int server_port = 1111;
+short src_port_start = 8888;
+short dst_port_start = 1111;
 
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
@@ -113,9 +114,9 @@ inline void parse_args(int argc, char **argv) {
       {"runtime", required_argument, 0, 'g'},
       {"fg", required_argument, 0, 'h'},
 	  {"server-addr", required_argument, 0, 'i'},
-	  {"server-port", required_argument, 0, 'j'},
+	  //{"server-port", required_argument, 0, 'j'},
       {0, 0, 0, 0}};
-  std::string ops = "a:b:c:d:e:g:h:i:j:";
+  std::string ops = "a:b:c:d:e:g:h:i:";
   int option_index = 0;
 
   while (1) {
@@ -159,10 +160,10 @@ inline void parse_args(int argc, char **argv) {
 		server_addr = std::string(optarg);
 		INVARIANT(server_addr.length() > 0);
 		break;
-	  case 'j':
+	  /*case 'j':
 		server_port = atoi(optarg);
 		INVARIANT(server_port > 0);
-		break;
+		break;*/
       default:
         abort();
     }
@@ -288,30 +289,45 @@ void *run_fg(void *param) {
                    non_exist_keys.begin() + non_exist_key_end);
   }
 
+  int res = 0;
+
   // Prepare socket
   int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
+  int disable = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+	perror("Disable udp checksum failed");
+  }
+  short src_port = src_port_start + thread_id;
+  short dst_port = dst_port_start + thread_id;
+  // Client address
+  struct sockaddr_in client_sockaddr;
+  memset(&client_sockaddr, 0, sizeof(struct sockaddr_in));
+  client_sockaddr.sin_family = AF_INET;
+  client_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  client_sockaddr.sin_port = htons(src_port);
+  res = bind(sockfd, (struct sockaddr *)&client_sockaddr, sizeof(struct sockaddr_in));
+  INVARIANT(res != -1)
+  // Server address
   struct sockaddr_in remote_sockaddr;
   memset(&remote_sockaddr, 0, sizeof(struct sockaddr_in));
   remote_sockaddr.sin_family = AF_INET;
   INVARIANT(inet_pton(AF_INET, server_addr.c_str(), &remote_sockaddr.sin_addr) > 0);
-  remote_sockaddr.sin_port = htons(server_port);
+  remote_sockaddr.sin_port = htons(dst_port);
   // Set timeout
   /*struct timeval tv;
   tv.tv_sec = 1;
   tv.tv_usec =  0;
   setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));*/
 
-  COUT_THIS("[client " << thread_id << "] Ready.");
-  size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
   // exsiting keys fall within range [delete_i, insert_i)
-  ready_threads++;
+  char buf[MAX_BUFSIZE];
   int req_size = 0;
-  int res = 0;
   int recv_size = 0;
   val_t dummy_value = 1234;
-  uint32_t sockaddr_len = sizeof(struct sockaddr);
-  char buf[MAX_BUFSIZE];
+  size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
+  COUT_THIS("[client " << thread_id << "] Ready.");
+  ready_threads++;
 
   while (!running)
     ;
@@ -326,7 +342,7 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
@@ -343,7 +359,7 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
@@ -360,7 +376,7 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
@@ -377,7 +393,7 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::DEL_RES);
@@ -393,7 +409,7 @@ void *run_fg(void *param) {
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
 	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&remote_sockaddr, &sockaddr_len);
+	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  INVARIANT(recv_size != -1);
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::SCAN_RES);
@@ -409,7 +425,6 @@ void *run_fg(void *param) {
       }
     }
     thread_param.throughput++;
-	//break; // TMPTMP
   }
 
   close(sockfd);
