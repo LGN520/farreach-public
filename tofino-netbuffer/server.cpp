@@ -326,6 +326,10 @@ void *run_sfg(void * param) {
   int recv_size = 0;
   int rsp_size = 0;
 
+  /*struct timespec time0 = { 0, 0  };
+  struct timespec time1 = { 0, 0  };
+  struct timespec time2 = { 0, 0  };*/
+
   ready_threads++;
 
   while (!running) {
@@ -334,6 +338,8 @@ void *run_sfg(void * param) {
   while (running) {
 	// UDP socket
 	recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
+
+	//clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time0);
 	
 	// Raw socket
 	//recv_size = recvfrom(sockfd, totalbuf, MAX_BUFSIZE, 0, NULL, NULL);
@@ -369,8 +375,16 @@ void *run_sfg(void * param) {
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 
+					//clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time1);
+
 					// UDP socket
 					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+
+					/*clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time2);
+
+					std::cout << "t0: " << time0.tv_sec << "s" << time0.tv_nsec << "ns" << std::endl
+								<< "t1: " << time1.tv_sec << "s" << time1.tv_nsec << "ns" << std::endl
+								<< "t2: " << time2.tv_sec << "s" << time2.tv_nsec << "ns" << std::endl;*/
 					
 					// Raw socket
 					//size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), dst_port, src_port, buf, rsp_size); // Pakcet socket
@@ -387,8 +401,16 @@ void *run_sfg(void * param) {
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 
+					//clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time1);
+
 					// UDP socket
 					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+
+					/*clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time2);
+
+					std::cout << "t0: " << time0.tv_sec << "s" << time0.tv_nsec << "ns" << std::endl
+								<< "t1: " << time1.tv_sec << "s" << time1.tv_nsec << "ns" << std::endl
+								<< "t2: " << time2.tv_sec << "s" << time2.tv_nsec << "ns" << std::endl;*/
 					
 					// Raw socket
 					//size_t totalsize = init_buf(totalbuf, MAX_BUFSIZE, dst_macaddr, src_macaddr, dst_ipaddr, std::string(src_ipaddr), dst_port, src_port, buf, rsp_size);
