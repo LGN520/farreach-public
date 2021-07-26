@@ -46,7 +46,7 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 #   ex: ["1/0", "1/1"]
 #
 fp_ports = ["2/0", "3/0"]
-src_mac = "9c:69:b4:60:ef:a4"
+src_mac = "9c:69:b4:60:ef:a5"
 dst_mac = "9c:69:b4:60:ef:8d"
 src_ip = "10.0.0.31"
 dst_ip = "10.0.0.32"
