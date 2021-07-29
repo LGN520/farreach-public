@@ -51,8 +51,18 @@
 				+ `./dpdk-devbind.py --status`
 					* Now since OS cannot find ens3f1, ifconfig cannot configure this interface
 					* We can use `dpdk-devbind.py -u 0000:5e:00.1` to unbind the interface
-		* TODO: configure env var
-	+ TODO: test DPDK
+		* Configure huge page
+			- `sudo sysctl -w vm.nr_hugepages=1024`
+			- Run `cat /proc/meminfo | grep Huge` or `cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages` to check huge page size
+		* Configure environment for DPDK
+			- Add `export RTE_SDK=/home/ssy/dpdk/dpdk-20.08` into /etc/profile
+			- Add `export RTE_TARGET=x86_64-native-linuxapp-gcc` into /etc/profile
+	+ Test DPDK
+		* `cd $RTE_SDK/examples/helloworld`
+		* `make`
+		* `sudo ./build/helloworld -l 0-1 -n 2`
+		* TODO: how to run DPDK without root permission
+		* TODO: `./dpdk-setup.sh` -> select option 55 -> 0xff -> start -> stop -> non-zero RX/TX bytes
 
 ### Implementation Log
 
