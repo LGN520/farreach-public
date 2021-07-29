@@ -29,10 +29,30 @@
 		* `xz -d dpdk-20.08.tar.xz`
 		* `tar -xvf dpdk-20.08.tar`
 		* `apt-get install numactl libnuma-dev`
+	+ Install and configure DPDK
 		* `cd dpdk-20.08/usertools`
 		* `./dpdk-setup.sh`
 			- Select option: 45 -> ERROR: Target does not have the DPDK UIO Kernel Module.
-			- (TODO) Solution: set `CONFIG_RTE_EAL_IGB_UIO=y` and `CONFIG_RTE_LIBRTE_IEEE1588=y` in dpdk-20.08/config
+			- Solution: modify `dpdk-20.08/config/common_base`, set `CONFIG_RTE_EAL_IGB_UIO=y` (Line 107) and `CONFIG_RTE_LIBRTE_IEEE1588=y` (Line 156)
+		* `modprobe uio`
+			- NOTE: uio module is in /lib/modules/4.15.0-122-generic/kernel/drivers/uio
+			- UIO API can register the user-space driver to map user-space buffer with the specified device
+		* `./dpdk-setup.sh` for rebuilding
+			- Select option: 38
+			- Select option: 45
+			- Select option: 51
+			- Select PCI address: 0000:5e:00.1 (ens3f1)
+				+ Not notifying since the interface is active
+		* `./dpdk-devbind.py --b igb_uio 0000:5e:00.1`
+			- Result still shows not notifying
+			- Run the following commands
+				+ `ifoncifg ens3f1 down`
+				+ `sudo ./dpdk-devbind.py --b igb_uio 0000:5e:00.1`
+				+ `./dpdk-devbind.py --status`
+					* Now since OS cannot find ens3f1, ifconfig cannot configure this interface
+					* We can use `dpdk-devbind.py -u 0000:5e:00.1` to unbind the interface
+		* TODO: configure env var
+	+ TODO: test DPDK
 
 ### Implementation Log
 
