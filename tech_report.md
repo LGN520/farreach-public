@@ -50,7 +50,7 @@
 				+ `sudo ./dpdk-devbind.py --b igb_uio 0000:5e:00.1`
 				+ `./dpdk-devbind.py --status`
 					* Now since OS cannot find ens3f1, ifconfig cannot configure this interface
-					* We can use `dpdk-devbind.py -u 0000:5e:00.1` to unbind the interface
+					* To unbind the interface: `dpdk-devbind.py -u 0000:5e:00.1`, and then `reboot` (after reboot, need to reload UIO and IGB_UIO modules, and reset huge page num)
 		* Configure huge page
 			- `sudo sysctl -w vm.nr_hugepages=1024`
 			- Run `cat /proc/meminfo | grep Huge` or `cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages` to check huge page size
@@ -61,8 +61,10 @@
 		* `cd $RTE_SDK/examples/helloworld`
 		* `make`
 		* `sudo ./build/helloworld -l 0-1 -n 2`
-		* TODO: how to run DPDK without root permission
-		* TODO: `./dpdk-setup.sh` -> select option 55 -> 0xff -> start -> stop -> non-zero RX/TX bytes
+		* UNSOLVED
+			- How to run DPDK without root permission: we should use VA mode instead of PA mode for IOVA theoretically
+			- `sudo ./app/test-pmd/build/app/testpmd -- -i --total-num-mbufs=2048` -> start -> stop -> non-zero RX/TX bytes: always zero without finding reasons
+	+ TODO: Change my code to dpdk API
 
 ### Implementation Log
 
