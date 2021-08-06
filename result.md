@@ -10,7 +10,7 @@
 	+ 70% read - 10% insert - 10% remove - 10% update: `./prepare -b 0.1; ./client -a 0.7 -b 0.1 -c 0.1 -d 0.1`
 	+ 60% read - 10% insert - 10% remove - 10% update - 10% scan: `./prepare -b 0.1; ./client -a 0.6 -b 0.1 -c 0.1 -d 0.1 -e 0.1`
 
-## Preliminary Exp of microbench
+## Preliminary Exp of microbench (without persistency)
 
 - Latency
 	* Read-only
