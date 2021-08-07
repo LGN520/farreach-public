@@ -2,8 +2,9 @@
 
 ## Implementation log
 
-- TODO0: DPDK-based CS architecture without persistency
-- TODO2: DPDK-based CS architecture with persistency
+- TODO: Try TLDK
+- TODO: DPDK-based CS architecture without persistency
+- TODO: DPDK-based CS architecture with persistency
 
 ## How to run
 

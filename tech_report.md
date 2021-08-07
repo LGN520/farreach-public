@@ -82,10 +82,11 @@
 		* UNSOLVED
 			- How to run DPDK without root permission: we should use VA mode instead of PA mode for IOVA theoretically
 			- `sudo ./app/test-pmd/build/app/testpmd -- -i --total-num-mbufs=2048` -> start -> stop -> non-zero RX/TX bytes: always zero without finding reasons
-- Install TLDK
+- Install TLDK (Deprecated)
+	+ `git clone https://github.com/FDio/tldk.git`
 	+ Install DPDK 18.11
 	+ Change files for compatibility
 		* `cd tldk`
-		* `bash tldk_fix.sh`
+		* `bash tldk_fix.sh` to solve error of `dereferencing pointer incomplete type`
 	+ Test
-		* `sudo ./x86_64-native-linuxapp-gcc/app/l4fwd -- --udp --mbuf-num 1000`
+		* `sudo ./x86_64-native-linuxapp-gcc/app/l4fwd -- --udp --mbuf-num 1000 --becfg ~/projects/NetBuffer/tofino-xindex-dpdk/client.cfg`
