@@ -22,7 +22,6 @@ struct alignas(CACHELINE_SIZE) FGParam;
 class Key;
 
 typedef FGParam fg_param_t;
-typedef ReceiverParam receiver_param_t;
 typedef Key index_key_t;
 typedef uint64_t val_t;
 typedef GetRequest<index_key_t> get_request_t;
@@ -38,8 +37,12 @@ inline void parse_args(int, char **);
 void load();
 void run_benchmark(size_t sec);
 void *run_fg(void *param); // sender
+
+// DPDK
 void *run_receiver(void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
+volatile struct rte_mbuf **pkts;
+volatile bool *stats;
 
 // parameters
 double read_ratio = 1;
@@ -64,11 +67,6 @@ std::vector<index_key_t> non_exist_keys;
 struct alignas(CACHELINE_SIZE) FGParam {
   uint64_t throughput;
   uint32_t thread_id;
-};
-
-struct alignas(CACHELINE_SIZE) ReceiverParam {
-	volatile struct rte_mbuf **pkts;
-	volatile bool *stats;
 };
 
 class Key {
@@ -114,9 +112,24 @@ int main(int argc, char **argv) {
   rte_eal_init_helper(&argc, &argv);
   dpdk_init(&mbuf_pool);
 
+  // Prepare pkts and stats
+  pkts = new volatile struct rte_mbuf*[fg_n];
+  stats = new volatile bool[fg_n];
+  memset(pkts, 0, sizeof(struct rte_mbuf)*fg_n);
+  memset(stats, 0, sizeof(bool)*fg_n);
+  for (size_t i = 0; i < fg_n; i++) {
+	pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
+  }
+
   parse_args(argc, argv);
   load();
   run_benchmark(runtime);
+
+  // Free DPDK mbufs
+  for (size_t i = 0; i < fg_n; i++) {
+	rte_pktmbuf_free(pkts[i]);
+  }
+
   exit(0);
 }
 
@@ -235,24 +248,8 @@ void run_benchmark(size_t sec) {
 
   running = false;
 
-  // Prepare receiver param
-  //pthread_t receiver_thread;
-  receiver_param_t receiver_param;
-  if ((uint64_t)(&receiver_param) % CACHELINE_SIZE != 0) {
-    COUT_N_EXIT("wrong parameter address: " << &receiver_param);
-  }
-  volatile bool stats[fg_n];
-  volatile struct rte_mbuf *pkts[fg_n];
-  memset(stats, 0, sizeof(bool)*fg_n);
-  memset(pkts, 0, sizeof(struct rte_mbuf)*fg_n);
-  for (size_t i = 0; i < fg_n; i++) {
-	pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
-  }
-  receiver_param.pkts = pkts;
-  receiver_param.stats = stats;
-
   // Launch receiver
-  ret = rte_eal_remote_launch(run_receiver, (void *)&receiver_param, lcoreid);
+  ret = rte_eal_remote_launch(run_receiver, NULL, lcoreid);
   if (ret) {
     COUT_N_EXIT("Error:" << ret);
   }
@@ -321,14 +318,7 @@ void run_benchmark(size_t sec) {
   COUT_THIS("[client] Throughput(op/s): " << throughput / sec);
 }
 
-void *run_receiver(void *param) {
-	volatile struct rte_mbuf **pkts;
-	volatile bool *stats;
-	receiver_param_t *receiver_param;
-
-	receiver_param = param;
-	pkts = receiver_param.pkts;
-	stats = receiver_param.stats;
+void *run_receiver(__attribute((unused))__ void *param) {
 
 	while (!running)
 		;
@@ -368,6 +358,11 @@ void *run_fg(void *param) {
   fg_param_t &thread_param = *(fg_param_t *)param;
   uint32_t thread_id = thread_param.thread_id;
 
+  // DPDK
+  struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
+  short src_port = src_port_start + thread_id;
+  short dst_port = dst_port_start + thread_id;
+
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<> ratio_dis(0, 1);
@@ -389,7 +384,7 @@ void *run_fg(void *param) {
   int res = 0;
 
   // Prepare socket
-  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
   int disable = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
@@ -410,7 +405,7 @@ void *run_fg(void *param) {
   memset(&remote_sockaddr, 0, sizeof(struct sockaddr_in));
   remote_sockaddr.sin_family = AF_INET;
   INVARIANT(inet_pton(AF_INET, server_addr.c_str(), &remote_sockaddr.sin_addr) > 0);
-  remote_sockaddr.sin_port = htons(dst_port);
+  remote_sockaddr.sin_port = htons(dst_port);*/
   // Set timeout
   /*struct timeval tv;
   tv.tv_sec = 1;
@@ -448,10 +443,22 @@ void *run_fg(void *param) {
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
 	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key)
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
-	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+
+	  // UDP socket
+	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  //INVARIANT(res != -1);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  //INVARIANT(recv_size != -1);
+	  
+	  // DPDK
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port);
+	  res = rte_eth_tx_burst(0, thread_id, sent_pkt, 1);
+	  INVARIANT(res == 1);
+	  while (!stats[thread_id])
+		  ;
+	  recv_size = get_payload(pkts[thread_id], buf);
 	  INVARIANT(recv_size != -1);
+
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
 	  get_response_t rsp(buf, recv_size);
@@ -465,10 +472,15 @@ void *run_fg(void *param) {
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
 	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val())
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
-	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  INVARIANT(recv_size != -1);
+
+	  // UDP socket
+	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  //INVARIANT(res != -1);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  //INVARIANT(recv_size != -1);
+
+	  // TODO: DPDK
+
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
 	  put_response_t rsp(buf, recv_size);
@@ -482,10 +494,15 @@ void *run_fg(void *param) {
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
 	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val())
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
-	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  INVARIANT(recv_size != -1);
+
+	  // UDP socket
+	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  //INVARIANT(res != -1);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  //INVARIANT(recv_size != -1);
+	  
+	  // TODO: DPDK
+	  
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
 	  put_response_t rsp(buf, recv_size);
@@ -499,10 +516,15 @@ void *run_fg(void *param) {
 	  del_request_t req(thread_id, op_keys[delete_i]);
 	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[delete_i].key)
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
-	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  INVARIANT(recv_size != -1);
+
+	  // UDP socket
+	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  //INVARIANT(res != -1);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  //INVARIANT(recv_size != -1);
+
+	  // TODO: DPDK
+
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::DEL_RES);
 	  del_response_t rsp(buf, recv_size);
@@ -515,10 +537,15 @@ void *run_fg(void *param) {
 	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], 10);
 	  //COUT_THIS("[client " << thread_id << "] key = " << req.key().key)
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
-	  res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  INVARIANT(res != -1);
-	  recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  INVARIANT(recv_size != -1);
+
+	  // UDP socket
+	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
+	  //INVARIANT(res != -1);
+	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
+	  //INVARIANT(recv_size != -1);
+
+	  // TODO: DPDK
+
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::SCAN_RES);
 	  scan_response_t rsp(buf, recv_size);

@@ -8,6 +8,8 @@ set(CMAKE_CXX_COMPILER /usr/bin/g++)
 set(JEMALLOC_DIR "/usr/lib/x86_64-linux-gnu")
 set(MKL_LINK_DIRECTORY "/opt/intel/mkl/lib/intel64")
 set(MKL_INCLUDE_DIRECTORY "/opt/intel/mkl/include")
+set(DPDK_LINK_DIRECTORY "/home/ssy/dpdk/dpdk-20.08/x86_64-native-linuxapp-gcc/lib")
+set(DPDK_INCLUDE_DIRECTORY "/home/ssy/dpdk/dpdk-20.08/x86_64-native-linuxapp-gcc/include")
 
 # Set a default build type if none was specified
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -31,6 +33,9 @@ link_libraries(jemalloc)
 
 include_directories(${MKL_INCLUDE_DIRECTORY})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+link_directories(${DPDK_LINK_DIRECTORY})
+include_directories(${DPDK_INCLUDE_DIRECTORY})
 
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Debug")
@@ -58,9 +63,9 @@ add_executable(prepare ${CMAKE_CURRENT_SOURCE_DIR}/prepare.cpp)
 
 # client
 add_executable(client ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp)
-target_link_libraries(client PRIVATE -lpthread)
+target_link_libraries(client PRIVATE -lpthread dpdk)
 
 # server
 add_executable(server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
-target_link_libraries(server PRIVATE -lpthread mkl_rt)
+target_link_libraries(server PRIVATE -lpthread mkl_rt dpdk)
 target_compile_definitions(server PRIVATE NDEBUGGING)

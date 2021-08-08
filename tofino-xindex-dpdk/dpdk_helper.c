@@ -224,6 +224,7 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::s
 	struct rte_ipv4_hdr *ipv4_hdr;
 	struct rte_udp_hdr *udp_hdr;
 	char *data;
+	uint32_t pktsize = 0;
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
@@ -231,8 +232,9 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::s
 	rte_memcpy(eth_hdr->d_addr.addr_bytes, dstmac, 6);
 	rte_memcpy(eth_hdr->s_addr.addr_bytes, srcmac, 6);
 	eth_hdr->ether_type = 0x0800;
+	pktsize += sizeof(rte_ether_hdr);
 
-	ipv4_hdr = (struct rte_ipv4_hdr *)(data + sizeof(rte_ether_hdr));
+	ipv4_hdr = (struct rte_ipv4_hdr *)(data + pktsize);
 	ipv4_hdr->version_ihl = (0x04 << 4 | 0x05);
 	ipv4_hdr->type_of_service = 0;
 	//ipv4_hdr->total_length = 0;
@@ -243,21 +245,27 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::s
 	ipv4_hdr->hdr_checksum = 0;
 	ipv4_hdr->src_addr = inet_addr(srcip.c_str());
 	ipv4_hdr->dst_addr = inet_addr(dstip.c_str());
+	pktsize += sizeof(rte_ipv4_hdr);
 
-	udp_hdr = (struct rte_udp_hdr *)(data + sizeof(rte_ether_hdr) + sizeof(rte_ipv4_hdr));
+	udp_hdr = (struct rte_udp_hdr *)(data + pktsize);
 	udp_hdr->src_port = htons(srcport);
 	udp_hdr->dst_port = htons(dstport);
 	udp_hdr->dgram_len = 0;
 	udp_hdr->dgram_cksum = 0;
+	pktsize += sizeof(rte_udp_hdr);
 
-	payload_begin = data + sizeof(rte_ether_hdr) + sizeof(rte_ipv4_hdr) + sizeof(rte_udp_hdr);
+	payload_begin = data + pktsize;
 	rte_memcpy(payload_begin, payload, payload_size);
+	pktsize += payload_size;
 
 	ipv4_hdr->total_length = sizeof(rte_ipv4_hdr) + sizeof(rte_udp_hdr) + payload_size;
 	udp_hdr->dgram_len = sizeof(rte_udp_hdr) + payload_size;
 
 	ipv4_hdr->hdr_checksum = checksum((uint16_t *)ipv4_hdr, sizeof(rte_ipv4_hdr));
 	udp_hdr->dgram_cksum = udp4_checksum(ipv4_hdr, udp_hdr, payload, payload_size);
+
+	mbuf->data_len = pktsize;
+	mbuf->pkt_len = pktsize;
 }
 
 static inline 
@@ -280,15 +288,15 @@ int decode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *s
 	rte_memcpy(srcmac, eth_hdr->s_addr.addr_bytes, 6);
 
 	ipv4_hdr = (struct rte_ipv4_hdr *)(data + sizeof(rte_ether_hdr));
+	if (ipv4_hdr->next_proto_id != 0x11) {
+		return -1;
+	}
 	tmp_ipaddr.addr = ipv4_hdr->src_addr;
 	tmp_ipstr = inet_ntoa(tmp_ipaddr);
 	rte_memcpy(srcip, tmp_ipstr, 4);
 	tmp_ipaddr.addr = ipv4_hdr->dst_addr;
 	tmp_ipstr = inet_ntoa(tmp_ipaddr);
 	rte_memcpy(dstip, tmp_ipstr, 4);
-	if (ipv4_hdr->next_proto_id != 0x11) {
-		return -1;
-	}
 
 	udp_hdr = (struct rte_udp_hdr *)(data + sizeof(rte_ether_hdr) + sizeof(rte_ipv4_hdr));
 	*srcport = ntohs(udp_hdr->src_port);
@@ -321,4 +329,32 @@ int get_dstport(struct rte_mbuf *mbuf) {
 
 	udp_hdr = (struct rte_udp_hdr *)(data + sizeof(rte_ether_hdr) + sizeof(rte_ipv4_hdr));
 	return ntohs(udp_hdr->dst_port);
+}
+
+static inline 
+int decode_mbuf(struct rte_mbuf *mbuf, char *payload) {
+	struct rte_ether_hdr *eth_hdr;
+	struct rte_ipv4_hdr *ipv4_hdr;
+	struct rte_udp_hdr *udp_hdr;
+	char *data;
+	uint32_t payload_size;
+
+	data = rte_pktmbuf_mtod(mbuf, char *);
+
+	eth_hdr = (struct rte_ether_hdr *)data;
+	if (eth_hdr->ether_type != 0x0800) {
+		return -1;
+	}
+
+	ipv4_hdr = (struct rte_ipv4_hdr *)(data + sizeof(rte_ether_hdr));
+	if (ipv4_hdr->next_proto_id != 0x11) {
+		return -1;
+	}
+
+	udp_hdr = (struct rte_udp_hdr *)(data + sizeof(rte_ether_hdr) + sizeof(rte_ipv4_hdr));
+	payload_size = udp_hdr->dgram_len - sizeof(rte_udp_hdr);
+
+	payload_begin = data + sizeof(rte_ether_hdr) + sizeof(rte_ipv4_hdr) + sizeof(rte_udp_hdr);
+	rte_memcpy(payload, payload_begin, payload_size);
+	return payload_size;
 }

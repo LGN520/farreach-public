@@ -32,5 +32,6 @@ static inline void dpdk_init(struct rte_mempool **mbuf_pool_ptr);
 static inline void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::string srcip, std::string dstip, uint16_t srcport, uint16_t dstport, char *payload, uint32_t payload_size);
 static inline int decode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload);
 static inline int get_dstport(struct rte_mbuf *mbuf);
+static inline int get_payload(struct rte_mbuf *mbuf, char *payload);
 
 #endif
