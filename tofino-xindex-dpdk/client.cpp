@@ -109,8 +109,32 @@ class Key {
 } PACKED;
 
 int main(int argc, char **argv) {
+  COUT_THIS(argc)
+  for (int i = 0; i < argc; i++) {
+	printf("%s\n", argv[i]);
+  }
+
+  // Prepare DPDK EAL param
+  int dpdk_argc = 5;
+  char **dpdk_argv;
+  dpdk_argv = new char *[dpdk_argc];
+  for (int i = 0; i < dpdk_argc; i++) {
+	dpdk_argv[i] = new char[20];
+	memset(dpdk_argv[i], '\0', 20);
+  }
+  std::string arg_proc = "./client";
+  std::string arg_iovamode = "--iova-mode";
+  std::string arg_iovamode_val = "pa";
+  std::string arg_whitelist = "-w";
+  std::string arg_whitelist_val = "0000:5e:00.1";
+  memcpy(dpdk_argv[0], arg_proc.c_str(), arg_proc.size());
+  memcpy(dpdk_argv[1], arg_iovamode.c_str(), arg_iovamode.size());
+  memcpy(dpdk_argv[2], arg_iovamode_val.c_str(), arg_iovamode_val.size());
+  memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
+  memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
+
   // Init DPDK
-  rte_eal_init_helper(&argc, &argv);
+  rte_eal_init_helper(&dpdk_argc, &dpdk_argv);
   dpdk_init(&mbuf_pool, fg_n);
 
   // Prepare pkts and stats

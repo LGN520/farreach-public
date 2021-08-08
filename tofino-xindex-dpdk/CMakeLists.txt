@@ -60,16 +60,20 @@ message(STATUS "Setting build type to '${CMAKE_BUILD_TYPE}' ")
 
 # dpdk_helper
 add_library(dpdk_helper STATIC ${CMAKE_CURRENT_SOURCE_DIR}/dpdk_helper.cpp)
-target_link_libraries(dpdk_helper PRIVATE -lpthread -lnuma -ldl)
+target_link_libraries(dpdk_helper PRIVATE -lpthread -lnuma -ldl dpdk -lrte_pmd_i40e)
 
 # prepare
 add_executable(prepare ${CMAKE_CURRENT_SOURCE_DIR}/prepare.cpp)
 
 # client
 add_executable(client ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp)
-target_link_libraries(client PRIVATE -lpthread dpdk_helper dpdk)
+target_link_libraries(client PRIVATE -lpthread dpdk_helper dpdk -lrte_pmd_i40e)
 
 # server
 add_executable(server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
-target_link_libraries(server PRIVATE -lpthread mkl_rt dpdk_helper dpdk)
+target_link_libraries(server PRIVATE -lpthread mkl_rt dpdk_helper dpdk -lrte_pmd_i40e)
 target_compile_definitions(server PRIVATE NDEBUGGING)
+
+# basicfwd
+#add_executable(basicfwd ${CMAKE_CURRENT_SOURCE_DIR}/basicfwd.cpp)
+#target_link_libraries(basicfwd PRIVATE -lpthread dpdk_helper dpdk -lrte_pmd_i40e)

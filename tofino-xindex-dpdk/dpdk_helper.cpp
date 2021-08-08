@@ -184,8 +184,8 @@ void rte_eal_init_helper(int *argc, char ***argv) {
 	if (ret < 0)
 		rte_exit(EXIT_FAILURE, "Error with EAL initialization\n");
 
-	*argc -= ret;
-	*argv += ret;
+	//*argc -= ret;
+	//*argv += ret;
 
 	port_conf_default.link_speeds = ETH_LINK_SPEED_40G;
 	struct rte_eth_rxmode tmp_rxmode;
