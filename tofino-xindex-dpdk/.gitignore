@@ -11,3 +11,4 @@ prepare
 *.log
 *.out
 *.pyc
+*.a

@@ -36,10 +36,11 @@ typedef ScanResponse<index_key_t, val_t> scan_response_t;
 inline void parse_args(int, char **);
 void load();
 void run_benchmark(size_t sec);
-void *run_fg(void *param); // sender
+//void *run_fg(void *param); // sender
 
 // DPDK
-void *run_receiver(void *param); // receiver
+static int run_fg(void *param); // sender
+static int run_receiver(__attribute__((unused)) void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
 volatile struct rte_mbuf **pkts;
 volatile bool *stats;
@@ -110,13 +111,13 @@ class Key {
 int main(int argc, char **argv) {
   // Init DPDK
   rte_eal_init_helper(&argc, &argv);
-  dpdk_init(&mbuf_pool);
+  dpdk_init(&mbuf_pool, fg_n);
 
   // Prepare pkts and stats
   pkts = new volatile struct rte_mbuf*[fg_n];
   stats = new volatile bool[fg_n];
-  memset(pkts, 0, sizeof(struct rte_mbuf)*fg_n);
-  memset(stats, 0, sizeof(bool)*fg_n);
+  memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
+  memset((void *)stats, 0, sizeof(bool)*fg_n);
   for (size_t i = 0; i < fg_n; i++) {
 	pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
   }
@@ -127,7 +128,7 @@ int main(int argc, char **argv) {
 
   // Free DPDK mbufs
   for (size_t i = 0; i < fg_n; i++) {
-	rte_pktmbuf_free(pkts[i]);
+	rte_pktmbuf_free((struct rte_mbuf *)pkts[i]);
   }
 
   exit(0);
@@ -253,6 +254,7 @@ void run_benchmark(size_t sec) {
   if (ret) {
     COUT_N_EXIT("Error:" << ret);
   }
+  COUT_THIS("[client] Launch receiver with ret code " << ret)
   lcoreid++;
 
   // Prepare fg params
@@ -275,6 +277,7 @@ void run_benchmark(size_t sec) {
     if (ret) {
       COUT_N_EXIT("Error:" << ret);
 	}
+	COUT_THIS("[client] Lanuch worker [" << worker_i << "] with ret code " << ret)
 	lcoreid++;
 	if (lcoreid >= MAX_LCORE_NUM) {
 		lcoreid = 1;
@@ -318,12 +321,13 @@ void run_benchmark(size_t sec) {
   COUT_THIS("[client] Throughput(op/s): " << throughput / sec);
 }
 
-void *run_receiver(__attribute((unused))__ void *param) {
+static int run_receiver(void *param) {
+	COUT_THIS("Receiver start!")
 
 	while (!running)
 		;
 
-	volatile struct rte_mbuf *received_pkts[fg_n];
+	struct rte_mbuf *received_pkts[fg_n];
 	while (running) {
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, fg_n);
 		if (n_rx == 0) continue;
@@ -335,7 +339,7 @@ void *run_receiver(__attribute((unused))__ void *param) {
 			else {
 				uint16_t received_port = (uint16_t)ret;
 				int idx = received_port - src_port_start;
-				if (idx < 0 || idx >= fg_n) {
+				if (idx < 0 || unsigned(idx) >= fg_n) {
 					COUT_THIS("Invalid dst port received by client: %u" << received_port)
 					continue;
 				}
@@ -352,14 +356,18 @@ void *run_receiver(__attribute((unused))__ void *param) {
 			}
 		}
 	}
+	return 0;
 }
 
-void *run_fg(void *param) {
+static int run_fg(void *param) {
   fg_param_t &thread_param = *(fg_param_t *)param;
   uint32_t thread_id = thread_param.thread_id;
 
+  COUT_THIS("Worker [" << thread_id << "] start!")
+
   // DPDK
   struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
+  struct rte_mbuf *sent_pkt_wrapper[1] = {sent_pkt};
   short src_port = src_port_start + thread_id;
   short dst_port = dst_port_start + thread_id;
 
@@ -420,28 +428,30 @@ void *run_fg(void *param) {
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
   COUT_THIS("[client " << thread_id << "] Ready.");
   ready_threads++;
+  COUT_VAR(ready_threads);
+  COUT_VAR(running);
 
   // DEBUG TEST
-  uint32_t debugtest_idx = 0;
-  uint32_t debugtest_i = 0;
+  //uint32_t debugtest_idx = 0;
+  //uint32_t debugtest_i = 0;
 
   while (!running)
     ;
 
   while (running) {
 	// DEBUG TEST
-	int tmprun = 0;
+	/*int tmprun = 0;
 	query_i = debugtest_idx;
 	update_i = debugtest_idx;
 	if (debugtest_i == 0) tmprun = 1;
-	debugtest_i++;
+	debugtest_i++;*/
 
     double d = ratio_dis(gen);
-	//int tmprun = 4;
+	int tmprun = 0;
     //if (d <= read_ratio) {  // get
     if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
-	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key)
+	  COUT_THIS("[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key)
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -451,8 +461,8 @@ void *run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 	  
 	  // DPDK
-	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port);
-	  res = rte_eth_tx_burst(0, thread_id, sent_pkt, 1);
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
 		  ;
@@ -462,7 +472,7 @@ void *run_fg(void *param) {
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
 	  get_response_t rsp(buf, recv_size);
-	  //COUT_THIS("[client " << thread_id << "] val = " << rsp.val())
+	  COUT_THIS("[client " << thread_id << "] val = " << rsp.val())
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
@@ -562,6 +572,7 @@ void *run_fg(void *param) {
     thread_param.throughput++;
   }
 
-  close(sockfd);
-  pthread_exit(nullptr);
+  //close(sockfd);
+  //pthread_exit(nullptr); // UDP socket
+  return 0;
 }

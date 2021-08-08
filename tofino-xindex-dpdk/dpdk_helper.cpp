@@ -1,5 +1,7 @@
 #include "dpdk_helper.h"
 
+static struct rte_eth_conf port_conf_default;
+
 static inline uint16_t checksum (uint16_t *addr, int len) {
 	int count = len;
 	register uint32_t sum = 0;
@@ -29,7 +31,7 @@ static inline uint16_t checksum (uint16_t *addr, int len) {
 	return (answer);
 }
 
-static inline uint16_t udp4_checksum (struct iphdr* iph, struct udphdr* udph, char *payload, int payloadlen) {
+static inline uint16_t udp4_checksum (struct rte_ipv4_hdr* iph, struct rte_udp_hdr* udph, char *payload, int payloadlen) {
 	char buf[1024];
 	char *ptr;
 	int chksumlen = 0;
@@ -38,14 +40,14 @@ static inline uint16_t udp4_checksum (struct iphdr* iph, struct udphdr* udph, ch
 	ptr = &buf[0];  // ptr points to beginning of buffer buf
 
 	// Copy source IP address into buf (32 bits)
-	memcpy (ptr, &iph->saddr, sizeof (struct in_addr));
-	ptr += sizeof (struct in_addr);
-	chksumlen += sizeof (struct in_addr);
+	memcpy (ptr, &iph->src_addr, sizeof (rte_be32_t));
+	ptr += sizeof (rte_be32_t);
+	chksumlen += sizeof (rte_be32_t);
 
 	// Copy destination IP address into buf (32 bits)
-	memcpy (ptr, &iph->daddr, sizeof (struct in_addr));
-	ptr += sizeof (struct in_addr);
-	chksumlen += sizeof (struct in_addr);
+	memcpy (ptr, &iph->dst_addr, sizeof (rte_be32_t));
+	ptr += sizeof (rte_be32_t);
+	chksumlen += sizeof (rte_be32_t);
 
 	// Copy zero field to buf (8 bits)
 	*ptr = 0; 
@@ -53,29 +55,29 @@ static inline uint16_t udp4_checksum (struct iphdr* iph, struct udphdr* udph, ch
 	chksumlen += 1;
 
 	// Copy transport layer protocol to buf (8 bits)
-	memcpy (ptr, &iph->protocol, sizeof (iph->protocol));
-	ptr += sizeof (iph->protocol);
-	chksumlen += sizeof (iph->protocol);
+	memcpy (ptr, &iph->next_proto_id, sizeof (iph->next_proto_id));
+	ptr += sizeof (iph->next_proto_id);
+	chksumlen += sizeof (iph->next_proto_id);
 
 	// Copy UDP length to buf (16 bits)
-	memcpy (ptr, &udph->len, sizeof (udph->len));
-	ptr += sizeof (udph->len);
-	chksumlen += sizeof (udph->len);
+	memcpy (ptr, &udph->dgram_len, sizeof (udph->dgram_len));
+	ptr += sizeof (udph->dgram_len);
+	chksumlen += sizeof (udph->dgram_len);
 
 	// Copy UDP source port to buf (16 bits)
-	memcpy (ptr, &udph->source, sizeof (udph->source));
-	ptr += sizeof (udph->source);
-	chksumlen += sizeof (udph->source);
+	memcpy (ptr, &udph->src_port, sizeof (udph->src_port));
+	ptr += sizeof (udph->src_port);
+	chksumlen += sizeof (udph->src_port);
 
 	// Copy UDP destination port to buf (16 bits)
-	memcpy (ptr, &udph->dest, sizeof (udph->dest));
-	ptr += sizeof (udph->dest);
-	chksumlen += sizeof (udph->dest);
+	memcpy (ptr, &udph->dst_port, sizeof (udph->dst_port));
+	ptr += sizeof (udph->dst_port);
+	chksumlen += sizeof (udph->dst_port);
 
 	// Copy UDP length again to buf (16 bits)
-	memcpy (ptr, &udph->len, sizeof (udph->len));
-	ptr += sizeof (udph->len);
-	chksumlen += sizeof (udph->len);
+	memcpy (ptr, &udph->dgram_len, sizeof (udph->dgram_len));
+	ptr += sizeof (udph->dgram_len);
+	chksumlen += sizeof (udph->dgram_len);
 
 	// Copy UDP checksum to buf (16 bits)
 	// Zero, since we don't know it yet
@@ -96,17 +98,6 @@ static inline uint16_t udp4_checksum (struct iphdr* iph, struct udphdr* udph, ch
 	}
 
 	return checksum ((uint16_t *) buf, chksumlen);
-}
-
-static inline
-void rte_eal_init_helper(int *argc, char ***argv) {
-	/* Initialize the Environment Abstraction Layer (EAL). */
-	int ret = rte_eal_init(*argc, *argv);
-	if (ret < 0)
-		rte_exit(EXIT_FAILURE, "Error with EAL initialization\n");
-
-	*argc -= ret;
-	*argv += ret;
 }
 
 static inline 
@@ -187,10 +178,25 @@ int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring) {
 	return 0;
 }
 
-static inline 
+void rte_eal_init_helper(int *argc, char ***argv) {
+	/* Initialize the Environment Abstraction Layer (EAL). */
+	int ret = rte_eal_init(*argc, *argv);
+	if (ret < 0)
+		rte_exit(EXIT_FAILURE, "Error with EAL initialization\n");
+
+	*argc -= ret;
+	*argv += ret;
+
+	port_conf_default.link_speeds = ETH_LINK_SPEED_40G;
+	struct rte_eth_rxmode tmp_rxmode;
+	tmp_rxmode.max_rx_pkt_len = RTE_ETHER_MAX_LEN;
+	port_conf_default.rxmode = tmp_rxmode;
+}
+
 void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring) {
 	unsigned nb_ports;
 	unsigned lcore_count;
+	uint16_t portid;
 
 	/* Check that there is an even number of ports to send/receive on. */
 	nb_ports = rte_eth_dev_count_avail();
@@ -202,7 +208,7 @@ void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring) {
 	*mbuf_pool_ptr = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS * nb_ports,
 		MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
-	if (mbuf_pool == NULL)
+	if (*mbuf_pool_ptr == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
 
 	/* Initialize all ports. */
@@ -218,13 +224,13 @@ void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring) {
 		printf("\nWARNING: Too many lcores enabled. Only 1 used.\n");*/
 }
 
-static inline 
 void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::string srcip, std::string dstip, uint16_t srcport, uint16_t dstport, char *payload, uint32_t payload_size) {
 	struct rte_ether_hdr *eth_hdr;
 	struct rte_ipv4_hdr *ipv4_hdr;
 	struct rte_udp_hdr *udp_hdr;
 	char *data;
 	uint32_t pktsize = 0;
+	char *payload_begin;
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
@@ -268,7 +274,6 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::s
 	mbuf->pkt_len = pktsize;
 }
 
-static inline 
 int decode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload) {
 	struct rte_ether_hdr *eth_hdr;
 	struct rte_ipv4_hdr *ipv4_hdr;
@@ -277,6 +282,7 @@ int decode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *s
 	struct in_addr tmp_ipaddr;
 	char *tmp_ipstr;
 	uint32_t payload_size;
+	char *payload_begin;
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
@@ -291,10 +297,10 @@ int decode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *s
 	if (ipv4_hdr->next_proto_id != 0x11) {
 		return -1;
 	}
-	tmp_ipaddr.addr = ipv4_hdr->src_addr;
+	tmp_ipaddr.s_addr = ipv4_hdr->src_addr;
 	tmp_ipstr = inet_ntoa(tmp_ipaddr);
 	rte_memcpy(srcip, tmp_ipstr, 4);
-	tmp_ipaddr.addr = ipv4_hdr->dst_addr;
+	tmp_ipaddr.s_addr = ipv4_hdr->dst_addr;
 	tmp_ipstr = inet_ntoa(tmp_ipaddr);
 	rte_memcpy(dstip, tmp_ipstr, 4);
 
@@ -308,8 +314,7 @@ int decode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *s
 	return payload_size;
 }
 
-static inline
-int get_dstport(struct rte_mbuf *mbuf) {
+int get_dstport(volatile struct rte_mbuf *mbuf) {
 	struct rte_ether_hdr *eth_hdr;
 	struct rte_ipv4_hdr *ipv4_hdr;
 	struct rte_udp_hdr *udp_hdr;
@@ -331,13 +336,13 @@ int get_dstport(struct rte_mbuf *mbuf) {
 	return ntohs(udp_hdr->dst_port);
 }
 
-static inline 
-int decode_mbuf(struct rte_mbuf *mbuf, char *payload) {
+int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
 	struct rte_ether_hdr *eth_hdr;
 	struct rte_ipv4_hdr *ipv4_hdr;
 	struct rte_udp_hdr *udp_hdr;
 	char *data;
 	uint32_t payload_size;
+	char *payload_begin;
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
