@@ -47,7 +47,7 @@
 		* `xz -d dpdk-20.08.tar.xz`
 		* `tar -xvf dpdk-20.08.tar`
 		* `apt-get install numactl libnuma-dev`
-	+ Install and configure DPDK
+	+ Install and configure DPDK (use vfio now, see details in testing DPDK)
 		* `cd dpdk-20.08/usertools`
 		* `./dpdk-setup.sh`
 			- Select option: 45 -> ERROR: Target does not have the DPDK UIO Kernel Module.
@@ -76,10 +76,22 @@
 			- Add `export RTE_SDK=/home/ssy/dpdk/dpdk-20.08` into /etc/profile
 			- Add `export RTE_TARGET=x86_64-native-linuxapp-gcc` into /etc/profile
 	+ Test DPDK
-		* `cd $RTE_SDK/examples/helloworld`
-		* `make`
-		* `sudo ./build/helloworld -l 0-1 -n 2`
-			- NOTE: `EAL: No available hugepages reported in hugepages-1048576kB` is normal since my huge page size is 2KB
+		* Helloworld
+			* `cd $RTE_SDK/examples/helloworld`
+			* `make`
+			* `sudo ./build/helloworld -l 0-1 -n 2`
+				- NOTE: `EAL: No available hugepages reported in hugepages-1048576kB` is normal since my huge page size is 2KB
+		* Skeleton
+			* `cd $RTE_SDK/examples/skeleton`
+			* `make`
+			* `sudo ./build/basicfwd -l 0-3 -n 4`
+				- Error: no available port
+				- Solution
+					+ (1) Change DPDL from 20.08 to 18.11 to match the kernel driver version and firmware version of the PCI device
+					+ (2) Change `CONFIG_RTE_LIBRTE_BNX2X_PMD=n` to `CONFIG_RTE_LIBRTE_BNX2X_PMD=y` in $RTE_SDK/config/common_base
+					+ (3) Change driver from igb_uio to vfio
+						- Check environment: `uname -r`; `dmesg | grep -e DMAR -e IOMMU`; `cat /proc/cmdline | grep iommu=pt`; `cat /proc/cmdline | grep intel_iommu=on`; Use dpdk-setup.sh to insert VFIO module; `./dpdk-devbind --b vfio-pci 0000:5e:00.1`
+					+ (4) Use Makefile (refer to [tas](https://github.com/tcp-acceleration-service/tas/blob/master/Makefile))
 		* UNSOLVED
 			- How to run DPDK without root permission: we should use VA mode instead of PA mode for IOVA theoretically
 			- `sudo ./app/test-pmd/build/app/testpmd -- -i --total-num-mbufs=2048` -> start -> stop -> non-zero RX/TX bytes: always zero without finding reasons

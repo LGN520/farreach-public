@@ -8,8 +8,8 @@ set(CMAKE_CXX_COMPILER /usr/bin/g++)
 set(JEMALLOC_DIR "/usr/lib/x86_64-linux-gnu")
 set(MKL_LINK_DIRECTORY "/opt/intel/mkl/lib/intel64")
 set(MKL_INCLUDE_DIRECTORY "/opt/intel/mkl/include")
-set(DPDK_LINK_DIRECTORY "/home/ssy/dpdk/dpdk-20.08/x86_64-native-linuxapp-gcc/lib")
-set(DPDK_INCLUDE_DIRECTORY "/home/ssy/dpdk/dpdk-20.08/x86_64-native-linuxapp-gcc/include")
+set(DPDK_LINK_DIRECTORY "$ENV{RTE_SDK}/$ENV{RTE_TARGET}/lib")
+set(DPDK_INCLUDE_DIRECTORY "$ENV{RTE_SDK}/$ENV{RTE_TARGET}/include")
 
 # Set a default build type if none was specified
 # https://blog.kitware.com/cmake-and-the-default-build-type/
@@ -59,21 +59,21 @@ message(STATUS "Setting build type to '${CMAKE_BUILD_TYPE}' ")
 #)
 
 # dpdk_helper
-add_library(dpdk_helper STATIC ${CMAKE_CURRENT_SOURCE_DIR}/dpdk_helper.cpp)
-target_link_libraries(dpdk_helper PRIVATE -lpthread -lnuma -ldl dpdk -lrte_pmd_i40e)
+#add_library(dpdk_helper STATIC ${CMAKE_CURRENT_SOURCE_DIR}/dpdk_helper.c)
+#target_link_libraries(dpdk_helper PRIVATE -lpthread -lnuma -ldl dpdk)
 
 # prepare
-add_executable(prepare ${CMAKE_CURRENT_SOURCE_DIR}/prepare.cpp)
+#add_executable(prepare ${CMAKE_CURRENT_SOURCE_DIR}/prepare.c)
 
 # client
-add_executable(client ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp)
-target_link_libraries(client PRIVATE -lpthread dpdk_helper dpdk -lrte_pmd_i40e)
+#add_executable(client ${CMAKE_CURRENT_SOURCE_DIR}/client.c)
+#target_link_libraries(client PRIVATE -lpthread dpdk_helper dpdk)
 
 # server
-add_executable(server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
-target_link_libraries(server PRIVATE -lpthread mkl_rt dpdk_helper dpdk -lrte_pmd_i40e)
-target_compile_definitions(server PRIVATE NDEBUGGING)
+#add_executable(server ${CMAKE_CURRENT_SOURCE_DIR}/server.c)
+#target_link_libraries(server PRIVATE -lpthread mkl_rt dpdk_helper dpdk)
+#target_compile_definitions(server PRIVATE NDEBUGGING)
 
 # basicfwd
-#add_executable(basicfwd ${CMAKE_CURRENT_SOURCE_DIR}/basicfwd.cpp)
-#target_link_libraries(basicfwd PRIVATE -lpthread dpdk_helper dpdk -lrte_pmd_i40e)
+add_executable(basicfwd ${CMAKE_CURRENT_SOURCE_DIR}/basicfwd.c)
+target_link_libraries(basicfwd PRIVATE -lpthread dpdk_helper dpdk)
