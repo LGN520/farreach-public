@@ -1,5 +1,10 @@
 # Tech Report
 
+## Switch configuration
+
+- There is sth wrong with dl31:ens3f0 (tofino:1/0)
+- We use dl31:ens3f1(tofino:2/0) and dl32:ens3f1(tofino:3/0)
+
 ## Directory
 
 - xindex
@@ -47,28 +52,37 @@
 		* `xz -d dpdk-20.08.tar.xz`
 		* `tar -xvf dpdk-20.08.tar`
 		* `apt-get install numactl libnuma-dev`
-	+ Install and configure DPDK (use vfio now, see details in testing DPDK)
+	+ Install and configure DPDK
 		* `cd dpdk-20.08/usertools`
-		* `./dpdk-setup.sh`
-			- Select option: 45 -> ERROR: Target does not have the DPDK UIO Kernel Module.
-			- Solution: modify `dpdk-20.08/config/common_base`, set `CONFIG_RTE_EAL_IGB_UIO=y` (Line 107) and `CONFIG_RTE_LIBRTE_IEEE1588=y` (Line 156)
-		* `modprobe uio`
-			- NOTE: uio module is in /lib/modules/4.15.0-122-generic/kernel/drivers/uio
-			- UIO API can register the user-space driver to map user-space buffer with the specified device
-		* `./dpdk-setup.sh` for rebuilding
-			- Select option: 38
-			- Select option: 45
-			- Select option: 51
-			- Select PCI address: 0000:5e:00.1 (ens3f1)
-				+ Not notifying since the interface is active
-		* `./dpdk-devbind.py --b igb_uio 0000:5e:00.1`
-			- Result still shows not notifying
-			- Run the following commands
-				+ `ifoncifg ens3f1 down`
-				+ `sudo ./dpdk-devbind.py --b igb_uio 0000:5e:00.1`
-				+ `./dpdk-devbind.py --status`
-					* Now since OS cannot find ens3f1, ifconfig cannot configure this interface
-					* To unbind the interface: `dpdk-devbind.py -u 0000:5e:00.1`, and then `reboot` (after reboot, need to reload UIO and IGB_UIO modules, and reset huge page num)
+		* Build and bind
+			* IGB UIO
+				* `./dpdk-setup.sh`
+					- Select option: 45 -> ERROR: Target does not have the DPDK UIO Kernel Module.
+					- Solution: modify `dpdk-20.08/config/common_base`, set `CONFIG_RTE_EAL_IGB_UIO=y` (Line 107) and `CONFIG_RTE_LIBRTE_IEEE1588=y` (Line 156)
+				* `modprobe uio`
+					- NOTE: uio module is in /lib/modules/4.15.0-122-generic/kernel/drivers/uio
+					- UIO API can register the user-space driver to map user-space buffer with the specified device
+				* `./dpdk-setup.sh` for rebuilding
+					- Select option: 38 to build DPDK
+					- Select option: 45 to insert IGB_UIO
+					- Select option: 51 to bind port
+					- Select PCI address: 0000:5e:00.1 (ens3f1)
+						+ Not notifying since the interface is active
+				* `./dpdk-devbind.py --b igb_uio 0000:5e:00.1`
+					- Result still shows not notifying
+					- Run the following commands
+						+ `ifconfig ens3f1 down`
+						+ `sudo ./dpdk-devbind.py --b igb_uio 0000:5e:00.1`
+						+ `./dpdk-devbind.py --status`
+							* Now since OS cannot find ens3f1, ifconfig cannot configure this interface
+			* VFIO
+				* `./dpdk-setup.sh`
+					- Select option: 38 to build DPDK
+					- Select option: 46 to insert VFIO
+					- `ifconfig ens3f1 down`
+					- ./dpdk-devbind.py --b vfio-pci 0000:5e:00.1
+			* To unbind the interface, we can use dpdk-setup.sh to change the driver from vfio to i40e
+				* Deprecated: To unbind the interface: `dpdk-devbind.py -u 0000:5e:00.1`, and then `reboot` (after reboot, need to reload UIO and IGB_UIO modules, and reset huge page num)
 		* Configure huge page
 			- `sudo sysctl -w vm.nr_hugepages=1024`
 			- Run `cat /proc/meminfo | grep Huge` or `cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages` to check huge page size
@@ -88,13 +102,15 @@
 				- Error: no available port
 				- Solution
 					+ (1) Change DPDL from 20.08 to 18.11 to match the kernel driver version and firmware version of the PCI device
-					+ (2) Change `CONFIG_RTE_LIBRTE_BNX2X_PMD=n` to `CONFIG_RTE_LIBRTE_BNX2X_PMD=y` in $RTE_SDK/config/common_base
 					+ (3) Change driver from igb_uio to vfio
-						- Check environment: `uname -r`; `dmesg | grep -e DMAR -e IOMMU`; `cat /proc/cmdline | grep iommu=pt`; `cat /proc/cmdline | grep intel_iommu=on`; Use dpdk-setup.sh to insert VFIO module; `./dpdk-devbind --b vfio-pci 0000:5e:00.1`
+						- Check environment before using vfio: `uname -r`; `dmesg | grep -e DMAR -e IOMMU`; `cat /proc/cmdline | grep iommu=pt`; `cat /proc/cmdline | grep intel_iommu=on`;
 					+ (4) Use Makefile (refer to [tas](https://github.com/tcp-acceleration-service/tas/blob/master/Makefile))
-		* UNSOLVED
-			- How to run DPDK without root permission: we should use VA mode instead of PA mode for IOVA theoretically
-			- `sudo ./app/test-pmd/build/app/testpmd -- -i --total-num-mbufs=2048` -> start -> stop -> non-zero RX/TX bytes: always zero without finding reasons
+					+ NOT USE: Change `CONFIG_RTE_LIBRTE_BNX2X_PMD=n` to `CONFIG_RTE_LIBRTE_BNX2X_PMD=y` in $RTE_SDK/config/common_base
+		* Notes
+			- How to run DPDK without root permission?
+				+ We should use VA mode instead of PA mode for IOVA theoretically
+			- `sudo ./app/test-pmd/build/app/testpmd -- -i --total-num-mbufs=2048` -> start -> stop -> non-zero TX/RX packets
+				+ If always zero, (1) the port is not connected to NIC or switch; for tofino, the port is not correctly enabled; (2) You must have odd ports
 - Install TLDK (Deprecated)
 	+ `git clone https://github.com/FDio/tldk.git`
 	+ Install DPDK 18.11

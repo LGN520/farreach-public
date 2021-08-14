@@ -12,3 +12,5 @@ prepare
 *.out
 *.pyc
 *.a
+*.o
+*.d

@@ -1,6 +1,14 @@
 #include "dpdk_helper.h" 
 static struct rte_eth_conf port_conf_default;
 
+static inline void dump_buf(char *buf, uint32_t bufsize)
+{
+	for (uint32_t byteidx = 0; byteidx < bufsize; byteidx++) {
+		printf("0x%02x ", uint8_t(buf[byteidx]));
+	}
+	printf("\n");
+}
+
 static inline uint16_t checksum (uint16_t *addr, int len) {
 	int count = len;
 	register uint32_t sum = 0;
@@ -239,7 +247,7 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::s
 	ethhdr = (struct ether_hdr *)data;
 	rte_memcpy(ethhdr->d_addr.addr_bytes, dstmac, 6);
 	rte_memcpy(ethhdr->s_addr.addr_bytes, srcmac, 6);
-	ethhdr->ether_type = 0x0800;
+	ethhdr->ether_type = 0x0008;
 	pktsize += sizeof(ether_hdr);
 
 	iphdr = (struct ipv4_hdr *)(data + pktsize);
@@ -271,6 +279,9 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::s
 
 	iphdr->hdr_checksum = checksum((uint16_t *)iphdr, sizeof(struct ipv4_hdr));
 	udphdr->dgram_cksum = udp4_checksum(iphdr, udphdr, payload, payload_size);
+
+	//printf("pktsize: %d\n", pktsize);
+	//dump_buf(data, pktsize);
 
 	mbuf->data_len = pktsize;
 	mbuf->pkt_len = pktsize;

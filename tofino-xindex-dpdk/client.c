@@ -346,8 +346,6 @@ void run_benchmark(size_t sec) {
 }
 
 static int run_receiver(void *param) {
-	COUT_THIS("Receiver start!")
-
 	while (!running)
 		;
 
@@ -386,8 +384,6 @@ static int run_receiver(void *param) {
 static int run_fg(void *param) {
   fg_param_t &thread_param = *(fg_param_t *)param;
   uint32_t thread_id = thread_param.thread_id;
-
-  COUT_THIS("Worker [" << thread_id << "] start!")
 
   // DPDK
   struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
@@ -487,6 +483,7 @@ static int run_fg(void *param) {
 	  // DPDK
 	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+	  COUT_VAR(res)
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
 		  ;
