@@ -329,9 +329,27 @@ static int run_receiver(void *param) {
 	while (!running)
 		;
 
+	unsigned portid;
 	struct rte_mbuf *received_pkts[fg_n];
+	for (size_t i = 0; i < fg_n; i++) {
+		received_pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
+	}
+	bool notprint=true;
 	while (running) {
-		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, fg_n);
+		uint16_t n_rx;
+		struct rte_eth_stats ethstats;
+		RTE_ETH_FOREACH_DEV(portid) {
+			n_rx = rte_eth_rx_burst(portid, 0, received_pkts, fg_n);
+			rte_eth_stats_get(portid, &ethstats);
+			if (ethstats.ipackets > 0 && notprint) {
+				COUT_VAR(portid);
+				COUT_VAR(ethstats.ipackets);
+				COUT_VAR(n_rx);
+				COUT_VAR(get_dstport(received_pkts[0]))
+				notprint=false;
+			}
+		}
+
 		if (n_rx == 0) continue;
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);

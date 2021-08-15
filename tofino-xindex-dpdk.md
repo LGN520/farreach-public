@@ -13,6 +13,7 @@
 		* Tofino must enable the correct port, otherwise dpdk cannot send the packet
 	+ No packet is transmitted to dl32
 		* Type of IPv4 is 0x0008 in host (0x0800 is big endian)
+	+ TODO: after client sends a packet, rte_eth_stats_get returns stats with ipackets=1, while rte_eth_rx_burst always returns 0
 - TODO: DPDK-based CS architecture with persistency
 
 ## How to run
