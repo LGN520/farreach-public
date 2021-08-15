@@ -19,6 +19,7 @@
 #include "xindex.h"
 #include "xindex_impl.h"
 #include "packet_format_impl.h"
+#include "dpdk_helper.h"
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
@@ -39,8 +40,15 @@ typedef ScanResponse<index_key_t, val_t> scan_response_t;
 inline void parse_args(int, char **);
 void load();
 void run_server(xindex_t *table);
-void *run_sfg(void *param);
+//void *run_sfg(void *param);
 void kill(int signum);
+
+// DPDK
+static int run_sfg(void *param);
+static int run_receiver(__attribute__((unused)) void *param); // receiver
+struct rte_mempool *mbuf_pool = NULL;
+volatile struct rte_mbuf **pkts;
+volatile bool *stats;
 
 // parameters
 size_t fg_n = 1;
@@ -97,6 +105,38 @@ class Key {
 } PACKED;
 
 int main(int argc, char **argv) {
+  // Prepare DPDK EAL param
+  int dpdk_argc = 3;
+  char **dpdk_argv;
+  dpdk_argv = new char *[dpdk_argc];
+  for (int i = 0; i < dpdk_argc; i++) {
+	dpdk_argv[i] = new char[20];
+	memset(dpdk_argv[i], '\0', 20);
+  }
+  std::string arg_proc = "./client";
+  std::string arg_iovamode = "--iova-mode";
+  std::string arg_iovamode_val = "pa";
+  //std::string arg_whitelist = "-w";
+  //std::string arg_whitelist_val = "0000:5e:00.1";
+  memcpy(dpdk_argv[0], arg_proc.c_str(), arg_proc.size());
+  memcpy(dpdk_argv[1], arg_iovamode.c_str(), arg_iovamode.size());
+  memcpy(dpdk_argv[2], arg_iovamode_val.c_str(), arg_iovamode_val.size());
+  //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
+  //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
+
+  // Init DPDK
+  rte_eal_init_helper(&dpdk_argc, &dpdk_argv);
+  dpdk_init(&mbuf_pool, fg_n, 1);
+
+  // Prepare pkts and stats for receiver
+  pkts = new volatile struct rte_mbuf*[fg_n];
+  stats = new volatile bool[fg_n];
+  memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
+  memset((void *)stats, 0, sizeof(bool)*fg_n);
+  for (size_t i = 0; i < fg_n; i++) {
+	pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
+  }
+
   parse_args(argc, argv);
   load();
 
@@ -109,6 +149,13 @@ int main(int argc, char **argv) {
 
   run_server(tab_xi);
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
+
+
+  // Free DPDK mbufs
+  for (size_t i = 0; i < fg_n; i++) {
+	rte_pktmbuf_free((struct rte_mbuf *)pkts[i]);
+  }
+
   COUT_THIS("[server] Exit successfully")
   exit(0);
 }
@@ -217,6 +264,20 @@ void load() {
 }
 
 void run_server(xindex_t *table) {
+	int ret = 0;
+	unsigned lcoreid = 1;
+
+	running = false;
+
+	// Launch receiver
+	ret = rte_eal_remote_launch(run_receiver, NULL, lcoreid);
+	if (ret) {
+		COUT_N_EXIT("Error:" << ret);
+	}
+	COUT_THIS("[client] Launch receiver with ret code " << ret)
+	lcoreid++;
+
+	// Prepare fg params
 	pthread_t threads[fg_n];
 	sfg_param_t sfg_params[fg_n];
 	// check if parameters are cacheline aligned
@@ -226,12 +287,18 @@ void run_server(xindex_t *table) {
 		}
 	}
 
+	// Launch workers
 	for (size_t worker_i = 0; worker_i < fg_n; worker_i++) {
 		sfg_params[worker_i].table = table;
 		sfg_params[worker_i].thread_id = worker_i;
-		int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
+		//int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
+		ret = rte_eal_remote_launch(run_sfg, (void *)sfg_params[i], lcoreid);
 		if (ret) {
 		  COUT_N_EXIT("Error:" << ret);
+		}
+		lcoreid++;
+		if (lcoreid >= MAX_LCORE_NUM) {
+			lcoreid = 1;
 		}
 	}
 
@@ -247,15 +314,54 @@ void run_server(xindex_t *table) {
 	}
 
 	running = false;
-	void *status;
+	/*void *status;
 	for (size_t i = 0; i < fg_n; i++) {
 		int rc = pthread_join(threads[i], &status);
 		if (rc) {
 		  COUT_N_EXIT("Error:unable to join," << rc);
 		}
-	}
+	}*/
+	rte_eal_mp_wait_lcore();
 }
 
+static int run_receiver(void *param) {
+	while (!running)
+		;
+
+	// TODO
+	struct rte_mbuf *received_pkts[fg_n];
+	while (running) {
+		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, fg_n);
+		if (n_rx == 0) continue;
+		for (size_t i = 0; i < n_rx; i++) {
+			int ret = get_dstport(received_pkts[i]);
+			if (ret == -1) {
+				continue;
+			}
+			else {
+				uint16_t received_port = (uint16_t)ret;
+				int idx = received_port - src_port_start;
+				if (idx < 0 || unsigned(idx) >= fg_n) {
+					COUT_THIS("Invalid dst port received by client: %u" << received_port)
+					continue;
+				}
+				else {
+					if (stats[idx]) {
+						COUT_THIS("Invalid stas[" << idx << "] which is true!")
+						continue;
+					}
+					else {
+						pkts[idx] = received_pkts[i];
+						stats[idx] = true;
+					}
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+// TODO
 void *run_sfg(void * param) {
   // Parse param
   sfg_param_t &thread_param = *(sfg_param_t *)param;
@@ -265,7 +371,7 @@ void *run_sfg(void * param) {
   int res = 0;
 
   // prepare socket
-  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   INVARIANT(sockfd >= 0);
   int disable = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
@@ -286,11 +392,12 @@ void *run_sfg(void * param) {
   tv.tv_sec = 1;
   tv.tv_usec =  0;
   res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-  INVARIANT(res >= 0);
+  INVARIANT(res >= 0);*/
 
   char buf[MAX_BUFSIZE];
   int recv_size = 0;
   int rsp_size = 0;
+  uint32_t timeout = 1000;
 
   ready_threads++;
 

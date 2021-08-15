@@ -109,11 +109,6 @@ class Key {
 } PACKED;
 
 int main(int argc, char **argv) {
-  COUT_THIS(argc)
-  for (int i = 0; i < argc; i++) {
-	printf("%s\n", argv[i]);
-  }
-
   // Prepare DPDK EAL param
   int dpdk_argc = 3;
   char **dpdk_argv;
@@ -135,9 +130,9 @@ int main(int argc, char **argv) {
 
   // Init DPDK
   rte_eal_init_helper(&dpdk_argc, &dpdk_argv);
-  dpdk_init(&mbuf_pool, fg_n);
+  dpdk_init(&mbuf_pool, fg_n, 1);
 
-  // Prepare pkts and stats
+  // Prepare pkts and stats for receiver
   pkts = new volatile struct rte_mbuf*[fg_n];
   stats = new volatile bool[fg_n];
   memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
@@ -448,8 +443,6 @@ static int run_fg(void *param) {
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
   COUT_THIS("[client " << thread_id << "] Ready.");
   ready_threads++;
-  COUT_VAR(ready_threads);
-  COUT_VAR(running);
 
   // DEBUG TEST
   //uint32_t debugtest_idx = 0;
@@ -483,7 +476,6 @@ static int run_fg(void *param) {
 	  // DPDK
 	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
-	  COUT_VAR(res)
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
 		  ;
@@ -595,5 +587,6 @@ static int run_fg(void *param) {
 
   //close(sockfd);
   //pthread_exit(nullptr); // UDP socket
+  rte_pktmbuf_free((struct rte_mbuf*)sent_pkt);
   return 0;
 }

@@ -108,9 +108,9 @@ static inline uint16_t udp4_checksum (struct ipv4_hdr* iph, struct udp_hdr* udph
 }
 
 static inline 
-int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring) {
+int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring, uint16_t n_rxring) {
 	struct rte_eth_conf port_conf = port_conf_default;
-	const uint16_t rx_rings = 1, tx_rings = n_txring;
+	const uint16_t rx_rings = n_rxring, tx_rings = n_txring;
 	uint16_t nb_rxd = RX_RING_SIZE;
 	uint16_t nb_txd = TX_RING_SIZE;
 	int retval;
@@ -203,7 +203,7 @@ void rte_eal_init_helper(int *argc, char ***argv) {
 	port_conf_default.rxmode = tmp_rxmode;
 }
 
-void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring) {
+void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring, uint16_t n_rxring) {
 	unsigned nb_ports;
 	unsigned lcore_count;
 	uint16_t portid;
@@ -223,7 +223,7 @@ void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring) {
 
 	/* Initialize all ports. */
 	RTE_ETH_FOREACH_DEV(portid) {
-		if (port_init(portid, *mbuf_pool_ptr, n_txring) != 0)
+		if (port_init(portid, *mbuf_pool_ptr, n_txring, n_rxring) != 0)
 			rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu16 "\n",
 					portid);
 	}
@@ -274,8 +274,8 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::s
 	rte_memcpy(payload_begin, payload, payload_size);
 	pktsize += payload_size;
 
-	iphdr->total_length = sizeof(struct ipv4_hdr) + sizeof(struct udp_hdr) + payload_size;
-	udphdr->dgram_len = sizeof(struct udp_hdr) + payload_size;
+	iphdr->total_length = htons(sizeof(struct ipv4_hdr) + sizeof(struct udp_hdr) + payload_size);
+	udphdr->dgram_len = htons(sizeof(struct udp_hdr) + payload_size);
 
 	iphdr->hdr_checksum = checksum((uint16_t *)iphdr, sizeof(struct ipv4_hdr));
 	udphdr->dgram_cksum = udp4_checksum(iphdr, udphdr, payload, payload_size);
@@ -347,6 +347,28 @@ int get_dstport(volatile struct rte_mbuf *mbuf) {
 
 	udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
 	return ntohs(udphdr->dst_port);
+}
+
+int get_srcport(volatile struct rte_mbuf *mbuf) {
+	struct ether_hdr *ethhdr;
+	struct ipv4_hdr *iphdr;
+	struct udp_hdr *udphdr;
+	char *data;
+
+	data = rte_pktmbuf_mtod(mbuf, char *);
+
+	ethhdr = (struct ether_hdr *)data;
+	if (ethhdr->ether_type != 0x0800) {
+		return -1;
+	}
+
+	iphdr = (struct ipv4_hdr *)(data + sizeof(ether_hdr));
+	if (iphdr->next_proto_id != 0x11) {
+		return -1;
+	}
+
+	udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
+	return ntohs(udphdr->src_port);
 }
 
 int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
