@@ -42,6 +42,10 @@
     abort();                       \
   }
 
+#if 1
+#define NDEBUGGING
+#endif
+
 #if defined(NDEBUGGING)
 #define DEBUG_THIS(this)
 #else

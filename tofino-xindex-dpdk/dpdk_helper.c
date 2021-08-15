@@ -287,7 +287,7 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::s
 	mbuf->pkt_len = pktsize;
 }
 
-int decode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload) {
+int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload) {
 	struct ether_hdr *ethhdr;
 	struct ipv4_hdr *iphdr;
 	struct udp_hdr *udphdr;

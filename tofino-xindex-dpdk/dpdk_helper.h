@@ -37,7 +37,7 @@ void rte_eal_init_helper(int *argc, char ***argv);
 void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring, uint16_t n_rxring);
 
 void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::string srcip, std::string dstip, uint16_t srcport, uint16_t dstport, char *payload, uint32_t payload_size);
-int decode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload);
+int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload);
 // Used by receiver in client side (mbuf is shared by receiver and workers)
 int get_srcport(volatile struct rte_mbuf *mbuf);
 int get_dstport(volatile struct rte_mbuf *mbuf);

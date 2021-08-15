@@ -274,11 +274,11 @@ void run_server(xindex_t *table) {
 	if (ret) {
 		COUT_N_EXIT("Error:" << ret);
 	}
-	COUT_THIS("[client] Launch receiver with ret code " << ret)
+	COUT_THIS("[server] Launch receiver with ret code " << ret)
 	lcoreid++;
 
 	// Prepare fg params
-	pthread_t threads[fg_n];
+	//pthread_t threads[fg_n];
 	sfg_param_t sfg_params[fg_n];
 	// check if parameters are cacheline aligned
 	for (size_t i = 0; i < fg_n; i++) {
@@ -292,7 +292,7 @@ void run_server(xindex_t *table) {
 		sfg_params[worker_i].table = table;
 		sfg_params[worker_i].thread_id = worker_i;
 		//int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
-		ret = rte_eal_remote_launch(run_sfg, (void *)sfg_params[i], lcoreid);
+		ret = rte_eal_remote_launch(run_sfg, (void *)&sfg_params[worker_i], lcoreid);
 		if (ret) {
 		  COUT_N_EXIT("Error:" << ret);
 		}
@@ -308,6 +308,7 @@ void run_server(xindex_t *table) {
 	signal(SIGTERM, kill); // Set for main thread
 
 	running = true;
+	COUT_THIS("[server] start running...")
 
 	while (!killed) {
 		sleep(1);
@@ -328,7 +329,6 @@ static int run_receiver(void *param) {
 	while (!running)
 		;
 
-	// TODO
 	struct rte_mbuf *received_pkts[fg_n];
 	while (running) {
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, fg_n);
@@ -340,9 +340,9 @@ static int run_receiver(void *param) {
 			}
 			else {
 				uint16_t received_port = (uint16_t)ret;
-				int idx = received_port - src_port_start;
+				int idx = received_port - dst_port_start;
 				if (idx < 0 || unsigned(idx) >= fg_n) {
-					COUT_THIS("Invalid dst port received by client: %u" << received_port)
+					COUT_THIS("Invalid dst port received by server: %u" << received_port)
 					continue;
 				}
 				else {
@@ -361,12 +361,16 @@ static int run_receiver(void *param) {
 	return 0;
 }
 
-// TODO
-void *run_sfg(void * param) {
+static int run_sfg(void * param) {
+//void *run_sfg(void * param) {
   // Parse param
   sfg_param_t &thread_param = *(sfg_param_t *)param;
   uint32_t thread_id = thread_param.thread_id;
   xindex_t *table = thread_param.table;
+
+  // DPDK
+  struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
+  struct rte_mbuf *sent_pkt_wrapper[1] = {sent_pkt};
 
   int res = 0;
 
@@ -397,7 +401,14 @@ void *run_sfg(void * param) {
   char buf[MAX_BUFSIZE];
   int recv_size = 0;
   int rsp_size = 0;
-  uint32_t timeout = 1000;
+
+  // DPDK
+  uint8_t srcmac[6];
+  uint8_t dstmac[6];
+  char srcip[4];
+  char dstip[4];
+  uint16_t srcport;
+  uint16_t dstport;
 
   ready_threads++;
 
@@ -405,7 +416,7 @@ void *run_sfg(void * param) {
   }
 
   while (running) {
-	recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
+	/*recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 	if (recv_size == -1) {
 		if (errno == EWOULDBLOCK || errno == EINTR) {
 			continue; // timeout or interrupted system call
@@ -414,9 +425,15 @@ void *run_sfg(void * param) {
 			COUT_THIS("[server] Error of recvfrom: errno = " << errno)
 			exit(-1);
 		}
-	}
-	else {
+	}*/
+
+	if (stats[thread_id]) {
 		//COUT_THIS("[server] Receive packet!")
+
+		// DPDK
+		stats[thread_id] = false;
+		recv_size = decode_mbuf(pkts[thread_id], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
+
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
 		switch (pkt_type) {
 			case packet_type_t::GET_REQ: 
@@ -431,7 +448,12 @@ void *run_sfg(void * param) {
 					//COUT_THIS("[server] val = " << tmp_val)
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr)); // UDP socket
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, std::string(dstip), std::string(srcip), dstport, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+					INVARIANT(res == 1);
 					break;
 				}
 			case packet_type_t::PUT_REQ:
@@ -442,7 +464,7 @@ void *run_sfg(void * param) {
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					break;
 				}
 			case packet_type_t::DEL_REQ:
@@ -453,7 +475,7 @@ void *run_sfg(void * param) {
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					break;
 				}
 			case packet_type_t::SCAN_REQ:
@@ -469,7 +491,7 @@ void *run_sfg(void * param) {
 					}*/
 					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, results);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					break;
 				}
 			default:
@@ -482,9 +504,13 @@ void *run_sfg(void * param) {
 	}
   }
 
-  close(sockfd);
+  //close(sockfd);
   COUT_THIS("[thread" << thread_id << "] exits")
-  pthread_exit(nullptr);
+  //pthread_exit(nullptr);
+  
+  // DPDK
+  rte_pktmbuf_free((struct rte_mbuf*)sent_pkt);
+  return 0;
 }
 
 void kill(int signum) {

@@ -479,6 +479,7 @@ static int run_fg(void *param) {
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
 		  ;
+	  stats[thread_id] = false;
 	  recv_size = get_payload(pkts[thread_id], buf);
 	  INVARIANT(recv_size != -1);
 
