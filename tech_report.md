@@ -76,6 +76,8 @@
 						+ `./dpdk-devbind.py --status`
 							* Now since OS cannot find ens3f1, ifconfig cannot configure this interface
 			* VFIO
+				* Check IOMMU: `uname -r`; `dmesg | grep -e DMAR -e IOMMU`; `cat /proc/cmdline | grep iommu=pt`; `cat /proc/cmdline | grep intel_iommu=on`;
+					- If IOMMU is not enabled: set `GRUB_CMDLINE_LINUX_DEFAULT="quiet splash iommu=pt intel_iommu=on"` in /etc/default/grub; `sudo update-grub`; `sudo reboot`
 				* `./dpdk-setup.sh`
 					- Select option: 38 to build DPDK
 					- Select option: 46 to insert VFIO
@@ -103,7 +105,6 @@
 				- Solution
 					+ (1) Change DPDL from 20.08 to 18.11 to match the kernel driver version and firmware version of the PCI device
 					+ (3) Change driver from igb_uio to vfio
-						- Check environment before using vfio: `uname -r`; `dmesg | grep -e DMAR -e IOMMU`; `cat /proc/cmdline | grep iommu=pt`; `cat /proc/cmdline | grep intel_iommu=on`;
 					+ (4) Use Makefile (refer to [tas](https://github.com/tcp-acceleration-service/tas/blob/master/Makefile))
 					+ NOT USE: Change `CONFIG_RTE_LIBRTE_BNX2X_PMD=n` to `CONFIG_RTE_LIBRTE_BNX2X_PMD=y` in $RTE_SDK/config/common_base
 		* Notes

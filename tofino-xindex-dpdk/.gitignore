@@ -3,7 +3,6 @@ build/
 CMakeFiles/
 *.cmake
 CMakeCache.txt
-Makefile
 client
 server
 microbench
