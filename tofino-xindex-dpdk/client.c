@@ -344,9 +344,9 @@ static int run_receiver(void *param) {
 	while (!running)
 		;
 
-	struct rte_mbuf *received_pkts[fg_n];
+	struct rte_mbuf *received_pkts[32];
 	while (running) {
-		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, fg_n);
+		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
 		if (n_rx == 0) continue;
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);
@@ -481,6 +481,7 @@ static int run_fg(void *param) {
 		  ;
 	  stats[thread_id] = false;
 	  recv_size = get_payload(pkts[thread_id], buf);
+	  rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
 	  INVARIANT(recv_size != -1);
 
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);

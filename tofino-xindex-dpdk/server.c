@@ -155,6 +155,7 @@ int main(int argc, char **argv) {
   for (size_t i = 0; i < fg_n; i++) {
 	rte_pktmbuf_free((struct rte_mbuf *)pkts[i]);
   }
+  dpdk_free();
 
   COUT_THIS("[server] Exit successfully")
   exit(0);
@@ -329,26 +330,12 @@ static int run_receiver(void *param) {
 	while (!running)
 		;
 
-	unsigned portid;
-	struct rte_mbuf *received_pkts[fg_n];
-	for (size_t i = 0; i < fg_n; i++) {
-		received_pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
-	}
-	bool notprint=true;
+	struct rte_mbuf *received_pkts[32];
 	while (running) {
 		uint16_t n_rx;
-		struct rte_eth_stats ethstats;
-		RTE_ETH_FOREACH_DEV(portid) {
-			n_rx = rte_eth_rx_burst(portid, 0, received_pkts, fg_n);
-			rte_eth_stats_get(portid, &ethstats);
-			if (ethstats.ipackets > 0 && notprint) {
-				COUT_VAR(portid);
-				COUT_VAR(ethstats.ipackets);
-				COUT_VAR(n_rx);
-				COUT_VAR(get_dstport(received_pkts[0]))
-				notprint=false;
-			}
-		}
+		n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
+		//struct rte_eth_stats ethstats;
+		//rte_eth_stats_get(0, &ethstats);
 
 		if (n_rx == 0) continue;
 		for (size_t i = 0; i < n_rx; i++) {
@@ -446,24 +433,25 @@ static int run_sfg(void * param) {
 	}*/
 
 	if (stats[thread_id]) {
-		//COUT_THIS("[server] Receive packet!")
+		COUT_THIS("[server] Receive packet!")
 
 		// DPDK
 		stats[thread_id] = false;
 		recv_size = decode_mbuf(pkts[thread_id], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
+		rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
 
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
 		switch (pkt_type) {
 			case packet_type_t::GET_REQ: 
 				{
 					get_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key)
+					COUT_THIS("[server] key = " << req.key().key)
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
 					if (!tmp_stat) {
 						tmp_val = 0;
 					}
-					//COUT_THIS("[server] val = " << tmp_val)
+					COUT_THIS("[server] val = " << tmp_val)
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr)); // UDP socket
@@ -471,7 +459,7 @@ static int run_sfg(void * param) {
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, std::string(dstip), std::string(srcip), dstport, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
-					INVARIANT(res == 1);
+					COUT_VAR(res);
 					break;
 				}
 			case packet_type_t::PUT_REQ:

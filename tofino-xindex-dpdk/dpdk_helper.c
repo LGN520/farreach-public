@@ -1,4 +1,5 @@
 #include "dpdk_helper.h" 
+#include "helper.h"
 static struct rte_eth_conf port_conf_default;
 
 static inline void dump_buf(char *buf, uint32_t bufsize)
@@ -116,6 +117,7 @@ int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring, u
 	int retval;
 	uint16_t q;
 	struct rte_eth_dev_info dev_info;
+	struct rte_eth_rxconf rxconf;
 	struct rte_eth_txconf txconf;
 
 	if (!rte_eth_dev_is_valid_port(port))
@@ -127,13 +129,14 @@ int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring, u
 				port, strerror(-retval));
 		return retval;
 	}*/
-	rte_eth_dev_info_get(port, &dev_info);
 
+	rte_eth_dev_info_get(port, &dev_info);
 	if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE)
 		port_conf.txmode.offloads |=
 			DEV_TX_OFFLOAD_MBUF_FAST_FREE;
 
 	/* Configure the Ethernet device. */
+	printf("Initialize port %u\n", port);
 	retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
 	if (retval != 0)
 		return retval;
@@ -142,10 +145,12 @@ int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring, u
 	if (retval != 0)
 		return retval;
 
+	rxconf = dev_info.default_rxconf;
+	rxconf.offloads = port_conf.rxmode.offloads;
 	/* Allocate and set up 1 RX queue per Ethernet port. */
 	for (q = 0; q < rx_rings; q++) {
 		retval = rte_eth_rx_queue_setup(port, q, nb_rxd,
-				rte_eth_dev_socket_id(port), NULL, mbuf_pool);
+				rte_eth_dev_socket_id(port), &rxconf, mbuf_pool);
 		if (retval < 0)
 			return retval;
 	}
@@ -160,18 +165,9 @@ int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring, u
 			return retval;
 	}
 
-	/* Start the Ethernet port. */
-	retval = rte_eth_dev_start(port);
-	if (retval < 0)
-		return retval;
-
 	/* Display the port MAC address. */
 	struct ether_addr addr;
-	/*retval = rte_eth_macaddr_get(port, &addr);
-	if (retval != 0)
-		return retval;*/
 	rte_eth_macaddr_get(port, &addr);
-
 	printf("Port %u MAC: %02" PRIx8 " %02" PRIx8 " %02" PRIx8
 			   " %02" PRIx8 " %02" PRIx8 " %02" PRIx8 "\n",
 			port,
@@ -180,10 +176,28 @@ int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring, u
 			addr.addr_bytes[4], addr.addr_bytes[5]);
 
 	/* Enable RX in promiscuous mode for the Ethernet device. */
-	/*retval = rte_eth_promiscuous_enable(port);
-	if (retval != 0)
-		return retval;*/
 	rte_eth_promiscuous_enable(port);
+
+	/* Start the Ethernet port. */
+	retval = rte_eth_dev_start(port);
+	if (retval < 0)
+		return retval;
+
+	// Wait until link up
+	struct rte_eth_link link;
+	memset(&link, 0, sizeof(struct rte_eth_link));
+	uint32_t max_repeat_times = 1000;
+	uint32_t check_interval_ms = 10;
+	for (uint32_t i = 0; i <= max_repeat_times; i++) {
+		rte_eth_link_get(port, &link);
+		if (link.link_status == ETH_LINK_UP)
+			break;
+		rte_delay_ms(check_interval_ms);
+	}
+	if (link.link_status == ETH_LINK_DOWN) {
+		rte_exit(EXIT_FAILURE, "Link is down for port %u\n", port);
+	}
+	printf("Initialize port %u done!\n", port);
 
 	return 0;
 }
@@ -200,19 +214,28 @@ void rte_eal_init_helper(int *argc, char ***argv) {
 	port_conf_default.link_speeds = ETH_LINK_SPEED_40G;
 	struct rte_eth_rxmode tmp_rxmode;
 	tmp_rxmode.max_rx_pkt_len = ETHER_MAX_LEN;
+	tmp_rxmode.split_hdr_size = 0;
 	port_conf_default.rxmode = tmp_rxmode;
+	/*struct rte_eth_txmode tmp_txmode;
+	tmp_txmode.offloads = DEV_TX_OFFLOAD_VLAN_INSERT |
+				DEV_TX_OFFLOAD_IPV4_CKSUM  |
+				DEV_TX_OFFLOAD_UDP_CKSUM   |
+				DEV_TX_OFFLOAD_TCP_CKSUM   |
+				DEV_TX_OFFLOAD_SCTP_CKSUM  |
+				DEV_TX_OFFLOAD_TCP_TSO;
+	port_conf_default.txmode = tmp_txmode;*/
 }
 
 void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring, uint16_t n_rxring) {
 	unsigned nb_ports;
 	unsigned lcore_count;
-	uint16_t portid;
+	uint16_t portid = 0;
 
 	/* Check that there is an even number of ports to send/receive on. */
 	nb_ports = rte_eth_dev_count_avail();
-	/*if (nb_ports < 2 || (nb_ports & 1))
-		rte_exit(EXIT_FAILURE, "Error: number of ports must be even\n");*/
-	printf("Available number of ports: %u\n", nb_ports);
+	if (nb_ports == 0)
+		rte_exit(EXIT_FAILURE, "No available DPDK port\n");
+	printf("Available number of ports: %u, while we only use port 0\n", nb_ports);
 
 	/* Creates a new mempool in memory to hold the mbufs. */
 	*mbuf_pool_ptr = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS * nb_ports,
@@ -222,16 +245,23 @@ void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring, uint16_t n
 		rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
 
 	/* Initialize all ports. */
-	RTE_ETH_FOREACH_DEV(portid) {
-		if (port_init(portid, *mbuf_pool_ptr, n_txring, n_rxring) != 0)
-			rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu16 "\n",
-					portid);
-	}
+	if (port_init(portid, *mbuf_pool_ptr, n_txring, n_rxring) != 0)
+		rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu16 "\n",
+				portid);
 
 	lcore_count = rte_lcore_count();
 	printf("Number of logical cores: %u\n", lcore_count);
 	/*if (rte_lcore_count() > 1)
 		printf("\nWARNING: Too many lcores enabled. Only 1 used.\n");*/
+}
+
+void dpdk_free() {
+	unsigned portid = 0;
+	/* closing and releasing resources */
+	struct rte_flow_error error;
+	rte_flow_flush(portid, &error);
+	rte_eth_dev_stop(portid);
+	rte_eth_dev_close(portid);
 }
 
 void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::string srcip, std::string dstip, uint16_t srcport, uint16_t dstport, char *payload, uint32_t payload_size) {
@@ -300,7 +330,7 @@ int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
 	ethhdr = (struct ether_hdr *)data;
-	if (ethhdr->ether_type != 0x0800) {
+	if (ethhdr->ether_type != 0x0008) {
 		return -1;
 	}
 	rte_memcpy(dstmac, ethhdr->d_addr.addr_bytes, 6);
@@ -320,7 +350,7 @@ int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac
 	udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
 	*srcport = ntohs(udphdr->src_port);
 	*dstport = ntohs(udphdr->dst_port);
-	payload_size = udphdr->dgram_len - sizeof(udp_hdr);
+	payload_size = ntohs(udphdr->dgram_len) - sizeof(udp_hdr);
 
 	payload_begin = data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + sizeof(udp_hdr);
 	rte_memcpy(payload, payload_begin, payload_size);
@@ -336,7 +366,7 @@ int get_dstport(volatile struct rte_mbuf *mbuf) {
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
 	ethhdr = (struct ether_hdr *)data;
-	if (ethhdr->ether_type != 0x0800) {
+	if (ethhdr->ether_type != 0x0008) {
 		return -1;
 	}
 
@@ -358,7 +388,7 @@ int get_srcport(volatile struct rte_mbuf *mbuf) {
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
 	ethhdr = (struct ether_hdr *)data;
-	if (ethhdr->ether_type != 0x0800) {
+	if (ethhdr->ether_type != 0x0008) {
 		return -1;
 	}
 
@@ -382,7 +412,7 @@ int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
 	ethhdr = (struct ether_hdr *)data;
-	if (ethhdr->ether_type != 0x0800) {
+	if (ethhdr->ether_type != 0x0008) {
 		return -1;
 	}
 
@@ -392,7 +422,7 @@ int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
 	}
 
 	udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
-	payload_size = udphdr->dgram_len - sizeof(udp_hdr);
+	payload_size = ntohs(udphdr->dgram_len) - sizeof(udp_hdr);
 
 	payload_begin = data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + sizeof(udp_hdr);
 	rte_memcpy(payload, payload_begin, payload_size);

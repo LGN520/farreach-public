@@ -11,13 +11,14 @@
 #include <rte_cycles.h>
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
+#include <rte_flow.h>
 #include <arpa/inet.h>
 
-#define RX_RING_SIZE 1024
-#define TX_RING_SIZE 1024
+#define RX_RING_SIZE 512
+#define TX_RING_SIZE 512
 
-#define NUM_MBUFS 8191
-#define MBUF_CACHE_SIZE 250
+#define NUM_MBUFS 4096
+#define MBUF_CACHE_SIZE 128
 
 // Internal var
 // Designated initializer is not suported by g++ 7.5.0
@@ -35,6 +36,7 @@
 
 void rte_eal_init_helper(int *argc, char ***argv);
 void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring, uint16_t n_rxring);
+void dpdk_free();
 
 void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::string srcip, std::string dstip, uint16_t srcport, uint16_t dstport, char *payload, uint32_t payload_size);
 int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload);
