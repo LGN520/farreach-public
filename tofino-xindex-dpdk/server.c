@@ -410,8 +410,8 @@ static int run_sfg(void * param) {
   // DPDK
   uint8_t srcmac[6];
   uint8_t dstmac[6];
-  char srcip[4];
-  char dstip[4];
+  char srcip[16];
+  char dstip[16];
   uint16_t srcport;
   uint16_t dstport;
 
@@ -433,7 +433,7 @@ static int run_sfg(void * param) {
 	}*/
 
 	if (stats[thread_id]) {
-		COUT_THIS("[server] Receive packet!")
+		//COUT_THIS("[server] Receive packet!")
 
 		// DPDK
 		stats[thread_id] = false;
@@ -445,21 +445,20 @@ static int run_sfg(void * param) {
 			case packet_type_t::GET_REQ: 
 				{
 					get_request_t req(buf, recv_size);
-					COUT_THIS("[server] key = " << req.key().key)
+					//COUT_THIS("[server] key = " << req.key().key)
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
 					if (!tmp_stat) {
 						tmp_val = 0;
 					}
-					COUT_THIS("[server] val = " << tmp_val)
+					//COUT_THIS("[server] val = " << tmp_val)
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr)); // UDP socket
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, std::string(dstip), std::string(srcip), dstport, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
-					COUT_VAR(res);
 					break;
 				}
 			case packet_type_t::PUT_REQ:

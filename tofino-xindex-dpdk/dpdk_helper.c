@@ -264,7 +264,7 @@ void dpdk_free() {
 	rte_eth_dev_close(portid);
 }
 
-void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::string srcip, std::string dstip, uint16_t srcport, uint16_t dstport, char *payload, uint32_t payload_size) {
+void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const char *srcip, const char *dstip, uint16_t srcport, uint16_t dstport, char *payload, uint32_t payload_size) {
 	struct ether_hdr *ethhdr;
 	struct ipv4_hdr *iphdr;
 	struct udp_hdr *udphdr;
@@ -289,8 +289,8 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, std::s
 	iphdr->time_to_live = 0x40;
 	iphdr->next_proto_id = 0x11;
 	iphdr->hdr_checksum = 0;
-	iphdr->src_addr = inet_addr(srcip.c_str());
-	iphdr->dst_addr = inet_addr(dstip.c_str());
+	iphdr->src_addr = inet_addr(srcip);
+	iphdr->dst_addr = inet_addr(dstip);
 	pktsize += sizeof(struct ipv4_hdr);
 
 	udphdr = (struct udp_hdr *)(data + pktsize);
@@ -323,7 +323,7 @@ int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac
 	struct udp_hdr *udphdr;
 	char *data;
 	struct in_addr tmp_ipaddr;
-	char *tmp_ipstr;
+	char * tmp_ipstr;
 	uint32_t payload_size;
 	char *payload_begin;
 
@@ -342,10 +342,10 @@ int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac
 	}
 	tmp_ipaddr.s_addr = iphdr->src_addr;
 	tmp_ipstr = inet_ntoa(tmp_ipaddr);
-	rte_memcpy(srcip, tmp_ipstr, 4);
+	rte_memcpy(srcip, tmp_ipstr, strlen(tmp_ipstr));
 	tmp_ipaddr.s_addr = iphdr->dst_addr;
 	tmp_ipstr = inet_ntoa(tmp_ipaddr);
-	rte_memcpy(dstip, tmp_ipstr, 4);
+	rte_memcpy(dstip, tmp_ipstr, strlen(tmp_ipstr));
 
 	udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
 	*srcport = ntohs(udphdr->src_port);

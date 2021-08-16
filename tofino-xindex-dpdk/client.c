@@ -55,8 +55,8 @@ size_t runtime = 10;
 size_t fg_n = 1;
 uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
 uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
-std::string src_ipaddr = "10.0.0.31";
-std::string server_addr = "10.0.0.32";
+char src_ipaddr[16] = "10.0.0.31";
+char server_addr[16] = "10.0.0.32";
 short src_port_start = 8888;
 short dst_port_start = 1111;
 
@@ -206,8 +206,8 @@ inline void parse_args(int argc, char **argv) {
         INVARIANT(fg_n > 0);
         break;
 	  case 'i':
-		server_addr = std::string(optarg);
-		INVARIANT(server_addr.length() > 0);
+		INVARIANT(strlen(optarg) > 0);
+		memcpy(server_addr, optarg, strlen(optarg));
 		break;
 	  /*case 'j':
 		server_port = atoi(optarg);
@@ -427,7 +427,7 @@ static int run_fg(void *param) {
   struct sockaddr_in remote_sockaddr;
   memset(&remote_sockaddr, 0, sizeof(struct sockaddr_in));
   remote_sockaddr.sin_family = AF_INET;
-  INVARIANT(inet_pton(AF_INET, server_addr.c_str(), &remote_sockaddr.sin_addr) > 0);
+  INVARIANT(inet_pton(AF_INET, server_addr, &remote_sockaddr.sin_addr) > 0);
   remote_sockaddr.sin_port = htons(dst_port);*/
   // Set timeout
   /*struct timeval tv;
