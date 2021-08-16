@@ -149,6 +149,7 @@ int main(int argc, char **argv) {
   for (size_t i = 0; i < fg_n; i++) {
 	rte_pktmbuf_free((struct rte_mbuf *)pkts[i]);
   }
+  dpdk_free();
 
   exit(0);
 }
@@ -348,8 +349,10 @@ static int run_receiver(void *param) {
 	while (running) {
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
 		if (n_rx == 0) continue;
+		COUT_VAR(n_rx);
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);
+			COUT_VAR(ret);
 			if (ret == -1) {
 				continue;
 			}

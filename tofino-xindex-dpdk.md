@@ -13,7 +13,10 @@
 		* Tofino must enable the correct port, otherwise dpdk cannot send the packet
 	+ No packet is transmitted to dl32
 		* Type of IPv4 is 0x0008 in host (0x0800 is big endian)
-	+ TODO: after client sends a packet, rte_eth_stats_get returns stats with ipackets=1, while rte_eth_rx_burst always returns 0
+	+ After client sends a packet, rte_eth_stats_get returns stats with ipackets=1, while rte_eth_rx_burst always returns 0
+		* Give rxconf when setuping RX queue
+		* Use multiple mbufs (e.g., 32) when invoking rte_eth_rx_burst; using 1 mbuf cannot receive any packet
+	+ TODO: receive packets in client side
 - TODO: DPDK-based CS architecture with persistency
 
 ## How to run
