@@ -16,7 +16,8 @@
 	+ After client sends a packet, rte_eth_stats_get returns stats with ipackets=1, while rte_eth_rx_burst always returns 0
 		* Give rxconf when setuping RX queue
 		* Use multiple mbufs (e.g., 32) when invoking rte_eth_rx_burst; using 1 mbuf cannot receive any packet
-	+ TODO: receive packets in client side
+	+ Receive packets in client side
+		* Fix a bug related with IP address in server side
 - TODO: DPDK-based CS architecture with persistency
 
 ## How to run

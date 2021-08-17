@@ -349,10 +349,8 @@ static int run_receiver(void *param) {
 	while (running) {
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
 		if (n_rx == 0) continue;
-		COUT_VAR(n_rx);
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);
-			COUT_VAR(ret);
 			if (ret == -1) {
 				continue;
 			}
@@ -498,7 +496,7 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio) {  // update
     } else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
-	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val())
+	  COUT_THIS("[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val())
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -507,7 +505,16 @@ static int run_fg(void *param) {
 	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  //INVARIANT(recv_size != -1);
 
-	  // TODO: DPDK
+	  // DPDK
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+	  INVARIANT(res == 1);
+	  while (!stats[thread_id])
+		  ;
+	  stats[thread_id] = false;
+	  recv_size = get_payload(pkts[thread_id], buf);
+	  rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
+	  INVARIANT(recv_size != -1);
 
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
@@ -520,7 +527,7 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     } else if (tmprun == 2) {  // insert
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
-	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val())
+	  COUT_THIS("[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val())
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -529,7 +536,16 @@ static int run_fg(void *param) {
 	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  //INVARIANT(recv_size != -1);
 	  
-	  // TODO: DPDK
+	  // DPDK
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+	  INVARIANT(res == 1);
+	  while (!stats[thread_id])
+		  ;
+	  stats[thread_id] = false;
+	  recv_size = get_payload(pkts[thread_id], buf);
+	  rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
+	  INVARIANT(recv_size != -1);
 	  
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
@@ -542,7 +558,7 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
     } else if (tmprun == 3) {  // remove
 	  del_request_t req(thread_id, op_keys[delete_i]);
-	  //COUT_THIS("[client " << thread_id << "] key = " << op_keys[delete_i].key)
+	  COUT_THIS("[client " << thread_id << "] key = " << op_keys[delete_i].key)
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -551,7 +567,16 @@ static int run_fg(void *param) {
 	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  //INVARIANT(recv_size != -1);
 
-	  // TODO: DPDK
+	  // DPDK
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+	  INVARIANT(res == 1);
+	  while (!stats[thread_id])
+		  ;
+	  stats[thread_id] = false;
+	  recv_size = get_payload(pkts[thread_id], buf);
+	  rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
+	  INVARIANT(recv_size != -1);
 
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::DEL_RES);
@@ -563,7 +588,7 @@ static int run_fg(void *param) {
       }
     } else {  // scan
 	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], 10);
-	  //COUT_THIS("[client " << thread_id << "] key = " << req.key().key)
+	  COUT_THIS("[client " << thread_id << "] key = " << req.key().key)
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -572,7 +597,16 @@ static int run_fg(void *param) {
 	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
 	  //INVARIANT(recv_size != -1);
 
-	  // TODO: DPDK
+	  // DPDK
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+	  INVARIANT(res == 1);
+	  while (!stats[thread_id])
+		  ;
+	  stats[thread_id] = false;
+	  recv_size = get_payload(pkts[thread_id], buf);
+	  rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
+	  INVARIANT(recv_size != -1);
 
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::SCAN_RES);
@@ -587,6 +621,7 @@ static int run_fg(void *param) {
         query_i = 0;
       }
     }
+    break;//TMPRUN
     thread_param.throughput++;
   }
 

@@ -470,6 +470,10 @@ static int run_sfg(void * param) {
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
 					break;
 				}
 			case packet_type_t::DEL_REQ:
@@ -481,6 +485,10 @@ static int run_sfg(void * param) {
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
 					break;
 				}
 			case packet_type_t::SCAN_REQ:
@@ -497,6 +505,10 @@ static int run_sfg(void * param) {
 					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, results);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
 					break;
 				}
 			default:
