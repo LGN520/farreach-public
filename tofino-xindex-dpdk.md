@@ -18,6 +18,9 @@
 		* Use multiple mbufs (e.g., 32) when invoking rte_eth_rx_burst; using 1 mbuf cannot receive any packet
 	+ Receive packets in client side
 		* Fix a bug related with IP address in server side
+	+ Simple test
+		* Pass single-thread test of XIndex: GET, PUT, DEL, SCAN
+		* TODO: error in multiple-thread of client side
 - TODO: DPDK-based CS architecture with persistency
 
 ## How to run

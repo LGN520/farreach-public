@@ -46,10 +46,20 @@
 #define NDEBUGGING
 #endif
 
+#if 0
+#define NDEBUGGING_CLIENT
+#endif
+
 #if defined(NDEBUGGING)
 #define DEBUG_THIS(this)
 #else
 #define DEBUG_THIS(this) std::cerr << this << std::endl
+#endif
+
+#if defined(NDEBUGGING_CLIENT)
+#define FDEBUG_THIS(ofs, this)
+#else
+#define FDEBUG_THIS(ofs, this) ofs << this << std::endl
 #endif
 
 #define UNUSED(var) ((void)var)

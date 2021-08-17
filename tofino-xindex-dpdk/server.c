@@ -172,7 +172,7 @@ inline void parse_args(int argc, char **argv) {
       {"xindex-buf-size-bound", required_argument, 0, 'n'},
       {"xindex-buf-compact-threshold", required_argument, 0, 'o'},
       {0, 0, 0, 0}};
-  std::string ops = "i:j:k:l:m:n:o:";
+  std::string ops = "h:i:j:k:l:m:n:o:";
   int option_index = 0;
 
   while (1) {
