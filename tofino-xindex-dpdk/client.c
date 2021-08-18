@@ -10,6 +10,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <fcntl.h>
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // inetaddr conversion
@@ -54,7 +55,7 @@ double delete_ratio = 0;
 double scan_ratio = 0;
 size_t runtime = 10;
 size_t fg_n = 1;
-uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa4};
+uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa5};
 uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
 char src_ipaddr[16] = "10.0.0.31";
 char server_addr[16] = "10.0.0.32";
@@ -110,6 +111,9 @@ class Key {
 } PACKED;
 
 int main(int argc, char **argv) {
+  parse_args(argc, argv);
+  load();
+
   // Prepare DPDK EAL param
   int dpdk_argc = 3;
   char **dpdk_argv;
@@ -134,6 +138,7 @@ int main(int argc, char **argv) {
   dpdk_init(&mbuf_pool, fg_n, 1);
 
   // Prepare pkts and stats for receiver
+  COUT_THIS("Prepare " << fg_n << "pkts and stats")
   pkts = new volatile struct rte_mbuf*[fg_n];
   stats = new volatile bool[fg_n];
   memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
@@ -142,8 +147,6 @@ int main(int argc, char **argv) {
 	pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
   }
 
-  parse_args(argc, argv);
-  load();
   run_benchmark(runtime);
 
   // Free DPDK mbufs
@@ -275,7 +278,7 @@ void run_benchmark(size_t sec) {
   if (ret) {
     COUT_N_EXIT("Error:" << ret);
   }
-  COUT_THIS("[client] Launch receiver with ret code " << ret)
+  COUT_THIS("[client] Launch receiver at lcore " << lcoreid)
   lcoreid++;
 
   // Prepare fg params
@@ -298,7 +301,7 @@ void run_benchmark(size_t sec) {
     if (ret) {
       COUT_N_EXIT("Error:" << ret);
 	}
-	COUT_THIS("[client] Lanuch worker [" << worker_i << "] with ret code " << ret)
+	COUT_THIS("[client] Lanuch worker [" << worker_i << "] at lcore " << lcoreid)
 	lcoreid++;
 	if (lcoreid >= MAX_LCORE_NUM) {
 		lcoreid = 1;
@@ -347,6 +350,7 @@ static int run_receiver(void *param) {
 	while (running) {
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
 		if (n_rx == 0) continue;
+		COUT_VAR(n_rx);
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);
 			if (ret == -1) {
@@ -381,7 +385,7 @@ static int run_fg(void *param) {
   COUT_THIS("thread id: " << thread_id)
 
   // DPDK
-  struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
+  struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(mbuf_pool);
   struct rte_mbuf *sent_pkt_wrapper[1] = {sent_pkt};
   short src_port = src_port_start + thread_id;
   short dst_port = dst_port_start + thread_id;
@@ -447,7 +451,7 @@ static int run_fg(void *param) {
   // DEBUG TEST
   //uint32_t debugtest_idx = 0;
   //uint32_t debugtest_i = 0;
-  std::ostringstream ss;
+  std::stringstream ss;
   ss << "tmp_client" << thread_id << ".out";
   std::ofstream ofs(ss.str(), std::ofstream::out);
 
@@ -461,6 +465,9 @@ static int run_fg(void *param) {
 	update_i = debugtest_idx;
 	if (debugtest_i == 0) tmprun = 1;
 	debugtest_i++;*/
+
+	// DPDK
+    //sent_pkt_wrapper[0] = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
 
     double d = ratio_dis(gen);
 	int tmprun = 0;
@@ -478,9 +485,8 @@ static int run_fg(void *param) {
 	  
 	  // DPDK
 	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
-	  FDEBUG_THIS(ofs, "thread id: " << thread_id << ", sent_pkt: "<< (void *)sent_pkt_wrapper[0]);
+	  FDEBUG_THIS(ofs, (void*)sent_pkt<< "sent_pkt: " << (void*)sent_pkt_wrapper[0] << "sent_pkt_wrapper: " << (void*)sent_pkt_wrapper);
 	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
-	  FDEBUG_THIS(ofs, "res: " << res);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
 		  ;
@@ -510,7 +516,7 @@ static int run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 
 	  // DPDK
-	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  encode_mbuf(sent_pkt_wrapper[0], src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
@@ -541,7 +547,7 @@ static int run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 	  
 	  // DPDK
-	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  encode_mbuf(sent_pkt_wrapper[0], src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
@@ -572,7 +578,7 @@ static int run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 
 	  // DPDK
-	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  encode_mbuf(sent_pkt_wrapper[0], src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
@@ -602,7 +608,7 @@ static int run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 
 	  // DPDK
-	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  encode_mbuf(sent_pkt_wrapper[0], src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
@@ -632,6 +638,5 @@ static int run_fg(void *param) {
   //close(sockfd);
   //pthread_exit(nullptr); // UDP socket
   ofs.close();
-  rte_pktmbuf_free((struct rte_mbuf*)sent_pkt);
   return 0;
 }

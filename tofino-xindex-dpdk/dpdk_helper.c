@@ -136,7 +136,7 @@ int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring, u
 			DEV_TX_OFFLOAD_MBUF_FAST_FREE;
 
 	/* Configure the Ethernet device. */
-	printf("Initialize port %u\n", port);
+	printf("Initialize port %u with %u TX rings and %u RX rings\n", port, n_txring, n_rxring);
 	retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
 	if (retval != 0)
 		return retval;

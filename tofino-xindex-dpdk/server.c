@@ -105,6 +105,10 @@ class Key {
 } PACKED;
 
 int main(int argc, char **argv) {
+
+  parse_args(argc, argv);
+  load();
+
   // Prepare DPDK EAL param
   int dpdk_argc = 3;
   char **dpdk_argv;
@@ -136,9 +140,6 @@ int main(int argc, char **argv) {
   for (size_t i = 0; i < fg_n; i++) {
 	pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
   }
-
-  parse_args(argc, argv);
-  load();
 
   // prepare xindex
   std::vector<val_t> vals(exist_keys.size(), 1);
