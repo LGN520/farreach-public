@@ -20,7 +20,8 @@
 		* Fix a bug related with IP address in server side
 	+ Simple test
 		* Pass single-thread test of XIndex: GET, PUT, DEL, SCAN
-		* TODO: error in multiple-thread of client side
+		* Fix segmentation fault for multiple-thread client side
+		* TODO: Pass multi-thread test of XIndex
 - TODO: DPDK-based CS architecture with persistency
 
 ## How to run
