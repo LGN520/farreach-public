@@ -2,13 +2,14 @@
 
 ## Run
 
-- Server side: `./prepare; ./server`
-- Client side
-	+ Read-only: `./prepare; ./client`
-	+ 90% read - 10% insert: `./prepare -b 0.1; ./client -a 0.9 -b 0.1`
-	+ 80% read - 10% insert - 10% remove: `./prepare -b 0.1; ./client -a 0.8 -b 0.1 -c 0.1`
-	+ 70% read - 10% insert - 10% remove - 10% update: `./prepare -b 0.1; ./client -a 0.7 -b 0.1 -c 0.1 -d 0.1`
-	+ 60% read - 10% insert - 10% remove - 10% update - 10% scan: `./prepare -b 0.1; ./client -a 0.6 -b 0.1 -c 0.1 -d 0.1 -e 0.1`
+- Latency
+	- Server side: `./prepare; ./server`
+	- Client side
+		+ Read-only: `./prepare; ./client`
+		+ 90% read - 10% insert: `./prepare -b 0.1; ./client -a 0.9 -b 0.1`
+		+ 80% read - 10% insert - 10% remove: `./prepare -b 0.1; ./client -a 0.8 -b 0.1 -c 0.1`
+		+ 70% read - 10% insert - 10% remove - 10% update: `./prepare -b 0.1; ./client -a 0.7 -b 0.1 -c 0.1 -d 0.1`
+		+ 60% read - 10% insert - 10% remove - 10% update - 10% scan: `./prepare -b 0.1; ./client -a 0.6 -b 0.1 -c 0.1 -d 0.1 -e 0.1`
 
 ## Preliminary Exp of microbench (without persistency)
 

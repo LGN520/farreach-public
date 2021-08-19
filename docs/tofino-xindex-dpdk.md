@@ -21,7 +21,7 @@
 	+ Simple test
 		* Pass single-thread test of XIndex: GET, PUT, DEL, SCAN
 		* Fix segmentation fault for multiple-thread client side
-		* TODO: Pass multi-thread test of XIndex
+		* Pass multi-thread test of XIndex: GET, PUT, DEL, SCAN
 - TODO: DPDK-based CS architecture with persistency
 
 ## How to run
