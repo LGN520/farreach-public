@@ -24,9 +24,12 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
+#include <time.h>
 
 #if !defined(HELPER_H)
 #define HELPER_H
+
+#define CUR_TIME() (double) clock() / CLOCKS_PER_SEC * 1000.0 * 1000.0; // us
 
 #define COUT_THIS(this) std::cout << this << std::endl;
 #define COUT_VAR(this) std::cout << #this << ": " << this << std::endl;

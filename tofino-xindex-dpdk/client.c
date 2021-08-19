@@ -352,18 +352,18 @@ static int run_receiver(void *param) {
 		if (n_rx == 0) continue;
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);
-			if (ret == -1) {
+			if (unlikely(ret == -1)) {
 				continue;
 			}
 			else {
 				uint16_t received_port = (uint16_t)ret;
 				int idx = received_port - src_port_start;
-				if (idx < 0 || unsigned(idx) >= fg_n) {
+				if (unlikely(idx < 0 || unsigned(idx) >= fg_n)) {
 					COUT_THIS("Invalid dst port received by client: %u" << received_port)
 					continue;
 				}
 				else {
-					if (stats[idx]) {
+					if (unlikely(stats[idx])) {
 						COUT_THIS("Invalid stas[" << idx << "] which is true!")
 						continue;
 					}
@@ -381,11 +381,6 @@ static int run_receiver(void *param) {
 static int run_fg(void *param) {
   fg_param_t &thread_param = *(fg_param_t *)param;
   uint32_t thread_id = thread_param.thread_id;
-
-  // DPDK
-  struct rte_mbuf *sent_pkt_wrapper[1];
-  short src_port = src_port_start + thread_id;
-  short dst_port = dst_port_start + thread_id;
 
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -436,6 +431,17 @@ static int run_fg(void *param) {
   tv.tv_usec =  0;
   setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));*/
 
+  // DPDK
+  short src_port = src_port_start + thread_id;
+  short dst_port = dst_port_start + thread_id;
+  // Optimize mbuf allocation
+  uint16_t burst_size = 256;
+  struct rte_mbuf *sent_pkts[burst_size];
+  uint16_t sent_pkt_idx = 0;
+  struct rte_mbuf *sent_pkt = NULL;
+  res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+  INVARIANT(res == 0);
+
   // exsiting keys fall within range [delete_i, insert_i)
   char buf[MAX_BUFSIZE];
   int req_size = 0;
@@ -463,10 +469,10 @@ static int run_fg(void *param) {
 	if (debugtest_i == 0) tmprun = 1;
 	debugtest_i++;*/
 
-	// DPDK
-    sent_pkt_wrapper[0] = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
+	sent_pkt = sent_pkts[sent_pkt_idx];
 
     double d = ratio_dis(gen);
+
 	//int tmprun = 4;
     if (d <= read_ratio) {  // get
     //if (tmprun == 0) {  // get
@@ -481,8 +487,8 @@ static int run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 	  
 	  // DPDK
-	  encode_mbuf(sent_pkt_wrapper[0], src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
-	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
 		  ;
@@ -512,8 +518,8 @@ static int run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 
 	  // DPDK
-	  encode_mbuf(sent_pkt_wrapper[0], src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
-	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
 		  ;
@@ -543,8 +549,8 @@ static int run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 	  
 	  // DPDK
-	  encode_mbuf(sent_pkt_wrapper[0], src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
-	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
 		  ;
@@ -574,8 +580,8 @@ static int run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 
 	  // DPDK
-	  encode_mbuf(sent_pkt_wrapper[0], src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
-	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
 		  ;
@@ -604,8 +610,8 @@ static int run_fg(void *param) {
 	  //INVARIANT(recv_size != -1);
 
 	  // DPDK
-	  encode_mbuf(sent_pkt_wrapper[0], src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
-	  res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
 		  ;
@@ -628,6 +634,19 @@ static int run_fg(void *param) {
       }
     }
     thread_param.throughput++;
+
+	sent_pkt_idx++;
+	if (sent_pkt_idx >= burst_size) {
+		sent_pkt_idx = 0;
+		res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+		INVARIANT(res == 0);
+	}
+  }
+
+  if (sent_pkt_idx < burst_size) {
+	for (uint16_t free_idx = sent_pkt_idx; free_idx != burst_size; free_idx++) {
+		rte_pktmbuf_free(sent_pkts[free_idx]);
+	}
   }
 
   //close(sockfd);
