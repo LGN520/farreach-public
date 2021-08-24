@@ -107,6 +107,7 @@ class Key {
 int main(int argc, char **argv) {
 
   parse_args(argc, argv);
+  init_options(); // init options of rocksdb
   load();
 
   // Prepare DPDK EAL param

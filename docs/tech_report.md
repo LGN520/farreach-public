@@ -26,7 +26,18 @@
 ## Global Configuration
 
 - Configuration of XIndex
-	+ See [README.md](./xindex/XIndex-R/READE.md)
+	+ See [README.md](../xindex/XIndex-R/READE.md)
+	+ For jemalloc, follow the next instructions to install libjemalloc-dev instead of libjemalloc1 as XIndex
+- Install jemalloc
+	+ `wget https://github.com/jemalloc/jemalloc/archive/refs/tags/5.2.1.tar.gz`
+	+ `gunzip 5.2.1.tar.gz`
+	+ `tar -xvf 5.2.1.tar`
+	+ `cd jemalloc-5.2.1`
+	+ `./autogen.sh`
+	+ `make dist`
+	+ `make`
+	+ `sudo make install`
+		* Installed into /usr/local/bin, /usr/local/lib, and /usr/local/include
 - Install cmake
 	+ `wget http://www.cmake.org/files/v3.5/cmake-3.5.1.tar.gz`
 	+ `tar xf cmake-3.5.1.tar.gz`
@@ -120,3 +131,10 @@
 		* `bash tldk_fix.sh` to solve error of `dereferencing pointer incomplete type`
 	+ Test
 		* `sudo ./x86_64-native-linuxapp-gcc/app/l4fwd -- --udp --mbuf-num 1000 --becfg ~/projects/NetBuffer/tofino-xindex-dpdk/client.cfg`
+- Install RocksDB
+	+ `sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev`
+	+ `wget https://github.com/facebook/rocksdb/archive/refs/tags/v6.22.1.tar.gz`
+	+ `gunzip v6.22.1.tar.gz`
+	+ `tar -xvf v6.22.1.tar`
+	+ `cd rocksdb-6.22.1`
+	+ `make static_lib`

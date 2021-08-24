@@ -26,6 +26,8 @@
 #include <memory>
 #include <mutex>
 
+#include "../rocksdb-6.22.1/include/db.h"
+
 #if !defined(XINDEX_UTIL_H)
 #define XINDEX_UTIL_H
 
@@ -70,10 +72,50 @@ struct IndexConfig {
   size_t worker_n = 0;
   std::unique_ptr<rcu_status_t[]> rcu_status;
   volatile bool exited = true;
+
+  // RocksDB
+  size_t memtable_size = 4 * 1024 * 1024; // 4 MB
+  size_t max_memtable_num = 2;
+  size_t sst_size = 4 * 1024 * 1024; // 4 MB
+  size_t compaction_thread_num = 2;
+  size_t level0_num = 8; // 32 MB
+  size_t level_num = 4;
+  size_t level1_size = 32 * 1024 * 1024; // 32 MB
+  size_t level_multiplier = 8; // level n+1 = 8 * level n
 };
 
 index_config_t config;
 std::mutex config_mutex;
+
+rocksdb::Options data_options;
+rocksdb::Options buffer_options;
+void inline init_options() {
+  // options for data
+  data_options.create_if_missing = true; // create database if not exist
+  data_options.enable_blob_files = true; // enable key-value separation
+  data_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
+  data_options.write_buffer_size = config.memtable_size;
+  data_options.max_write_buffer_number = config.max_memtable_num;
+  data_options.target_file_size_base = config.sst_size;
+  data_options.max_background_compactions = config.compaction_thread_num;
+  data_options.level0_file_num_compaction_trigger = config.level0_num;
+  data_options.num_levels = config.level_num;
+  data_options.max_bytes_for_level_base = config.level1_size;
+  data_options.max_bytes_for_level_multiplier = config.level_multiplier;
+
+  // options for buffer
+  buffer_options.create_if_missing = true; // create database if not exist
+  buffer_options.enable_blob_files = false; // disable key-value separation
+  buffer_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
+  buffer_options.write_buffer_size = config.memtable_size;
+  buffer_options.max_write_buffer_number = config.max_memtable_num;
+  buffer_options.target_file_size_base = config.sst_size;
+  buffer_options.max_background_compactions = config.compaction_thread_num;
+  buffer_options.level0_file_num_compaction_trigger = config.level0_num;
+  buffer_options.num_levels = config.level_num;
+  buffer_options.max_bytes_for_level_base = config.level1_size;
+  buffer_options.max_bytes_for_level_multiplier = config.level_multiplier;
+}
 
 // TODO replace it with user space RCU (e.g., qsbr)
 void rcu_init() {

@@ -29,6 +29,12 @@
 #if !defined(HELPER_H)
 #define HELPER_H
 
+#define GET_STRING(v, this) { \
+	std::stringstream ss; \
+ 	ss << this; \
+	v = ss.str(); \
+}
+
 #define CUR_TIME() (double) clock() / CLOCKS_PER_SEC * 1000.0 * 1000.0; // us
 
 #define COUT_THIS(this) std::cout << this << std::endl;

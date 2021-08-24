@@ -39,8 +39,8 @@ LDLIBS += $(MKL_LDLIBS)
 DPDK_PMDS ?= ixgbe i40e tap virtio
 
 DPDK_CPPFLAGS += -I$(RTE_SDK)/$(RTE_TARGET)/include
-DPDK_LDFLAGS+= -L$(RTE_SDK)/$(RTE_TARGET)/lib/
-DPDK_LDLIBS+= \
+DPDK_LDFLAGS += -L$(RTE_SDK)/$(RTE_TARGET)/lib/
+DPDK_LDLIBS += \
   -Wl,--whole-archive \
    $(addprefix -lrte_pmd_,$(DPDK_PMDS)) \
   -lrte_eal \
@@ -67,6 +67,15 @@ DPDK_LDLIBS+= \
 CPPFLAGS += $(DPDK_CPPFLAGS)
 LDFLAGS += $(DPDK_LDFLAGS)
 
+##############################################################################
+# RocksDB configuration
+
+ROCKSDB_CPPFLAGS += -I../rocksdb-6.22.1/include
+ROCKSDB_LDFLAGS += -L../rocksdb-6.22.1
+ROCKSDB_LDLIBS = -lrocksdb
+
+CPPFLAGS += $(ROCKSDB_CPPFLAGS)
+LDFLAGS += $(ROCKSDB_LDFLAGS)
 
 ##############################################################################
 
@@ -92,7 +101,7 @@ DEPS += client.d
 CLEAN += client.o client
 
 server: server.o dpdk_helper.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += server.d
 CLEAN += server.o serer
 

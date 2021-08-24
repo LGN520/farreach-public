@@ -454,9 +454,10 @@ static int run_fg(void *param) {
   // DEBUG TEST
   //uint32_t debugtest_idx = 0;
   //uint32_t debugtest_i = 0;
-  std::stringstream ss;
-  ss << "tmp_client" << thread_id << ".out";
-  std::ofstream ofs(ss.str(), std::ofstream::out);
+
+  std::string logname;
+  GET_STRING(logname, "tmp_client"<<thread_id<<".out");
+  std::ofstream ofs(logname, std::ofstream::out);
 
   while (!running)
     ;
