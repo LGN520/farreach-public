@@ -18,6 +18,7 @@
 #include "helper.h"
 #include "xindex.h"
 #include "xindex_impl.h"
+#include "xindex_util.h"
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
 
@@ -88,6 +89,12 @@ class Key {
     return *this;
   }
 
+  std::string to_string() const {
+	std::string result;
+	GET_STRING(result, key);
+	return result;
+  }
+
   model_key_t to_model_key() const {
     model_key_t model_key;
     model_key[0] = key;
@@ -107,7 +114,7 @@ class Key {
 int main(int argc, char **argv) {
 
   parse_args(argc, argv);
-  init_options(); // init options of rocksdb
+  xindex::init_options(); // init options of rocksdb
   load();
 
   // Prepare DPDK EAL param

@@ -26,7 +26,9 @@
 #include <memory>
 #include <mutex>
 
-#include "../rocksdb-6.22.1/include/db.h"
+#include "rocksdb/db.h"
+#include "rocksdb/utilities/transaction.h"
+#include "rocksdb/utilities/transaction_db.h"
 
 #if !defined(XINDEX_UTIL_H)
 #define XINDEX_UTIL_H

@@ -127,7 +127,7 @@ void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
     groups[group_i].first = keys[begin_i];
     groups[group_i].second = new group_t();
     groups[group_i].second->init(keys.begin() + begin_i, vals.begin() + begin_i,
-                                 end_i - begin_i, group_i);
+                                 end_i - begin_i);
   }
 
   // then decide # of 2nd stage model of root RMI
@@ -195,8 +195,9 @@ inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val) {
  * Root::put
  */
 template <class key_t, class val_t, bool seq>
-inline result_t Root<key_t, val_t, seq>::put(const key_t &key, const val_t &val) {
-  return locate_group(key)->put(key, val);
+inline result_t Root<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
+                                             const uint32_t worker_id) {
+  return locate_group(key)->put(key, val, worker_id);
 }
 
 /*
@@ -211,7 +212,7 @@ template <class key_t, class val_t, bool seq>
 inline size_t Root<key_t, val_t, seq>::scan(
     const key_t &begin, const size_t n,
     std::vector<std::pair<key_t, val_t>> &result) {
-  /*size_t remaining = n;
+  size_t remaining = n;
   result.clear();
   result.reserve(n);
   key_t next_begin = begin;
@@ -221,7 +222,7 @@ inline size_t Root<key_t, val_t, seq>::scan(
   group_t *group = locate_group_pt2(begin, locate_group_pt1(begin, group_i));
   while (remaining && group_i < (int)group_n) {
     while (remaining && group &&
-           group->get_pivot() > latest_group_pivot) { // avoid re-entry
+           group->get_pivot() > latest_group_pivot /* avoid re-entry */) {
       size_t done = group->scan(next_begin, remaining, result);
       assert(done <= remaining);
       remaining -= done;
@@ -233,10 +234,7 @@ inline size_t Root<key_t, val_t, seq>::scan(
     group = groups[group_i].second;
   }
 
-  return n - remaining;*/
-
-  // TODO
-  return 0;
+  return n - remaining;
 }
 
 template <class key_t, class val_t, bool seq>
@@ -268,7 +266,7 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
                                : (bg_i + 1) * root.group_n / bg_num;
 
       // iterate through the array, and do maintenance
-      size_t compact = 0;
+      size_t m_split = 0, g_split = 0, m_merge = 0, g_merge = 0, compact = 0;
       size_t buf_size = 0, cnt = 0;
       for (size_t group_i = begin_group_i; group_i < end_group_i; group_i++) {
         if (group_i % 50000 == 0) {
@@ -277,17 +275,139 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
 
         group_t *volatile *group = &(root.groups[group_i].second);
         while (*group != nullptr) {
+          // check model split/merge
+          bool should_split_group = false;
+          bool might_merge_group = false;
+
+          // set this to avoid ping-pong effect
+          size_t max_trial_n = max_model_n;
+          for (size_t trial_i = 0; trial_i < max_trial_n; ++trial_i) {
+            group_t *old_group = (*group);
+
+            double mean_error;
+            if (seq) {
+              mean_error = old_group->mean_error_est();
+            } else {
+              mean_error = old_group->mean_error;
+            }
+
+            uint16_t model_n = old_group->model_n;
+            if (mean_error > config.group_error_bound) {
+              if (model_n != max_model_n) {
+                // DEBUG_THIS("------ [model split] err="
+                //  << mean_error << ", group_i=" << group_i);
+                *group = old_group->split_model();
+                memory_fence();
+                rcu_barrier();
+                if (seq) {
+                  (*group)->enable_seq_insert_opt();
+                }
+                m_split++;
+                delete old_group;
+              } else {
+                should_split_group = true;
+                break;
+              }
+            } else if (mean_error < config.group_error_bound /
+                                        config.group_error_tolerance) {
+              if (model_n != 1) {
+                // DEBUG_THIS("------ [model merge] err="
+                //            << mean_error << ", group_i=" << group_i);
+                *group = old_group->merge_model();
+                memory_fence();
+                rcu_barrier();
+                if (seq) {
+                  (*group)->enable_seq_insert_opt();
+                }
+                m_merge++;
+                delete old_group;
+              } else {
+                might_merge_group = true;
+                break;
+              }
+            } else {
+              break;
+            }
+          }
+
+          // prepare for group merge
+          group_t *volatile *next_group = nullptr;
+          if ((*group)->next) {
+            next_group = &((*group)->next);
+          } else if (group_i != end_group_i - 1 &&
+                     root.groups[group_i + 1].second) {
+            next_group = &(root.groups[group_i + 1].second);
+          }
+
           // check for group split/merge, if not, do compaction
-		  size_t buffer_size = (*group)->buffer_size;
+          size_t buffer_size = (*group)->buffer->size();
           buf_size += buffer_size;
           cnt++;
           group_t *old_group = (*group);
-          if (buffer_size > config.buffer_compact_threshold) {
+          if (should_split_group || buffer_size > config.buffer_size_bound) {
+            // DEBUG_THIS("------ [group split] buf_size="
+            //            << buffer_size << ", group_i=" << group_i);
+
+            group_t *intermediate = old_group->split_group_pt1();
+            *group = intermediate;  // create 2 new groups with freezed buffer
+            memory_fence();
+            rcu_barrier();  // make sure no one is inserting to buffer
+            group_t *new_group = intermediate->split_group_pt2();  // now merge
+            *group = new_group;
+            memory_fence();
+            rcu_barrier();  // make sure no one is using old/intermedia groups
+            g_split++;
+            new_group->compact_phase_2();
+            new_group->next->compact_phase_2();
+            memory_fence();
+            rcu_barrier();  // make sure no one is accessing the old data
+            old_group->free_data();  // intermidiates share the array and buffer
+            old_group->free_buffer();  // so no free_xxx is needed
+            delete old_group;
+            delete intermediate->next;  // but deleting the metadata is needed
+            delete intermediate;
+            should_update_array = true;
+
+            // skip next (the split new one), to avoid ping-pong split / merge
+            group = &((*group)->next);
+          } else if (might_merge_group &&
+                     buffer_size < config.buffer_size_bound /
+                                       config.buffer_size_tolerance &&
+                     next_group != nullptr) {
+            if (seq == true) {
+              COUT_VAR(group_i);
+              COUT_VAR(begin_group_i);
+              COUT_VAR(end_group_i);
+              COUT_VAR(old_group);
+              COUT_VAR(next_group);
+            }
+
+            // DEBUG_THIS("------ [group merge] buf_size="
+            //            << buffer_size << ", group_i=" << group_i);
+
+            group_t *old_next = (*next_group);
+            group_t *new_group = old_group->merge_group(*old_next);
+            *group = new_group;
+            *next_group = new_group;  // first set 2 ptrs to a valid one
+            memory_fence();  // make sure that no one is accessing old groups
+            rcu_barrier();   // before nullify the old next
+            *next_group = nullptr;  // then nullify the next
+            g_merge++;
+            new_group->compact_phase_2();
+            memory_fence();
+            rcu_barrier();  // make sure no one is accessing the old data
+            old_group->free_data();
+            old_group->free_buffer();
+            old_next->free_data();
+            old_next->free_buffer();
+            delete old_group;
+            delete old_next;
+            should_update_array = true;
+          } else if (buffer_size > config.buffer_compact_threshold) {
             // DEBUG_THIS("------ [compaction], buf_size="
             //            << buffer_size << ", group_i=" << group_i);
 
-			// TODO: Compact
-            /*group_t *new_group = old_group->compact_phase_1();
+            group_t *new_group = old_group->compact_phase_1();
             *group = new_group;
             memory_fence();
             rcu_barrier();
@@ -297,7 +417,7 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
             rcu_barrier();  // make sure no one is accessing the old data
             old_group->free_data();
             old_group->free_buffer();
-            delete old_group;*/
+            delete old_group;
           }
 
           // do next (in the chain)
@@ -306,6 +426,10 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
       }
 
       finished = true;
+      DEBUG_THIS("------ [structure update] m_split_n: " << m_split);
+      DEBUG_THIS("------ [structure update] g_split_n: " << g_split);
+      DEBUG_THIS("------ [structure update] m_merge_n: " << m_merge);
+      DEBUG_THIS("------ [structure update] g_merge_n: " << g_merge);
       DEBUG_THIS("------ [structure update] compact_n: " << compact);
       DEBUG_THIS("------ [structure update] buf_size/cnt: " << 1.0 * buf_size /
                                                                    cnt);

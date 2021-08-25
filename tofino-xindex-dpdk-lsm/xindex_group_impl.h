@@ -55,19 +55,21 @@ void Group<key_t, val_t, seq, max_model_n>::init(
   // Create original data
   std::string data_path;
   GET_STRING(data_path, "/tmp/netbuffer/group"<<group_idx<<".db");
-  Status s = rocksdb::TransactionDB::Open(data_options, rocksdb::TransactionDBOptions(), data_path, &data);
+  rocksdb::Status s = rocksdb::TransactionDB::Open(data_options, rocksdb::TransactionDBOptions(), data_path, &data);
   assert(s.ok());
   
   // Create delta index
   std::string buffer_path;
   GET_STRING(buffer_path, "/tmp/netbuffer/buffer"<<group_idx<<".db");
-  s = rocksdb::TransactionDB::Open(buffer_options, rocsdb::TransactionDBOptions(), buffer_path, &buffer);
+  s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_path, &buffer);
   assert(s.ok());
 
   // Write original data
   rocksdb::WriteBatch batch;
   for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
-	batch.Put(*(keys_begin + rec_i), *(vals_begin + rec_i));
+	std::string valstr;
+	GET_STRING(valstr, *(vals_begin + rec_i));
+	batch.Put((*(keys_begin + rec_i)).to_string(), valstr);
   }
   s = data->Write(rocksdb::WriteOptions(), &batch);
   assert(s.ok());
@@ -111,8 +113,10 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
     if (buf_frozen) {
       return result_t::retry;
     }
-    update_to_lsm(key, val, buffer);
-    return result_t::ok;
+    res = update_to_lsm(key, val, buffer);
+	assert(res == result_t::ok);
+	buffer_size++;
+    return res;
   } else {
 	if (get_from_lsm(key, old_val, buffer)) {
 		res = update_to_lsm(key, val, buffer);
@@ -215,10 +219,12 @@ void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::get_from_lsm(
     const key_t &key, val_t &val, rocksdb::TransactionDB *txn_db) {
-	Status s;
-	Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionDBOptions());
-	s = txn->Get(rocksdb::ReadOptions(), key, &val);
+	std::string valstr;
+	rocksdb::Status s;
+	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	s = txn->Get(rocksdb::ReadOptions(), key.to_string(), &valstr);
 	s = txn->Commit();
+	val = std::stoi(valstr);
 	delete txn;
 	return s.ok();
 }
@@ -226,9 +232,11 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_lsm(
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_lsm(
     const key_t &key, const val_t &val, rocksdb::TransactionDB *txn_db) {
-	Status s;
-	Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionDBOptions());
-	s = txn->Put(key, val);
+	std::string valstr;
+	GET_STRING(valstr, val);
+	rocksdb::Status s;
+	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	s = txn->Put(key.to_string(), valstr);
 	s = txn->Commit();
 	delete txn;
 	if (s.ok()) {
@@ -242,9 +250,9 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_lsm(
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_lsm(
     const key_t &key, rocksdb::TransactionDB *txn_db) {
-	Status s;
-	Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionDBOptions());
-	s = txn->Delete(key);
+	rocksdb::Status s;
+	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	s = txn->Delete(key.to_string());
 	s = txn->Commit();
 	delete txn;
 	return s.ok();

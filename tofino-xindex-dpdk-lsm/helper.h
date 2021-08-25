@@ -24,6 +24,7 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <time.h>
 
 #if !defined(HELPER_H)

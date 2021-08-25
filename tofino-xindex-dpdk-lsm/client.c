@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include <sstream>
 #include <fcntl.h>
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
@@ -92,6 +91,12 @@ class Key {
   Key &operator=(const Key &other) {
     key = other.key;
     return *this;
+  }
+
+  std::string to_string() const {
+	std::string result;
+	GET_STRING(result, key);
+	return result;
   }
 
   model_key_t to_model_key() const {

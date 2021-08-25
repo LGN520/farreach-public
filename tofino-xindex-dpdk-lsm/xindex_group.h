@@ -25,7 +25,9 @@
 #include "xindex_util.h"
 #include "helper.h"
 
-#include "../rocksdb-6.22.1/include/db.h"
+#include "rocksdb/db.h"
+#include "rocksdb/utilities/transaction.h"
+#include "rocksdb/utilities/transaction_db.h"
 
 #if !defined(XINDEX_GROUP_H)
 #define XINDEX_GROUP_H
@@ -52,8 +54,7 @@ class alignas(CACHELINE_SIZE) Group {
   const key_t &get_pivot();
 
   inline result_t get(const key_t &key, val_t &val);
-  inline result_t put(const key_t &key, const val_t &val,
-                      const uint32_t worker_id);
+  inline result_t put(const key_t &key, const val_t &val);
   inline result_t remove(const key_t &key);
   //inline size_t scan(const key_t &begin, const size_t n,
   //                   std::vector<std::pair<key_t, val_t>> &result);
@@ -84,10 +85,11 @@ class alignas(CACHELINE_SIZE) Group {
   uint16_t model_n = 0;
   bool buf_frozen = false;
   Group *next = nullptr;
-  std::array<model_info_t, max_model_n> models;
   rocksdb::TransactionDB *data = nullptr;
   rocksdb::TransactionDB *buffer = nullptr;
   rocksdb::TransactionDB *buffer_temp = nullptr;
+
+  uint32_t buffer_size = 0; // The size of puts in buffer instead of the number of elements in buffer
 };
 
 }  // namespace xindex

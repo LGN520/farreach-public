@@ -72,7 +72,7 @@ LDFLAGS += $(DPDK_LDFLAGS)
 
 ROCKSDB_CPPFLAGS += -I../rocksdb-6.22.1/include
 ROCKSDB_LDFLAGS += -L../rocksdb-6.22.1
-ROCKSDB_LDLIBS = -lrocksdb
+ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
 
 CPPFLAGS += $(ROCKSDB_CPPFLAGS)
 LDFLAGS += $(ROCKSDB_LDFLAGS)

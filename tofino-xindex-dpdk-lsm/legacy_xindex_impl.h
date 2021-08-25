@@ -75,7 +75,7 @@ inline bool XIndex<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
                                            const uint32_t worker_id) {
   result_t res;
   rcu_progress(worker_id);
-  while ((res = root->put(key, val)) == result_t::retry) {
+  while ((res = root->put(key, val, worker_id)) == result_t::retry) {
     rcu_progress(worker_id);
   }
   return res == result_t::ok;
@@ -162,6 +162,33 @@ void *XIndex<key_t, val_t, seq>::background(void *this_) {
       info[bg_i].finished = false;
       info[bg_i].should_update_array = false;
     }
+
+	// RMI retraining
+    if (should_update_array) {
+      root_t *old_root = index.root;
+      index.root = old_root->create_new_root();
+      memory_fence();
+      rcu_barrier();
+      index.root->trim_root();
+      delete old_root;
+
+      double avg_group_error = 0, max_group_error = 0;
+      for (size_t group_i = 0; group_i < index.root->group_n; group_i++) {
+        avg_group_error += index.root->groups[group_i].second->mean_error;
+        if (index.root->groups[group_i].second->mean_error > max_group_error) {
+          max_group_error = index.root->groups[group_i].second->mean_error;
+        }
+      }
+      avg_group_error /= index.root->group_n;
+      DEBUG_THIS("--- [root] group_n: " << index.root->group_n);
+      DEBUG_THIS("--- [root] rmi_2nd_stage_model_n: "
+                 << index.root->rmi_2nd_stage_model_n);
+      DEBUG_THIS("--- [root] avg_group_error: " << avg_group_error);
+      DEBUG_THIS("--- [root] max_group_error: " << max_group_error);
+    }
+
+    memory_fence();  // ensure the background theads and the workers all see a
+    rcu_barrier();   // correct final stage of root.groups
   }
 
   for (size_t bg_i = 0; bg_i < bg_num; bg_i++) {
