@@ -3,6 +3,8 @@
 ## Implementation log
 
 - Install RocksDB 6.22.1
+- Fix compilation bugs
+- Fix bugs of opening database (not link snappy in librocksdb.a)
 
 ## How to run
 

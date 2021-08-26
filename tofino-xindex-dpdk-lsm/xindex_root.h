@@ -37,7 +37,7 @@ class Root {
 
  public:
   ~Root();
-  void init(const std::vector<key_t> &keys, const std::vector<val_t> &vals);
+  void init(const std::vector<key_t> &keys, const std::vector<val_t> &vals, uint32_t group_n = 10);
   void calculate_err(const std::vector<key_t> &keys,
                      const std::vector<val_t> &vals, size_t group_n_trial,
                      double &err_at_percentile, double &max_err,

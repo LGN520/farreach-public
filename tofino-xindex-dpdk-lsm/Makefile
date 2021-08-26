@@ -4,30 +4,24 @@
 # Compile, link, and install flags
 
 CC := g++
-CPPFLAGS += -Iinclude/
-CPPFLAGS += $(EXTRA_CPPFLAGS)
 #CFLAGS += -std=c++14 -O3 -g -Wall -Werror -march=native -fno-omit-frame-pointer
 CFLAGS += -std=c++14 -O3 -g -Wall -march=native -fno-omit-frame-pointer
 CFLAGS += $(EXTRA_CFLAGS)
 CFLAGS_SHARED += $(CFLAGS) -fPIC
-LDFLAGS += -pthread -g
-LDFLAGS += $(EXTRA_LDFLAGS)
 LDLIBS += -lpthread -ldl -ljemalloc
 LDLIBS += $(EXTRA_LDLIBS)
 
-PREFIX ?= /usr/local
-SBINDIR ?= $(PREFIX)/sbin
-LIBDIR ?= $(PREFIX)/lib
-INCDIR ?= $(PREFIX)/include
+LDDIR += -L/usr/lib/x86_64-linux-gnu
+INCDIR += -I/usr/include
 
 ##############################################################################
 # MKL configuration
-MKL_CPPFLAGS += -I/opt/intel/mkl/include
-MKL_LDFLAGS += -L/opt/intel/mkl/lib/intel64
+MKL_INCDIR += -I/opt/intel/mkl/include
+MKL_LDDIR += -L/opt/intel/mkl/lib/intel64
 MKL_LDLIBS += -lmkl_rt
 
-CPPFLAGS += $(MKL_CPPFLAGS)
-LDFLAGS += $(MKL_LDFLAGS)
+INCDIR += $(MKL_INCDIR)
+LDDIR += $(MKL_LDDIR)
 LDLIBS += $(MKL_LDLIBS)
 
 ##############################################################################
@@ -38,8 +32,8 @@ LDLIBS += $(MKL_LDLIBS)
 # mpdts to compile
 DPDK_PMDS ?= ixgbe i40e tap virtio
 
-DPDK_CPPFLAGS += -I$(RTE_SDK)/$(RTE_TARGET)/include
-DPDK_LDFLAGS += -L$(RTE_SDK)/$(RTE_TARGET)/lib/
+DPDK_INCDIR += -I$(RTE_SDK)/$(RTE_TARGET)/include
+DPDK_LDDIR += -L$(RTE_SDK)/$(RTE_TARGET)/lib/
 DPDK_LDLIBS += \
   -Wl,--whole-archive \
    $(addprefix -lrte_pmd_,$(DPDK_PMDS)) \
@@ -64,18 +58,25 @@ DPDK_LDLIBS += \
   -ldl \
   $(EXTRA_LIBS_DPDK)
 
-CPPFLAGS += $(DPDK_CPPFLAGS)
-LDFLAGS += $(DPDK_LDFLAGS)
+INCDIR += $(DPDK_INCDIR)
+LDDIR += $(DPDK_LDDIR)
 
 ##############################################################################
 # RocksDB configuration
 
-ROCKSDB_CPPFLAGS += -I../rocksdb-6.22.1/include
-ROCKSDB_LDFLAGS += -L../rocksdb-6.22.1
+ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
+ROCKSDB_LDDIR += -L../rocksdb-6.22.1
 ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
 
-CPPFLAGS += $(ROCKSDB_CPPFLAGS)
-LDFLAGS += $(ROCKSDB_LDFLAGS)
+INCDIR += $(ROCKSDB_INCDIR)
+LDDIR += $(ROCKSDB_LDDIR)
+
+##############################################################################
+
+CPPFLAGS += $(INCDIR)
+CPPFLAGS += $(EXTRA_CPPFLAGS)
+LDFLAGS += -pthread -g $(LDDIR)
+LDFLAGS += $(EXTRA_LDFLAGS)
 
 ##############################################################################
 
@@ -112,8 +113,6 @@ all: $(TARGETS)
 
 clean:
 	rm -rf $(CLEAN) $(DEPS)
-
-
 
 .DEFAULT_GOAL := all
 .PHONY: all clean

@@ -31,7 +31,11 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>::Group() {}
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-Group<key_t, val_t, seq, max_model_n>::~Group() {}
+Group<key_t, val_t, seq, max_model_n>::~Group() {
+	if (data != nullptr) delete data;
+	if (buffer != nullptr) delete buffer;
+	if (buffer_temp != nullptr) delete buffer_temp;
+}
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq, max_model_n>::init(

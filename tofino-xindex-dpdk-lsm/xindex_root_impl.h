@@ -29,85 +29,21 @@
 namespace xindex {
 
 template <class key_t, class val_t, bool seq>
-Root<key_t, val_t, seq>::~Root() {}
+Root<key_t, val_t, seq>::~Root() {
+	for (size_t group_i = 0; group_i < group_n; group_i++) {
+		delete groups[group_i].second;
+	}
+}
 
 template <class key_t, class val_t, bool seq>
 void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
-                                   const std::vector<val_t> &vals) {
+                                   const std::vector<val_t> &vals, uint32_t group_n) {
   INVARIANT(seq == false);
 
-  // try different initial # of groups
   size_t record_n = keys.size();
-  const size_t group_size_to_group_error_experience_ratio = 1000;
-  size_t group_n_trial =
-      record_n /
-      (group_size_to_group_error_experience_ratio * config.group_error_bound);
-
-  size_t max_trial_n = 40, trial_i = 0;
-  double actual_error_at_percentile = 0, max_group_error = 0,
-         avg_group_error = 0;
-
-  std::unordered_map<size_t, double> group_n_tried;
-
-  for (; trial_i < max_trial_n; trial_i++) {
-    group_n_trial = group_n_trial != 0 ? group_n_trial : 1;
-
-    calculate_err(keys, vals, group_n_trial, actual_error_at_percentile,
-                  max_group_error, avg_group_error);
-
-    // stop when we find ping-pong
-    if (group_n_tried.count(group_n_trial) > 0) {
-      size_t best_group_n = group_n_trial;
-      double min_error = actual_error_at_percentile;
-      for (auto iter = group_n_tried.begin(); iter != group_n_tried.end();
-           iter++) {
-        if (iter->second < min_error) {
-          best_group_n = iter->first;
-          min_error = iter->second;
-        }
-      }
-      group_n_trial = best_group_n;
-      actual_error_at_percentile = min_error;
-      DEBUG_THIS(
-          "--- [root] Ping-Pong while finding group_n. Stop at "
-          "group_n="
-          << group_n_trial
-          << ", error_at_percentile=" << actual_error_at_percentile);
-      break;
-    }
-    group_n_tried.emplace(group_n_trial, actual_error_at_percentile);
-
-    if (actual_error_at_percentile > config.group_error_bound) {
-      group_n_trial =
-          group_n_trial * actual_error_at_percentile / config.group_error_bound;
-    } else if (actual_error_at_percentile < config.group_error_bound / 2) {
-      if (group_n_trial == 1) {  // when group_n_trial can't go down anymore
-        break;
-      }
-      // embrace the group_n=0 case
-      if (actual_error_at_percentile == 0 && trial_i == max_trial_n - 1) {
-        break;
-      }
-      group_n_trial = group_n_trial * actual_error_at_percentile /
-                      (config.group_error_bound / 2);
-    } else {
-      break;
-    }
-  }
-
-  // max group_n is keys.size()
-  if (group_n_trial > keys.size()) group_n_trial = keys.size();
-  calculate_err(keys, vals, group_n_trial, actual_error_at_percentile,
-                max_group_error, avg_group_error);
-
-  DEBUG_THIS("--- [root] final group size: "
-             << group_n_trial << " (actual_error_at_percentile="
-             << actual_error_at_percentile << ", max_error=" << max_group_error
-             << ", avg_group_error=" << avg_group_error << ") after " << trial_i
-             << " trial(s)");
 
   // use the found group_n_trial to initialize groups
-  group_n = group_n_trial;
+  this->group_n = group_n;
   groups = std::make_unique<std::pair<key_t, group_t *volatile>[]>(group_n);
   size_t records_per_group = record_n / group_n;
   size_t trailing_record_n = record_n - records_per_group * group_n;
