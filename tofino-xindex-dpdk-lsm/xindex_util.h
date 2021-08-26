@@ -92,22 +92,30 @@ std::mutex config_mutex;
 rocksdb::Options data_options;
 rocksdb::Options buffer_options;
 void inline init_options() {
+  std::shared_ptr<Cache> cache = rocksdb::NewLRUCache(8 * 1024 * 1024, 4); // 8MB with 16 shards
+  rocksdb::BlockBasedTableOptions table_options;
+  table_options.block_cache = cache;
+
   // options for data
   data_options.create_if_missing = true; // create database if not exist
   data_options.enable_blob_files = true; // enable key-value separation
+  //data_options.allow_os_buffer = false; // disable OS cache
+  data_options.table_factory.reset(new BlockBasedTableFactory(table_options)); // Block cache with uncompressed blocks
   data_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
-  data_options.write_buffer_size = config.memtable_size;
-  data_options.max_write_buffer_number = config.max_memtable_num;
-  data_options.target_file_size_base = config.sst_size;
-  data_options.max_background_compactions = config.compaction_thread_num;
-  data_options.level0_file_num_compaction_trigger = config.level0_num;
-  data_options.num_levels = config.level_num;
-  data_options.max_bytes_for_level_base = config.level1_size;
+  data_options.write_buffer_size = config.memtable_size; // single memtable size
+  data_options.max_write_buffer_number = config.max_memtable_num; // memtable number
+  data_options.target_file_size_base = config.sst_size; // single sst size
+  data_options.max_background_compactions = config.compaction_thread_num; // compaction thread number
+  data_options.level0_file_num_compaction_trigger = config.level0_num; // sst number in level0
+  data_options.num_levels = config.level_num; // level number
+  data_options.max_bytes_for_level_base = config.level1_size; // byte number in level1
   data_options.max_bytes_for_level_multiplier = config.level_multiplier;
 
   // options for buffer
   buffer_options.create_if_missing = true; // create database if not exist
   buffer_options.enable_blob_files = false; // disable key-value separation
+  //buffer_options.allow_os_buffer = false;
+  buffer_options.table_factory.reset(new BlockBasedTableFactory(table_options)); // Block cache with uncompressed blocks
   buffer_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
   buffer_options.write_buffer_size = config.memtable_size;
   buffer_options.max_write_buffer_number = config.max_memtable_num;

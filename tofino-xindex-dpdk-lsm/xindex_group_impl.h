@@ -228,9 +228,14 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_lsm(
 	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
 	s = txn->Get(rocksdb::ReadOptions(), key.to_string(), &valstr);
 	s = txn->Commit();
-	val = std::stoi(valstr);
 	delete txn;
-	return s.ok();
+	if (valstr != "") {
+		val = std::stoi(valstr);
+		return s.ok();
+	}
+	else {
+		return false;
+	}
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>

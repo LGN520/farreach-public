@@ -479,7 +479,7 @@ static int run_fg(void *param) {
 
     double d = ratio_dis(gen);
 
-	//int tmprun = 4;
+	//int tmprun = 0;
     if (d <= read_ratio) {  // get
     //if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
@@ -631,8 +631,8 @@ static int run_fg(void *param) {
 	  scan_response_t rsp(buf, recv_size);
 	  FDEBUG_THIS(ofs, "[client " << thread_id << "] num = " << rsp.num());
 	  for (uint32_t val_i = 0; val_i < rsp.num(); val_i++) {
-		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].first.key)
-		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].second)
+		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].first.key);
+		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].second);
 	  }
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
