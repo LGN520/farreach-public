@@ -20,6 +20,8 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
+#include <stdlib.h>
+
 #include "xindex_group.h"
 
 #if !defined(XINDEX_ROOT_H)

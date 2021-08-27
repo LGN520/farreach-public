@@ -27,6 +27,8 @@
 #include <mutex>
 
 #include "rocksdb/db.h"
+#include "rocksdb/cache.h"
+#include "rocksdb/table.h"
 #include "rocksdb/utilities/transaction.h"
 #include "rocksdb/utilities/transaction_db.h"
 
@@ -92,7 +94,7 @@ std::mutex config_mutex;
 rocksdb::Options data_options;
 rocksdb::Options buffer_options;
 void inline init_options() {
-  std::shared_ptr<Cache> cache = rocksdb::NewLRUCache(8 * 1024 * 1024, 4); // 8MB with 16 shards
+  std::shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache(8 * 1024 * 1024, 4); // 8MB with 16 shards
   rocksdb::BlockBasedTableOptions table_options;
   table_options.block_cache = cache;
 
@@ -100,7 +102,7 @@ void inline init_options() {
   data_options.create_if_missing = true; // create database if not exist
   data_options.enable_blob_files = true; // enable key-value separation
   //data_options.allow_os_buffer = false; // disable OS cache
-  data_options.table_factory.reset(new BlockBasedTableFactory(table_options)); // Block cache with uncompressed blocks
+  data_options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options)); // Block cache with uncompressed blocks
   data_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
   data_options.write_buffer_size = config.memtable_size; // single memtable size
   data_options.max_write_buffer_number = config.max_memtable_num; // memtable number
@@ -115,7 +117,7 @@ void inline init_options() {
   buffer_options.create_if_missing = true; // create database if not exist
   buffer_options.enable_blob_files = false; // disable key-value separation
   //buffer_options.allow_os_buffer = false;
-  buffer_options.table_factory.reset(new BlockBasedTableFactory(table_options)); // Block cache with uncompressed blocks
+  buffer_options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options)); // Block cache with uncompressed blocks
   buffer_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
   buffer_options.write_buffer_size = config.memtable_size;
   buffer_options.max_write_buffer_number = config.max_memtable_num;
