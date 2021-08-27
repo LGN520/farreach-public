@@ -226,7 +226,9 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_lsm(
 	std::string valstr;
 	rocksdb::Status s;
 	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
-	s = txn->Get(rocksdb::ReadOptions(), key.to_string(), &valstr);
+	rocksdb::ReadOptions read_options;
+	read_options.fill_cache = false; // Bypass OS page cache, use block cache only
+	s = txn->Get(read_options, key.to_string(), &valstr);
 	s = txn->Commit();
 	delete txn;
 	if (valstr != "") {
@@ -244,7 +246,9 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_lsm(
 	std::string valstr;
 	GET_STRING(valstr, val);
 	rocksdb::Status s;
-	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	rocksdb::WriteOptions write_options;
+	write_options.sync = true; // Write through for persistency
+	rocksdb::Transaction* txn = txn_db->BeginTransaction(write_options, rocksdb::TransactionOptions());
 	s = txn->Put(key.to_string(), valstr);
 	s = txn->Commit();
 	delete txn;

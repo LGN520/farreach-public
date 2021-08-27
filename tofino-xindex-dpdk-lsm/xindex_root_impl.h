@@ -67,7 +67,7 @@ void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
   }
 
   // Disable OS page cache
-  system("hdparm -W 0 /tmp/netbuffer");
+  //system("hdparm -W 0 /tmp/netbuffer");
 
   // then decide # of 2nd stage model of root RMI
   adjust_rmi();
