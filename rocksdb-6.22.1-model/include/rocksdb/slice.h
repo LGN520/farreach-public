@@ -129,6 +129,35 @@ class Slice {
   // Compare two slices and returns the first byte where they differ
   size_t difference_offset(const Slice& b) const;
 
+  //NetBuffer
+  bool to_model_key(double* array, uint32_t array_len) const {
+	uint32_t key_len = get_key_len();
+	uint32_t remainder = size_ % 8;
+	
+	if (key_len > array_len) return false;
+
+	char *curptr = data_;
+	for (uint32_t i = 0; i < key_len; i++) {
+		if (i != key_len - 1 || remainder == 0) {
+			array[i] = *((uint64_t*)(curptr));
+			curptr += 8;
+		}
+		else {
+			char tmp[8];
+			memset(tmp, 0, 8);
+			memcpy(tmp + 8 - remainder, curptr, remainder);
+			array[i] = *((uint64_t*)(tmp));
+		}
+	}
+
+	return true;
+  }
+
+  // NetBuffer
+  uint32_t get_key_len() const {
+	return (size_ + 7) / 8; // 0 -> 0, 1-8 -> 1, 9 -> 2
+  }
+
   // private: make these public for rocksdbjni access
   const char* data_;
   size_t size_;

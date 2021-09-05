@@ -62,6 +62,9 @@
 #include "util/string_util.h"
 #include "util/user_comparator_wrapper.h"
 
+//NetBuffer
+#include "model/linear_model_wrapper.h"
+
 namespace ROCKSDB_NAMESPACE {
 
 namespace {
@@ -2336,12 +2339,27 @@ void VersionStorageInfo::UpdateAccumulatedStats(FileMetaData* file_meta) {
   current_num_samples_++;
 }
 
-void VersionStorageInfo::RemoveCurrentStats(FileMetaData* file_meta) {
+void VersionStorageInfo::RemoveCurrentStats(FileMetaData* file_meta, int level) {
   if (file_meta->init_stats_from_file) {
     current_num_non_deletions_ -=
         file_meta->num_entries - file_meta->num_deletions;
     current_num_deletions_ -= file_meta->num_deletions;
     current_num_samples_--;
+  }
+
+  //NetBuffer
+  const uint64_t file_number = file_meta->fd.GetNumber();
+  volatile std::map<uint64_t, LinearModelWrapper*> &model_map = version_->cfd_->level_models[level];
+  bool has_trained = (model_map.find(file_number) != model_map.end());
+  if (!has_trained) return; // No model exists for the file
+  mutable std::shared_mutex &rwlock = level_locks_[level];
+  while (true) {
+	if (rwlock.try_lock()) {
+		delete model_map[file_number];
+		model_map.erase(file_number);
+		rwlock.unlock();
+		break;
+	}
   }
 }
 
@@ -2810,6 +2828,78 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f) {
   assert(file_locations_.find(file_number) == file_locations_.end());
   file_locations_.emplace(file_number,
                           FileLocation(level, level_files.size() - 1));
+
+  //NetBuffer
+  volatile std::map<uint64_t, LinearModelWrapper*> &model_map = version_->cfd_->level_models[level];
+  bool has_trained = (model_map.find(file_number) != model_map.end());
+  if (has_trained) return; // Do not need to train models for sst files in base vstorage info
+
+  BlockBasedTable* table_reader = std::dynamic_cast<BlockBasedTable*>(f->fd.table_reader);
+  assert(table_reader != nullptr);
+
+  // Prepare index keys and data keys list
+  std::vector<Slice> index_keys;
+  std::vector<std::vector<Slice>> data_keys_list;
+  // IndexBlockIter
+  std::unique_ptr<InternalIteratorBase<IndexValue>> blockhandles_iter(
+      table_reader->NewIndexIterator(ReadOptions(), /*need_upper_bound_check=*/false,
+                       /*input_iter=*/nullptr, /*get_context=*/nullptr,
+                       /*lookup_contex=*/nullptr));
+  Status s = blockhandles_iter->status();
+  assert(s.ok());
+  uint32_t datablock_idx = 0;
+  for (blockhandles_iter->SeekToFirst(); blockhandles_iter->Valid();
+       blockhandles_iter->Next()) {
+    s = blockhandles_iter->status();
+	assert(s.ok());
+    Slice key = blockhandles_iter->key();
+    Slice user_key;
+    InternalKey ikey;
+    if (!table_reader->rep_->index_key_includes_seq) {
+      user_key = key;
+    } else {
+      ikey.DecodeFrom(key);
+      user_key = ikey.user_key();
+    }
+	index_keys.push_back(user_key);
+	data_keys_list.push_back(std::vector<Slice>());
+
+	// DataBlockIter
+    std::unique_ptr<InternalIterator> datablock_iter;
+    datablock_iter.reset(table_reader->NewDataBlockIterator<DataBlockIter>(
+        ReadOptions(), blockhandles_iter->value().handle, 
+		/*input_iter=*/nullptr, /*type=*/BlockType::kData,
+        /*get_context=*/nullptr, /*lookup_context=*/nullptr, Status(),
+        /*prefetch_buffer=*/nullptr));
+    s = datablock_iter->status();
+	assert(s.ok());
+    for (datablock_iter->SeekToFirst(); datablock_iter->Valid();
+         datablock_iter->Next()) {
+      s = datablock_iter->status();
+	  assert(s.ok());
+	  key = datablock_iter->key();
+	  ikey.DecodeFrom(key);
+	  user_key = ikey.user_key();
+	  data_keys_list[datablock_idx].push_back(user_key);
+    }
+	datablock_idx++;
+  }
+
+  // Train models
+  LinearModelWrapper *linear_model_wrapper = new LinearModelWrapper(
+		  index_keys, data_keys_list);
+
+  // Update ColumnFamilyData
+  mutable std::shared_mutex &rwlock = level_locks_[level];
+  while (true) {
+	if (rwlock.try_lock()) {
+		model_map.insert(std::pair<uint64_t, LinearModelWrapper*>(file_number, linear_model_wrapper));
+		rwlock.unlock();
+		break;
+	}
+  }
+  //NetBuffer End
+  
 }
 
 void VersionStorageInfo::AddBlobFile(

@@ -143,7 +143,7 @@ class VersionStorageInfo {
   void UpdateAccumulatedStats(FileMetaData* file_meta);
 
   // Decrease the current stat from a to-be-deleted file-meta
-  void RemoveCurrentStats(FileMetaData* file_meta);
+  void RemoveCurrentStats(FileMetaData* file_meta, int level);
 
   void ComputeCompensatedSizes();
 

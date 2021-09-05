@@ -90,8 +90,7 @@ class Key {
   }
 
   std::string to_string() const {
-	std::string result;
-	GET_STRING(result, key);
+	std::string result((char *)key, 8); // convert uint64_t to char[8]
 	return result;
   }
 
