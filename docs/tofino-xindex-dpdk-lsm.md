@@ -32,15 +32,57 @@
 		+ Try lock
 		+ If lock successfully, free the LinearModelWrapper, and remove the pair of file number and LinearModelWrapper from level_models
 		+ Unlock
+- Add Get/SetColumnFamilyData and cfd_ in TableReader, then BlockBasedTable will inherit them (table/table_reader.h)
+- Set cfd of table_reader by SetColumnFamilyData() at TableCache::GetTableReader after table_factory->NewTableReader (db/table_cache.cc)
+- Pass cfd to TableCache::GetTableReader (called only when no corresponding hanlde in table_cache) -> TableCache::FindTable (db/table_cache.h, db/table_cache.cc)
+	+ VersionBuilder::Rep::LoadTableHandlers (db/version_builder.h, db/version_builder.cc)
+		* VersionSet::ProcessManifestWrites (db/version_set.cc)
+		* VersionEditHandler::LoadTables (db/version_edit_handler.cc)
+	+ TableCache::NewIterator (db/table_cache.cc, db/table_cache.h)
+		* CompactionJob::Run (db/compaction/compaction_job.cc)
+		* BuildTable (db/builder.cc, db/builder.h)
+			- Repairer::ConvertLogToTable (db/repair.cc)
+			- DBImpl::WriteLevel0TableForRecovery (db/db_impl/db_impl_open.cc)
+			- FlushJob::WriteLevel0Table (db/flush_job.cc)
+		* Repairer::ScanTable (db/repair.cc)
+		* LevelIterator::NewFileIterator (db/version_set.cc)
+			- LevelIterator::LevelIterator (db/version_set.cc)
+			- Version::AddIteratVorsForLevel (db/version_set.cc)
+			- Version::OverlapWithLevelIterator (db/version_set.cc)
+			- VersionSet::MakeInputIterator (db/version_set.cc)
+		* Version::AddIteratVorsForLevel (db/version_set.cc)
+		* Version::OverlapWithLevelIterator (db/version_set.cc)
+		* VersionSet::MakeInputIterator (db/version_set.cc)
+		* ForwardLevelIterator::Reset (db/forward_iterator.cc)
+		* ForwardIterator::RebuildIterators (db/forward_iterator.cc)
+		* ForwardIterator::RenewIterators (db/forward_iterator.cc)
+		* ForwardIterator::ResetIncompleteIterators (db/forward_iterator.cc)
+	+ TableCache::GetRangeTombStoneIterator (db/table_cache.cc, db/table_cache.h)
+		* Version::TablesRangeTombstoneSummary (db/version_set.cc)
+	+ TableCache::Get/MultiGet (db/table_cache.cc, db/table_cache.h)
+		* Version::Get/MultiGet (db/version_set.cc)
+	+ TableCache::GetTableProperties (db/table_cache.cc, db/table_cache.h)
+		* Repairer::ScanTable (db/repair.cc)
+		* Version::GetTableProperties (db/version_set.cc)
+	+ TableCache:: (db/table_cache.cc, db/table_cache.h)
+		* Version::GetMemoryUsageByTableReaders (db/version_set.cc)
+	+ TableCache::ApproximateOffsetOf (db/table_cache.cc, db/table_cache.h)
+		* VersionSet::ApproximateOffsetOf (db/version_set.cc)
+	+ TableCache::ApproximateSize (db/table_cache.cc, db/table_cache.h)
+		+ VersionSet::ApproximateSize (db/version_set.cc)
 - TODO: 
-- Judge if (unlikely) table_reader exists in VersionStorageInfo::AddFile, otherwise use VersionStorageInfo::version->table_cache to get the table_reader
-- Add set_cfd() in TableReader, then BlockBasedTable will inherit this function
-- Add cfd into table_reader by set_cfd() at TableCache::GetTableReader after table_factory->NewTableReader
-- Add cfd into BlockIter for IndexBlockIter and DataBlockIter
+- Pass cfd into IndexBlockIter::Seek and DataBlockIter::Seek (= BlockIter::Seek) (table/block_based/block.h)
+	+ BlockIter::Seek
+	+ BlockIter::SeekImpl
+	+ IndexBlockIter::SeekImpl
+	+ DataBlockIter::SeekImpl
+	+ DataBlockIter::SeekForGet
+	+ DataBloVkIter::SeekForGetImpl
 - Lookup model in GET/SCAN
 	+ For GET, change IndexBlockIter::Seek (table/block_based/block.cc)
 		+ Add BlockIter::ModelSeek referring to BlockIter::BinarySeek (table/block_based/block.cc)
 	+ For GET, change DataBlockIter::Seek (table/block_based/block.cc)
+- TODO: Judge if (unlikely) table_reader exists in VersionStorageInfo::AddFile, otherwise use VersionStorageInfo::version->table_cache to get the table_reader (db/version_set.cc)
 
 ## How to run
 

@@ -142,6 +142,12 @@ class TableReader {
                                 TableReaderCaller /*caller*/) {
     return Status::NotSupported("VerifyChecksum() not supported");
   }
+
+  ColumnFamilyData* GetColumnFamilyData() { return cfd_; }
+  ColumnFamilyData* SetColumnFamilyData(ColumnFamilyData *cfd) { cfd_ = cfd; }
+
+ private:
+  ColumnFamilyData *cfd_ = nullptr;
 };
 
 }  // namespace ROCKSDB_NAMESPACE

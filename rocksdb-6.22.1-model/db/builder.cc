@@ -70,7 +70,8 @@ Status BuildTable(
     TableProperties* table_properties, Env::WriteLifeTimeHint write_hint,
     const std::string* full_history_ts_low,
     BlobFileCompletionCallback* blob_callback, uint64_t* num_input_entries,
-    uint64_t* memtable_payload_bytes, uint64_t* memtable_garbage_bytes) {
+    uint64_t* memtable_payload_bytes, uint64_t* memtable_garbage_bytes,
+	ColumnFamilyData *cfd /*NetBuffer*/) {
   assert((tboptions.column_family_id ==
           TablePropertiesCollectorFactory::Context::kUnknownColumnFamily) ==
          tboptions.column_family_name.empty());
@@ -335,7 +336,7 @@ Status BuildTable(
           MaxFileSizeForL0MetaPin(mutable_cf_options),
           /*smallest_compaction_key=*/nullptr,
           /*largest_compaction_key*/ nullptr,
-          /*allow_unprepared_value*/ false));
+          /*allow_unprepared_value*/ false, /*NetBuffer*/ cfd));
       s = it->status();
       if (s.ok() && paranoid_file_checks) {
         OutputValidator file_validator(tboptions.internal_comparator,

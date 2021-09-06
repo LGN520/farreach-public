@@ -68,6 +68,7 @@ extern Status BuildTable(
     BlobFileCompletionCallback* blob_callback = nullptr,
     uint64_t* num_input_entries = nullptr,
     uint64_t* memtable_payload_bytes = nullptr,
-    uint64_t* memtable_garbage_bytes = nullptr);
+    uint64_t* memtable_garbage_bytes = nullptr,
+	ColumnFamilyData *cfd = nullptr /*NetBuffer*/);
 
 }  // namespace ROCKSDB_NAMESPACE

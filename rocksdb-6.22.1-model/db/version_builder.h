@@ -43,7 +43,8 @@ class VersionBuilder {
                            bool prefetch_index_and_filter_in_cache,
                            bool is_initial_load,
                            const SliceTransform* prefix_extractor,
-                           size_t max_file_size_for_l0_meta_pin);
+                           size_t max_file_size_for_l0_meta_pin, 
+						   /*NetBuffer*/ ColumnFamilyData* cfd = nullptr);
   uint64_t GetMinOldestBlobFileNumber() const;
 
  private:

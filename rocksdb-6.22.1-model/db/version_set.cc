@@ -894,7 +894,8 @@ class LevelIterator final : public InternalIterator {
                 bool skip_filters, int level, RangeDelAggregator* range_del_agg,
                 const std::vector<AtomicCompactionUnitBoundary>*
                     compaction_boundaries = nullptr,
-                bool allow_unprepared_value = false)
+                bool allow_unprepared_value = false,
+				ColumnFamilyData *cfd = nullptr /*NetBuffer*/)
       : table_cache_(table_cache),
         read_options_(read_options),
         file_options_(file_options),
@@ -911,7 +912,8 @@ class LevelIterator final : public InternalIterator {
         level_(level),
         range_del_agg_(range_del_agg),
         pinned_iters_mgr_(nullptr),
-        compaction_boundaries_(compaction_boundaries) {
+        compaction_boundaries_(compaction_boundaries),
+   		cfd_(cfd) /*NetBuffer*/	{
     // Empty level is not supported.
     assert(flevel_ != nullptr && flevel_->num_files > 0);
   }
@@ -982,6 +984,8 @@ class LevelIterator final : public InternalIterator {
   void SetFileIterator(InternalIterator* iter);
   void InitFileIterator(size_t new_file_index);
 
+  ColumnFamilyData *cfd_; //NetBuffer
+
   const Slice& file_smallest_key(size_t file_index) {
     assert(file_index < flevel_->num_files);
     return flevel_->files[file_index].smallest_key;
@@ -1014,7 +1018,7 @@ class LevelIterator final : public InternalIterator {
         nullptr /* don't need reference to table */, file_read_hist_, caller_,
         /*arena=*/nullptr, skip_filters_, level_,
         /*max_file_size_for_l0_meta_pin=*/0, smallest_compaction_key,
-        largest_compaction_key, allow_unprepared_value_);
+        largest_compaction_key, allow_unprepared_value_, cfd_ /*NetBuffer*/);
   }
 
   // Check if current file being fully within iterate_lower_bound.
@@ -1263,7 +1267,7 @@ Status Version::GetTableProperties(std::shared_ptr<const TableProperties>* tp,
   auto ioptions = cfd_->ioptions();
   Status s = table_cache->GetTableProperties(
       file_options_, cfd_->internal_comparator(), file_meta->fd, tp,
-      mutable_cf_options_.prefix_extractor.get(), true /* no io */);
+      mutable_cf_options_.prefix_extractor.get(), true /* no io */, cfd_ /*NetBuffer*/);
   if (s.ok()) {
     return s;
   }
@@ -1346,7 +1350,7 @@ Status Version::TablesRangeTombstoneSummary(int max_entries_to_print,
 
       Status s = table_cache->GetRangeTombstoneIterator(
           ReadOptions(), cfd_->internal_comparator(), *file_meta,
-          &tombstone_iter);
+          &tombstone_iter, cfd_ /*NetBuffer*/);
       if (!s.ok()) {
         return s;
       }
@@ -1457,7 +1461,7 @@ size_t Version::GetMemoryUsageByTableReaders() {
     for (size_t i = 0; i < file_level.num_files; i++) {
       total_usage += cfd_->table_cache()->GetMemoryUsageByTableReader(
           file_options_, cfd_->internal_comparator(), file_level.files[i].fd,
-          mutable_cf_options_.prefix_extractor.get());
+          mutable_cf_options_.prefix_extractor.get(), cfd_ /*NetBuffer*/);
     }
   }
   return total_usage;
@@ -1627,7 +1631,7 @@ void Version::AddIteratorsForLevel(const ReadOptions& read_options,
           TableReaderCaller::kUserIterator, arena,
           /*skip_filters=*/false, /*level=*/0, max_file_size_for_l0_meta_pin_,
           /*smallest_compaction_key=*/nullptr,
-          /*largest_compaction_key=*/nullptr, allow_unprepared_value));
+          /*largest_compaction_key=*/nullptr, allow_unprepared_value, cfd_ /*NetBuffer*/));
     }
     if (should_sample) {
       // Count ones for every L0 files. This is done per iterator creation
@@ -1650,7 +1654,7 @@ void Version::AddIteratorsForLevel(const ReadOptions& read_options,
         cfd_->internal_stats()->GetFileReadHist(level),
         TableReaderCaller::kUserIterator, IsFilterSkipped(level), level,
         range_del_agg,
-        /*compaction_boundaries=*/nullptr, allow_unprepared_value));
+        /*compaction_boundaries=*/nullptr, allow_unprepared_value, cfd_ /*NetBuffer*/));
   }
 }
 
@@ -1687,7 +1691,7 @@ Status Version::OverlapWithLevelIterator(const ReadOptions& read_options,
           /*skip_filters=*/false, /*level=*/0, max_file_size_for_l0_meta_pin_,
           /*smallest_compaction_key=*/nullptr,
           /*largest_compaction_key=*/nullptr,
-          /*allow_unprepared_value=*/false));
+          /*allow_unprepared_value=*/false, cfd_ /*NetBuffer*/));
       status = OverlapWithIterator(
           ucmp, smallest_user_key, largest_user_key, iter.get(), overlap);
       if (!status.ok() || *overlap) {
@@ -1702,7 +1706,7 @@ Status Version::OverlapWithLevelIterator(const ReadOptions& read_options,
         mutable_cf_options_.prefix_extractor.get(), should_sample_file_read(),
         cfd_->internal_stats()->GetFileReadHist(level),
         TableReaderCaller::kUserIterator, IsFilterSkipped(level), level,
-        &range_del_agg));
+        &range_del_agg, cfd_ /*NetBuffer*/));
     status = OverlapWithIterator(
         ucmp, smallest_user_key, largest_user_key, iter.get(), overlap);
   }
@@ -1922,7 +1926,7 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
         cfd_->internal_stats()->GetFileReadHist(fp.GetHitFileLevel()),
         IsFilterSkipped(static_cast<int>(fp.GetHitFileLevel()),
                         fp.IsHitFileLastInLevel()),
-        fp.GetHitFileLevel(), max_file_size_for_l0_meta_pin_);
+        fp.GetHitFileLevel(), max_file_size_for_l0_meta_pin_, cfd_ /*NetBuffer*/);
     // TODO: examine the behavior for corrupted key
     if (timer_enabled) {
       PERF_COUNTER_BY_LEVEL_ADD(get_from_table_nanos, timer.ElapsedNanos(),
@@ -2084,7 +2088,7 @@ void Version::MultiGet(const ReadOptions& read_options, MultiGetRange* range,
         cfd_->internal_stats()->GetFileReadHist(fp.GetHitFileLevel()),
         IsFilterSkipped(static_cast<int>(fp.GetHitFileLevel()),
                         fp.IsHitFileLastInLevel()),
-        fp.GetHitFileLevel());
+        fp.GetHitFileLevel(), cfd_ /*NetBuffer*/);
     // TODO: examine the behavior for corrupted key
     if (timer_enabled) {
       PERF_COUNTER_BY_LEVEL_ADD(get_from_table_nanos, timer.ElapsedNanos(),
@@ -4198,7 +4202,7 @@ Status VersionSet::ProcessManifestWrites(
             true /* prefetch_index_and_filter_in_cache */,
             false /* is_initial_load */,
             mutable_cf_options_ptrs[i]->prefix_extractor.get(),
-            MaxFileSizeForL0MetaPin(*mutable_cf_options_ptrs[i]));
+            MaxFileSizeForL0MetaPin(*mutable_cf_options_ptrs[i]), cfd /*NetBuffer*/);
         if (!s.ok()) {
           if (db_options_->paranoid_checks) {
             break;
@@ -5423,7 +5427,7 @@ uint64_t VersionSet::ApproximateOffsetOf(Version* v, const FdWithKeyRange& f,
     if (table_cache != nullptr) {
       result = table_cache->ApproximateOffsetOf(
           key, f.file_metadata->fd, caller, icmp,
-          v->GetMutableCFOptions().prefix_extractor.get());
+          v->GetMutableCFOptions().prefix_extractor.get(), v->cfd_ /*NetBuffer*/);
     }
   }
   return result;
@@ -5463,7 +5467,7 @@ uint64_t VersionSet::ApproximateSize(Version* v, const FdWithKeyRange& f,
   }
   return table_cache->ApproximateSize(
       start, end, f.file_metadata->fd, caller, icmp,
-      v->GetMutableCFOptions().prefix_extractor.get());
+      v->GetMutableCFOptions().prefix_extractor.get(), v->cfd_ /*NetBuffer*/);
 }
 
 void VersionSet::AddLiveFiles(std::vector<uint64_t>* live_table_files,
@@ -5564,7 +5568,8 @@ InternalIterator* VersionSet::MakeInputIterator(
               MaxFileSizeForL0MetaPin(*c->mutable_cf_options()),
               /*smallest_compaction_key=*/nullptr,
               /*largest_compaction_key=*/nullptr,
-              /*allow_unprepared_value=*/false);
+              /*allow_unprepared_value=*/false,
+			  cfd /*NetBuffer*/);
         }
       } else {
         // Create concatenating iterator for the files from this level
@@ -5576,7 +5581,7 @@ InternalIterator* VersionSet::MakeInputIterator(
             /*no per level latency histogram=*/nullptr,
             TableReaderCaller::kCompaction, /*skip_filters=*/false,
             /*level=*/static_cast<int>(c->level(which)), range_del_agg,
-            c->boundaries(which));
+            c->boundaries(which), cfd /*NetBuffer*/);
       }
     }
   }

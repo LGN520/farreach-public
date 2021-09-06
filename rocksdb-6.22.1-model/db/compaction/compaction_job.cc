@@ -705,7 +705,7 @@ Status CompactionJob::Run() {
                 *compact_->compaction->mutable_cf_options()),
             /*smallest_compaction_key=*/nullptr,
             /*largest_compaction_key=*/nullptr,
-            /*allow_unprepared_value=*/false);
+            /*allow_unprepared_value=*/false, cfd /*NetBuffer*/);
         auto s = iter->status();
 
         if (s.ok() && paranoid_file_checks_) {

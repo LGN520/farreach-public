@@ -463,7 +463,7 @@ class Repairer {
           {}, kMaxSequenceNumber, snapshot_checker,
           false /* paranoid_file_checks*/, nullptr /* internal_stats */, &io_s,
           nullptr /*IOTracer*/, nullptr /* event_logger */, 0 /* job_id */,
-          Env::IO_HIGH, nullptr /* table_properties */, write_hint);
+          Env::IO_HIGH, nullptr /* table_properties */, write_hint, cfd /*NetBuffer*/);
       ROCKS_LOG_INFO(db_options_.info_log,
                      "Log #%" PRIu64 ": %d ops saved to Table #%" PRIu64 " %s",
                      log, counter, meta.fd.GetNumber(),
@@ -510,8 +510,10 @@ class Repairer {
                                 file_size);
     std::shared_ptr<const TableProperties> props;
     if (status.ok()) {
+      ColumnFamilyData *tmp_cfd = vset_.GetColumnFamilySet()->GetColumnFamily(
+			  static_cast<uint32_t>(props->column_family_id)); //NetBuffer
       status = table_cache_->GetTableProperties(env_options_, icmp_, t->meta.fd,
-                                                &props);
+                                                &props, tmp_cfd /*NetBuffer*/);
     }
     if (status.ok()) {
       t->column_family_id = static_cast<uint32_t>(props->column_family_id);
@@ -559,7 +561,7 @@ class Repairer {
           /*level=*/-1, /*max_file_size_for_l0_meta_pin=*/0,
           /*smallest_compaction_key=*/nullptr,
           /*largest_compaction_key=*/nullptr,
-          /*allow_unprepared_value=*/false);
+          /*allow_unprepared_value=*/false, cfd /*NetBuffer*/);
       ParsedInternalKey parsed;
       for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
         Slice key = iter->key();

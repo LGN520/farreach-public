@@ -424,7 +424,7 @@ Status FlushJob::WriteLevel0Table() {
           mutable_cf_options_.paranoid_file_checks, cfd_->internal_stats(),
           &io_s, io_tracer_, event_logger_, job_context_->job_id, Env::IO_HIGH,
           &table_properties_, write_hint, full_history_ts_low, blob_callback_,
-          &num_input_entries, &memtable_payload_bytes, &memtable_garbage_bytes);
+          &num_input_entries, &memtable_payload_bytes, &memtable_garbage_bytes, cfd_ /*NetBuffer*/);
       if (!io_s.ok()) {
         io_status_ = io_s;
       }
