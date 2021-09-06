@@ -94,7 +94,7 @@ std::mutex config_mutex;
 rocksdb::Options data_options;
 rocksdb::Options buffer_options;
 void inline init_options() {
-  std::shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache(8 * 1024 * 1024, 4); // 8MB with 16 shards
+  std::shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache(4 * 1024 * 1024, 4); // 4 MB with 16 shards
   rocksdb::BlockBasedTableOptions table_options;
   table_options.block_cache = cache;
 
