@@ -295,8 +295,8 @@ class BlockIter : public InternalIteratorBase<TValue> {
     UpdateKey();
   }
 
-  virtual void Seek(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/) override final {
-    SeekImpl(target, cfd /*NetBuffer*/);
+  virtual void Seek(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1 /*NetBuffer*/, uint64_t filenum = 0) override final {
+    SeekImpl(target, cfd /*NetBuffer*/, level /*NetBuffer*/, filenum);
     UpdateKey();
   }
 
@@ -382,7 +382,7 @@ class BlockIter : public InternalIteratorBase<TValue> {
 
   virtual void SeekToFirstImpl() = 0;
   virtual void SeekToLastImpl() = 0;
-  virtual void SeekImpl(const Slice& target, ColumnFamilyData* cfd = nullptr /*NetBuffer*/) = 0;
+  virtual void SeekImpl(const Slice& target, ColumnFamilyData* cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0) = 0;
   virtual void SeekForPrevImpl(const Slice& target) = 0;
   virtual void NextImpl() = 0;
   virtual void PrevImpl() = 0;
@@ -468,6 +468,11 @@ class BlockIter : public InternalIteratorBase<TValue> {
   inline bool BinarySeek(const Slice& target, uint32_t* index,
                          bool* is_index_key_result);
 
+  // NetBuffer
+  template <typename DecodeKeyFunc>
+  inline bool ModelSeek(const Slice& target, uint32_t* index,
+                         bool* is_index_key_result, ColumnFamilyData *cfd = nullptr, int level = -1, uint64_t filenum = 0);
+
   void FindKeyAfterBinarySeek(const Slice& target, uint32_t index,
                               bool is_index_key_result);
 };
@@ -509,13 +514,13 @@ class DataBlockIter final : public BlockIter<Slice> {
     return value_;
   }
 
-  inline bool SeekForGet(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/) {
+  inline bool SeekForGet(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum) {
     if (!data_block_hash_index_) {
-      SeekImpl(target, cfd /*NetBuffer*/);
+      SeekImpl(target, cfd /*NetBuffer*/, level, filenum);
       UpdateKey();
       return true;
     }
-    bool res = SeekForGetImpl(target, cfd /*NetBuffer*/);
+    bool res = SeekForGetImpl(target, cfd /*NetBuffer*/, level, filenum);
     UpdateKey();
     return res;
   }
@@ -547,7 +552,7 @@ class DataBlockIter final : public BlockIter<Slice> {
  protected:
   virtual void SeekToFirstImpl() override;
   virtual void SeekToLastImpl() override;
-  virtual void SeekImpl(const Slice& target, ColumnFamilyData* cfd = nullptr /*NetBuffer*/) override;
+  virtual void SeekImpl(const Slice& target, ColumnFamilyData* cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0) override;
   virtual void SeekForPrevImpl(const Slice& target) override;
   virtual void NextImpl() override;
   virtual void PrevImpl() override;
@@ -586,7 +591,7 @@ class DataBlockIter final : public BlockIter<Slice> {
   template <typename DecodeEntryFunc>
   inline bool ParseNextDataKey(const char* limit = nullptr);
 
-  bool SeekForGetImpl(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/);
+  bool SeekForGetImpl(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0);
   void NextOrReportImpl();
   void SeekToFirstOrReportImpl();
 };
@@ -650,7 +655,7 @@ class IndexBlockIter final : public BlockIter<IndexValue> {
   // If the prefix of `target` doesn't exist in the file, it can either
   // return the result of total order seek, or set both of Valid() = false
   // and status() = NotFound().
-  void SeekImpl(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/) override;
+  void SeekImpl(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0) override;
 
   void SeekForPrevImpl(const Slice&) override {
     assert(false);

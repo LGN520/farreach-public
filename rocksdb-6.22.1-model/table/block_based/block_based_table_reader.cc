@@ -639,6 +639,8 @@ Status BlockBasedTable::Open(
           static_cast<size_t>(file_size) - prefetch_buffer->min_offset_read());
     }
 
+	new_table->filenum_ = cur_file_num; // NetBuffer
+
     *table_reader = std::move(new_table);
   }
 
@@ -2076,7 +2078,7 @@ bool BlockBasedTable::PrefixMayMatch(
           no_io_read_options,
           /*need_upper_bound_check=*/false, /*input_iter=*/nullptr,
           /*get_context=*/nullptr, lookup_context));
-      iiter->Seek(internal_prefix, cfd_ /*NetBuffer*/);
+      iiter->Seek(internal_prefix, cfd_ /*NetBuffer*/, rep_->level /*NetBuffer*/, filenum_);
 
       if (!iiter->Valid()) {
         // we're past end of file
@@ -2295,7 +2297,7 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
         rep_->internal_comparator.user_comparator()->timestamp_size();
     bool matched = false;  // if such user key matched a key in SST
     bool done = false;
-    for (iiter->Seek(key, cfd_ /*NetBuffer*/); iiter->Valid() && !done; iiter->Next()) {
+    for (iiter->Seek(key, cfd_ /*NetBuffer*/, rep_->level /*NetBuffer*/, filenum_); iiter->Valid() && !done; iiter->Next()) {
       IndexValue v = iiter->value();
 
       bool not_exist_in_filter =
@@ -2348,7 +2350,7 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
         break;
       }
 
-      bool may_exist = biter.SeekForGet(key, cfd_ /*NetBuffer*/);
+      bool may_exist = biter.SeekForGet(key, cfd_ /*NetBuffer*/, rep_->level, filenum_);
       // If user-specified timestamp is supported, we cannot end the search
       // just because hash index lookup indicates the key+ts does not exist.
       if (!may_exist && ts_sz == 0) {
@@ -2498,7 +2500,7 @@ void BlockBasedTable::MultiGet(const ReadOptions& read_options,
       for (auto miter = data_block_range.begin();
            miter != data_block_range.end(); ++miter) {
         const Slice& key = miter->ikey;
-        iiter->Seek(miter->ikey, cfd_ /*NetBuffer*/);
+        iiter->Seek(miter->ikey, cfd_ /*NetBuffer*/, rep_->level /*NetBuffer*/, filenum_);
 
         IndexValue v;
         if (iiter->Valid()) {
@@ -2718,7 +2720,7 @@ void BlockBasedTable::MultiGet(const ReadOptions& read_options,
           break;
         }
 
-        bool may_exist = biter->SeekForGet(key, cfd_ /*NetBuffer*/);
+        bool may_exist = biter->SeekForGet(key, cfd_ /*NetBuffer*/, rep_->level, filenum_);
         if (!may_exist) {
           // HashSeek cannot find the key this block and the the iter is not
           // the end of the block, i.e. cannot be in the following blocks
@@ -2797,7 +2799,7 @@ void BlockBasedTable::MultiGet(const ReadOptions& read_options,
           break;
         }
         if (first_block) {
-          iiter->Seek(key, cfd_ /*NetBuffer*/);
+          iiter->Seek(key, cfd_ /*NetBuffer*/, rep_->level /*NetBuffer*/, filenum_);
         }
         first_block = false;
         iiter->Next();
@@ -2848,7 +2850,7 @@ Status BlockBasedTable::Prefetch(const Slice* const begin,
   // indicates if we are on the last page that need to be pre-fetched
   bool prefetching_boundary_page = false;
 
-  for (begin ? iiter->Seek(*begin, cfd_ /*NetBuffer*/) : iiter->SeekToFirst(); iiter->Valid();
+  for (begin ? iiter->Seek(*begin, cfd_ /*NetBuffer*/, rep_->level /*NetBuffer*/, filenum_) : iiter->SeekToFirst(); iiter->Valid();
        iiter->Next()) {
     BlockHandle block_handle = iiter->value().handle;
     const bool is_user_key = !rep_->index_key_includes_seq;
@@ -3054,7 +3056,7 @@ bool BlockBasedTable::TEST_KeyInCache(const ReadOptions& options,
   std::unique_ptr<InternalIteratorBase<IndexValue>> iiter(NewIndexIterator(
       options, /*need_upper_bound_check=*/false, /*input_iter=*/nullptr,
       /*get_context=*/nullptr, /*lookup_context=*/nullptr));
-  iiter->Seek(key, cfd_);
+  iiter->Seek(key, cfd_, rep_->level /*NetBuffer*/, filenum_);
   assert(iiter->Valid());
 
   return TEST_BlockInCache(iiter->value().handle);
@@ -3176,7 +3178,7 @@ uint64_t BlockBasedTable::ApproximateOffsetOf(const Slice& key,
     iiter_unique_ptr.reset(index_iter);
   }
 
-  index_iter->Seek(key, cfd_ /*NetBuffer*/);
+  index_iter->Seek(key, cfd_ /*NetBuffer*/, rep_->level, filenum_);
 
   uint64_t offset = ApproximateDataOffsetOf(*index_iter, data_size);
   // Pro-rate file metadata (incl filters) size-proportionally across data
@@ -3211,9 +3213,9 @@ uint64_t BlockBasedTable::ApproximateSize(const Slice& start, const Slice& end,
     iiter_unique_ptr.reset(index_iter);
   }
 
-  index_iter->Seek(start, cfd_ /*NetBuffer*/);
+  index_iter->Seek(start, cfd_ /*NetBuffer*/, rep_->level, filenum_);
   uint64_t start_offset = ApproximateDataOffsetOf(*index_iter, data_size);
-  index_iter->Seek(end ,cfd_ /*NetBuffer*/);
+  index_iter->Seek(end ,cfd_ /*NetBuffer*/, rep_->level, filenum_);
   uint64_t end_offset = ApproximateDataOffsetOf(*index_iter, data_size);
 
   assert(end_offset >= start_offset);

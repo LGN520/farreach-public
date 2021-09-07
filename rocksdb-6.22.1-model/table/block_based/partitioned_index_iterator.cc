@@ -17,7 +17,7 @@ void PartitionedIndexIterator::SeekImpl(const Slice* target) {
   SavePrevIndexValue();
 
   if (target) {
-    index_iter_->Seek(*target, table_->GetColumnFamilyData() /*NetBuffer*/);
+    index_iter_->Seek(*target, table_->GetColumnFamilyData() /*NetBuffer*/, table_->rep_->level, table_->filenum_);
   } else {
     index_iter_->SeekToFirst();
   }
@@ -30,7 +30,7 @@ void PartitionedIndexIterator::SeekImpl(const Slice* target) {
   InitPartitionedIndexBlock();
 
   if (target) {
-    block_iter_.Seek(*target, table_->GetColumnFamilyData() /*NetBuffer*/);
+    block_iter_.Seek(*target, table_->GetColumnFamilyData() /*NetBuffer*/, table_->rep_->level, table_->filenum_);
   } else {
     block_iter_.SeekToFirst();
   }

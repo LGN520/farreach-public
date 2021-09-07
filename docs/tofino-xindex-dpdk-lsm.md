@@ -70,7 +70,8 @@
 		* VersionSet::ApproximateOffsetOf (db/version_set.cc)
 	+ TableCache::ApproximateSize (db/table_cache.cc, db/table_cache.h)
 		+ VersionSet::ApproximateSize (db/version_set.cc)
-- Pass cfd into IndexBlockIter::Seek and DataBlockIter::Seek (= BlockIter::Seek) (table/block_based/block.h)
+- Add filenum_ in BlockBasedTable when calling BlockBasedTable::Open (table/block_based/block_based_table_reader.h, table/block_based/block_based_table_reader.cc)
+- Pass cfd/level/filenumber into IndexBlockIter::Seek and DataBlockIter::Seek (= BlockIter::Seek) (table/block_based/block.h)
 	+ BlockIter::Seek (table/block_based/block.h)
 		* BlockBasedTable::PrefixMayMatch (table/block_based/block_based_table_reader.cc)
 		* BlockBasedTable::Get (table/block_based/block_based_table_reader.cc)
@@ -89,11 +90,12 @@
 		* BlockBasedTable::Get (table/block_based/block_based_table_reader.cc)
 		* BlockBasedTable::MultiGet (table/block_based/block_based_table_reader.cc)
 	+ DataBlockIter::SeekForGetImpl (table/block_based/block.h, table/block_based/block.c)
-- TODO: 
 - Lookup model in GET/SCAN
 	+ For GET, change IndexBlockIter::SeekImpl (table/block_based/block.cc)
-		+ Add BlockIter::ModelSeek referring to BlockIter::BinarySeek (table/block_based/block.cc)
+		+ Add BlockIter::ModelSeek referring to BlockIter::BinarySeek (table/block_based/block.h, table/block_based/block.cc)
+- TODO: 
 	+ For GET, change DataBlockIter::SeekImpl/SeekForGetImpl (table/block_based/block.cc)
+- Add cfd in BlockBasedTable::Open
 - TODO: Judge if (unlikely) table_reader exists in VersionStorageInfo::AddFile, otherwise use VersionStorageInfo::version->table_cache to get the table_reader (db/version_set.cc)
 
 ## How to run

@@ -46,7 +46,7 @@ void BlockBasedTableIterator::SeekImpl(const Slice* target) {
 
   if (need_seek_index) {
     if (target) {
-      index_iter_->Seek(*target, table_->GetColumnFamilyData() /*NetBuffer*/);
+      index_iter_->Seek(*target, table_->GetColumnFamilyData() /*NetBuffer*/, table_->rep_->level, table_->filenum_);
     } else {
       index_iter_->SeekToFirst();
     }
@@ -85,7 +85,7 @@ void BlockBasedTableIterator::SeekImpl(const Slice* target) {
     }
 
     if (target) {
-      block_iter_.Seek(*target, table_->GetColumnFamilyData() /*NetBuffer*/);
+      block_iter_.Seek(*target, table_->GetColumnFamilyData() /*NetBuffer*/, table_->rep_->level, table_->filenum_);
     } else {
       block_iter_.SeekToFirst();
     }
@@ -124,7 +124,7 @@ void BlockBasedTableIterator::SeekForPrev(const Slice& target) {
   // first block, rather than the second. However, we don't have the information
   // to distinguish the two unless we read the second block. In this case, we'll
   // end up with reading two blocks.
-  index_iter_->Seek(target, table_->GetColumnFamilyData() /*NetBuffer*/);
+  index_iter_->Seek(target, table_->GetColumnFamilyData() /*NetBuffer*/, table_->rep_->level. table_->filenum_);
 
   if (!index_iter_->Valid()) {
     auto seek_status = index_iter_->status();
