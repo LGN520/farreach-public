@@ -70,18 +70,30 @@
 		* VersionSet::ApproximateOffsetOf (db/version_set.cc)
 	+ TableCache::ApproximateSize (db/table_cache.cc, db/table_cache.h)
 		+ VersionSet::ApproximateSize (db/version_set.cc)
-- TODO: 
 - Pass cfd into IndexBlockIter::Seek and DataBlockIter::Seek (= BlockIter::Seek) (table/block_based/block.h)
-	+ BlockIter::Seek
-	+ BlockIter::SeekImpl
-	+ IndexBlockIter::SeekImpl
-	+ DataBlockIter::SeekImpl
-	+ DataBlockIter::SeekForGet
-	+ DataBloVkIter::SeekForGetImpl
+	+ BlockIter::Seek (table/block_based/block.h)
+		* BlockBasedTable::PrefixMayMatch (table/block_based/block_based_table_reader.cc)
+		* BlockBasedTable::Get (table/block_based/block_based_table_reader.cc)
+		* BlockBasedTable::MultiGet (table/block_based/block_based_table_reader.cc)
+		* BlockBasedTable::Prefetch (table/block_based/block_based_table_reader.cc)
+		* BlockBasedTable::TEST_KeyInCache (table/block_based/block_based_table_reader.cc)
+		* BlockBasedTable::ArpproximateOffsetOf (table/block_based/block_based_table_reader.cc)
+		* BlockBasedTable::ArpproximateSize (table/block_based/block_based_table_reader.cc)
+		* PartitionedIndexIterator::SeekImpl (table/block_based/partitioned_index_iterator.cc)
+		* BlockBasedTableIterator::SeekImpl (table/block_based/block_based_table_iterator.cc)
+		* BlockBasedTableIterator::SeekForPrev (table/block_based/block_based_table_iterator.cc)
+	+ BlockIter::SeekImpl (table/block_based/block.h)
+	+ IndexBlockIter::SeekImpl (table/block_based/block.h, table/block_based/block.c)
+	+ DataBlockIter::SeekImpl (table/block_based/block.h, table/block_based/block.c)
+	+ DataBlockIter::SeekForGet (table/block_based/block.h)
+		* BlockBasedTable::Get (table/block_based/block_based_table_reader.cc)
+		* BlockBasedTable::MultiGet (table/block_based/block_based_table_reader.cc)
+	+ DataBlockIter::SeekForGetImpl (table/block_based/block.h, table/block_based/block.c)
+- TODO: 
 - Lookup model in GET/SCAN
-	+ For GET, change IndexBlockIter::Seek (table/block_based/block.cc)
+	+ For GET, change IndexBlockIter::SeekImpl (table/block_based/block.cc)
 		+ Add BlockIter::ModelSeek referring to BlockIter::BinarySeek (table/block_based/block.cc)
-	+ For GET, change DataBlockIter::Seek (table/block_based/block.cc)
+	+ For GET, change DataBlockIter::SeekImpl/SeekForGetImpl (table/block_based/block.cc)
 - TODO: Judge if (unlikely) table_reader exists in VersionStorageInfo::AddFile, otherwise use VersionStorageInfo::version->table_cache to get the table_reader (db/version_set.cc)
 
 ## How to run

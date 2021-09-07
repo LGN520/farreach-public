@@ -234,7 +234,7 @@ void DataBlockIter::PrevImpl() {
   prev_entries_idx_ = static_cast<int32_t>(prev_entries_.size()) - 1;
 }
 
-void DataBlockIter::SeekImpl(const Slice& target) {
+void DataBlockIter::SeekImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuffer*/) {
   Slice seek_key = target;
   PERF_TIMER_GUARD(block_seek_nanos);
   if (data_ == nullptr) {  // Not init yet
@@ -273,7 +273,7 @@ void DataBlockIter::SeekImpl(const Slice& target) {
 //    than the seek_user_key, or the block ends with a matching user_key but
 //    with a smaller [ type | seqno ] (i.e. a larger seqno, or the same seqno
 //    but larger type).
-bool DataBlockIter::SeekForGetImpl(const Slice& target) {
+bool DataBlockIter::SeekForGetImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuffer*/) {
   Slice target_user_key = ExtractUserKey(target);
   uint32_t map_offset = restarts_ + num_restarts_ * sizeof(uint32_t);
   uint8_t entry =
@@ -281,7 +281,7 @@ bool DataBlockIter::SeekForGetImpl(const Slice& target) {
 
   if (entry == kCollision) {
     // HashSeek not effective, falling back
-    SeekImpl(target);
+    SeekImpl(target, cfd /*NetBuffer*/);
     return true;
   }
 
@@ -361,7 +361,7 @@ bool DataBlockIter::SeekForGetImpl(const Slice& target) {
       value_type != ValueType::kTypeDeletion &&
       value_type != ValueType::kTypeSingleDeletion &&
       value_type != ValueType::kTypeBlobIndex) {
-    SeekImpl(target);
+    SeekImpl(target, cfd /*NetBuffer*/);
     return true;
   }
 
@@ -369,7 +369,7 @@ bool DataBlockIter::SeekForGetImpl(const Slice& target) {
   return true;
 }
 
-void IndexBlockIter::SeekImpl(const Slice& target) {
+void IndexBlockIter::SeekImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuffer*/) {
   TEST_SYNC_POINT("IndexBlockIter::Seek:0");
   PERF_TIMER_GUARD(block_seek_nanos);
   if (data_ == nullptr) {  // Not init yet
