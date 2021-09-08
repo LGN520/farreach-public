@@ -26,8 +26,12 @@
 
 //NetBuffer
 #include <execinfo.h>
+#include <boost/thread/shared_mutex.hpp>
+#include "model/linear_model_wrapper.h"
 
 namespace ROCKSDB_NAMESPACE {
+
+class ColumnFamilyData;
 
 // Helper routine: decode the next block entry starting at "p",
 // storing the number of shared key bytes, non_shared key bytes,
@@ -237,7 +241,7 @@ void DataBlockIter::PrevImpl() {
   prev_entries_idx_ = static_cast<int32_t>(prev_entries_.size()) - 1;
 }
 
-void DataBlockIter::SeekImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuffer*/, int level, uint64_t filenum) {
+void DataBlockIter::SeekImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuffer*/, int level, uint64_t filenum, int datablock_idx) {
   Slice seek_key = target;
   PERF_TIMER_GUARD(block_seek_nanos);
   if (data_ == nullptr) {  // Not init yet
@@ -245,7 +249,8 @@ void DataBlockIter::SeekImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuf
   }
   uint32_t index = 0;
   bool skip_linear_scan = false;
-  bool ok = BinarySeek<DecodeKey>(seek_key, &index, &skip_linear_scan);
+  //bool ok = BinarySeek<DecodeKey>(seek_key, &index, &skip_linear_scan);
+  bool ok = ModelSeek<DecodeKey>(seek_key, &index, &skip_linear_scan, cfd, level, filenum, datablock_idx);
 
   if (!ok) {
     return;
@@ -276,7 +281,7 @@ void DataBlockIter::SeekImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuf
 //    than the seek_user_key, or the block ends with a matching user_key but
 //    with a smaller [ type | seqno ] (i.e. a larger seqno, or the same seqno
 //    but larger type).
-bool DataBlockIter::SeekForGetImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuffer*/, int level, uint64_t filenum) {
+bool DataBlockIter::SeekForGetImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuffer*/, int level, uint64_t filenum, int datablock_idx) {
   Slice target_user_key = ExtractUserKey(target);
   uint32_t map_offset = restarts_ + num_restarts_ * sizeof(uint32_t);
   uint8_t entry =
@@ -284,7 +289,7 @@ bool DataBlockIter::SeekForGetImpl(const Slice& target, ColumnFamilyData *cfd /*
 
   if (entry == kCollision) {
     // HashSeek not effective, falling back
-    SeekImpl(target, cfd /*NetBuffer*/, level, filenum);
+    SeekImpl(target, cfd /*NetBuffer*/, level, filenum, datablock_idx);
     return true;
   }
 
@@ -364,7 +369,7 @@ bool DataBlockIter::SeekForGetImpl(const Slice& target, ColumnFamilyData *cfd /*
       value_type != ValueType::kTypeDeletion &&
       value_type != ValueType::kTypeSingleDeletion &&
       value_type != ValueType::kTypeBlobIndex) {
-    SeekImpl(target, cfd /*NetBuffer*/, level, filenum);
+    SeekImpl(target, cfd /*NetBuffer*/, level, filenum, datablock_idx);
     return true;
   }
 
@@ -372,7 +377,7 @@ bool DataBlockIter::SeekForGetImpl(const Slice& target, ColumnFamilyData *cfd /*
   return true;
 }
 
-void IndexBlockIter::SeekImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuffer*/, int level, uint64_t filenum) {
+void IndexBlockIter::SeekImpl(const Slice& target, ColumnFamilyData *cfd /*NetBuffer*/, int level, uint64_t filenum, int datablock_idx) {
   TEST_SYNC_POINT("IndexBlockIter::Seek:0");
   PERF_TIMER_GUARD(block_seek_nanos);
   if (data_ == nullptr) {  // Not init yet
@@ -400,9 +405,11 @@ void IndexBlockIter::SeekImpl(const Slice& target, ColumnFamilyData *cfd /*NetBu
     // search simply lands at the right place.
     skip_linear_scan = true;
   } else if (value_delta_encoded_) {
-    ok = BinarySeek<DecodeKeyV4>(seek_key, &index, &skip_linear_scan);
+	//ok = BinarySeek<DecodeKeyV4>(seek_key, &index, &skip_linear_scan);
+    ok = ModelSeek<DecodeKeyV4>(seek_key, &index, &skip_linear_scan, cfd, level, filenum, datablock_idx); // NetBuffer
   } else {
-    ok = BinarySeek<DecodeKey>(seek_key, &index, &skip_linear_scan);
+    //ok = BinarySeek<DecodeKey>(seek_key, &index, &skip_linear_scan);
+    ok = ModelSeek<DecodeKey>(seek_key, &index, &skip_linear_scan, cfd, level, filenum, datablock_idx); // NetBuffer
   }
 
   if (!ok) {
@@ -749,19 +756,27 @@ bool BlockIter<TValue>::BinarySeek(const Slice& target, uint32_t* index,
 template <class TValue>
 template <typename DecodeKeyFunc>
 bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
-                                   bool* skip_linear_scan, ColumnFamilyData *cfd, int level, uint64_t filenum) {
+                                   bool* skip_linear_scan, ColumnFamilyData *cfd, int level, uint64_t filenum, int datablock_idx) {
 	bool has_trained = true;
-	volatile std::map<uint64_t, LinearModelWrapper*> &model_map;
+	std::map<uint64_t, LinearModelWrapper*> &model_map = cfd->level_models[level];
+	boost::shared_mutex &rwlock = cfd->level_locks_[level];
+	while (true) {
+		if (rwlock.try_lock_shared()) {
+			break;
+		}
+	}
+
 	if (cfd == nullptr || level == -1 || filenum == 0) {
 		has_trained = false;
 	}
 	else {
-		model_map = cfd->level_models[level];
 		has_trained = (model_map.find(filenum) != model_map.end());
 	}
 
 	if (!has_trained) {
-		printf("[WARNING] cfd == null is %d, level = %d, filenum = %u, has_trained = %d!\n", int(cfd==nullptr), level, filenum, int(has_trained));
+		rwlock.unlock_shared();
+		printf("[WARNING] cfd == null is %d, level = %d, filenum = %llu, has_trained = %d!\n", 
+				int(cfd==nullptr), level, unsigned long long(filenum), int(has_trained));
 		int nptrs;
         void *buffer[128];
         char **strings;
@@ -789,12 +804,20 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
   *skip_linear_scan = false;
 
   LinearModelWrapper *model_ptr = model_map[filenum];
-  uint32_t curidx = model_ptr->index_predict(target);
+  uint32_t curidx, error_bound;
+  if (typeid(TValue) == typeid(IndexBlockIter)) {
+	  curidx = model_ptr->index_predict(target);
+	  error_bound = model_ptr->index_error_bound();
+  }
+  else {
+	  assert(datablock_idx != -1);
+	  curidx = model_ptr->data_predict(target, uint32_t(datablock_idx));
+	  error_bound = model_ptr->data_error_bound(uint32_t(datablock_idx));
+  }
   if (curidx >= num_restarts_) {
 	  curidx = num_restarts_ - 1;
   }
   uint32_t previdx;
-  uint32_t error_bound = model_ptr->index_error_bound();
   uint32_t local_search_n = 0;
   while (true) {
 	previdx = curidx;
@@ -816,29 +839,25 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 			return false;
 		}
 		if (previdx == (curidx + 1)) { // pingpong
-			*skip_linear_scan = true;
 			*index = previdx;
-			return true;
+			break;
 		}
 		curidx++;
     } else if (cmp > 0) {
 		// Key at "curidx" is >= "target". Therefore all blocks at or
 		// after "curidx" are uninteresting.
-		if (curid == 0) {
-			*skip_linear_scan = true;
+		if (curidx == 0) {
 			*index = 0;
-			return true;
+			break;
 		}
 		if (previdx == (curidx - 1)) { // pingong
-			*skip_linear_scan = true;
 			*index = curidx;
-			return true;
+			break;
 		}
 		curidx--;
     } else {
-		*skip_linear_scan = true;
 		*index = curidx;
-		return true;
+		break;
     }
 
 	local_search_n++;
@@ -847,9 +866,9 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 	}
   }
 
-  printf("[ERROR] Cannot achieve here!\n");
-  assert(false);
-  return false;
+  *skip_linear_scan = true;
+  index_ = *index;
+  return true;
 }
 
 // Compare target key and the block key of the block of `block_index`.

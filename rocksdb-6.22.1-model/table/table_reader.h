@@ -144,7 +144,7 @@ class TableReader {
   }
 
   ColumnFamilyData* GetColumnFamilyData() { return cfd_; }
-  ColumnFamilyData* SetColumnFamilyData(ColumnFamilyData *cfd) { cfd_ = cfd; }
+  void SetColumnFamilyData(ColumnFamilyData *cfd) { cfd_ = cfd; }
 
  private:
   ColumnFamilyData *cfd_ = nullptr;

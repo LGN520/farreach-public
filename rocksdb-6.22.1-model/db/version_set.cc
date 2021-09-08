@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "compaction/compaction.h"
+#include "db/compaction/compaction.h"
 #include "db/blob/blob_fetcher.h"
 #include "db/blob/blob_file_cache.h"
 #include "db/blob/blob_file_reader.h"
@@ -63,6 +63,9 @@
 #include "util/user_comparator_wrapper.h"
 
 //NetBuffer
+#include <boost/thread/shared_mutex.hpp>
+#include "table/block_based/block_based_table_reader.h"
+#include "db/column_family.h"
 #include "model/linear_model_wrapper.h"
 
 namespace ROCKSDB_NAMESPACE {
@@ -984,8 +987,6 @@ class LevelIterator final : public InternalIterator {
   void SetFileIterator(InternalIterator* iter);
   void InitFileIterator(size_t new_file_index);
 
-  ColumnFamilyData *cfd_; //NetBuffer
-
   const Slice& file_smallest_key(size_t file_index) {
     assert(file_index < flevel_->num_files);
     return flevel_->files[file_index].smallest_key;
@@ -1062,6 +1063,8 @@ class LevelIterator final : public InternalIterator {
   // To be propagated to RangeDelAggregator in order to safely truncate range
   // tombstones.
   const std::vector<AtomicCompactionUnitBoundary>* compaction_boundaries_;
+
+  ColumnFamilyData *cfd_; //NetBuffer
 };
 
 void LevelIterator::Seek(const Slice& target) {
@@ -1706,7 +1709,7 @@ Status Version::OverlapWithLevelIterator(const ReadOptions& read_options,
         mutable_cf_options_.prefix_extractor.get(), should_sample_file_read(),
         cfd_->internal_stats()->GetFileReadHist(level),
         TableReaderCaller::kUserIterator, IsFilterSkipped(level), level,
-        &range_del_agg, cfd_ /*NetBuffer*/));
+        &range_del_agg, nullptr, false, cfd_ /*NetBuffer*/));
     status = OverlapWithIterator(
         ucmp, smallest_user_key, largest_user_key, iter.get(), overlap);
   }
@@ -2353,10 +2356,10 @@ void VersionStorageInfo::RemoveCurrentStats(FileMetaData* file_meta, int level) 
 
   //NetBuffer
   const uint64_t file_number = file_meta->fd.GetNumber();
-  volatile std::map<uint64_t, LinearModelWrapper*> &model_map = version_->cfd_->level_models[level];
+  std::map<uint64_t, LinearModelWrapper*> &model_map = version_->cfd_->level_models_[level];
   bool has_trained = (model_map.find(file_number) != model_map.end());
   if (!has_trained) return; // No model exists for the file
-  mutable std::shared_mutex &rwlock = level_locks_[level];
+  boost::shared_mutex &rwlock = version_->cfd_->level_locks_[level];
   while (true) {
 	if (rwlock.try_lock()) {
 		delete model_map[file_number];
@@ -2834,11 +2837,11 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f) {
                           FileLocation(level, level_files.size() - 1));
 
   //NetBuffer
-  volatile std::map<uint64_t, LinearModelWrapper*> &model_map = version_->cfd_->level_models[level];
+  std::map<uint64_t, LinearModelWrapper*> &model_map = version_->cfd_->level_models_[level];
   bool has_trained = (model_map.find(file_number) != model_map.end());
   if (has_trained) return; // Do not need to train models for sst files in base vstorage info
 
-  BlockBasedTable* table_reader = std::dynamic_cast<BlockBasedTable*>(f->fd.table_reader);
+  BlockBasedTable* table_reader = dynamic_cast<BlockBasedTable*>(f->fd.table_reader);
   assert(table_reader != nullptr);
 
   // Prepare index keys and data keys list
@@ -2894,7 +2897,7 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f) {
 		  index_keys, data_keys_list);
 
   // Update ColumnFamilyData
-  mutable std::shared_mutex &rwlock = level_locks_[level];
+  boost::shared_mutex &rwlock = version_->cfd_->level_locks_[level];
   while (true) {
 	if (rwlock.try_lock()) {
 		model_map.insert(std::pair<uint64_t, LinearModelWrapper*>(file_number, linear_model_wrapper));

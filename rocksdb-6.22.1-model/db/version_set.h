@@ -514,9 +514,6 @@ class VersionStorageInfo {
                                      int last_level, int last_l0_idx);
 
  private:
-  //NetBuffer
-  Version* version_;
-
   const InternalKeyComparator* internal_comparator_;
   const Comparator* user_comparator_;
   int num_levels_;            // Number of levels
@@ -638,6 +635,9 @@ class VersionStorageInfo {
   // If set to true, we will run consistency checks even if RocksDB
   // is compiled in release mode
   bool force_consistency_checks_;
+
+  //NetBuffer
+  Version* version_;
 
   friend class Version;
   friend class VersionSet;
@@ -802,6 +802,7 @@ class Version {
 
   friend class ReactiveVersionSet;
   friend class VersionSet;
+  friend class VersionStorageInfo;
   friend class VersionEditHandler;
   friend class VersionEditHandlerPointInTime;
 

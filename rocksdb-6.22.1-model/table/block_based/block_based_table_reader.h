@@ -263,6 +263,8 @@ class BlockBasedTable : public TableReader {
   void operator=(const TableReader&) = delete;
 
  private:
+  friend class VersionSet;
+  friend class VersionStorageInfo;
   friend class MockedBlockBasedTable;
   friend class BlockBasedTableReaderTestVerifyChecksum_ChecksumMismatch_Test;
   static std::atomic<uint64_t> next_cache_key_id_;
@@ -506,6 +508,7 @@ class BlockBasedTable : public TableReader {
   // use a stack buffer
   static constexpr size_t kMultiGetReadStackBufSize = 8192;
 
+  friend class VersionStorageInfo;
   friend class PartitionedFilterBlockReader;
   friend class PartitionedFilterBlockTest;
   friend class DBBasicTest_MultiGetIOBufferOverrun_Test;

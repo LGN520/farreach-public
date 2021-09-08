@@ -39,6 +39,8 @@ class MemTableIterator;
 class MergeContext;
 class SystemClock;
 
+class VersionEdit;
+
 struct ImmutableMemTableOptions {
   explicit ImmutableMemTableOptions(const ImmutableOptions& ioptions,
                                     const MutableCFOptions& mutable_cf_options);

@@ -85,7 +85,7 @@ void BlockBasedTableIterator::SeekImpl(const Slice* target) {
     }
 
     if (target) {
-      block_iter_.Seek(*target, table_->GetColumnFamilyData() /*NetBuffer*/, table_->rep_->level, table_->filenum_);
+      block_iter_.Seek(*target, table_->GetColumnFamilyData() /*NetBuffer*/, table_->rep_->level, table_->filenum_, index_iter_->index_);
     } else {
       block_iter_.SeekToFirst();
     }

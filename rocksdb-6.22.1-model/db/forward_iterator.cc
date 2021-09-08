@@ -88,7 +88,7 @@ class ForwardLevelIterator : public InternalIterator {
         /*arena=*/nullptr, /*skip_filters=*/false, /*level=*/-1,
         /*max_file_size_for_l0_meta_pin=*/0,
         /*smallest_compaction_key=*/nullptr,
-        /*largest_compaction_key=*/nullptr, allow_unprepared_value_, cfd_ /*NetBuffer*/);
+        /*largest_compaction_key=*/nullptr, allow_unprepared_value_, (ColumnFamilyData *)cfd_ /*NetBuffer*/);
     file_iter_->SetPinnedItersMgr(pinned_iters_mgr_);
     valid_ = false;
     if (!range_del_agg.IsEmpty()) {
@@ -698,7 +698,7 @@ void ForwardIterator::RebuildIterators(bool refresh_sv) {
         /*skip_filters=*/false, /*level=*/-1,
         MaxFileSizeForL0MetaPin(sv_->mutable_cf_options),
         /*smallest_compaction_key=*/nullptr,
-        /*largest_compaction_key=*/nullptr, allow_unprepared_value_, cfd_ /*NetBuffer*/));
+        /*largest_compaction_key=*/nullptr, allow_unprepared_value_, (ColumnFamilyData *)cfd_ /*NetBuffer*/));
   }
   BuildLevelIterators(vstorage);
   current_ = nullptr;
@@ -778,7 +778,7 @@ void ForwardIterator::RenewIterators() {
         /*skip_filters=*/false, /*level=*/-1,
         MaxFileSizeForL0MetaPin(svnew->mutable_cf_options),
         /*smallest_compaction_key=*/nullptr,
-        /*largest_compaction_key=*/nullptr, allow_unprepared_value_, cfd_ /*NetBuffer*/));
+        /*largest_compaction_key=*/nullptr, allow_unprepared_value_, (ColumnFamilyData *)cfd_ /*NetBuffer*/));
   }
 
   for (auto* f : l0_iters_) {
@@ -844,7 +844,7 @@ void ForwardIterator::ResetIncompleteIterators() {
         /*skip_filters=*/false, /*level=*/-1,
         MaxFileSizeForL0MetaPin(sv_->mutable_cf_options),
         /*smallest_compaction_key=*/nullptr,
-        /*largest_compaction_key=*/nullptr, allow_unprepared_value_, cfd_/*NetBuffer*/);
+        /*largest_compaction_key=*/nullptr, allow_unprepared_value_, (ColumnFamilyData *)cfd_/*NetBuffer*/);
     l0_iters_[i]->SetPinnedItersMgr(pinned_iters_mgr_);
   }
 

@@ -29,7 +29,8 @@
 
 // NetBuffer
 #include <map>
-#include <shared_mutex>
+#include <boost/thread/shared_mutex.hpp>
+#include "model/linear_model_wrapper.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -49,6 +50,7 @@ class InstrumentedMutex;
 class InstrumentedMutexLock;
 struct SuperVersionContext;
 class BlobFileCache;
+class ColumnFamilySet;
 
 extern const double kIncSlowdownRatio;
 // This file contains a list of data structures for managing column family
@@ -527,6 +529,8 @@ class ColumnFamilyData {
 
  private:
   friend class ColumnFamilySet;
+  friend class VersionSet;
+  friend class VersionStorageInfo;
   static const uint32_t kDummyColumnFamilyDataId;
   ColumnFamilyData(uint32_t id, const std::string& name,
                    Version* dummy_versions, Cache* table_cache,
@@ -542,8 +546,8 @@ class ColumnFamilyData {
   std::vector<std::string> GetDbPaths() const;
 
   //NetBuffer
-  std::vector<volatile std::map<uint64_t, LinearModelWrapper*>> level_models_;
-  std::vector<mutable std::shared_mutex> level_locks_; // mutable variable can be changed in const function
+  std::vector<std::map<uint64_t, LinearModelWrapper*>> level_models_;
+  std::vector<boost::shared_mutex> level_locks_; // mutable variable can be changed in const function
 
   uint32_t id_;
   const std::string name_;

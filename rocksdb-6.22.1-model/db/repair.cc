@@ -463,7 +463,8 @@ class Repairer {
           {}, kMaxSequenceNumber, snapshot_checker,
           false /* paranoid_file_checks*/, nullptr /* internal_stats */, &io_s,
           nullptr /*IOTracer*/, nullptr /* event_logger */, 0 /* job_id */,
-          Env::IO_HIGH, nullptr /* table_properties */, write_hint, cfd /*NetBuffer*/);
+          Env::IO_HIGH, nullptr /* table_properties */, write_hint, 
+		  nullptr, nullptr, nullptr, nullptr, nullptr, cfd /*NetBuffer*/);
       ROCKS_LOG_INFO(db_options_.info_log,
                      "Log #%" PRIu64 ": %d ops saved to Table #%" PRIu64 " %s",
                      log, counter, meta.fd.GetNumber(),
@@ -513,7 +514,7 @@ class Repairer {
       ColumnFamilyData *tmp_cfd = vset_.GetColumnFamilySet()->GetColumnFamily(
 			  static_cast<uint32_t>(props->column_family_id)); //NetBuffer
       status = table_cache_->GetTableProperties(env_options_, icmp_, t->meta.fd,
-                                                &props, tmp_cfd /*NetBuffer*/);
+                                                &props, nullptr, false, tmp_cfd /*NetBuffer*/);
     }
     if (status.ok()) {
       t->column_family_id = static_cast<uint32_t>(props->column_family_id);

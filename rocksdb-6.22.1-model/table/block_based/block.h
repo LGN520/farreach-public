@@ -37,6 +37,8 @@ class DataBlockIter;
 class IndexBlockIter;
 class BlockPrefixIndex;
 
+class ColumnFamilyData;
+
 // BlockReadAmpBitmap is a bitmap that map the ROCKSDB_NAMESPACE::Block data
 // bytes to a bitmap with ratio bytes_per_bit. Whenever we access a range of
 // bytes in the Block we update the bitmap and increment
@@ -295,8 +297,14 @@ class BlockIter : public InternalIteratorBase<TValue> {
     UpdateKey();
   }
 
-  virtual void Seek(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1 /*NetBuffer*/, uint64_t filenum = 0) override final {
-    SeekImpl(target, cfd /*NetBuffer*/, level /*NetBuffer*/, filenum);
+  virtual void Seek(const Slice& target) override final {
+	SeekImpl(target);
+	UpdateKey();
+  }
+
+  //NetBuffer
+  virtual void Seek(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1 /*NetBuffer*/, uint64_t filenum = 0, int datablock_idx = -1) final {
+    SeekImpl(target, cfd /*NetBuffer*/, level /*NetBuffer*/, filenum, datablock_idx);
     UpdateKey();
   }
 
@@ -357,6 +365,9 @@ class BlockIter : public InternalIteratorBase<TValue> {
   Cache::Handle* cache_handle() { return cache_handle_; }
 
  protected:
+  // NetBuffer
+  uint32_t index_; // index of IndexBlockIter or DataBlockIter
+
   const char* data_;       // underlying block contents
   uint32_t num_restarts_;  // Number of uint32_t entries in restart array
 
@@ -382,7 +393,7 @@ class BlockIter : public InternalIteratorBase<TValue> {
 
   virtual void SeekToFirstImpl() = 0;
   virtual void SeekToLastImpl() = 0;
-  virtual void SeekImpl(const Slice& target, ColumnFamilyData* cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0) = 0;
+  virtual void SeekImpl(const Slice& target, ColumnFamilyData* cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0, int datablock_idx = -1) = 0;
   virtual void SeekForPrevImpl(const Slice& target) = 0;
   virtual void NextImpl() = 0;
   virtual void PrevImpl() = 0;
@@ -471,7 +482,7 @@ class BlockIter : public InternalIteratorBase<TValue> {
   // NetBuffer
   template <typename DecodeKeyFunc>
   inline bool ModelSeek(const Slice& target, uint32_t* index,
-                         bool* is_index_key_result, ColumnFamilyData *cfd = nullptr, int level = -1, uint64_t filenum = 0);
+                         bool* is_index_key_result, ColumnFamilyData *cfd = nullptr, int level = -1, uint64_t filenum = 0, int datablock_idx = -1);
 
   void FindKeyAfterBinarySeek(const Slice& target, uint32_t index,
                               bool is_index_key_result);
@@ -514,9 +525,9 @@ class DataBlockIter final : public BlockIter<Slice> {
     return value_;
   }
 
-  inline bool SeekForGet(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum) {
+  inline bool SeekForGet(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0, int datablock_idx = -1) {
     if (!data_block_hash_index_) {
-      SeekImpl(target, cfd /*NetBuffer*/, level, filenum);
+      SeekImpl(target, cfd /*NetBuffer*/, level, filenum, datablock_idx);
       UpdateKey();
       return true;
     }
@@ -552,7 +563,7 @@ class DataBlockIter final : public BlockIter<Slice> {
  protected:
   virtual void SeekToFirstImpl() override;
   virtual void SeekToLastImpl() override;
-  virtual void SeekImpl(const Slice& target, ColumnFamilyData* cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0) override;
+  virtual void SeekImpl(const Slice& target, ColumnFamilyData* cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0, int datablock_idx = -1) override;
   virtual void SeekForPrevImpl(const Slice& target) override;
   virtual void NextImpl() override;
   virtual void PrevImpl() override;
@@ -591,7 +602,7 @@ class DataBlockIter final : public BlockIter<Slice> {
   template <typename DecodeEntryFunc>
   inline bool ParseNextDataKey(const char* limit = nullptr);
 
-  bool SeekForGetImpl(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0);
+  bool SeekForGetImpl(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0, int datablock_idx = -1);
   void NextOrReportImpl();
   void SeekToFirstOrReportImpl();
 };
@@ -655,7 +666,7 @@ class IndexBlockIter final : public BlockIter<IndexValue> {
   // If the prefix of `target` doesn't exist in the file, it can either
   // return the result of total order seek, or set both of Valid() = false
   // and status() = NotFound().
-  void SeekImpl(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0) override;
+  void SeekImpl(const Slice& target, ColumnFamilyData *cfd = nullptr /*NetBuffer*/, int level = -1, uint64_t filenum = 0, int datablock_idx = -1) override;
 
   void SeekForPrevImpl(const Slice&) override {
     assert(false);

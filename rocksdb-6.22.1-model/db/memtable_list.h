@@ -33,6 +33,10 @@ class InstrumentedMutex;
 class MergeIteratorBuilder;
 class MemTableList;
 
+class FileMetaData;
+template <class T, size_t kSize> class autovector;
+class VersionSet;
+
 struct FlushJobInfo;
 
 // keeps a list of immutable memtables in a vector. the list is immutable

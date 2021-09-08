@@ -2350,7 +2350,7 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
         break;
       }
 
-      bool may_exist = biter.SeekForGet(key, cfd_ /*NetBuffer*/, rep_->level, filenum_);
+      bool may_exist = biter.SeekForGet(key, cfd_ /*NetBuffer*/, rep_->level, filenum_, iiter->index_);
       // If user-specified timestamp is supported, we cannot end the search
       // just because hash index lookup indicates the key+ts does not exist.
       if (!may_exist && ts_sz == 0) {
@@ -2720,7 +2720,7 @@ void BlockBasedTable::MultiGet(const ReadOptions& read_options,
           break;
         }
 
-        bool may_exist = biter->SeekForGet(key, cfd_ /*NetBuffer*/, rep_->level, filenum_);
+        bool may_exist = biter->SeekForGet(key, cfd_ /*NetBuffer*/, rep_->level, filenum_, iiter->index_);
         if (!may_exist) {
           // HashSeek cannot find the key this block and the the iter is not
           // the end of the block, i.e. cannot be in the following blocks
