@@ -26,6 +26,7 @@
 #include "table/internal_iterator.h"
 #include "test_util/sync_point.h"
 #include "util/random.h"
+#include "db/file_descriptor.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -36,8 +37,6 @@ class BlockIter;
 class DataBlockIter;
 class IndexBlockIter;
 class BlockPrefixIndex;
-
-struct FileDescriptor;
 
 // BlockReadAmpBitmap is a bitmap that map the ROCKSDB_NAMESPACE::Block data
 // bytes to a bitmap with ratio bytes_per_bit. Whenever we access a range of
@@ -252,6 +251,9 @@ class Block {
 // invoking `UpdateKey()`.
 template <class TValue>
 class BlockIter : public InternalIteratorBase<TValue> {
+	friend class BlockBasedTable;
+	friend class BlockBasedTableIterator;
+	friend class PartitionedIndexIterator;
  public:
   void InitializeBase(const Comparator* raw_ucmp, const char* data,
                       uint32_t restarts, uint32_t num_restarts,
@@ -298,7 +300,7 @@ class BlockIter : public InternalIteratorBase<TValue> {
   }
 
   virtual void Seek(const Slice& target) override final {
-    SeekImpl(target);
+    SeekImpl(target, nullptr);
     UpdateKey();
   }
 
@@ -478,6 +480,7 @@ class BlockIter : public InternalIteratorBase<TValue> {
   inline bool BinarySeek(const Slice& target, uint32_t* index,
                          bool* is_index_key_result);
 
+  template <typename DecodeKeyFunc>
   inline bool ModelSeek(const Slice& target, uint32_t* index,
                          bool* skip_linear_scan, FileDescriptor *fd, int64_t datablock_idx = -1);
 

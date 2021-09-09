@@ -17,7 +17,7 @@ void PartitionedIndexIterator::SeekImpl(const Slice* target) {
   SavePrevIndexValue();
 
   if (target) {
-    index_iter_->Seek(*target, table_->GetFileDescriptor());
+    dynamic_cast<IndexBlockIter*>(&(*index_iter_))->Seek(*target, ((BlockBasedTable*)table_)->GetFileDescriptor());
   } else {
     index_iter_->SeekToFirst();
   }
@@ -30,7 +30,7 @@ void PartitionedIndexIterator::SeekImpl(const Slice* target) {
   InitPartitionedIndexBlock();
 
   if (target) {
-    block_iter_.Seek(*target, table->GetFileDescriptor(), index_iter_->index_);
+    block_iter_.Seek(*target, ((BlockBasedTable*)table_)->GetFileDescriptor(), dynamic_cast<IndexBlockIter*>(&(*index_iter_))->index_);
   } else {
     block_iter_.SeekToFirst();
   }

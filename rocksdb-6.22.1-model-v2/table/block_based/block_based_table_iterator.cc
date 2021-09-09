@@ -46,7 +46,7 @@ void BlockBasedTableIterator::SeekImpl(const Slice* target) {
 
   if (need_seek_index) {
     if (target) {
-      index_iter_->Seek(*target, table_->GetFileDescriptor());
+      dynamic_cast<IndexBlockIter*>(&(*index_iter_))->Seek(*target, ((BlockBasedTable*)table_)->GetFileDescriptor());
     } else {
       index_iter_->SeekToFirst();
     }
@@ -85,7 +85,7 @@ void BlockBasedTableIterator::SeekImpl(const Slice* target) {
     }
 
     if (target) {
-      block_iter_.Seek(*target, table_->GetFileDescriptor(), index_iter_->index_);
+      block_iter_.Seek(*target, ((BlockBasedTable*)table_)->GetFileDescriptor(), dynamic_cast<IndexBlockIter*>(&(*index_iter_))->index_);
     } else {
       block_iter_.SeekToFirst();
     }
@@ -124,7 +124,7 @@ void BlockBasedTableIterator::SeekForPrev(const Slice& target) {
   // first block, rather than the second. However, we don't have the information
   // to distinguish the two unless we read the second block. In this case, we'll
   // end up with reading two blocks.
-  index_iter_->Seek(target, table_->GetFileDescriptor());
+  dynamic_cast<IndexBlockIter*>(&(*index_iter_))->Seek(target, ((BlockBasedTable*)table_)->GetFileDescriptor());
 
   if (!index_iter_->Valid()) {
     auto seek_status = index_iter_->status();

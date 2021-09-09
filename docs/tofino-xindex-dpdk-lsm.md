@@ -8,6 +8,7 @@
 - Solution 2: maintain models in each FileDescriptor
 	+ Create directory of rocksdb-6.22.1-model-v2
 	+ Add linaer_model_wrapper in each FileDescriptor (do not need map or lock mechanism) (db/version_edit.h)
+		- NOTE: for creation of FileDescriptor, (create new) db_impl_open/flush_job/compaction_job ->(create new)-> version_edit ->(copy constructor)-> version_builder ->(copy pointer, calling SaveTo)-> version_storage_info
 	+ Create directory of rocksdb-6.22.1-model/model
 		- Change xindex_model.h to make it support keys of variable length (model/xindex_model.h, model/xindex_model_impl.h)
 		- For Slice, implement to_model_key to convert Slice into double array (include/rocksdb/slice.h)
@@ -48,6 +49,16 @@
 			+ Add BlockIter::ModelSeek referring to BlockIter::BinarySeek (table/block_based/block.h, table/block_based/block.cc)
 			+ Replace BinarySeek with ModelSeek in IndexBlockIter::SeekImpl (table/block_based/block.cc)
 	- Add model/linaer_model_wrapper.cc in src.mk
+	- Debug
+		+ Include table/block_based/block_based_table_reader.h in db/version_set.cc
+		+ Add friend class VersionStorageInfo in table/block_based/block_based_table_reader.h 
+		+ Add friend class BlockBasedTableIterator,, BlockBasedTable, and PartitionedIndexIterator in table/block_based/block.h
+		+ Convert uniquq_ptr<InternalIteratorBased<IndexValue>> as IndexBlockIter* in table/block_based/block_based_table_reader.cc, table/block_based/block_baed_table_iterator.cc, and table/block_based/partitioned_index_iterator.cc
+		+ Incomplete type of FileDescriptor (forward declaration) when compiling version_edit
+			* Reason: Before the complete declaration of FileDescriptor, version_edit.h includes table/get_context.h including table/block_based/block.h, which requires complete type of FileDescriptor!
+			* Solution: extract FileDescriptor from db/version_edit.h, re-organize it as an db/file_descriptor.h and .cc, and include it in db/version_edit.h and table/block_based/block.h
+		+ NOTE: when using ar to generate static lib file, it just combines all .o files into a single .a file, without linking static library
+			* Therefore, we need to link rocksdb-model before linking mkl, otherwise some funcs in rocksdb-model cannot be re-located
 - (legacy) Solution 1: maintain models in each ColumnFamilyData
 	- Create directory of rocksdb-6.22.1-model
 	- Add Version* version_ in VersionStorageInfo (db/version_set.h, db/version_set.cc)
@@ -140,11 +151,12 @@
 			+ Add BlockIter::ModelSeek referring to BlockIter::BinarySeek (table/block_based/block.h, table/block_based/block.cc)
 			+ Add try lock shared and unlock shared
 			+ Replace BinarySeek with ModelSeek in IndexBlockIter::SeekImpl (table/block_based/block.cc)
-	- Add model/linaer_model_wrapper.cc in src.mk
+	- Add model/linaer_model_wrapper.cc and db/file_descriptor.cc in src.mk
 	- Find model may be time-consuming? we should maintain a model for each FileDescriptor without lock, and pass it to table_reader
 		+ NOTE: although each version has a FileMetaData* for the same sstable file, they point to the same object of FileMetaData
 		+ Therefore, we deprecate solution 1 and propose solution 2
 	- STATUS: unable to solve incomplete type of ColumnFamilyData in table/block_based/block.cc
+		+ Potential solution: similar to the 3rd point in Debug of Solution 1 mentioned before
 	- TODO: forward declaration of 
 - TODO: Judge if (unlikely) table_reader exists in VersionStorageInfo::AddFile, otherwise use VersionStorageInfo::version->table_cache to get the table_reader (db/version_set.cc)
 

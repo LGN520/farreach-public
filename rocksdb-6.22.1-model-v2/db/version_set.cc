@@ -62,6 +62,8 @@
 #include "util/string_util.h"
 #include "util/user_comparator_wrapper.h"
 
+#include "table/block_based/block_based_table_reader.h"
+
 namespace ROCKSDB_NAMESPACE {
 
 namespace {

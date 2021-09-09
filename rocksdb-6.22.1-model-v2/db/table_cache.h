@@ -29,7 +29,7 @@ namespace ROCKSDB_NAMESPACE {
 
 class Env;
 class Arena;
-struct FileDescriptor;
+class FileDescriptor;
 class GetContext;
 class HistogramImpl;
 

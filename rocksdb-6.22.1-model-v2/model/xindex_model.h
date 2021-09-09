@@ -20,6 +20,7 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
+#include <vector>
 #include "mkl.h"
 #include "mkl_lapacke.h"
 #include "model/linear_model_wrapper.h"
@@ -32,15 +33,14 @@ namespace ROCKSDB_NAMESPACE {
 template <class key_t>
 class VarlenLinearModel {
   friend class LinearModelWrapper;
+  typedef std::vector<double> model_key_t;
  public:
   ~VarlenLinearModel();
   void prepare(const std::vector<key_t> &keys,
                const std::vector<size_t> &positions);
-  void prepare(const typename std::vector<key_t>::const_iterator &keys_begin,
-               uint32_t size);
   void prepare_model(const std::vector<double *> &model_key_ptrs,
                      const std::vector<size_t> &positions);
-  size_t predict(const key_t &key) const;
+  size_t predict(const key_t &curkey) const;
 
  private:
   uint32_t get_max_key_len(const std::vector<key_t> &keys);

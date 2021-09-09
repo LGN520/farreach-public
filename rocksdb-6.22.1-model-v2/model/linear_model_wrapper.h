@@ -6,6 +6,7 @@
 
 #include "rocksdb/slice.h"
 #include "xindex_model.h"
+#include "xindex_model_impl.h"
 
 namespace ROCKSDB_NAMESPACE {
 

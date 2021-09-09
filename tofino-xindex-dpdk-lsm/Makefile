@@ -15,16 +15,6 @@ LDDIR += -L/usr/lib/x86_64-linux-gnu
 INCDIR += -I/usr/include
 
 ##############################################################################
-# MKL configuration
-MKL_INCDIR += -I/opt/intel/mkl/include
-MKL_LDDIR += -L/opt/intel/mkl/lib/intel64
-MKL_LDLIBS += -lmkl_rt
-
-INCDIR += $(MKL_INCDIR)
-LDDIR += $(MKL_LDDIR)
-LDLIBS += $(MKL_LDLIBS)
-
-##############################################################################
 # DPDK configuration
 
 # Prefix for dpdk
@@ -64,12 +54,25 @@ LDDIR += $(DPDK_LDDIR)
 ##############################################################################
 # RocksDB configuration
 
-ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
-ROCKSDB_LDDIR += -L../rocksdb-6.22.1
+#ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
+#ROCKSDB_LDDIR += -L../rocksdb-6.22.1
+ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
+ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
 ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
 
 INCDIR += $(ROCKSDB_INCDIR)
 LDDIR += $(ROCKSDB_LDDIR)
+LDLIBS += $(ROCKSDB_LDLIBS)
+
+##############################################################################
+# MKL configuration
+MKL_INCDIR += -I/opt/intel/mkl/include
+MKL_LDDIR += -L/opt/intel/mkl/lib/intel64
+MKL_LDLIBS += -lmkl_rt
+
+INCDIR += $(MKL_INCDIR)
+LDDIR += $(MKL_LDDIR)
+LDLIBS += $(MKL_LDLIBS)
 
 ##############################################################################
 
@@ -102,7 +105,7 @@ DEPS += client.d
 CLEAN += client.o client
 
 server: server.o dpdk_helper.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) $(ROCKSDB_LDLIBS) -o $@
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += server.d
 CLEAN += server.o serer
 

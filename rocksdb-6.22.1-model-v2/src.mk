@@ -1,6 +1,7 @@
 # These are the sources from which librocksdb.a is built:
 LIB_SOURCES =                                                   \
   model/linear_model_wrapper.cc									\
+  db/file_descriptor.cc											\
   cache/cache.cc                                                \
   cache/cache_entry_roles.cc                                    \
   cache/clock_cache.cc                                          \

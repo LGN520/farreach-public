@@ -25,10 +25,10 @@
 #if !defined(XINDEX_MODEL_IMPL_H)
 #define XINDEX_MODEL_IMPL_H
 
-namespace xindex {
+namespace ROCKSDB_NAMESPACE {
 
 template <class key_t>
-VarlenLinearModel::~VarlenLinearModel() {
+VarlenLinearModel<key_t>::~VarlenLinearModel() {
 	delete weights;
 }
 
@@ -38,13 +38,13 @@ void VarlenLinearModel<key_t>::prepare(const std::vector<key_t> &keys,
   assert(keys.size() == positions.size());
   if (keys.size() == 0) return;
 
-  get_max_key_len(keys);
-  typedef std::array<double, max_key_len> model_key_t;
+  max_key_len = get_max_key_len(keys);
 
   std::vector<model_key_t> model_keys(keys.size());
   std::vector<double *> key_ptrs(keys.size());
-  for (size_t i = 0; i < keys.size(); i++) {
-    model_keys[i] = keys[i].to_model_key();
+  for (uint32_t i = 0; i < keys.size(); i++) {
+	model_keys[i].resize(max_key_len);
+    assert(keys[i].to_model_key(model_keys[i].data(), max_key_len));
     key_ptrs[i] = model_keys[i].data();
   }
 
@@ -52,30 +52,6 @@ void VarlenLinearModel<key_t>::prepare(const std::vector<key_t> &keys,
 
   prepare_model(key_ptrs, positions);
   error_bound = get_error_bound(keys, positions);
-}
-
-template <class key_t>
-void VarlenLinearModel<key_t>::prepare(
-    const typename std::vector<key_t>::const_iterator &keys_begin,
-    uint32_t size) {
-  if (size == 0) return;
-
-  get_max_key_len(keys);
-  typedef std::array<double, max_key_len> model_key_t;
-
-  std::vector<model_key_t> model_keys(size);
-  std::vector<double *> key_ptrs(size);
-  std::vector<size_t> positions(size);
-  for (size_t i = 0; i < size; i++) {
-    model_keys[i] = (keys_begin + i)->to_model_key();
-    key_ptrs[i] = model_keys[i].data();
-    positions[i] = i;
-  }
-
-  weights = new double[max_key_len + 1];
-
-  prepare_model(key_ptrs, positions);
-  error_bound = get_error_bound(keys_begin, size);
 }
 
 template <class key_t>
@@ -112,9 +88,10 @@ void VarlenLinearModel<key_t>::prepare_model(
 
   // trim down samples to avoid large memory usage
   size_t step = 1;
+  /*size_t desired_training_key_n = 10000;
   if (model_key_ptrs.size() > desired_training_key_n) {
     step = model_key_ptrs.size() / desired_training_key_n;
-  }
+  }*/
 
   std::vector<size_t> useful_feat_index;
   for (size_t feat_i = 0; feat_i < max_key_len; feat_i++) {
@@ -127,7 +104,7 @@ void VarlenLinearModel<key_t>::prepare_model(
     }
   }
   if (model_key_ptrs.size() != 1 && useful_feat_index.size() == 0) {
-    COUT_THIS("all feats are the same");
+	printf("all features are the same");
   }
   size_t useful_feat_n = useful_feat_index.size();
   bool use_bias = true;
@@ -142,7 +119,8 @@ void VarlenLinearModel<key_t>::prepare_model(
     double *a = (double *)malloc(m * n * sizeof(double));
     double *b = (double *)malloc(std::max(m, n) * sizeof(double));
     if (a == nullptr || b == nullptr) {
-      COUT_N_EXIT("cannot allocate memory for matrix a or b");
+      printf("cannot allocate memory for matrix a or b");
+	  exit(-1);
     }
 
     for (int sample_i = 0; sample_i < m; ++sample_i) {
@@ -179,9 +157,10 @@ void VarlenLinearModel<key_t>::prepare_model(
       }
 
       if (useful_feat_index.size() == 0 && use_bias == false) {
-        COUT_N_EXIT(
+        printf(
             "impossible! cannot fail when there is only 1 bias column in "
             "matrix a");
+		exit(-1);
       }
     } else if (fitting_res < 0) {
       printf("%i-th parameter had an illegal value\n", -fitting_res);
@@ -189,7 +168,7 @@ void VarlenLinearModel<key_t>::prepare_model(
     }
 
     // set weights to all zero
-    for (size_t weight_i = 0; weight_i < weights.size(); weight_i++) {
+    for (size_t weight_i = 0; weight_i < (max_key_len+1); weight_i++) {
       weights[weight_i] = 0;
     }
     // set weights of useful features
@@ -209,34 +188,45 @@ void VarlenLinearModel<key_t>::prepare_model(
 }
 
 template <class key_t>
-size_t VarlenLinearModel<key_t>::predict(const key_t &key) const {
-  model_key_t model_key = key.to_model_key();
-  double *model_key_ptr = model_key.data();
+size_t VarlenLinearModel<key_t>::predict(const key_t &curkey) const {
+  model_key_t model_key;
+  model_key.resize(max_key_len);
 
-  if (key_len == 1) {
+  double *model_key_ptr = model_key.data();
+  if (!curkey.to_model_key(model_key_ptr, max_key_len)) {
+	printf("Cannot convert key in predict!");
+	exit(-1);
+  }
+
+  if (max_key_len == 1) {
     double res = weights[0] * *model_key_ptr + weights[1];
     return res > 0 ? res : 0;
   } else {
     double res = 0;
-    for (size_t feat_i = 0; feat_i < key_len; feat_i++) {
+    for (size_t feat_i = 0; feat_i < max_key_len; feat_i++) {
       res += weights[feat_i] * model_key_ptr[feat_i];
     }
-    res += weights[key_len];  // the bias term
+    res += weights[max_key_len];  // the bias term
     return res > 0 ? res : 0;
   }
+
+  printf("Should not arrive here!");
+  exit(-1);
+  return 0;
 }
 
 template <class key_t>
 uint32_t VarlenLinearModel<key_t>::get_max_key_len(
 		const std::vector<key_t> &keys) {
-	max_key_len = 0;
+	uint32_t result = 0;
 	uint32_t tmp_len = 0;
 	for (size_t key_i = 0; key_i < keys.size(); key_i++) {
-		tmp_len = keys[key_t].get_ken_len();
-		if (tmp_len > max_key_len) {
-			max_key_len = tmp_len;
+		tmp_len = keys[key_i].get_key_len();
+		if (tmp_len > result) {
+			result = tmp_len;
 		}
 	}
+	return result;
 }
 
 template <class key_t>

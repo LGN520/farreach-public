@@ -24,6 +24,10 @@
 #include "table/format.h"
 #include "util/coding.h"
 
+// NetBuffer
+#include <execinfo.h>
+#include "model/linear_model_wrapper.h"
+
 namespace ROCKSDB_NAMESPACE {
 
 // Helper routine: decode the next block entry starting at "p",
