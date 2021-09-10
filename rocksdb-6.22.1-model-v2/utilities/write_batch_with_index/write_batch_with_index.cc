@@ -462,7 +462,6 @@ Status WriteBatchWithIndex::GetFromBatchAndDB(DB* db,
 Status WriteBatchWithIndex::GetFromBatchAndDB(
     DB* db, const ReadOptions& read_options, ColumnFamilyHandle* column_family,
     const Slice& key, PinnableSlice* pinnable_val, ReadCallback* callback) {
-  print_msg("WriteBatchWithIndex::GetFromBatchAndDB\n");//DEBUGDEBUG
   Status s;
   WriteBatchWithIndexInternal wbwii(db, column_family);
 

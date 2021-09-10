@@ -308,8 +308,6 @@ class BlockIter : public InternalIteratorBase<TValue> {
 
   // NetBuffer
   virtual void Seek(const Slice& target, FileDescriptor *fd, int64_t datablock_idx = -1) final {
-	print_msg("Arrive Seek: target size %d, fd %p, datablock_idx %d!\n", int(target.size()), (void *)fd, int(datablock_idx));//DEBUGDEBUG
-	backtrace();
     SeekImpl(target, fd, datablock_idx);
     UpdateKey();
   }
@@ -530,8 +528,6 @@ class DataBlockIter final : public BlockIter<Slice> {
   }
 
   inline bool SeekForGet(const Slice& target, FileDescriptor *fd, int64_t datablock_idx = -1) {
-	print_msg("Arrive Seek: target size %d, fd %p, datablock_idx %d!\n", int(target.size()), (void *)fd, int(datablock_idx));//DEBUGDEBUG
-	backtrace();
     if (!data_block_hash_index_) {
       SeekImpl(target, fd, datablock_idx);
       UpdateKey();

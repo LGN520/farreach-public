@@ -753,91 +753,101 @@ template <class TValue>
 template <typename DecodeKeyFunc>
 bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
                                    bool* skip_linear_scan, FileDescriptor *fd, int64_t datablock_idx) {
-
+	print_msg("Start modelseek\n");
+	bool result = true;
 	if (fd == nullptr) {
 		printf("[WARNING] FileDescriptor *fd is NULL!\n");
 
-		BinarySeek<DecodeKeyFunc>(target, index, skip_linear_scan);
+		result = BinarySeek<DecodeKeyFunc>(target, index, skip_linear_scan);
 	}
-
-  if (restarts_ == 0) {
-    // SST files dedicated to range tombstones are written with index blocks
-    // that have no keys while also having `num_restarts_ == 1`. This would
-    // cause a problem for `BinarySeek()` as it'd try to access the first key
-    // which does not exist. We identify such blocks by the offset at which
-    // their restarts are stored, and return false to prevent any attempted
-    // key accesses.
-    return false;
-  }
-
-  *skip_linear_scan = false;
-
-  LinearModelWrapper *model_ptr = fd->linear_model_wrapper;
-  uint32_t curidx, error_bound;
-  if (typeid(TValue) == typeid(IndexBlockIter)) {
-	  curidx = model_ptr->index_predict(target);
-	  error_bound = model_ptr->index_error_bound();
-  }
-  else {
-	  assert(datablock_idx != -1);
-	  curidx = model_ptr->data_predict(target, uint32_t(datablock_idx));
-	  error_bound = model_ptr->data_error_bound(uint32_t(datablock_idx));
-  }
-  if (curidx >= num_restarts_) {
-	  curidx = num_restarts_ - 1;
-  }
-  uint32_t previdx;
-  uint32_t local_search_n = 0;
-  while (true) {
-	previdx = curidx;
-    uint32_t region_offset = GetRestartPoint(curidx);
-    uint32_t shared, non_shared;
-    const char* key_ptr = DecodeKeyFunc()(
-        data_ + region_offset, data_ + restarts_, &shared, &non_shared);
-    if (key_ptr == nullptr || (shared != 0)) {
-      CorruptionError();
-      return false;
-    }
-    Slice curkey(key_ptr, non_shared);
-    raw_key_.SetKey(curkey, false /* copy */);
-    int cmp = CompareCurrentKey(target);
-    if (cmp < 0) {
-		// Key at "curidx" is smaller than "target". Therefore all
-		// blocks before "curidx" are uninteresting.
-		if (curidx == num_restarts_ - 1) {
-			return false;
+	else {
+		if (restarts_ == 0) {
+			// SST files dedicated to range tombstones are written with index blocks
+			// that have no keys while also having `num_restarts_ == 1`. This would
+			// cause a problem for `BinarySeek()` as it'd try to access the first key
+			// which does not exist. We identify such blocks by the offset at which
+			// their restarts are stored, and return false to prevent any attempted
+			// key accesses.
+			result = false;
 		}
-		if (previdx == (curidx + 1)) { // pingpong
-			*index = previdx;
-			break;
-		}
-		curidx++;
-    } else if (cmp > 0) {
-		// Key at "curidx" is >= "target". Therefore all blocks at or
-		// after "curidx" are uninteresting.
-		if (curidx == 0) {
-			*index = 0;
-			break;
-		}
-		if (previdx == (curidx - 1)) { // pingong
-			*index = curidx;
-			break;
-		}
-		curidx--;
-    } else {
-		*index = curidx;
-		break;
-    }
+		else {
+			*skip_linear_scan = false;
 
-	local_search_n++;
-	if (local_search_n >= error_bound) {
-		return false;
+			LinearModelWrapper *model_ptr = fd->linear_model_wrapper;
+			uint32_t curidx, error_bound;
+			if (typeid(TValue) == typeid(IndexBlockIter)) {
+			  curidx = model_ptr->index_predict(target);
+			  error_bound = model_ptr->index_error_bound();
+			}
+			else {
+			  assert(datablock_idx != -1);
+			  curidx = model_ptr->data_predict(target, uint32_t(datablock_idx));
+			  error_bound = model_ptr->data_error_bound(uint32_t(datablock_idx));
+			}
+			if (curidx >= num_restarts_) {
+			  curidx = num_restarts_ - 1;
+			}
+			uint32_t previdx = curidx;
+			uint32_t local_search_n = 0;
+			while (true) {
+				uint32_t region_offset = GetRestartPoint(curidx);
+				uint32_t shared, non_shared;
+				const char* key_ptr = DecodeKeyFunc()(
+					data_ + region_offset, data_ + restarts_, &shared, &non_shared);
+				if (key_ptr == nullptr || (shared != 0)) {
+					CorruptionError();
+					result = false;
+					break;
+				}
+				Slice curkey(key_ptr, non_shared);
+				raw_key_.SetKey(curkey, false /* copy */);
+				int cmp = CompareCurrentKey(target);
+				if (cmp < 0) {
+					// Key at "curidx" is smaller than "target". Therefore all
+					// blocks before "curidx" are uninteresting.
+					if (curidx == num_restarts_ - 1) {
+						result = false;
+						break;
+					}
+					if (previdx == (curidx + 1)) { // pingpong
+						*index = previdx;
+						break;
+					}
+					previdx = curidx;
+					curidx++;
+				} else if (cmp > 0) {
+					// Key at "curidx" is >= "target". Therefore all blocks at or
+					// after "curidx" are uninteresting.
+					if (curidx == 0) {
+						*index = 0;
+						break;
+					}
+					if (previdx == (curidx - 1)) { // pingong
+						*index = curidx;
+						break;
+					}
+					previdx = curidx;
+					curidx--;
+				} else {
+					*index = curidx;
+					break;
+				}
+
+				local_search_n++;
+				if (local_search_n >= error_bound) {
+					result = false;
+					break;
+				}
+			} // while true
+		} // restarts_ != 0
+	} // fd != null
+
+	if (result) {
+		*skip_linear_scan = true;
+		index_ = int64_t(*index);
 	}
-  }
-
-  *skip_linear_scan = true;
-  index_ = int64_t(*index);
-  return true;
+	print_msg("Finish modelseek\n");
+	return result;
 }
 
 // Compare target key and the block key of the block of `block_index`.

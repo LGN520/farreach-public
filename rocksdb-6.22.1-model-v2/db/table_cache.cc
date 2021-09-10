@@ -30,6 +30,8 @@
 #include "util/coding.h"
 #include "util/stop_watch.h"
 
+#include "table/block_based/backtrace.h"
+
 namespace ROCKSDB_NAMESPACE {
 
 namespace {
@@ -104,6 +106,7 @@ Status TableCache::GetTableReader(
     const SliceTransform* prefix_extractor, bool skip_filters, int level,
     bool prefetch_index_and_filter_in_cache,
     size_t max_file_size_for_l0_meta_pin) {
+  print_msg("Start GetTableReader\n");
   std::string fname =
       TableFileName(ioptions_.cf_paths, fd.GetNumber(), fd.GetPathId());
   std::unique_ptr<FSRandomAccessFile> file;
@@ -142,9 +145,10 @@ Status TableCache::GetTableReader(
             max_file_size_for_l0_meta_pin, db_session_id_, fd.GetNumber()),
         std::move(file_reader), fd.GetFileSize(), table_reader,
         prefetch_index_and_filter_in_cache);
-	(*table_reader)->SetFileDescriptor((FileDescriptor*)&fd);
+	(*table_reader)->SetFileDescriptor((FileDescriptor*)&fd);//NetBuffer
     TEST_SYNC_POINT("TableCache::GetTableReader:0");
   }
+  print_msg("Finish GetTableReader\n");
   return s;
 }
 

@@ -20,10 +20,11 @@ void backtrace() {
 }
 
 void print_msg(const char * fmt, ...) {
-	FILE *fd = fopen("debug.out", "a+");
+	//FILE *fd = fopen("debug.out", "a+");
 	std::va_list args;
 	va_start(args, fmt);
-	fprintf(fd, fmt, args);
+	//fprintf(fd, fmt, args);
+	printf(fmt, args);
 	va_end(args);
-	fclose(fd);
+	//fclose(fd);
 }
