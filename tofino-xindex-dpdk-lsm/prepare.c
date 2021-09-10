@@ -21,7 +21,7 @@ void save();
 
 // parameters
 double insert_ratio = 0;
-size_t table_size = 100000000;
+size_t table_size = 10 * 1000 * 1000; // 10MB
 
 std::vector<index_key_t> exist_keys;
 std::vector<index_key_t> non_exist_keys;

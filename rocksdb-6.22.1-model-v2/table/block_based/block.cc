@@ -25,7 +25,6 @@
 #include "util/coding.h"
 
 // NetBuffer
-#include <execinfo.h>
 #include "model/linear_model_wrapper.h"
 
 namespace ROCKSDB_NAMESPACE {
@@ -757,16 +756,6 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 
 	if (fd == nullptr) {
 		printf("[WARNING] FileDescriptor *fd is NULL!\n");
-		int nptrs;
-        void *buffer[128];
-        char **strings;
-		nptrs = backtrace(buffer, 128);
-        strings = backtrace_symbols(buffer, nptrs);
-        if (strings != NULL) {
-        	for (int j = 0; j < nptrs; j++)
-            	printf("%s\n", strings[j]);
-       		free(strings);
-        }
 
 		BinarySeek<DecodeKeyFunc>(target, index, skip_linear_scan);
 	}

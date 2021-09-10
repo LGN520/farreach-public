@@ -24,6 +24,8 @@
 #include "utilities/transactions/write_prepared_txn_db.h"
 #include "utilities/transactions/write_unprepared_txn_db.h"
 
+#include "table/block_based/backtrace.h"
+
 namespace ROCKSDB_NAMESPACE {
 
 PessimisticTransactionDB::PessimisticTransactionDB(
@@ -160,12 +162,17 @@ Status PessimisticTransactionDB::Initialize(
 Transaction* WriteCommittedTxnDB::BeginTransaction(
     const WriteOptions& write_options, const TransactionOptions& txn_options,
     Transaction* old_txn) {
+  print_msg("PessimisticTransactionDB::BeginTransaction\n");//DEBUGDEBUG
+  Transaction* result = nullptr;
   if (old_txn != nullptr) {
+	print_msg("old_txn is not null\n");
     ReinitializeTransaction(old_txn, write_options, txn_options);
-    return old_txn;
+    result = old_txn;
   } else {
-    return new WriteCommittedTxn(this, write_options, txn_options);
+	print_msg("New WriteCommittedTxn\n");
+    result = new WriteCommittedTxn(this, write_options, txn_options);
   }
+  return result;
 }
 
 TransactionDBOptions PessimisticTransactionDB::ValidateTxnDBOptions(

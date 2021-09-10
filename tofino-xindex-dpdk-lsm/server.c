@@ -21,6 +21,7 @@
 #include "xindex_util.h"
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
+#include "rocksdb/slice.h"
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
@@ -89,8 +90,8 @@ class Key {
     return *this;
   }
 
-  std::string to_string() const {
-	std::string result((char *)key, 8); // convert uint64_t to char[8]
+  rocksdb::Slice to_slice() const {
+	rocksdb::Slice result((char *)(&key), 8); // convert uint64_t to char[8]
 	return result;
   }
 

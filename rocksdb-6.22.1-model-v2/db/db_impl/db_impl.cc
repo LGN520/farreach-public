@@ -102,6 +102,8 @@
 #include "util/stop_watch.h"
 #include "util/string_util.h"
 
+#include "table/block_based/backtrace.h"
+
 namespace ROCKSDB_NAMESPACE {
 
 const std::string kDefaultColumnFamilyName("default");
@@ -1632,6 +1634,7 @@ Status DBImpl::Get(const ReadOptions& read_options,
 Status DBImpl::Get(const ReadOptions& read_options,
                    ColumnFamilyHandle* column_family, const Slice& key,
                    PinnableSlice* value, std::string* timestamp) {
+  print_msg("DBImpl::Get\n");//DEBUGDEBUG
   GetImplOptions get_impl_options;
   get_impl_options.column_family = column_family;
   get_impl_options.value = value;
@@ -1662,6 +1665,8 @@ Status DBImpl::GetImpl(const ReadOptions& read_options, const Slice& key,
   size_t ts_sz = ucmp->timestamp_size();
   GetWithTimestampReadCallback read_cb(0);  // Will call Refresh
 
+  print_msg("DBImpl::GetImpl\n");//DEBUGDEBUG
+
 #ifndef NDEBUG
   if (ts_sz > 0) {
     assert(read_options.timestamp);
@@ -1691,6 +1696,8 @@ Status DBImpl::GetImpl(const ReadOptions& read_options, const Slice& key,
 
   // Acquire SuperVersion
   SuperVersion* sv = GetAndRefSuperVersion(cfd);
+
+  print_msg("DBImpl::GetImpl sv: %p\n", (void*)sv);//DEBUGDEBUG
 
   TEST_SYNC_POINT("DBImpl::GetImpl:1");
   TEST_SYNC_POINT("DBImpl::GetImpl:2");
@@ -1734,6 +1741,7 @@ Status DBImpl::GetImpl(const ReadOptions& read_options, const Slice& key,
       snapshot = get_impl_options.callback->max_visible_seq();
     }
   }
+  print_msg("DBImpl::GetImpl st_sz: %llu\n", ts_sz);//DEBUGDEBUG
   // If timestamp is used, we use read callback to ensure <key,t,s> is returned
   // only if t <= read_opts.timestamp and s <= snapshot.
   if (ts_sz > 0) {
@@ -1742,6 +1750,7 @@ Status DBImpl::GetImpl(const ReadOptions& read_options, const Slice& key,
     read_cb.Refresh(snapshot);
     get_impl_options.callback = &read_cb;
   }
+  print_msg("DBImpl::GetImpl after snapshot\n");//DEBUGDEBUG
   TEST_SYNC_POINT("DBImpl::GetImpl:3");
   TEST_SYNC_POINT("DBImpl::GetImpl:4");
 
@@ -1753,14 +1762,19 @@ Status DBImpl::GetImpl(const ReadOptions& read_options, const Slice& key,
   // First look in the memtable, then in the immutable memtable (if any).
   // s is both in/out. When in, s could either be OK or MergeInProgress.
   // merge_operands will contain the sequence of merges in the latter case.
+  print_msg("dbimpl::getimpl build lookupkey\n");//debugdebug
   LookupKey lkey(key, snapshot, read_options.timestamp);
   PERF_TIMER_STOP(get_snapshot_time);
+  print_msg("dbimpl::getimpl after build lookupkey\n");//debugdebug
 
   bool skip_memtable = (read_options.read_tier == kPersistedTier &&
                         has_unpersisted_data_.load(std::memory_order_relaxed));
+  print_msg("DBImpl::GetImpl skip_memtable: %d\n", skip_memtable ? 1 : 0);//DEBUGDEBUG
   bool done = false;
   std::string* timestamp = ts_sz > 0 ? get_impl_options.timestamp : nullptr;
+  print_msg("DBImpl::GetImpl start mem/imm Get\n");//DEBUGDEBUG
   if (!skip_memtable) {
+	print_msg("DBImpl::GetImpl not skip memtable! get_impl_options.get_value: %d\n", get_impl_options.get_value);//DEBUGDEBUG
     // Get value associated with key
     if (get_impl_options.get_value) {
       if (sv->mem->Get(lkey, get_impl_options.value->GetSelf(), timestamp, &s,
@@ -1796,13 +1810,16 @@ Status DBImpl::GetImpl(const ReadOptions& read_options, const Slice& key,
         RecordTick(stats_, MEMTABLE_HIT);
       }
     }
+	print_msg("DBImpl::GetImpl Finish mem/imm Get\n");//DEBUGDEBUG
     if (!done && !s.ok() && !s.IsMergeInProgress()) {
+	  print_msg("DBImpl::GetImpl status not ok!\n");//DEBUGDEBUG
       ReturnAndCleanupSuperVersion(cfd, sv);
       return s;
     }
   }
   if (!done) {
     PERF_TIMER_GUARD(get_from_output_files_time);
+	print_msg("sv->current->Get\n");//DEBUGDEBUG
     sv->current->Get(
         read_options, lkey, get_impl_options.value, timestamp, &s,
         &merge_context, &max_covering_tombstone_seq,
@@ -1811,6 +1828,7 @@ Status DBImpl::GetImpl(const ReadOptions& read_options, const Slice& key,
         get_impl_options.get_value ? get_impl_options.callback : nullptr,
         get_impl_options.get_value ? get_impl_options.is_blob_index : nullptr,
         get_impl_options.get_value);
+	print_msg("finish sv->current->Get\n");//DEBUGDEBUG
     RecordTick(stats_, MEMTABLE_MISS);
   }
 

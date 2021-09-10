@@ -59,6 +59,8 @@
 			* Solution: extract FileDescriptor from db/version_edit.h, re-organize it as an db/file_descriptor.h and .cc, and include it in db/version_edit.h and table/block_based/block.h
 		+ NOTE: when using ar to generate static lib file, it just combines all .o files into a single .a file, without linking static library
 			* Therefore, we need to link rocksdb-model before linking mkl, otherwise some funcs in rocksdb-model cannot be re-located
+		+ NOTE: -L only provides search directory, which works for adding static lib but only checks dynamic lib
+			* To locate dynamic lib in runtime, we must set the lib in enviroment variable, or copy the lib to standard directory by `make install`, or use `-Wl,-rpath=dir` to store RPATH in executable file (we can use `objdump -p server` to confirm it)
 - (legacy) Solution 1: maintain models in each ColumnFamilyData
 	- Create directory of rocksdb-6.22.1-model
 	- Add Version* version_ in VersionStorageInfo (db/version_set.h, db/version_set.cc)

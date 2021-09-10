@@ -69,11 +69,12 @@ void Group<key_t, val_t, seq, max_model_n>::init(
   assert(s.ok());
 
   // Write original data (execute at the first time)
-  /*rocksdb::WriteBatch batch;
+  /*val_t tmpval;
+  rocksdb::WriteBatch batch;
   for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
 	std::string valstr;
 	GET_STRING(valstr, *(vals_begin + rec_i));
-	batch.Put((*(keys_begin + rec_i)).to_string(), valstr);
+	batch.Put((*(keys_begin + rec_i)).to_slice(), valstr);
   }
   s = data->Write(rocksdb::WriteOptions(), &batch);
   assert(s.ok());*/
@@ -225,10 +226,15 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_lsm(
     const key_t &key, val_t &val, rocksdb::TransactionDB *txn_db) {
 	std::string valstr;
 	rocksdb::Status s;
+	COUT_THIS("begin transaction")
 	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	INVARIANT(txn != nullptr);
+	COUT_THIS("finish begin transaction")
 	rocksdb::ReadOptions read_options;
 	read_options.fill_cache = false; // Bypass OS page cache, use block cache only
-	s = txn->Get(read_options, key.to_string(), &valstr);
+	COUT_THIS("get")
+	s = txn->Get(read_options, key.to_slice(), &valstr);
+	COUT_THIS("finish get")
 	s = txn->Commit();
 	delete txn;
 	if (valstr != "") {
@@ -249,7 +255,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_lsm(
 	rocksdb::WriteOptions write_options;
 	write_options.sync = true; // Write through for persistency
 	rocksdb::Transaction* txn = txn_db->BeginTransaction(write_options, rocksdb::TransactionOptions());
-	s = txn->Put(key.to_string(), valstr);
+	s = txn->Put(key.to_slice(), valstr);
 	s = txn->Commit();
 	delete txn;
 	if (s.ok()) {
@@ -265,7 +271,7 @@ inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_lsm(
     const key_t &key, rocksdb::TransactionDB *txn_db) {
 	rocksdb::Status s;
 	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
-	s = txn->Delete(key.to_string());
+	s = txn->Delete(key.to_slice());
 	s = txn->Commit();
 	delete txn;
 	return s.ok();

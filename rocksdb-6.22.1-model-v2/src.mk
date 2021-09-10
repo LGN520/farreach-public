@@ -1,5 +1,6 @@
 # These are the sources from which librocksdb.a is built:
 LIB_SOURCES =                                                   \
+  table/block_based/backtrace.cc								\
   model/linear_model_wrapper.cc									\
   db/file_descriptor.cc											\
   cache/cache.cc                                                \

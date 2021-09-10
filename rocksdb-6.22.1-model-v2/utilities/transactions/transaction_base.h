@@ -24,6 +24,8 @@
 #include "utilities/transactions/lock/lock_tracker.h"
 #include "utilities/transactions/transaction_util.h"
 
+#include "table/block_based/backtrace.h"
+
 namespace ROCKSDB_NAMESPACE {
 
 class TransactionBaseImpl : public Transaction {
@@ -62,6 +64,7 @@ class TransactionBaseImpl : public Transaction {
 
   Status Get(const ReadOptions& options, const Slice& key,
              std::string* value) override {
+	print_msg("TransactionBaseImpl::Get with Slice key and string value\n");//DEBUGDEBUG
     return Get(options, db_->DefaultColumnFamily(), key, value);
   }
 

@@ -188,6 +188,7 @@ Status TransactionBaseImpl::PopSavePoint() {
 Status TransactionBaseImpl::Get(const ReadOptions& read_options,
                                 ColumnFamilyHandle* column_family,
                                 const Slice& key, std::string* value) {
+  print_msg("TransactionBaseImpl::Get with cfh\n");//DEBUGDEBUG
   assert(value != nullptr);
   PinnableSlice pinnable_val(value);
   assert(!pinnable_val.IsPinned());
@@ -201,6 +202,7 @@ Status TransactionBaseImpl::Get(const ReadOptions& read_options,
 Status TransactionBaseImpl::Get(const ReadOptions& read_options,
                                 ColumnFamilyHandle* column_family,
                                 const Slice& key, PinnableSlice* pinnable_val) {
+  print_msg("TransactionBaseImpl::Get with pinnable_val\n");//DEBUGDEBUG
   return write_batch_.GetFromBatchAndDB(db_, read_options, column_family, key,
                                         pinnable_val);
 }

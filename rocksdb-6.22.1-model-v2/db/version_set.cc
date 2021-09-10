@@ -63,6 +63,7 @@
 #include "util/user_comparator_wrapper.h"
 
 #include "table/block_based/block_based_table_reader.h"
+#include "table/block_based/backtrace.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -1856,6 +1857,7 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
                   SequenceNumber* max_covering_tombstone_seq, bool* value_found,
                   bool* key_exists, SequenceNumber* seq, ReadCallback* callback,
                   bool* is_blob, bool do_merge) {
+  print_msg("Version::Get\n");//DEBUGDEBUG
   Slice ikey = k.internal_key();
   Slice user_key = k.user_key();
 
@@ -1913,6 +1915,7 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
         GetPerfLevel() >= PerfLevel::kEnableTimeExceptForMutex &&
         get_perf_context()->per_level_perf_context_enabled;
     StopWatchNano timer(clock_, timer_enabled /* auto_start */);
+	print_msg("Version::Get table_cache->Get\n");//DEBUGDEBUG
     *status = table_cache_->Get(
         read_options, *internal_comparator(), *f->file_metadata, ikey,
         &get_context, mutable_cf_options_.prefix_extractor.get(),
@@ -1920,6 +1923,7 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
         IsFilterSkipped(static_cast<int>(fp.GetHitFileLevel()),
                         fp.IsHitFileLastInLevel()),
         fp.GetHitFileLevel(), max_file_size_for_l0_meta_pin_);
+	print_msg("Version::Get finish table_cache->Get\n");//DEBUGDEBUG
     // TODO: examine the behavior for corrupted key
     if (timer_enabled) {
       PERF_COUNTER_BY_LEVEL_ADD(get_from_table_nanos, timer.ElapsedNanos(),

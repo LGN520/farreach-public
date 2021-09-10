@@ -67,7 +67,7 @@ LDLIBS += $(ROCKSDB_LDLIBS)
 ##############################################################################
 # MKL configuration
 MKL_INCDIR += -I/opt/intel/mkl/include
-MKL_LDDIR += -L/opt/intel/mkl/lib/intel64
+MKL_LDDIR += -L/opt/intel/mkl/lib/intel64 -Wl,-rpath=/opt/intel/mkl/lib/intel64
 MKL_LDLIBS += -lmkl_rt
 
 INCDIR += $(MKL_INCDIR)
