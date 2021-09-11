@@ -1038,7 +1038,7 @@ class VersionBuilder::Rep {
       if (add_it != add_files.end() && add_it->second != f) {
         vstorage->RemoveCurrentStats(f);
       } else {
-        vstorage->AddFile(level, f);
+        vstorage->AddFile(level, f, table_cache_); //netbuffer
       }
     }
   }

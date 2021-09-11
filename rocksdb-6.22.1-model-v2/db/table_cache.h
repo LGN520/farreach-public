@@ -197,6 +197,7 @@ class TableCache {
   }
 
  private:
+  friend class VersionStorageInfo;
   // Build a table reader
   Status GetTableReader(const ReadOptions& ro, const FileOptions& file_options,
                         const InternalKeyComparator& internal_comparator,

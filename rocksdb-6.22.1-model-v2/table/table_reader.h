@@ -16,6 +16,8 @@
 #include "table/multiget_context.h"
 #include "table/table_reader_caller.h"
 
+#include "model/linear_model_wrapper.h"
+
 namespace ROCKSDB_NAMESPACE {
 
 class Iterator;
@@ -39,9 +41,11 @@ class TableReader {
   virtual ~TableReader() {}
 
   // NetBuffer
-  FileDescriptor* fd_;
-  FileDescriptor* GetFileDescriptor() { return fd_; }
-  void SetFileDescriptor(FileDescriptor *fd) { fd_ = fd; }
+  LinearModelWrapper *linear_model_wrapper_ = nullptr;
+  LinearModelWrapper* GetLinearModelWrapper() { return linear_model_wrapper_; }
+  void SetLinearModelWrapper(LinearModelWrapper *linear_model_wrapper) {
+	  linear_model_wrapper_ = linear_model_wrapper;
+  }
 
   // Returns a new iterator over the table contents.
   // The result of NewIterator() is initially invalid (caller must

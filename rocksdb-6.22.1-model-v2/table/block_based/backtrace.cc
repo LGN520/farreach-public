@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <execinfo.h>
-#include <cstdarg>
+//#include <cstdarg>
 
 void backtrace() {
 	int nptrs;
@@ -14,12 +14,12 @@ void backtrace() {
 	strings = backtrace_symbols(buffer, nptrs);
 	if (strings != NULL) {
 		for (int j = 0; j < nptrs; j++)
-			print_msg("%s\n", strings[j]);
+			printf("%s\n", strings[j]);
 		free(strings);
 	}
 }
 
-void print_msg(const char * fmt, ...) {
+/*void print_msg(const char * fmt, ...) {
 	//FILE *fd = fopen("debug.out", "a+");
 	std::va_list args;
 	va_start(args, fmt);
@@ -27,4 +27,4 @@ void print_msg(const char * fmt, ...) {
 	printf(fmt, args);
 	va_end(args);
 	//fclose(fd);
-}
+}*/

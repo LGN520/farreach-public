@@ -307,8 +307,8 @@ class BlockIter : public InternalIteratorBase<TValue> {
   }
 
   // NetBuffer
-  virtual void Seek(const Slice& target, FileDescriptor *fd, int64_t datablock_idx = -1) final {
-    SeekImpl(target, fd, datablock_idx);
+  virtual void Seek(const Slice& target, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx = -1) final {
+    SeekImpl(target, linear_model_wrapper, datablock_idx);
     UpdateKey();
   }
 
@@ -396,7 +396,7 @@ class BlockIter : public InternalIteratorBase<TValue> {
 
   virtual void SeekToFirstImpl() = 0;
   virtual void SeekToLastImpl() = 0;
-  virtual void SeekImpl(const Slice& target, FileDescriptor *fd, int64_t datablock_idx = -1) = 0;
+  virtual void SeekImpl(const Slice& target, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx = -1) = 0;
   virtual void SeekForPrevImpl(const Slice& target) = 0;
   virtual void NextImpl() = 0;
   virtual void PrevImpl() = 0;
@@ -484,7 +484,7 @@ class BlockIter : public InternalIteratorBase<TValue> {
 
   template <typename DecodeKeyFunc>
   inline bool ModelSeek(const Slice& target, uint32_t* index,
-                         bool* skip_linear_scan, FileDescriptor *fd, int64_t datablock_idx = -1);
+                         bool* skip_linear_scan, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx = -1);
 
   void FindKeyAfterBinarySeek(const Slice& target, uint32_t index,
                               bool is_index_key_result);
@@ -527,13 +527,13 @@ class DataBlockIter final : public BlockIter<Slice> {
     return value_;
   }
 
-  inline bool SeekForGet(const Slice& target, FileDescriptor *fd, int64_t datablock_idx = -1) {
+  inline bool SeekForGet(const Slice& target, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx = -1) {
     if (!data_block_hash_index_) {
-      SeekImpl(target, fd, datablock_idx);
+      SeekImpl(target, linear_model_wrapper, datablock_idx);
       UpdateKey();
       return true;
     }
-    bool res = SeekForGetImpl(target, fd, datablock_idx);
+    bool res = SeekForGetImpl(target, linear_model_wrapper, datablock_idx);
     UpdateKey();
     return res;
   }
@@ -565,7 +565,7 @@ class DataBlockIter final : public BlockIter<Slice> {
  protected:
   virtual void SeekToFirstImpl() override;
   virtual void SeekToLastImpl() override;
-  virtual void SeekImpl(const Slice& target, FileDescriptor *fd, int64_t datablock_idx = -1) override;
+  virtual void SeekImpl(const Slice& target, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx = -1) override;
   virtual void SeekForPrevImpl(const Slice& target) override;
   virtual void NextImpl() override;
   virtual void PrevImpl() override;
@@ -604,7 +604,7 @@ class DataBlockIter final : public BlockIter<Slice> {
   template <typename DecodeEntryFunc>
   inline bool ParseNextDataKey(const char* limit = nullptr);
 
-  bool SeekForGetImpl(const Slice& target, FileDescriptor *fd, int64_t datablock_idx = -1);
+  bool SeekForGetImpl(const Slice& target, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx = -1);
   void NextOrReportImpl();
   void SeekToFirstOrReportImpl();
 };
@@ -668,7 +668,7 @@ class IndexBlockIter final : public BlockIter<IndexValue> {
   // If the prefix of `target` doesn't exist in the file, it can either
   // return the result of total order seek, or set both of Valid() = false
   // and status() = NotFound().
-  void SeekImpl(const Slice& target, FileDescriptor *fd, int64_t datablock_idx = -1) override;
+  void SeekImpl(const Slice& target, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx = -1) override;
 
   void SeekForPrevImpl(const Slice&) override {
     assert(false);

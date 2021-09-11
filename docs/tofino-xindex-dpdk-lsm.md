@@ -7,23 +7,34 @@
 - Fix bugs of opening database (not link snappy in librocksdb.a)
 - Solution 2: maintain models in each FileDescriptor
 	+ Create directory of rocksdb-6.22.1-model-v2
-	+ Add linaer_model_wrapper in each FileDescriptor (do not need map or lock mechanism) (db/version_edit.h)
+	+ Add linaer_model_wrapper_ in each FileDescriptor (do not need map or lock mechanism) (db/version_edit.h)
 		- NOTE: for creation of FileDescriptor, (create new) db_impl_open/flush_job/compaction_job ->(create new)-> version_edit ->(copy constructor)-> version_builder ->(copy pointer, calling SaveTo)-> version_storage_info
 	+ Create directory of rocksdb-6.22.1-model/model
 		- Change xindex_model.h to make it support keys of variable length (model/xindex_model.h, model/xindex_model_impl.h)
 		- For Slice, implement to_model_key to convert Slice into double array (include/rocksdb/slice.h)
 		- Change to_string to directly conert the byte array of key as Slice (client.c, server.c)
 		- Implement LinearModelWrapper (model/linear_model_wrapper.h, model/linear_model_wrapper.c)
+	- Pass table_cache_ from VersionBuilder::Rep::MaybeAddFile (db/version_builder.cc) to VersionStorageInfo::AddFile (db/version_set.cc)
 	- For VersionBuilder::Rep::SaveTo(vstorage) -> VersionBuilder::Rep::MaybeAddFile(vstorage, level, f) (db/version_builder.cc)
-		+ Train linear models in VersionStorageInfo::AddFile(level, f) (db/version_set.cc)
+		+ Train linear models in VersionStorageInfo::AddFile(level, f, table_cache) (db/version_set.cc)
+			+ Get table reader by table_cache if f->fd.table_reader is null
 			+ New and prepare LinearModelWrapper for the new file
 		+ Do not need to drop linear models in VersionStorageInfo::RemoveCurrentStats(file_meta) (db/version_builder.cc)
 			+ Reason: dummy versions still have the FileMetaData* pointing to the file
-	- Add Get/SetFileDescriptor and fd_ in TableReader, then BlockBasedTable will inherit them (table/table_reader.h)
-	- Set fd_ of table_reader by SetFileDescriptor() at TableCache::GetTableReader after table_factory->NewTableReader (db/table_cache.cc)
+	- Legacy: Add Get/SetFileDescriptor and fd_ in TableReader, then BlockBasedTable will inherit them (table/table_reader.h)
+		- NOW: Add Get/SetLinearModelWrapper and linear_model_wrapper_ in TableReader, then BlockBasedTable will inherit them (table/table_reader.h)
+	- Legacy: Set fd_ of table_reader by SetFileDescriptor() at TableCache::GetTableReader after table_factory->NewTableReader (db/table_cache.cc)
+		+ NOW: Set linear_model_wrapper_ of table_reader at VersionSet::AddFile, TableCache::Get, and TableCache::NewIterator
 		+ NOTE: FileDescriptor has already been passed into GetTableReader
+		+ IMPORTANT NOTE: for new files, they give fd to GetTableReader from flush/open/compaction, while VersionEdit will 
+		create new file metadata/descriptor, and deep copy to VersionBuilder, which saves the pointer to VersionStorageInfo. 
+		Therefore, it makes no sense to set fd (not the final one, without linear model) of table_reader at GetTableReader.
+		Instaed, we should use fd from VersionBuilder/VersionStorageInfo (at VersionSet::AddFile). Although handle will be removed
+		from table_cache, table reader still exists since fd in VersionStorageInfo refers to it.
+		+ IMPORTANT NOTE: For existing files, if their table_reader are null (theoretially impossible since we will set table_reader for
+		each fd when AddFile), since they only use Get/NewIterator -> GetTableReader instead of AddFile, we should set fd of table_reader at that time.
 	- Add index_ in DataBlockIter and IndexBlockIter (table/block_based/block.h, table/block_based/block.c)
-	- Pass fd/datablock_idx into IndexBlockIter::Seek and DataBlockIter::Seek (= BlockIter::Seek) (table/block_based/block.h)
+	- Pass linear_model_wrapper/datablock_idx into IndexBlockIter::Seek and DataBlockIter::Seek (= BlockIter::Seek) (table/block_based/block.h)
 		+ NOTE: BlockBasedTable::Rep has level, BlockBasedTable::fd_ has filenumber, IndexBlockIter::index_ has datablock_idx
 		+ NOTE: we do not need level and filenumber to find model; we only need fd to find model
 		+ BlockIter::Seek (table/block_based/block.h)
@@ -38,8 +49,8 @@
 			* BlockBasedTableIterator::SeekImpl (table/block_based/block_based_table_iterator.cc)
 			* BlockBasedTableIterator::SeekForPrev (table/block_based/block_based_table_iterator.cc)
 		+ BlockIter::SeekImpl (table/block_based/block.h)
-		+ IndexBlockIter::SeekImpl (table/block_based/block.h, table/block_based/block.c)
-		+ DataBlockIter::SeekImpl (table/block_based/block.h, table/block_based/block.c)
+		+ IndexBlockIter::SeekImpl (table/block_based/block.h, table/block_based/block.cc)
+		+ DataBlockIter::SeekImpl (table/block_based/block.h, table/block_based/block.cc)
 		+ DataBlockIter::SeekForGet (table/block_based/block.h)
 			* BlockBasedTable::Get (table/block_based/block_based_table_reader.cc)
 			* BlockBasedTable::MultiGet (table/block_based/block_based_table_reader.cc)
@@ -53,6 +64,7 @@
 		+ Include table/block_based/block_based_table_reader.h in db/version_set.cc
 		+ Add friend class VersionStorageInfo in table/block_based/block_based_table_reader.h 
 		+ Add friend class BlockBasedTableIterator,, BlockBasedTable, and PartitionedIndexIterator in table/block_based/block.h
+		+ Add friend class VersionStorageInfo in TableCache
 		+ Convert uniquq_ptr<InternalIteratorBased<IndexValue>> as IndexBlockIter* in table/block_based/block_based_table_reader.cc, table/block_based/block_baed_table_iterator.cc, and table/block_based/partitioned_index_iterator.cc
 		+ Incomplete type of FileDescriptor (forward declaration) when compiling version_edit
 			* Reason: Before the complete declaration of FileDescriptor, version_edit.h includes table/get_context.h including table/block_based/block.h, which requires complete type of FileDescriptor!
@@ -160,7 +172,6 @@
 	- STATUS: unable to solve incomplete type of ColumnFamilyData in table/block_based/block.cc
 		+ Potential solution: similar to the 3rd point in Debug of Solution 1 mentioned before
 	- TODO: forward declaration of 
-- TODO: Judge if (unlikely) table_reader exists in VersionStorageInfo::AddFile, otherwise use VersionStorageInfo::version->table_cache to get the table_reader (db/version_set.cc)
 
 ## How to run
 

@@ -115,7 +115,7 @@ constexpr uint64_t kUnknownFileCreationTime = 0;
   uint64_t file_size;  // File size in bytes
   SequenceNumber smallest_seqno;  // The smallest seqno in this file
   SequenceNumber largest_seqno;   // The largest seqno in this file
-  LinearModelWrapper* linear_model_wrapper; //NetBuffer
+  LinearModelWrapper* linear_model_wrapper_; //NetBuffer
 
   FileDescriptor() : FileDescriptor(0, 0, 0) {}
 
@@ -138,7 +138,7 @@ constexpr uint64_t kUnknownFileCreationTime = 0;
     file_size = fd.file_size;
     smallest_seqno = fd.smallest_seqno;
     largest_seqno = fd.largest_seqno;
-	linear_model_wrapper = fd.linear_model_wrapper;
+	linear_model_wrapper_ = fd.linear_model_wrapper_;
     return *this;
   }
 

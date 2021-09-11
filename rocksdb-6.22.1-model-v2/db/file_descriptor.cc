@@ -15,7 +15,8 @@ FileDescriptor::FileDescriptor(uint64_t number, uint32_t path_id, uint64_t _file
         packed_number_and_path_id(PackFileNumberAndPathId(number, path_id)),
         file_size(_file_size),
         smallest_seqno(_smallest_seqno),
-        largest_seqno(_largest_seqno) {}
+        largest_seqno(_largest_seqno),
+   		linear_model_wrapper_(nullptr) {}
 
 FileDescriptor::FileDescriptor(const FileDescriptor& fd) { *this = fd; }
 
@@ -25,7 +26,7 @@ FileDescriptor& FileDescriptor::operator=(const FileDescriptor& fd) {
     file_size = fd.file_size;
     smallest_seqno = fd.smallest_seqno;
     largest_seqno = fd.largest_seqno;
-	linear_model_wrapper = fd.linear_model_wrapper;
+	linear_model_wrapper_ = fd.linear_model_wrapper_;
     return *this;
   }
 

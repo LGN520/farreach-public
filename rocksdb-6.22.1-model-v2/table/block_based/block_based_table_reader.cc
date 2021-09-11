@@ -2076,7 +2076,7 @@ bool BlockBasedTable::PrefixMayMatch(
           no_io_read_options,
           /*need_upper_bound_check=*/false, /*input_iter=*/nullptr,
           /*get_context=*/nullptr, lookup_context));
-      dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(internal_prefix, fd_);
+      dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(internal_prefix, linear_model_wrapper_);
 
       if (!iiter->Valid()) {
         // we're past end of file
@@ -2295,7 +2295,7 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
         rep_->internal_comparator.user_comparator()->timestamp_size();
     bool matched = false;  // if such user key matched a key in SST
     bool done = false;
-    for (dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(key, fd_); iiter->Valid() && !done; iiter->Next()) {
+    for (dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(key, linear_model_wrapper_); iiter->Valid() && !done; iiter->Next()) {
       IndexValue v = iiter->value();
 
       bool not_exist_in_filter =
@@ -2348,7 +2348,7 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
         break;
       }
 
-      bool may_exist = biter.SeekForGet(key, fd_, dynamic_cast<IndexBlockIter*>(&(*iiter))->index_);
+      bool may_exist = biter.SeekForGet(key, linear_model_wrapper_, dynamic_cast<IndexBlockIter*>(&(*iiter))->index_);
       // If user-specified timestamp is supported, we cannot end the search
       // just because hash index lookup indicates the key+ts does not exist.
       if (!may_exist && ts_sz == 0) {
@@ -2498,7 +2498,7 @@ void BlockBasedTable::MultiGet(const ReadOptions& read_options,
       for (auto miter = data_block_range.begin();
            miter != data_block_range.end(); ++miter) {
         const Slice& key = miter->ikey;
-        dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(miter->ikey, fd_);
+        dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(miter->ikey, linear_model_wrapper_);
 
         IndexValue v;
         if (iiter->Valid()) {
@@ -2718,7 +2718,7 @@ void BlockBasedTable::MultiGet(const ReadOptions& read_options,
           break;
         }
 
-        bool may_exist = biter->SeekForGet(key, fd_, dynamic_cast<IndexBlockIter*>(&(*iiter))->index_);
+        bool may_exist = biter->SeekForGet(key, linear_model_wrapper_, dynamic_cast<IndexBlockIter*>(&(*iiter))->index_);
         if (!may_exist) {
           // HashSeek cannot find the key this block and the the iter is not
           // the end of the block, i.e. cannot be in the following blocks
@@ -2797,7 +2797,7 @@ void BlockBasedTable::MultiGet(const ReadOptions& read_options,
           break;
         }
         if (first_block) {
-          dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(key, fd_);
+          dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(key, linear_model_wrapper_);
         }
         first_block = false;
         iiter->Next();
@@ -2848,7 +2848,7 @@ Status BlockBasedTable::Prefetch(const Slice* const begin,
   // indicates if we are on the last page that need to be pre-fetched
   bool prefetching_boundary_page = false;
 
-  for (begin ? dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(*begin, fd_) : iiter->SeekToFirst(); iiter->Valid();
+  for (begin ? dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(*begin, linear_model_wrapper_) : iiter->SeekToFirst(); iiter->Valid();
        iiter->Next()) {
     BlockHandle block_handle = iiter->value().handle;
     const bool is_user_key = !rep_->index_key_includes_seq;
@@ -3054,7 +3054,7 @@ bool BlockBasedTable::TEST_KeyInCache(const ReadOptions& options,
   std::unique_ptr<InternalIteratorBase<IndexValue>> iiter(NewIndexIterator(
       options, /*need_upper_bound_check=*/false, /*input_iter=*/nullptr,
       /*get_context=*/nullptr, /*lookup_context=*/nullptr));
-  dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(key, fd_);
+  dynamic_cast<IndexBlockIter*>(&(*iiter))->Seek(key, linear_model_wrapper_);
   assert(iiter->Valid());
 
   return TEST_BlockInCache(iiter->value().handle);
@@ -3176,7 +3176,7 @@ uint64_t BlockBasedTable::ApproximateOffsetOf(const Slice& key,
     iiter_unique_ptr.reset(index_iter);
   }
 
-  dynamic_cast<IndexBlockIter*>(&(*index_iter))->Seek(key, fd_);
+  dynamic_cast<IndexBlockIter*>(&(*index_iter))->Seek(key, linear_model_wrapper_);
 
   uint64_t offset = ApproximateDataOffsetOf(*index_iter, data_size);
   // Pro-rate file metadata (incl filters) size-proportionally across data
@@ -3211,9 +3211,9 @@ uint64_t BlockBasedTable::ApproximateSize(const Slice& start, const Slice& end,
     iiter_unique_ptr.reset(index_iter);
   }
 
-  dynamic_cast<IndexBlockIter*>(&(*index_iter))->Seek(start, fd_);
+  dynamic_cast<IndexBlockIter*>(&(*index_iter))->Seek(start, linear_model_wrapper_);
   uint64_t start_offset = ApproximateDataOffsetOf(*index_iter, data_size);
-  dynamic_cast<IndexBlockIter*>(&(*index_iter))->Seek(end, fd_);
+  dynamic_cast<IndexBlockIter*>(&(*index_iter))->Seek(end, linear_model_wrapper_);
   uint64_t end_offset = ApproximateDataOffsetOf(*index_iter, data_size);
 
   assert(end_offset >= start_offset);

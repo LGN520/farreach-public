@@ -106,7 +106,6 @@ Status TableCache::GetTableReader(
     const SliceTransform* prefix_extractor, bool skip_filters, int level,
     bool prefetch_index_and_filter_in_cache,
     size_t max_file_size_for_l0_meta_pin) {
-  print_msg("Start GetTableReader\n");
   std::string fname =
       TableFileName(ioptions_.cf_paths, fd.GetNumber(), fd.GetPathId());
   std::unique_ptr<FSRandomAccessFile> file;
@@ -145,10 +144,9 @@ Status TableCache::GetTableReader(
             max_file_size_for_l0_meta_pin, db_session_id_, fd.GetNumber()),
         std::move(file_reader), fd.GetFileSize(), table_reader,
         prefetch_index_and_filter_in_cache);
-	(*table_reader)->SetFileDescriptor((FileDescriptor*)&fd);//NetBuffer
+	//(*table_reader)->SetFileDescriptor(fd);//NetBuffer
     TEST_SYNC_POINT("TableCache::GetTableReader:0");
   }
-  print_msg("Finish GetTableReader\n");
   return s;
 }
 
@@ -220,6 +218,7 @@ InternalIterator* TableCache::NewIterator(
     const InternalKey* smallest_compaction_key,
     const InternalKey* largest_compaction_key, bool allow_unprepared_value) {
   PERF_TIMER_GUARD(new_table_iterator_nanos);
+  print_msg("TableCache::NewIterator filenum: %llu\n", (unsigned long long)file_meta.fd.GetNumber());
 
   Status s;
   TableReader* table_reader = nullptr;
@@ -239,6 +238,7 @@ InternalIterator* TableCache::NewIterator(
         max_file_size_for_l0_meta_pin);
     if (s.ok()) {
       table_reader = GetTableReaderFromHandle(handle);
+	  table_reader->SetLinearModelWrapper(fd.linear_model_wrapper_); // NetBuffer
     }
   }
   InternalIterator* result = nullptr;
@@ -431,6 +431,7 @@ Status TableCache::Get(const ReadOptions& options,
                     max_file_size_for_l0_meta_pin);
       if (s.ok()) {
         t = GetTableReaderFromHandle(handle);
+		t->SetLinearModelWrapper(fd.linear_model_wrapper_); // NetBuffer
       }
     }
     SequenceNumber* max_covering_tombstone_seq =

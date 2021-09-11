@@ -32,7 +32,7 @@ public:
   uint64_t file_size;  // File size in bytes
   SequenceNumber smallest_seqno;  // The smallest seqno in this file
   SequenceNumber largest_seqno;   // The largest seqno in this file
-  LinearModelWrapper* linear_model_wrapper; //NetBuffer
+  LinearModelWrapper* linear_model_wrapper_; //NetBuffer
 
   FileDescriptor();
 

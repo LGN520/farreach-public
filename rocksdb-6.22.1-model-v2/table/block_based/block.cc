@@ -237,7 +237,7 @@ void DataBlockIter::PrevImpl() {
   prev_entries_idx_ = static_cast<int32_t>(prev_entries_.size()) - 1;
 }
 
-void DataBlockIter::SeekImpl(const Slice& target, FileDescriptor *fd, int64_t datablock_idx) {
+void DataBlockIter::SeekImpl(const Slice& target, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx) {
   Slice seek_key = target;
   PERF_TIMER_GUARD(block_seek_nanos);
   if (data_ == nullptr) {  // Not init yet
@@ -246,7 +246,7 @@ void DataBlockIter::SeekImpl(const Slice& target, FileDescriptor *fd, int64_t da
   uint32_t index = 0;
   bool skip_linear_scan = false;
   //bool ok = BinarySeek<DecodeKey>(seek_key, &index, &skip_linear_scan);
-  bool ok = ModelSeek<DecodeKey>(seek_key, &index, &skip_linear_scan, fd, datablock_idx);
+  bool ok = ModelSeek<DecodeKey>(seek_key, &index, &skip_linear_scan, linear_model_wrapper, datablock_idx);
 
   if (!ok) {
     return;
@@ -277,7 +277,7 @@ void DataBlockIter::SeekImpl(const Slice& target, FileDescriptor *fd, int64_t da
 //    than the seek_user_key, or the block ends with a matching user_key but
 //    with a smaller [ type | seqno ] (i.e. a larger seqno, or the same seqno
 //    but larger type).
-bool DataBlockIter::SeekForGetImpl(const Slice& target, FileDescriptor *fd, int64_t datablock_idx) {
+bool DataBlockIter::SeekForGetImpl(const Slice& target, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx) {
   Slice target_user_key = ExtractUserKey(target);
   uint32_t map_offset = restarts_ + num_restarts_ * sizeof(uint32_t);
   uint8_t entry =
@@ -285,7 +285,7 @@ bool DataBlockIter::SeekForGetImpl(const Slice& target, FileDescriptor *fd, int6
 
   if (entry == kCollision) {
     // HashSeek not effective, falling back
-    SeekImpl(target, fd, datablock_idx);
+    SeekImpl(target, linear_model_wrapper, datablock_idx);
     return true;
   }
 
@@ -365,7 +365,7 @@ bool DataBlockIter::SeekForGetImpl(const Slice& target, FileDescriptor *fd, int6
       value_type != ValueType::kTypeDeletion &&
       value_type != ValueType::kTypeSingleDeletion &&
       value_type != ValueType::kTypeBlobIndex) {
-    SeekImpl(target, fd, datablock_idx);
+    SeekImpl(target, linear_model_wrapper, datablock_idx);
     return true;
   }
 
@@ -373,7 +373,7 @@ bool DataBlockIter::SeekForGetImpl(const Slice& target, FileDescriptor *fd, int6
   return true;
 }
 
-void IndexBlockIter::SeekImpl(const Slice& target, FileDescriptor *fd, int64_t datablock_idx) {
+void IndexBlockIter::SeekImpl(const Slice& target, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx) {
   TEST_SYNC_POINT("IndexBlockIter::Seek:0");
   PERF_TIMER_GUARD(block_seek_nanos);
   if (data_ == nullptr) {  // Not init yet
@@ -402,10 +402,10 @@ void IndexBlockIter::SeekImpl(const Slice& target, FileDescriptor *fd, int64_t d
     skip_linear_scan = true;
   } else if (value_delta_encoded_) {
 	//ok = BinarySeek<DecodeKeyV4>(seek_key, &index, &skip_linear_scan);
-    ok = ModelSeek<DecodeKeyV4>(seek_key, &index, &skip_linear_scan, fd, datablock_idx); // NetBuffer
+    ok = ModelSeek<DecodeKeyV4>(seek_key, &index, &skip_linear_scan, linear_model_wrapper, datablock_idx); // NetBuffer
   } else {
     //ok = BinarySeek<DecodeKey>(seek_key, &index, &skip_linear_scan);
-    ok = ModelSeek<DecodeKey>(seek_key, &index, &skip_linear_scan, fd, datablock_idx); // NetBuffer
+    ok = ModelSeek<DecodeKey>(seek_key, &index, &skip_linear_scan, linear_model_wrapper, datablock_idx); // NetBuffer
   }
 
   if (!ok) {
@@ -752,11 +752,11 @@ bool BlockIter<TValue>::BinarySeek(const Slice& target, uint32_t* index,
 template <class TValue>
 template <typename DecodeKeyFunc>
 bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
-                                   bool* skip_linear_scan, FileDescriptor *fd, int64_t datablock_idx) {
-	print_msg("Start modelseek\n");
+                                   bool* skip_linear_scan, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx) {
 	bool result = true;
-	if (fd == nullptr) {
-		printf("[WARNING] FileDescriptor *fd is NULL!\n");
+	if (linear_model_wrapper == nullptr) {
+		printf("[WARNING] LinearModelWrapper *linear_model_wrapper is NULL! target: %s, type: %s\n",
+				target.ToString().c_str(), typeid(TValue).name());
 
 		result = BinarySeek<DecodeKeyFunc>(target, index, skip_linear_scan);
 	}
@@ -773,16 +773,15 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 		else {
 			*skip_linear_scan = false;
 
-			LinearModelWrapper *model_ptr = fd->linear_model_wrapper;
 			uint32_t curidx, error_bound;
 			if (typeid(TValue) == typeid(IndexBlockIter)) {
-			  curidx = model_ptr->index_predict(target);
-			  error_bound = model_ptr->index_error_bound();
+			  curidx = linear_model_wrapper->index_predict(target);
+			  error_bound = linear_model_wrapper->index_error_bound();
 			}
 			else {
 			  assert(datablock_idx != -1);
-			  curidx = model_ptr->data_predict(target, uint32_t(datablock_idx));
-			  error_bound = model_ptr->data_error_bound(uint32_t(datablock_idx));
+			  curidx = linear_model_wrapper->data_predict(target, uint32_t(datablock_idx));
+			  error_bound = linear_model_wrapper->data_error_bound(uint32_t(datablock_idx));
 			}
 			if (curidx >= num_restarts_) {
 			  curidx = num_restarts_ - 1;
@@ -840,13 +839,12 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 				}
 			} // while true
 		} // restarts_ != 0
-	} // fd != null
+	} // linear_model_wrapper != null
 
 	if (result) {
 		*skip_linear_scan = true;
 		index_ = int64_t(*index);
 	}
-	print_msg("Finish modelseek\n");
 	return result;
 }
 

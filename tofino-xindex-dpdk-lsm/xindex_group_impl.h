@@ -57,12 +57,14 @@ void Group<key_t, val_t, seq, max_model_n>::init(
   this->model_n = model_n; // # of models per sstable
 
   // Create original data
+  COUT_THIS("Open data")
   std::string data_path;
   GET_STRING(data_path, "/tmp/netbuffer/group"<<group_idx<<".db");
   rocksdb::Status s = rocksdb::TransactionDB::Open(data_options, rocksdb::TransactionDBOptions(), data_path, &data);
   assert(s.ok());
   
   // Create delta index
+  COUT_THIS("Open buffer")
   std::string buffer_path;
   GET_STRING(buffer_path, "/tmp/netbuffer/buffer"<<group_idx<<".db");
   s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_path, &buffer);

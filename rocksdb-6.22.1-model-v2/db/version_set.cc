@@ -64,6 +64,8 @@
 
 #include "table/block_based/block_based_table_reader.h"
 #include "table/block_based/backtrace.h"
+#include "options/cf_options.h"
+#include "table/table_builder.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -2800,8 +2802,8 @@ bool CompareCompensatedSizeDescending(const Fsize& first, const Fsize& second) {
 }
 } // anonymous namespace
 
-void VersionStorageInfo::AddFile(int level, FileMetaData* f) {
-  print_msg("Start AddFile\n");
+void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_cache) {
+  print_msg("Start VersionStorageInfo::AddFile filenumber: %llu\n", (unsigned long long)f->fd.GetNumber());
   auto& level_files = files_[level];
   level_files.push_back(f);
 
@@ -2814,62 +2816,102 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f) {
                           FileLocation(level, level_files.size() - 1));
 
   // NetBuffer
+  // NOTE: if f comes from VersionBuilder, f->fd.table_reader and f->fd.linear_model_wrapper_ should be null
+  // Then, we should add table reader and linear model wrapper for the file metadata
+  // We also need to tell f->fd (with linear model wrapper) to the table reader
+  print_msg("table_reader is null: %d, meta addr: %p, fd addr: %p\n", f->fd.table_reader == nullptr ? 1 : 0, (void*)f, (void*)(&f->fd));
+  if (f->fd.table_reader == nullptr) {
+	  if (table_cache == nullptr) {
+		  printf("VersionStorageInfo::AddFile: both table_reader and table_cache are null!\n");
+		  exit(-1);
+	  }
+	  ReadOptions read_options;
+	  const FileOptions &file_options = table_cache->file_options_;
+	  ColumnFamilyOptions cf_options;
+	  MutableCFOptions mutable_cf_options;
+	  //const ImmutableOptions &ioptions = table_cache->ioptions_;
+	  Cache::Handle* handle = nullptr;
+      Status s = table_cache->FindTable(
+          read_options, file_options, InternalKeyComparator(cf_options.comparator), f->fd /*FileDescriptor&*/,
+          &handle, mutable_cf_options.prefix_extractor.get(), 
+		  read_options.read_tier == kBlockCacheTier /* no_io */,
+		  true /*record_read_stats*/, nullptr /*file_read_hist*/, 
+		  false /*skip_filters*/, level, true /*prefetch*/,
+          MaxFileSizeForL0MetaPin(mutable_cf_options));
+	  if (s.ok()) {
+		  f->fd.table_reader = table_cache->GetTableReaderFromHandle(handle);
+	  }
+	  else {
+		  printf("VersionStorageInfo::AddFile: TableCache::FindTable fails!\n");
+		  printf("Status: %s\n", s.ToString().c_str());
+		  exit(-1);
+	  }
+  }
+  assert(f->fd.table_reader != nullptr);
   BlockBasedTable* table_reader = dynamic_cast<BlockBasedTable*>(f->fd.table_reader);
-  assert(table_reader != nullptr);
 
-  // Prepare index keys and data keys list
-  std::vector<Slice> index_keys;
-  std::vector<std::vector<Slice>> data_keys_list;
-  // IndexBlockIter
-  std::unique_ptr<InternalIteratorBase<IndexValue>> blockhandles_iter(
-      table_reader->NewIndexIterator(ReadOptions(), /*need_upper_bound_check=*/false,
-                       /*input_iter=*/nullptr, /*get_context=*/nullptr,
-                       /*lookup_contex=*/nullptr));
-  Status s = blockhandles_iter->status();
-  assert(s.ok());
-  uint32_t datablock_idx = 0;
-  for (blockhandles_iter->SeekToFirst(); blockhandles_iter->Valid();
-       blockhandles_iter->Next()) {
-    s = blockhandles_iter->status();
-	assert(s.ok());
-    Slice key = blockhandles_iter->key();
-    Slice user_key;
-    InternalKey ikey;
-    if (!table_reader->rep_->index_key_includes_seq) {
-      user_key = key;
-    } else {
-      ikey.DecodeFrom(key);
-      user_key = ikey.user_key();
-    }
-	index_keys.push_back(user_key);
-	data_keys_list.push_back(std::vector<Slice>());
-
-	// DataBlockIter
-    std::unique_ptr<InternalIterator> datablock_iter;
-    datablock_iter.reset(table_reader->NewDataBlockIterator<DataBlockIter>(
-        ReadOptions(), blockhandles_iter->value().handle, 
-		/*input_iter=*/nullptr, /*type=*/BlockType::kData,
-        /*get_context=*/nullptr, /*lookup_context=*/nullptr, Status(),
-        /*prefetch_buffer=*/nullptr));
-    s = datablock_iter->status();
-	assert(s.ok());
-    for (datablock_iter->SeekToFirst(); datablock_iter->Valid();
-         datablock_iter->Next()) {
-      s = datablock_iter->status();
+  if (f->fd.linear_model_wrapper_ == nullptr) {
+	  print_msg("f->fd.linear_model_wrapper_ is null, train linear model\n");
+	  // Prepare index keys and data keys list
+	  std::vector<Slice> index_keys;
+	  std::vector<std::vector<Slice>> data_keys_list;
+	  // IndexBlockIter
+	  std::unique_ptr<InternalIteratorBase<IndexValue>> blockhandles_iter(
+		  table_reader->NewIndexIterator(ReadOptions(), /*need_upper_bound_check=*/false,
+						   /*input_iter=*/nullptr, /*get_context=*/nullptr,
+						   /*lookup_contex=*/nullptr));
+	  Status s = blockhandles_iter->status();
 	  assert(s.ok());
-	  key = datablock_iter->key();
-	  ikey.DecodeFrom(key);
-	  user_key = ikey.user_key();
-	  data_keys_list[datablock_idx].push_back(user_key);
-    }
-	datablock_idx++;
+	  uint32_t datablock_idx = 0;
+	  for (blockhandles_iter->SeekToFirst(); blockhandles_iter->Valid();
+		   blockhandles_iter->Next()) {
+		s = blockhandles_iter->status();
+		assert(s.ok());
+		Slice key = blockhandles_iter->key();
+		Slice user_key;
+		InternalKey ikey;
+		if (!table_reader->rep_->index_key_includes_seq) {
+		  user_key = key;
+		} else {
+		  ikey.DecodeFrom(key);
+		  user_key = ikey.user_key();
+		}
+		index_keys.push_back(user_key);
+		data_keys_list.push_back(std::vector<Slice>());
+
+		// DataBlockIter
+		std::unique_ptr<InternalIterator> datablock_iter;
+		datablock_iter.reset(table_reader->NewDataBlockIterator<DataBlockIter>(
+			ReadOptions(), blockhandles_iter->value().handle, 
+			/*input_iter=*/nullptr, /*type=*/BlockType::kData,
+			/*get_context=*/nullptr, /*lookup_context=*/nullptr, Status(),
+			/*prefetch_buffer=*/nullptr));
+		s = datablock_iter->status();
+		assert(s.ok());
+		for (datablock_iter->SeekToFirst(); datablock_iter->Valid();
+			 datablock_iter->Next()) {
+		  s = datablock_iter->status();
+		  assert(s.ok());
+		  key = datablock_iter->key();
+		  ikey.DecodeFrom(key);
+		  user_key = ikey.user_key();
+		  data_keys_list[datablock_idx].push_back(user_key);
+		}
+		datablock_idx++;
+	  }
+
+	  // Train models
+	  f->fd.linear_model_wrapper_ = new LinearModelWrapper(index_keys, data_keys_list);
   }
 
-  // Train models
-  f->fd.linear_model_wrapper = new LinearModelWrapper(index_keys, data_keys_list);
+  if (f->fd.table_reader->GetLinearModelWrapper() == nullptr) {
+	  f->fd.table_reader->SetLinearModelWrapper(f->fd.linear_model_wrapper_); // Must copy fd after set linear_model_wrapper_
+  }
+  print_msg("f->fd.linear_model_wrapper_ addr %p, table reader addr %p, table_reader.linear_model_wrapper_ addr %p\n", 
+		  (void*)f->fd.linear_model_wrapper_, (void*)f->fd.table_reader, (void*)f->fd.table_reader->GetLinearModelWrapper());
 
   // NetBuffer End
-  print_msg("End AddFile\n");
+  print_msg("End VersionStorageInfo::AddFile\n");
 }
 
 void VersionStorageInfo::AddBlobFile(
