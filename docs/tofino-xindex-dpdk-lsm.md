@@ -73,6 +73,15 @@
 			* Therefore, we need to link rocksdb-model before linking mkl, otherwise some funcs in rocksdb-model cannot be re-located
 		+ NOTE: -L only provides search directory, which works for adding static lib but only checks dynamic lib
 			* To locate dynamic lib in runtime, we must set the lib in enviroment variable, or copy the lib to standard directory by `make install`, or use `-Wl,-rpath=dir` to store RPATH in executable file (we can use `objdump -p server` to confirm it)
+		+ NOTE: the default comparator is BytewiseComparator which calls Slice::compare -> std::memcmp (consdier each key as a series of bytes)
+		, which is inconsistent with our model training process (consider each key as a series of doubles)
+			* NOW: change Slice::compare (include/rocksdb/slice.h)
+		+ Fix bugs of model training at model/xindex_model_impl.h (statement in assert() does not execute?!)
+		+ Fix bugs of model reference that we use user keys to train models for index/data block. However, index block saves user key,
+		while data block saves internal key (i.e., user key + 7-byte seq number + 1-byte value type). We convert internal key as user
+		key to predict in ModelSeek, but still uses InternalKeyComparator as usual since each sstable does not have duplicate user key 
+		(table/block_based/block.cc)
+		+ Support multiple models for lookup within a single block for smaller error bound (model/linear_model_wrapper.cc)
 - (legacy) Solution 1: maintain models in each ColumnFamilyData
 	- Create directory of rocksdb-6.22.1-model
 	- Add Version* version_ in VersionStorageInfo (db/version_set.h, db/version_set.cc)

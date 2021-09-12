@@ -74,7 +74,6 @@ Status BuildTable(
   assert((tboptions.column_family_id ==
           TablePropertiesCollectorFactory::Context::kUnknownColumnFamily) ==
          tboptions.column_family_name.empty());
-  print_msg("Builder::BuildTable: start, file number %llu\n", (unsigned long long)meta->fd.GetNumber());
   auto& mutable_cf_options = tboptions.moptions;
   auto& ioptions = tboptions.ioptions;
   // Reports the IOStats for flush for every following bytes.
@@ -388,7 +387,6 @@ Status BuildTable(
       fname, job_id, meta->fd, meta->oldest_blob_file_number, tp,
       tboptions.reason, s, file_checksum, file_checksum_func_name);
 
-  print_msg("Builder::BuildTable: End!\n");
   return s;
 }
 

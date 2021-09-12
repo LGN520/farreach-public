@@ -56,8 +56,8 @@ class alignas(CACHELINE_SIZE) Group {
   inline result_t get(const key_t &key, val_t &val);
   inline result_t put(const key_t &key, const val_t &val);
   inline result_t remove(const key_t &key);
-  //inline size_t scan(const key_t &begin, const size_t n,
-  //                   std::vector<std::pair<key_t, val_t>> &result);
+  inline size_t scan(const key_t &begin, const size_t n,
+                     std::vector<std::pair<key_t, val_t>> &result);
   //inline size_t range_scan(const key_t &begin, const key_t &end,
   //                         std::vector<std::pair<key_t, val_t>> &result);
 
@@ -71,7 +71,17 @@ class alignas(CACHELINE_SIZE) Group {
   inline bool get_from_lsm(const key_t &key, val_t &val, rocksdb::TransactionDB *txn_db);
   inline result_t update_to_lsm(const key_t &key, const val_t &val, rocksdb::TransactionDB *txn_db);
   inline bool remove_from_lsm(const key_t &key, rocksdb::TransactionDB *txn_db);
+  inline bool scan_from_lsm(const key_t &begin, const size_t n, const key_t &end, 
+		  std::vector<std::pair<key_t, val_t>> &result, rocksdb::TransactionDB *txn_db);
 
+  inline size_t scan_2_way(const key_t &begin, const size_t n, const key_t &end, 
+		  std::vector<std::pair<key_t, val_t>> &result);
+  inline size_t scan_3_way(const key_t &begin, const size_t n, const key_t &end, 
+		  std::vector<std::pair<key_t, val_t>> &result);
+  inline size_t merge_scan_2_way(const std::vector<std::pair<key_t, val_t>> &v0, 
+		  const std::vector<std::pair<key_t, val_t>> &v1, const size_t n, std::vector<std::pair<key_t, val_t>> &result);
+  inline size_t merge_scan_3_way(const std::vector<std::pair<key_t, val_t>> &v0, const std::vector<std::pair<key_t, val_t>> &v1, 
+		  const std::vector<std::pair<key_t, val_t>> &v2, const size_t n, std::vector<std::pair<key_t, val_t>> &result);
 
   //inline size_t scan_2_way(const key_t &begin, const size_t n, const key_t &end,
   //                         std::vector<std::pair<key_t, val_t>> &result);

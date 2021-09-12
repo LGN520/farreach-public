@@ -2803,7 +2803,6 @@ bool CompareCompensatedSizeDescending(const Fsize& first, const Fsize& second) {
 } // anonymous namespace
 
 void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_cache) {
-  print_msg("Start VersionStorageInfo::AddFile filenumber: %llu\n", (unsigned long long)f->fd.GetNumber());
   auto& level_files = files_[level];
   level_files.push_back(f);
 
@@ -2819,7 +2818,6 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
   // NOTE: if f comes from VersionBuilder, f->fd.table_reader and f->fd.linear_model_wrapper_ should be null
   // Then, we should add table reader and linear model wrapper for the file metadata
   // We also need to tell f->fd (with linear model wrapper) to the table reader
-  print_msg("table_reader is null: %d, meta addr: %p, fd addr: %p\n", f->fd.table_reader == nullptr ? 1 : 0, (void*)f, (void*)(&f->fd));
   if (f->fd.table_reader == nullptr) {
 	  if (table_cache == nullptr) {
 		  printf("VersionStorageInfo::AddFile: both table_reader and table_cache are null!\n");
@@ -2851,7 +2849,6 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
   BlockBasedTable* table_reader = dynamic_cast<BlockBasedTable*>(f->fd.table_reader);
 
   if (f->fd.linear_model_wrapper_ == nullptr) {
-	  print_msg("f->fd.linear_model_wrapper_ is null, train linear model\n");
 	  // Prepare index keys and data keys list
 	  std::vector<Slice> index_keys;
 	  std::vector<std::vector<Slice>> data_keys_list;
@@ -2870,11 +2867,11 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
 		Slice key = blockhandles_iter->key();
 		Slice user_key;
 		InternalKey ikey;
-		if (!table_reader->rep_->index_key_includes_seq) {
+		if (!table_reader->rep_->index_key_includes_seq) { // index_key_includes_seq is true by default
 		  user_key = key;
 		} else {
 		  ikey.DecodeFrom(key);
-		  user_key = ikey.user_key();
+		  user_key = ikey.user_key(); // NOTE: we use userkey for model trainning
 		}
 		index_keys.push_back(user_key);
 		data_keys_list.push_back(std::vector<Slice>());
@@ -2894,7 +2891,7 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
 		  assert(s.ok());
 		  key = datablock_iter->key();
 		  ikey.DecodeFrom(key);
-		  user_key = ikey.user_key();
+		  user_key = ikey.user_key(); // NOTE: we use userkey for model trainning
 		  data_keys_list[datablock_idx].push_back(user_key);
 		}
 		datablock_idx++;
@@ -2907,11 +2904,8 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
   if (f->fd.table_reader->GetLinearModelWrapper() == nullptr) {
 	  f->fd.table_reader->SetLinearModelWrapper(f->fd.linear_model_wrapper_); // Must copy fd after set linear_model_wrapper_
   }
-  print_msg("f->fd.linear_model_wrapper_ addr %p, table reader addr %p, table_reader.linear_model_wrapper_ addr %p\n", 
-		  (void*)f->fd.linear_model_wrapper_, (void*)f->fd.table_reader, (void*)f->fd.table_reader->GetLinearModelWrapper());
 
   // NetBuffer End
-  print_msg("End VersionStorageInfo::AddFile\n");
 }
 
 void VersionStorageInfo::AddBlobFile(

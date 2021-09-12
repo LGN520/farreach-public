@@ -21,6 +21,7 @@
  */
 
 #include <vector>
+#include <cassert>
 #include "mkl.h"
 #include "mkl_lapacke.h"
 #include "model/linear_model_wrapper.h"
@@ -38,12 +39,14 @@ class VarlenLinearModel {
   ~VarlenLinearModel();
   void prepare(const std::vector<key_t> &keys,
                const std::vector<size_t> &positions);
+  void prepare(const typename std::vector<key_t>::const_iterator &keys_begin, uint32_t size);
   void prepare_model(const std::vector<double *> &model_key_ptrs,
                      const std::vector<size_t> &positions);
   size_t predict(const key_t &curkey) const;
 
  private:
   uint32_t get_max_key_len(const std::vector<key_t> &keys);
+  uint32_t get_max_key_len(const typename std::vector<key_t>::const_iterator &keys_begin, uint32_t size);
   size_t get_error_bound(const std::vector<key_t> &keys,
                          const std::vector<size_t> &positions);
   size_t get_error_bound(

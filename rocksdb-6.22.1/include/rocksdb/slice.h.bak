@@ -30,9 +30,6 @@
 
 #include "rocksdb/cleanable.h"
 
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
-
 namespace ROCKSDB_NAMESPACE {
 
 class Slice {
@@ -131,40 +128,6 @@ class Slice {
 
   // Compare two slices and returns the first byte where they differ
   size_t difference_offset(const Slice& b) const;
-
-  //NetBuffer
-  void to_model_key(double* array, uint32_t array_len) const {
-	uint32_t key_len = get_key_len();
-	uint32_t remainder = size_ % 8;
-	
-	if (unlikely(array == nullptr || key_len > array_len)){
-		printf("Error: to_model_key fails! size: %u, data[0-7]: %u-%u-%u-%u-%u-%u-%u-%u, uint64_t: %llu, array: %p, array_len: %u\n",
-					uint32_t(size_), data_[0], data_[1], data_[2], data_[3], data_[4], data_[5], data_[6], data_[7], 
-					(unsigned long long)(*(uint64_t*)data_), (void*)array, array_len);
-		exit(-1);
-	}
-
-	char *curptr = (char *)data_;
-	for (uint32_t i = 0; i < key_len; i++) {
-		if (i != key_len - 1 || remainder == 0) {
-			array[i] = double(*((uint64_t*)(curptr)));
-			curptr += 8;
-		}
-		else {
-			char tmp[8];
-			memset(tmp, 0, 8);
-			memcpy(tmp, curptr, remainder); // emulate little-endian
-			//memcpy(tmp + 8 - remainder, curptr, remainder);
-			array[i] = double(*((uint64_t*)(tmp)));
-			break;
-		}
-	}
-  }
-
-  // NetBuffer
-  uint32_t get_key_len() const {
-	return (size_ + 7) / 8; // 0 -> 0, 1-8 -> 1, 9 -> 2
-  }
 
   // private: make these public for rocksdbjni access
   const char* data_;
@@ -283,7 +246,7 @@ inline bool operator!=(const Slice& x, const Slice& y) { return !(x == y); }
 
 inline int Slice::compare(const Slice& b) const {
   assert(data_ != nullptr && b.data_ != nullptr);
-  /*const size_t min_len = (size_ < b.size_) ? size_ : b.size_;
+  const size_t min_len = (size_ < b.size_) ? size_ : b.size_;
   int r = memcmp(data_, b.data_, min_len);
   if (r == 0) {
     if (size_ < b.size_)
@@ -291,29 +254,7 @@ inline int Slice::compare(const Slice& b) const {
     else if (size_ > b.size_)
       r = +1;
   }
-  return r;*/
-
-  // NetBuffer (sort based on unsigned integeer under little-endian)
-  uint32_t keylen_a = get_key_len();
-  uint32_t keylen_b = b.get_key_len();
-  uint32_t max_keylen = (keylen_a > keylen_b) ? keylen_a : keylen_b;
-  double model_key_a[max_keylen] = {0};
-  double model_key_b[max_keylen] = {0};
-  to_model_key(model_key_a, max_keylen);
-  b.to_model_key(model_key_b, max_keylen);
-  // From max_keylen-1 to 0 = from latter byte to previous byte = from most significant to least significant under little-endian
-  int result = 0;
-  for (int i = max_keylen - 1; i >= 0; i--) {
-	if (model_key_a[i] > model_key_b[i]) {
-		result = 1;
-		break;
-	}
-	else if (model_key_a[i] < model_key_b[i]) {
-		result = -1;
-		break;
-	}
-  }
-  return result;
+  return r;
 }
 
 inline size_t Slice::difference_offset(const Slice& b) const {

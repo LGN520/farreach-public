@@ -380,7 +380,7 @@ void IndexBlockIter::SeekImpl(const Slice& target, LinearModelWrapper *linear_mo
     return;
   }
   Slice seek_key = target;
-  if (raw_key_.IsUserKey()) {
+  if (raw_key_.IsUserKey()) { // true
     seek_key = ExtractUserKey(target);
   }
   status_ = Status::OK();
@@ -408,10 +408,10 @@ void IndexBlockIter::SeekImpl(const Slice& target, LinearModelWrapper *linear_mo
     ok = ModelSeek<DecodeKey>(seek_key, &index, &skip_linear_scan, linear_model_wrapper, datablock_idx); // NetBuffer
   }
 
-  if (!ok) {
+  if (!ok) { // current_ = restarts_
     return;
   }
-  FindKeyAfterBinarySeek(seek_key, index, skip_linear_scan);
+  FindKeyAfterBinarySeek(seek_key, index, skip_linear_scan); // set current_
 }
 
 void DataBlockIter::SeekForPrevImpl(const Slice& target) {
@@ -753,11 +753,12 @@ template <class TValue>
 template <typename DecodeKeyFunc>
 bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
                                    bool* skip_linear_scan, LinearModelWrapper *linear_model_wrapper, int64_t datablock_idx) {
+	// NOTE: for IndexBlockIter, target is a user key, and we use UserComparator = Slice::compare; 
+	// while for DataBlockIter, target is an internal key, and we use IternalKeyComparator 
+	// (i.e., if user keys are the same, larger seqno/valuetype = smaller key, which helps to choose lastest value from minheap)
+	// NOTE: for the same sstable, we won't have different seqnos of each same key -> InternalKeyComparator = UserComparator
 	bool result = true;
 	if (linear_model_wrapper == nullptr) {
-		printf("[WARNING] LinearModelWrapper *linear_model_wrapper is NULL! target: %s, type: %s\n",
-				target.ToString().c_str(), typeid(TValue).name());
-
 		result = BinarySeek<DecodeKeyFunc>(target, index, skip_linear_scan);
 	}
 	else {
@@ -773,16 +774,27 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 		else {
 			*skip_linear_scan = false;
 
-			uint32_t curidx, error_bound;
-			if (typeid(TValue) == typeid(IndexBlockIter)) {
-			  curidx = linear_model_wrapper->index_predict(target);
-			  error_bound = linear_model_wrapper->index_error_bound();
+			ModelResult model_result;
+			if (typeid(TValue) == typeid(IndexValue)) {
+			  model_result = linear_model_wrapper->index_predict(target);
+			}
+			else if (typeid(TValue) == typeid(Slice)) {
+			  if (datablock_idx == -1) {
+				  printf("BlockIter<%s>::ModelSeek<%s>: Invalid datablock_idx %d for DataBlockIter::ModelSeek!\n", typeid(TValue).name(), typeid(DecodeKeyFunc).name(), int(datablock_idx));
+				  exit(-1);
+			  }
+			  // NOTE: although data block saves ineternal key, using user key to predict is correct since we train models by user keys,
+			  // and each sstable (and even each non-zero level) does not have duplicate user key
+			  model_result = linear_model_wrapper->data_predict(ExtractUserKey(target), uint32_t(datablock_idx));
 			}
 			else {
-			  assert(datablock_idx != -1);
-			  curidx = linear_model_wrapper->data_predict(target, uint32_t(datablock_idx));
-			  error_bound = linear_model_wrapper->data_error_bound(uint32_t(datablock_idx));
+			  printf("BlockIter<%s>::ModelSeek<%s>: Invalid TValue which should be IndexValue or Slice!\n", typeid(TValue).name(), typeid(DecodeKeyFunc).name());
+			  exit(-1);
 			}
+			uint32_t curidx, error_bound;
+			curidx = model_result.predict_idx;
+			error_bound = model_result.error_bound;
+
 			if (curidx >= num_restarts_) {
 			  curidx = num_restarts_ - 1;
 			}
@@ -799,7 +811,7 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 					break;
 				}
 				Slice curkey(key_ptr, non_shared);
-				raw_key_.SetKey(curkey, false /* copy */);
+				raw_key_.SetKey(curkey, false /* copy */); // Keep original property of is_user_key of raw_key_
 				int cmp = CompareCurrentKey(target);
 				if (cmp < 0) {
 					// Key at "curidx" is smaller than "target". Therefore all

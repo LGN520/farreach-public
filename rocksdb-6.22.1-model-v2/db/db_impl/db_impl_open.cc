@@ -378,7 +378,6 @@ Status DBImpl::Recover(
     bool error_if_wal_file_exists, bool error_if_data_exists_in_wals,
     uint64_t* recovered_seq) {
   mutex_.AssertHeld();
-  print_msg("DBImpl::Recover: start!\n");
 
   bool is_new_db = false;
   assert(db_lock_ == nullptr);
@@ -445,7 +444,6 @@ Status DBImpl::Recover(
       return s;
     }
     // Verify compatibility of file_options_ and filesystem
-  	print_msg("DBImpl::Recover: verify compatibility\n");
     {
       std::unique_ptr<FSRandomAccessFile> idfile;
       FileOptions customized_fs(file_options_);
@@ -515,7 +513,6 @@ Status DBImpl::Recover(
     }
   }
   // DB mutex is already held
- print_msg("DBImpl::Recover: hold DB mutex\n");
   if (s.ok() && immutable_db_options_.persist_stats_to_disk) {
     s = InitPersistStatsColumnFamily();
   }
@@ -595,7 +592,6 @@ Status DBImpl::Recover(
       return s;
     }
 
-	print_msg("DBImpl::Recover: wal_files empty: %d\n", wal_files.empty() ? 1 : 0);
     if (!wal_files.empty()) {
       if (error_if_wal_file_exists) {
         return Status::Corruption(
@@ -616,7 +612,6 @@ Status DBImpl::Recover(
       }
     }
 
-	print_msg("DBImpl::Recover: before recover log files\n");
     if (!wal_files.empty()) {
       // Recover in the order in which the wals were generated
       std::vector<uint64_t> wals;
@@ -672,7 +667,6 @@ Status DBImpl::Recover(
       versions_->options_file_number_ = options_file_number;
     }
   }
-  print_msg("DBImpl::Recover: end!\n");
   return s;
 }
 
@@ -787,7 +781,6 @@ Status DBImpl::InitPersistStatsColumnFamily() {
 Status DBImpl::RecoverLogFiles(const std::vector<uint64_t>& wal_numbers,
                                SequenceNumber* next_sequence, bool read_only,
                                bool* corrupted_wal_found) {
-  print_msg("DBImpl::RecoverLogFiles: start!\n");
   struct LogReporter : public log::Reader::Reporter {
     Env* env;
     Logger* info_log;
@@ -1277,7 +1270,6 @@ Status DBImpl::RecoverLogFiles(const std::vector<uint64_t>& wal_numbers,
   event_logger_.Log() << "job" << job_id << "event"
                       << "recovery_finished";
 
-  print_msg("DBImpl::RecoverLogFiles: end!\n");
   return status;
 }
 
@@ -1360,7 +1352,6 @@ Status DBImpl::WriteLevel0TableForRecovery(int job_id, ColumnFamilyData* cfd,
       new std::list<uint64_t>::iterator(
           CaptureCurrentFileNumberInPendingOutputs()));
   meta.fd = FileDescriptor(versions_->NewFileNumber(), 0, 0);
-  print_msg("start DBImpl::WriteLevel0TableForRecovery: file number %llu\n", (unsigned long long)meta.fd.GetNumber());
   ReadOptions ro;
   ro.total_order_seek = true;
   Arena arena;
@@ -1475,7 +1466,6 @@ Status DBImpl::WriteLevel0TableForRecovery(int job_id, ColumnFamilyData* cfd,
       InternalStats::BYTES_FLUSHED,
       stats.bytes_written + stats.bytes_written_blob);
   RecordTick(stats_, COMPACT_WRITE_BYTES, meta.fd.GetFileSize());
-  print_msg("start DBImpl::WriteLevel0TableForRecovery: file number %llu\n", (unsigned long long)meta.fd.GetNumber());
   return s;
 }
 

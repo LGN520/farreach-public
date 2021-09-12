@@ -10,20 +10,33 @@
 
 namespace ROCKSDB_NAMESPACE {
 
+class ModelResult {
+	public:
+		uint32_t predict_idx;
+		uint32_t error_bound;
+};
+
 class LinearModelWrapper {
 	typedef VarlenLinearModel<Slice> linear_model_t;
 	public:
 		LinearModelWrapper(const std::vector<Slice> &index_keys, 
-				const std::vector<std::vector<Slice>> &data_keys_list);
+				const std::vector<std::vector<Slice>> &data_keys_list,
+				uint32_t index_model_n = 1, uint32_t data_model_n = 10);
 		~LinearModelWrapper();
-		uint32_t index_predict(const Slice &key) const;
-		uint32_t index_error_bound() const;
-		uint32_t data_predict(const Slice &key, const uint32_t &data_idx) const;
-		uint32_t data_error_bound(const uint32_t &data_idx) const;
+		ModelResult index_predict(const Slice &key) const;
+		ModelResult data_predict(const Slice &key, const uint32_t &data_idx) const;
+		//uint32_t index_predict(const Slice &key) const;
+		//uint32_t index_error_bound() const;
+		//uint32_t data_predict(const Slice &key, const uint32_t &data_idx) const;
+		//uint32_t data_error_bound(const uint32_t &data_idx) const;
 	private:
-		linear_model_t index_model_;	
-		linear_model_t *data_models_; // linear models of data_block_n
-		uint32_t data_block_n;
+		linear_model_t *index_models_; // # of index_models_ is index_model_n
+		linear_model_t **data_models_list_; // # of linear models is data_block_n * data_model_n
+		Slice *index_pivots_; // save the smallest key of each index model in index block
+		Slice **data_pivots_list_; // save the smallest key of each data model in each data block
+		uint32_t data_block_n_;
+		uint32_t index_model_n_;
+		uint32_t data_model_n_;
 };
 
 }

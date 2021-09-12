@@ -218,7 +218,6 @@ InternalIterator* TableCache::NewIterator(
     const InternalKey* smallest_compaction_key,
     const InternalKey* largest_compaction_key, bool allow_unprepared_value) {
   PERF_TIMER_GUARD(new_table_iterator_nanos);
-  print_msg("TableCache::NewIterator filenum: %llu\n", (unsigned long long)file_meta.fd.GetNumber());
 
   Status s;
   TableReader* table_reader = nullptr;

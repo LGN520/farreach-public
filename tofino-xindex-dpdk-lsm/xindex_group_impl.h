@@ -57,22 +57,19 @@ void Group<key_t, val_t, seq, max_model_n>::init(
   this->model_n = model_n; // # of models per sstable
 
   // Create original data
-  COUT_THIS("Open data")
   std::string data_path;
   GET_STRING(data_path, "/tmp/netbuffer/group"<<group_idx<<".db");
   rocksdb::Status s = rocksdb::TransactionDB::Open(data_options, rocksdb::TransactionDBOptions(), data_path, &data);
   assert(s.ok());
   
   // Create delta index
-  COUT_THIS("Open buffer")
   std::string buffer_path;
   GET_STRING(buffer_path, "/tmp/netbuffer/buffer"<<group_idx<<".db");
   s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_path, &buffer);
   assert(s.ok());
 
   // Write original data (execute at the first time)
-  /*val_t tmpval;
-  rocksdb::WriteBatch batch;
+  /*rocksdb::WriteBatch batch;
   for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
 	std::string valstr;
 	GET_STRING(valstr, *(vals_begin + rec_i));
@@ -151,13 +148,199 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::remove(
   return result_t::failed;
 }
 
-/*template <class key_t, class val_t, bool seq, size_t max_model_n>
+template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::scan(
     const key_t &begin, const size_t n,
     std::vector<std::pair<key_t, val_t>> &result) {
   return buffer_temp ? scan_3_way(begin, n, key_t::max(), result)
                      : scan_2_way(begin, n, key_t::max(), result);
-}*/
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
+    const key_t &begin, const size_t n, const key_t &end, std::vector<std::pair<key_t, val_t>> &result) {
+	std::vector<std::pair<key_t, val_t>> data_result;
+	std::vector<std::pair<key_t, val_t>> buffer_result;
+	bool res;
+	res = scan_from_lsm(begin, n, end, data_result, data);
+	INVARIANT(res);
+	res = scan_from_lsm(begin, n, end, buffer_result, buffer);
+	INVARIANT(res);
+	return merge_scan_2_way(data_result, buffer_result, n, result);
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
+    const key_t &begin, const size_t n, const key_t &end, std::vector<std::pair<key_t, val_t>> &result) {
+	std::vector<std::pair<key_t, val_t>> data_result;
+	std::vector<std::pair<key_t, val_t>> buffer_result;
+	std::vector<std::pair<key_t, val_t>> buffer_temp_result;
+	bool res;
+	res = scan_from_lsm(begin, n, end, data_result, data);
+	INVARIANT(res);
+	res = scan_from_lsm(begin, n, end, buffer_result, buffer);
+	INVARIANT(res);
+	res = scan_from_lsm(begin, n, end, buffer_temp_result, buffer_temp);
+	INVARIANT(res);
+	return merge_scan_3_way(data_result, buffer_result, buffer_temp_result, n, result);
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline size_t Group<key_t, val_t, seq, max_model_n>::merge_scan_2_way(
+    const std::vector<std::pair<key_t, val_t>> &v0, const std::vector<std::pair<key_t, val_t>> &v1, 
+	const size_t n, std::vector<std::pair<key_t, val_t>> &result) {
+	uint32_t v0_idx = 0;
+	uint32_t v1_idx = 0;
+	uint32_t v0_size = v0.size();
+	uint32_t v1_size = v1.size();
+	uint32_t cnt = 0;
+	while (true) {
+		if (v0[v0_idx].first < v1[v1_idx].first) {
+			result.push_back(v0[v0_idx]);
+			v0_idx++;
+		}
+		else if (v0[v0_idx].first > v1[v1_idx].first) {
+			result.push_back(v1[v1_idx]);
+			v1_idx++;
+		}
+		else {
+			result.push_back(v0[v0_idx]);
+			v0_idx++;
+			v1_idx++;
+		}
+		cnt++;
+
+		if ((v0_idx == v0_size) || (v1_idx == v1_size) || (cnt == n)) {
+			break;
+		}
+	}
+
+	if (cnt == n) return cnt;
+
+	if (v0_idx < v0_size) {
+		for (; v0_idx < v0_size; v0_idx++) {
+			result.push_back(v0[v0_idx]);
+			cnt++;
+			if (cnt == n) break;
+		}
+	}
+	else if (v1_idx < v1_size) {
+		for (; v1_idx < v1_size; v1_idx++) {
+			result.push_back(v1[v1_idx]);
+			cnt++;
+			if (cnt == n) break;
+		}
+	}
+	return cnt;
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline size_t Group<key_t, val_t, seq, max_model_n>::merge_scan_3_way(
+    const std::vector<std::pair<key_t, val_t>> &v0, const std::vector<std::pair<key_t, val_t>> &v1, 
+	const std::vector<std::pair<key_t, val_t>> &v2, const size_t n, std::vector<std::pair<key_t, val_t>> &result) {
+	std::vector<std::pair<key_t, val_t>> tmp;
+	merge_scan_2_way(v0, v1, n, tmp);
+	return merge_scan_2_way(tmp, v2, n, result);
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+void Group<key_t, val_t, seq, max_model_n>::free_data() {
+  delete data;
+}
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
+  delete buffer;
+}
+
+// semantics: atomically read the value
+// only when the key exists and the record (record_t) is not logical removed,
+// return true on success
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline bool Group<key_t, val_t, seq, max_model_n>::get_from_lsm(
+    const key_t &key, val_t &val, rocksdb::TransactionDB *txn_db) {
+	std::string valstr;
+	rocksdb::Status s;
+	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	INVARIANT(txn != nullptr);
+	rocksdb::ReadOptions read_options;
+	read_options.fill_cache = false; // Bypass OS page cache, use block cache only
+	COUT_THIS("get")
+	s = txn->Get(read_options, key.to_slice(), &valstr);
+	COUT_THIS("finish get")
+	s = txn->Commit();
+	delete txn;
+	if (valstr != "") {
+		val = std::stoi(valstr);
+		return s.ok();
+	}
+	else {
+		return false;
+	}
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_lsm(
+    const key_t &key, const val_t &val, rocksdb::TransactionDB *txn_db) {
+	std::string valstr;
+	GET_STRING(valstr, val);
+	rocksdb::Status s;
+	rocksdb::WriteOptions write_options;
+	write_options.sync = true; // Write through for persistency
+	rocksdb::Transaction* txn = txn_db->BeginTransaction(write_options, rocksdb::TransactionOptions());
+	s = txn->Put(key.to_slice(), valstr);
+	s = txn->Commit();
+	delete txn;
+	if (s.ok()) {
+		return result_t::ok;
+	}
+	else {
+		return result_t::failed;
+	}
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_lsm(
+    const key_t &key, rocksdb::TransactionDB *txn_db) {
+	rocksdb::Status s;
+	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	s = txn->Delete(key.to_slice());
+	s = txn->Commit();
+	delete txn;
+	return s.ok();
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline bool Group<key_t, val_t, seq, max_model_n>::scan_from_lsm(
+    const key_t &begin, const size_t n, const key_t &end,
+    std::vector<std::pair<key_t, val_t>> &result,
+	rocksdb::TransactionDB *txn_db) {
+	rocksdb::Status s;
+	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	rocksdb::Iterator* iter = txn->GetIterator(rocksdb::ReadOptions());
+	INVARIANT(iter!=nullptr);
+	result.clear();
+	result.reserve(n);
+	for (uint32_t i = 0; i < n; i++) {
+		if (i == 0) {
+			iter->Seek(begin.to_slice());
+			if (!iter->Valid()) break;
+		}
+		else {
+			iter->Next();
+			if (!iter->Valid()) break;
+		}
+		rocksdb::Slice tmpkey_slice = iter->key();
+		key_t tmpkey;
+		tmpkey.key = *(uint64_t*)tmpkey_slice.data_;
+		if (tmpkey.key >= end.key) break;
+		rocksdb::Slice tmpvalue_slice = iter->value();
+		val_t tmpval = std::stoi(tmpvalue_slice.ToString());
+		result.push_back(std::pair<key_t, val_t>(tmpkey, tmpval));
+	}
+	s = txn->Commit();
+	delete txn;
+	return s.ok();
+}
 
 /*template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::range_scan(
@@ -210,74 +393,6 @@ inline void Group<key_t, val_t, seq, max_model_n>::compact_phase_2() {
     enable_seq_insert_opt();
   }
 }*/
-
-template <class key_t, class val_t, bool seq, size_t max_model_n>
-void Group<key_t, val_t, seq, max_model_n>::free_data() {
-  delete data;
-}
-template <class key_t, class val_t, bool seq, size_t max_model_n>
-void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
-  delete buffer;
-}
-
-// semantics: atomically read the value
-// only when the key exists and the record (record_t) is not logical removed,
-// return true on success
-template <class key_t, class val_t, bool seq, size_t max_model_n>
-inline bool Group<key_t, val_t, seq, max_model_n>::get_from_lsm(
-    const key_t &key, val_t &val, rocksdb::TransactionDB *txn_db) {
-	std::string valstr;
-	rocksdb::Status s;
-	COUT_THIS("begin transaction")
-	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
-	INVARIANT(txn != nullptr);
-	COUT_THIS("finish begin transaction")
-	rocksdb::ReadOptions read_options;
-	read_options.fill_cache = false; // Bypass OS page cache, use block cache only
-	COUT_THIS("get")
-	s = txn->Get(read_options, key.to_slice(), &valstr);
-	COUT_THIS("finish get")
-	s = txn->Commit();
-	delete txn;
-	if (valstr != "") {
-		val = std::stoi(valstr);
-		return s.ok();
-	}
-	else {
-		return false;
-	}
-}
-
-template <class key_t, class val_t, bool seq, size_t max_model_n>
-inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_lsm(
-    const key_t &key, const val_t &val, rocksdb::TransactionDB *txn_db) {
-	std::string valstr;
-	GET_STRING(valstr, val);
-	rocksdb::Status s;
-	rocksdb::WriteOptions write_options;
-	write_options.sync = true; // Write through for persistency
-	rocksdb::Transaction* txn = txn_db->BeginTransaction(write_options, rocksdb::TransactionOptions());
-	s = txn->Put(key.to_slice(), valstr);
-	s = txn->Commit();
-	delete txn;
-	if (s.ok()) {
-		return result_t::ok;
-	}
-	else {
-		return result_t::failed;
-	}
-}
-
-template <class key_t, class val_t, bool seq, size_t max_model_n>
-inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_lsm(
-    const key_t &key, rocksdb::TransactionDB *txn_db) {
-	rocksdb::Status s;
-	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
-	s = txn->Delete(key.to_slice());
-	s = txn->Commit();
-	delete txn;
-	return s.ok();
-}
 
 /*template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(

@@ -150,7 +150,7 @@ template <class key_t, class val_t, bool seq>
 inline size_t Root<key_t, val_t, seq>::scan(
     const key_t &begin, const size_t n,
     std::vector<std::pair<key_t, val_t>> &result) {
-  /*size_t remaining = n;
+  size_t remaining = n;
   result.clear();
   result.reserve(n);
   key_t next_begin = begin;
@@ -172,10 +172,7 @@ inline size_t Root<key_t, val_t, seq>::scan(
     group = groups[group_i].second;
   }
 
-  return n - remaining;*/
-
-  // TODO
-  return 0;
+  return n - remaining;
 }
 
 template <class key_t, class val_t, bool seq>

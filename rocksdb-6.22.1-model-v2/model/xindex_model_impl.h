@@ -44,7 +44,7 @@ void VarlenLinearModel<key_t>::prepare(const std::vector<key_t> &keys,
   std::vector<double *> key_ptrs(keys.size());
   for (uint32_t i = 0; i < keys.size(); i++) {
 	model_keys[i].resize(max_key_len);
-    assert(keys[i].to_model_key(model_keys[i].data(), max_key_len));
+    keys[i].to_model_key(model_keys[i].data(), max_key_len);
     key_ptrs[i] = model_keys[i].data();
   }
 
@@ -52,6 +52,30 @@ void VarlenLinearModel<key_t>::prepare(const std::vector<key_t> &keys,
 
   prepare_model(key_ptrs, positions);
   error_bound = get_error_bound(keys, positions);
+}
+
+template <class key_t>
+void VarlenLinearModel<key_t>::prepare(
+    const typename std::vector<key_t>::const_iterator &keys_begin,
+    uint32_t size) {
+  if (size == 0) return;
+
+  max_key_len = get_max_key_len(keys_begin, size);
+
+  std::vector<model_key_t> model_keys(size);
+  std::vector<double *> key_ptrs(size);
+  std::vector<size_t> positions(size);
+  for (size_t i = 0; i < size; i++) {
+	model_keys[i].resize(max_key_len);
+    (keys_begin + i)->to_model_key(model_keys[i].data(), max_key_len);
+    key_ptrs[i] = model_keys[i].data();
+    positions[i] = i;
+  }
+
+  weights = new double[max_key_len + 1];
+
+  prepare_model(key_ptrs, positions);
+  error_bound = get_error_bound(keys_begin, size);
 }
 
 template <class key_t>
@@ -193,10 +217,7 @@ size_t VarlenLinearModel<key_t>::predict(const key_t &curkey) const {
   model_key.resize(max_key_len);
 
   double *model_key_ptr = model_key.data();
-  if (!curkey.to_model_key(model_key_ptr, max_key_len)) {
-	printf("Cannot convert key in predict!");
-	exit(-1);
-  }
+  curkey.to_model_key(model_key_ptr, max_key_len);
 
   if (max_key_len == 1) {
     double res = weights[0] * *model_key_ptr + weights[1];
@@ -225,6 +246,23 @@ uint32_t VarlenLinearModel<key_t>::get_max_key_len(
 		if (tmp_len > result) {
 			result = tmp_len;
 		}
+	}
+	return result;
+}
+
+template <class key_t>
+uint32_t VarlenLinearModel<key_t>::get_max_key_len(
+    const typename std::vector<key_t>::const_iterator &keys_begin,
+	uint32_t size) {
+	typename std::vector<key_t>::const_iterator iter = keys_begin;
+	uint32_t result = 0;
+	uint32_t tmp_len = 0;
+	for (size_t i = 0; i < size; i++) {
+		tmp_len = iter->get_key_len();
+		if (tmp_len > result) {
+			result = tmp_len;
+		}
+		iter++;
 	}
 	return result;
 }
