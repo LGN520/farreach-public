@@ -758,6 +758,7 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 	// (i.e., if user keys are the same, larger seqno/valuetype = smaller key, which helps to choose lastest value from minheap)
 	// NOTE: for the same sstable, we won't have different seqnos of each same key -> InternalKeyComparator = UserComparator
 	bool result = true;
+	*skip_linear_scan = false;
 	if (linear_model_wrapper == nullptr) {
 		result = BinarySeek<DecodeKeyFunc>(target, index, skip_linear_scan);
 	}
@@ -772,8 +773,6 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 			result = false;
 		}
 		else {
-			*skip_linear_scan = false;
-
 			ModelResult model_result;
 			if (typeid(TValue) == typeid(IndexValue)) {
 			  model_result = linear_model_wrapper->index_predict(target);
@@ -793,7 +792,7 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 			}
 			uint32_t curidx, error_bound;
 			curidx = model_result.predict_idx;
-			error_bound = model_result.error_bound;
+			error_bound = model_result.error_bound + 1; // We can prove that error_bound + 1 must find the last key <= target
 
 			if (curidx >= num_restarts_) {
 			  curidx = num_restarts_ - 1;
@@ -814,33 +813,29 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 				raw_key_.SetKey(curkey, false /* copy */); // Keep original property of is_user_key of raw_key_
 				int cmp = CompareCurrentKey(target);
 				if (cmp < 0) {
-					// Key at "curidx" is smaller than "target". Therefore all
-					// blocks before "curidx" are uninteresting.
-					if (curidx == num_restarts_ - 1) {
-						result = false;
-						break;
-					}
-					if (previdx == (curidx + 1)) { // pingpong
-						*index = previdx;
+					// the last key is smaller than target or pingpong
+					if ((curidx == num_restarts_ - 1) || previdx == (curidx + 1)) {
+						*index = curidx;
 						break;
 					}
 					previdx = curidx;
 					curidx++;
 				} else if (cmp > 0) {
-					// Key at "curidx" is >= "target". Therefore all blocks at or
-					// after "curidx" are uninteresting.
+					// the smallest ke is larger than target
 					if (curidx == 0) {
 						*index = 0;
+						*skip_linear_scan = true;
 						break;
 					}
 					if (previdx == (curidx - 1)) { // pingong
-						*index = curidx;
+						*index = previdx;
 						break;
 					}
 					previdx = curidx;
 					curidx--;
 				} else {
 					*index = curidx;
+					*skip_linear_scan = true;
 					break;
 				}
 
@@ -854,7 +849,6 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 	} // linear_model_wrapper != null
 
 	if (result) {
-		*skip_linear_scan = true;
 		index_ = int64_t(*index);
 	}
 	return result;

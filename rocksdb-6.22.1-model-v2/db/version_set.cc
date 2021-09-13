@@ -2861,6 +2861,7 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
 	  Status s = blockhandles_iter->status();
 	  assert(s.ok());
 	  uint32_t datablock_idx = 0;
+
 	  for (blockhandles_iter->SeekToFirst(); blockhandles_iter->Valid();
 		   blockhandles_iter->Next()) {
 		s = blockhandles_iter->status();

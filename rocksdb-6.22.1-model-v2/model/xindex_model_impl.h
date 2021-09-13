@@ -287,6 +287,25 @@ size_t VarlenLinearModel<key_t>::get_error_bound(
 
 template <class key_t>
 size_t VarlenLinearModel<key_t>::get_error_bound(
+    const std::vector<key_t> &keys, const std::vector<size_t> &positions, const uint32_t limit) {
+  int max = 0;
+
+  for (size_t key_i = 0; key_i < keys.size(); ++key_i) {
+    long long int pos_actual = positions[key_i];
+    long long int pos_pred = predict(keys[key_i]);
+	if (pos_pred >= limit) pos_pred = limit - 1;
+    int error = std::abs(pos_actual - pos_pred);
+
+    if (error > max) {
+      max = error;
+    }
+  }
+
+  return max;
+}
+
+template <class key_t>
+size_t VarlenLinearModel<key_t>::get_error_bound(
     const typename std::vector<key_t>::const_iterator &keys_begin,
     uint32_t size) {
   int max = 0;
@@ -294,6 +313,26 @@ size_t VarlenLinearModel<key_t>::get_error_bound(
   for (size_t key_i = 0; key_i < size; ++key_i) {
     long long int pos_actual = key_i;
     long long int pos_pred = predict(*(keys_begin + key_i));
+    int error = std::abs(pos_actual - pos_pred);
+
+    if (error > max) {
+      max = error;
+    }
+  }
+
+  return max;
+}
+
+template <class key_t>
+size_t VarlenLinearModel<key_t>::get_error_bound(
+    const typename std::vector<key_t>::const_iterator &keys_begin,
+    uint32_t size, const uint32_t limit) {
+  int max = 0;
+
+  for (size_t key_i = 0; key_i < size; ++key_i) {
+    long long int pos_actual = key_i;
+    long long int pos_pred = predict(*(keys_begin + key_i));
+	if (pos_pred >= limit) pos_pred = limit - 1;
     int error = std::abs(pos_actual - pos_pred);
 
     if (error > max) {

@@ -184,6 +184,7 @@
 
 ## How to run
 
+- `mkdir /tmp/netbuffer`
 - Prepare randomly-generated keys
 	+ `make all`
 	+ `./prepare`

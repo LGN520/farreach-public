@@ -22,6 +22,8 @@
 
 #include "xindex_group.h"
 
+#include <fstream>
+
 #if !defined(XINDEX_GROUP_IMPL_H)
 #define XINDEX_GROUP_IMPL_H
 
@@ -69,13 +71,18 @@ void Group<key_t, val_t, seq, max_model_n>::init(
   assert(s.ok());
 
   // Write original data (execute at the first time)
+  std::string debug_filename;
+  GET_STRING(debug_filename, "tmp_server"<<group_idx<<".out");
+  std::ofstream ofs(debug_filename, std::ofstream::out);
   rocksdb::WriteBatch batch;
   for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
 	std::string valstr;
 	GET_STRING(valstr, *(vals_begin + rec_i));
 	batch.Put((*(keys_begin + rec_i)).to_slice(), valstr);
+	ofs<<"key: "<<(keys_begin + rec_i)->key<<" val: "<<valstr<<std::endl;
   }
   s = data->Write(rocksdb::WriteOptions(), &batch);
+  ofs.close();
   assert(s.ok());
 
   // RocksDB will train model_n linear models for each new sstable 

@@ -78,6 +78,10 @@ ModelResult LinearModelWrapper::index_predict(const Slice &key) const {
 	uint32_t prev_i = 0;
 	uint32_t index_model_i = 0;
 	while (index_model_n_ > 1) {
+		if (cur_i >= index_model_n_) {
+			index_model_i = prev_i;
+			break;
+		}
 		int cmp = key.compare(index_pivots_[cur_i]);
 		if (cmp > 0) {
 			prev_i = cur_i;
@@ -98,12 +102,20 @@ ModelResult LinearModelWrapper::index_predict(const Slice &key) const {
 } 
 
 ModelResult LinearModelWrapper::data_predict(const Slice &key, const uint32_t &data_idx) const {
+	if (unlikely(data_idx >= data_block_n_)) {
+		printf("[LinearModelWrapper::data_predict] Invalid data idx %u >= # of data block %u\n", data_idx, data_block_n_);
+		exit(-1);
+	}
 	ModelResult result;
 	uint32_t cur_i = 0;
 	uint32_t prev_i = 0;
 	uint32_t data_model_i = 0;
 	Slice *data_pivots_ = data_pivots_list_[data_idx];
 	while (data_model_n_ > 1) {
+		if (cur_i >= data_model_n_) {
+			data_model_i = prev_i;
+			break;
+		}
 		int cmp = key.compare(data_pivots_[cur_i]);
 		if (cmp > 0) {
 			prev_i = cur_i;
