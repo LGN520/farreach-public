@@ -473,7 +473,6 @@ static int run_fg(void *param) {
 
   while (running) {
 	// DEBUG TEST
-	int tmprun = 0;
 	/*query_i = debugtest_idx;
 	update_i = debugtest_idx;
 	if (debugtest_i == 0) tmprun = 1;
@@ -484,8 +483,8 @@ static int run_fg(void *param) {
     double d = ratio_dis(gen);
 
 	//int tmprun = 0;
-    //if (d <= read_ratio) {  // get
-    if (tmprun == 0) {  // get
+    if (d <= read_ratio) {  // get
+    //if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
 	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key);
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -651,7 +650,6 @@ static int run_fg(void *param) {
 		res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
 		INVARIANT(res == 0);
 	}
-	break; //tmprun
   }
 
   if (sent_pkt_idx < burst_size) {

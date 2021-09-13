@@ -2849,6 +2849,7 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
   BlockBasedTable* table_reader = dynamic_cast<BlockBasedTable*>(f->fd.table_reader);
 
   if (f->fd.linear_model_wrapper_ == nullptr) {
+	  print_msg("Training model for %u at level %d\n", uint32_t(f->fd.GetNumber()), level);
 	  // Prepare index keys and data keys list
 	  std::vector<Slice> index_keys;
 	  std::vector<std::vector<Slice>> data_keys_list;

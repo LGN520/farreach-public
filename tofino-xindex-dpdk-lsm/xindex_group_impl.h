@@ -69,14 +69,14 @@ void Group<key_t, val_t, seq, max_model_n>::init(
   assert(s.ok());
 
   // Write original data (execute at the first time)
-  /*rocksdb::WriteBatch batch;
+  rocksdb::WriteBatch batch;
   for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
 	std::string valstr;
 	GET_STRING(valstr, *(vals_begin + rec_i));
 	batch.Put((*(keys_begin + rec_i)).to_slice(), valstr);
   }
   s = data->Write(rocksdb::WriteOptions(), &batch);
-  assert(s.ok());*/
+  assert(s.ok());
 
   // RocksDB will train model_n linear models for each new sstable 
 }
@@ -195,6 +195,10 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::merge_scan_2_way(
 	uint32_t v1_size = v1.size();
 	uint32_t cnt = 0;
 	while (true) {
+		if ((v0_idx == v0_size) || (v1_idx == v1_size) || (cnt == n)) {
+			break;
+		}
+
 		if (v0[v0_idx].first < v1[v1_idx].first) {
 			result.push_back(v0[v0_idx]);
 			v0_idx++;
@@ -209,10 +213,6 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::merge_scan_2_way(
 			v1_idx++;
 		}
 		cnt++;
-
-		if ((v0_idx == v0_size) || (v1_idx == v1_size) || (cnt == n)) {
-			break;
-		}
 	}
 
 	if (cnt == n) return cnt;
@@ -231,6 +231,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::merge_scan_2_way(
 			if (cnt == n) break;
 		}
 	}
+
 	return cnt;
 }
 
@@ -264,9 +265,7 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_lsm(
 	INVARIANT(txn != nullptr);
 	rocksdb::ReadOptions read_options;
 	read_options.fill_cache = false; // Bypass OS page cache, use block cache only
-	COUT_THIS("get")
 	s = txn->Get(read_options, key.to_slice(), &valstr);
-	COUT_THIS("finish get")
 	s = txn->Commit();
 	delete txn;
 	if (valstr != "") {
@@ -332,7 +331,7 @@ inline bool Group<key_t, val_t, seq, max_model_n>::scan_from_lsm(
 		rocksdb::Slice tmpkey_slice = iter->key();
 		key_t tmpkey;
 		tmpkey.key = *(uint64_t*)tmpkey_slice.data_;
-		if (tmpkey.key >= end.key) break;
+		//if (tmpkey.key >= end.key) break;
 		rocksdb::Slice tmpvalue_slice = iter->value();
 		val_t tmpval = std::stoi(tmpvalue_slice.ToString());
 		result.push_back(std::pair<key_t, val_t>(tmpkey, tmpval));
