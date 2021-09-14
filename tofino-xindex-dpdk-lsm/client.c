@@ -335,6 +335,13 @@ void run_benchmark(size_t sec) {
   }
 
   running = false;
+
+  size_t throughput = 0;
+  for (auto &p : fg_params) {
+    throughput += p.throughput;
+  }
+  COUT_THIS("[client] Throughput(op/s): " << throughput / sec);
+
   /*void *status;
   for (size_t i = 0; i < fg_n; i++) {
     int rc = pthread_join(threads[i], &status);
@@ -343,12 +350,6 @@ void run_benchmark(size_t sec) {
     }
   }*/
   rte_eal_mp_wait_lcore();
-
-  size_t throughput = 0;
-  for (auto &p : fg_params) {
-    throughput += p.throughput;
-  }
-  COUT_THIS("[client] Throughput(op/s): " << throughput / sec);
 }
 
 static int run_receiver(void *param) {
