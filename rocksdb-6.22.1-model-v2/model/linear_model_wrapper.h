@@ -21,7 +21,7 @@ class LinearModelWrapper {
 	public:
 		LinearModelWrapper(const std::vector<Slice> &index_keys, 
 				const std::vector<std::vector<Slice>> &data_keys_list,
-				uint32_t index_model_n = 1, uint32_t data_model_n = 10);
+				uint32_t index_model_n = 1, uint32_t data_model_n = 2);
 		~LinearModelWrapper();
 		ModelResult index_predict(const Slice &key) const;
 		ModelResult data_predict(const Slice &key, const uint32_t &data_idx) const;

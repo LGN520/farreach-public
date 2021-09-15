@@ -247,9 +247,7 @@ void DataBlockIter::SeekImpl(const Slice& target) {
   if (!ok) {
     return;
   }
-  printf("beefore data find index: %u\n", index);
   FindKeyAfterBinarySeek(seek_key, index, skip_linear_scan);
-  printf("after data find index: %u\n", index);
 }
 
 // Optimized Seek for point lookup for an internal key `target`
@@ -407,9 +405,7 @@ void IndexBlockIter::SeekImpl(const Slice& target) {
   if (!ok) {
     return;
   }
-  printf("beefore index find index: %u\n", index);
   FindKeyAfterBinarySeek(seek_key, index, skip_linear_scan);
-  printf("after index find index: %u\n", index);
 }
 
 void DataBlockIter::SeekForPrevImpl(const Slice& target) {
@@ -719,7 +715,6 @@ bool BlockIter<TValue>::BinarySeek(const Slice& target, uint32_t* index,
       return false;
     }
     Slice mid_key(key_ptr, non_shared);
-	printf("mid index: %d, key: %llu\n", int(mid), *(unsigned long long*)mid_key.data_);
     raw_key_.SetKey(mid_key, false /* copy */);
     int cmp = CompareCurrentKey(target);
     if (cmp < 0) {

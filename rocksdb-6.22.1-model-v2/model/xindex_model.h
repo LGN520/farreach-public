@@ -49,16 +49,17 @@ class VarlenLinearModel {
   uint32_t get_max_key_len(const typename std::vector<key_t>::const_iterator &keys_begin, uint32_t size);
   size_t get_error_bound(const std::vector<key_t> &keys,
                          const std::vector<size_t> &positions);
-  size_t get_error_bound(const std::vector<key_t> &keys,
-                         const std::vector<size_t> &positions, const uint32_t limit);
+  //size_t get_error_bound(const std::vector<key_t> &keys,
+  //                       const std::vector<size_t> &positions, const uint32_t limit);
   size_t get_error_bound(
       const typename std::vector<key_t>::const_iterator &keys_begin,
       uint32_t size);
-  size_t get_error_bound(
-      const typename std::vector<key_t>::const_iterator &keys_begin,
-      uint32_t size, const uint32_t limit);
+  //size_t get_error_bound(
+  //    const typename std::vector<key_t>::const_iterator &keys_begin,
+  //    uint32_t size, const uint32_t limit);
 
   size_t error_bound = 0;
+  size_t limit = 0;
   double *weights = nullptr; // weights of max_key_len + 1
   uint32_t max_key_len = 0;
 };

@@ -14,8 +14,8 @@ LinearModelWrapper::LinearModelWrapper(const std::vector<Slice> &index_keys,
 	data_models_list_ = new linear_model_t*[data_block_n_];
 	data_pivots_list_ = new Slice*[data_block_n_];
 	for (size_t i = 0; i < data_block_n_; i++) {
-		data_models_list_[i] = new linear_model_t[data_model_n_];
-		data_pivots_list_[i] = new Slice[data_model_n_];
+		data_models_list_[i] = nullptr;
+		data_pivots_list_[i] = nullptr;
 	} // data_block_n_ * data_model_n_
 
 	// Train index models
@@ -31,27 +31,39 @@ LinearModelWrapper::LinearModelWrapper(const std::vector<Slice> &index_keys,
 		else {
 			index_models_[i].prepare(index_keys_iter, tail_index_keys_n);
 		}
-		//printf("index_models[%u].error_bound = %u\n", uint32_t(i), uint32_t(index_models_[i].error_bound));
+		printf("index_models[%u].error_bound = %u, limit: %u\n", uint32_t(i), uint32_t(index_models_[i].error_bound), uint32_t(index_models_[i].limit));
 	}
 	
 	// Train data models
+	printf("datablockn: %u\n", uint32_t(data_block_n_));
 	for (size_t data_block_i = 0; data_block_i < data_block_n_; data_block_i++) {
 		const std::vector<Slice> &data_keys = data_keys_list[data_block_i];
-		linear_model_t *data_models_ = data_models_list_[data_block_i];
-		Slice *data_pivots_ = data_pivots_list_[data_block_i];
-		uint32_t per_data_keys_n = data_keys.size() / data_model_n_;
-		uint32_t tail_data_keys_n = per_data_keys_n + data_keys.size() % data_model_n_;
-		std::vector<Slice>::const_iterator data_keys_iter = data_keys.begin();
-		for (size_t i = 0; i < data_model_n_; i++) {
-			data_pivots_[i] = *data_keys_iter;
-			if (i != data_model_n_ - 1) {
-				data_models_[i].prepare(data_keys_iter, per_data_keys_n);
-				data_keys_iter += per_data_keys_n;
+		for (uint32_t tmpi = 0; tmpi < data_keys.size(); tmpi++) {
+			printf("datekeys[%u]: %llu, datakeys size: %u\n", tmpi, *(unsigned long long*)data_keys[tmpi].data_, uint32_t(data_keys.size()));
+		}
+		if (data_keys.size() != 0) { // unprepared model will has a weights = nullptr
+			data_models_list_[data_block_i] = new linear_model_t[data_model_n_];
+			data_pivots_list_[data_block_i] = new Slice[data_model_n_];
+			linear_model_t *data_models_ = data_models_list_[data_block_i];
+			Slice *data_pivots_ = data_pivots_list_[data_block_i];
+			uint32_t per_data_keys_n = data_keys.size() / data_model_n_;
+			uint32_t tail_data_keys_n = per_data_keys_n + data_keys.size() % data_model_n_;
+			std::vector<Slice>::const_iterator data_keys_iter = data_keys.begin();
+			for (size_t i = 0; i < data_model_n_; i++) {
+				data_pivots_[i] = *data_keys_iter;
+				if (i != data_model_n_ - 1) {
+					data_models_[i].prepare(data_keys_iter, per_data_keys_n);
+					data_keys_iter = data_keys_iter + per_data_keys_n;
+				}
+				else {
+					data_models_[i].prepare(data_keys_iter, tail_data_keys_n);
+				}
+				printf("data_block_i: %u, minkey: %llu, maxkey: %llu, data_pivots_[%u]:%llu\n", uint32_t(data_block_i),
+						*(unsigned long long*)data_keys[0].data_, *(unsigned long long*)data_keys[data_keys.size()-1].data_,
+						uint32_t(i), *(unsigned long long*)data_pivots_[i].data_);
+				printf("data_models_list[%u][%u].error_bound = %u, limit: %u\n", uint32_t(data_block_i), uint32_t(i), uint32_t(data_models_[i].error_bound), uint32_t(data_models_[i].limit));
+				//printf("data_models_list[%u][%u].error_bound = %u, limit: %u\n", uint32_t(data_block_i), uint32_t(i), uint32_t(data_models_[i].error_bound), uint32_t(data_models_[i].limit));
 			}
-			else {
-				data_models_[i].prepare(data_keys_iter, tail_data_keys_n);
-			}
-			//printf("data_models_list[%u][%u].error_bound = %u\n", uint32_t(data_block_i), uint32_t(i), uint32_t(data_models_[i].error_bound));
 		}
 	}
 
@@ -106,11 +118,53 @@ ModelResult LinearModelWrapper::data_predict(const Slice &key, const uint32_t &d
 		printf("[LinearModelWrapper::data_predict] Invalid data idx %u >= # of data block %u\n", data_idx, data_block_n_);
 		exit(-1);
 	}
+	
+	if (data_models_list_[data_idx] == nullptr) {
+		printf("[LinearModelWrapper::data_predict] Should not invoke data_predict for empty data block!\n");
+		exit(-1);
+	}
+
 	ModelResult result;
-	uint32_t cur_i = 0;
-	uint32_t prev_i = 0;
-	uint32_t data_model_i = 0;
 	Slice *data_pivots_ = data_pivots_list_[data_idx];
+	uint32_t data_model_i = 0;
+
+	// Simple search for data_model_n = 2
+	if (likely(data_model_n_ == 2)) {
+		int cmp = key.compare(data_pivots_[1]);
+		if (cmp >= 0) {
+			data_model_i = 1;
+		}
+	}
+
+	// Binary search
+	/*if (likely(data_model_n_ > 1)) {
+		int32_t left = -1, right = int32_t(data_model_n_ - 1);
+		while (left != right) {
+			int32_t mid = left + (right - left + 1) / 2;
+			int cmp = key.compare(data_pivots_[mid]);
+			if (cmp < 0) {
+				right = mid - 1;
+			}
+			else if (cmp > 0) {
+				left = mid;
+			}
+			else {
+				left = right = mid;
+				break;
+			}
+		}
+
+		if (left != -1) {
+			data_model_i = left;
+		}
+		else {
+			data_model_i = 0;
+		}
+	}*/
+
+	// Linear search
+	/*uint32_t cur_i = 0;
+	uint32_t prev_i = 0;
 	while (data_model_n_ > 1) {
 		if (cur_i >= data_model_n_) {
 			data_model_i = prev_i;
@@ -129,7 +183,8 @@ ModelResult LinearModelWrapper::data_predict(const Slice &key, const uint32_t &d
 			data_model_i = cur_i;
 			break;
 		}
-	}
+	}*/
+
 	result.predict_idx = data_models_list_[data_idx][data_model_i].predict(key);
 	result.error_bound = data_models_list_[data_idx][data_model_i].error_bound;
 	return result;

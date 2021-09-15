@@ -252,6 +252,7 @@ void DataBlockIter::SeekImpl(const Slice& target, LinearModelWrapper *linear_mod
     return;
   }
   FindKeyAfterBinarySeek(seek_key, index, skip_linear_scan);
+  printf("Final index: %d\n", int(index_));
 }
 
 // Optimized Seek for point lookup for an internal key `target`
@@ -412,6 +413,7 @@ void IndexBlockIter::SeekImpl(const Slice& target, LinearModelWrapper *linear_mo
     return;
   }
   FindKeyAfterBinarySeek(seek_key, index, skip_linear_scan); // set current_
+  printf("Final index: %d\n", int(index_));
 }
 
 void DataBlockIter::SeekForPrevImpl(const Slice& target) {
@@ -669,6 +671,9 @@ void BlockIter<TValue>::FindKeyAfterBinarySeek(const Slice& target,
       if (!Valid()) {
         break;
       }
+	  printf("before index: %d\n", int(index_));
+	  index_ = index_ + 1;
+	  printf("after index: %d\n", int(index_));
       if (current_ == max_offset) {
         assert(CompareCurrentKey(target) > 0);
         break;
@@ -778,7 +783,7 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 			  model_result = linear_model_wrapper->index_predict(target);
 			}
 			else if (typeid(TValue) == typeid(Slice)) {
-			  if (datablock_idx == -1) {
+			  if (unlikely(datablock_idx == -1)) {
 				  printf("BlockIter<%s>::ModelSeek<%s>: Invalid datablock_idx %d for DataBlockIter::ModelSeek!\n", typeid(TValue).name(), typeid(DecodeKeyFunc).name(), int(datablock_idx));
 				  exit(-1);
 			  }
@@ -794,7 +799,57 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 			curidx = model_result.predict_idx;
 			error_bound = model_result.error_bound + 1; // We can prove that error_bound + 1 must find the last key <= target
 
-			if (curidx >= num_restarts_) {
+			// Binary search
+			printf("curidx: %u, error_bound: %u, num_restarts_: %u\n", curidx, error_bound, uint32_t(num_restarts_));
+			int64_t left = int64_t(curidx) - int64_t(error_bound) - 1;
+			printf("left: %d\n", int(left));
+			if (left < 0) left = -1;
+			printf("left: %d\n", int(left));
+			int64_t right = int64_t(curidx + error_bound); // Must true: right > 0 and right > left
+			printf("right :%d\n", int(right));
+			if (right >= num_restarts_) right = num_restarts_ - 1;
+			printf("right :%d\n", int(right));
+			if (unlikely(left > right)) {
+				printf("Invalid left: %d, right %d, curidx: %u, error_bound: %u, num_restarts_: %u\n",
+						int(left), int(right), curidx, error_bound, uint32_t(num_restarts_));
+				exit(-1);
+			}
+			while (left != right) {
+				int64_t mid = left + (right - left + 1) / 2;
+				uint32_t region_offset = GetRestartPoint(mid);
+				uint32_t shared, non_shared;
+				const char* key_ptr = DecodeKeyFunc()(
+					data_ + region_offset, data_ + restarts_, &shared, &non_shared);
+				if (key_ptr == nullptr || (shared != 0)) {
+					CorruptionError();
+					result = false;
+					break;
+				}
+				Slice midkey(key_ptr, non_shared);
+				printf("midindx: %d, midkey: %llu\n", int(mid), *(unsigned long long*)midkey.data_);
+				raw_key_.SetKey(midkey, false /* copy */); // Keep original property of is_user_key of raw_key_
+				int cmp = CompareCurrentKey(target);
+				if (cmp < 0) {
+					left = mid;
+				}
+				else if (cmp > 0) {
+					right = mid - 1;
+				}
+				else {
+					*skip_linear_scan = true;
+					left = right = mid;
+				}
+			}
+			if (left == -1) {
+				*skip_linear_scan = true;
+				*index = 0;
+			}
+			else {
+				*index = uint32_t(left);
+			}
+
+			// Linear search
+			/*if (curidx >= num_restarts_) {
 			  curidx = num_restarts_ - 1;
 			}
 			uint32_t previdx = curidx;
@@ -810,7 +865,7 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 					break;
 				}
 				Slice curkey(key_ptr, non_shared);
-				raw_key_.SetKey(curkey, false /* copy */); // Keep original property of is_user_key of raw_key_
+				raw_key_.SetKey(curkey, false); // Copy: false; Keep original property of is_user_key of raw_key_
 				int cmp = CompareCurrentKey(target);
 				if (cmp < 0) {
 					// the last key is smaller than target or pingpong
@@ -844,7 +899,8 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 					result = false;
 					break;
 				}
-			} // while true
+			} // while true */
+
 		} // restarts_ != 0
 	} // linear_model_wrapper != null
 

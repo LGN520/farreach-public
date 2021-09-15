@@ -11,7 +11,18 @@
 		+ 70% read - 10% insert - 10% remove - 10% update: `./prepare -b 0.1; ./client -a 0.7 -b 0.1 -c 0.1 -d 0.1`
 		+ 60% read - 10% insert - 10% remove - 10% update - 10% scan: `./prepare -b 0.1; ./client -a 0.6 -b 0.1 -c 0.1 -d 0.1 -e 0.1`
 
-## Preliminary Exp of microbench (without persistency)
+## Preliminary Exp of Microbench (local test with persistency)
+
+- Latency
+	+ Per-sstable: 4MB; Data size: 10MB
+		* XIndex with rocksdb: 100293 op/s
+		* XIndex with rocksdb-model
+			- # of model = 2:
+			- # of model = 4: 96759 op/s
+			- # of model = 8:
+			- # of model = 16:
+
+## Preliminary Exp of microbench (remote test without persistency)
 
 - Latency
 	* Kernel stack

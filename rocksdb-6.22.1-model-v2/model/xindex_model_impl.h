@@ -49,6 +49,7 @@ void VarlenLinearModel<key_t>::prepare(const std::vector<key_t> &keys,
   }
 
   weights = new double[max_key_len + 1];
+  limit = positions[positions.size()-1]+1;
 
   prepare_model(key_ptrs, positions);
   error_bound = get_error_bound(keys, positions);
@@ -73,6 +74,7 @@ void VarlenLinearModel<key_t>::prepare(
   }
 
   weights = new double[max_key_len + 1];
+  limit = positions[positions.size()-1]+1;
 
   prepare_model(key_ptrs, positions);
   error_bound = get_error_bound(keys_begin, size);
@@ -219,21 +221,24 @@ size_t VarlenLinearModel<key_t>::predict(const key_t &curkey) const {
   double *model_key_ptr = model_key.data();
   curkey.to_model_key(model_key_ptr, max_key_len);
 
+  double res = 0;
   if (max_key_len == 1) {
-    double res = weights[0] * *model_key_ptr + weights[1];
-    return res > 0 ? res : 0;
+    res = weights[0] * *model_key_ptr + weights[1];
   } else {
-    double res = 0;
     for (size_t feat_i = 0; feat_i < max_key_len; feat_i++) {
       res += weights[feat_i] * model_key_ptr[feat_i];
     }
     res += weights[max_key_len];  // the bias term
-    return res > 0 ? res : 0;
+  }
+    
+  if (res < 0) {
+	  res = 0;
+  }
+  else if (res >= limit) {
+	  res = limit - 1;
   }
 
-  printf("Should not arrive here!");
-  exit(-1);
-  return 0;
+  return size_t(res); // [0, limit-1]
 }
 
 template <class key_t>
@@ -285,7 +290,7 @@ size_t VarlenLinearModel<key_t>::get_error_bound(
   return max;
 }
 
-template <class key_t>
+/*template <class key_t>
 size_t VarlenLinearModel<key_t>::get_error_bound(
     const std::vector<key_t> &keys, const std::vector<size_t> &positions, const uint32_t limit) {
   int max = 0;
@@ -302,7 +307,7 @@ size_t VarlenLinearModel<key_t>::get_error_bound(
   }
 
   return max;
-}
+}*/
 
 template <class key_t>
 size_t VarlenLinearModel<key_t>::get_error_bound(
@@ -323,7 +328,7 @@ size_t VarlenLinearModel<key_t>::get_error_bound(
   return max;
 }
 
-template <class key_t>
+/*template <class key_t>
 size_t VarlenLinearModel<key_t>::get_error_bound(
     const typename std::vector<key_t>::const_iterator &keys_begin,
     uint32_t size, const uint32_t limit) {
@@ -341,7 +346,7 @@ size_t VarlenLinearModel<key_t>::get_error_bound(
   }
 
   return max;
-}
+}*/
 
 }  // namespace xindex
 

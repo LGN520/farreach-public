@@ -71,7 +71,7 @@ void Group<key_t, val_t, seq, max_model_n>::init(
   assert(s.ok());
 
   // Write original data (execute at the first time)
-  std::string debug_filename;
+  /*std::string debug_filename;
   GET_STRING(debug_filename, "tmp_server"<<group_idx<<".out");
   std::ofstream ofs(debug_filename, std::ofstream::out);
   rocksdb::WriteBatch batch;
@@ -83,7 +83,7 @@ void Group<key_t, val_t, seq, max_model_n>::init(
   }
   s = data->Write(rocksdb::WriteOptions(), &batch);
   ofs.close();
-  assert(s.ok());
+  assert(s.ok());*/
 
   // RocksDB will train model_n linear models for each new sstable 
 }

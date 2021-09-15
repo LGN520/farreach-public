@@ -2868,17 +2868,21 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
 		assert(s.ok());
 		Slice key = blockhandles_iter->key();
 		Slice user_key;
-		InternalKey ikey;
+		// NOTE: ikey has a string to deep copy the key from the block; each time of DecodeFrom will reset the string
+		// So, using a single InternalKey ikey to push back elements into data_keys_list will incur that all the elements (aka slices)
+		// have the same memory address. That's why the value always changes as the procedure runs
+		//InternalKey ikey; 
 		if (!table_reader->rep_->index_key_includes_seq) { // index_key_includes_seq is true by default
 		  user_key = key;
 		} else {
-		  ikey.DecodeFrom(key);
-		  user_key = ikey.user_key(); // NOTE: we use userkey for model trainning
+		  //ikey.DecodeFrom(key);
+		  //user_key = ikey.user_key(); // NOTE: we use userkey for model trainning
+		  user_key = ExtractUserKey(key);
 		}
 		index_keys.push_back(user_key);
-		data_keys_list.push_back(std::vector<Slice>());
 
 		// DataBlockIter
+		data_keys_list.push_back(std::vector<Slice>());
 		std::unique_ptr<InternalIterator> datablock_iter;
 		datablock_iter.reset(table_reader->NewDataBlockIterator<DataBlockIter>(
 			ReadOptions(), blockhandles_iter->value().handle, 
@@ -2889,12 +2893,15 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
 		assert(s.ok());
 		for (datablock_iter->SeekToFirst(); datablock_iter->Valid();
 			 datablock_iter->Next()) {
-		  s = datablock_iter->status();
-		  assert(s.ok());
-		  key = datablock_iter->key();
-		  ikey.DecodeFrom(key);
-		  user_key = ikey.user_key(); // NOTE: we use userkey for model trainning
-		  data_keys_list[datablock_idx].push_back(user_key);
+			s = datablock_iter->status();
+			assert(s.ok());
+			key = datablock_iter->key();
+			ParsedInternalKey pkey;
+			ParseInternalKey(key, &pkey, false);
+			if (pkey.type == kTypeValue) {
+				user_key = ExtractUserKey(key);
+				data_keys_list[datablock_idx].push_back(user_key);
+			}
 		}
 		datablock_idx++;
 	  }
