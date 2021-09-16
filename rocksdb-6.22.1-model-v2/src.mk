@@ -2,6 +2,7 @@
 LIB_SOURCES =                                                   \
   table/block_based/backtrace.cc								\
   model/linear_model_wrapper.cc									\
+  model/xindex_model.cc											\
   db/file_descriptor.cc											\
   cache/cache.cc                                                \
   cache/cache_entry_roles.cc                                    \

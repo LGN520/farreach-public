@@ -364,17 +364,17 @@ void *run_sfg(void * param) {
 	int tmprun = 0;
     if (d <= read_ratio) {  // get
     //if (tmprun == 0) {  // get
-	  val_t tmp_val;
+	  /*val_t tmp_val;
 	  Key tmp_key;
-	  tmp_key.key = 307498288186127;
+	  tmp_key.key = 335765875373118;
 	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << tmp_key.key);
 	  bool tmp_stat = table->get(tmp_key, tmp_val, thread_id);
 	  if (!tmp_stat) {
 		tmp_val = 0;
 	  }
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << tmp_key.key << " val = " << tmp_val);
+	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << tmp_key.key << " val = " << tmp_val);*/
 
-	  /*val_t tmp_val;
+	  val_t tmp_val;
 	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key);
 	  bool tmp_stat = table->get(op_keys[(query_i + delete_i) % op_keys.size()], tmp_val, thread_id);
 	  if (!tmp_stat) {
@@ -402,7 +402,7 @@ void *run_sfg(void * param) {
       insert_i++;
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
-      }*/
+      }
     } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
     //} else if (tmprun == 3) {  // remove
 	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id);
@@ -426,7 +426,6 @@ void *run_sfg(void * param) {
       }
     }
     thread_param.throughput++;
-	exit(-1);
   }
 
   pthread_exit(nullptr);

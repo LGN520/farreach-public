@@ -2248,6 +2248,8 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
                             bool skip_filters) {
   assert(key.size() >= 8);  // key must be internal key
   assert(get_context != nullptr);
+  ParsedInternalKey pkey;
+  ParseInternalKey(key, &pkey, false);
   Status s;
   const bool no_io = read_options.read_tier == kBlockCacheTier;
 

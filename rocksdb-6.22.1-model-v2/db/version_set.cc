@@ -2851,8 +2851,10 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
   if (f->fd.linear_model_wrapper_ == nullptr) {
 	  print_msg("Training model for %u at level %d\n", uint32_t(f->fd.GetNumber()), level);
 	  // Prepare index keys and data keys list
-	  std::vector<Slice> index_keys;
-	  std::vector<std::vector<Slice>> data_keys_list;
+	  //std::vector<Slice> index_keys;
+	  //std::vector<std::vector<Slice>> data_keys_list; // Shallow copy
+	  std::vector<std::string> index_keys;
+	  std::vector<std::vector<std::string>> data_keys_list; // Deep copy
 	  // IndexBlockIter
 	  std::unique_ptr<InternalIteratorBase<IndexValue>> blockhandles_iter(
 		  table_reader->NewIndexIterator(ReadOptions(), /*need_upper_bound_check=*/false,
@@ -2867,22 +2869,23 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
 		s = blockhandles_iter->status();
 		assert(s.ok());
 		Slice key = blockhandles_iter->key();
-		Slice user_key;
+		Slice user_key;// Shallow copy
 		// NOTE: ikey has a string to deep copy the key from the block; each time of DecodeFrom will reset the string
 		// So, using a single InternalKey ikey to push back elements into data_keys_list will incur that all the elements (aka slices)
 		// have the same memory address. That's why the value always changes as the procedure runs
 		//InternalKey ikey; 
 		if (!table_reader->rep_->index_key_includes_seq) { // index_key_includes_seq is true by default
-		  user_key = key;
+		  //user_key = key; // Shallow copy
+		  index_keys.push_back(key.ToString()); // deep copy
 		} else {
 		  //ikey.DecodeFrom(key);
 		  //user_key = ikey.user_key(); // NOTE: we use userkey for model trainning
-		  user_key = ExtractUserKey(key);
+		  //user_key = ExtractUserKey(key); // Shallow copy
+		  index_keys.push_back(ExtractUserKey(key).ToString()); // deep copy
 		}
-		index_keys.push_back(user_key);
 
 		// DataBlockIter
-		data_keys_list.push_back(std::vector<Slice>());
+		data_keys_list.push_back(std::vector<std::string>());
 		std::unique_ptr<InternalIterator> datablock_iter;
 		datablock_iter.reset(table_reader->NewDataBlockIterator<DataBlockIter>(
 			ReadOptions(), blockhandles_iter->value().handle, 
@@ -2891,17 +2894,21 @@ void VersionStorageInfo::AddFile(int level, FileMetaData* f, TableCache *table_c
 			/*prefetch_buffer=*/nullptr));
 		s = datablock_iter->status();
 		assert(s.ok());
+		
 		for (datablock_iter->SeekToFirst(); datablock_iter->Valid();
 			 datablock_iter->Next()) {
 			s = datablock_iter->status();
 			assert(s.ok());
 			key = datablock_iter->key();
-			ParsedInternalKey pkey;
-			ParseInternalKey(key, &pkey, false);
-			if (pkey.type == kTypeValue) {
-				user_key = ExtractUserKey(key);
-				data_keys_list[datablock_idx].push_back(user_key);
-			}
+			data_keys_list[datablock_idx].push_back(ExtractUserKey(key).ToString());
+
+			// Legacy: check value type
+			//ParsedInternalKey pkey;
+			//ParseInternalKey(key, &pkey, false);
+			//if (pkey.type == ValueType::kTypeBlobIndex || pkey.type == ValueType::kTypeValue) { // NOTE: we also need delete
+			//	user_key = ExtractUserKey(key);
+			//	data_keys_list[datablock_idx].push_back(user_key);
+			//}
 		}
 		datablock_idx++;
 	  }

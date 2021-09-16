@@ -256,6 +256,7 @@ class BlockIter : public InternalIteratorBase<TValue> {
 	friend class BlockBasedTable;
 	friend class BlockBasedTableIterator;
 	friend class PartitionedIndexIterator;
+	friend class VersionStorageInfo;
  public:
   void InitializeBase(const Comparator* raw_ucmp, const char* data,
                       uint32_t restarts, uint32_t num_restarts,
@@ -491,6 +492,7 @@ class BlockIter : public InternalIteratorBase<TValue> {
 };
 
 class DataBlockIter final : public BlockIter<Slice> {
+	friend class VersionStorageInfo;
  public:
   DataBlockIter()
       : BlockIter(), read_amp_bitmap_(nullptr), last_bitmap_offset_(0) {}

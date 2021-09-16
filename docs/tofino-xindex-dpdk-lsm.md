@@ -5,6 +5,7 @@
 - Install RocksDB 6.22.1
 - Fix compilation bugs
 - Fix bugs of opening database (not link snappy in librocksdb.a)
+- Set data_block_restart_interval as 1 (the same as index_block_restart_interval) (include/rocksdb/table.h)
 - Solution 2: maintain models in each FileDescriptor
 	+ Create directory of rocksdb-6.22.1-model-v2
 	+ Add linaer_model_wrapper_ in each FileDescriptor (do not need map or lock mechanism) (db/version_edit.h)
@@ -82,6 +83,25 @@
 		key to predict in ModelSeek, but still uses InternalKeyComparator as usual since each sstable does not have duplicate user key 
 		(table/block_based/block.cc)
 		+ Support multiple models for lookup within a single block for smaller error bound (model/linear_model_wrapper.cc)
+- Sep. 14
+	+ Write code for local test (localtest.c)
+- Sep. 15
+	+ Implement binary search for pivots of multiple models in one sstable file (model/linear_model_wrapper.\*.bak)
+	+ Implement binary search for local search after model prediction (table/block_based/block.cc)
+	+ Do local test (poor perf)
+	+ Debug and optimize
+		+ Fix a bug of unstopped loop in modelseek (due to left < right in binary search)
+		+ Introduce limit in linear model to reduce error bound of model
+		+ Fix a bug of wrong data block index when model predict for the block, which loses the benefit of CDF model on data blocks
+		+ Fix a bug of wrong training set due to incorrect use of InternalKey (different keys point to the same memory of a string)
+		+ Legacy: Fix a bug of not checking the ValueType of each Slice in data block
+- Sep. 16
+	+ Debug and optimize
+		+ Fix a bug of wrong training set due to shallow copy of Slice (each key points to an individual memory in block, yet which will be realloated before model training)
+		+ Deep copy Slice in model for pivots (otherwise, slice points to index/data block, which might be freed from memory cache)
+		+ Legacy: Use linear search for CDF model in index and data block due to accurate prediction (binary search >> linear search)
+		+ Fix a bug in linear search (even keys are the same, cmp != 0 due to different seqno)
+
 - (legacy) Solution 1: maintain models in each ColumnFamilyData
 	- Create directory of rocksdb-6.22.1-model
 	- Add Version* version_ in VersionStorageInfo (db/version_set.h, db/version_set.cc)

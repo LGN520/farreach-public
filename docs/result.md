@@ -15,12 +15,8 @@
 
 - Latency
 	+ Per-sstable: 4MB; Data size: 10MB
-		* XIndex with rocksdb: 100293 op/s
+		* XIndex with rocksdb:
 		* XIndex with rocksdb-model
-			- # of model = 2:
-			- # of model = 4: 96759 op/s
-			- # of model = 8:
-			- # of model = 16:
 
 ## Preliminary Exp of microbench (remote test without persistency)
 

@@ -252,7 +252,6 @@ void DataBlockIter::SeekImpl(const Slice& target, LinearModelWrapper *linear_mod
     return;
   }
   FindKeyAfterBinarySeek(seek_key, index, skip_linear_scan);
-  printf("Final index: %d\n", int(index_));
 }
 
 // Optimized Seek for point lookup for an internal key `target`
@@ -413,7 +412,6 @@ void IndexBlockIter::SeekImpl(const Slice& target, LinearModelWrapper *linear_mo
     return;
   }
   FindKeyAfterBinarySeek(seek_key, index, skip_linear_scan); // set current_
-  printf("Final index: %d\n", int(index_));
 }
 
 void DataBlockIter::SeekForPrevImpl(const Slice& target) {
@@ -660,7 +658,7 @@ void BlockIter<TValue>::FindKeyAfterBinarySeek(const Slice& target,
       // We are in a non-last restart interval. Since `BinarySeek()` guarantees
       // the next restart key is strictly greater than `target`, we can
       // terminate upon reaching it without any additional key comparison.
-      max_offset = GetRestartPoint(index + 1);
+      max_offset = GetRestartPoint(index + 1); // NOTE: to next restart point; for index block, it is the next key; for data block, it is the next sampled key
     } else {
       // We are in the last restart interval. The while-loop will terminate by
       // `Valid()` returning false upon advancing past the block's last key.
@@ -671,9 +669,7 @@ void BlockIter<TValue>::FindKeyAfterBinarySeek(const Slice& target,
       if (!Valid()) {
         break;
       }
-	  printf("before index: %d\n", int(index_));
 	  index_ = index_ + 1;
-	  printf("after index: %d\n", int(index_));
       if (current_ == max_offset) {
         assert(CompareCurrentKey(target) > 0);
         break;
@@ -795,20 +791,17 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 			  printf("BlockIter<%s>::ModelSeek<%s>: Invalid TValue which should be IndexValue or Slice!\n", typeid(TValue).name(), typeid(DecodeKeyFunc).name());
 			  exit(-1);
 			}
+
 			uint32_t curidx, error_bound;
 			curidx = model_result.predict_idx;
 			error_bound = model_result.error_bound + 1; // We can prove that error_bound + 1 must find the last key <= target
 
 			// Binary search
-			printf("curidx: %u, error_bound: %u, num_restarts_: %u\n", curidx, error_bound, uint32_t(num_restarts_));
 			int64_t left = int64_t(curidx) - int64_t(error_bound) - 1;
-			printf("left: %d\n", int(left));
 			if (left < 0) left = -1;
-			printf("left: %d\n", int(left));
+			else if (left >= num_restarts_) left = num_restarts_ - 1;
 			int64_t right = int64_t(curidx + error_bound); // Must true: right > 0 and right > left
-			printf("right :%d\n", int(right));
 			if (right >= num_restarts_) right = num_restarts_ - 1;
-			printf("right :%d\n", int(right));
 			if (unlikely(left > right)) {
 				printf("Invalid left: %d, right %d, curidx: %u, error_bound: %u, num_restarts_: %u\n",
 						int(left), int(right), curidx, error_bound, uint32_t(num_restarts_));
@@ -826,9 +819,11 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 					break;
 				}
 				Slice midkey(key_ptr, non_shared);
-				printf("midindx: %d, midkey: %llu\n", int(mid), *(unsigned long long*)midkey.data_);
-				raw_key_.SetKey(midkey, false /* copy */); // Keep original property of is_user_key of raw_key_
+				raw_key_.SetKey(midkey, false); // Keep original property of is_user_key of raw_key_
 				int cmp = CompareCurrentKey(target);
+				// NOTE: for IndexBlockIter, GetUserKey = raw_key_; for DataBlockIter, GetUserKey = ExtractUserKey(raw_key_)
+				// NOTE: we use ucmp since a single sst cannot have duplicate keys (a key with different seqnos)
+				//int cmp = ucmp().Compare(raw_key_.GetUserKey(), target);
 				if (cmp < 0) {
 					left = mid;
 				}
@@ -867,22 +862,32 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 				Slice curkey(key_ptr, non_shared);
 				raw_key_.SetKey(curkey, false); // Copy: false; Keep original property of is_user_key of raw_key_
 				int cmp = CompareCurrentKey(target);
+				// NOTE: if target = curidx + error bound, it must finally fall in the case of pingpong for cmp > 0, which
+				// returns previdx and gets the target in linear scan.
+				// NOTE: if target = curidx - error bound, cmp must always larger than 0. In this case, we need return curidx
+				// and sets linear scan as false.
 				if (cmp < 0) {
 					// the last key is smaller than target or pingpong
 					if ((curidx == num_restarts_ - 1) || previdx == (curidx + 1)) {
 						*index = curidx;
 						break;
 					}
+					else if (unlikely(local_search_n >= error_bound)) {
+						printf("BlockIter<%s>::ModelSeek<%s>: Invalid case: the rightest key %llu is still smaller than target %llu!\n", 
+								typeid(TValue).name(), typeid(DecodeKeyFunc).name(), 
+								*(unsigned long long*)curkey.data_, *(unsigned long long*)target.data_);
+						exit(-1);
+					}
 					previdx = curidx;
 					curidx++;
 				} else if (cmp > 0) {
-					// the smallest ke is larger than target
-					if (curidx == 0) {
-						*index = 0;
+					// the smallest key within error bound is larger than target
+					if (curidx == 0 || local_search_n >= error_bound) {
+						*index = curidx;
 						*skip_linear_scan = true;
 						break;
 					}
-					if (previdx == (curidx - 1)) { // pingong
+					else if (previdx == (curidx - 1)) { // pingong
 						*index = previdx;
 						break;
 					}
@@ -895,10 +900,6 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 				}
 
 				local_search_n++;
-				if (local_search_n >= error_bound) {
-					result = false;
-					break;
-				}
 			} // while true */
 
 		} // restarts_ != 0

@@ -25,37 +25,37 @@
 #include "mkl.h"
 #include "mkl_lapacke.h"
 #include "model/linear_model_wrapper.h"
+#include "include/rocksdb/slice.h"
 
 #if !defined(XINDEX_MODEL_H)
 #define XINDEX_MODEL_H
 
 namespace ROCKSDB_NAMESPACE {
 
-template <class key_t>
 class VarlenLinearModel {
   friend class LinearModelWrapper;
   typedef std::vector<double> model_key_t;
  public:
   ~VarlenLinearModel();
-  void prepare(const std::vector<key_t> &keys,
+  void prepare(const std::vector<std::string> &keys,
                const std::vector<size_t> &positions);
-  void prepare(const typename std::vector<key_t>::const_iterator &keys_begin, uint32_t size);
+  void prepare(const typename std::vector<std::string>::const_iterator &keys_begin, uint32_t size);
   void prepare_model(const std::vector<double *> &model_key_ptrs,
                      const std::vector<size_t> &positions);
-  size_t predict(const key_t &curkey) const;
+  size_t predict(const rocksdb::Slice &curkey) const;
 
  private:
-  uint32_t get_max_key_len(const std::vector<key_t> &keys);
-  uint32_t get_max_key_len(const typename std::vector<key_t>::const_iterator &keys_begin, uint32_t size);
-  size_t get_error_bound(const std::vector<key_t> &keys,
+  uint32_t get_max_key_len(const std::vector<std::string> &keys);
+  uint32_t get_max_key_len(const typename std::vector<std::string>::const_iterator &keys_begin, uint32_t size);
+  size_t get_error_bound(const std::vector<std::string> &keys,
                          const std::vector<size_t> &positions);
-  //size_t get_error_bound(const std::vector<key_t> &keys,
+  //size_t get_error_bound(const std::vector<std::string> &keys,
   //                       const std::vector<size_t> &positions, const uint32_t limit);
   size_t get_error_bound(
-      const typename std::vector<key_t>::const_iterator &keys_begin,
+      const typename std::vector<std::string>::const_iterator &keys_begin,
       uint32_t size);
   //size_t get_error_bound(
-  //    const typename std::vector<key_t>::const_iterator &keys_begin,
+  //    const typename std::vector<std::string>::const_iterator &keys_begin,
   //    uint32_t size, const uint32_t limit);
 
   size_t error_bound = 0;

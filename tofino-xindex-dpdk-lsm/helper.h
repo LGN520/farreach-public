@@ -56,7 +56,7 @@
 #define NDEBUGGING
 #endif
 
-#if 0
+#if 1
 #define NDEBUGGING_CLIENT
 #endif
 
