@@ -14,9 +14,10 @@
 ## Preliminary Exp of Microbench (local test with persistency)
 
 - Latency
-	+ Per-sstable: 4MB; Data size: 10MB
-		* XIndex with rocksdb:
-		* XIndex with rocksdb-model
+	+ Per-sstable: 4MB; Key-value number: 10MB
+		* XIndex with rocksdb: 100809 op/s = 9.92us
+		* XIndex with rocksdb-model: 103611 op/s = 9.65us
+	+ Per-sstable: 4MB; Key-value number: 100MB
 
 ## Preliminary Exp of microbench (remote test without persistency)
 

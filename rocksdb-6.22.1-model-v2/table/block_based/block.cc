@@ -820,10 +820,16 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 				}
 				Slice midkey(key_ptr, non_shared);
 				raw_key_.SetKey(midkey, false); // Keep original property of is_user_key of raw_key_
-				int cmp = CompareCurrentKey(target);
+				//int cmp = CompareCurrentKey(target);
 				// NOTE: for IndexBlockIter, GetUserKey = raw_key_; for DataBlockIter, GetUserKey = ExtractUserKey(raw_key_)
 				// NOTE: we use ucmp since a single sst cannot have duplicate keys (a key with different seqnos)
-				//int cmp = ucmp().Compare(raw_key_.GetUserKey(), target);
+				int cmp = 0;	
+				if (raw_key_.IsUserKey()) {
+					cmp = ucmp().Compare(raw_key_.GetUserKey(), target); // GetUserKey just returns the raw_key
+				}
+				else {
+					cmp = ucmp().Compare(raw_key_.GetUserKey(), ExtractUserKey(target)); // GetUserKey returns ExtractUserKey(raw_key)
+				}
 				if (cmp < 0) {
 					left = mid;
 				}
