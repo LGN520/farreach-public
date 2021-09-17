@@ -13,11 +13,24 @@
 
 ## Preliminary Exp of Microbench (local test with persistency)
 
-- Latency
+- GET latency
 	+ Per-sstable: 4MB; Key-value number: 10MB
 		* XIndex with rocksdb: 100809 op/s = 9.92us
 		* XIndex with rocksdb-model: 103611 op/s = 9.65us
 	+ Per-sstable: 4MB; Key-value number: 100MB
+		* XIndex with rocksdb: 103302 op/s
+		* XIndex with rocksdb-model: 104692 op/s
+	+ Per-sstable: 16MB; Key-value number: 100MB
+		* XIndex with rocksdb: 93607 op/s
+		* XIndex with rocksdb-model: 97598 op/s
+- SYNC PUT latency
+	+ Per-sstable: 4MB; Key-value number: 100MB
+		* XIndex with rocksdb: 1748 op/s
+		* XIndex with rocksdb-model: 1792 op/s
+- ASYNC PUT latency
+	+ Per-sstable: 4MB; Key-value number: 100MB
+		* XIndex with rocksdb: 50655 - 55602 op/s
+		* XIndex with rocksdb-model: 49698 - 54514 op/s
 
 ## Preliminary Exp of microbench (remote test without persistency)
 

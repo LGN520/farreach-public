@@ -101,6 +101,8 @@
 		+ Deep copy Slice in model for pivots (otherwise, slice points to index/data block, which might be freed from memory cache)
 		+ Legacy: Use linear search for CDF model in index and data block due to accurate prediction (binary search >> linear search)
 		+ Fix a bug in linear search (even keys are the same, cmp != 0 due to different seqno)
+- Sep. 17
+	+ Use UserKey::Comparator instead InternalKey::Comparator since a single sst cannot have a key with different seqnos (aka no duplicate keys) (table/block_based/block.cc)
 
 - (legacy) Solution 1: maintain models in each ColumnFamilyData
 	- Create directory of rocksdb-6.22.1-model

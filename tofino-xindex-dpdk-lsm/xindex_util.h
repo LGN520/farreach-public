@@ -78,9 +78,11 @@ struct IndexConfig {
   volatile bool exited = true;
 
   // RocksDB
-  size_t memtable_size = 4 * 1024 * 1024; // 4 MB
+  //size_t memtable_size = 4 * 1024 * 1024; // 4 MB
+  size_t memtable_size = 16 * 1024 * 1024; // 4 MB
   size_t max_memtable_num = 2;
-  size_t sst_size = 4 * 1024 * 1024; // 4 MB
+  //size_t sst_size = 4 * 1024 * 1024; // 4 MB
+  size_t sst_size = 16 * 1024 * 1024; // 4 MB
   size_t compaction_thread_num = 2;
   size_t level0_num = 8; // 32 MB
   size_t level_num = 4;

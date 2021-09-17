@@ -54,10 +54,10 @@ LDDIR += $(DPDK_LDDIR)
 ##############################################################################
 # RocksDB configuration
 
-#ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
-#ROCKSDB_LDDIR += -L../rocksdb-6.22.1
-ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
-ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
+ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
+ROCKSDB_LDDIR += -L../rocksdb-6.22.1
+#ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
+#ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
 ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
 
 INCDIR += $(ROCKSDB_INCDIR)
