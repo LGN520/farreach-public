@@ -103,6 +103,11 @@
 		+ Fix a bug in linear search (even keys are the same, cmp != 0 due to different seqno)
 - Sep. 17
 	+ Use UserKey::Comparator instead InternalKey::Comparator since a single sst cannot have a key with different seqnos (aka no duplicate keys) (table/block_based/block.cc)
+- Sep. 18
+	+ Add lock mechanism for compaction
+		* Use shared lock in PUT/DEL (xindex_group_impl.h)
+		* Use exclusive lock in compact (xindex_group_impl.h)
+		* Do compact with RCU (xindex_root_impl.h)
 
 - (legacy) Solution 1: maintain models in each ColumnFamilyData
 	- Create directory of rocksdb-6.22.1-model

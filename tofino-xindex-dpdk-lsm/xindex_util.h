@@ -78,11 +78,9 @@ struct IndexConfig {
   volatile bool exited = true;
 
   // RocksDB
-  //size_t memtable_size = 4 * 1024 * 1024; // 4 MB
-  size_t memtable_size = 16 * 1024 * 1024; // 4 MB
+  size_t memtable_size = 4 * 1024 * 1024; // 4 MB
   size_t max_memtable_num = 2;
-  //size_t sst_size = 4 * 1024 * 1024; // 4 MB
-  size_t sst_size = 16 * 1024 * 1024; // 4 MB
+  size_t sst_size = 4 * 1024 * 1024; // 4 MB
   size_t compaction_thread_num = 2;
   size_t level0_num = 8; // 32 MB
   size_t level_num = 4;
@@ -103,7 +101,7 @@ void inline init_options() {
   // options for data
   data_options.create_if_missing = true; // create database if not exist
   data_options.enable_blob_files = true; // enable key-value separation
-  //data_options.allow_os_buffer = false; // disable OS cache
+  //data_options.allow_os_buffer = false; // Disable OS-cache
   data_options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options)); // Block cache with uncompressed blocks
   data_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
   data_options.write_buffer_size = config.memtable_size; // single memtable size

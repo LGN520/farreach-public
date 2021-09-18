@@ -56,8 +56,8 @@
 #define NDEBUGGING
 #endif
 
-#if 1
-#define NDEBUGGING_CLIENT
+#if 0
+#define NDEBUGGING_LOG
 #endif
 
 #if defined(NDEBUGGING)
@@ -66,7 +66,7 @@
 #define DEBUG_THIS(this) std::cerr << this << std::endl
 #endif
 
-#if defined(NDEBUGGING_CLIENT)
+#if defined(NDEBUGGING_LOG)
 #define FDEBUG_THIS(ofs, this)
 #else
 #define FDEBUG_THIS(ofs, this) ofs << this << std::endl

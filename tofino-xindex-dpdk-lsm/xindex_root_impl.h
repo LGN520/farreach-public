@@ -66,7 +66,7 @@ void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
                                  end_i - begin_i, group_i);
   }
 
-  // Disable OS page cache
+  // Disable OS-cache
   //system("hdparm -W 0 /tmp/netbuffer");
 
   // then decide # of 2nd stage model of root RMI
@@ -222,18 +222,14 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
             // DEBUG_THIS("------ [compaction], buf_size="
             //            << buffer_size << ", group_i=" << group_i);
 
-			// TODO: Compact
-            /*group_t *new_group = old_group->compact_phase_1();
+			// Compact
+            group_t *new_group = old_group->compact_phase();
             *group = new_group;
-            memory_fence();
-            rcu_barrier();
             compact++;
-            new_group->compact_phase_2();
             memory_fence();
             rcu_barrier();  // make sure no one is accessing the old data
-            old_group->free_data();
             old_group->free_buffer();
-            delete old_group;*/
+            delete old_group;
           }
 
           // do next (in the chain)

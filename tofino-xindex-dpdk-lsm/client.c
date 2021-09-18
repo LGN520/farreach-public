@@ -99,14 +99,18 @@ class Key {
 	return result;
   }
 
+  void from_slice(rocksdb::Slice& slice) {
+	key = *(uint64_t*)slice.data_;
+  }
+
   model_key_t to_model_key() const {
     model_key_t model_key;
     model_key[0] = key;
     return model_key;
   }
 
-  uint32_t get_key_len() const {
-	  return 1;
+  uint64_t to_int() const {
+	  return key;
   }
 
   friend bool operator<(const Key &l, const Key &r) { return l.key < r.key; }
@@ -465,9 +469,11 @@ static int run_fg(void *param) {
   //uint32_t debugtest_idx = 0;
   //uint32_t debugtest_i = 0;
 
+#if !defined(NDEBUGGING_LOG)
   std::string logname;
   GET_STRING(logname, "tmp_client"<<thread_id<<".out");
   std::ofstream ofs(logname, std::ofstream::out);
+#endif
 
   while (!running)
     ;
@@ -661,6 +667,8 @@ static int run_fg(void *param) {
 
   //close(sockfd);
   //pthread_exit(nullptr); // UDP socket
+#if !defined(NDEBUGGING_LOG)
   ofs.close();
+#endif
   return 0;
 }

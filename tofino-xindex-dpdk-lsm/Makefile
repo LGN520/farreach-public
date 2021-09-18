@@ -8,7 +8,7 @@ CC := g++
 CFLAGS += -std=c++14 -O3 -g -Wall -march=native -fno-omit-frame-pointer
 CFLAGS += $(EXTRA_CFLAGS)
 CFLAGS_SHARED += $(CFLAGS) -fPIC
-LDLIBS += -lpthread -ldl -ljemalloc
+LDLIBS += -lpthread -ldl -ljemalloc -lstdc++fs -lboost_system
 LDLIBS += $(EXTRA_LDLIBS)
 
 LDDIR += -L/usr/lib/x86_64-linux-gnu

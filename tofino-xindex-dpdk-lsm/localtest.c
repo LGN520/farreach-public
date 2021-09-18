@@ -88,10 +88,18 @@ class Key {
 	return result;
   }
 
+  void from_slice(rocksdb::Slice& slice) {
+	key = *(uint64_t*)slice.data_;
+  }
+
   model_key_t to_model_key() const {
     model_key_t model_key;
     model_key[0] = key;
     return model_key;
+  }
+
+  uint64_t to_int() const {
+	  return key;
   }
 
   friend bool operator<(const Key &l, const Key &r) { return l.key < r.key; }
@@ -351,9 +359,11 @@ void *run_sfg(void * param) {
 
   ready_threads++;
 
+#if !defined(NDEBUGGING_LOG)
   std::string logname;
   GET_STRING(logname, "tmp_localtest"<<thread_id<<".out");
   std::ofstream ofs(logname, std::ofstream::out);
+#endif
 
   while (!running) {
   }
@@ -361,12 +371,12 @@ void *run_sfg(void * param) {
   while (running) {
     double d = ratio_dis(gen);
 
-	int tmprun = 0;
+	//int tmprun = 0;
     if (d <= read_ratio) {  // get
     //if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
 	  Key tmp_key;
-	  tmp_key.key = 335765875373118;
+	  tmp_key.key = 12345;
 	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << tmp_key.key);
 	  bool tmp_stat = table->get(tmp_key, tmp_val, thread_id);
 	  if (!tmp_stat) {
@@ -396,7 +406,7 @@ void *run_sfg(void * param) {
       }
     } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     //} else if (tmprun == 2) {  // insert
-	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
+	  tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
 	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << dummy_value
 			  << " stat = " << tmp_stat);
       insert_i++;
@@ -426,9 +436,12 @@ void *run_sfg(void * param) {
       }
     }
     thread_param.throughput++;
+	if (thread_param.throughput >= 10) break;
   }
 
   pthread_exit(nullptr);
+#if !defined(NDEBUGGING_LOG)
   ofs.close();
+#endif
   return 0;
 }

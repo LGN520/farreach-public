@@ -20,6 +20,7 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
+#include <boost/thread/shared_mutex.hpp>
 #include "xindex_buffer.h"
 #include "xindex_model.h"
 #include "xindex_util.h"
@@ -31,6 +32,8 @@
 
 #if !defined(XINDEX_GROUP_H)
 #define XINDEX_GROUP_H
+
+#define RWLOCKMAP_SIZE 1024
 
 namespace xindex {
 
@@ -48,9 +51,9 @@ class alignas(CACHELINE_SIZE) Group {
   void init(const typename std::vector<key_t>::const_iterator &keys_begin,
             const typename std::vector<val_t>::const_iterator &vals_begin,
             uint32_t array_size, uint32_t group_idx);
-  void init(const typename std::vector<key_t>::const_iterator &keys_begin,
+  /*void init(const typename std::vector<key_t>::const_iterator &keys_begin,
             const typename std::vector<val_t>::const_iterator &vals_begin,
-            uint32_t model_n, uint32_t array_size, uint32_t group_idx);
+            uint32_t model_n, uint32_t array_size, uint32_t group_idx);*/
   const key_t &get_pivot();
 
   inline result_t get(const key_t &key, val_t &val);
@@ -61,10 +64,11 @@ class alignas(CACHELINE_SIZE) Group {
   //inline size_t range_scan(const key_t &begin, const key_t &end,
   //                         std::vector<std::pair<key_t, val_t>> &result);
 
+  Group *compact_phase();
   //Group *compact_phase_1();
   //void compact_phase_2();
 
-  void free_data();
+  //void free_data();
   void free_buffer();
 
  private:
@@ -87,19 +91,26 @@ class alignas(CACHELINE_SIZE) Group {
   //                         std::vector<std::pair<key_t, val_t>> &result);
   //inline size_t scan_3_way(const key_t &begin, const size_t n, const key_t &end,
   //                         std::vector<std::pair<key_t, val_t>> &result);
+  
+  inline void init_cur_buffer_id();
+  inline std::string get_buffer_path(uint32_t buffer_id);
 
   key_t pivot;
   // make array_size atomic because we don't want to acquire lock during `get`.
   // it is okay to obtain a stale (smaller) array_size during `get`.
-  uint32_t array_size;
-  uint16_t model_n = 0;
+  //uint32_t array_size;
+  //uint16_t model_n = 0;
+  Group *next = nullptr; // unused
   bool buf_frozen = false;
-  Group *next = nullptr;
+  bool after_compact = false;
   rocksdb::TransactionDB *data = nullptr;
   rocksdb::TransactionDB *buffer = nullptr;
   rocksdb::TransactionDB *buffer_temp = nullptr;
 
   uint32_t buffer_size = 0; // The size of puts in buffer instead of the number of elements in buffer
+  boost::shared_mutex rwlockmap[RWLOCKMAP_SIZE];
+  uint32_t group_idx = 0;
+  uint32_t cur_buffer_id = 0;
 };
 
 }  // namespace xindex

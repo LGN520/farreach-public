@@ -38,6 +38,8 @@
 	+ `make`
 	+ `sudo make install`
 		* Installed into /usr/local/bin, /usr/local/lib, and /usr/local/include
+- Install boost
+	+ `sudo apt-get install libboost-all-dev`
 - Install cmake
 	+ `wget http://www.cmake.org/files/v3.5/cmake-3.5.1.tar.gz`
 	+ `tar xf cmake-3.5.1.tar.gz`

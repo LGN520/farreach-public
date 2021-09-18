@@ -95,10 +95,18 @@ class Key {
 	return result;
   }
 
+  void from_slice(rocksdb::Slice& slice) {
+	key = *(uint64_t*)slice.data_;
+  }
+
   model_key_t to_model_key() const {
     model_key_t model_key;
     model_key[0] = key;
     return model_key;
+  }
+
+  uint64_t to_int() const {
+	  return key;
   }
 
   friend bool operator<(const Key &l, const Key &r) { return l.key < r.key; }
