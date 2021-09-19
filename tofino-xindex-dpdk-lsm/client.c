@@ -360,10 +360,25 @@ static int run_receiver(void *param) {
 	while (!running)
 		;
 
+  //DEBUG
+  double prevt0 = 0;
+  double t0 = CUR_TIME();
+  uint32_t debug_idx = 0;
+
 	struct rte_mbuf *received_pkts[32];
 	while (running) {
+		double tmpt0 = CUR_TIME();
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
-		if (n_rx == 0) continue;
+		if (n_rx == 0) {
+			double tmpt1 = CUR_TIME();
+			t0 += (tmpt1 - tmpt0);
+			continue;
+		}
+		if ((debug_idx + 1) % 10001 == 0) {
+			COUT_VAR((t0 - prevt0) / 10000.0);
+			prevt0 = t0;
+			COUT_VAR(n_rx);
+		}
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);
 			if (unlikely(ret == -1)) {
@@ -388,6 +403,9 @@ static int run_receiver(void *param) {
 				}
 			}
 		}
+		debug_idx++;
+		double tmpt1 = CUR_TIME();
+		t0 += (tmpt1 - tmpt0);
 	}
 	return 0;
 }
@@ -478,6 +496,11 @@ static int run_fg(void *param) {
   while (!running)
     ;
 
+  //DEBUG
+  //double t0 = CUR_TIME();
+  //uint32_t debug_idx = 0;
+  //uint32_t tmploop = 0;
+
   while (running) {
 	// DEBUG TEST
 	/*query_i = debugtest_idx;
@@ -488,6 +511,13 @@ static int run_fg(void *param) {
 	sent_pkt = sent_pkts[sent_pkt_idx];
 
     double d = ratio_dis(gen);
+
+	/*if ((debug_idx + 1) % 10001 == 0) {
+		COUT_VAR(t0 / 10000.0);
+		t0 = 0;
+		COUT_VAR(tmploop / 10000.0);
+		tmploop = 0;
+	}*/
 
 	//int tmprun = 0;
     if (d <= read_ratio) {  // get
@@ -504,10 +534,15 @@ static int run_fg(void *param) {
 	  
 	  // DPDK
 	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+	  //double tmpt0 = CUR_TIME();
 	  res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
+		  //tmploop++;
 		  ;
+      //debug_idx++;
+	  //double tmpt1 = CUR_TIME();
+	  //t0 += (tmpt1 - tmpt0);
 	  stats[thread_id] = false;
 	  recv_size = get_payload(pkts[thread_id], buf);
 	  rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
@@ -516,7 +551,7 @@ static int run_fg(void *param) {
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
 	  get_response_t rsp(buf, recv_size);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] val = " << rsp.val());
+	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << rsp.key().key << " val = " << rsp.val());
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
