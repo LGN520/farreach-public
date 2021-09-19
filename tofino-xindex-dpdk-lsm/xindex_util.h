@@ -35,6 +35,8 @@
 #if !defined(XINDEX_UTIL_H)
 #define XINDEX_UTIL_H
 
+#define SYNC_WRITE false
+
 namespace xindex {
 
 static const size_t desired_training_key_n = 10000000;
@@ -75,7 +77,7 @@ struct IndexConfig {
   size_t buffer_compact_threshold = 8;
   size_t worker_n = 0;
   std::unique_ptr<rcu_status_t[]> rcu_status;
-  volatile bool exited = true;
+  volatile bool exited = false;
 
   // RocksDB
   size_t memtable_size = 4 * 1024 * 1024; // 4 MB
@@ -101,7 +103,7 @@ void inline init_options() {
   // options for data
   data_options.create_if_missing = true; // create database if not exist
   data_options.enable_blob_files = true; // enable key-value separation
-  //data_options.allow_os_buffer = false; // Disable OS-cache
+  //data_options.allow_os_buffer = false; // Disable OS-cache (Not provided in current version of rocksdb now)
   data_options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options)); // Block cache with uncompressed blocks
   data_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
   data_options.write_buffer_size = config.memtable_size; // single memtable size

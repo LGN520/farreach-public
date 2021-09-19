@@ -108,6 +108,8 @@
 		* Use shared lock in PUT/DEL (xindex_group_impl.h)
 		* Use exclusive lock in compact (xindex_group_impl.h)
 		* Do compact with RCU (xindex_root_impl.h)
+- Sep. 19
+	+ Fix a bug of RCU mechanism in XIndex (it sets config.exited as true by default!) (xindex_util.h)
 
 - (legacy) Solution 1: maintain models in each ColumnFamilyData
 	- Create directory of rocksdb-6.22.1-model

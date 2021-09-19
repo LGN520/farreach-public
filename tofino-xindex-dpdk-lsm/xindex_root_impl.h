@@ -225,9 +225,14 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
 			// Compact
             group_t *new_group = old_group->compact_phase();
             *group = new_group;
+			printf("group_i: %u, old addr: %p. new addr: %p\n", uint32_t(group_i), (void*)old_group, (void*)new_group);
             compact++;
             memory_fence();
+			COUT_VAR(config.rcu_status[0].status);
+			COUT_VAR(config.exited);
             rcu_barrier();  // make sure no one is accessing the old data
+			COUT_VAR(config.rcu_status[0].status);
+			COUT_VAR(config.exited);
             old_group->free_buffer();
             delete old_group;
           }

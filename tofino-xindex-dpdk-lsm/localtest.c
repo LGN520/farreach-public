@@ -406,7 +406,7 @@ void *run_sfg(void * param) {
       }
     } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     //} else if (tmprun == 2) {  // insert
-	  tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
+	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
 	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << dummy_value
 			  << " stat = " << tmp_stat);
       insert_i++;
