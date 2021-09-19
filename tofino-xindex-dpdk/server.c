@@ -18,6 +18,7 @@
 #include "helper.h"
 #include "xindex.h"
 #include "xindex_impl.h"
+#include "xindex_util.h"
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
 
@@ -92,6 +93,10 @@ class Key {
     model_key_t model_key;
     model_key[0] = key;
     return model_key;
+  }
+
+  uint64_t to_int() const {
+	  return key;
   }
 
   friend bool operator<(const Key &l, const Key &r) { return l.key < r.key; }
@@ -421,6 +426,11 @@ static int run_sfg(void * param) {
   while (!running) {
   }
 
+	// DEBUG
+	double prevt0 = 0;
+	double t0 = CUR_TIME();
+	uint32_t debug_idx = 0;
+
   while (running) {
 	/*recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 	if (recv_size == -1) {
@@ -441,7 +451,13 @@ static int run_sfg(void * param) {
 		recv_size = decode_mbuf(pkts[thread_id], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
 
+		if ((debug_idx + 1) % 10001 == 0) {
+			COUT_VAR((t0 - prevt0) / 10000.0);
+			prevt0 = t0;
+		}
+
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
+		double tmpt0 = CUR_TIME();
 		switch (pkt_type) {
 			case packet_type_t::GET_REQ: 
 				{
@@ -460,6 +476,7 @@ static int run_sfg(void * param) {
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+					debug_idx++;
 					break;
 				}
 			case packet_type_t::PUT_REQ:
@@ -519,6 +536,8 @@ static int run_sfg(void * param) {
 					exit(-1);
 				}
 		}
+		double tmpt1 = CUR_TIME();
+		t0 += (tmpt1 - tmpt0);
 	}
   }
 

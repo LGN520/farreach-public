@@ -16,7 +16,6 @@
 #include "xindex_impl.h"
 #include "xindex_util.h"
 #include "packet_format_impl.h"
-#include "rocksdb/slice.h"
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
@@ -83,15 +82,6 @@ class Key {
     return *this;
   }
 
-  rocksdb::Slice to_slice() const {
-	rocksdb::Slice result((char *)(&key), 8); // convert uint64_t to char[8]
-	return result;
-  }
-
-  void from_slice(rocksdb::Slice& slice) {
-	key = *(uint64_t*)slice.data_;
-  }
-
   model_key_t to_model_key() const {
     model_key_t model_key;
     model_key[0] = key;
@@ -115,7 +105,6 @@ class Key {
 int main(int argc, char **argv) {
 
   parse_args(argc, argv);
-  xindex::init_options(); // init options of rocksdb
   load();
 
   // prepare xindex

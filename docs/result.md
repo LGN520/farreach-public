@@ -32,6 +32,10 @@
 		* XIndex with rocksdb: 50655 - 55602 op/s
 		* XIndex with rocksdb-model: 49698 - 54514 op/s
 
+## Preliminary Exp of Microbench (local test without persistency)
+
+- XIndex: 7M op/s = 0.14us 
+
 ## Preliminary Exp of microbench (remote test without persistency)
 
 - Latency

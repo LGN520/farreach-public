@@ -74,7 +74,7 @@ include mk/recipes.mk
 
 DEPS :=
 CLEAN :=
-TARGETS := client server prepare
+TARGETS := client server prepare localtest
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
@@ -95,6 +95,11 @@ server: server.o dpdk_helper.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += server.d
 CLEAN += server.o serer
+
+localtest: localtest.o dpdk_helper.o
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += localtest.d
+CLEAN += localtest.o serer
 
 ##############################################################################
 # Top level targets
