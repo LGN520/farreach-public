@@ -24,10 +24,17 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <time.h>
 
 #if !defined(HELPER_H)
 #define HELPER_H
+
+#define GET_STRING(v, this) { \
+	std::stringstream ss; \
+ 	ss << this; \
+	v = ss.str(); \
+}
 
 #define CUR_TIME() (double) clock() / CLOCKS_PER_SEC * 1000.0 * 1000.0; // us
 
@@ -50,7 +57,7 @@
 #endif
 
 #if 1
-#define NDEBUGGING_CLIENT
+#define NDEBUGGING_LOG
 #endif
 
 #if defined(NDEBUGGING)
@@ -59,7 +66,7 @@
 #define DEBUG_THIS(this) std::cerr << this << std::endl
 #endif
 
-#if defined(NDEBUGGING_CLIENT)
+#if defined(NDEBUGGING_LOG)
 #define FDEBUG_THIS(ofs, this)
 #else
 #define FDEBUG_THIS(ofs, this) ofs << this << std::endl

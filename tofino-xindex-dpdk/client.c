@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include <sstream>
 #include <fcntl.h>
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
@@ -98,6 +97,10 @@ class Key {
     model_key_t model_key;
     model_key[0] = key;
     return model_key;
+  }
+
+  uint64_t to_int() const {
+	  return key;
   }
 
   friend bool operator<(const Key &l, const Key &r) { return l.key < r.key; }
@@ -326,6 +329,13 @@ void run_benchmark(size_t sec) {
   }
 
   running = false;
+
+  size_t throughput = 0;
+  for (auto &p : fg_params) {
+    throughput += p.throughput;
+  }
+  COUT_THIS("[client] Throughput(op/s): " << throughput / sec);
+
   /*void *status;
   for (size_t i = 0; i < fg_n; i++) {
     int rc = pthread_join(threads[i], &status);
@@ -334,12 +344,6 @@ void run_benchmark(size_t sec) {
     }
   }*/
   rte_eal_mp_wait_lcore();
-
-  size_t throughput = 0;
-  for (auto &p : fg_params) {
-    throughput += p.throughput;
-  }
-  COUT_THIS("[client] Throughput(op/s): " << throughput / sec);
 }
 
 static int run_receiver(void *param) {
@@ -454,17 +458,19 @@ static int run_fg(void *param) {
   // DEBUG TEST
   //uint32_t debugtest_idx = 0;
   //uint32_t debugtest_i = 0;
-  std::stringstream ss;
-  ss << "tmp_client" << thread_id << ".out";
-  std::ofstream ofs(ss.str(), std::ofstream::out);
+
+#if !defined(NDEBUGGING_LOG)
+  std::string logname;
+  GET_STRING(logname, "tmp_client"<<thread_id<<".out");
+  std::ofstream ofs(logname, std::ofstream::out);
+#endif
 
   while (!running)
     ;
 
   while (running) {
 	// DEBUG TEST
-	/*int tmprun = 0;
-	query_i = debugtest_idx;
+	/*query_i = debugtest_idx;
 	update_i = debugtest_idx;
 	if (debugtest_i == 0) tmprun = 1;
 	debugtest_i++;*/
@@ -473,7 +479,7 @@ static int run_fg(void *param) {
 
     double d = ratio_dis(gen);
 
-	//int tmprun = 4;
+	//int tmprun = 0;
     if (d <= read_ratio) {  // get
     //if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
@@ -625,8 +631,8 @@ static int run_fg(void *param) {
 	  scan_response_t rsp(buf, recv_size);
 	  FDEBUG_THIS(ofs, "[client " << thread_id << "] num = " << rsp.num());
 	  for (uint32_t val_i = 0; val_i < rsp.num(); val_i++) {
-		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].first.key)
-		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].second)
+		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].first.key);
+		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].second);
 	  }
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
@@ -651,6 +657,8 @@ static int run_fg(void *param) {
 
   //close(sockfd);
   //pthread_exit(nullptr); // UDP socket
+#if !defined(NDEBUGGING_LOG)
   ofs.close();
+#endif
   return 0;
 }
