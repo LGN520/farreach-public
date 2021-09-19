@@ -1,9 +1,9 @@
-# Tofino-based NetBuffer + DPDK-based XIndex (tofino-netbuffer-dpdk)
+# Tofino-based NetBuffer + DPDK-based XIndex with persistency (tofino-netbuffer-dpdk-lsm)
 
 ## Implementation log
 
-- TODO1: DPDK-based CS architecture without persistency
-- TODO3: DPDK-based CS architecture with persistency
+- Copy from tofino-xindex-dpdk-lsm to tofino-netbuffer-dpdk-lsm
+- Add PUT_REQ_S (server.c, packet_format.h, packet_format_impl.h)
 
 ## How to run
 
