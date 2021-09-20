@@ -11,6 +11,12 @@
 		+ 70% read - 10% insert - 10% remove - 10% update: `./prepare -b 0.1; ./client -a 0.7 -b 0.1 -c 0.1 -d 0.1`
 		+ 60% read - 10% insert - 10% remove - 10% update - 10% scan: `./prepare -b 0.1; ./client -a 0.6 -b 0.1 -c 0.1 -d 0.1 -e 0.1`
 
+## Preliminary Exp of Microbench (remote test with persistency)
+
+- GET latency
+	+ All hit server: 31119 op/s = 32.13us (similar as remote test without persistency due to DPDK PMD implementation)
+	+ All hit switch: 41506 op/s = 24.09us (eliminate the 8us-overhead in server)
+
 ## Preliminary Exp of Microbench (local test with persistency)
 
 - GET latency

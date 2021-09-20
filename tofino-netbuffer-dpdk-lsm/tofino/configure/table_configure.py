@@ -191,27 +191,69 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring match_keylo_tbl"
             matchspec0 = netbuffer_match_keylo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
             matchspec1 = netbuffer_match_keylo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            matchspec2 = netbuffer_match_keylo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
             self.client.match_keylo_tbl_table_add_with_get_match_keylo(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             self.client.match_keylo_tbl_table_add_with_put_match_keylo(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
+            self.client.match_keylo_tbl_table_add_with_get_match_keylo(\
+                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: match_keyhi_tbl
             print "Configuring match_keyhi_tbl"
             matchspec0 = netbuffer_match_keyhi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
             matchspec1 = netbuffer_match_keyhi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            matchspec2 = netbuffer_match_keyhi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
             self.client.match_keyhi_tbl_table_add_with_get_match_keyhi(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             self.client.match_keyhi_tbl_table_add_with_put_match_keyhi(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
+            self.client.match_keyhi_tbl_table_add_with_get_match_keyhi(\
+                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: access_valid_tbl
             print "Configuring access_valid_tbl"
-            matchspec0 = netbuffer_access_valid_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            matchspec1 = netbuffer_access_valid_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            self.client.access_valid_tbl_table_add_with_get_valid(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            self.client.access_valid_tbl_table_add_with_set_valid(\
+            predicate_list = [0, 1, 2, 4, 8]
+            for ismatch_keylo in predicate_list:
+                for ismatch_keyhi in predicate_list:
+                    matchspec0 = netbuffer_access_valid_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE, meta_ismatch_keylo=ismatch_keylo, meta_ismatch_keyhi=ismatch_keyhi);
+                    self.client.access_valid_tbl_table_add_with_get_valid(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+            for ismatch_keylo in predicate_list:
+                for ismatch_keyhi in predicate_list:
+                    matchspec1 = netbuffer_access_valid_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE, meta_ismatch_keylo=ismatch_keylo, meta_ismatch_keyhi=ismatch_keyhi);
+                    self.client.access_valid_tbl_table_add_with_set_valid(\
+                            self.sess_hdl, self.dev_tgt, matchspec1)
+            matchspec2 = netbuffer_access_valid_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE, meta_ismatch_keylo=2, meta_ismatch_keyhi=2)
+            self.client.access_valid_tbl_table_add_with_clear_valid(\
+                    self.sess_hdl, self.dev_tgt, matchspec2)
+
+            # Table: update_vallo_tbl
+            print "Configuring update_vallo_tbl"
+            valid_list = [0, 1]
+            predicate_list = [0, 1, 2, 4, 8]
+            for isvalid in valid_list:
+                for ismatch_keylo in predicate_list:
+                    for ismatch_keyhi in predicate_list:
+                        matchspec0 = netbuffer_update_vallo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE, meta_isvalid=isvalid, meta_ismatch_keylo=ismatch_keylo, meta_ismatch_keyhi=ismatch_keyhi);
+                        self.client.update_vallo_tbl_table_add_with_put_vallo(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec1 = netbuffer_update_vallo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE, meta_isvalid=1, meta_ismatch_keylo=2, meta_ismatch_keyhi=2);
+            self.client.update_vallo_tbl_table_add_with_get_vallo(\
+                    self.sess_hdl, self.dev_tgt, matchspec1)
+
+            # Table: update_valhi_tbl
+            print "Configuring update_valhi_tbl"
+            valid_list = [0, 1]
+            predicate_list = [0, 1, 2, 4, 8]
+            for isvalid in valid_list:
+                for ismatch_keylo in predicate_list:
+                    for ismatch_keyhi in predicate_list:
+                        matchspec0 = netbuffer_update_valhi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE, meta_isvalid=isvalid, meta_ismatch_keylo=ismatch_keylo, meta_ismatch_keyhi=ismatch_keyhi);
+                        self.client.update_valhi_tbl_table_add_with_put_valhi(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec1 = netbuffer_update_valhi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE, meta_isvalid=1, meta_ismatch_keylo=2, meta_ismatch_keyhi=2);
+            self.client.update_valhi_tbl_table_add_with_get_valhi(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
 
             # Table: clone_pkt_tbl
