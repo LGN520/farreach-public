@@ -21,7 +21,8 @@
 #define PUTREQ_S_TYPE 0x08000000
 
 // 64K * (4B + 4B + 4B + 4B + 1B)
-#define KV_BUCKET_COUNT 65536
+//#define KV_BUCKET_COUNT 65536
+#define KV_BUCKET_COUNT 1
 
 /* Packet Header Types */
 
@@ -259,11 +260,27 @@ action calculate_hash() {
 	modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT);
 }
 
+@pragma stage 0
 table calculate_hash_tbl {
 	actions {
 		calculate_hash;
 	}
 	default_action: calculate_hash();
+}
+
+action save_info() {
+	modify_field(meta.tmp_sipaddr, ipv4_hdr.srcAddr);
+	modify_field(meta.tmp_dipaddr, ipv4_hdr.dstAddr);
+	modify_field(meta.tmp_sport, udp_hdr.srcPort);
+	modify_field(meta.tmp_dport, udp_hdr.dstPort);
+}
+
+@pragma stage 0
+table save_info_tbl {
+	actions {
+		save_info;
+	}
+	default_action: save_info();
 }
 
 /* KV (hash table) */
@@ -306,6 +323,7 @@ action put_match_keylo() {
 	put_match_keylo_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 1
 table match_keylo_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -356,6 +374,7 @@ action put_match_keyhi() {
 	put_match_keyhi_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 1
 table match_keyhi_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -409,22 +428,25 @@ action clear_valid() {
 	clear_valid_alu.execute_stateful_alu(meta.hashidx);
 }
 
-@pragma stage 2
+/*@pragma stage 2
 table clear_valid_tbl {
 	actions {
 		clear_valid;
 	}
 	default_action: clear_valid();
-}
+}*/
 
 @pragma stage 2
 table access_valid_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.ismatch_keylo: exact;
+		meta.ismatch_keyhi: exact;
 	}
 	actions {
 		get_valid;
 		set_valid;
+		clear_valid;
 		nop;
 	}
 	default_action: nop();
@@ -448,12 +470,12 @@ action get_vallo() {
 	get_vallo_alu.execute_stateful_alu(meta.hashidx);
 }
 
-table get_vallo_tbl {
+/*table get_vallo_tbl {
 	actions {
 		get_vallo;
 	}
 	default_action: get_vallo();
-}
+}*/
 
 blackbox stateful_alu put_vallo_alu {
 	reg: vallo_reg;
@@ -468,12 +490,28 @@ action put_vallo() {
 	put_vallo_alu.execute_stateful_alu(meta.hashidx);
 }
 
-@pragma stage 3
+/*@pragma stage 3
 table put_vallo_tbl {
 	actions {
 		put_vallo;
 	}
 	default_action: put_vallo();
+}*/
+
+@pragma stage 3
+table update_vallo_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.isvalid: exact;
+		meta.ismatch_keylo: exact;
+		meta.ismatch_keyhi: exact;
+	}
+	actions {
+		get_vallo;
+		put_vallo;
+		nop;
+	}
+	default_action: nop();
 }
 
 register valhi_reg {
@@ -494,12 +532,12 @@ action get_valhi() {
 	get_valhi_alu.execute_stateful_alu(meta.hashidx);
 }
 
-table get_valhi_tbl {
+/*table get_valhi_tbl {
 	actions {
 		get_valhi;
 	}
 	default_action: get_valhi();
-}
+}*/
 
 blackbox stateful_alu put_valhi_alu {
 	reg: valhi_reg;
@@ -514,28 +552,31 @@ action put_valhi() {
 	put_valhi_alu.execute_stateful_alu(meta.hashidx);
 }
 
+/*@pragma stage 3
 table put_valhi_tbl {
 	actions {
 		put_valhi;
 	}
 	default_action: put_valhi();
+}*/
+
+@pragma stage 3
+table update_valhi_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.isvalid: exact;
+		meta.ismatch_keylo: exact;
+		meta.ismatch_keyhi: exact;
+	}
+	actions {
+		get_valhi;
+		put_valhi;
+		nop;
+	}
+	default_action: nop();
 }
 
 /* Ingress Processing */
-
-action save_info() {
-	modify_field(meta.tmp_sipaddr, ipv4_hdr.srcAddr);
-	modify_field(meta.tmp_dipaddr, ipv4_hdr.dstAddr);
-	modify_field(meta.tmp_sport, udp_hdr.srcPort);
-	modify_field(meta.tmp_dport, udp_hdr.dstPort);
-}
-
-table save_info_tbl {
-	actions {
-		save_info;
-	}
-	default_action: save_info();
-}
 
 action sendback_getres(tmp_smacaddr, tmp_dmacaddr) {
 	// Swap mac address
@@ -668,25 +709,27 @@ control ingress {
 	if (valid(op_hdr)) {
 
 		/*** Stage 0 ***/
-
 		apply(calculate_hash_tbl);
 		apply(save_info_tbl);
 
 		/*** Stage 1 ***/
-
 		// Different MAT entries for getreq/putreq
 		apply(match_keylo_tbl);
 		apply(match_keyhi_tbl);
 
 		/*** Stage 2 ***/
-		apply(access_valid_tbl);
+		// NOTE: we put valid_reg in stage 2 to support DEL operation
+		apply(access_valid_tbl); 
+
+		/*** Stage 3 ***/
+		// NOTE: we must put in stage 3 since get_vallo/hi_tbl relies on isvalid and ismatch_keylo/hi
+		apply(update_vallo_tbl);
+		apply(update_valhi_tbl);
 
 		if (op_hdr.optype == GETREQ_TYPE) {
-			/*** Stage 3 ***/
+			/*** Stage 4 ***/
 			if (meta.isvalid == 1) {
 				if (meta.ismatch_keylo == 2 and meta.ismatch_keyhi == 2) {
-					apply(get_vallo_tbl);
-					apply(get_valhi_tbl);
 					apply(sendback_getres_tbl);
 				}
 				else {
@@ -698,11 +741,9 @@ control ingress {
 			}
 		}
 		else if (op_hdr.optype == PUTREQ_TYPE) {
-			/*** Stage 2 ***/
-			apply(put_vallo_tbl);
-			apply(put_valhi_tbl);
-			apply(sendback_putres_tbl);
 			/*** Stage 3 ***/
+			apply(sendback_putres_tbl);
+
 			if (meta.isvalid == 1) { // pkt is cloned to egress and will not execute this code
 				if (meta.origin_keylo != op_hdr.keylo) {
 					apply(clone_pkt_tbl);
@@ -714,14 +755,9 @@ control ingress {
 		}
 		else if (op_hdr.optype == DELREQ_TYPE) {
 			/*** Stage 2 ***/
-			if (meta.origin_keylo == op_hdr.keylo) {
-				if (meta.origin_keyhi == op_hdr.keyhi) {
-					apply(clear_valid_tbl);
-					apply(sendback_delres_tbl);
-				}
-				else {
-					apply(ipv4_lpm);
-				}
+			if (meta.ismatch_keylo == 2 and meta.ismatch_keyhi == 2) {
+				apply(sendback_delres_tbl);
+				// TODO: need to send DELREQ_S to delete the key from server if necessary?
 			}
 			else {
 				apply(ipv4_lpm);
