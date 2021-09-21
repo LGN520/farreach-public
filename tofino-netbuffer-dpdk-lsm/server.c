@@ -549,6 +549,14 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
 				}
+			case packet_type_t::DEL_REQ_S:
+				{
+					del_request_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().key)
+					bool tmp_stat = table->remove(req.key(), req.thread_id());
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					break;
+				}
 			default:
 				{
 					COUT_THIS("[server] Invalid packet type: " << int(pkt_type))

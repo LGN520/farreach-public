@@ -7,7 +7,7 @@
 #include "helper.h"
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, 
-	GET_RES, PUT_RES, DEL_RES, SCAN_RES, PUT_REQ_S};
+	GET_RES, PUT_RES, DEL_RES, SCAN_RES, PUT_REQ_S, DEL_REQ_S};
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -62,6 +62,7 @@ class PutRequest : public Packet<key_t> {
 template<class key_t>
 class DelRequest : public Packet<key_t> {
 	public: 
+		DelRequest();
 		DelRequest(uint32_t thread_id, key_t key);
 		DelRequest(const char * data, uint32_t recv_size);
 
@@ -158,6 +159,15 @@ class PutRequestS : public PutRequest<key_t, val_t> {
 	public:
 		PutRequestS(uint32_t thread_id, key_t key, val_t val);
 		PutRequestS(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class DelRequestS : public DelRequest<key_t, val_t> {
+	public:
+		DelRequestS(uint32_t thread_id, key_t key);
+		DelRequestS(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };

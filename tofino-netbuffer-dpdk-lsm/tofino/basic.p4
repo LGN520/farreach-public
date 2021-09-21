@@ -19,6 +19,7 @@
 #define DELRES_TYPE 0x06000000
 #define SCANRES_TYPE 0x07000000
 #define PUTREQ_S_TYPE 0x08000000
+#define DELREQ_S_TYPE 0x09000000
 
 // 64K * (4B + 4B + 4B + 4B + 1B)
 //#define KV_BUCKET_COUNT 65536
@@ -110,7 +111,7 @@ header_type metadata_t {
 		tmp_sport: 16;
 		tmp_dport: 16;
 		tmp_port: 16;
-		is_clone: 1;
+		is_clone: 2;
 	}
 }
 
@@ -681,7 +682,7 @@ table sendback_delres_tbl {
 	default_action: nop();
 }
 
-field_list clone_field_list {
+field_list clone_put_field_list {
 	meta.origin_keylo;
 	meta.origin_keyhi;
 	meta.origin_vallo;
@@ -689,17 +690,37 @@ field_list clone_field_list {
 	meta.is_clone;
 }
 
-action clone_pkt(sid) {
+action clone_putpkt(sid) {
 	modify_field(meta.is_clone, 1);
-	clone_ingress_pkt_to_egress(sid, clone_field_list);
+	clone_ingress_pkt_to_egress(sid, clone_put_field_list);
 }
 
-table clone_pkt_tbl {
+table clone_putpkt_tbl {
 	reads {
 		ig_intr_md.ingress_port: exact;
 	}
 	actions {
-		clone_pkt;
+		clone_putpkt;
+		nop;
+	}
+	default_action: nop();
+}
+
+field_list clone_del_field_list {
+	meta.is_clone;
+}
+
+action clone_delpkt(sid) {
+	modify_field(meta.is_clone, 2);
+	clone_ingress_pkt_to_egress(sid, clone_del_field_list);
+}
+
+table clone_delpkt_tbl {
+	reads {
+		ig_intr_md.ingress_port: exact;
+	}
+	actions {
+		clone_delpkt;
 		nop;
 	}
 	default_action: nop();
@@ -746,10 +767,10 @@ control ingress {
 
 			if (meta.isvalid == 1) { // pkt is cloned to egress and will not execute this code
 				if (meta.origin_keylo != op_hdr.keylo) {
-					apply(clone_pkt_tbl);
+					apply(clone_putpkt_tbl);
 				}
 				else if (meta.origin_keyhi != op_hdr.keyhi) {
-					apply(clone_pkt_tbl);
+					apply(clone_putpkt_tbl);
 				}
 			}
 		}
@@ -757,7 +778,7 @@ control ingress {
 			/*** Stage 2 ***/
 			if (meta.ismatch_keylo == 2 and meta.ismatch_keyhi == 2) {
 				apply(sendback_delres_tbl);
-				// TODO: need to send DELREQ_S to delete the key from server if necessary?
+				apply(clone_delpkt_tbl);
 			}
 			else {
 				apply(ipv4_lpm);
@@ -790,8 +811,22 @@ table update_putreq_tbl {
 	default_action: update_putreq();
 }
 
+action update_delreq() {
+	modify_field(op_hdr.optype, DELREQ_S_TYPE);
+}
+
+table update_delreq_tbl {
+	actions {
+		update_delreq;
+	}
+	default_action: update_delreq();
+}
+
 control egress {
 	if (meta.is_clone == 1) {
 		apply(update_putreq_tbl);
+	}
+	else if (meta.is_clone == 2) {
+		apply(update_delreq_tbl);
 	}
 }

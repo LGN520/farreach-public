@@ -132,6 +132,13 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 }
 
 // DelRequest
+
+template<class key_t, class val_t>
+DelRequest<key_t, val_t>::DelRequest()
+	: Packet<key_t>()
+{
+}
+
 template<class key_t>
 DelRequest<key_t>::DelRequest(uint32_t thread_id, key_t key)
 	: Packet<key_t>(packet_type_t::DEL_REQ, thread_id, key)
@@ -489,6 +496,26 @@ PutRequestS<key_t, val_t>::PutRequestS(const char * data, uint32_t recv_size) {
 template<class key_t, class val_t>
 uint32_t PutRequestS<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	COUT_N_EXIT("Invalid invoke of serialize for PutReqestS");
+}
+
+// DelRequestS
+
+template<class key_t, class val_t>
+DelRequestS<key_t, val_t>::DelRequestS(uint32_t thread_id, key_t key) 
+	: DelRequest<key_t, val_t>::DelRequest(thread_id, key)
+{	
+	this->type = PacketType::DEL_REQ_S;
+}
+
+template<class key_t, class val_t>
+DelRequestS<key_t, val_t>::DelRequestS(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(this->_type == PacketType::DEL_REQ_S);
+}
+
+template<class key_t, class val_t>
+uint32_t DelRequestS<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for DelReqestS");
 }
 
 // APIs
