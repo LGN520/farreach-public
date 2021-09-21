@@ -256,14 +256,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.update_valhi_tbl_table_add_with_get_valhi(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
 
-            # Table: clone_pkt_tbl
-            print "Configuring clone_pkt_tbl"
+            # Bind sid with port for packet mirror
             sidnum = 1
             sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
-            matchspec0 = netbuffer_clone_pkt_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
-            actnspec0 = netbuffer_clone_pkt_action_spec_t(sids[0])
-            self.client.clone_pkt_tbl_table_add_with_clone_pkt(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             print "Binding sid {} with port {}".format(sids[0], self.devPorts[1])
             info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
                                   Direction_e.PD_DIR_INGRESS,
@@ -271,6 +266,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                   self.devPorts[1],
                                   True)
             self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+
+            # Table: clone_putpkt_tbl
+            print "Configuring clone_putpkt_tbl"
+            matchspec0 = netbuffer_clone_putpkt_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
+            actnspec0 = netbuffer_clone_putpkt_action_spec_t(sids[0])
+            self.client.clone_putpkt_tbl_table_add_with_clone_putpkt(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
+            # Table: clone_delpkt_tbl
+            print "Configuring clone_delpkt_tbl"
+            matchspec0 = netbuffer_clone_delpkt_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
+            actnspec0 = netbuffer_clone_delpkt_action_spec_t(sids[0])
+            self.client.clone_delpkt_tbl_table_add_with_clone_delpkt(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
 

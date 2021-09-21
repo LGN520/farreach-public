@@ -39,6 +39,7 @@ typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
 typedef PutRequestS<index_key_t, val_t> put_request_s_t;
+typedef DelRequestS<index_key_t> del_request_s_t;
 
 inline void parse_args(int, char **);
 void load();
@@ -551,7 +552,7 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::DEL_REQ_S:
 				{
-					del_request_t req(buf, recv_size);
+					del_request_s_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().key)
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
