@@ -361,24 +361,24 @@ static int run_receiver(void *param) {
 		;
 
   //DEBUG
-  double prevt0 = 0;
-  double t0 = CUR_TIME();
-  uint32_t debug_idx = 0;
+  //double prevt0 = 0;
+  //double t0 = CUR_TIME();
+  //uint32_t debug_idx = 0;
 
 	struct rte_mbuf *received_pkts[32];
 	while (running) {
-		double tmpt0 = CUR_TIME();
+		//double tmpt0 = CUR_TIME();
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
 		if (n_rx == 0) {
-			double tmpt1 = CUR_TIME();
-			t0 += (tmpt1 - tmpt0);
+			//double tmpt1 = CUR_TIME();
+			//t0 += (tmpt1 - tmpt0);
 			continue;
 		}
-		if ((debug_idx + 1) % 10001 == 0) {
+		/*if ((debug_idx + 1) % 10001 == 0) {
 			COUT_VAR((t0 - prevt0) / 10000.0);
 			prevt0 = t0;
 			COUT_VAR(n_rx);
-		}
+		}*/
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);
 			if (unlikely(ret == -1)) {
@@ -403,9 +403,9 @@ static int run_receiver(void *param) {
 				}
 			}
 		}
-		debug_idx++;
-		double tmpt1 = CUR_TIME();
-		t0 += (tmpt1 - tmpt0);
+		//debug_idx++;
+		//double tmpt1 = CUR_TIME();
+		//t0 += (tmpt1 - tmpt0);
 	}
 	return 0;
 }
@@ -478,7 +478,7 @@ static int run_fg(void *param) {
   char buf[MAX_BUFSIZE];
   int req_size = 0;
   int recv_size = 0;
-  val_t dummy_value = 1234;
+  val_t dummy_value = 1235;
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
   COUT_THIS("[client " << thread_id << "] Ready.");
   ready_threads++;
@@ -503,7 +503,8 @@ static int run_fg(void *param) {
 
   while (running) {
 	// DEBUG TEST
-	/*query_i = debugtest_idx;
+	/*int tmprun = 0;
+	query_i = debugtest_idx;
 	update_i = debugtest_idx;
 	if (debugtest_i == 0) tmprun = 1;
 	debugtest_i++;*/
@@ -519,9 +520,9 @@ static int run_fg(void *param) {
 		tmploop = 0;
 	}*/
 
-	//int tmprun = 0;
-    if (d <= read_ratio) {  // get
-    //if (tmprun == 0) {  // get
+	int tmprun = 0;
+    //if (d <= read_ratio) {  // get
+    if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
 	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key);
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -556,8 +557,8 @@ static int run_fg(void *param) {
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio) {  // update
-    //} else if (tmprun == 1) {  // update
+    //} else if (d <= read_ratio + update_ratio) {  // update
+    } else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
 	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -587,8 +588,8 @@ static int run_fg(void *param) {
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
-    //} else if (tmprun == 2) {  // insert
+    //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
+    } else if (tmprun == 2) {  // insert
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
 	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -618,8 +619,8 @@ static int run_fg(void *param) {
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
-    //} else if (tmprun == 3) {  // remove
+    //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
+    } else if (tmprun == 3) {  // remove
 	  del_request_t req(thread_id, op_keys[delete_i]);
 	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[delete_i].key);
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
