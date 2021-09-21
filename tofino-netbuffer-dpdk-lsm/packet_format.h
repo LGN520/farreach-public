@@ -163,8 +163,8 @@ class PutRequestS : public PutRequest<key_t, val_t> {
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
-template<class key_t, class val_t>
-class DelRequestS : public DelRequest<key_t, val_t> {
+template<class key_t>
+class DelRequestS : public DelRequest<key_t> {
 	public:
 		DelRequestS(uint32_t thread_id, key_t key);
 		DelRequestS(const char * data, uint32_t recv_size);
