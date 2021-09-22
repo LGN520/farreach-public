@@ -16,6 +16,10 @@
 - GET latency
 	+ All hit server: 31119 op/s = 32.13us (similar as remote test without persistency due to DPDK PMD implementation)
 	+ All hit switch: 41506 op/s = 24.09us (eliminate the 8us-overhead in server)
+- PUT latency
+	+ Since all puts must hit switch, the latency is similar as GET latency
+	+ NOTE: if the workload is linear or random, then server will be overloaded. However, we assume that workload is skewed, thus most
+	puts will hit switch without evicting key-value pairs to server
 
 ## Preliminary Exp of Microbench (local test with persistency)
 

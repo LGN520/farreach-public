@@ -238,6 +238,7 @@ void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring, uint16_t n
 	printf("Available number of ports: %u, while we only use port 0\n", nb_ports);
 
 	/* Creates a new mempool in memory to hold the mbufs. */
+	printf("mbuf num: %d\n", int(NUM_MBUFS * nb_ports));
 	*mbuf_pool_ptr = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS * nb_ports,
 		MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 

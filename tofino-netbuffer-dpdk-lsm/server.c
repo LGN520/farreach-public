@@ -23,6 +23,8 @@
 #include "dpdk_helper.h"
 #include "rocksdb/slice.h"
 
+#define MQ_SIZE 256
+
 struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
 
@@ -51,8 +53,11 @@ void kill(int signum);
 static int run_sfg(void *param);
 static int run_receiver(__attribute__((unused)) void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
-volatile struct rte_mbuf **pkts;
-volatile bool *stats;
+//volatile struct rte_mbuf **pkts;
+//volatile bool *stats;
+volatile struct rte_mbuf ***pkts_list;
+volatile uint32_t *heads;
+volatile uint32_t *tails;
 
 // parameters
 size_t fg_n = 1;
@@ -151,12 +156,25 @@ int main(int argc, char **argv) {
   dpdk_init(&mbuf_pool, fg_n, 1);
 
   // Prepare pkts and stats for receiver
-  pkts = new volatile struct rte_mbuf*[fg_n];
-  stats = new volatile bool[fg_n];
-  memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
-  memset((void *)stats, 0, sizeof(bool)*fg_n);
+  //pkts = new volatile struct rte_mbuf*[fg_n];
+  //stats = new volatile bool[fg_n];
+  //memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
+  //memset((void *)stats, 0, sizeof(bool)*fg_n);
+  //for (size_t i = 0; i < fg_n; i++) {
+  //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
+  //}
+  pkts_list = new volatile struct rte_mbuf**[fg_n];
+  heads = new volatile uint32_t[fg_n];
+  tails = new volatile uint32_t[fg_n];
+  memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
+  memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
+  //int res = 0;
   for (size_t i = 0; i < fg_n; i++) {
-	pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
+	  pkts_list[i] = new volatile struct rte_mbuf*[MQ_SIZE];
+	  for (size_t j = 0; j < MQ_SIZE; j++) {
+		  pkts_list[i][j] = NULL;
+	  }
+	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
   }
 
   // prepare xindex
@@ -172,7 +190,11 @@ int main(int argc, char **argv) {
 
   // Free DPDK mbufs
   for (size_t i = 0; i < fg_n; i++) {
-	rte_pktmbuf_free((struct rte_mbuf *)pkts[i]);
+	//rte_pktmbuf_free((struct rte_mbuf *)pkts[i]);
+	  while (heads[i] != tails[i]) {
+		  rte_pktmbuf_free((struct rte_mbuf*)pkts_list[i][tails[i]]);
+		  tails[i] += 1;
+	  }
   }
   dpdk_free();
 
@@ -370,13 +392,21 @@ static int run_receiver(void *param) {
 					continue;
 				}
 				else {
-					if (stats[idx]) {
+					/*if (stats[idx]) {
 						COUT_THIS("Invalid stas[" << idx << "] which is true!")
 						continue;
 					}
 					else {
 						pkts[idx] = received_pkts[i];
 						stats[idx] = true;
+					}*/
+					if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
+						pkts_list[idx][heads[idx]] = received_pkts[i];
+						heads[idx] = (heads[idx] + 1) % MQ_SIZE;
+					}
+					else {
+						COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
+						rte_pktmbuf_free(received_pkts[i]);
 					}
 				}
 			}
@@ -392,11 +422,18 @@ static int run_sfg(void * param) {
   uint32_t thread_id = thread_param.thread_id;
   xindex_t *table = thread_param.table;
 
-  // DPDK
-  struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
-  struct rte_mbuf *sent_pkt_wrapper[1] = {sent_pkt};
-
   int res = 0;
+
+  // DPDK
+  //struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
+  //struct rte_mbuf *sent_pkt_wrapper[1] = {sent_pkt};
+  // Optimize mbuf allocation
+  uint16_t burst_size = 256;
+  struct rte_mbuf *sent_pkts[burst_size];
+  uint16_t sent_pkt_idx = 0;
+  struct rte_mbuf *sent_pkt = NULL;
+  res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+  INVARIANT(res == 0);
 
   // prepare socket
   /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -440,9 +477,9 @@ static int run_sfg(void * param) {
   }
 
 	// DEBUG
-	double prevt0 = 0;
-	double t0 = CUR_TIME();
-	uint32_t debug_idx = 0;
+	//double prevt0 = 0;
+	//double t0 = CUR_TIME();
+	//uint32_t debug_idx = 0;
 
   while (running) {
 	/*recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
@@ -456,18 +493,25 @@ static int run_sfg(void * param) {
 		}
 	}*/
 
-	if (stats[thread_id]) {
+	//if (stats[thread_id]) {
+	if (heads[thread_id] != tails[thread_id]) {
 		//COUT_THIS("[server] Receive packet!")
 
-		// DPDK
-		stats[thread_id] = false;
-		recv_size = decode_mbuf(pkts[thread_id], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
-		rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
+		sent_pkt = sent_pkts[sent_pkt_idx];
 
-		if ((debug_idx + 1) % 10001 == 0) {
+		// DPDK
+		//stats[thread_id] = false;
+		//recv_size = decode_mbuf(pkts[thread_id], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
+		//rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
+		INVARIANT(pkts_list[thread_id][tails[thread_id]] != NULL);
+		recv_size = decode_mbuf(pkts_list[thread_id][tails[thread_id]], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
+		rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
+		tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
+
+		/*if ((debug_idx + 1) % 10001 == 0) {
 			COUT_VAR((t0 - prevt0) / 10000.0);
 			prevt0 = t0;
-		}
+		}*/
 
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
 		double tmpt0 = CUR_TIME();
@@ -484,12 +528,13 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] val = " << tmp_val)
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr)); // UDP socket
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
-					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
-					debug_idx++;
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
 					break;
 				}
 			case packet_type_t::PUT_REQ:
@@ -504,7 +549,8 @@ static int run_sfg(void * param) {
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
-					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
 					break;
 				}
 			case packet_type_t::DEL_REQ:
@@ -519,7 +565,8 @@ static int run_sfg(void * param) {
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
-					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
 					break;
 				}
 			case packet_type_t::SCAN_REQ:
@@ -539,7 +586,8 @@ static int run_sfg(void * param) {
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
-					res = rte_eth_tx_burst(0, thread_id, sent_pkt_wrapper, 1);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
 					break;
 				}
 			case packet_type_t::PUT_REQ_S:
@@ -565,17 +613,30 @@ static int run_sfg(void * param) {
 					exit(-1);
 				}
 		}
-		double tmpt1 = CUR_TIME();
-		t0 += (tmpt1 - tmpt0);
+
+		if (sent_pkt_idx >= burst_size) {
+			sent_pkt_idx = 0;
+			res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+			INVARIANT(res == 0);
+		}
+
+		//debug_idx++;
+		//double tmpt1 = CUR_TIME();
+		//t0 += (tmpt1 - tmpt0);
+	}
+  }
+  
+  // DPDK
+  //rte_pktmbuf_free((struct rte_mbuf*)sent_pkt);
+  if (sent_pkt_idx < burst_size) {
+	for (uint16_t free_idx = sent_pkt_idx; free_idx != burst_size; free_idx++) {
+		rte_pktmbuf_free(sent_pkts[free_idx]);
 	}
   }
 
   //close(sockfd);
   COUT_THIS("[thread" << thread_id << "] exits")
   //pthread_exit(nullptr);
-  
-  // DPDK
-  rte_pktmbuf_free((struct rte_mbuf*)sent_pkt);
   return 0;
 }
 

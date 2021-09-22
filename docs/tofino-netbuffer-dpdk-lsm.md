@@ -4,6 +4,9 @@
 
 - Copy from tofino-xindex-dpdk-lsm to tofino-netbuffer-dpdk-lsm
 - Add PUT_REQ_S (server.c, packet_format.h, packet_format_impl.h)
+- Add DEL_REQ_S (server.c, packet_format.h, packet_format_impl.h)
+- Clone pkt for DEL (tofino/basic.c, tofino/configure/table_configure.py)
+- Add message queue and optimize mbuf allocation (server.c)
 
 ## How to run
 

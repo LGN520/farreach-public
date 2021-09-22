@@ -22,8 +22,7 @@
 #define DELREQ_S_TYPE 0x09000000
 
 // 64K * (4B + 4B + 4B + 4B + 1B)
-//#define KV_BUCKET_COUNT 65536
-#define KV_BUCKET_COUNT 1
+#define KV_BUCKET_COUNT 65536
 
 /* Packet Header Types */
 
