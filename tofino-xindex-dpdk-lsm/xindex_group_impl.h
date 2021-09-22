@@ -99,9 +99,9 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t &key, val
 		return result_t::ok;
 	}
 	// NOTE: if after_compact is true which means buffer will be deallocated, just retry for the new group instead of touching buffer of old group
-	if (after_compact) {
+	/*if (after_compact) {
 		return result_t::retry;
-	}
+	}*/
 	if (get_from_lsm(key, val, buffer)) {
 		return result_t::ok;
 	}
@@ -133,9 +133,11 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
 			if (buf_frozen) {
 				res = result_t::retry;
 			}
+			if (!get_from_lsm(key, old_val, buffer)) {
+				buffer_size++;
+			}
 			res = update_to_lsm(key, val, buffer);
 			assert(res == result_t::ok);
-			buffer_size++;
 		} else {
 			if (after_compact == true || buffer == nullptr) {
 				printf("[GROUP::PUT] group idx: %u, group addr: %p, after_compact: %d, buffer==null: %d\n", group_idx, (void *)this, after_compact?1:0, buffer==nullptr?1:0);
@@ -159,6 +161,9 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
 				}*/
 			}
 			else {
+				if (!get_from_lsm(key, old_val, buffer_temp)) {
+					buffer_size_temp++;
+				}
 				update_to_lsm(key, val, buffer_temp);
 				res = result_t::ok;
 			}
@@ -190,7 +195,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::remove(
 	}
 	else {
 		// NOTE: if after_compact is true which means buffer will be deallocated, just retry for the new group instead of touching buffer of old group
-		if (after_compact) {
+		/*if (after_compact) {
 			res = result_t::retry;
 		}
 		else {
@@ -202,6 +207,16 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::remove(
 				remove_from_lsm(key, buffer_temp);
 				res = result_t::ok;
 			}
+		}*/
+		if (get_from_lsm(key, tmpval, buffer)) {
+			remove_from_lsm(key, buffer);
+			buffer_size--;
+			res = result_t::ok;
+		}
+		else if (buffer_temp && get_from_lsm(key, tmpval, buffer_temp)) {
+			remove_from_lsm(key, buffer_temp);
+			buffer_size_temp--;
+			res = result_t::ok;
 		}
 	}
 
@@ -314,14 +329,11 @@ void Group<key_t, val_t, seq, max_model_n>::free_data() {
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
-	printf("after compact: %d, buffer==nullptr: %d, group_idx: %u, group addr: %p\n", 
-			after_compact==true?1:0, buffer==nullptr?1:0, group_idx, (void*)this);
 	INVARIANT(after_compact == true);
 	delete buffer; // Close the TransactionDB of old buffer
 	buffer = nullptr;
-	COUT_THIS("Finish delete buffer")
+	buffer_size = 0;
 	std::string buffer_path = get_buffer_path(cur_buffer_id);
-	COUT_THIS("Before calling remove_all, buffer path: " << buffer_path)
 	std::uintmax_t n = std::experimental::filesystem::remove_all(buffer_path);
 	COUT_THIS("Remove " << n << " files from " << buffer_path);
 }
@@ -439,7 +451,6 @@ inline std::string Group<key_t, val_t, seq, max_model_n>::get_buffer_path(uint32
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>
 		*Group<key_t, val_t, seq, max_model_n>::compact_phase() {
-	COUT_THIS("start compact...")
 	buf_frozen = true;
 	memory_fence();
 	rcu_barrier();
@@ -496,11 +507,11 @@ Group<key_t, val_t, seq, max_model_n>
 	new_group->pivot = pivot;
 	new_group->data = data;
 	new_group->buffer = buffer_temp;
+	new_group->buffer_size = buffer_size_temp;
 	new_group->group_idx = group_idx;
 	new_group->cur_buffer_id = cur_buffer_id == 0 ? 1 : 0;
 
 	this->after_compact = true; // It means refcnt of data and buffer_temp are 2
-	COUT_THIS("finish compact...")
 
 	return new_group;
 }

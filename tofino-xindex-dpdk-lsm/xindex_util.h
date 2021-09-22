@@ -74,7 +74,7 @@ struct IndexConfig {
   double group_error_tolerance = 4;
   size_t buffer_size_bound = 256;
   double buffer_size_tolerance = 3;
-  size_t buffer_compact_threshold = 8;
+  size_t buffer_compact_threshold = 256 * 1024; // 256K * 16B kvpair
   size_t worker_n = 0;
   std::unique_ptr<rcu_status_t[]> rcu_status;
   volatile bool exited = false;

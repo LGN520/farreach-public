@@ -365,15 +365,28 @@ void *run_sfg(void * param) {
   std::ofstream ofs(logname, std::ofstream::out);
 #endif
 
+  // DEBUG TEST
+  //uint32_t debugtest_idx = insert_i + 20;
+  //uint32_t debugtest_i = 0;
+
   while (!running) {
   }
 
   while (running) {
+	// DEBUG TEST
+	/*int tmprun = 0;
+	query_i = debugtest_idx;
+	update_i = debugtest_idx;
+	insert_i = debugtest_idx;
+	delete_i = 0;
+	if (debugtest_i == 0) tmprun = 2;
+	debugtest_i++;*/
+
     double d = ratio_dis(gen);
 
-	//int tmprun = 0;
-    if (d <= read_ratio) {  // get
-    //if (tmprun == 0) {  // get
+	int tmprun = 0;
+    //if (d <= read_ratio) {  // get
+    if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
 	  Key tmp_key;
 	  tmp_key.key = 12345;
@@ -395,8 +408,8 @@ void *run_sfg(void * param) {
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio) {  // update
-    //} else if (tmprun == 1) {  // update
+    //} else if (d <= read_ratio + update_ratio) {  // update
+    } else if (tmprun == 1) {  // update
 	  bool tmp_stat = table->put(op_keys[(update_i + delete_i) % op_keys.size()], dummy_value, thread_id);
 	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << dummy_value
 			  << " stat = " << tmp_stat);
@@ -413,8 +426,8 @@ void *run_sfg(void * param) {
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
-    //} else if (tmprun == 3) {  // remove
+    //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
+    } else if (tmprun == 3) {  // remove
 	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id);
 	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[delete_i].key << " val = " << dummy_value
 			  << " stat = " << tmp_stat);

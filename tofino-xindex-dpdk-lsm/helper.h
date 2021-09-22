@@ -56,7 +56,7 @@
 #define NDEBUGGING
 #endif
 
-#if 1
+#if 0
 #define NDEBUGGING_LOG
 #endif
 

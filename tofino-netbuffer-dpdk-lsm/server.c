@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
   for (size_t i = 0; i < fg_n; i++) {
 	  pkts_list[i] = new volatile struct rte_mbuf*[MQ_SIZE];
 	  for (size_t j = 0; j < MQ_SIZE; j++) {
-		  pkts_list[i][j] = NULL;
+		  pkts_list[i][j] = nullptr;
 	  }
 	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
   }
@@ -503,7 +503,7 @@ static int run_sfg(void * param) {
 		//stats[thread_id] = false;
 		//recv_size = decode_mbuf(pkts[thread_id], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		//rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
-		INVARIANT(pkts_list[thread_id][tails[thread_id]] != NULL);
+		INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
 		recv_size = decode_mbuf(pkts_list[thread_id][tails[thread_id]], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 		tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;

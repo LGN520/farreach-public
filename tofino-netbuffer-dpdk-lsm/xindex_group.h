@@ -20,6 +20,9 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
+#if !defined(XINDEX_GROUP_H)
+#define XINDEX_GROUP_H
+
 #include <boost/thread/shared_mutex.hpp>
 #include "xindex_buffer.h"
 #include "xindex_model.h"
@@ -30,10 +33,10 @@
 #include "rocksdb/utilities/transaction.h"
 #include "rocksdb/utilities/transaction_db.h"
 
-#if !defined(XINDEX_GROUP_H)
-#define XINDEX_GROUP_H
+#include "cbf_impl.h"
 
 #define RWLOCKMAP_SIZE 1024
+#define CBF_BYTES_NUM 1024 * 1024 // 1 MB
 
 namespace xindex {
 
@@ -44,6 +47,7 @@ class alignas(CACHELINE_SIZE) Group {
   friend class XIndex;
   template <class key_tt, class val_tt, bool sequential>
   friend class Root;
+  typedef CBF<key_t> cbf_t;
 
  public:
   Group();
@@ -105,9 +109,12 @@ class alignas(CACHELINE_SIZE) Group {
   bool after_compact = false;
   rocksdb::TransactionDB *data = nullptr;
   rocksdb::TransactionDB *buffer = nullptr;
+  cbf_t* cbf = nullptr;
   rocksdb::TransactionDB *buffer_temp = nullptr;
+  cbf_t* cbf_temp = nullptr;
 
   uint32_t buffer_size = 0; // The size of puts in buffer instead of the number of elements in buffer
+  uint32_t buffer_size_temp = 0;
   boost::shared_mutex rwlockmap[RWLOCKMAP_SIZE];
   uint32_t group_idx = 0;
   uint32_t cur_buffer_id = 0;

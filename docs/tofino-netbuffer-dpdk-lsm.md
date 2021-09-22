@@ -7,6 +7,8 @@
 - Add DEL_REQ_S (server.c, packet_format.h, packet_format_impl.h)
 - Clone pkt for DEL (tofino/basic.c, tofino/configure/table_configure.py)
 - Add message queue and optimize mbuf allocation (server.c)
+- Add CBF (cbf.h, cbf_impl.h)
+- Integrate CBF into NetBuffer (GET/PUT/DEL/free/compact) (xindex_group.h, xindex_group_impl.h)
 
 ## How to run
 

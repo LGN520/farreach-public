@@ -108,6 +108,7 @@ class alignas(CACHELINE_SIZE) Group {
   rocksdb::TransactionDB *buffer_temp = nullptr;
 
   uint32_t buffer_size = 0; // The size of puts in buffer instead of the number of elements in buffer
+  uint32_t buffer_size_temp = 0;
   boost::shared_mutex rwlockmap[RWLOCKMAP_SIZE];
   uint32_t group_idx = 0;
   uint32_t cur_buffer_id = 0;

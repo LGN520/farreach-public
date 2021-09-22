@@ -39,6 +39,8 @@ Group<key_t, val_t, seq, max_model_n>::~Group() {
 		if (data != nullptr) delete data;
 		if (buffer != nullptr) delete buffer;
 		if (buffer_temp != nullptr) delete buffer_temp;
+		if (cbf != nullptr) delete cbf;
+		if (cbf_temp != nullptr) delete cbf_temp;
 	}
 }
 
@@ -75,6 +77,8 @@ void Group<key_t, val_t, seq, max_model_n>::init(
 	s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_path, &buffer);
 	assert(s.ok());
 
+	cbf = new cbf_t(CBF_BYTES_NUM);
+
 	// Write original data (execute at the first time)
 	/*rocksdb::WriteBatch batch;
 	for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
@@ -95,17 +99,17 @@ const key_t &Group<key_t, val_t, seq, max_model_n>::get_pivot() {
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t &key, val_t &val) {
+	if (cbf->query(key) > 0) {
+		if (get_from_lsm(key, val, buffer)) {
+			return result_t::ok;
+		}
+	}
+	if (cbf_temp != nullptr && cbf_temp->query(key) > 0) {
+		if (buffer_temp && get_from_lsm(key, val, buffer_temp)) {
+			return result_t::ok;
+		}
+	}
 	if (get_from_lsm(key, val, data)) {
-		return result_t::ok;
-	}
-	// NOTE: if after_compact is true which means buffer will be deallocated, just retry for the new group instead of touching buffer of old group
-	if (after_compact) {
-		return result_t::retry;
-	}
-	if (get_from_lsm(key, val, buffer)) {
-		return result_t::ok;
-	}
-	if (buffer_temp && get_from_lsm(key, val, buffer_temp)) {
 		return result_t::ok;
 	}
 }
@@ -124,47 +128,59 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
 	result_t res = result_t::failed;
 
 	val_t old_val;
-	if (get_from_lsm(key, old_val, data)) {
-		res = update_to_lsm(key, val, data);
-		assert(res == result_t::ok);
-	}
-	else {
-		if (likely(buffer_temp == nullptr)) {
-			if (buf_frozen) {
-				res = result_t::retry;
-			}
+	if (cbf->query(key) > 0) {
+		if (get_from_lsm(key, old_val, buffer)) {
 			res = update_to_lsm(key, val, buffer);
+			// cbf->update(key); // Do not update the same key with multile times
 			assert(res == result_t::ok);
-			buffer_size++;
-		} else {
-			if (after_compact == true || buffer == nullptr) {
-				printf("[GROUP::PUT] group idx: %u, group addr: %p, after_compact: %d, buffer==null: %d\n", group_idx, (void *)this, after_compact?1:0, buffer==nullptr?1:0);
-				COUT_VAR(config.rcu_status[0].status);
+			if (rwlock != nullptr) {
+				rwlock->unlock_shared();
 			}
-			// NOTE: if after_compact is true which means buffer will be deallocated, just retry for the new group instead of touching buffer of old group
-			/*if (after_compact) {
-				COUT_THIS("Retry!")
-				res =result_t::retry;
-			}*/
-			if (get_from_lsm(key, old_val, buffer)) {
-				res = update_to_lsm(key, val, buffer);
+			return res;
+		}
+	}
+
+	// Not in buffer
+	if (buf_frozen) {
+		if (buffer_temp == nullptr || cbf_temp == nullptr) {
+			res = result_t::retry;
+			if (rwlock != nullptr) {
+				rwlock->unlock_shared();
+			}
+			return res;
+		}
+
+		if (cbf_temp->query(key) > 0) {
+			if (get_from_lsm(key, old_val, buffer_temp)) {
+				res = update_to_lsm(key, val, buffer_temp);
+				// cbf_temp->update(key); // Do not update the same key with multile times
 				assert(res == result_t::ok);
-				// NOTE: if the key is still in buffer (aka not yet put into data), we should not update buffer; otherwise, iterator->Next cannot see the latest value
-				/*if (buf_frozen) { 
-					res = result_t::retry;
+				if (rwlock != nullptr) {
+					rwlock->unlock_shared();
 				}
-				else {
-					res = update_to_lsm(key, val, buffer);
-					assert(res == result_t::ok);
-				}*/
-			}
-			else {
-				update_to_lsm(key, val, buffer_temp);
-				res = result_t::ok;
+				return res;
 			}
 		}
 	}
 
+	// Not in buffer && Not in buffer_temp (if any)
+	if (get_from_lsm(key, old_val, data)) {
+		res = update_to_lsm(key, val, data);
+	}
+	else {
+		if (buf_frozen) {
+			assert(buffer_temp != nullptr && cbf_temp != nullptr);
+			res = update_to_lsm(key, val, buffer_temp);
+			buffer_size_temp += 1;
+			cbf_temp->update(key);
+		}
+		else {
+			res = update_to_lsm(key, val, buffer);
+			buffer_size += 1;
+			cbf->update(key);
+		}
+	}
+	assert(res == result_t::ok);
 	if (rwlock != nullptr) {
 		rwlock->unlock_shared();
 	}
@@ -184,25 +200,36 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::remove(
 	}
 	val_t tmpval;
 	result_t res = result_t::failed;
+
+	if (cbf->query(key) > 0) {
+		if (get_from_lsm(key, tmpval, buffer)) {
+			remove_from_lsm(key, buffer);
+			buffer_size -= 1;
+			cbf->remove(key);
+			res = result_t::ok;
+			if (rwlock != nullptr) {
+				rwlock->unlock_shared();
+			}
+			return res;
+		}
+	}
+
+	if (cbf_temp && cbf_temp->query(key) > 0) {
+		if (buffer_temp && get_from_lsm(key, tmpval, buffer_temp)) {
+			remove_from_lsm(key, buffer_temp);
+			buffer_size_temp -= 1;
+			cbf_temp->remove(key);
+			res = result_t::ok;
+			if (rwlock != nullptr) {
+				rwlock->unlock_shared();
+			}
+			return res;
+		}
+	}
+
 	if (get_from_lsm(key, tmpval, data)) {
 		remove_from_lsm(key, data);
 		res = result_t::ok;
-	}
-	else {
-		// NOTE: if after_compact is true which means buffer will be deallocated, just retry for the new group instead of touching buffer of old group
-		if (after_compact) {
-			res = result_t::retry;
-		}
-		else {
-			if (get_from_lsm(key, tmpval, buffer)) {
-				remove_from_lsm(key, buffer);
-				res = result_t::ok;
-			}
-			else if (buffer_temp && get_from_lsm(key, tmpval, buffer_temp)) {
-				remove_from_lsm(key, buffer_temp);
-				res = result_t::ok;
-			}
-		}
 	}
 
 	if (rwlock != nullptr) {
@@ -314,16 +341,15 @@ void Group<key_t, val_t, seq, max_model_n>::free_data() {
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
-	printf("after compact: %d, buffer==nullptr: %d, group_idx: %u, group addr: %p\n", 
-			after_compact==true?1:0, buffer==nullptr?1:0, group_idx, (void*)this);
 	INVARIANT(after_compact == true);
 	delete buffer; // Close the TransactionDB of old buffer
 	buffer = nullptr;
-	COUT_THIS("Finish delete buffer")
+	buffer_size = 0;
 	std::string buffer_path = get_buffer_path(cur_buffer_id);
-	COUT_THIS("Before calling remove_all, buffer path: " << buffer_path)
 	std::uintmax_t n = std::experimental::filesystem::remove_all(buffer_path);
-	COUT_THIS("Remove " << n << " files from " << buffer_path);
+	COUT_THIS("Remove " << n << " files from " << buffer_path)
+	delete cbf;
+	cbf = nullptr;
 }
 
 // semantics: atomically read the value
@@ -439,7 +465,7 @@ inline std::string Group<key_t, val_t, seq, max_model_n>::get_buffer_path(uint32
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>
 		*Group<key_t, val_t, seq, max_model_n>::compact_phase() {
-	COUT_THIS("start compact...")
+	COUT_THIS("Compact!")
 	buf_frozen = true;
 	memory_fence();
 	rcu_barrier();
@@ -458,6 +484,8 @@ Group<key_t, val_t, seq, max_model_n>
 	rocksdb::Status s;
 	s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_temp_path, &buffer_temp);
 	INVARIANT(s.ok());
+
+	cbf_temp = new cbf_t(CBF_BYTES_NUM);
 
 	// Enumerate all keys from buffer (NOTE: buffer does not have PUTs now)
 	rocksdb::Transaction* txn = buffer->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
@@ -484,6 +512,8 @@ Group<key_t, val_t, seq, max_model_n>
 		get_from_lsm(tmpkey, tmpval, buffer); // Get the lastest value from buffer
 		update_to_lsm(tmpkey, tmpval, data); // Put key-value pair from buffer to data
 
+		cbf->remove(tmpkey); // Remove the key such that the following puts will hit data
+
 		rwlock.unlock(); // PUT/DELs for the key will hit in data
 		iter->Next();
 	}
@@ -496,11 +526,12 @@ Group<key_t, val_t, seq, max_model_n>
 	new_group->pivot = pivot;
 	new_group->data = data;
 	new_group->buffer = buffer_temp;
+	new_group->buffer_size = buffer_size_temp;
+	new_group->cbf = cbf_temp;
 	new_group->group_idx = group_idx;
 	new_group->cur_buffer_id = cur_buffer_id == 0 ? 1 : 0;
 
 	this->after_compact = true; // It means refcnt of data and buffer_temp are 2
-	COUT_THIS("finish compact...")
 
 	return new_group;
 }
