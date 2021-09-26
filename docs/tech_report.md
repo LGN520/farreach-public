@@ -5,6 +5,14 @@
 - There is sth wrong with dl31:ens3f0 (tofino:1/0)
 - We use dl31:ens3f1(tofino:2/0) and dl32:ens3f1(tofino:3/0)
 
+## Port configuration
+
+- Client <-> server
+	+ Client starts from 8888
+	+ Server starts from 1111 (1024 ~ 1279 in basic.p4)
+- Controller -> server
+	+ Server port: 3333
+
 ## Directory
 
 - xindex

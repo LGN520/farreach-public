@@ -7,7 +7,8 @@
 #define PROTOTYPE_UDP 0x11
 //#define PROTOTYPE_NETBUFFER 0x90
 
-#define OP_PORT 1111
+#define OP_PORT 1111 // 0x0457
+#define OP_PORT_MASK 0xF400 // 1024 ~ 1279 // OP_PORT must be 0x04XX
 
 // NOTE: convert type into Big Endian (not use threadid by now; big endian of key does not make sense)
 #define GETREQ_TYPE 0x00000000
@@ -22,7 +23,8 @@
 #define DELREQ_S_TYPE 0x09000000
 
 // 64K * (4B + 4B + 4B + 4B + 1B)
-#define KV_BUCKET_COUNT 65536
+//#define KV_BUCKET_COUNT 65536
+#define KV_BUCKET_COUNT 8
 
 /* Packet Header Types */
 
@@ -150,7 +152,8 @@ parser parse_ipv4 {
 parser parse_udp {
 	extract(udp_hdr);
 	return select(udp_hdr.dstPort) {
-		OP_PORT: parse_op;
+		//OP_PORT: parse_op;
+		OP_PORT mask OP_PORT_MASK: parse_op;
 		default: ingress;
 	}
 }
