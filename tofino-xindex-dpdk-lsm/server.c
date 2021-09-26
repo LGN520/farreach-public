@@ -24,6 +24,7 @@
 #include "rocksdb/slice.h"
 
 #define MQ_SIZE 256
+#define KV_BUCKET_COUT 8
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
@@ -48,19 +49,23 @@ void run_server(xindex_t *table);
 void kill(int signum);
 
 // DPDK
-static int run_sfg(void *param);
+static int run_sfg(void *param); // workers
 static int run_receiver(__attribute__((unused)) void *param); // receiver
+void *run_backuper(__attribute__((unused)) void *param); // backuper
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
 volatile struct rte_mbuf ***pkts_list;
 volatile uint32_t *heads;
 volatile uint32_t *tails;
+volatile std::map<index_key_t, val_t> *backup_data = nullptr;
+volatile bool is_backuping = false;
 
 // parameters
 size_t fg_n = 1;
 size_t bg_n = 1;
 short dst_port_start = 1111;
+short backup_port = 3333;
 
 std::vector<index_key_t> exist_keys;
 
@@ -317,6 +322,13 @@ void run_server(xindex_t *table) {
 	COUT_THIS("[server] Launch receiver with ret code " << ret)
 	lcoreid++;
 
+	// Launch backuper
+	pthread_t backuper_thread;
+	ret = pthread_create(&backuper_thread, nullptr, run_backuper, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: unable to create backuper " << ret);
+	}
+
 	// Prepare fg params
 	//pthread_t threads[fg_n];
 	sfg_param_t sfg_params[fg_n];
@@ -362,6 +374,11 @@ void run_server(xindex_t *table) {
 		  COUT_N_EXIT("Error:unable to join," << rc);
 		}
 	}*/
+	void * status;
+	int rc = pthread_join(backuper_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join," << rc);
+	}
 	rte_eal_mp_wait_lcore();
 }
 
@@ -411,6 +428,34 @@ static int run_receiver(void *param) {
 		}
 	}
 	return 0;
+}
+
+void *run_backuper(void *param) {
+
+	int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	INVARIANT(sock_fd >= 0);
+	struct sockaddr_in backup_server_addr;
+	memset(&backup_server_addr, 0, sizeof(sockaddr_in));
+	backup_server_addr.sin_family = AF_INET;
+	backup_server_addr.sin_port = htons(backup_port);
+	backup_server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	int res = bind(sock_fd, (struct sockaddr *)&backup_server_addr, sizeof(backup_server_addr));
+	INVARIANT(res >= 0);
+	
+	int recv_size = 0;
+	char recv_buf[1179648]; // 65536 * 17 + 14 + 20 + 8 < 65536 * 18 = 1179648
+	memset(recv_buf, 0, sizeof(recv_buf));
+
+	while (!running)
+		;
+
+	while (running) {
+		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
+		INVARIANT(recv_size >= 0);
+		
+		COUT_VAR(recv_size);
+		dump_buf(recv_buf, recv_size);
+	}
 }
 
 static int run_sfg(void * param) {

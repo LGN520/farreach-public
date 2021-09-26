@@ -2,14 +2,6 @@
 #include "helper.h"
 static struct rte_eth_conf port_conf_default;
 
-static inline void dump_buf(char *buf, uint32_t bufsize)
-{
-	for (uint32_t byteidx = 0; byteidx < bufsize; byteidx++) {
-		printf("0x%02x ", uint8_t(buf[byteidx]));
-	}
-	printf("\n");
-}
-
 static inline uint16_t checksum (uint16_t *addr, int len) {
 	int count = len;
 	register uint32_t sum = 0;
@@ -367,6 +359,9 @@ int get_dstport(volatile struct rte_mbuf *mbuf) {
 	char *data;
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
+
+	//printf("pktsize: %d\n", mbuf->pkt_len);
+	//dump_buf(data, mbuf->pkt_len);
 
 	ethhdr = (struct ether_hdr *)data;
 	if (ethhdr->ether_type != 0x0008) {
