@@ -36,6 +36,7 @@ from ptf.testutils import *
 from ptf.thriftutils import *
 from res_pd_rpc.ttypes import *
 
+import socket
 import struct
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
@@ -49,11 +50,11 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 
 bucket_count = 8 # Must be the same as basic.p4
 fp_ports = ["2/0", "3/0"]
-switch_ip = "1.1.1.1" # useless
-switch_mac = "01:01:01:01:01:01" # useless
-switch_port = 1 #useless
-server_ip = "10.0.0.32"
-server_mac = "9c:69:b4:60:ef:8d"
+#switch_ip = "1.1.1.1" # useless
+#switch_mac = "01:01:01:01:01:01" # useless
+#switch_port = 1 #useless
+server_ip = "172.16.112.32"
+#server_mac = "9c:69:b4:60:ef:8d"
 server_port = 3333
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
@@ -95,7 +96,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
         print("keylo_list size: {} keyhi_list size: {}".format(len(keylo_list), len(keyhi_list)))
         buf = struct.pack("I", bucket_count)
-        for i in range(bucket_count):
+        for idx in range(bucket_count):
+            i = idx + bucket_count # Our ports are in the 2nd pipeline
             tmpkeylo = keylo_list[i]
             tmpkeyhi = keyhi_list[i]
             tmpvallo = vallo_list[i]
@@ -110,17 +112,23 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 tmpvallo += pow(2, 32)
             if (tmpvalhi < 0):
                 tmpvalhi += pow(2, 32)
-            tmpkey = tmpkeyhi << 32 + tmpkeylo
-            tmpval = tmpvalhi << 32 + tmpvallo
+            tmpkey = (tmpkeyhi << 32) + tmpkeylo
+            tmpval = (tmpvalhi << 32) + tmpvallo
+            print("final key: {} final val: {}".format(tmpkey, tmpval))
             buf = buf + struct.pack("2QB", tmpkey, tmpval, tmpvalid)
 
-        pktlen = 14 + 20 + 8 + 17 * bucket_count
-        pkt = simple_udp_packet(pktlen, eth_dst=server_mac, eth_src=switch_mac, 
-                ip_src=switch_ip, ip_dst=server_ip, ip_ttl=64, 
-                udp_sport=switch_port, udp_dport=server_port,
-                udp_payload=buf)
-        print(type(pkt))
-        print(len(pkt))
-        print(pkt)
-        print("send packet from {}".format(self.devPorts[0]))
-        send_packet(self, self.devPorts[0], str(pkt))
+        sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sockfd.sendto(buf, (server_ip, server_port))
+
+        #pktlen = 14 + 20 + 8 + 4 + 17 * bucket_count
+        #pkt = simple_udp_packet(pktlen, eth_dst=server_mac, eth_src=switch_mac, 
+        #        ip_src=switch_ip, ip_dst=server_ip, ip_ttl=64, 
+        #        udp_sport=switch_port, udp_dport=server_port,
+        #        udp_payload=buf)
+        #print(type(pkt))
+        #print(len(pkt))
+        #print(pkt)
+        #print("send packet from {}".format(self.devPorts[0]))
+        #sent = send_packet(self, (0, self.devPorts[0]), str(pkt))
+        #print("sent: {}".format(sent))
+        #verify_packets(self, pkt, [self.devPorts[1]])

@@ -10,8 +10,10 @@
 - Client <-> server
 	+ Client starts from 8888
 	+ Server starts from 1111 (1024 ~ 1279 in basic.p4)
-- Controller -> server
+- Controller (controller -> rtf -> controller) -> server (backup)
+	+ Controller: localhost, 3334
 	+ Server port: 3333
+	+ Server IP: 172.16.112.32 (dl32:eno3, connected with NetBuffer controller in the same LAN)
 
 ## Directory
 
