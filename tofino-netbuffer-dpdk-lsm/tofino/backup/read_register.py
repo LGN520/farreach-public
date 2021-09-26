@@ -120,6 +120,9 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sockfd.sendto(buf, (server_ip, server_port))
 
+        self.conn_mgr.complete_operations(self.sess_hdl)
+        self.conn_mgr.client_cleanup(self.sess_hdl)
+
         #pktlen = 14 + 20 + 8 + 4 + 17 * bucket_count
         #pkt = simple_udp_packet(pktlen, eth_dst=server_mac, eth_src=switch_mac, 
         #        ip_src=switch_ip, ip_dst=server_ip, ip_ttl=64, 

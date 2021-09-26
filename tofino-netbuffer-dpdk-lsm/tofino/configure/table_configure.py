@@ -282,19 +282,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
-
-    def tearDown(self):
-        if test_param_get('cleanup') == True:
-
-            print "\nCleaning up"
-
-            # delete the programmed forward table entry
-            self.cleanup_table("ipv4_lpm", True)
-            # delete the platform ports
             self.conn_mgr.client_cleanup(self.sess_hdl)
-            for i in self.devPorts:
-                self.pal.pal_port_del(0, i)
-            self.pal.pal_port_del_all(0)
+
+    #def tearDown(self):
+    #    if test_param_get('cleanup') == True:
+
+    #        print "\nCleaning up"
+
+    #        # delete the programmed forward table entry
+    #        self.cleanup_table("ipv4_lpm", True)
+    #        # delete the platform ports
+    #        self.conn_mgr.client_cleanup(self.sess_hdl)
+    #        for i in self.devPorts:
+    #            self.pal.pal_port_del(0, i)
+    #        self.pal.pal_port_del_all(0)
 
     def cleanup_table(self, table, iscalled=False):
         if iscalled:
