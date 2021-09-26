@@ -24,7 +24,7 @@
 #include "rocksdb/slice.h"
 
 #define MQ_SIZE 256
-#define KV_BUCKET_COUT 8
+#define KV_BUCKET_COUT 65536
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
@@ -59,7 +59,7 @@ volatile struct rte_mbuf ***pkts_list;
 volatile uint32_t *heads;
 volatile uint32_t *tails;
 volatile std::map<index_key_t, val_t> *backup_data = nullptr;
-volatile bool is_backuping = false;
+volatile uint32_t *backup_rcu;
 
 // parameters
 size_t fg_n = 1;
@@ -179,6 +179,9 @@ int main(int argc, char **argv) {
 	  }
 	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
   }
+
+  backup_rcu = new uint32_t[fg_n];
+  memset((void *)backup_rcu, 0, fg_n * sizeof(uint32_t));
 
   // prepare xindex
   std::vector<val_t> vals(exist_keys.size(), 1);
@@ -434,16 +437,28 @@ void *run_backuper(void *param) {
 
 	int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
 	INVARIANT(sock_fd >= 0);
+	// Diskable udp check
+	int disable = 1;
+	if (setsockopt(sock_fd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+		COUT_N_EXIT("Disable udp checksum failed");
+	}
+	// Set timeout
+	struct timeval tv;
+	tv.tv_sec = 1;
+	tv.tv_usec =  0;
+	int res = setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	INVARIANT(res >= 0);
+	// Set listen addr
 	struct sockaddr_in backup_server_addr;
 	memset(&backup_server_addr, 0, sizeof(sockaddr_in));
 	backup_server_addr.sin_family = AF_INET;
 	backup_server_addr.sin_port = htons(backup_port);
 	backup_server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	int res = bind(sock_fd, (struct sockaddr *)&backup_server_addr, sizeof(backup_server_addr));
+	res = bind(sock_fd, (struct sockaddr *)&backup_server_addr, sizeof(backup_server_addr));
 	INVARIANT(res >= 0);
 	
 	int recv_size = 0;
-	char recv_buf[1179648]; // 65536 * 17 + 14 + 20 + 8 < 65536 * 18 = 1179648
+	char recv_buf[KV_BUCKET_COUT * 18]; // 65536 * 17 + 14 + 20 + 8 < 65536 * 18 = 1179648
 	memset(recv_buf, 0, sizeof(recv_buf));
 
 	while (!running)
@@ -451,11 +466,50 @@ void *run_backuper(void *param) {
 
 	while (running) {
 		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
-		INVARIANT(recv_size >= 0);
+		if (recv_size == -1) {
+			if (errno == EWOULDBLOCK || errno == EINTR) {
+				continue; // timeout or interrupted system call
+			}
+			else {
+				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
+			}
+		}
+
+		char *cur = recv_buf;
+		uint32_t kvnum = *(uint32_t *)cur;
+		cur += 4;
+		std::map<index_key_t, val_t> *new_backup_data = new std::map<index_key_t, val_t>;
+		for (uint32_t i = 0; i < kvnum; i++) {
+			index_key_t curkey(*(uint64_t*)cur);
+			cur += 8;
+			val_t curval = *(uint64_t*)cur;
+			cur += 8;
+			uint8_t curvalid = *(uint8_t*)cur;
+			cur += 1;
+			if (curvalid == 1) {
+				COUT_VAR(curkey.key);
+				COUT_VAR(curval);
+				new_backup_data->insert(std::pair<index_key_t, val_t>(curkey, curval));
+			}
+		}
+
+		volatile std::map<index_key_t, val_t> *old_backup_data = backup_data;
+		backup_data = new_backup_data;
+
+		// peace period
+		for (uint32_t i = 0; i < fg_n; i++) {
+			uint32_t prev_val = backup_rcu[i];
+			while (running && backup_rcu[i] == prev_val) {}
+		}
+		if (old_backup_data != nullptr) {
+			delete old_backup_data;
+			old_backup_data = nullptr;
+		}
 		
-		COUT_VAR(recv_size);
-		dump_buf(recv_buf, recv_size);
+		//COUT_VAR(recv_size);
+		//dump_buf(recv_buf, recv_size);
 	}
+	pthread_exit(nullptr);
 }
 
 static int run_sfg(void * param) {
@@ -640,6 +694,7 @@ static int run_sfg(void * param) {
 					exit(-1);
 				}
 		}
+		backup_rcu[thread_id]++;
 
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;
