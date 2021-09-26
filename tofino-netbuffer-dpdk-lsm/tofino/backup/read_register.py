@@ -102,7 +102,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmpvalhi = valhi_list[i]
             tmpvalid = valid_list[i]
             print("keylo: {}, keyhi: {}, vallo: {}, valhi: {}, valid: {}".format(tmpkeylo, tmpkeyhi, tmpvallo, tmpvalhi, tmpvalid))
-            if (tmpkeylo < 0);
+            if (tmpkeylo < 0):
                 tmpkeylo += pow(2, 32)
             if (tmpkeyhi < 0):
                 tmpkeyhi += pow(2, 32)
