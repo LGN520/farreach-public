@@ -26,6 +26,8 @@
 //#define KV_BUCKET_COUNT 65536
 #define KV_BUCKET_COUNT 8
 
+#define CPU_PORT 32
+
 /* Packet Header Types */
 
 header_type ethernet_t {
@@ -78,6 +80,12 @@ header_type putreq_t {
 	}
 }
 
+header_type scanreq_t {
+	fields {
+		num: 32;
+	}
+}
+
 header_type getres_t {
 	fields {
 		vallo: 32;
@@ -121,6 +129,7 @@ header ipv4_t ipv4_hdr;
 header udp_t udp_hdr;
 header op_t op_hdr;
 header putreq_t putreq_hdr;
+header scanreq_t scanreq_hdr;
 header getres_t getres_hdr;
 header putres_t putres_hdr;
 header delres_t delres_hdr;
@@ -162,6 +171,7 @@ parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
 		PUTREQ_TYPE: parse_putreq;
+		SCANREQ_TYPE: parse_scanreq;
 		GETRES_TYPE: parse_getres;
 		PUTRES_TYPE: parse_putres;
 		DELRES_TYPE: parse_delres;
@@ -171,6 +181,11 @@ parser parse_op {
 
 parser parse_putreq {
 	extract(putreq_hdr);
+	return ingress;
+}
+
+parser parse_scanreq {
+	extract(scanreq_hdr);
 	return ingress;
 }
 
@@ -728,6 +743,17 @@ table clone_delpkt_tbl {
 	default_action: nop();
 }
 
+action send_scanpkt() {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, CPU_PORT);
+}
+
+table send_scanpkt_tbl {
+	actions {
+		send_scanpkt;
+	}
+	default_action: send_scanpkt();
+}
+
 control ingress {
 	if (valid(op_hdr)) {
 
@@ -767,6 +793,7 @@ control ingress {
 			/*** Stage 3 ***/
 			apply(sendback_putres_tbl);
 
+			/*** Stage 4 ***/
 			if (meta.isvalid == 1) { // pkt is cloned to egress and will not execute this code
 				if (meta.origin_keylo != op_hdr.keylo) {
 					apply(clone_putpkt_tbl);
@@ -785,6 +812,10 @@ control ingress {
 			else {
 				apply(ipv4_lpm);
 			}
+		}
+		else if (op_hdr.optype == SCANREQ_TYPE) {
+			/*** Stage 0 ***/
+			apply(send_scanpkt_tbl);
 		}
 		else {
 			apply(ipv4_lpm);

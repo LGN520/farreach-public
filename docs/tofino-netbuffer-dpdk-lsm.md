@@ -10,6 +10,7 @@
 - Add CBF (cbf.h, cbf_impl.h)
 - Integrate CBF into NetBuffer (GET/PUT/DEL/free/compact) (xindex_group.h, xindex_group_impl.h)
 - Implement backup mechanism (tofino/backup.sh, tofino/backup/read_register.py, tofino/controller.py, server.c)
+- Add CPU port mechanism (tofino/cpuport/, tofino/cpuport.sh)
 
 ## How to run
 
@@ -24,5 +25,9 @@
 	+ Create a new terminal and run `bash configure.sh` to configure data plane
 - Run `bash start_server.sh` in server host
 - Run `bash start_client.sh` in client host
+- Switch
+	+ `cd tofino`
+	+ `python controller.py`
+	+ `python cpuport/recv.py`
 
 ## Fixed issues
