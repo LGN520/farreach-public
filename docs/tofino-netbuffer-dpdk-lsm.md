@@ -6,7 +6,7 @@
 - Add PUT_REQ_S (server.c, packet_format.h, packet_format_impl.h)
 - Add DEL_REQ_S (server.c, packet_format.h, packet_format_impl.h)
 - Clone pkt for DEL (tofino/basic.c, tofino/configure/table_configure.py)
-- Add message queue and optimize mbuf allocation (server.c)
+- Add message queue and optimize mbuf allocation (server.c) (SYNC to tofino-xindex-dpdk-lsm)
 - Add CBF (cbf.h, cbf_impl.h)
 - Integrate CBF into NetBuffer (GET/PUT/DEL/free/compact) (xindex_group.h, xindex_group_impl.h)
 - Implement backup mechanism (tofino/backup.sh, tofino/backup/read_register.py, tofino/controller.py, server.c)

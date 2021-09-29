@@ -1,6 +1,7 @@
 import time
 import signal, os
 import socket
+#from io import BlockingIOError
 
 running = True
 cmd = "bash backup.sh"
@@ -19,9 +20,11 @@ s.setblocking(0)
 
 # Polling
 while running:
-    data, addr = s.recvfrom(1024)
-    if data > 0:
-        print data
-        print addr
-        #rval = os.system(cmd)
+    try:
+        data, addr = s.recvfrom(1024)
+        if len(data) > 0:
+            rval = os.system(cmd)
+    #except BlockingIOError as e:
+    except:
+        continue
 

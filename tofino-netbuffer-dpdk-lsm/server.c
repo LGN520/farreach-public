@@ -69,7 +69,7 @@ size_t bg_n = 1;
 short dst_port_start = 1111;
 short backup_port = 3333;
 short controller_port = 3334;
-char controller_ip[20] = "172.16.112.19"
+char controller_ip[20] = "172.16.112.19";
 
 std::vector<index_key_t> exist_keys;
 
@@ -478,6 +478,8 @@ void *run_backuper(void *param) {
 				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
 			}
 		}
+		COUT_VAR(recv_size);
+		//dump_buf(recv_buf, recv_size);
 
 		char *cur = recv_buf;
 		uint32_t kvnum = *(uint32_t *)cur;
@@ -510,8 +512,6 @@ void *run_backuper(void *param) {
 			old_backup_data = nullptr;
 		}
 		
-		COUT_VAR(recv_size);
-		//dump_buf(recv_buf, recv_size);
 	}
 	pthread_exit(nullptr);
 }
@@ -579,7 +579,7 @@ static int run_sfg(void * param) {
   memset(&controller_addr, 0, sizeof(sockaddr_in));
   controller_addr.sin_family = AF_INET;
   controller_addr.sin_port = htons(controller_port);
-  controller_addr.sin_addr = inet_addr(controller_ip);
+  controller_addr.sin_addr.s_addr = inet_addr(controller_ip);
 
   ready_threads++;
 
@@ -682,7 +682,7 @@ static int run_sfg(void * param) {
 			case packet_type_t::SCAN_REQ:
 				{
 					// Send KV pull request to switch (should not be counted into latency)
-					sendto(sock_fd , "1", 0, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
+					sendto(sock_fd , "1", 1, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
 
 					scan_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().key << " num = " << req.num())
