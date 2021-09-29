@@ -32,22 +32,13 @@ from mc_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
 from devport_mgr_pd_rpc.ttypes import *
 
-
-swports = [x for x in range(65)]
+#swports = [x for x in range(65)]
 dev_id = 0
-
 
 def dumpObject(obj):
     for attr in dir(obj):
         if hasattr(obj, attr):
             print("obj.%s = %s" % (attr, getattr(obj, attr)))
-
-def open_packet_socket(hostif_name):
-    s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW,
-                      socket.htons(ETH_P_ALL))
-    s.bind((hostif_name, ETH_P_ALL))
-    s.setblocking(0)
-    return s
 
 class TestCpuPort(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -55,15 +46,23 @@ class TestCpuPort(pd_base_tests.ThriftInterfaceDataPlane):
             self, ["netbuffer"])
 
     def runTest(self):
-        #os.system("sudo ifconfig test_hostif1 down")
-        # Delete hostif
-        #self.knet_mgr.knet_hostif_kndev_delete(
-        #    cpuif_ndev.knet_cpuif_id, hostif_ndev.knet_hostif_id)
-        # Delete cpuif (This will clear out all state for KNET)
+        try:
+            sess_hdl = self.conn_mgr.client_init()
 
-        cpuif_list_res = self.knet_mgr.knet_cpuif_list_get(10)
-        #dumpObject(cpuif_list_res)
-        cpuif_list = cpuif_list_res.cpuif_list
-        for i in range(len(cpuif_list)):
-          self.knet_mgr.knet_cpuif_ndev_delete(cpuif_list[i].id)
-          #os.system("sudo ip link del {}".format(cputif_list[i].name))
+            # Wait for all pipe APIs to complete.
+            self.conn_mgr.complete_operations(sess_hdl)
+
+            # Create CPU interface
+            cpuif_ndev = self.knet_mgr.knet_cpuif_ndev_add("veth251") # veth250 and veth251 are for port 64
+            #dumpObject(cpuif_ndev)
+            self.assertTrue(cpuif_ndev.status == 0,
+                            "Cpu netdev add failed for veth251")
+
+            # Create host interface
+            hostif_ndev = self.knet_mgr.knet_hostif_kndev_add(
+                cpuif_ndev.knet_cpuif_id, "test_hostif1")
+            self.assertTrue(hostif_ndev.status == 0,
+                            "hostif netdev add failed for test_hostif1")
+            os.system("sudo ifconfig test_hostif1 up")
+        finally:
+            sess_hdl = self.conn_mgr.client_cleanup(sess_hdl)

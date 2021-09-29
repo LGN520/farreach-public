@@ -26,7 +26,7 @@
 //#define KV_BUCKET_COUNT 65536
 #define KV_BUCKET_COUNT 8
 
-#define CPU_PORT 32
+//#define CPU_PORT 192
 
 /* Packet Header Types */
 
@@ -744,7 +744,8 @@ table clone_delpkt_tbl {
 }
 
 action send_scanpkt() {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, CPU_PORT);
+	modify_field(ig_intr_md_for_tm.copy_to_cpu, 1);
+	//modify_field(ig_intr_md_for_tm.ucast_egress_port, CPU_PORT);
 }
 
 table send_scanpkt_tbl {
@@ -757,26 +758,26 @@ table send_scanpkt_tbl {
 control ingress {
 	if (valid(op_hdr)) {
 
-		/*** Stage 0 ***/
+		// Stage 0
 		apply(calculate_hash_tbl);
 		apply(save_info_tbl);
 
-		/*** Stage 1 ***/
+		// Stage 1
 		// Different MAT entries for getreq/putreq
 		apply(match_keylo_tbl);
 		apply(match_keyhi_tbl);
 
-		/*** Stage 2 ***/
+		// Stage 2
 		// NOTE: we put valid_reg in stage 2 to support DEL operation
 		apply(access_valid_tbl); 
 
-		/*** Stage 3 ***/
+		// Stage 3
 		// NOTE: we must put in stage 3 since get_vallo/hi_tbl relies on isvalid and ismatch_keylo/hi
 		apply(update_vallo_tbl);
 		apply(update_valhi_tbl);
 
 		if (op_hdr.optype == GETREQ_TYPE) {
-			/*** Stage 4 ***/
+			// Stage 4
 			if (meta.isvalid == 1) {
 				if (meta.ismatch_keylo == 2 and meta.ismatch_keyhi == 2) {
 					apply(sendback_getres_tbl);
@@ -790,10 +791,10 @@ control ingress {
 			}
 		}
 		else if (op_hdr.optype == PUTREQ_TYPE) {
-			/*** Stage 3 ***/
+			// Stage 3
 			apply(sendback_putres_tbl);
 
-			/*** Stage 4 ***/
+			// Stage 4
 			if (meta.isvalid == 1) { // pkt is cloned to egress and will not execute this code
 				if (meta.origin_keylo != op_hdr.keylo) {
 					apply(clone_putpkt_tbl);
@@ -804,7 +805,7 @@ control ingress {
 			}
 		}
 		else if (op_hdr.optype == DELREQ_TYPE) {
-			/*** Stage 2 ***/
+			// Stage 2 
 			if (meta.ismatch_keylo == 2 and meta.ismatch_keyhi == 2) {
 				apply(sendback_delres_tbl);
 				apply(clone_delpkt_tbl);
@@ -814,8 +815,9 @@ control ingress {
 			}
 		}
 		else if (op_hdr.optype == SCANREQ_TYPE) {
-			/*** Stage 0 ***/
+			// Stage 0 
 			apply(send_scanpkt_tbl);
+			apply(ipv4_lpm);
 		}
 		else {
 			apply(ipv4_lpm);

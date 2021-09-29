@@ -46,6 +46,7 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 #   ex: ["1/0", "1/1"]
 #
 fp_ports = ["2/0", "3/0"]
+#CPU_PORT = 192
 src_mac = "9c:69:b4:60:ef:a5"
 dst_mac = "9c:69:b4:60:ef:8d"
 src_ip = "10.0.0.31"
@@ -135,6 +136,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             port, chnl = fpPort.split("/")
             devPort = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
             self.devPorts.append(devPort)
+        #self.devPorts.append(CPU_PORT)
 
     def runTest(self):
         if test_param_get('cleanup') != True:

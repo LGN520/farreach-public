@@ -24,6 +24,7 @@
 #include "rocksdb/slice.h"
 
 #define MQ_SIZE 256
+#define KV_BUCKET_COUT 65536
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
@@ -52,17 +53,23 @@ void kill(int signum);
 // DPDK
 static int run_sfg(void *param);
 static int run_receiver(__attribute__((unused)) void *param); // receiver
+void *run_backuper(__attribute__((unused)) void *param); // backuper
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
 volatile struct rte_mbuf ***pkts_list;
 volatile uint32_t *heads;
 volatile uint32_t *tails;
+volatile std::map<index_key_t, val_t> *backup_data = nullptr;
+volatile uint32_t *backup_rcu;
 
 // parameters
 size_t fg_n = 1;
 size_t bg_n = 1;
 short dst_port_start = 1111;
+short backup_port = 3333;
+short controller_port = 3334;
+char controller_ip[20] = "172.16.112.19"
 
 std::vector<index_key_t> exist_keys;
 
@@ -176,6 +183,9 @@ int main(int argc, char **argv) {
 	  }
 	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
   }
+
+  backup_rcu = new uint32_t[fg_n];
+  memset((void *)backup_rcu, 0, fg_n * sizeof(uint32_t));
 
   // prepare xindex
   std::vector<val_t> vals(exist_keys.size(), 1);
@@ -319,6 +329,13 @@ void run_server(xindex_t *table) {
 	COUT_THIS("[server] Launch receiver with ret code " << ret)
 	lcoreid++;
 
+	// Launch backuper
+	pthread_t backuper_thread;
+	ret = pthread_create(&backuper_thread, nullptr, run_backuper, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: unable to create backuper " << ret);
+	}
+
 	// Prepare fg params
 	//pthread_t threads[fg_n];
 	sfg_param_t sfg_params[fg_n];
@@ -364,6 +381,11 @@ void run_server(xindex_t *table) {
 		  COUT_N_EXIT("Error:unable to join," << rc);
 		}
 	}*/
+	void * status;
+	int rc = pthread_join(backuper_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join," << rc);
+	}
 	rte_eal_mp_wait_lcore();
 }
 
@@ -413,6 +435,85 @@ static int run_receiver(void *param) {
 		}
 	}
 	return 0;
+}
+
+void *run_backuper(void *param) {
+
+	int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	INVARIANT(sock_fd >= 0);
+	// Diskable udp check
+	int disable = 1;
+	if (setsockopt(sock_fd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+		COUT_N_EXIT("Disable udp checksum failed");
+	}
+	// Set timeout
+	struct timeval tv;
+	tv.tv_sec = 1;
+	tv.tv_usec =  0;
+	int res = setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	INVARIANT(res >= 0);
+	// Set listen addr
+	struct sockaddr_in backup_server_addr;
+	memset(&backup_server_addr, 0, sizeof(sockaddr_in));
+	backup_server_addr.sin_family = AF_INET;
+	backup_server_addr.sin_port = htons(backup_port);
+	backup_server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	res = bind(sock_fd, (struct sockaddr *)&backup_server_addr, sizeof(backup_server_addr));
+	INVARIANT(res >= 0);
+	
+	int recv_size = 0;
+	char recv_buf[KV_BUCKET_COUT * 18]; // 65536 * 17 + 14 + 20 + 8 < 65536 * 18 = 1179648
+	memset(recv_buf, 0, sizeof(recv_buf));
+
+	while (!running)
+		;
+
+	while (running) {
+		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
+		if (recv_size == -1) {
+			if (errno == EWOULDBLOCK || errno == EINTR) {
+				continue; // timeout or interrupted system call
+			}
+			else {
+				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
+			}
+		}
+
+		char *cur = recv_buf;
+		uint32_t kvnum = *(uint32_t *)cur;
+		cur += 4;
+		std::map<index_key_t, val_t> *new_backup_data = new std::map<index_key_t, val_t>;
+		for (uint32_t i = 0; i < kvnum; i++) {
+			index_key_t curkey(*(uint64_t*)cur);
+			cur += 8;
+			val_t curval = *(uint64_t*)cur;
+			cur += 8;
+			uint8_t curvalid = *(uint8_t*)cur;
+			cur += 1;
+			if (curvalid == 1) {
+				COUT_VAR(curkey.key);
+				COUT_VAR(curval);
+				new_backup_data->insert(std::pair<index_key_t, val_t>(curkey, curval));
+			}
+		}
+
+		volatile std::map<index_key_t, val_t> *old_backup_data = backup_data;
+		backup_data = new_backup_data;
+
+		// peace period
+		for (uint32_t i = 0; i < fg_n; i++) {
+			uint32_t prev_val = backup_rcu[i];
+			while (running && backup_rcu[i] == prev_val) {}
+		}
+		if (old_backup_data != nullptr) {
+			delete old_backup_data;
+			old_backup_data = nullptr;
+		}
+		
+		COUT_VAR(recv_size);
+		//dump_buf(recv_buf, recv_size);
+	}
+	pthread_exit(nullptr);
 }
 
 static int run_sfg(void * param) {
@@ -470,6 +571,15 @@ static int run_sfg(void * param) {
   char dstip[16];
   uint16_t srcport;
   uint16_t dstport;
+
+  // UDP socket for SCAN
+  int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+  INVARIANT(sock_fd >= 0);
+  struct sockaddr_in controller_addr;
+  memset(&controller_addr, 0, sizeof(sockaddr_in));
+  controller_addr.sin_family = AF_INET;
+  controller_addr.sin_port = htons(controller_port);
+  controller_addr.sin_addr = inet_addr(controller_ip);
 
   ready_threads++;
 
@@ -571,6 +681,9 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::SCAN_REQ:
 				{
+					// Send KV pull request to switch (should not be counted into latency)
+					sendto(sock_fd , "1", 0, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
+
 					scan_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().key << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
@@ -613,6 +726,7 @@ static int run_sfg(void * param) {
 					exit(-1);
 				}
 		}
+		backup_rcu[thread_id]++;
 
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;

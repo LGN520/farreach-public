@@ -11,6 +11,18 @@
 - Integrate CBF into NetBuffer (GET/PUT/DEL/free/compact) (xindex_group.h, xindex_group_impl.h)
 - Implement backup mechanism (tofino/backup.sh, tofino/backup/read_register.py, tofino/controller.py, server.c)
 - Add CPU port mechanism (tofino/cpuport/, tofino/cpuport.sh)
+	+ Set CPU port fail: cannot get packet in OS
+	+ Set copy_to_cpu fail: cannot get packet in OS
+	+ Solution
+		* Server pulls KV from switch OS after receving scan, we calculate latency for our original design (server.c, tofino/pull_listerner.py)
+			- XIndex SCAN: client -> P4 switch -> server -> XIndex SCAN
+			- NetBuffer SCAN: client -> P4 switch
+				+ -> server -> SCAN + wait + Merge (if wait >= 0); SCAN + Merge (wait < 0)
+				+ -> controller (P4 switch OS) -> get KV -> normal switch -> server -> update KV
+					* We assume that the ports between controller and server are DPDK ports
+					* The latency from P4 switch to switch OS, and that within normal switch are ns-level
+				+ Approximately, wait time = getKV + updateKV - SCAN
+		* We can compile P4 with setting copy_to_cpu to get the hardware resource usage
 
 ## How to run
 
@@ -28,6 +40,7 @@
 - Switch
 	+ `cd tofino`
 	+ `python controller.py`
-	+ `python cpuport/recv.py`
+	+ `python pull_listener.py`
+	+ Legacy: `python cpuport/recv.py`
 
 ## Fixed issues
