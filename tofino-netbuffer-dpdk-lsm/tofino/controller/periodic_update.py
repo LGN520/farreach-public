@@ -2,7 +2,7 @@ import time
 import signal, os
 
 running = True
-cmd = "bash backup.sh"
+cmd = "$SDE/run_p4_tests.sh -p netbuffer -t /home/ssy/NetBuffer/tofino-netbuffer-dpdk-lsm/tofino/periodic_update/ --target hw --setup"
 
 def handler(signum, frame):
     global running

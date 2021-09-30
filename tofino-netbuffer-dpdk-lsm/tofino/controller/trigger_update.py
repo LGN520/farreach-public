@@ -4,10 +4,10 @@ import socket
 #from io import BlockingIOError
 
 running = True
-cmd = "bash listener.sh"
+cmd = "$SDE/run_p4_tests.sh -p netbuffer -t /home/ssy/NetBuffer/tofino-netbuffer-dpdk-lsm/tofino/trigger_update/ --target hw --setup"
 
-listener_ip = "172.16.112.19"
-listener_port = 3334
+controller_ip = "172.16.112.19"
+controller_port = 3334
 
 def handler(signum, frame):
     global running
@@ -15,7 +15,7 @@ def handler(signum, frame):
     running = False
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.bind((listener_ip, listener_port))
+s.bind((controller_ip, controller_port))
 s.setblocking(0)
 
 # Polling

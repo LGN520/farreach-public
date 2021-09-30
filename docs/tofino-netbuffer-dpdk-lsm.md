@@ -24,8 +24,8 @@
 				+ Approximately, wait time = getKV + updateKV - SCAN
 		* We can compile P4 with setting copy_to_cpu to get the hardware resource usage
 - Support SCAN with KV listener and backuper
-	+ tofino/controller/controller.py -> backup/read_register.py -> backuper in server: periodically send KV to server for backup
-	+ tofino/controller/pull_request.py -> listener/read_register.py -> listener in server: trigger KV update after receiving pull request for SCAN
+	+ tofino/controller/periodic_update.py -> periodic_update/read_register.py -> backuper in server.c: periodically send KV to server for backup
+	+ tofino/controller/trigger_update.py -> trigger_update/read_register.py -> listener in server.c: trigger KV update after receiving pull request for SCAN
 
 ## How to run
 
