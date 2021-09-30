@@ -11,6 +11,18 @@
 		+ 70% read - 10% insert - 10% remove - 10% update: `./prepare -b 0.1; ./client -a 0.7 -b 0.1 -c 0.1 -d 0.1`
 		+ 60% read - 10% insert - 10% remove - 10% update - 10% scan: `./prepare -b 0.1; ./client -a 0.6 -b 0.1 -c 0.1 -d 0.1 -e 0.1`
 
+## We must use perf-consistency trade-off for SCAN
+
+- XIndex: 30us
+- delta = GetKV + TransmissionDelay + UpdateKV + Merge
+	+ GetKV: 2.8s for 1MB data
+	+ TransmissionDelay: 1MB/40Gbps = 195us
+	+ UpdateKV: >= tens to hundreds of us (not be accurately measured now)
+        + MergeKV: 1-2 us
+- So we must put GetKV/TransmissionDelay/UpdateKV in the background, i.e., periodic update backup in server
+	+ Option: If MergeKV incurs large time overhead, consider to train learned index in the background for backup data
+
+
 ## Preliminary Exp of Microbench (local test with persistency with CBF)
 
 - XIndex: 100K op/s

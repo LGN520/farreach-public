@@ -48,7 +48,7 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 #   ex: ["1/0", "1/1"]
 #
 
-bucket_count = 8 # Must be the same as basic.p4
+bucket_count = 65536 # Must be the same as basic.p4
 fp_ports = ["2/0", "3/0"]
 #switch_ip = "1.1.1.1" # useless
 #switch_mac = "01:01:01:01:01:01" # useless
@@ -85,6 +85,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.devPorts.append(devPort)
 
     def runTest(self):
+        t0 = time.time()
         flags = netbuffer_register_flags_t(read_hw_sync=True)
         keylo_list = self.client.register_range_read_keylo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         keyhi_list = self.client.register_range_read_keyhi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
@@ -93,8 +94,10 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         valid_list = self.client.register_range_read_valid_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
+        t1 = time.time()
+        print("GET KV: {} us".format((t1 - t0)*1000000))
 
-        print("keylo_list size: {} keyhi_list size: {}".format(len(keylo_list), len(keyhi_list)))
+        #print("keylo_list size: {} keyhi_list size: {}".format(len(keylo_list), len(keyhi_list)))
         buf = struct.pack("I", bucket_count)
         for idx in range(bucket_count):
             i = idx + bucket_count # Our ports are in the 2nd pipeline
@@ -103,7 +106,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmpvallo = vallo_list[i]
             tmpvalhi = valhi_list[i]
             tmpvalid = valid_list[i]
-            print("keylo: {}, keyhi: {}, vallo: {}, valhi: {}, valid: {}".format(tmpkeylo, tmpkeyhi, tmpvallo, tmpvalhi, tmpvalid))
+            #print("keylo: {}, keyhi: {}, vallo: {}, valhi: {}, valid: {}".format(tmpkeylo, tmpkeyhi, tmpvallo, tmpvalhi, tmpvalid))
             if (tmpkeylo < 0):
                 tmpkeylo += pow(2, 32)
             if (tmpkeyhi < 0):
@@ -114,11 +117,19 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 tmpvalhi += pow(2, 32)
             tmpkey = (tmpkeyhi << 32) + tmpkeylo
             tmpval = (tmpvalhi << 32) + tmpvallo
-            print("final key: {} final val: {}".format(tmpkey, tmpval))
+            #print("final key: {} final val: {}".format(tmpkey, tmpval))
             buf = buf + struct.pack("2QB", tmpkey, tmpval, tmpvalid)
+            if idx >= 1024:
+                break
+
+        t1 = time.time()
+        print("GET KV: {} us".format((t1 - t0)*1000000))
 
         sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sockfd.sendto(buf, (server_ip, server_port))
+        #sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #s.connect((server_ip, server_port))
+        #s.send(buf)
 
         self.conn_mgr.client_cleanup(self.sess_hdl)
 

@@ -103,7 +103,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmpvallo = vallo_list[i]
             tmpvalhi = valhi_list[i]
             tmpvalid = valid_list[i]
-            print("keylo: {}, keyhi: {}, vallo: {}, valhi: {}, valid: {}".format(tmpkeylo, tmpkeyhi, tmpvallo, tmpvalhi, tmpvalid))
+            #print("keylo: {}, keyhi: {}, vallo: {}, valhi: {}, valid: {}".format(tmpkeylo, tmpkeyhi, tmpvallo, tmpvalhi, tmpvalid))
             if (tmpkeylo < 0):
                 tmpkeylo += pow(2, 32)
             if (tmpkeyhi < 0):
@@ -114,8 +114,10 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 tmpvalhi += pow(2, 32)
             tmpkey = (tmpkeyhi << 32) + tmpkeylo
             tmpval = (tmpvalhi << 32) + tmpvallo
-            print("final key: {} final val: {}".format(tmpkey, tmpval))
+            #print("final key: {} final val: {}".format(tmpkey, tmpval))
             buf = buf + struct.pack("2QB", tmpkey, tmpval, tmpvalid)
+            if idx >= 1024:
+                break
 
         sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sockfd.sendto(buf, (server_ip, server_port))

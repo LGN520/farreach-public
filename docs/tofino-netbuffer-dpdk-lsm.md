@@ -15,13 +15,15 @@
 	+ Set copy_to_cpu fail: cannot get packet in OS
 	+ Solution
 		* Server pulls KV from switch OS after receving scan, we calculate latency for our original design (server.c, tofino/pull_listerner.py)
-			- XIndex SCAN: client -> P4 switch -> server -> XIndex SCAN
+			- XIndex SCAN: client -> P4 switch -> server -> XIndex SCAN (say t0)
 			- NetBuffer SCAN: client -> P4 switch
-				+ -> server -> SCAN + wait + Merge (if wait >= 0); SCAN + Merge (wait < 0)
+				+ -> server -> XIndex SCAN + wait + Merge (if wait >= 0, aka t0 + wait + Merge); XIndex SCAN + Merge (if wait < 0, aka t0 + Merge)
+					* It means that delta = t0 + wait + merge - t0 = wait + merge
 				+ -> controller (P4 switch OS) -> get KV -> normal switch -> server -> update KV
-					* We assume that the ports between controller and server are DPDK ports
-					* The latency from P4 switch to switch OS, and that within normal switch are ns-level
-				+ Approximately, wait time = getKV + updateKV - SCAN
+					* We assume that the port of controller is in data plane and that of server is a DPDK port (transmission delay is RTT/4)
+					* We ignore the time from data plane to switch OS
+				+ Approximately, wait time = getKV + updateKV - XIndex SCAN + (transmission delay of 1-2MB, 1MB/4GBps=195us)
+					* So, delta = wait + merge = getKV + updateKV - XIndex SCAN + merge
 		* We can compile P4 with setting copy_to_cpu to get the hardware resource usage
 - Support SCAN with KV listener and backuper
 	+ tofino/controller/periodic_update.py -> periodic_update/read_register.py -> backuper in server.c: periodically send KV to server for backup
