@@ -23,6 +23,9 @@
 					* The latency from P4 switch to switch OS, and that within normal switch are ns-level
 				+ Approximately, wait time = getKV + updateKV - SCAN
 		* We can compile P4 with setting copy_to_cpu to get the hardware resource usage
+- Support SCAN with KV listener and backuper
+	+ tofino/controller/controller.py -> backup/read_register.py -> backuper in server: periodically send KV to server for backup
+	+ tofino/controller/pull_request.py -> listener/read_register.py -> listener in server: trigger KV update after receiving pull request for SCAN
 
 ## How to run
 

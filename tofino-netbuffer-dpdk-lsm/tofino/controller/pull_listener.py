@@ -4,7 +4,7 @@ import socket
 #from io import BlockingIOError
 
 running = True
-cmd = "bash backup.sh"
+cmd = "bash listener.sh"
 
 listener_ip = "172.16.112.19"
 listener_port = 3334
