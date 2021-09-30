@@ -39,8 +39,8 @@
 - Run `bash start_client.sh` in client host
 - Switch
 	+ `cd tofino`
-	+ `python controller.py`
-	+ `python pull_listener.py`
+	+ `bash controller.sh setup`
+	+ END: `bash controller.sh cleanup`
 	+ Legacy: `python cpuport/recv.py`
 
 ## Fixed issues
