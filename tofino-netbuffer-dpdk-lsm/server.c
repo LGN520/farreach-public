@@ -496,7 +496,7 @@ void *run_backuper(void *param) {
 				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
 			}
 		}
-		COUT_VAR(recv_size);
+		COUT_THIS("backuper recvsize: "<<recv_size)
 		//dump_buf(recv_buf, recv_size);
 
 		char *cur = recv_buf;
@@ -573,7 +573,7 @@ void *run_listener(void *param) {
 				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
 			}
 		}
-		COUT_VAR(recv_size);
+		COUT_THIS("listener recvsize: "<<recv_size)
 		//dump_buf(recv_buf, recv_size);
 
 		char *cur = recv_buf;
