@@ -140,7 +140,16 @@ class Key {
   uint64_t key;
 } PACKED;
 
+void test_merge_latency() {
+	backup_data = new std::map<index_key_t, val_t>(64*1024);
+	for (size_t i = 0; i < 64*1024; i++) {
+		(*backup_data)[i].first = exist_keys[i];
+		(*backup_data)[i].second = 1;
+	}
+}
+
 int main(int argc, char **argv) {
+  test_merge_latency(); // DEBUG test
 
   parse_args(argc, argv);
   xindex::init_options(); // init options of rocksdb
@@ -565,6 +574,7 @@ void *run_listener(void *param) {
 
 	while (running) {
 		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
+		double t0 = CUR_TIME();
 		if (recv_size == -1) {
 			if (errno == EWOULDBLOCK || errno == EINTR) {
 				continue; // timeout or interrupted system call
@@ -573,7 +583,7 @@ void *run_listener(void *param) {
 				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
 			}
 		}
-		COUT_THIS("listener recvsize: "<<recv_size)
+		//COUT_THIS("listener recvsize: "<<recv_size)
 		//dump_buf(recv_buf, recv_size);
 
 		char *cur = recv_buf;
@@ -606,7 +616,9 @@ void *run_listener(void *param) {
 			delete old_listener_data;
 			old_listener_data = nullptr;
 		}
-		
+
+		double t1 = CUR_TIME();
+		//COUT_THIS("Update KV: " << (t1 - t0) << "us")
 	}
 	pthread_exit(nullptr);
 }
@@ -784,7 +796,10 @@ static int run_sfg(void * param) {
 					scan_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().key << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
+					//double t00 = CUR_TIME();
 					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
+					//double t11 = CUR_TIME();
+					//COUT_THIS("Index SCAN: " << (t11 - t00) << "us")
 					/*COUT_THIS("[server] num = " << tmp_num)
 					for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 						COUT_VAR(results[val_i].first.key)
@@ -793,46 +808,55 @@ static int run_sfg(void * param) {
 
 					// wait the new KV from switch (only for latency)
 					// comment it for thpt to trade consistency for perf (directly use backup_data, uncomment the later sentence)
-					while (listener_version == old_version) {}
-					COUT_VAR(old_version);
-					COUT_VAR(listener_version);
+					//while (listener_version == old_version) {}
 
 					// Merge results with backup data
-					std::vector<std::pair<index_key_t, val_t>> final_results;
-					std::map<index_key_t, val_t> *kvdata = listener_data;
-					//std::map<index_key_t, val_t> *kvdata = backup_data; // uncomment it for thpt
-					std::map<index_key_t, val_t>::iterator kviter = kvdata->lower_bound(req.key());
-					uint32_t result_idx = 0;
-					for (; kviter != kvdata->end(); kviter++) {
-						if (kviter->first >= results[result_idx].first) {
-							final_results.push_back(results[result_idx]);
-							result_idx++;
-							if (result_idx >= results.size()) {
-								break;
-							}
-						}
-						else {
-							final_results.push_back(*kviter);
-						}
-					}
-					if (final_results.size() < req.num()) {
-						// Only enter one loop
-						for (; result_idx < results.size(); result_idx++) {
-							final_results.push_back(results[result_idx]);
-							if (final_results.size() == req.num()) {
-								break;
-							}
-						}
+					//double t0 = CUR_TIME();
+					std::vector<std::pair<index_key_t, val_t>> merge_results;
+					//std::map<index_key_t, val_t> *kvdata = listener_data;
+					std::map<index_key_t, val_t> *kvdata = backup_data; // uncomment it for thpt
+					if (kvdata != nullptr) {
+						std::map<index_key_t, val_t>::iterator kviter = kvdata->lower_bound(req.key());
+						uint32_t result_idx = 0;
 						for (; kviter != kvdata->end(); kviter++) {
-							final_results.push_back(*kviter);
-							if (final_results.size() == req.num()) {
-								break;
+							if (kviter->first >= results[result_idx].first) {
+								merge_results.push_back(results[result_idx]);
+								result_idx++;
+								if (result_idx >= results.size()) {
+									break;
+								}
+							}
+							else {
+								merge_results.push_back(*kviter);
+							}
+						}
+						if (merge_results.size() < req.num()) {
+							// Only enter one loop
+							for (; result_idx < results.size(); result_idx++) {
+								merge_results.push_back(results[result_idx]);
+								if (merge_results.size() == req.num()) {
+									break;
+								}
+							}
+							for (; kviter != kvdata->end(); kviter++) {
+								merge_results.push_back(*kviter);
+								if (merge_results.size() == req.num()) {
+									break;
+								}
 							}
 						}
 					}
+					//double t1 = CUR_TIME();
+					//COUT_THIS("Merge: "<< (t1-t0) <<"us")
 
-					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, final_results);
-					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					scan_response_t *rsp = nullptr;
+					if (kvdata != nullptr) {
+						rsp = new scan_response_t(req.thread_id(), req.key(), merge_results.size(), merge_results);
+					}
+					else {
+						rsp = new scan_response_t(req.thread_id(), req.key(), tmp_num, results);
+					}
+					rsp_size = rsp->serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
