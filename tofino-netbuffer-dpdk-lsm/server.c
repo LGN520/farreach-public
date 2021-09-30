@@ -25,6 +25,7 @@
 
 #define MQ_SIZE 256
 #define KV_BUCKET_COUT 65536
+#define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
@@ -58,10 +59,11 @@ struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
 volatile struct rte_mbuf ***pkts_list;
-volatile uint32_t *heads;
-volatile uint32_t *tails;
-volatile std::map<index_key_t, val_t> *backup_data = nullptr;
-volatile uint32_t *backup_rcu;
+uint32_t* volatile heads;
+uint32_t* volatile tails;
+std::map<index_key_t, val_t>* volatile backup_data = nullptr;
+uint32_t* volatile backup_rcu;
+volatile uint64_t backup_version = 0;
 
 // parameters
 size_t fg_n = 1;
@@ -171,8 +173,8 @@ int main(int argc, char **argv) {
   //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
   //}
   pkts_list = new volatile struct rte_mbuf**[fg_n];
-  heads = new volatile uint32_t[fg_n];
-  tails = new volatile uint32_t[fg_n];
+  heads = new uint32_t[fg_n];
+  tails = new uint32_t[fg_n];
   memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
   memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
   //int res = 0;
@@ -501,8 +503,14 @@ void *run_backuper(void *param) {
 
 		volatile std::map<index_key_t, val_t> *old_backup_data = backup_data;
 		backup_data = new_backup_data;
+		if (unlikely(backup_version == MAX_VERSION)) { // avoid overflow
+			backup_version = 0;
+		}
+		else {
+			backup_version += 1;
+		}
 
-		// peace period
+		// peace period of RCU
 		for (uint32_t i = 0; i < fg_n; i++) {
 			uint32_t prev_val = backup_rcu[i];
 			while (running && backup_rcu[i] == prev_val) {}
@@ -606,13 +614,15 @@ static int run_sfg(void * param) {
 	//if (stats[thread_id]) {
 	if (heads[thread_id] != tails[thread_id]) {
 		//COUT_THIS("[server] Receive packet!")
-
-		sent_pkt = sent_pkts[sent_pkt_idx];
+		
+		uint64_t old_version = backup_version;
 
 		// DPDK
 		//stats[thread_id] = false;
 		//recv_size = decode_mbuf(pkts[thread_id], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		//rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
+		sent_pkt = sent_pkts[sent_pkt_idx];
+
 		INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
 		recv_size = decode_mbuf(pkts_list[thread_id][tails[thread_id]], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
@@ -682,18 +692,67 @@ static int run_sfg(void * param) {
 			case packet_type_t::SCAN_REQ:
 				{
 					// Send KV pull request to switch (should not be counted into latency)
+					COUT_THIS("before sendto")
 					sendto(sock_fd , "1", 1, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
+					COUT_THIS("after sendto")
 
 					scan_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().key << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
 					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
+					for (size_t debugi = 0; debugi < results.size(); debugi++) {
+						COUT_VAR(results[debugi].first.key);
+					}
 					/*COUT_THIS("[server] num = " << tmp_num)
 					for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 						COUT_VAR(results[val_i].first.key)
 						COUT_VAR(results[val_i].second)
 					}*/
-					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, results);
+
+					// wait the new KV from switch (only for latency, comment it for thpt to trade consistency for perf)
+					while (backup_version == old_version) {} // Uncomment it with pull listener for latency; Comment it with controller (backup)
+					COUT_VAR(old_version);
+					COUT_VAR(backup_version);
+
+					// Merge results with backup data
+					std::vector<std::pair<index_key_t, val_t>> final_results;
+					std::map<index_key_t, val_t>::iterator backup_iter = backup_data->lower_bound(req.key());
+					uint32_t result_idx = 0;
+					for (; backup_iter != backup_data->end(); backup_iter++) {
+						if (backup_iter->first >= results[result_idx].first) {
+							final_results.push_back(results[result_idx]);
+							result_idx++;
+							if (result_idx >= results.size()) {
+								break;
+							}
+						}
+						else {
+							final_results.push_back(*backup_iter);
+						}
+					}
+					for (size_t debugi = 0; debugi < final_results.size(); debugi++) {
+						COUT_VAR(final_results[debugi].first.key);
+					}
+					if (final_results.size() < req.num()) {
+						// Only enter one loop
+						for (; result_idx < results.size(); result_idx++) {
+							final_results.push_back(results[result_idx]);
+							if (final_results.size() == req.num()) {
+								break;
+							}
+						}
+						for (; backup_iter != backup_data->end(); backup_iter++) {
+							final_results.push_back(*backup_iter);
+							if (final_results.size() == req.num()) {
+								break;
+							}
+						}
+					}
+					for (size_t debugi = 0; debugi < final_results.size(); debugi++) {
+						COUT_VAR(final_results[debugi].first.key);
+					}
+
+					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, final_results);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
