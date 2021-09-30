@@ -1,6 +1,6 @@
 if [ $1 == "setup" ]
 then
-	#python3 controller/controller.py >/dev/null 2>&1 &
+	python3 controller/controller.py >/dev/null 2>&1 &
 	python3 controller/pull_listener.py >/dev/null 2>&1 &
 	#python3 controller/controller.py &
 	#python3 controller/pull_listener.py &

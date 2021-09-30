@@ -13,9 +13,11 @@
 - Controller (controller -> rtf -> controller) -> server (backup)
 	+ Server port: 3333
 	+ Server IP: 172.16.112.32 (dl32:eno3, connected with NetBuffer controller in the same LAN)
-- Controller (pull listener) <- server (scan pull request)
+- Controller (pull listener) <-> server (scan pull request)
 	+ Switch OS port: 3334
 	+ Switch OS IP: 172.16.112.19
+	+ Server port: 3335
+	+ Server IP: 172.16.112.32 (dl32:eno3, connected with NetBuffer controller in the same LAN)
 
 ## Directory
 

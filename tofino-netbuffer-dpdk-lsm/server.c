@@ -54,16 +54,20 @@ void kill(int signum);
 // DPDK
 static int run_sfg(void *param);
 static int run_receiver(__attribute__((unused)) void *param); // receiver
-void *run_backuper(__attribute__((unused)) void *param); // backuper
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
 volatile struct rte_mbuf ***pkts_list;
 uint32_t* volatile heads;
 uint32_t* volatile tails;
+
+void *run_backuper(__attribute__((unused)) void *param); // backuper
 std::map<index_key_t, val_t>* volatile backup_data = nullptr;
 uint32_t* volatile backup_rcu;
-volatile uint64_t backup_version = 0;
+
+void *run_listener(__attribute__((unused)) void *param); // listener to listen the responses of KV pull requests for SCAN
+std::map<index_key_t, val_t>* volatile listener_data = nullptr;
+volatile uint64_t listener_version = 0;
 
 // parameters
 size_t fg_n = 1;
@@ -71,6 +75,7 @@ size_t bg_n = 1;
 short dst_port_start = 1111;
 short backup_port = 3333;
 short controller_port = 3334;
+short listener_port = 3335;
 char controller_ip[20] = "172.16.112.19";
 
 std::vector<index_key_t> exist_keys;
@@ -338,6 +343,13 @@ void run_server(xindex_t *table) {
 		COUT_N_EXIT("Error: unable to create backuper " << ret);
 	}
 
+	// Launch listener
+	pthread_t listener_thread;
+	ret = pthread_create(&listener_thread, nullptr, run_listener, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: unable to create listener " << ret);
+	}
+
 	// Prepare fg params
 	//pthread_t threads[fg_n];
 	sfg_param_t sfg_params[fg_n];
@@ -385,6 +397,10 @@ void run_server(xindex_t *table) {
 	}*/
 	void * status;
 	int rc = pthread_join(backuper_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join," << rc);
+	}
+	rc = pthread_join(listener_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join," << rc);
 	}
@@ -495,22 +511,14 @@ void *run_backuper(void *param) {
 			uint8_t curvalid = *(uint8_t*)cur;
 			cur += 1;
 			if (curvalid == 1) {
-				COUT_VAR(curkey.key);
-				COUT_VAR(curval);
 				new_backup_data->insert(std::pair<index_key_t, val_t>(curkey, curval));
 			}
 		}
 
 		volatile std::map<index_key_t, val_t> *old_backup_data = backup_data;
 		backup_data = new_backup_data;
-		if (unlikely(backup_version == MAX_VERSION)) { // avoid overflow
-			backup_version = 0;
-		}
-		else {
-			backup_version += 1;
-		}
 
-		// peace period of RCU
+		// peace period of RCU (may not need if we do not use them in SCAN)
 		for (uint32_t i = 0; i < fg_n; i++) {
 			uint32_t prev_val = backup_rcu[i];
 			while (running && backup_rcu[i] == prev_val) {}
@@ -518,6 +526,85 @@ void *run_backuper(void *param) {
 		if (old_backup_data != nullptr) {
 			delete old_backup_data;
 			old_backup_data = nullptr;
+		}
+		
+	}
+	pthread_exit(nullptr);
+}
+
+void *run_listener(void *param) {
+
+	int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	INVARIANT(sock_fd >= 0);
+	// Diskable udp check
+	int disable = 1;
+	if (setsockopt(sock_fd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+		COUT_N_EXIT("Disable udp checksum failed");
+	}
+	// Set timeout
+	struct timeval tv;
+	tv.tv_sec = 1;
+	tv.tv_usec =  0;
+	int res = setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	INVARIANT(res >= 0);
+	// Set listen addr
+	struct sockaddr_in listener_server_addr;
+	memset(&listener_server_addr, 0, sizeof(sockaddr_in));
+	listener_server_addr.sin_family = AF_INET;
+	listener_server_addr.sin_port = htons(listener_port);
+	listener_server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	res = bind(sock_fd, (struct sockaddr *)&listener_server_addr, sizeof(listener_server_addr));
+	INVARIANT(res >= 0);
+	
+	int recv_size = 0;
+	char recv_buf[KV_BUCKET_COUT * 18]; // 65536 * 17 + 14 + 20 + 8 < 65536 * 18 = 1179648
+	memset(recv_buf, 0, sizeof(recv_buf));
+
+	while (!running)
+		;
+
+	while (running) {
+		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
+		if (recv_size == -1) {
+			if (errno == EWOULDBLOCK || errno == EINTR) {
+				continue; // timeout or interrupted system call
+			}
+			else {
+				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
+			}
+		}
+		COUT_VAR(recv_size);
+		//dump_buf(recv_buf, recv_size);
+
+		char *cur = recv_buf;
+		uint32_t kvnum = *(uint32_t *)cur;
+		cur += 4;
+		std::map<index_key_t, val_t> *new_listener_data = new std::map<index_key_t, val_t>;
+		for (uint32_t i = 0; i < kvnum; i++) {
+			index_key_t curkey(*(uint64_t*)cur);
+			cur += 8;
+			val_t curval = *(uint64_t*)cur;
+			cur += 8;
+			uint8_t curvalid = *(uint8_t*)cur;
+			cur += 1;
+			if (curvalid == 1) {
+				new_listener_data->insert(std::pair<index_key_t, val_t>(curkey, curval));
+			}
+		}
+
+		volatile std::map<index_key_t, val_t> *old_listener_data = listener_data;
+		listener_data = new_listener_data;
+		if (unlikely(listener_version == MAX_VERSION)) { // avoid overflow
+			listener_version = 0;
+		}
+		else {
+			listener_version += 1;
+		}
+
+		// Do no need peace period of RCU since SCAN will never use old listener data
+		if (old_listener_data != nullptr) {
+			delete old_listener_data;
+			old_listener_data = nullptr;
 		}
 		
 	}
@@ -615,7 +702,7 @@ static int run_sfg(void * param) {
 	if (heads[thread_id] != tails[thread_id]) {
 		//COUT_THIS("[server] Receive packet!")
 		
-		uint64_t old_version = backup_version;
+		uint64_t old_version = listener_version;
 
 		// DPDK
 		//stats[thread_id] = false;
@@ -692,34 +779,32 @@ static int run_sfg(void * param) {
 			case packet_type_t::SCAN_REQ:
 				{
 					// Send KV pull request to switch (should not be counted into latency)
-					COUT_THIS("before sendto")
 					sendto(sock_fd , "1", 1, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
-					COUT_THIS("after sendto")
 
 					scan_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().key << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
 					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
-					for (size_t debugi = 0; debugi < results.size(); debugi++) {
-						COUT_VAR(results[debugi].first.key);
-					}
 					/*COUT_THIS("[server] num = " << tmp_num)
 					for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 						COUT_VAR(results[val_i].first.key)
 						COUT_VAR(results[val_i].second)
 					}*/
 
-					// wait the new KV from switch (only for latency, comment it for thpt to trade consistency for perf)
-					while (backup_version == old_version) {} // Uncomment it with pull listener for latency; Comment it with controller (backup)
+					// wait the new KV from switch (only for latency)
+					// comment it for thpt to trade consistency for perf (directly use backup_data, uncomment the later sentence)
+					while (listener_version == old_version) {}
 					COUT_VAR(old_version);
-					COUT_VAR(backup_version);
+					COUT_VAR(listener_version);
 
 					// Merge results with backup data
 					std::vector<std::pair<index_key_t, val_t>> final_results;
-					std::map<index_key_t, val_t>::iterator backup_iter = backup_data->lower_bound(req.key());
+					std::map<index_key_t, val_t> *kvdata = listener_data;
+					//std::map<index_key_t, val_t> *kvdata = backup_data; // uncomment it for thpt
+					std::map<index_key_t, val_t>::iterator kviter = kvdata->lower_bound(req.key());
 					uint32_t result_idx = 0;
-					for (; backup_iter != backup_data->end(); backup_iter++) {
-						if (backup_iter->first >= results[result_idx].first) {
+					for (; kviter != kvdata->end(); kviter++) {
+						if (kviter->first >= results[result_idx].first) {
 							final_results.push_back(results[result_idx]);
 							result_idx++;
 							if (result_idx >= results.size()) {
@@ -727,11 +812,8 @@ static int run_sfg(void * param) {
 							}
 						}
 						else {
-							final_results.push_back(*backup_iter);
+							final_results.push_back(*kviter);
 						}
-					}
-					for (size_t debugi = 0; debugi < final_results.size(); debugi++) {
-						COUT_VAR(final_results[debugi].first.key);
 					}
 					if (final_results.size() < req.num()) {
 						// Only enter one loop
@@ -741,15 +823,12 @@ static int run_sfg(void * param) {
 								break;
 							}
 						}
-						for (; backup_iter != backup_data->end(); backup_iter++) {
-							final_results.push_back(*backup_iter);
+						for (; kviter != kvdata->end(); kviter++) {
+							final_results.push_back(*kviter);
 							if (final_results.size() == req.num()) {
 								break;
 							}
 						}
-					}
-					for (size_t debugi = 0; debugi < final_results.size(); debugi++) {
-						COUT_VAR(final_results[debugi].first.key);
 					}
 
 					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, final_results);
