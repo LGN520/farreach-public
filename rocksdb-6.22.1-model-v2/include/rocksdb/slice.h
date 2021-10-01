@@ -138,9 +138,9 @@ class Slice {
 	uint32_t remainder = size_ % 8;
 	
 	if (unlikely(array == nullptr || key_len > array_len)){
-		printf("Error: to_model_key fails! size: %u, data[0-7]: %u-%u-%u-%u-%u-%u-%u-%u, uint64_t: %llu, array: %p, array_len: %u\n",
+		printf("Error: to_model_key fails! size: %u, data[0-7]: %u-%u-%u-%u-%u-%u-%u-%u, uint64_t: %llu, array: %p, array_len: %u, size_: %u, key_len: %u\n",
 					uint32_t(size_), data_[0], data_[1], data_[2], data_[3], data_[4], data_[5], data_[6], data_[7], 
-					(unsigned long long)(*(uint64_t*)data_), (void*)array, array_len);
+					(unsigned long long)(*(uint64_t*)data_), (void*)array, array_len, uint32_t(size_), key_len);
 		exit(-1);
 	}
 

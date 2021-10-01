@@ -11,6 +11,9 @@
 	+ Modify periodic_update/read_register.py
 	+ Modify trigger_update/read_register.py
 	+ Add key.h and key.c, modify client.c, localtest.c, server.c. prepare.c, Makefile
+- Fix a bug in rocksdb-model-v2 (table/block_based/block.cc, ModelSeek)
+	+ For 8B key, IndexBlock::key does not have seq (aka user key); while for 16B key, IndexBlock::key has seq (aka internal key)
+	+ raw_key_.IsUserKey comes fom index_includes_seq, so we need to identify it even for the key in index block
 
 ## How to run
 
