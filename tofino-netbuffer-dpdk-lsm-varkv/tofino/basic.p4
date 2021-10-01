@@ -263,7 +263,7 @@ table ipv4_lpm {
 		droppkt;
 	}
 	default_action: droppkt();
-	size: 1024;
+	size: 4;
 }
 
 /* Hash */
@@ -293,6 +293,7 @@ table calculate_hash_tbl {
 		calculate_hash;
 	}
 	default_action: calculate_hash();
+	size: 1;
 }
 
 action save_info() {
@@ -308,6 +309,7 @@ table save_info_tbl {
 		save_info;
 	}
 	default_action: save_info();
+	size: 1;
 }
 
 /* KV (hash table) */
@@ -380,6 +382,7 @@ table update_vallo_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 2048;
 }
 
 register valhi_reg {
@@ -444,6 +447,7 @@ table update_valhi_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 2048;
 }
 
 /* Ingress Processing */
@@ -481,6 +485,7 @@ table sendback_getres_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 2;
 }
 
 action sendback_putres(tmp_smacaddr, tmp_dmacaddr) {
@@ -517,6 +522,7 @@ table sendback_putres_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 2;
 }
 
 action sendback_delres(tmp_smacaddr, tmp_dmacaddr) {
@@ -552,6 +558,7 @@ table sendback_delres_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 2;
 }
 
 field_list clone_put_field_list {
@@ -578,6 +585,7 @@ table clone_putpkt_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 2;
 }
 
 field_list clone_del_field_list {
@@ -610,6 +618,7 @@ table send_scanpkt_tbl {
 		send_scanpkt;
 	}
 	default_action: send_scanpkt();
+	size: 2;
 }
 
 control ingress {
@@ -721,6 +730,7 @@ table update_putreq_tbl {
 		update_putreq;
 	}
 	default_action: update_putreq();
+	size: 1;
 }
 
 action update_delreq() {
@@ -732,6 +742,7 @@ table update_delreq_tbl {
 		update_delreq;
 	}
 	default_action: update_delreq();
+	size: 1;
 }
 
 control egress {

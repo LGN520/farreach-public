@@ -49,6 +49,7 @@ table match_keylolo_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 4;
 }
 
 register keylohi_reg {
@@ -100,6 +101,7 @@ table match_keylohi_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 4;
 }
 
 register keyhilo_reg {
@@ -151,6 +153,7 @@ table match_keyhilo_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 4;
 }
 
 register keyhihi_reg {
@@ -202,4 +205,5 @@ table match_keyhihi_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 4;
 }

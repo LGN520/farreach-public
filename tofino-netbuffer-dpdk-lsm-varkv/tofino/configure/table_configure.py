@@ -282,15 +282,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     for ismatch_keylohi in predicate_list:
                         for ismatch_keyhilo in predicate_list:
                             for ismatch_keyhihi in predicate_list:
-                        matchspec0 = netbuffer_update_vallo_tbl_match_spec_t(
-                                op_hdr_optype=PUTREQ_TYPE, 
-                                meta_isvalid=isvalid, 
-                                meta_ismatch_keylolo=ismatch_keylolo, 
-                                meta_ismatch_keylohi=ismatch_keylohi, 
-                                meta_ismatch_keyhilo=ismatch_keyhilo,
-                                meta_ismatch_keyhihi=ismatch_keyhihi)
-                        self.client.update_vallo_tbl_table_add_with_put_vallo(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                matchspec0 = netbuffer_update_vallo_tbl_match_spec_t(
+                                        op_hdr_optype=PUTREQ_TYPE, 
+                                        meta_isvalid=isvalid, 
+                                        meta_ismatch_keylolo=ismatch_keylolo, 
+                                        meta_ismatch_keylohi=ismatch_keylohi, 
+                                        meta_ismatch_keyhilo=ismatch_keyhilo,
+                                        meta_ismatch_keyhihi=ismatch_keyhihi)
+                                self.client.update_vallo_tbl_table_add_with_put_vallo(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec1 = netbuffer_update_vallo_tbl_match_spec_t(
                     op_hdr_optype=GETREQ_TYPE, 
                     meta_isvalid=1, 
@@ -310,15 +310,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     for ismatch_keylohi in predicate_list:
                         for ismatch_keyhilo in predicate_list:
                             for ismatch_keyhihi in predicate_list:
-                        matchspec0 = netbuffer_update_valhi_tbl_match_spec_t(
-                                op_hdr_optype=PUTREQ_TYPE, 
-                                meta_isvalid=isvalid, 
-                                meta_ismatch_keylolo=ismatch_keylolo, 
-                                meta_ismatch_keylohi=ismatch_keylohi, 
-                                meta_ismatch_keyhilo=ismatch_keyhilo,
-                                meta_ismatch_keyhihi=ismatch_keyhihi)
-                        self.client.update_valhi_tbl_table_add_with_put_valhi(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                matchspec0 = netbuffer_update_valhi_tbl_match_spec_t(
+                                        op_hdr_optype=PUTREQ_TYPE, 
+                                        meta_isvalid=isvalid, 
+                                        meta_ismatch_keylolo=ismatch_keylolo, 
+                                        meta_ismatch_keylohi=ismatch_keylohi, 
+                                        meta_ismatch_keyhilo=ismatch_keyhilo,
+                                        meta_ismatch_keyhihi=ismatch_keyhihi)
+                                self.client.update_valhi_tbl_table_add_with_put_valhi(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec1 = netbuffer_update_valhi_tbl_match_spec_t(
                     op_hdr_optype=GETREQ_TYPE, 
                     meta_isvalid=1, 

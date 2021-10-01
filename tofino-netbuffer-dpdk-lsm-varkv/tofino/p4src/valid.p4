@@ -65,4 +65,5 @@ table access_valid_tbl {
 		nop;
 	}
 	default_action: nop();
+	size: 2048;
 }
