@@ -396,6 +396,7 @@ void *run_sfg(void * param) {
       }
     }
     thread_param.throughput++;
+	if (thread_param.throughput>=100) break;
   }
 
   pthread_exit(nullptr);

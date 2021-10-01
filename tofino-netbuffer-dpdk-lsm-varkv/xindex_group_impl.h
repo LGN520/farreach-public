@@ -80,14 +80,14 @@ void Group<key_t, val_t, seq, max_model_n>::init(
 	cbf = new cbf_t(CBF_BYTES_NUM);
 
 	// Write original data (execute at the first time)
-	/*rocksdb::WriteBatch batch;
+	rocksdb::WriteBatch batch;
 	for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
 		std::string valstr;
 		GET_STRING(valstr, *(vals_begin + rec_i));
 		batch.Put((*(keys_begin + rec_i)).to_slice(), valstr);
 	}
 	s = data->Write(rocksdb::WriteOptions(), &batch);
-	assert(s.ok());*/
+	assert(s.ok());
 
 	// RocksDB will train model_n linear models for each new sstable 
 }
@@ -367,6 +367,7 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_lsm(
 	s = txn->Get(read_options, key.to_slice(), &valstr);
 	s = txn->Commit();
 	delete txn;
+	COUT_VAR(valstr);
 	if (valstr != "") {
 		val = std::stoi(valstr);
 		return s.ok();
@@ -391,6 +392,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_lsm(
 	s = txn->Put(key.to_slice(), valstr);
 	s = txn->Commit();
 	delete txn;
+	COUT_VAR(valstr);
 	if (s.ok()) {
 		return result_t::ok;
 	}

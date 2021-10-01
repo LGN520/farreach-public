@@ -63,11 +63,10 @@ Key& Key::operator=(const Key &other) {
 
 rocksdb::Slice Key::to_slice() const {
 #ifdef LARGE_KEY
-	char buf[16];
 	// NOTE: keylo-keyhi, in rocksdb/include/slice.h, we compare two slices from end to beginning
-	memcpy(buf, (const char *)&keylo, 8);
-	memcpy(buf+8, (const char *)&keyhi, 8);
-	rocksdb::Slice result(buf, 16);
+	// NOTE: slice is a shallow copy, where we cannot give slice a local varialbe!!!
+	// NOTE: addr of this = addr of keylo due to packed
+	rocksdb::Slice result((char *)this, 16); 
 #else
 	rocksdb::Slice result((char *)(&key), 8); // convert uint64_t to char[8]
 #endif
