@@ -758,7 +758,6 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 	// while for DataBlockIter, target is an internal key, and we use IternalKeyComparator 
 	// (i.e., if user keys are the same, larger seqno/valuetype = smaller key, which helps to choose lastest value from minheap)
 	// NOTE: for the same sstable, we won't have different seqnos of each same key -> InternalKeyComparator = UserComparator
-	printf("target size: %u\n", uint32_t(target.size_));
 	bool result = true;
 	*skip_linear_scan = false;
 	if (linear_model_wrapper == nullptr) {
@@ -776,12 +775,10 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 		}
 		else {
 			ModelResult model_result;
-			printf("TValue: %s\n", typeid(TValue).name());
-			ParsedInternalKey tmpikey;
+			/*ParsedInternalKey tmpikey;
 			ParseInternalKey(target, &tmpikey, false);
 			printf("ikey size: %u, seq: %u, type: %u\n", uint32_t(tmpikey.user_key.size_), uint32_t(tmpikey.sequence), uint32_t(tmpikey.type));
-			printf("ikey data: %lu, %lu\n", *(uint64_t*)tmpikey.user_key.data_, *(uint64_t*)(tmpikey.user_key.data_+8));
-			printf("raw_key_.IsUserKey: %d\n", raw_key_.IsUserKey() ? 1:0);
+			printf("ikey data: %lu, %lu\n", *(uint64_t*)tmpikey.user_key.data_, *(uint64_t*)(tmpikey.user_key.data_+8));*/
 			if (typeid(TValue) == typeid(IndexValue)) {
 			  if (raw_key_.IsUserKey()) {
 				model_result = linear_model_wrapper->index_predict(target);
@@ -836,10 +833,6 @@ bool BlockIter<TValue>::ModelSeek(const Slice& target, uint32_t* index,
 				// NOTE: for IndexBlockIter, GetUserKey = raw_key_; for DataBlockIter, GetUserKey = ExtractUserKey(raw_key_)
 				// NOTE: we use ucmp since a single sst cannot have duplicate keys (a key with different seqnos)
 				int cmp = 0;	
-				printf("raw key size: %u\n", uint32_t(raw_key_.GetUserKey().size_));
-				for (uint32_t i = 0; i < target.size_; i++) {
-					printf("rawkey.data_[i]: %u\n", uint32_t(raw_key_.GetUserKey().data_[i]));
-				}
 				if (raw_key_.IsUserKey()) {
 					cmp = ucmp().Compare(raw_key_.GetUserKey(), target); // GetUserKey just returns the raw_key
 				}

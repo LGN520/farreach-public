@@ -86,7 +86,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.devPorts.append(devPort)
 
     @staticmethod
-    def get_reg(reglist, idx);
+    def get_reg(reglist, idx):
         tmpreg = reglist[idx]
         if (tmpreg < 0):
             tmpreg += pow(2, 32)
@@ -109,17 +109,17 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         buf = struct.pack("I", bucket_count)
         for idx in range(bucket_count):
             i = idx + bucket_count # Our ports are in the 2nd pipeline
-            tmpkeylolo = get_reg(keylolo_list, i)
-            tmpkeylohi = get_reg(keylohi_list, i)
-            tmpkeyhilo = get_reg(keyhilo_list, i)
-            tmpkeyhihi = get_reg(keyhihi_list, i)
-            tmpvallo = get_reg(vallo_list, i)
-            tmpvalhi = get_reg(valhi_list, i)
+            tmpkeylolo = RegisterUpdate.get_reg(keylolo_list, i)
+            tmpkeylohi = RegisterUpdate.get_reg(keylohi_list, i)
+            tmpkeyhilo = RegisterUpdate.get_reg(keyhilo_list, i)
+            tmpkeyhihi = RegisterUpdate.get_reg(keyhihi_list, i)
+            tmpvallo = RegisterUpdate.get_reg(vallo_list, i)
+            tmpvalhi = RegisterUpdate.get_reg(valhi_list, i)
             tmpvalid = valid_list[i]
             tmpkeylo = (tmpkeylohi << 32) + tmpkeylolo
             tmpkeyhi = (tmpkeyhihi << 32) + tmpkeyhilo
             tmpval = (tmpvalhi << 32) + tmpvallo
-            #print("final key: {} final val: {}".format(tmpkey, tmpval))
+            #print("final key: {}, {} final val: {} valid: {}".format(tmpkeylo, tmpkeyhi, tmpval, tmpvalid))
             buf = buf + struct.pack("3QB", tmpkeylo, tmpkeyhi, tmpval, tmpvalid)
             if idx >= 1024:
                 break

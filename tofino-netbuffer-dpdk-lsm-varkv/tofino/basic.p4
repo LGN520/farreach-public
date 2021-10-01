@@ -688,11 +688,11 @@ control ingress {
 			if (meta.ismatch_keylolo == 2 and meta.ismatch_keylohi == 2) {
 				if (meta.ismatch_keyhilo == 2 and meta.ismatch_keyhihi == 2) {
 					apply(sendback_delres_tbl);
-					apply(clone_delpkt_tbl);
 				}
-				else {
-					apply(ipv4_lpm);
-				}
+			}
+			// Stage 3
+			if (meta.isvalid == 1) {
+				apply(clone_delpkt_tbl);
 			}
 			else {
 				apply(ipv4_lpm);

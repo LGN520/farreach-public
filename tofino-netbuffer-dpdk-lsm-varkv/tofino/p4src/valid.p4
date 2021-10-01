@@ -35,6 +35,9 @@ blackbox stateful_alu clear_valid_alu {
 	reg: valid_reg;
 
 	update_lo_1_value: clr_bit;
+
+	output_value: alu_lo;
+	output_dst: meta.isvalid;
 }
 
 action clear_valid() {
