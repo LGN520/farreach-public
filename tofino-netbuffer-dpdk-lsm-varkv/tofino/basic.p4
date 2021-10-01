@@ -496,13 +496,13 @@ action sendback_putres(tmp_smacaddr, tmp_dmacaddr) {
 	// Swap ip address
 	modify_field(ipv4_hdr.srcAddr, meta.tmp_dipaddr);
 	modify_field(ipv4_hdr.dstAddr, meta.tmp_sipaddr);
-	add_to_field(ipv4_hdr.totalLen, 1); // 1B status
+	subtract_from_field(ipv4_hdr.totalLen, 7); // - 8B value + 1B status
 	//modify_field(ipv4_hdr.totalLen, 53); // Big endian: 20B IP + 8B UDP + 24B OP + 1B status
 	
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
-	add_to_field(udp_hdr.hdrLength, 1); // 1B status
+	subtract_from_field(udp_hdr.hdrLength, 7); // - 8B value + 1B status
 	//modify_field(udp_hdr.hdrLength, 33); // 8B UDP + 24B OP + 1B status
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);

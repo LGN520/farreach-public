@@ -3,6 +3,7 @@
 
 #include <array>
 #include <limits>
+#include <string>
 #include "rocksdb/slice.h"
 
 // Comment it for 8B small key
@@ -16,7 +17,13 @@ class Key {
 #endif
 
  public:
-  static constexpr size_t model_key_size();
+  static constexpr size_t model_key_size() {
+#ifdef LARGE_KEY
+	return 2;
+#else
+	return 1; 
+#endif
+  }
   static Key max();
   static Key min();
 
@@ -36,6 +43,8 @@ class Key {
   model_key_t to_model_key() const;
 
   uint64_t to_int() const; // For hash
+
+  std::string to_string() const; // For print
 
   friend bool operator<(const Key &l, const Key &r);
   friend bool operator>(const Key &l, const Key &r);

@@ -3,7 +3,7 @@
 // Packet
 template<class key_t>
 Packet<key_t>::Packet() 
-	: _type(packet_type_t(0)), _thread_id(0), _key(key_t(0))
+	: _type(packet_type_t(0)), _thread_id(0), _key(key_t::min())
 {
 }
 
