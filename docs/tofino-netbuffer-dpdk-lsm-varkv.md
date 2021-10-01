@@ -10,7 +10,7 @@
 	+ Modify debug/read_register.py
 	+ Modify periodic_update/read_register.py
 	+ Modify trigger_update/read_register.py
-	+ Add key.h and key.c, modify client.c, localtest.c, server.c. prepare.c
+	+ Add key.h and key.c, modify client.c, localtest.c, server.c. prepare.c, Makefile
 
 ## How to run
 

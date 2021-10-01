@@ -21,7 +21,7 @@
 #include "xindex_util.h"
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
-#include "rocksdb/slice.h"
+#include "key.h"
 
 #define MQ_SIZE 256
 
@@ -72,57 +72,6 @@ struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
   uint32_t thread_id;
 };
-
-class Key {
-  typedef std::array<double, 1> model_key_t;
-
- public:
-  static constexpr size_t model_key_size() { return 1; }
-  static Key max() {
-    static Key max_key(std::numeric_limits<uint64_t>::max());
-    return max_key;
-  }
-  static Key min() {
-    static Key min_key(std::numeric_limits<uint64_t>::min());
-    return min_key;
-  }
-
-  Key() : key(0) {}
-  Key(uint64_t key) : key(key) {}
-  Key(const Key &other) { key = other.key; }
-  Key &operator=(const Key &other) {
-    key = other.key;
-    return *this;
-  }
-
-  rocksdb::Slice to_slice() const {
-	rocksdb::Slice result((char *)(&key), 8); // convert uint64_t to char[8]
-	return result;
-  }
-
-  void from_slice(rocksdb::Slice& slice) {
-	key = *(uint64_t*)slice.data_;
-  }
-
-  model_key_t to_model_key() const {
-    model_key_t model_key;
-    model_key[0] = key;
-    return model_key;
-  }
-
-  uint64_t to_int() const {
-	  return key;
-  }
-
-  friend bool operator<(const Key &l, const Key &r) { return l.key < r.key; }
-  friend bool operator>(const Key &l, const Key &r) { return l.key > r.key; }
-  friend bool operator>=(const Key &l, const Key &r) { return l.key >= r.key; }
-  friend bool operator<=(const Key &l, const Key &r) { return l.key <= r.key; }
-  friend bool operator==(const Key &l, const Key &r) { return l.key == r.key; }
-  friend bool operator!=(const Key &l, const Key &r) { return l.key != r.key; }
-
-  uint64_t key;
-} PACKED;
 
 int main(int argc, char **argv) {
 
@@ -517,7 +466,7 @@ static int run_sfg(void * param) {
 			case packet_type_t::GET_REQ: 
 				{
 					get_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key)
+					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
 					if (!tmp_stat) {
@@ -538,7 +487,7 @@ static int run_sfg(void * param) {
 			case packet_type_t::PUT_REQ:
 				{
 					put_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key << " val = " << req.val())
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
@@ -554,7 +503,7 @@ static int run_sfg(void * param) {
 			case packet_type_t::DEL_REQ:
 				{
 					del_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key)
+					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
@@ -570,12 +519,12 @@ static int run_sfg(void * param) {
 			case packet_type_t::SCAN_REQ:
 				{
 					scan_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key << " num = " << req.num())
+					//COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
 					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
 					/*COUT_THIS("[server] num = " << tmp_num)
 					for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
-						COUT_VAR(results[val_i].first.key)
+						COUT_VAR(results[val_i].first.to_string())
 						COUT_VAR(results[val_i].second)
 					}*/
 					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, results);

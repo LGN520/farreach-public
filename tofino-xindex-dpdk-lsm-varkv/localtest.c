@@ -337,21 +337,20 @@ void *run_sfg(void * param) {
     if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
 	  Key tmp_key;
-	  tmp_key.key = 12345;
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << tmp_key.key);
+	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << tmp_key.to_string());
 	  bool tmp_stat = table->get(tmp_key, tmp_val, thread_id);
 	  if (!tmp_stat) {
 		tmp_val = 0;
 	  }
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << tmp_key.key << " val = " << tmp_val);*/
+	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << tmp_key.to_string() << " val = " << tmp_val);*/
 
 	  val_t tmp_val;
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key);
+	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string());
 	  bool tmp_stat = table->get(op_keys[(query_i + delete_i) % op_keys.size()], tmp_val, thread_id);
 	  if (!tmp_stat) {
 		tmp_val = 0;
 	  }
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key << " val = " << tmp_val);
+	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " val = " << tmp_val);
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
@@ -359,7 +358,7 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio) {  // update
     } else if (tmprun == 1) {  // update
 	  bool tmp_stat = table->put(op_keys[(update_i + delete_i) % op_keys.size()], dummy_value, thread_id);
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << dummy_value
+	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << dummy_value
 			  << " stat = " << tmp_stat);
       update_i++;
       if (unlikely(update_i == op_keys.size() / 2)) {
@@ -368,7 +367,7 @@ void *run_sfg(void * param) {
     } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     //} else if (tmprun == 2) {  // insert
 	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << dummy_value
+	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value
 			  << " stat = " << tmp_stat);
       insert_i++;
       if (unlikely(insert_i == op_keys.size())) {
@@ -377,7 +376,7 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
     } else if (tmprun == 3) {  // remove
 	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id);
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[delete_i].key << " val = " << dummy_value
+	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[delete_i].to_string() << " val = " << dummy_value
 			  << " stat = " << tmp_stat);
       delete_i++;
       if (unlikely(delete_i == op_keys.size())) {
@@ -386,9 +385,9 @@ void *run_sfg(void * param) {
     } else {  // scan
 	  std::vector<std::pair<index_key_t, val_t>> results;
 	  size_t tmp_num = table->scan(op_keys[(query_i + delete_i) % op_keys.size()], 10, results, thread_id);
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key << " num = " << tmp_num);
+	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " num = " << tmp_num);
 	  for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
-		  FDEBUG_THIS(ofs, results[val_i].first.key);
+		  FDEBUG_THIS(ofs, results[val_i].first.to_string());
 		  FDEBUG_THIS(ofs, results[val_i].second);
 	  }
       query_i++;

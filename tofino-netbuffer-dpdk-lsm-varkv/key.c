@@ -1,10 +1,7 @@
 #include "key.h"
+#include <sstream>
 
-static constexpr size_t Key::model_key_size() { 
-	return 1; 
-}
-
-static Key Key::max() {
+Key Key::max() {
 #ifdef LARGE_KEY
     static Key max_key(std::numeric_limits<uint64_t>::max(),
 			std::numeric_limits<uint64_t>::max());
@@ -14,7 +11,7 @@ static Key Key::max() {
     return max_key;
 }
 
-static Key Key::min() {
+Key Key::min() {
 #ifdef LARGE_KEY
     static Key min_key(std::numeric_limits<uint64_t>::min(),
 			std::numeric_limits<uint64_t>::min());
@@ -77,7 +74,7 @@ rocksdb::Slice Key::to_slice() const {
 	return result;
 }
 
-void Key::from_slice() {
+void Key::from_slice(rocksdb::Slice& slice) {
 #ifdef LARGE_KEY
 	keylo = *(uint64_t*)slice.data_;
 	keyhi = *(uint64_t*)(slice.data_+8);
@@ -86,8 +83,8 @@ void Key::from_slice() {
 #endif
 }
 
-model_key_t Key::to_model_key() const {
-    model_key_t model_key;
+Key::model_key_t Key::to_model_key() const {
+    Key::model_key_t model_key;
 #ifdef LARGE_KEY
 	model_key[0] = keylo;
 	model_key[1] = keyhi;
@@ -103,6 +100,16 @@ uint64_t Key::to_int() const {
 #else
 	return key;
 #endif
+}
+
+std::string Key::to_string() const {
+	std::stringstream ss;
+#ifdef LARGE_KEY
+	ss << keylo << "," << keyhi;
+#else
+	ss << key;
+#endif
+	return ss.str();
 }
 
 bool operator<(const Key &l, const Key &r) { 
@@ -139,7 +146,7 @@ bool operator<=(const Key &l, const Key &r) {
 
 bool operator==(const Key &l, const Key &r) {
 #ifdef LARGE_KEY
-	return (l.keyhi == r.key) && (l.keylo == r.keylo);
+	return (l.keyhi == r.keyhi) && (l.keylo == r.keylo);
 #else
 	return l.key == r.key;
 #endif
@@ -147,7 +154,7 @@ bool operator==(const Key &l, const Key &r) {
 
 bool operator!=(const Key &l, const Key &r) { 
 #ifdef LARGE_KEY
-	return (l.keyhi != r.key) || (l.keylo != r.keylo);
+	return (l.keyhi != r.keyhi) || (l.keylo != r.keylo);
 #else
 	return l.key != r.key;
 #endif

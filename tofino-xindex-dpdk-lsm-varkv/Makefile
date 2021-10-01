@@ -92,24 +92,27 @@ TARGETS := client server prepare localtest
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
 
-prepare: prepare.o
+DEPS += key.d
+CLEAN += key.o
+
+prepare: prepare.o key.o
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += prepare.d
 CLEAN += prepare.o prepare
 
-client: client.o dpdk_helper.o
+client: client.o dpdk_helper.o key.o
 	echo $(LDFLAGS)
 	echo $(LDLIBS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += client.d
 CLEAN += client.o client
 
-server: server.o dpdk_helper.o
+server: server.o dpdk_helper.o key.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += server.d
 CLEAN += server.o serer
 
-localtest: localtest.o
+localtest: localtest.o key.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += localtest.d
 CLEAN += localtest.o localtest

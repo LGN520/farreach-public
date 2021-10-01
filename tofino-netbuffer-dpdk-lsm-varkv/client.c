@@ -472,7 +472,7 @@ static int run_fg(void *param) {
     //if (d <= read_ratio) {  // get
     if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].key);
+	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -500,7 +500,7 @@ static int run_fg(void *param) {
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
 	  get_response_t rsp(buf, recv_size);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << rsp.key().key << " val = " << rsp.val());
+	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << rsp.key().to_string() << " val = " << rsp.val());
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
@@ -508,7 +508,7 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio) {  // update
     } else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].key << " val = " << req.val());
+	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -539,7 +539,7 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     } else if (tmprun == 2) {  // insert
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[insert_i].key << " val = " << req.val());
+	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[insert_i].to_string() << " val = " << req.val());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -570,7 +570,7 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
     } else if (tmprun == 3) {  // remove
 	  del_request_t req(thread_id, op_keys[delete_i]);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[delete_i].key);
+	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[delete_i].to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -600,7 +600,7 @@ static int run_fg(void *param) {
       }
     } else {  // scan
 	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], 10);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << req.key().key);
+	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << req.key().to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -625,7 +625,7 @@ static int run_fg(void *param) {
 	  scan_response_t rsp(buf, recv_size);
 	  FDEBUG_THIS(ofs, "[client " << thread_id << "] num = " << rsp.num());
 	  for (uint32_t val_i = 0; val_i < rsp.num(); val_i++) {
-		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].first.key);
+		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].first.to_string());
 		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].second);
 	  }
       query_i++;

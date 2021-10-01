@@ -90,10 +90,9 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 };
 
 void test_merge_latency() {
-	backup_data = new std::map<index_key_t, val_t>(64*1024);
+	backup_data = new std::map<index_key_t, val_t>;
 	for (size_t i = 0; i < 64*1024; i++) {
-		(*backup_data)[i].first = exist_keys[i];
-		(*backup_data)[i].second = 1;
+		backup_data->insert(std::pair<index_key_t, val_t>(exist_keys[i], 1));
 	}
 }
 
@@ -438,7 +437,7 @@ void *run_backuper(void *param) {
 	INVARIANT(res >= 0);
 	
 	int recv_size = 0;
-	char recv_buf[KV_BUCKET_COUT * 18]; // 65536 * 17 + 14 + 20 + 8 < 65536 * 18 = 1179648
+	char recv_buf[KV_BUCKET_COUT * 26]; // n * 25 + 14 + 20 + 8 < n * 26
 	memset(recv_buf, 0, sizeof(recv_buf));
 
 	while (!running)
@@ -462,8 +461,13 @@ void *run_backuper(void *param) {
 		cur += 4;
 		std::map<index_key_t, val_t> *new_backup_data = new std::map<index_key_t, val_t>;
 		for (uint32_t i = 0; i < kvnum; i++) {
+#ifdef LARGE_KEY
+			index_key_t curkey(*(uint64_t*)cur, *(uint64_t*)(cur+8));
+			cur += 16;
+#else
 			index_key_t curkey(*(uint64_t*)cur);
 			cur += 8;
+#endif
 			val_t curval = *(uint64_t*)cur;
 			cur += 8;
 			uint8_t curvalid = *(uint8_t*)cur;
@@ -515,7 +519,7 @@ void *run_listener(void *param) {
 	INVARIANT(res >= 0);
 	
 	int recv_size = 0;
-	char recv_buf[KV_BUCKET_COUT * 18]; // 65536 * 17 + 14 + 20 + 8 < 65536 * 18 = 1179648
+	char recv_buf[KV_BUCKET_COUT * 26]; // n * 25 + 14 + 20 + 8 < n * 26
 	memset(recv_buf, 0, sizeof(recv_buf));
 
 	while (!running)
@@ -540,8 +544,13 @@ void *run_listener(void *param) {
 		cur += 4;
 		std::map<index_key_t, val_t> *new_listener_data = new std::map<index_key_t, val_t>;
 		for (uint32_t i = 0; i < kvnum; i++) {
+#ifdef LARGE_KEY
+			index_key_t curkey(*(uint64_t*)cur, *(uint64_t*)(cur+8));
+			cur += 16;
+#else
 			index_key_t curkey(*(uint64_t*)cur);
 			cur += 8;
+#endif
 			val_t curval = *(uint64_t*)cur;
 			cur += 8;
 			uint8_t curvalid = *(uint8_t*)cur;
@@ -687,7 +696,7 @@ static int run_sfg(void * param) {
 			case packet_type_t::GET_REQ: 
 				{
 					get_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key)
+					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
 					if (!tmp_stat) {
@@ -708,7 +717,7 @@ static int run_sfg(void * param) {
 			case packet_type_t::PUT_REQ:
 				{
 					put_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key << " val = " << req.val())
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
@@ -724,7 +733,7 @@ static int run_sfg(void * param) {
 			case packet_type_t::DEL_REQ:
 				{
 					del_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key)
+					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
@@ -743,7 +752,7 @@ static int run_sfg(void * param) {
 					sendto(sock_fd , "1", 1, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
 
 					scan_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key << " num = " << req.num())
+					//COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
 					//double t00 = CUR_TIME();
 					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
@@ -751,7 +760,7 @@ static int run_sfg(void * param) {
 					//COUT_THIS("Index SCAN: " << (t11 - t00) << "us")
 					/*COUT_THIS("[server] num = " << tmp_num)
 					for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
-						COUT_VAR(results[val_i].first.key)
+						COUT_VAR(results[val_i].first.to_string())
 						COUT_VAR(results[val_i].second)
 					}*/
 
@@ -817,7 +826,7 @@ static int run_sfg(void * param) {
 			case packet_type_t::PUT_REQ_S:
 				{
 					put_request_s_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key << " val = " << req.val())
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
@@ -825,7 +834,7 @@ static int run_sfg(void * param) {
 			case packet_type_t::DEL_REQ_S:
 				{
 					del_request_s_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().key)
+					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
