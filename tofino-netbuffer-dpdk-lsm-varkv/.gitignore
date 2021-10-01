@@ -1,0 +1,16 @@
+build/
+.vscode/
+CMakeFiles/
+*.cmake
+CMakeCache.txt
+client
+server
+microbench
+prepare
+localtest
+*.log
+*.out
+*.pyc
+*.a
+*.o
+*.d

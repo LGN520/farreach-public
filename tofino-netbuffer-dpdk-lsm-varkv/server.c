@@ -24,6 +24,9 @@
 #include "key.h"
 
 #define MQ_SIZE 256
+#define KV_BUCKET_COUT 32768
+//#define KV_BUCKET_COUT 65536
+#define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 
@@ -39,6 +42,8 @@ typedef GetResponse<index_key_t, val_t> get_response_t;
 typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
+typedef PutRequestS<index_key_t, val_t> put_request_s_t;
+typedef DelRequestS<index_key_t> del_request_s_t;
 
 inline void parse_args(int, char **);
 void load();
@@ -47,19 +52,31 @@ void run_server(xindex_t *table);
 void kill(int signum);
 
 // DPDK
-static int run_sfg(void *param); // workers
+static int run_sfg(void *param);
 static int run_receiver(__attribute__((unused)) void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
 volatile struct rte_mbuf ***pkts_list;
-volatile uint32_t *heads;
-volatile uint32_t *tails;
+uint32_t* volatile heads;
+uint32_t* volatile tails;
+
+void *run_backuper(__attribute__((unused)) void *param); // backuper
+std::map<index_key_t, val_t>* volatile backup_data = nullptr;
+uint32_t* volatile backup_rcu;
+
+void *run_listener(__attribute__((unused)) void *param); // listener to listen the responses of KV pull requests for SCAN
+std::map<index_key_t, val_t>* volatile listener_data = nullptr;
+volatile uint64_t listener_version = 0;
 
 // parameters
 size_t fg_n = 1;
 size_t bg_n = 1;
 short dst_port_start = 1111;
+short backup_port = 3333;
+short controller_port = 3334;
+short listener_port = 3335;
+char controller_ip[20] = "172.16.112.19";
 
 std::vector<index_key_t> exist_keys;
 
@@ -72,58 +89,16 @@ struct alignas(CACHELINE_SIZE) SFGParam {
   uint32_t thread_id;
 };
 
-class Key {
-  typedef std::array<double, 1> model_key_t;
-
- public:
-  static constexpr size_t model_key_size() { return 1; }
-  static Key max() {
-    static Key max_key(std::numeric_limits<uint64_t>::max());
-    return max_key;
-  }
-  static Key min() {
-    static Key min_key(std::numeric_limits<uint64_t>::min());
-    return min_key;
-  }
-
-  Key() : key(0) {}
-  Key(uint64_t key) : key(key) {}
-  Key(const Key &other) { key = other.key; }
-  Key &operator=(const Key &other) {
-    key = other.key;
-    return *this;
-  }
-
-  rocksdb::Slice to_slice() const {
-	rocksdb::Slice result((char *)(&key), 8); // convert uint64_t to char[8]
-	return result;
-  }
-
-  void from_slice(rocksdb::Slice& slice) {
-	key = *(uint64_t*)slice.data_;
-  }
-
-  model_key_t to_model_key() const {
-    model_key_t model_key;
-    model_key[0] = key;
-    return model_key;
-  }
-
-  uint64_t to_int() const {
-	  return key;
-  }
-
-  friend bool operator<(const Key &l, const Key &r) { return l.key < r.key; }
-  friend bool operator>(const Key &l, const Key &r) { return l.key > r.key; }
-  friend bool operator>=(const Key &l, const Key &r) { return l.key >= r.key; }
-  friend bool operator<=(const Key &l, const Key &r) { return l.key <= r.key; }
-  friend bool operator==(const Key &l, const Key &r) { return l.key == r.key; }
-  friend bool operator!=(const Key &l, const Key &r) { return l.key != r.key; }
-
-  uint64_t key;
-} PACKED;
+void test_merge_latency() {
+	backup_data = new std::map<index_key_t, val_t>(64*1024);
+	for (size_t i = 0; i < 64*1024; i++) {
+		(*backup_data)[i].first = exist_keys[i];
+		(*backup_data)[i].second = 1;
+	}
+}
 
 int main(int argc, char **argv) {
+  test_merge_latency(); // DEBUG test
 
   parse_args(argc, argv);
   xindex::init_options(); // init options of rocksdb
@@ -161,18 +136,21 @@ int main(int argc, char **argv) {
   //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
   //}
   pkts_list = new volatile struct rte_mbuf**[fg_n];
-  heads = new volatile uint32_t[fg_n];
-  tails = new volatile uint32_t[fg_n];
+  heads = new uint32_t[fg_n];
+  tails = new uint32_t[fg_n];
   memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
   memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
   //int res = 0;
   for (size_t i = 0; i < fg_n; i++) {
 	  pkts_list[i] = new volatile struct rte_mbuf*[MQ_SIZE];
 	  for (size_t j = 0; j < MQ_SIZE; j++) {
-		  pkts_list[i][j] = NULL;
+		  pkts_list[i][j] = nullptr;
 	  }
 	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
   }
+
+  backup_rcu = new uint32_t[fg_n];
+  memset((void *)backup_rcu, 0, fg_n * sizeof(uint32_t));
 
   // prepare xindex
   std::vector<val_t> vals(exist_keys.size(), 1);
@@ -316,6 +294,20 @@ void run_server(xindex_t *table) {
 	COUT_THIS("[server] Launch receiver with ret code " << ret)
 	lcoreid++;
 
+	// Launch backuper
+	pthread_t backuper_thread;
+	ret = pthread_create(&backuper_thread, nullptr, run_backuper, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: unable to create backuper " << ret);
+	}
+
+	// Launch listener
+	pthread_t listener_thread;
+	ret = pthread_create(&listener_thread, nullptr, run_listener, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: unable to create listener " << ret);
+	}
+
 	// Prepare fg params
 	//pthread_t threads[fg_n];
 	sfg_param_t sfg_params[fg_n];
@@ -361,6 +353,15 @@ void run_server(xindex_t *table) {
 		  COUT_N_EXIT("Error:unable to join," << rc);
 		}
 	}*/
+	void * status;
+	int rc = pthread_join(backuper_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join," << rc);
+	}
+	rc = pthread_join(listener_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join," << rc);
+	}
 	rte_eal_mp_wait_lcore();
 }
 
@@ -410,6 +411,165 @@ static int run_receiver(void *param) {
 		}
 	}
 	return 0;
+}
+
+void *run_backuper(void *param) {
+
+	int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	INVARIANT(sock_fd >= 0);
+	// Diskable udp check
+	int disable = 1;
+	if (setsockopt(sock_fd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+		COUT_N_EXIT("Disable udp checksum failed");
+	}
+	// Set timeout
+	struct timeval tv;
+	tv.tv_sec = 1;
+	tv.tv_usec =  0;
+	int res = setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	INVARIANT(res >= 0);
+	// Set listen addr
+	struct sockaddr_in backup_server_addr;
+	memset(&backup_server_addr, 0, sizeof(sockaddr_in));
+	backup_server_addr.sin_family = AF_INET;
+	backup_server_addr.sin_port = htons(backup_port);
+	backup_server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	res = bind(sock_fd, (struct sockaddr *)&backup_server_addr, sizeof(backup_server_addr));
+	INVARIANT(res >= 0);
+	
+	int recv_size = 0;
+	char recv_buf[KV_BUCKET_COUT * 18]; // 65536 * 17 + 14 + 20 + 8 < 65536 * 18 = 1179648
+	memset(recv_buf, 0, sizeof(recv_buf));
+
+	while (!running)
+		;
+
+	while (running) {
+		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
+		if (recv_size == -1) {
+			if (errno == EWOULDBLOCK || errno == EINTR) {
+				continue; // timeout or interrupted system call
+			}
+			else {
+				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
+			}
+		}
+		COUT_THIS("backuper recvsize: "<<recv_size)
+		//dump_buf(recv_buf, recv_size);
+
+		char *cur = recv_buf;
+		uint32_t kvnum = *(uint32_t *)cur;
+		cur += 4;
+		std::map<index_key_t, val_t> *new_backup_data = new std::map<index_key_t, val_t>;
+		for (uint32_t i = 0; i < kvnum; i++) {
+			index_key_t curkey(*(uint64_t*)cur);
+			cur += 8;
+			val_t curval = *(uint64_t*)cur;
+			cur += 8;
+			uint8_t curvalid = *(uint8_t*)cur;
+			cur += 1;
+			if (curvalid == 1) {
+				new_backup_data->insert(std::pair<index_key_t, val_t>(curkey, curval));
+			}
+		}
+
+		volatile std::map<index_key_t, val_t> *old_backup_data = backup_data;
+		backup_data = new_backup_data;
+
+		// peace period of RCU (may not need if we do not use them in SCAN)
+		for (uint32_t i = 0; i < fg_n; i++) {
+			uint32_t prev_val = backup_rcu[i];
+			while (running && backup_rcu[i] == prev_val) {}
+		}
+		if (old_backup_data != nullptr) {
+			delete old_backup_data;
+			old_backup_data = nullptr;
+		}
+		
+	}
+	pthread_exit(nullptr);
+}
+
+void *run_listener(void *param) {
+
+	int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	INVARIANT(sock_fd >= 0);
+	// Diskable udp check
+	int disable = 1;
+	if (setsockopt(sock_fd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+		COUT_N_EXIT("Disable udp checksum failed");
+	}
+	// Set timeout
+	struct timeval tv;
+	tv.tv_sec = 1;
+	tv.tv_usec =  0;
+	int res = setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	INVARIANT(res >= 0);
+	// Set listen addr
+	struct sockaddr_in listener_server_addr;
+	memset(&listener_server_addr, 0, sizeof(sockaddr_in));
+	listener_server_addr.sin_family = AF_INET;
+	listener_server_addr.sin_port = htons(listener_port);
+	listener_server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	res = bind(sock_fd, (struct sockaddr *)&listener_server_addr, sizeof(listener_server_addr));
+	INVARIANT(res >= 0);
+	
+	int recv_size = 0;
+	char recv_buf[KV_BUCKET_COUT * 18]; // 65536 * 17 + 14 + 20 + 8 < 65536 * 18 = 1179648
+	memset(recv_buf, 0, sizeof(recv_buf));
+
+	while (!running)
+		;
+
+	while (running) {
+		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
+		double t0 = CUR_TIME();
+		if (recv_size == -1) {
+			if (errno == EWOULDBLOCK || errno == EINTR) {
+				continue; // timeout or interrupted system call
+			}
+			else {
+				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
+			}
+		}
+		//COUT_THIS("listener recvsize: "<<recv_size)
+		//dump_buf(recv_buf, recv_size);
+
+		char *cur = recv_buf;
+		uint32_t kvnum = *(uint32_t *)cur;
+		cur += 4;
+		std::map<index_key_t, val_t> *new_listener_data = new std::map<index_key_t, val_t>;
+		for (uint32_t i = 0; i < kvnum; i++) {
+			index_key_t curkey(*(uint64_t*)cur);
+			cur += 8;
+			val_t curval = *(uint64_t*)cur;
+			cur += 8;
+			uint8_t curvalid = *(uint8_t*)cur;
+			cur += 1;
+			if (curvalid == 1) {
+				new_listener_data->insert(std::pair<index_key_t, val_t>(curkey, curval));
+			}
+		}
+
+		volatile std::map<index_key_t, val_t> *old_listener_data = listener_data;
+		listener_data = new_listener_data;
+		if (unlikely(listener_version == MAX_VERSION)) { // avoid overflow
+			listener_version = 0;
+		}
+		else {
+			listener_version += 1;
+		}
+
+		// Do no need peace period of RCU since SCAN will never use old listener data
+		if (old_listener_data != nullptr) {
+			delete old_listener_data;
+			old_listener_data = nullptr;
+		}
+
+		double t1 = CUR_TIME();
+		//COUT_THIS("Update KV: " << (t1 - t0) << "us")
+	}
+	pthread_exit(nullptr);
 }
 
 static int run_sfg(void * param) {
@@ -468,6 +628,15 @@ static int run_sfg(void * param) {
   uint16_t srcport;
   uint16_t dstport;
 
+  // UDP socket for SCAN
+  int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+  INVARIANT(sock_fd >= 0);
+  struct sockaddr_in controller_addr;
+  memset(&controller_addr, 0, sizeof(sockaddr_in));
+  controller_addr.sin_family = AF_INET;
+  controller_addr.sin_port = htons(controller_port);
+  controller_addr.sin_addr.s_addr = inet_addr(controller_ip);
+
   ready_threads++;
 
   while (!running) {
@@ -493,14 +662,16 @@ static int run_sfg(void * param) {
 	//if (stats[thread_id]) {
 	if (heads[thread_id] != tails[thread_id]) {
 		//COUT_THIS("[server] Receive packet!")
-
-		sent_pkt = sent_pkts[sent_pkt_idx];
+		
+		uint64_t old_version = listener_version;
 
 		// DPDK
 		//stats[thread_id] = false;
 		//recv_size = decode_mbuf(pkts[thread_id], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		//rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
-		INVARIANT(pkts_list[thread_id][tails[thread_id]] != NULL);
+		sent_pkt = sent_pkts[sent_pkt_idx];
+
+		INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
 		recv_size = decode_mbuf(pkts_list[thread_id][tails[thread_id]], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 		tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
@@ -568,23 +739,95 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::SCAN_REQ:
 				{
+					// Send KV pull request to switch (should not be counted into latency)
+					sendto(sock_fd , "1", 1, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
+
 					scan_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().key << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
+					//double t00 = CUR_TIME();
 					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
+					//double t11 = CUR_TIME();
+					//COUT_THIS("Index SCAN: " << (t11 - t00) << "us")
 					/*COUT_THIS("[server] num = " << tmp_num)
 					for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 						COUT_VAR(results[val_i].first.key)
 						COUT_VAR(results[val_i].second)
 					}*/
-					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, results);
-					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+
+					// wait the new KV from switch (only for latency)
+					// comment it for thpt to trade consistency for perf (directly use backup_data, uncomment the later sentence)
+					//while (listener_version == old_version) {}
+
+					// Merge results with backup data
+					//double t0 = CUR_TIME();
+					std::vector<std::pair<index_key_t, val_t>> merge_results;
+					//std::map<index_key_t, val_t> *kvdata = listener_data;
+					std::map<index_key_t, val_t> *kvdata = backup_data; // uncomment it for thpt
+					if (kvdata != nullptr) {
+						std::map<index_key_t, val_t>::iterator kviter = kvdata->lower_bound(req.key());
+						uint32_t result_idx = 0;
+						for (; kviter != kvdata->end(); kviter++) {
+							if (kviter->first >= results[result_idx].first) {
+								merge_results.push_back(results[result_idx]);
+								result_idx++;
+								if (result_idx >= results.size()) {
+									break;
+								}
+							}
+							else {
+								merge_results.push_back(*kviter);
+							}
+						}
+						if (merge_results.size() < req.num()) {
+							// Only enter one loop
+							for (; result_idx < results.size(); result_idx++) {
+								merge_results.push_back(results[result_idx]);
+								if (merge_results.size() == req.num()) {
+									break;
+								}
+							}
+							for (; kviter != kvdata->end(); kviter++) {
+								merge_results.push_back(*kviter);
+								if (merge_results.size() == req.num()) {
+									break;
+								}
+							}
+						}
+					}
+					//double t1 = CUR_TIME();
+					//COUT_THIS("Merge: "<< (t1-t0) <<"us")
+
+					scan_response_t *rsp = nullptr;
+					if (kvdata != nullptr) {
+						rsp = new scan_response_t(req.thread_id(), req.key(), merge_results.size(), merge_results);
+					}
+					else {
+						rsp = new scan_response_t(req.thread_id(), req.key(), tmp_num, results);
+					}
+					rsp_size = rsp->serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::PUT_REQ_S:
+				{
+					put_request_s_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().key << " val = " << req.val())
+					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					break;
+				}
+			case packet_type_t::DEL_REQ_S:
+				{
+					del_request_s_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().key)
+					bool tmp_stat = table->remove(req.key(), req.thread_id());
+					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
 				}
 			default:
@@ -594,6 +837,7 @@ static int run_sfg(void * param) {
 					exit(-1);
 				}
 		}
+		backup_rcu[thread_id]++;
 
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;

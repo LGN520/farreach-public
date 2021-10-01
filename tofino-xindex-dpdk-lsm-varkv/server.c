@@ -21,11 +21,12 @@
 #include "xindex_util.h"
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
-#include "key.h"
+#include "rocksdb/slice.h"
 
 #define MQ_SIZE 256
 
 struct alignas(CACHELINE_SIZE) SFGParam;
+class Key;
 
 typedef Key index_key_t;
 typedef uint64_t val_t;
