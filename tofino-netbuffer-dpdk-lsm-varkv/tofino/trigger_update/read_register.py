@@ -109,6 +109,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
         buf = struct.pack("I", bucket_count)
         for idx in range(bucket_count):
+            # TODO: the registers may be the first half of list (aka i = idx) instead of the second half
+            # NOTE: we should identify which half of our interest by the first non-empty entry
             i = idx + bucket_count # Our ports are in the 2nd pipeline
             tmpkeylolo = RegisterUpdate.get_reg(keylolo_list, i)
             tmpkeylohi = RegisterUpdate.get_reg(keylohi_list, i)

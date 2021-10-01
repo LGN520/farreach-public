@@ -681,6 +681,10 @@ static int run_sfg(void * param) {
 		sent_pkt = sent_pkts[sent_pkt_idx];
 
 		INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+		memset(srcip, '\0', 16);
+		memset(dstip, '\0', 16);
+		memset(srcmac, 0, 6);
+		memset(dstmac, 0, 6);
 		recv_size = decode_mbuf(pkts_list[thread_id][tails[thread_id]], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 		tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
@@ -776,16 +780,21 @@ static int run_sfg(void * param) {
 					if (kvdata != nullptr) {
 						std::map<index_key_t, val_t>::iterator kviter = kvdata->lower_bound(req.key());
 						uint32_t result_idx = 0;
-						for (; kviter != kvdata->end(); kviter++) {
-							if (kviter->first >= results[result_idx].first) {
-								merge_results.push_back(results[result_idx]);
-								result_idx++;
-								if (result_idx >= results.size()) {
+						if (kvdata->size() != 0 && results.size() != 0) {
+							for (; kviter != kvdata->end(); kviter++) {
+								if (kviter->first >= results[result_idx].first) {
+									merge_results.push_back(results[result_idx]);
+									result_idx++;
+									if (result_idx >= results.size()) {
+										break;
+									}
+								}
+								else {
+									merge_results.push_back(*kviter);
+								}
+								if (merge_results.size() == req.num()) {
 									break;
 								}
-							}
-							else {
-								merge_results.push_back(*kviter);
 							}
 						}
 						if (merge_results.size() < req.num()) {
@@ -809,12 +818,15 @@ static int run_sfg(void * param) {
 
 					scan_response_t *rsp = nullptr;
 					if (kvdata != nullptr) {
+						COUT_VAR(merge_results.size());
 						rsp = new scan_response_t(req.thread_id(), req.key(), merge_results.size(), merge_results);
 					}
 					else {
+						COUT_VAR(tmp_num);
 						rsp = new scan_response_t(req.thread_id(), req.key(), tmp_num, results);
 					}
 					rsp_size = rsp->serialize(buf, MAX_BUFSIZE);
+					COUT_VAR(rsp_size);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK

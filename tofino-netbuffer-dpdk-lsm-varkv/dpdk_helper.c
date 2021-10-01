@@ -311,8 +311,8 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const 
 	iphdr->hdr_checksum = checksum((uint16_t *)iphdr, sizeof(struct ipv4_hdr));
 	udphdr->dgram_cksum = udp4_checksum(iphdr, udphdr, payload, payload_size);
 
-	//printf("pktsize: %d\n", pktsize);
-	//dump_buf(data, pktsize);
+	printf("pktsize: %d\n", pktsize);
+	dump_buf(data, pktsize);
 
 	mbuf->data_len = pktsize;
 	mbuf->pkt_len = pktsize;

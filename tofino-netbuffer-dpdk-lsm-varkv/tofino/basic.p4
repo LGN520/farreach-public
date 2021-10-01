@@ -684,14 +684,9 @@ control ingress {
 			}
 		}
 		else if (op_hdr.optype == DELREQ_TYPE) {
-			// Stage 2 
-			if (meta.ismatch_keylolo == 2 and meta.ismatch_keylohi == 2) {
-				if (meta.ismatch_keyhilo == 2 and meta.ismatch_keyhihi == 2) {
-					apply(sendback_delres_tbl);
-				}
-			}
 			// Stage 3
 			if (meta.isvalid == 1) {
+				apply(sendback_delres_tbl);
 				apply(clone_delpkt_tbl);
 			}
 			else {

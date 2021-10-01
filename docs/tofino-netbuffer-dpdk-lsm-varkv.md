@@ -14,6 +14,8 @@
 - Fix a bug in rocksdb-model-v2 (table/block_based/block.cc, ModelSeek)
 	+ For 8B key, IndexBlock::key does not have seq (aka user key); while for 16B key, IndexBlock::key has seq (aka internal key)
 	+ raw_key_.IsUserKey comes fom index_includes_seq, so we need to identify it even for the key in index block
+- Fix a bug in tofino (tofino/basic.p4)
+	+ Get original valid bit and clone a packet of DEL_REQ_S to server only if the original bit is 1
 
 ## How to run
 

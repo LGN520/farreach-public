@@ -451,6 +451,10 @@ static int run_sfg(void * param) {
 		//recv_size = decode_mbuf(pkts[thread_id], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		//rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
 		INVARIANT(pkts_list[thread_id][tails[thread_id]] != NULL);
+		memset(srcip, '\0', 16);
+		memset(dstip, '\0', 16);
+		memset(srcmac, 0, 6);
+		memset(dstmac, 0, 6);
 		recv_size = decode_mbuf(pkts_list[thread_id][tails[thread_id]], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 		tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
