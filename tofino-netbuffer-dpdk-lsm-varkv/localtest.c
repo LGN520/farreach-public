@@ -332,7 +332,7 @@ void *run_sfg(void * param) {
 
     double d = ratio_dis(gen);
 
-	int tmprun = 0;
+	int tmprun = 3;
     //if (d <= read_ratio) {  // get
     if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
@@ -364,8 +364,8 @@ void *run_sfg(void * param) {
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
       }
-    } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
-    //} else if (tmprun == 2) {  // insert
+    //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
+    } else if (tmprun == 2) {  // insert
 	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
 	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value
 			  << " stat = " << tmp_stat);
@@ -396,7 +396,6 @@ void *run_sfg(void * param) {
       }
     }
     thread_param.throughput++;
-	if (thread_param.throughput>=100) break;
   }
 
   pthread_exit(nullptr);

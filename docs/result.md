@@ -10,6 +10,45 @@
 		+ 80% read - 10% insert - 10% remove: `./prepare -b 0.1; ./client -a 0.8 -b 0.1 -c 0.1`
 		+ 70% read - 10% insert - 10% remove - 10% update: `./prepare -b 0.1; ./client -a 0.7 -b 0.1 -c 0.1 -d 0.1`
 		+ 60% read - 10% insert - 10% remove - 10% update - 10% scan: `./prepare -b 0.1; ./client -a 0.6 -b 0.1 -c 0.1 -d 0.1 -e 0.1`
+- NOTES
+	+ All preliminary results are with logging, which should be disabled in real evaluation
+
+## Preliminary Exp of Microbench (with persistence with CBF with 16B key)
+
+- Local test
+	+ GET
+		+ XIndex: 83294 op/s
+		+ NetBuffer: 84076 op/s
+	+ UPDATE
+		+ XIndex: 54950 op/s
+		+ NetBuffer: 54117 op/s
+	+ INSERT
+		+ XIndex: 52611 op/s
+		+ NetBuffer: 58529 op/s
+		+ Reason: To count buffer size, we need check whether the key is a new key in buffer. XIndex needs to get the key in LSM,
+		while NetBuffer can quickly determine by CBF
+	+ DEL
+		+ XIndex: 52224 op/s
+		+ NetBuffer: 55500 op/s
+	+ SCAN
+		+ XIndex: 14631 op/s
+		+ NetBuffer (merge with backup data): 17205 op/s
+- Remote test
+	+ GET
+		+ XIndex:
+		+ NetBuffer:
+	+ UPDATE
+		+ XIndex:
+		+ NetBuffer:
+	+ INSERT
+		+ XIndex:
+		+ NetBuffer
+	+ DEL
+		+ XIndex:
+		+ NetBuffer
+	+ SCAN
+		+ XIndex:
+		+ NetBuffer (merge with backup data)
 
 ## We must use perf-consistency trade-off for SCAN
 
