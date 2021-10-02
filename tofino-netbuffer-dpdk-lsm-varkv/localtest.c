@@ -54,6 +54,17 @@ std::vector<index_key_t> non_exist_keys;
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
 
+#define KV_BUCKET_COUT 32768
+
+std::map<index_key_t, val_t>* volatile backup_data = nullptr;
+
+void test_merge_latency() {
+	backup_data = new std::map<index_key_t, val_t>;
+	for (size_t i = 0; i < KV_BUCKET_COUT; i++) {
+		backup_data->insert(std::pair<index_key_t, val_t>(exist_keys[i], 1));
+	}
+}
+
 struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
   uint64_t throughput;
@@ -65,6 +76,8 @@ int main(int argc, char **argv) {
   parse_args(argc, argv);
   xindex::init_options(); // init options of rocksdb
   load();
+
+  test_merge_latency(); // DEBUG test
 
   // prepare xindex
   std::vector<val_t> vals(exist_keys.size(), 1);
@@ -332,7 +345,7 @@ void *run_sfg(void * param) {
 
     double d = ratio_dis(gen);
 
-	int tmprun = 3;
+	int tmprun = 4;
     //if (d <= read_ratio) {  // get
     if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
@@ -384,12 +397,56 @@ void *run_sfg(void * param) {
       }
     } else {  // scan
 	  std::vector<std::pair<index_key_t, val_t>> results;
-	  size_t tmp_num = table->scan(op_keys[(query_i + delete_i) % op_keys.size()], 10, results, thread_id);
+	  size_t targetnum = 10;
+	  size_t tmp_num = table->scan(op_keys[(query_i + delete_i) % op_keys.size()], targetnum, results, thread_id);
 	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " num = " << tmp_num);
-	  for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
+	  /*for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 		  FDEBUG_THIS(ofs, results[val_i].first.to_string());
 		  FDEBUG_THIS(ofs, results[val_i].second);
-	  }
+	  }*/
+
+		std::vector<std::pair<index_key_t, val_t>> merge_results;
+		//std::map<index_key_t, val_t> *kvdata = listener_data;
+		std::map<index_key_t, val_t> *kvdata = backup_data; // uncomment it for thpt
+		if (kvdata != nullptr) {
+			std::map<index_key_t, val_t>::iterator kviter = kvdata->lower_bound(
+					op_keys[(query_i + delete_i) % op_keys.size()]);
+			uint32_t result_idx = 0;
+			if (kvdata->size() != 0 && results.size() != 0) {
+				for (; kviter != kvdata->end(); kviter++) {
+					if (kviter->first >= results[result_idx].first) {
+						merge_results.push_back(results[result_idx]);
+						result_idx++;
+						if (result_idx >= results.size()) {
+							break;
+						}
+					}
+					else {
+						merge_results.push_back(*kviter);
+					}
+					if (merge_results.size() == targetnum) {
+						break;
+					}
+				}
+			}
+			if (merge_results.size() < targetnum) {
+				// Only enter one loop
+				for (; result_idx < results.size(); result_idx++) {
+					merge_results.push_back(results[result_idx]);
+					if (merge_results.size() == targetnum) {
+						break;
+					}
+				}
+				for (; kviter != kvdata->end(); kviter++) {
+					merge_results.push_back(*kviter);
+					if (merge_results.size() == targetnum) {
+						break;
+					}
+				}
+			}
+		}
+
+
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;

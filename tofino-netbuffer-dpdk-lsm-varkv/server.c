@@ -91,7 +91,7 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 
 void test_merge_latency() {
 	backup_data = new std::map<index_key_t, val_t>;
-	for (size_t i = 0; i < 64*1024; i++) {
+	for (size_t i = 0; i < KV_BUCKET_COUT; i++) {
 		backup_data->insert(std::pair<index_key_t, val_t>(exist_keys[i], 1));
 	}
 }
@@ -700,13 +700,13 @@ static int run_sfg(void * param) {
 			case packet_type_t::GET_REQ: 
 				{
 					get_request_t req(buf, recv_size);
-					COUT_THIS("[server] key = " << req.key().to_string())
+					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
 					if (!tmp_stat) {
 						tmp_val = 0;
 					}
-					COUT_THIS("[server] val = " << tmp_val)
+					//COUT_THIS("[server] val = " << tmp_val)
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 
@@ -721,9 +721,9 @@ static int run_sfg(void * param) {
 			case packet_type_t::PUT_REQ:
 				{
 					put_request_t req(buf, recv_size);
-					COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val())
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
-					COUT_THIS("[server] stat = " << tmp_stat)
+					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
@@ -737,9 +737,9 @@ static int run_sfg(void * param) {
 			case packet_type_t::DEL_REQ:
 				{
 					del_request_t req(buf, recv_size);
-					COUT_THIS("[server] key = " << req.key().to_string())
+					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
-					COUT_THIS("[server] stat = " << tmp_stat)
+					//COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
@@ -753,23 +753,24 @@ static int run_sfg(void * param) {
 			case packet_type_t::SCAN_REQ:
 				{
 					// Send KV pull request to switch (should not be counted into latency)
-					sendto(sock_fd , "1", 1, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
+					// Comment it for thpt
+					//sendto(sock_fd , "1", 1, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
 
 					scan_request_t req(buf, recv_size);
-					COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
+					//COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
 					//double t00 = CUR_TIME();
 					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
 					//double t11 = CUR_TIME();
 					//COUT_THIS("Index SCAN: " << (t11 - t00) << "us")
-					COUT_THIS("[server] num = " << tmp_num)
-					for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
+					//COUT_THIS("[server] num = " << tmp_num)
+					/*for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 						COUT_VAR(results[val_i].first.to_string())
 						COUT_VAR(results[val_i].second)
-					}
+					}*/
 
 					// wait the new KV from switch (only for latency)
-					// comment it for thpt to trade consistency for perf (directly use backup_data, uncomment the later sentence)
+					// Comment it for thpt to trade consistency for perf (directly use backup_data, uncomment the later sentence)
 					//while (listener_version == old_version) {}
 
 					// Merge results with backup data
@@ -818,15 +819,12 @@ static int run_sfg(void * param) {
 
 					scan_response_t *rsp = nullptr;
 					if (kvdata != nullptr) {
-						COUT_VAR(merge_results.size());
 						rsp = new scan_response_t(req.thread_id(), req.key(), merge_results.size(), merge_results);
 					}
 					else {
-						COUT_VAR(tmp_num);
 						rsp = new scan_response_t(req.thread_id(), req.key(), tmp_num, results);
 					}
 					rsp_size = rsp->serialize(buf, MAX_BUFSIZE);
-					COUT_VAR(rsp_size);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
@@ -838,17 +836,17 @@ static int run_sfg(void * param) {
 			case packet_type_t::PUT_REQ_S:
 				{
 					put_request_s_t req(buf, recv_size);
-					COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val())
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
-					COUT_THIS("[server] stat = " << tmp_stat)
+					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
 				}
 			case packet_type_t::DEL_REQ_S:
 				{
 					del_request_s_t req(buf, recv_size);
-					COUT_THIS("[server] key = " << req.key().to_string())
+					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
-					COUT_THIS("[server] stat = " << tmp_stat)
+					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
 				}
 			default:

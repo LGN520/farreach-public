@@ -169,7 +169,15 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
 	}
 	else {
 		if (buf_frozen) {
-			assert(buffer_temp != nullptr && cbf_temp != nullptr);
+			// NOTE: We must retry since buf_frozen might be set as true intermediately
+			// assert(buffer_temp != nullptr && cbf_temp != nullptr); 
+			if (buffer_temp == nullptr || cbf_temp == nullptr) {
+				res = result_t::retry;
+				if (rwlock != nullptr) {
+					rwlock->unlock_shared();
+				}
+				return res;
+			}
 			res = update_to_lsm(key, val, buffer_temp);
 			buffer_size_temp += 1;
 			cbf_temp->update(key);

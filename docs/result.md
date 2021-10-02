@@ -12,6 +12,8 @@
 		+ 60% read - 10% insert - 10% remove - 10% update - 10% scan: `./prepare -b 0.1; ./client -a 0.6 -b 0.1 -c 0.1 -d 0.1 -e 0.1`
 - NOTES
 	+ All preliminary results are with logging, which should be disabled in real evaluation
+	+ All preliminary results are based on single thread, so the the results (op/s) actually represent latency
+	+ For throughput, we should calculate especially for NetBuffer
 
 ## Preliminary Exp of Microbench (with persistence with CBF with 16B key)
 
@@ -31,24 +33,24 @@
 		+ XIndex: 52224 op/s
 		+ NetBuffer: 55500 op/s
 	+ SCAN
-		+ XIndex: 14631 op/s
-		+ NetBuffer (merge with backup data): 17205 op/s
+		+ XIndex: 14631 (scan after del) / 32000 (only scan) op/s
+		+ NetBuffer (merge with backup data): 17205 (scan after del) / 31000 (only scan) op/s
 - Remote test
 	+ GET
-		+ XIndex:
-		+ NetBuffer:
+		+ XIndex: 31042 op/s
+		+ NetBuffer: 30549 op/s
 	+ UPDATE
-		+ XIndex:
-		+ NetBuffer:
+		+ XIndex: 29389 op/s
+		+ NetBuffer: 41149 op/s
 	+ INSERT
-		+ XIndex:
-		+ NetBuffer
+		+ XIndex: 28873 op/s
+		+ NetBuffer: 41501 op/s
 	+ DEL
-		+ XIndex:
-		+ NetBuffer
+		+ XIndex: 31031 op/s
+		+ NetBuffer: 30876 op/s (hit in server)
 	+ SCAN
-		+ XIndex:
-		+ NetBuffer (merge with backup data)
+		+ XIndex: 13157 (only scan) op/s
+		+ NetBuffer (merge with backup data): 12932 (only scan) op/s
 
 ## We must use perf-consistency trade-off for SCAN
 
