@@ -27,7 +27,8 @@
 // NOTE: we only have 64 * 4B PHV (not T-PHV), we need 1 * 4B for op_hdr.type 
 // (fields in the same ALU msut be in the same PHV group)
 // -> (64-1)/2=31 -> 31*4=124B val -> 15*8=120B val
-// 32K * (4*2B keylo + 4*2B keyhi + 120B val + 1bit valid)
+// 32K * (4*2B keylo + 4*2B keyhi + 96B val + 1bit valid)
+// NOTE: 120B/104BB -> Alignment constraint & DifferentContainer constraint
 #define KV_BUCKET_COUNT 32768
 //#define KV_BUCKET_COUNT 8
 
@@ -51,10 +52,10 @@ header val_t val9_hdr;
 header val_t val10_hdr;
 header val_t val11_hdr;
 header val_t val12_hdr;
-header val_t val13_hdr;
+/*header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
-/*header val_t val16_hdr;*/
+header val_t val16_hdr;*/
 header res_t res_hdr;
 metadata metadata_t meta;
 
@@ -195,7 +196,7 @@ action sendback_getres() {
 	modify_field(val12_hdr.vallo, meta.origin_vallo12);
 	modify_field(val12_hdr.valhi, meta.origin_valhi12);
 	add_header(val12_hdr);
-	modify_field(val13_hdr.vallo, meta.origin_vallo13);
+	/*modify_field(val13_hdr.vallo, meta.origin_vallo13);
 	modify_field(val13_hdr.valhi, meta.origin_valhi13);
 	add_header(val13_hdr);
 	modify_field(val14_hdr.vallo, meta.origin_vallo14);
@@ -204,7 +205,7 @@ action sendback_getres() {
 	modify_field(val15_hdr.vallo, meta.origin_vallo15);
 	modify_field(val15_hdr.valhi, meta.origin_valhi15);
 	add_header(val15_hdr);
-	/*modify_field(val16_hdr.vallo, meta.origin_vallo16);
+	modify_field(val16_hdr.vallo, meta.origin_vallo16);
 	modify_field(val16_hdr.valhi, meta.origin_valhi16);
 	add_header(val16_hdr);*/
 }
@@ -266,10 +267,10 @@ action update_putreq() {
 	modify_field(val12_hdr.vallo, meta.origin_vallo12);
 	modify_field(val12_hdr.valhi, meta.origin_valhi12);
 	add_header(val12_hdr);
-	modify_field(val13_hdr.vallo, meta.origin_vallo13);
+	/*modify_field(val13_hdr.vallo, meta.origin_vallo13);
 	modify_field(val13_hdr.valhi, meta.origin_valhi13);
 	add_header(val13_hdr);
-	/*modify_field(val14_hdr.vallo, meta.origin_vallo14);
+	modify_field(val14_hdr.vallo, meta.origin_vallo14);
 	modify_field(val14_hdr.valhi, meta.origin_valhi14);
 	add_header(val14_hdr);
 	modify_field(val15_hdr.vallo, meta.origin_vallo15);
@@ -404,9 +405,9 @@ control ingress {
 		apply(update_valhi11_tbl);
 		apply(update_vallo12_tbl);
 		apply(update_valhi12_tbl);
-		apply(update_vallo13_tbl);
+		/*apply(update_vallo13_tbl);
 		apply(update_valhi13_tbl);
-		/*apply(update_vallo14_tbl);
+		apply(update_vallo14_tbl);
 		apply(update_valhi14_tbl);
 		apply(update_vallo15_tbl);
 		apply(update_valhi15_tbl);
@@ -417,8 +418,8 @@ control ingress {
 			// Stage 4 (rely on val)
 			if (meta.isvalid == 1) {
 				if (meta.ismatch_keylololo == 2 and meta.ismatch_keylolohi == 2) {
-					if (meta.ismatch_keylohilo == 2 and meta.ismatch_lohihi == 2) {
-						if (meta.ismatch_keyhilolo == 2 and meta.ismatch_hilohi == 2) {
+					if (meta.ismatch_keylohilo == 2 and meta.ismatch_keylohihi == 2) {
+						if (meta.ismatch_keyhilolo == 2 and meta.ismatch_keyhilohi == 2) {
 							if (meta.ismatch_keyhihilo == 2 and meta.ismatch_keyhihihi == 2) {
 								apply(sendback_getres_tbl);
 							}
@@ -516,8 +517,8 @@ action sendback_putres() {
 	remove_header(val10_hdr);
 	remove_header(val11_hdr);
 	remove_header(val12_hdr);
-	remove_header(val13_hdr);
-	/*remove_header(val14_hdr);
+	/*remove_header(val13_hdr);
+	remove_header(val14_hdr);
 	remove_header(val15_hdr);
 	remove_header(val16_hdr);*/
 	modify_field(op_hdr.optype, PUTRES_TYPE);

@@ -52,18 +52,14 @@ table clear_valid_tbl {
 	default_action: clear_valid();
 }*/
 
-@pragma stage 3
+@pragma stage 2
 table access_valid_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 	}
 	actions {
 		get_valid;

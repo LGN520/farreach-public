@@ -11,10 +11,14 @@ header_type op_t {
 	fields {
 		optype: 8;
 		threadid: 8;
-		keylolo: 32;
-		keylohi: 32;
-		keyhilo: 32;
-		keyhihi: 32;
+		keylololo: 16;
+		keylolohi: 16;
+		keylohilo: 16;
+		keylohihi: 16;
+		keyhilolo: 16;
+		keyhilohi: 16;
+		keyhihilo: 16;
+		keyhihihi: 16;
 	}
 }
 
@@ -41,15 +45,23 @@ header_type res_t {
 header_type metadata_t {
 	fields {
 		hashidx: 16;
-		ismatch_keylolo: 4; // predicate 
-		ismatch_keylohi: 4; // predicate 
-		ismatch_keyhilo: 4; // predicate
-		ismatch_keyhihi: 4; // predicate
+		ismatch_keylololo: 4; // predicate 
+		ismatch_keylolohi: 4; // predicate 
+		ismatch_keylohilo: 4; // predicate 
+		ismatch_keylohihi: 4; // predicate 
+		ismatch_keyhilolo: 4; // predicate
+		ismatch_keyhilohi: 4; // predicate
+		ismatch_keyhihilo: 4; // predicate
+		ismatch_keyhihihi: 4; // predicate
 		isvalid: 1;
-		origin_keylolo: 32;
-		origin_keylohi: 32;
-		origin_keyhilo: 32;
-		origin_keyhihi: 32;
+		origin_keylololo: 16;
+		origin_keylolohi: 16;
+		origin_keylohilo: 16;
+		origin_keylohihi: 16;
+		origin_keyhilolo: 16;
+		origin_keyhilohi: 16;
+		origin_keyhihilo: 16;
+		origin_keyhihihi: 16;
 		origin_vallen: 8;
 		origin_vallo1: 32;
 		origin_valhi1: 32;
@@ -73,9 +85,9 @@ header_type metadata_t {
 		origin_valhi10: 32;
 		origin_vallo11: 32;
 		origin_valhi11: 32;
-		/*origin_vallo12: 32;
+		origin_vallo12: 32;
 		origin_valhi12: 32;
-		origin_vallo13: 32;
+		/*origin_vallo13: 32;
 		origin_valhi13: 32;
 		origin_vallo14: 32;
 		origin_valhi14: 32;
