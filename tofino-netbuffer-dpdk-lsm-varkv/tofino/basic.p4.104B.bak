@@ -22,11 +22,13 @@
 #define PUTREQ_S_TYPE 0x08
 #define DELREQ_S_TYPE 0x09
 
-// NOTE: we only have 8 stages for val and 64 * 32-bit PHV (not T-PHV)
-// NOTE: both val in op_hdr and metadata cost X * 32-bit PHV
-// NOTE: the 16B key in op_hdr and metadata cost 8 * 32-bit PHV
-// NOTE: fields in the same ALU must be in the same PHV group
-// 32K * (2*4B keylo + 2*4B keyhi + 124B val + 1bit valid)
+// NOTE: Here we use 4*4B keys, which occupies 1 stage
+// NOTE: we only have 8.5 stages for val (at most 34 register arrays -> 128B val)
+// NOTE: we only have 64 * 4B PHV (not T-PHV), we need 1 * 4B for op_hdr.type 
+// (fields in the same ALU msut be in the same PHV group) and 8 * 4B for keys
+// (both metadata and packet header) -> (64-9)/2=27 -> 27*4=108B val -> 13*8=104B val
+// NOTE: 32K * (2*4B keylo + 2*4B keyhi + 80B val + 1bit valid) in practice
+// NOTE: 104B/96B/88B -> Alignment constraint & DifferentContainer constraint
 #define KV_BUCKET_COUNT 32768
 //#define KV_BUCKET_COUNT 8
 
@@ -48,8 +50,8 @@ header val_t val7_hdr;
 header val_t val8_hdr;
 header val_t val9_hdr;
 header val_t val10_hdr;
-header val_t val11_hdr;
-/*header val_t val12_hdr;
+/*header val_t val11_hdr;
+header val_t val12_hdr;
 header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
@@ -184,10 +186,10 @@ action sendback_getres() {
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
 	modify_field(val10_hdr.valhi, meta.origin_valhi10);
 	add_header(val10_hdr);
-	modify_field(val11_hdr.vallo, meta.origin_vallo11);
+	/*modify_field(val11_hdr.vallo, meta.origin_vallo11);
 	modify_field(val11_hdr.valhi, meta.origin_valhi11);
 	add_header(val11_hdr);
-	/*modify_field(val12_hdr.vallo, meta.origin_vallo12);
+	modify_field(val12_hdr.vallo, meta.origin_vallo12);
 	modify_field(val12_hdr.valhi, meta.origin_valhi12);
 	add_header(val12_hdr);
 	modify_field(val13_hdr.vallo, meta.origin_vallo13);
@@ -251,10 +253,10 @@ action update_putreq() {
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
 	modify_field(val10_hdr.valhi, meta.origin_valhi10);
 	add_header(val10_hdr);
-	modify_field(val11_hdr.vallo, meta.origin_vallo11);
+	/*modify_field(val11_hdr.vallo, meta.origin_vallo11);
 	modify_field(val11_hdr.valhi, meta.origin_valhi11);
 	add_header(val11_hdr);
-	/*modify_field(val12_hdr.vallo, meta.origin_vallo12);
+	modify_field(val12_hdr.vallo, meta.origin_vallo12);
 	modify_field(val12_hdr.valhi, meta.origin_valhi12);
 	add_header(val12_hdr);
 	modify_field(val13_hdr.vallo, meta.origin_vallo13);
@@ -362,11 +364,11 @@ control ingress {
 		// Stage 2
 		// NOTE: we put valid_reg in stage 2 to support DEL operation
 		apply(access_valid_tbl); 
+		apply(update_vallen_tbl);
 
 		// Start from stage 2
 		// NOTE: we just get/put val directly; we decide whether to put the original val in getres or 
 		// putreq in control flow
-		apply(update_vallen_tbl);
 		apply(update_vallo1_tbl);
 		apply(update_valhi1_tbl);
 		apply(update_vallo2_tbl);
@@ -387,9 +389,9 @@ control ingress {
 		apply(update_valhi9_tbl);
 		apply(update_vallo10_tbl);
 		apply(update_valhi10_tbl);
-		apply(update_vallo11_tbl);
+		/*apply(update_vallo11_tbl);
 		apply(update_valhi11_tbl);
-		/*apply(update_vallo12_tbl);
+		apply(update_vallo12_tbl);
 		apply(update_valhi12_tbl);
 		apply(update_vallo13_tbl);
 		apply(update_valhi13_tbl);
@@ -479,8 +481,8 @@ action sendback_putres() {
 	remove_header(val8_hdr);
 	remove_header(val9_hdr);
 	remove_header(val10_hdr);
-	remove_header(val11_hdr);
-	/*remove_header(val12_hdr);
+	/*remove_header(val11_hdr);
+	remove_header(val12_hdr);
 	remove_header(val13_hdr);
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);

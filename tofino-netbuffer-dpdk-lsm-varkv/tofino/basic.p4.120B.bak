@@ -22,11 +22,12 @@
 #define PUTREQ_S_TYPE 0x08
 #define DELREQ_S_TYPE 0x09
 
-// NOTE: we only have 8 stages for val and 64 * 32-bit PHV (not T-PHV)
-// NOTE: both val in op_hdr and metadata cost X * 32-bit PHV
-// NOTE: the 16B key in op_hdr and metadata cost 8 * 32-bit PHV
-// NOTE: fields in the same ALU must be in the same PHV group
-// 32K * (2*4B keylo + 2*4B keyhi + 124B val + 1bit valid)
+// NOTE: Here we use 8*2B keys, which occupies 2 stages
+// NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
+// NOTE: we only have 64 * 4B PHV (not T-PHV), we need 1 * 4B for op_hdr.type 
+// (fields in the same ALU msut be in the same PHV group)
+// -> (64-1)/2=31 -> 31*4=124B val -> 15*8=120B val
+// 32K * (4*2B keylo + 4*2B keyhi + 120B val + 1bit valid)
 #define KV_BUCKET_COUNT 32768
 //#define KV_BUCKET_COUNT 8
 
@@ -49,11 +50,11 @@ header val_t val8_hdr;
 header val_t val9_hdr;
 header val_t val10_hdr;
 header val_t val11_hdr;
-/*header val_t val12_hdr;
+header val_t val12_hdr;
 header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
-header val_t val16_hdr;*/
+/*header val_t val16_hdr;*/
 header res_t res_hdr;
 metadata metadata_t meta;
 
@@ -88,10 +89,14 @@ table port_forward_tbl {
 /* Hash */
 
 field_list hash_fields {
-	op_hdr.keylolo;
-	op_hdr.keylohi;
-	op_hdr.keyhilo;
-	op_hdr.keyhihi;
+	op_hdr.keylololo;
+	op_hdr.keylolohi;
+	op_hdr.keylohilo;
+	op_hdr.keylohihi;
+	op_hdr.keyhilolo;
+	op_hdr.keyhilohi;
+	op_hdr.keyhihilo;
+	op_hdr.keyhihihi;
 }
 
 field_list_calculation hash_field_calc {
@@ -187,7 +192,7 @@ action sendback_getres() {
 	modify_field(val11_hdr.vallo, meta.origin_vallo11);
 	modify_field(val11_hdr.valhi, meta.origin_valhi11);
 	add_header(val11_hdr);
-	/*modify_field(val12_hdr.vallo, meta.origin_vallo12);
+	modify_field(val12_hdr.vallo, meta.origin_vallo12);
 	modify_field(val12_hdr.valhi, meta.origin_valhi12);
 	add_header(val12_hdr);
 	modify_field(val13_hdr.vallo, meta.origin_vallo13);
@@ -199,7 +204,7 @@ action sendback_getres() {
 	modify_field(val15_hdr.vallo, meta.origin_vallo15);
 	modify_field(val15_hdr.valhi, meta.origin_valhi15);
 	add_header(val15_hdr);
-	modify_field(val16_hdr.vallo, meta.origin_vallo16);
+	/*modify_field(val16_hdr.vallo, meta.origin_vallo16);
 	modify_field(val16_hdr.valhi, meta.origin_valhi16);
 	add_header(val16_hdr);*/
 }
@@ -215,10 +220,14 @@ table sendback_getres_tbl {
 action update_putreq() {
 	modify_field(op_hdr.optype, PUTREQ_S_TYPE);
 
-	modify_field(op_hdr.keylolo, meta.origin_keylolo);
-	modify_field(op_hdr.keylohi, meta.origin_keylohi);
-	modify_field(op_hdr.keyhilo, meta.origin_keyhilo);
-	modify_field(op_hdr.keyhihi, meta.origin_keyhihi);
+	modify_field(op_hdr.keylololo, meta.origin_keylololo);
+	modify_field(op_hdr.keylolohi, meta.origin_keylolohi);
+	modify_field(op_hdr.keylohilo, meta.origin_keylohilo);
+	modify_field(op_hdr.keylohihi, meta.origin_keylohihi);
+	modify_field(op_hdr.keyhilolo, meta.origin_keyhilolo);
+	modify_field(op_hdr.keyhilohi, meta.origin_keyhilohi);
+	modify_field(op_hdr.keyhihilo, meta.origin_keyhihilo);
+	modify_field(op_hdr.keyhihihi, meta.origin_keyhihihi);
 	modify_field(vallen_hdr.vallen, meta.origin_vallen);
 	add_header(vallen_hdr);
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
@@ -254,13 +263,13 @@ action update_putreq() {
 	modify_field(val11_hdr.vallo, meta.origin_vallo11);
 	modify_field(val11_hdr.valhi, meta.origin_valhi11);
 	add_header(val11_hdr);
-	/*modify_field(val12_hdr.vallo, meta.origin_vallo12);
+	modify_field(val12_hdr.vallo, meta.origin_vallo12);
 	modify_field(val12_hdr.valhi, meta.origin_valhi12);
 	add_header(val12_hdr);
 	modify_field(val13_hdr.vallo, meta.origin_vallo13);
 	modify_field(val13_hdr.valhi, meta.origin_valhi13);
 	add_header(val13_hdr);
-	modify_field(val14_hdr.vallo, meta.origin_vallo14);
+	/*modify_field(val14_hdr.vallo, meta.origin_vallo14);
 	modify_field(val14_hdr.valhi, meta.origin_valhi14);
 	add_header(val14_hdr);
 	modify_field(val15_hdr.vallo, meta.origin_vallo15);
@@ -352,21 +361,25 @@ control ingress {
 		apply(calculate_hash_tbl);
 		apply(save_info_tbl);
 
-		// Stage 1
+		// Stage 1 and 2
 		// Different MAT entries for getreq/putreq
-		apply(match_keylolo_tbl);
-		apply(match_keylohi_tbl);
-		apply(match_keyhilo_tbl);
-		apply(match_keyhihi_tbl);
+		apply(match_keylololo_tbl);
+		apply(match_keylolohi_tbl);
+		apply(match_keylohilo_tbl);
+		apply(match_keylohihi_tbl);
+		apply(match_keyhilolo_tbl);
+		apply(match_keyhilohi_tbl);
+		apply(match_keyhihilo_tbl);
+		apply(match_keyhihihi_tbl);
 
-		// Stage 2
+		// Stage 3
 		// NOTE: we put valid_reg in stage 2 to support DEL operation
 		apply(access_valid_tbl); 
+		apply(update_vallen_tbl);
 
-		// Start from stage 2
+		// Start from stage 3
 		// NOTE: we just get/put val directly; we decide whether to put the original val in getres or 
 		// putreq in control flow
-		apply(update_vallen_tbl);
 		apply(update_vallo1_tbl);
 		apply(update_valhi1_tbl);
 		apply(update_vallo2_tbl);
@@ -389,11 +402,11 @@ control ingress {
 		apply(update_valhi10_tbl);
 		apply(update_vallo11_tbl);
 		apply(update_valhi11_tbl);
-		/*apply(update_vallo12_tbl);
+		apply(update_vallo12_tbl);
 		apply(update_valhi12_tbl);
 		apply(update_vallo13_tbl);
 		apply(update_valhi13_tbl);
-		apply(update_vallo14_tbl);
+		/*apply(update_vallo14_tbl);
 		apply(update_valhi14_tbl);
 		apply(update_vallo15_tbl);
 		apply(update_valhi15_tbl);
@@ -403,9 +416,19 @@ control ingress {
 		if (op_hdr.optype == GETREQ_TYPE) {
 			// Stage 4 (rely on val)
 			if (meta.isvalid == 1) {
-				if (meta.ismatch_keylolo == 2 and meta.ismatch_keylohi == 2) {
-					if (meta.ismatch_keyhilo == 2 and meta.ismatch_keyhihi == 2) {
-						apply(sendback_getres_tbl);
+				if (meta.ismatch_keylololo == 2 and meta.ismatch_keylolohi == 2) {
+					if (meta.ismatch_keylohilo == 2 and meta.ismatch_lohihi == 2) {
+						if (meta.ismatch_keyhilolo == 2 and meta.ismatch_hilohi == 2) {
+							if (meta.ismatch_keyhihilo == 2 and meta.ismatch_keyhihihi == 2) {
+								apply(sendback_getres_tbl);
+							}
+							else {
+								apply(port_forward_tbl);
+							}
+						}
+						else {
+							apply(port_forward_tbl);
+						}
 					}
 					else {
 						apply(port_forward_tbl);
@@ -422,16 +445,28 @@ control ingress {
 		else if (op_hdr.optype == PUTREQ_TYPE) {
 			// Stage 4 (rely on val)
 			if (meta.isvalid == 1) { // pkt is cloned to egress and will not execute this code
-				if (meta.origin_keylolo != op_hdr.keylolo) {
+				if (meta.origin_keylololo != op_hdr.keylololo) {
 					apply(update_putreq_tbl);
 				}
-				else if (meta.origin_keylohi != op_hdr.keylohi) {
+				else if (meta.origin_keylolohi != op_hdr.keylolohi) {
 					apply(update_putreq_tbl);
 				}
-				else if (meta.origin_keyhilo != op_hdr.keyhilo) {
+				else if (meta.origin_keylohilo != op_hdr.keylohilo) {
 					apply(update_putreq_tbl);
 				}
-				else if (meta.origin_keyhihi != op_hdr.keyhihi) {
+				else if (meta.origin_keylohihi != op_hdr.keylohihi) {
+					apply(update_putreq_tbl);
+				}
+				else if (meta.origin_keyhilolo != op_hdr.keyhilolo) {
+					apply(update_putreq_tbl);
+				}
+				else if (meta.origin_keyhilohi != op_hdr.keyhilohi) {
+					apply(update_putreq_tbl);
+				}
+				else if (meta.origin_keyhihilo != op_hdr.keyhihilo) {
+					apply(update_putreq_tbl);
+				}
+				else if (meta.origin_keyhihihi != op_hdr.keyhihihi) {
 					apply(update_putreq_tbl);
 				}
 			}
@@ -480,9 +515,9 @@ action sendback_putres() {
 	remove_header(val9_hdr);
 	remove_header(val10_hdr);
 	remove_header(val11_hdr);
-	/*remove_header(val12_hdr);
+	remove_header(val12_hdr);
 	remove_header(val13_hdr);
-	remove_header(val14_hdr);
+	/*remove_header(val14_hdr);
 	remove_header(val15_hdr);
 	remove_header(val16_hdr);*/
 	modify_field(op_hdr.optype, PUTRES_TYPE);
