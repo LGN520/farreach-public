@@ -18,6 +18,12 @@
 	+ Get original valid bit and clone a packet of DEL_REQ_S to server only if the original bit is 1
 - Fix a bug of rocksdb (cannot find after put)
 	+ Reason: slice is shallow copy, we cannot give a pointer of local variable in Key::to_slice
+- Support variable-length value
+	+ Add tofino/basic.p4.120B.bak, tofino/p4src/header.p4.120B.bak, tofino/p4src/parser.p4.120B.bak, tofino/p4src/regs/key.p4.120B.bak,
+	val.p4.120B.bak, and valid.p4.120B.bak
+	+ Add val.h and val.c
+	+ Remove trigger_update and periodic_update
+	+ Add tofino/reportkv/read_register.py
 - TODO: if workload is not skewed, server will be overloaded
 
 ## How to run

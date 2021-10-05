@@ -22,6 +22,7 @@
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
 #include "key.h"
+#include "val.h"
 
 #define MQ_SIZE 256
 #define KV_BUCKET_COUT 32768
@@ -31,7 +32,7 @@
 struct alignas(CACHELINE_SIZE) SFGParam;
 
 typedef Key index_key_t;
-typedef uint64_t val_t;
+typedef Val val_t;
 typedef SFGParam sfg_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
@@ -61,6 +62,7 @@ volatile struct rte_mbuf ***pkts_list;
 uint32_t* volatile heads;
 uint32_t* volatile tails;
 
+void parse_kv(const char* recv_buf, std::map<index_key_t, val_t>* data);
 void *run_backuper(__attribute__((unused)) void *param); // backuper
 std::map<index_key_t, val_t>* volatile backup_data = nullptr;
 uint32_t* volatile backup_rcu;
@@ -92,7 +94,8 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 void test_merge_latency() {
 	backup_data = new std::map<index_key_t, val_t>;
 	for (size_t i = 0; i < KV_BUCKET_COUT; i++) {
-		backup_data->insert(std::pair<index_key_t, val_t>(exist_keys[i], 1));
+		uint64_t init_val_data[1] = {1};
+		backup_data->insert(std::pair<index_key_t, val_t>(exist_keys[i], Val(init_val_data, 1)));
 	}
 }
 
@@ -152,7 +155,8 @@ int main(int argc, char **argv) {
   memset((void *)backup_rcu, 0, fg_n * sizeof(uint32_t));
 
   // prepare xindex
-  std::vector<val_t> vals(exist_keys.size(), 1);
+  uint64_t init_val_data[1] = {1};
+  std::vector<val_t> vals(exist_keys.size(), Val(init_val_data, 1));
   xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   // register signal handler
@@ -364,6 +368,32 @@ void run_server(xindex_t *table) {
 	rte_eal_mp_wait_lcore();
 }
 
+void parse_kv(const char* recv_buf, std::map<index_key_t, val_t>* data) {
+	INVARIANT(recv_buf != nullptr && data != nullptr);
+	char *cur = recv_buf;
+	uint32_t kvnum = *(uint32_t *)cur;
+	cur += 4;
+	for (uint32_t i = 0; i < kvnum; i++) {
+#ifdef LARGE_KEY
+		index_key_t curkey(*(uint64_t*)cur, *(uint64_t*)(cur+8));
+		cur += 16;
+#else
+		index_key_t curkey(*(uint64_t*)cur);
+		cur += 8;
+#endif
+		uint8_t curvallen = *(uint8_t*)cur;
+		cur += 1;
+		INVARIANT(curvallen > 0);
+		uint64_t curval_data[curvallen];
+		for (uint8_t val_idx = 0; val_idx < curvallen; val_idx++) {
+			curval_data[val_idx] = *(uint64_t*)cur;
+			cur += 8;
+		}
+		val_t curval(curval_data, curvallen);
+		data->insert(std::pair<index_key_t, val_t>(curkey, curval));
+	}
+}
+
 static int run_receiver(void *param) {
 	while (!running)
 		;
@@ -437,7 +467,7 @@ void *run_backuper(void *param) {
 	INVARIANT(res >= 0);
 	
 	int recv_size = 0;
-	char recv_buf[KV_BUCKET_COUT * 26]; // n * 25 + 14 + 20 + 8 < n * 26
+	char recv_buf[KV_BUCKET_COUT * 114]; // n * (16+1+96) + 14 + 20 + 8 < n * 114
 	memset(recv_buf, 0, sizeof(recv_buf));
 
 	while (!running)
@@ -456,26 +486,8 @@ void *run_backuper(void *param) {
 		COUT_THIS("backuper recvsize: "<<recv_size)
 		//dump_buf(recv_buf, recv_size);
 
-		char *cur = recv_buf;
-		uint32_t kvnum = *(uint32_t *)cur;
-		cur += 4;
 		std::map<index_key_t, val_t> *new_backup_data = new std::map<index_key_t, val_t>;
-		for (uint32_t i = 0; i < kvnum; i++) {
-#ifdef LARGE_KEY
-			index_key_t curkey(*(uint64_t*)cur, *(uint64_t*)(cur+8));
-			cur += 16;
-#else
-			index_key_t curkey(*(uint64_t*)cur);
-			cur += 8;
-#endif
-			val_t curval = *(uint64_t*)cur;
-			cur += 8;
-			uint8_t curvalid = *(uint8_t*)cur;
-			cur += 1;
-			if (curvalid == 1) {
-				new_backup_data->insert(std::pair<index_key_t, val_t>(curkey, curval));
-			}
-		}
+		parse_kv(recv_buf, new_backup_data);
 
 		volatile std::map<index_key_t, val_t> *old_backup_data = backup_data;
 		backup_data = new_backup_data;
@@ -539,26 +551,8 @@ void *run_listener(void *param) {
 		//COUT_THIS("listener recvsize: "<<recv_size)
 		//dump_buf(recv_buf, recv_size);
 
-		char *cur = recv_buf;
-		uint32_t kvnum = *(uint32_t *)cur;
-		cur += 4;
 		std::map<index_key_t, val_t> *new_listener_data = new std::map<index_key_t, val_t>;
-		for (uint32_t i = 0; i < kvnum; i++) {
-#ifdef LARGE_KEY
-			index_key_t curkey(*(uint64_t*)cur, *(uint64_t*)(cur+8));
-			cur += 16;
-#else
-			index_key_t curkey(*(uint64_t*)cur);
-			cur += 8;
-#endif
-			val_t curval = *(uint64_t*)cur;
-			cur += 8;
-			uint8_t curvalid = *(uint8_t*)cur;
-			cur += 1;
-			if (curvalid == 1) {
-				new_listener_data->insert(std::pair<index_key_t, val_t>(curkey, curval));
-			}
-		}
+		parse_kv(recv_buf, new_listener_data);
 
 		volatile std::map<index_key_t, val_t> *old_listener_data = listener_data;
 		listener_data = new_listener_data;

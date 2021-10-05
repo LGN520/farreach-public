@@ -19,12 +19,13 @@
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
 #include "key.h"
+#include "val.h"
 
 struct alignas(CACHELINE_SIZE) FGParam;
 
 typedef FGParam fg_param_t;
 typedef Key index_key_t;
-typedef uint64_t val_t;
+typedef Val val_t;
 typedef GetRequest<index_key_t> get_request_t;
 typedef PutRequest<index_key_t, val_t> put_request_t;
 typedef DelRequest<index_key_t> del_request_t;
@@ -426,7 +427,8 @@ static int run_fg(void *param) {
   char buf[MAX_BUFSIZE];
   int req_size = 0;
   int recv_size = 0;
-  val_t dummy_value = 1235;
+  uint64_t dummy_value_data[1] = {1234};
+  val_t dummy_value = Val(dummy_value_data, 1);
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
   COUT_THIS("[client " << thread_id << "] Ready.");
   ready_threads++;
@@ -500,7 +502,7 @@ static int run_fg(void *param) {
 	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
 	  get_response_t rsp(buf, recv_size);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << rsp.key().to_string() << " val = " << rsp.val());
+	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
@@ -508,7 +510,7 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio) {  // update
     } else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << req.val());
+	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << req.val().to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -539,7 +541,7 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     } else if (tmprun == 2) {  // insert
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
-	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[insert_i].to_string() << " val = " << req.val());
+	  FDEBUG_THIS(ofs, "[client " << thread_id << "] key = " << op_keys[insert_i].to_string() << " val = " << req.val().to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // UDP socket
@@ -626,7 +628,7 @@ static int run_fg(void *param) {
 	  FDEBUG_THIS(ofs, "[client " << thread_id << "] num = " << rsp.num());
 	  for (uint32_t val_i = 0; val_i < rsp.num(); val_i++) {
 		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].first.to_string());
-		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].second);
+		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].second.to_string());
 	  }
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {

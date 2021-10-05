@@ -22,6 +22,7 @@
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
 #include "key.h"
+#include "val.h"
 
 #define MQ_SIZE 256
 
@@ -29,7 +30,7 @@ struct alignas(CACHELINE_SIZE) SFGParam;
 class Key;
 
 typedef Key index_key_t;
-typedef uint64_t val_t;
+typedef Val val_t;
 typedef SFGParam sfg_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
@@ -125,7 +126,8 @@ int main(int argc, char **argv) {
   }
 
   // prepare xindex
-  std::vector<val_t> vals(exist_keys.size(), 1);
+  uint64_t init_val_data[1] = {1};
+  std::vector<val_t> vals(exist_keys.size(), val_t(init_val_data, 1));
   xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   // register signal handler

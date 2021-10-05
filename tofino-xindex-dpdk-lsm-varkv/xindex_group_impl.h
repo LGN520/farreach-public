@@ -78,9 +78,7 @@ void Group<key_t, val_t, seq, max_model_n>::init(
 	// Write original data (execute at the first time)
 	/*rocksdb::WriteBatch batch;
 	for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
-		std::string valstr;
-		GET_STRING(valstr, *(vals_begin + rec_i));
-		batch.Put((*(keys_begin + rec_i)).to_slice(), valstr);
+		batch.Put((*(keys_begin + rec_i)).to_slice(), *(vals_begin + rec_i).to_slice());
 	}
 	s = data->Write(rocksdb::WriteOptions(), &batch);
 	assert(s.ok());*/
@@ -354,7 +352,7 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_lsm(
 	s = txn->Commit();
 	delete txn;
 	if (valstr != "") {
-		val = std::stoi(valstr);
+		val.from_string(valstr);
 		return s.ok();
 	}
 	else {
@@ -368,13 +366,11 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_lsm(
 	/*if (unlikely(buf_frozen && txn_db == buffer)) {
 		COUT_N_EXIT("Try to update buffer when buf is frozen!");
 	}*/
-	std::string valstr;
-	GET_STRING(valstr, val);
 	rocksdb::Status s;
 	rocksdb::WriteOptions write_options;
 	write_options.sync = SYNC_WRITE; // Write through for persistency
 	rocksdb::Transaction* txn = txn_db->BeginTransaction(write_options, rocksdb::TransactionOptions());
-	s = txn->Put(key.to_slice(), valstr);
+	s = txn->Put(key.to_slice(), val.to_slice());
 	s = txn->Commit();
 	delete txn;
 	if (s.ok()) {
@@ -421,7 +417,8 @@ inline bool Group<key_t, val_t, seq, max_model_n>::scan_from_lsm(
 		tmpkey.from_slice(tmpkey_slice);
 		//if (tmpkey.key >= end.key) break;
 		rocksdb::Slice tmpvalue_slice = iter->value();
-		val_t tmpval = std::stoi(tmpvalue_slice.ToString());
+		val_t tmpval;
+		tmpval.from_slice(tmpvalue_slice);
 		result.push_back(std::pair<key_t, val_t>(tmpkey, tmpval));
 	}
 	s = txn->Commit();

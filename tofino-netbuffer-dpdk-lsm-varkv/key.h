@@ -5,6 +5,7 @@
 #include <limits>
 #include <string>
 #include "rocksdb/slice.h"
+#include "helper.h"
 
 // Comment it for 8B small key
 #define LARGE_KEY

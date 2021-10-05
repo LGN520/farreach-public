@@ -1,26 +1,26 @@
 #include "val.h"
-#include "helper.h"
+#include <sstream>
 
 Val::Val() {
 	val_length = 0;
 	val_data = nullptr;
 }
 
-Vla::~Val() {
+Val::~Val() {
 	if (val_data != nullptr) {
 		delete val_data;
 		val_data = nullptr;
 	}
 }
 
-Val::Val(const char* buf, uint8_t length) {
+Val::Val(const uint64_t* buf, uint8_t length) {
 	INVARIANT(buf != nullptr);
 	INVARIANT(length != 0 && length <= MAX_VAL_LENGTH);
 
 	// Deep copy
-	val_data = new char[length];
+	val_data = new uint64_t[length];
 	INVARIANT(val_data != nullptr);
-	memcpy(val_data, buf, length);
+	memcpy((char *)val_data, buf, sizeof(uint64_t) * length);
 
 	val_length = length;
 }
@@ -28,9 +28,9 @@ Val::Val(const char* buf, uint8_t length) {
 Val::Val(const Val &other) {
 	if (other.val_data != nullptr && other.val_length != 0) {
 		// Deep copy
-		val_data = new char[other.val_length];
+		val_data = new uint64_t[other.val_length];
 		INVARIANT(val_data != nullptr);
-		memcpy(val_data, other.val_data, other.val_length);
+		memcpy((char *)val_data, other.val_data, sizeof(uint64_t) * other.val_length);
 
 		val_length = other.val_length;
 	}
@@ -40,12 +40,12 @@ Val::Val(const Val &other) {
 	}
 }
 
-Val& Val::operator=(const Val &other) const {
+Val& Val::operator=(const Val &other) {
 	if (other.val_data != nullptr && other.val_length != 0) {
 		// Deep copy
-		val_data = new char[other.val_length];
+		val_data = new uint64_t[other.val_length];
 		INVARIANT(val_data != nullptr);
-		memcpy(val_data, other.val_data, other.val_length);
+		memcpy((char *)val_data, other.val_data, sizeof(uint64_t) * other.val_length);
 
 		val_length = other.val_length;
 	}
@@ -57,18 +57,19 @@ Val& Val::operator=(const Val &other) const {
 }
 
 rocksdb::Slice Val::to_slice() const {
-	return rocksdb::Slice(val_data, val_length); // NOTE: slice is shallow copy
+	return rocksdb::Slice((const char*)val_data, sizeof(uint64_t) * val_length); // NOTE: slice is shallow copy
 }
 
 void Val::from_slice(rocksdb::Slice& slice) {
-	INVARIANT(slice.size_ < MAX_VAL_LENGTH);
+	INVARIANT(slice.size_ % sizeof(uint64_t) == 0);
+	INVARIANT(slice.size_ <= MAX_VAL_LENGTH * sizeof(uint64_t));
 	if (slice.data_ != nullptr && slice.size_ != 0) {
 		// Deep copy
-		val_data = new char[slice.size_];
+		val_data = new uint64_t[slice.size_/8];
 		INVARIANT(val_data != nullptr);
-		memcpy(val_data, slice.data_, slice.size_);
+		memcpy((char *)val_data, slice.data_, slice.size_);
 
-		val_length = uint8_t(slice.size_);
+		val_length = uint8_t(slice.size_/8);
 	}
 	else {
 		val_length = 0;
@@ -76,6 +77,30 @@ void Val::from_slice(rocksdb::Slice& slice) {
 	}
 }
 
-std::string Val::to_string() const {
-	return std::string(val_data, val_length);
+void Val::from_string(std::string& str) {
+	INVARIANT(str.length() % sizeof(uint64_t) == 0);
+	INVARIANT(str.length() <= MAX_VAL_LENGTH * sizeof(uint64_t));
+	if (str.data() != nullptr && str.length() != 0) {
+		// Deep copy
+		val_data = new uint64_t[str.length()/8];
+		INVARIANT(val_data != nullptr);
+		memcpy((char *)val_data, str.data(), str.length());
+
+		val_length = uint8_t(str.length()/8);
+	}
+	else {
+		val_length = 0;
+		val_data = nullptr;
+	}
+}
+
+std::string Val::to_string() const { // For print
+	std::stringstream ss;
+	for (uint8_t i = 0; i < val_length; i++) {
+		ss << val_data[i];
+		if (i != val_length-1) {
+			ss << ", ";
+		}
+	}
+	return ss.str();
 }

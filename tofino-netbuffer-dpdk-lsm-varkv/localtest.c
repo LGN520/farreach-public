@@ -17,11 +17,12 @@
 #include "xindex_util.h"
 #include "packet_format_impl.h"
 #include "key.h"
+#include "value.h"
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 
 typedef Key index_key_t;
-typedef uint64_t val_t;
+typedef Val val_t;
 typedef SFGParam sfg_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
@@ -61,7 +62,8 @@ std::map<index_key_t, val_t>* volatile backup_data = nullptr;
 void test_merge_latency() {
 	backup_data = new std::map<index_key_t, val_t>;
 	for (size_t i = 0; i < KV_BUCKET_COUT; i++) {
-		backup_data->insert(std::pair<index_key_t, val_t>(exist_keys[i], 1));
+		uint64_t init_val_data[1] = {1};
+		backup_data->insert(std::pair<index_key_t, val_t>(exist_keys[i], val_t(init_val_data, 1)));
 	}
 }
 
@@ -80,7 +82,8 @@ int main(int argc, char **argv) {
   test_merge_latency(); // DEBUG test
 
   // prepare xindex
-  std::vector<val_t> vals(exist_keys.size(), 1);
+  uint64_t init_val_data[1] = {1};
+  std::vector<val_t> vals(exist_keys.size(), val_t(init_val_data, 1));
   xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   run_server(tab_xi, runtime);
@@ -314,7 +317,8 @@ void *run_sfg(void * param) {
   }
 
   int res = 0;
-  val_t dummy_value = 1234;
+  uint64_t dummy_value_data[1] = {1234};
+  val_t dummy_value = val_t(dummy_value_data, 1);
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
   COUT_THIS("[localtest " << thread_id << "] Ready.");
 

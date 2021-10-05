@@ -5,8 +5,10 @@
 #include <limits>
 #include <string>
 #include "rocksdb/slice.h"
+#include "helper.h"
 
-#define MAX_VAL_LENGTH 96
+// MAX_VAL_LENGTH * 8B
+#define MAX_VAL_LENGTH 12
 
 class Val {
 
@@ -14,18 +16,19 @@ class Val {
 
   Val();
   ~Val();
-  Val(const char* buf, uint8_t length);
+  Val(const uint64_t* buf, uint8_t length);
   Val(const Val &other);
   Val &operator=(const Val &other);
 
   rocksdb::Slice to_slice() const; // NOTE: slice is shallow copy
 
   void from_slice(rocksdb::Slice& slice);
+  void from_string(std::string& str);
 
   std::string to_string() const; // For print
 
-  uint8_t val_length;
-  char *val_data;
+  uint8_t val_length; // val_length * 8B
+  uint64_t *val_data;
 } PACKED;
 
 #endif

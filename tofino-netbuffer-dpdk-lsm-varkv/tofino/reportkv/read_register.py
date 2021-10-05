@@ -48,7 +48,7 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 #   ex: ["1/0", "1/1"]
 #
 
-#bucket_count = 65536 # Must be the same as basic.p4
+#bucket_count = 8 # Must be the same as basic.p4
 bucket_count =32768 # Must be the same as basic.p4
 fp_ports = ["2/0", "3/0"]
 #switch_ip = "1.1.1.1" # useless
@@ -56,7 +56,8 @@ fp_ports = ["2/0", "3/0"]
 #switch_port = 1 #useless
 server_ip = "172.16.112.32"
 #server_mac = "9c:69:b4:60:ef:8d"
-server_port = 3335
+server_port = 3333
+max_val_len = 12
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -86,55 +87,74 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.devPorts.append(devPort)
 
     @staticmethod
-    def get_reg(reglist, idx):
+    def get_reg16(reglist, idx):
+        tmpreg = reglist[idx]
+        if (tmpreg < 0):
+            tmpreg += pow(2, 16)
+        return tmpreg
+
+    @staticmethod
+    def get_reg32(reglist, idx):
         tmpreg = reglist[idx]
         if (tmpreg < 0):
             tmpreg += pow(2, 32)
         return tmpreg
 
     def runTest(self):
-        t0 = time.time()
         flags = netbuffer_register_flags_t(read_hw_sync=True)
-        keylolo_list = self.client.register_range_read_keylolo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keylohi_list = self.client.register_range_read_keylohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keyhilo_list = self.client.register_range_read_keyhilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keyhihi_list = self.client.register_range_read_keyhihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        vallo_list = self.client.register_range_read_vallo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        valhi_list = self.client.register_range_read_valhi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylololo_list = self.client.register_range_read_keylololo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylolohi_list = self.client.register_range_read_keylolohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylohilo_list = self.client.register_range_read_keylohilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylohihi_list = self.client.register_range_read_keylohihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keyhilolo_list = self.client.register_range_read_keyhilolo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keyhilohi_list = self.client.register_range_read_keyhilohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keyhihilo_list = self.client.register_range_read_keyhihilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keyhihihi_list = self.client.register_range_read_keyhihihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        vallo_list_list = []
+        valhi_list_list = []
+        for i in range(max_val_len):
+            vallo_list_list.append(self.client.__dict__["register_range_read_vallo{}_reg".format(i+1)](self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
+            valhi_list_list.append(self.client.__dict__["register_range_read_valhi{}_reg".format(i+1)](self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
+        vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         valid_list = self.client.register_range_read_valid_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
-        t1 = time.time()
-        print("GET KV: {} us".format((t1 - t0)*1000000))
 
-        buf = struct.pack("I", bucket_count)
+        count = 0
+        buf = []
         for idx in range(bucket_count):
-            # TODO: the registers may be the first half of list (aka i = idx) instead of the second half
-            # NOTE: we should identify which half of our interest by the first non-empty entry
             i = idx + bucket_count # Our ports are in the 2nd pipeline
-            tmpkeylolo = RegisterUpdate.get_reg(keylolo_list, i)
-            tmpkeylohi = RegisterUpdate.get_reg(keylohi_list, i)
-            tmpkeyhilo = RegisterUpdate.get_reg(keyhilo_list, i)
-            tmpkeyhihi = RegisterUpdate.get_reg(keyhihi_list, i)
-            tmpvallo = RegisterUpdate.get_reg(vallo_list, i)
-            tmpvalhi = RegisterUpdate.get_reg(valhi_list, i)
             tmpvalid = valid_list[i]
-            tmpkeylo = (tmpkeylohi << 32) + tmpkeylolo
-            tmpkeyhi = (tmpkeyhihi << 32) + tmpkeyhilo
-            tmpval = (tmpvalhi << 32) + tmpvallo
-            #print("final key: {}, {} final val: {} valid {}".format(tmpkeylo, tmpkeyhi, tmpval, tmpvalid))
-            buf = buf + struct.pack("3QB", tmpkeylo, tmpkeyhi, tmpval, tmpvalid)
+            if tmpvalid <= 0:
+                continue
+            tmpvallen = vallen_list[i]
+            if tmpvallen <= 0:
+                continue
+            # each tmpkeyxxxxxx is 2B
+            tmpkeylololo = RegisterUpdate.get_reg16(keylololo_list, i)
+            tmpkeylolohi = RegisterUpdate.get_reg16(keylolohi_list, i)
+            tmpkeylohilo = RegisterUpdate.get_reg16(keylohilo_list, i)
+            tmpkeylohihi = RegisterUpdate.get_reg16(keylohihi_list, i)
+            tmpkeyhilolo = RegisterUpdate.get_reg16(keyhilolo_list, i)
+            tmpkeyhilohi = RegisterUpdate.get_reg16(keyhilohi_list, i)
+            tmpkeyhihilo = RegisterUpdate.get_reg16(keyhihilo_list, i)
+            tmpkeyhihihi = RegisterUpdate.get_reg16(keyhihihi_list, i)
+            tmpkeylo = (((tmpkeylohihi << 16) + tmpkeylohilo) << 32) + ((tmpkeylolohi << 16) + tmpkeylololo)
+            tmpkeyhi = (((tmpkeyhihihi << 16) + tmpkeyhihilo) << 32) + ((tmpkeyhilohi << 16) + tmpkeyhilolo)
+            buf = buf + struct.pack("2QB", tmpkeylo, tmpkeyhi, tmpvallen)
+            #print("keylo: {} keyhi: {} vallen: {}".format(tmpkeylo, tmpkeyhi, tmpvallen))
+            for val_idx in range(tmpvallen):
+                tmpvallo = RegisterUpdate.get_reg32(vallo_list_list[val_idx], i)
+                tmpvalhi = RegisterUpdate.get_reg32(valhi_list_list[val_idx], i)
+                tmpval = (tmpvalhi << 32) + tmpvallo
+                buf = buf + struct.pack("Q", tmpval)
+            count += 1
             if idx >= 1024:
                 break
-
-        t1 = time.time()
-        print("GET KV: {} us".format((t1 - t0)*1000000))
+        buf = struct.pack("I", count) + buf
 
         sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sockfd.sendto(buf, (server_ip, server_port))
-        #sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #s.connect((server_ip, server_port))
-        #s.send(buf)
 
         self.conn_mgr.client_cleanup(self.sess_hdl)
 
