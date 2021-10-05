@@ -7,23 +7,23 @@
 #include "helper.h"
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, 
-	GET_RES, PUT_RES, DEL_RES, SCAN_RES};
+	GET_RES, PUT_RES, DEL_RES, SCAN_RES, PUT_REQ_S, DEL_REQ_S};
 typedef PacketType packet_type_t;
 
 template<class key_t>
 class Packet {
 	public:
 		Packet();
-		Packet(packet_type_t type, uint32_t thread_id, key_t key);
+		Packet(packet_type_t type, uint8_t thread_id, key_t key);
 
 		packet_type_t type() const;
-		uint32_t thread_id() const;
+		uint8_t thread_id() const;
 		key_t key() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size) = 0;
 	protected:
-		packet_type_t _type;
-		uint32_t _thread_id;
+		uint8_t _type;
+		uint8_t _thread_id;
 		key_t _key;
 
 		virtual uint32_t size() = 0;
@@ -33,7 +33,7 @@ class Packet {
 template<class key_t>
 class GetRequest : public Packet<key_t> {
 	public: 
-		GetRequest(uint32_t thread_id, key_t key);
+		GetRequest(uint8_t thread_id, key_t key);
 		GetRequest(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -45,7 +45,8 @@ class GetRequest : public Packet<key_t> {
 template<class key_t, class val_t>
 class PutRequest : public Packet<key_t> {
 	public:
-		PutRequest(uint32_t thread_id, key_t key, val_t val);
+		PutRequest();
+		PutRequest(uint8_t thread_id, key_t key, val_t val);
 		PutRequest(const char * data, uint32_t recv_size);
 
 		val_t val() const;
@@ -61,7 +62,8 @@ class PutRequest : public Packet<key_t> {
 template<class key_t>
 class DelRequest : public Packet<key_t> {
 	public: 
-		DelRequest(uint32_t thread_id, key_t key);
+		DelRequest();
+		DelRequest(uint8_t thread_id, key_t key);
 		DelRequest(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -73,7 +75,7 @@ class DelRequest : public Packet<key_t> {
 template<class key_t>
 class ScanRequest : public Packet<key_t> {
 	public: 
-		ScanRequest(uint32_t thread_id, key_t key, uint32_t num);
+		ScanRequest(uint8_t thread_id, key_t key, uint32_t num);
 		ScanRequest(const char * data, uint32_t recv_size);
 
 		uint32_t num() const;
@@ -89,7 +91,7 @@ class ScanRequest : public Packet<key_t> {
 template<class key_t, class val_t>
 class GetResponse : public Packet<key_t> {
 	public:
-		GetResponse(uint32_t thread_id, key_t key, val_t val);
+		GetResponse(uint8_t thread_id, key_t key, val_t val);
 		GetResponse(const char * data, uint32_t recv_size);
 
 		val_t val() const;
@@ -105,7 +107,7 @@ class GetResponse : public Packet<key_t> {
 template<class key_t>
 class PutResponse : public Packet<key_t> {
 	public: 
-		PutResponse(uint32_t thread_id, key_t key, bool stat);
+		PutResponse(uint8_t thread_id, key_t key, bool stat);
 		PutResponse(const char * data, uint32_t recv_size);
 
 		bool stat() const;
@@ -121,7 +123,7 @@ class PutResponse : public Packet<key_t> {
 template<class key_t>
 class DelResponse : public Packet<key_t> {
 	public: 
-		DelResponse(uint32_t thread_id, key_t key, bool stat);
+		DelResponse(uint8_t thread_id, key_t key, bool stat);
 		DelResponse(const char * data, uint32_t recv_size);
 
 		bool stat() const;
@@ -137,7 +139,7 @@ class DelResponse : public Packet<key_t> {
 template<class key_t, class val_t>
 class ScanResponse : public Packet<key_t> {
 	public: 
-		ScanResponse(uint32_t thread_id, key_t key, uint32_t num, std::vector<std::pair<key_t, val_t>> pairs);
+		ScanResponse(uint8_t thread_id, key_t key, uint32_t num, std::vector<std::pair<key_t, val_t>> pairs);
 		ScanResponse(const char * data, uint32_t recv_size);
 
 		uint32_t num() const;
@@ -152,6 +154,23 @@ class ScanResponse : public Packet<key_t> {
 		std::vector<std::pair<key_t, val_t>> _pairs;
 };
 
+template<class key_t, class val_t>
+class PutRequestS : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestS(uint8_t thread_id, key_t key, val_t val);
+		PutRequestS(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t>
+class DelRequestS : public DelRequest<key_t> {
+	public:
+		DelRequestS(uint8_t thread_id, key_t key);
+		DelRequestS(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
 
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size);

@@ -71,7 +71,7 @@ std::atomic<size_t> ready_threads(0);
 
 struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
-  uint32_t thread_id;
+  uint8_t thread_id;
 };
 
 int main(int argc, char **argv) {
@@ -279,7 +279,7 @@ void run_server(xindex_t *table) {
 	}
 
 	// Launch workers
-	for (size_t worker_i = 0; worker_i < fg_n; worker_i++) {
+	for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
 		sfg_params[worker_i].table = table;
 		sfg_params[worker_i].thread_id = worker_i;
 		//int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
@@ -368,7 +368,7 @@ static int run_sfg(void * param) {
 //void *run_sfg(void * param) {
   // Parse param
   sfg_param_t &thread_param = *(sfg_param_t *)param;
-  uint32_t thread_id = thread_param.thread_id;
+  uint8_t thread_id = thread_param.thread_id;
   xindex_t *table = thread_param.table;
 
   int res = 0;
@@ -475,9 +475,6 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
-					if (!tmp_stat) {
-						tmp_val = 0;
-					}
 					//COUT_THIS("[server] val = " << tmp_val)
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);

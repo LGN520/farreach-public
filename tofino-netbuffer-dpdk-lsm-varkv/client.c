@@ -69,7 +69,7 @@ std::vector<index_key_t> non_exist_keys;
 
 struct alignas(CACHELINE_SIZE) FGParam {
   uint64_t throughput;
-  uint32_t thread_id;
+  uint8_t thread_id;
 };
 
 int main(int argc, char **argv) {
@@ -254,7 +254,7 @@ void run_benchmark(size_t sec) {
   }
 
   // Launch workers
-  for (size_t worker_i = 0; worker_i < fg_n; worker_i++) {
+  for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
     fg_params[worker_i].thread_id = worker_i;
     fg_params[worker_i].throughput = 0;
     /*int ret = pthread_create(&threads[worker_i], nullptr, run_fg,
@@ -361,7 +361,7 @@ static int run_receiver(void *param) {
 
 static int run_fg(void *param) {
   fg_param_t &thread_param = *(fg_param_t *)param;
-  uint32_t thread_id = thread_param.thread_id;
+  uint8_t thread_id = thread_param.thread_id;
 
   std::random_device rd;
   std::mt19937 gen(rd());

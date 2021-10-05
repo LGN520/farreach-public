@@ -27,9 +27,13 @@
 // NOTE: we only have 64 * 4B PHV (not T-PHV), we need 1 * 4B for op_hdr.type 
 // (fields in the same ALU msut be in the same PHV group)
 // -> (64-1)/2=31 -> 31*4=124B val -> 15*8=120B val
-// 32K * (4*2B keylo + 4*2B keyhi + 120B val + 1bit valid)
+// 32K * (4*2B keylo + 4*2B keyhi + 96B val + 1bit valid)
 #define KV_BUCKET_COUNT 32768
 //#define KV_BUCKET_COUNT 8
+
+//#define MAX_VAL_LEN 12
+#define VAL_PKTLEN 96
+#define VAL_PKTLEN_MINUS_ONE 95
 
 //#define CPU_PORT 192
 
@@ -153,6 +157,7 @@ action sendback_getres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 
@@ -502,6 +507,7 @@ action sendback_putres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_ONE);
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
@@ -537,6 +543,7 @@ action sendback_delres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	add_to_field(udp_hdr.hdrlen, 1);
 
 	modify_field(op_hdr.optype, DELRES_TYPE);
 	modify_field(res_hdr.stat, 1);

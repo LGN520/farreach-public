@@ -45,12 +45,4 @@ int get_srcport(volatile struct rte_mbuf *mbuf);
 int get_dstport(volatile struct rte_mbuf *mbuf);
 int get_payload(volatile struct rte_mbuf *mbuf, char *payload);
 
-static inline void dump_buf(char *buf, uint32_t bufsize)
-{
-	for (uint32_t byteidx = 0; byteidx < bufsize; byteidx++) {
-		printf("0x%02x ", uint8_t(buf[byteidx]));
-	}
-	printf("\n");
-}
-
 #endif
