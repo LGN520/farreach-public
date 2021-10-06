@@ -301,9 +301,9 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const 
 	udphdr->dgram_cksum = 0;
 	pktsize += sizeof(udp_hdr);*/
 
-	*(uint16_t*)data = htons(srcport);
-	*(uint16_t*)(data+2) = htons(dstport);
-	*(uint16_t*)(data+4) = htons(payload_size+6);
+	*(uint16_t*)(data+pktsize) = htons(srcport);
+	*(uint16_t*)(data+pktsize+2) = htons(dstport);
+	*(uint16_t*)(data+pktsize+4) = htons(payload_size+6);
 	pktsize += 6;
 
 	payload_begin = data + pktsize;
@@ -384,6 +384,9 @@ int get_dstport(volatile struct rte_mbuf *mbuf) {
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
+	//printf("pktsize: %d\n", mbuf->pkt_len);
+	//dump_buf(data, mbuf->pkt_len);
+
 	/*ethhdr = (struct ether_hdr *)data;
 	if (ethhdr->ether_type != 0x0008) {
 		return -1;
@@ -398,7 +401,7 @@ int get_dstport(volatile struct rte_mbuf *mbuf) {
 	return ntohs(udphdr->dst_port);*/
 
 	//return ntohs(*(uint16_t*)(data+2));
-	return ntohs(*(uint16_t*)(data+sizeof(ether_hdr) + sizeof(ipv4_hdr)+2));
+	return ntohs(*(uint16_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 2));
 }
 
 int get_srcport(volatile struct rte_mbuf *mbuf) {
@@ -436,8 +439,8 @@ int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
-	//printf("pktsize: %d\n", mbuf->pkt_len);
-	//dump_buf(data, mbuf->pkt_len);
+	printf("pktsize: %d\n", mbuf->pkt_len);
+	dump_buf(data, mbuf->pkt_len);
 
 	ethhdr = (struct ether_hdr *)data;
 	if (ethhdr->ether_type != 0x0008) {
