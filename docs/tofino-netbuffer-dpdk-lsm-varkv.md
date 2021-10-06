@@ -24,6 +24,9 @@
 	+ Add val.h and val.c
 	+ Remove trigger_update and periodic_update
 	+ Add tofino/reportkv/read_register.py
+	+ Pass localtest and remote test
+	+ NOTE: Tofino will drop all packets without Ethernet header!!!
+	+ NOTE: DPDK port will drop all packets without correct ethernet address even if enable promisc mode!!!
 - TODO: if workload is not skewed, server will be overloaded
 
 ## How to run

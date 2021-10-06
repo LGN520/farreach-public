@@ -49,6 +49,8 @@ header_type udp_t {
 	}
 }*/
 
+header ethernet_t ethernet_hdr;
+header ipv4_t ipv4_hdr;
 header udp_t udp_hdr;
 //metadata metadata_t meta;
 
