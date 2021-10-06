@@ -251,6 +251,21 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #self.client.sendback_delres_tbl_table_add_with_sendback_delres(\
             #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
+            # Table: swap_macaddr_tbl
+            print "Configuring swap_macaddr_tbl"
+            actnspec = netbuffer_swap_macaddr_action_spec_t(\
+                    macAddr_to_string(src_mac), \
+                    macAddr_to_string(dst_mac))
+            matchspec0 = netbuffer_swap_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_TYPE)
+            matchspec1 = netbuffer_swap_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES_TYPE)
+            matchspec2 = netbuffer_swap_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES_TYPE)
+            self.client.swap_macaddr_tbl_table_add_with_swap_macaddr(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec)
+            self.client.swap_macaddr_tbl_table_add_with_swap_macaddr(\
+                    self.sess_hdl, self.dev_tgt, matchspec1, actnspec)
+            self.client.swap_macaddr_tbl_table_add_with_swap_macaddr(\
+                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec)
+
             # Table: match_keylololo_tbl
             print "Configuring match_keylololo_tbl"
             matchspec0 = netbuffer_match_keylololo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
