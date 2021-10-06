@@ -178,21 +178,21 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             for i in range(len(self.devPorts)):
                 matchspec0 = netbuffer_put_port_forward_tbl_match_spec_t(
                         ig_intr_md_ingress_port = self.devPorts[i],
-                        op_hdr_op_type = PUTREQ_TYPE,
-                        meta_is_valid = 0)
+                        op_hdr_type = PUTREQ_TYPE,
+                        meta_isvalid = 0)
                 self.client.put_port_forward_tbl_table_add_with_droppkt(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             matchspec1 = netbuffer_put_port_forward_tbl_match_spec_t(
                     ig_intr_md_ingress_port = self.devPorts[0],
-                    op_hdr_op_type = PUTREQ_TYPE,
-                    meta_is_valid = 1)
+                    op_hdr_type = PUTREQ_TYPE,
+                    meta_isvalid = 1)
             actnspec1 = netbuffer_port_forward_action_spec_t(self.devPorts[1])
             self.client.put_port_forward_tbl_table_add_with_droppkt(\
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
             matchspec2 = netbuffer_put_port_forward_tbl_match_spec_t(
                     ig_intr_md_ingress_port = self.devPorts[1],
-                    op_hdr_op_type = PUTREQ_TYPE,
-                    meta_is_valid = 1)
+                    op_hdr_type = PUTREQ_TYPE,
+                    meta_isvalid = 1)
             actnspec2 = netbuffer_port_forward_action_spec_t(self.devPorts[0])
             self.client.put_port_forward_tbl_table_add_with_droppkt(\
                     self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)

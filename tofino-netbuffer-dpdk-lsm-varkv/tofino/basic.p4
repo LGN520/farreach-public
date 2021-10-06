@@ -93,8 +93,8 @@ table port_forward_tbl {
 table put_port_forward_tbl {
 	reads {
 		ig_intr_md.ingress_port: exact;
-		op_hdr.op_type: exact;
-		meta.is_valid: exact;
+		op_hdr.type: exact;
+		meta.isvalid: exact;
 	}
 	actions {
 		port_forward;

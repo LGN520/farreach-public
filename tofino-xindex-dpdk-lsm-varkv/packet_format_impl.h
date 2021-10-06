@@ -529,8 +529,8 @@ uint32_t DelRequestS<key_t>::serialize(char * const data, uint32_t max_size) {
 
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size) {
-	INVARIANT(recv_size >= sizeof(packet_type_t));
-	packet_type_t tmp;
-	memcpy((void *)&tmp, data, sizeof(packet_type_t));
-	return tmp;
+	INVARIANT(recv_size >= sizeof(uint8_t));
+	uint8_t tmp;
+	memcpy((void *)&tmp, data, sizeof(uint8_t));
+	return static_cast<packet_type_t>(tmp);
 }

@@ -475,7 +475,7 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
-					//COUT_THIS("[server] val = " << tmp_val)
+					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 
@@ -490,7 +490,7 @@ static int run_sfg(void * param) {
 			case packet_type_t::PUT_REQ:
 				{
 					put_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val())
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
@@ -528,7 +528,7 @@ static int run_sfg(void * param) {
 					/*COUT_THIS("[server] num = " << tmp_num)
 					for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 						COUT_VAR(results[val_i].first.to_string())
-						COUT_VAR(results[val_i].second)
+						COUT_VAR(results[val_i].second.to_string())
 					}*/
 					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, results);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
