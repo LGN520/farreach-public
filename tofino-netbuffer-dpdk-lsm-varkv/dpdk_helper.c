@@ -266,8 +266,8 @@ void dpdk_free() {
 }
 
 void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const char *srcip, const char *dstip, uint16_t srcport, uint16_t dstport, char *payload, uint32_t payload_size) {
-	//struct ether_hdr *ethhdr;
-	//struct ipv4_hdr *iphdr;
+	struct ether_hdr *ethhdr;
+	struct ipv4_hdr *iphdr;
 	//struct udp_hdr *udphdr;
 	char *data;
 	uint32_t pktsize = 0;
@@ -275,7 +275,7 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const 
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
-	/*ethhdr = (struct ether_hdr *)data;
+	ethhdr = (struct ether_hdr *)data;
 	rte_memcpy(ethhdr->d_addr.addr_bytes, dstmac, 6);
 	rte_memcpy(ethhdr->s_addr.addr_bytes, srcmac, 6);
 	ethhdr->ether_type = 0x0008;
@@ -294,17 +294,13 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const 
 	iphdr->dst_addr = inet_addr(dstip);
 	pktsize += sizeof(struct ipv4_hdr);
 
-	udphdr = (struct udp_hdr *)(data + pktsize);
+	/*udphdr = (struct udp_hdr *)(data + pktsize);
 	udphdr->src_port = htons(srcport);
 	udphdr->dst_port = htons(dstport);
 	udphdr->dgram_len = 0;
 	udphdr->dgram_cksum = 0;
 	pktsize += sizeof(udp_hdr);*/
 
-	/*UNUSED(srcmac);
-	UNUSED(dstmac);
-	UNUSED(srcip);
-	UNUSED(dstip);*/
 	*(uint16_t*)data = htons(srcport);
 	*(uint16_t*)(data+2) = htons(dstport);
 	*(uint16_t*)(data+4) = htons(payload_size+6);
@@ -315,9 +311,10 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const 
 	pktsize += payload_size;
 
 	//iphdr->total_length = htons(sizeof(struct ipv4_hdr) + sizeof(struct udp_hdr) + payload_size);
+	iphdr->total_length = htons(sizeof(struct ipv4_hdr) + 6 + payload_size);
 	//udphdr->dgram_len = htons(sizeof(struct udp_hdr) + payload_size);
 
-	//iphdr->hdr_checksum = checksum((uint16_t *)iphdr, sizeof(struct ipv4_hdr));
+	iphdr->hdr_checksum = checksum((uint16_t *)iphdr, sizeof(struct ipv4_hdr));
 	//udphdr->dgram_cksum = udp4_checksum(iphdr, udphdr, payload, payload_size);
 
 	//printf("pktsize: %d\n", pktsize);
@@ -328,12 +325,12 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const 
 }
 
 int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload) {
-	//struct ether_hdr *ethhdr;
-	//struct ipv4_hdr *iphdr;
+	struct ether_hdr *ethhdr;
+	struct ipv4_hdr *iphdr;
 	//struct udp_hdr *udphdr;
 	char *data;
-	//struct in_addr tmp_ipaddr;
-	//char * tmp_ipstr;
+	struct in_addr tmp_ipaddr;
+	char * tmp_ipstr;
 	uint32_t payload_size;
 	char *payload_begin;
 
@@ -342,7 +339,7 @@ int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac
 	//printf("pktsize: %d\n", mbuf->pkt_len);
 	//dump_buf(data, mbuf->pkt_len);
 
-	/*ethhdr = (struct ether_hdr *)data;
+	ethhdr = (struct ether_hdr *)data;
 	if (ethhdr->ether_type != 0x0008) {
 		return -1;
 	}
@@ -360,17 +357,21 @@ int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac
 	tmp_ipstr = inet_ntoa(tmp_ipaddr);
 	rte_memcpy(dstip, tmp_ipstr, strlen(tmp_ipstr));
 
-	udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
+	/*udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
 	*srcport = ntohs(udphdr->src_port);
 	*dstport = ntohs(udphdr->dst_port);
 	payload_size = ntohs(udphdr->dgram_len) - sizeof(udp_hdr);*/
 
-	*srcport = ntohs(*(uint16_t*)data);
-	*dstport = ntohs(*(uint16_t*)(data+2));
-	payload_size = ntohs(*(uint16_t*)(data+4)) - 6;
+	*srcport = ntohs(*(uint16_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr)));
+	*dstport = ntohs(*(uint16_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 2));
+	payload_size = ntohs(*(uint16_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 4)) - 6;
+	//*srcport = ntohs(*(uint16_t*)data);
+	//*dstport = ntohs(*(uint16_t*)(data+2));
+	//payload_size = ntohs(*(uint16_t*)(data+4)) - 6;
 
 	//payload_begin = data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + sizeof(udp_hdr);
-	payload_begin = data + 6;
+	payload_begin = data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 6;
+	//payload_begin = data + 6;
 	rte_memcpy(payload, payload_begin, payload_size);
 	return payload_size;
 }
@@ -396,7 +397,8 @@ int get_dstport(volatile struct rte_mbuf *mbuf) {
 	udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
 	return ntohs(udphdr->dst_port);*/
 
-	return ntohs(*(uint16_t*)(data+2));
+	//return ntohs(*(uint16_t*)(data+2));
+	return ntohs(*(uint16_t*)(data+sizeof(ether_hdr) + sizeof(ipv4_hdr)+2));
 }
 
 int get_srcport(volatile struct rte_mbuf *mbuf) {
@@ -420,12 +422,13 @@ int get_srcport(volatile struct rte_mbuf *mbuf) {
 	udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
 	return ntohs(udphdr->src_port);*/
 
-	return ntohs(*(uint16_t*)data);
+	//return ntohs(*(uint16_t*)data);
+	return ntohs(*(uint16_t*)(data+sizeof(ether_hdr) + sizeof(ipv4_hdr)));
 }
 
 int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
-	//struct ether_hdr *ethhdr;
-	//struct ipv4_hdr *iphdr;
+	struct ether_hdr *ethhdr;
+	struct ipv4_hdr *iphdr;
 	//struct udp_hdr *udphdr;
 	char *data;
 	uint32_t payload_size;
@@ -436,7 +439,7 @@ int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
 	//printf("pktsize: %d\n", mbuf->pkt_len);
 	//dump_buf(data, mbuf->pkt_len);
 
-	/*ethhdr = (struct ether_hdr *)data;
+	ethhdr = (struct ether_hdr *)data;
 	if (ethhdr->ether_type != 0x0008) {
 		return -1;
 	}
@@ -446,12 +449,14 @@ int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
 		return -1;
 	}
 
-	udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
+	/*udphdr = (struct udp_hdr *)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr));
 	payload_size = ntohs(udphdr->dgram_len) - sizeof(udp_hdr);*/
 
 	//payload_begin = data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + sizeof(udp_hdr);
-	payload_begin = data + 6;
-	payload_size = ntohs(*(uint16_t*)(data+4)) - 6;
+	payload_begin = data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 6;
+	payload_size = ntohs(*(uint16_t*)(data+sizeof(ether_hdr) + sizeof(ipv4_hdr)+4)) - 6;
+	//payload_begin = data + 6;
+	//payload_size = ntohs(*(uint16_t*)(data+4)) - 6;
 	rte_memcpy(payload, payload_begin, payload_size);
 	return payload_size;
 }
