@@ -32,8 +32,8 @@
 //#define KV_BUCKET_COUNT 8
 
 //#define MAX_VAL_LEN 12
-#define VAL_PKTLEN 96
-#define VAL_PKTLEN_MINUS_ONE 95
+#define VAL_PKTLEN 97
+#define VAL_PKTLEN_MINUS_ONE 96
 
 //#define CPU_PORT 192
 
