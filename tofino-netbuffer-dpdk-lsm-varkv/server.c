@@ -694,10 +694,10 @@ static int run_sfg(void * param) {
 			case packet_type_t::GET_REQ: 
 				{
 					get_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string())
+					COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
-					//COUT_THIS("[server] val = " << tmp_val)
+					COUT_THIS("[server] val = " << tmp_val.to_string())
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 
@@ -712,9 +712,9 @@ static int run_sfg(void * param) {
 			case packet_type_t::PUT_REQ:
 				{
 					put_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val())
+					COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
-					//COUT_THIS("[server] stat = " << tmp_stat)
+					COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
@@ -728,9 +728,9 @@ static int run_sfg(void * param) {
 			case packet_type_t::DEL_REQ:
 				{
 					del_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string())
+					COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
-					//COUT_THIS("[server] stat = " << tmp_stat)
+					COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
@@ -748,7 +748,7 @@ static int run_sfg(void * param) {
 					//sendto(sock_fd , "1", 1, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
 
 					scan_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
+					COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
 					//double t00 = CUR_TIME();
 					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
@@ -827,17 +827,17 @@ static int run_sfg(void * param) {
 			case packet_type_t::PUT_REQ_S:
 				{
 					put_request_s_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val())
+					COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
-					//COUT_THIS("[server] stat = " << tmp_stat)
+					COUT_THIS("[server] stat = " << tmp_stat)
 					break;
 				}
 			case packet_type_t::DEL_REQ_S:
 				{
 					del_request_s_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string())
+					COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
-					//COUT_THIS("[server] stat = " << tmp_stat)
+					COUT_THIS("[server] stat = " << tmp_stat)
 					break;
 				}
 			default:
