@@ -30,7 +30,7 @@ header udp_t udp_hdr;
 /* Parser */
 
 parser start {
-	return parse_ethernet;
+	return parse_udp;
 }
 
 parser parse_udp {
