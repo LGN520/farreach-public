@@ -31,7 +31,7 @@
 // -> (64-1)/2=31 -> 31*4=124B val -> 15*8=120B val
 // 32K * (4*2B keylo + 4*2B keyhi + 96B val + 1bit valid)
 #define KV_BUCKET_COUNT 32768
-//#define KV_BUCKET_COUNT 8
+//#define KV_BUCKET_COUNT 1
 
 //#define MAX_VAL_LEN 12
 #define VAL_PKTLEN 97

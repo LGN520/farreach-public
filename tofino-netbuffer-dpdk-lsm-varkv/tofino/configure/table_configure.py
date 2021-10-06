@@ -60,6 +60,8 @@ GETRES_TYPE = 0x04
 PUTRES_TYPE = 0x05
 DELRES_TYPE = 0x06
 SCANRES_TYPE = 0x07
+PUTREQ_S_TYPE = 0x08
+DELREQ_S_TYPE = 0x09
 
 if test_param_get("arch") == "tofino":
   MIR_SESS_COUNT = 1024
@@ -182,6 +184,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         meta_isvalid = 0)
                 self.client.put_port_forward_tbl_table_add_with_droppkt(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = netbuffer_put_port_forward_tbl_match_spec_t(
+                        ig_intr_md_ingress_port = self.devPorts[i],
+                        op_hdr_optype = PUTREQ_S_TYPE,
+                        meta_isvalid = 0)
+                self.client.put_port_forward_tbl_table_add_with_droppkt(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec1 = netbuffer_put_port_forward_tbl_match_spec_t(
                     ig_intr_md_ingress_port = self.devPorts[0],
                     op_hdr_optype = PUTREQ_TYPE,
@@ -192,6 +200,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec2 = netbuffer_put_port_forward_tbl_match_spec_t(
                     ig_intr_md_ingress_port = self.devPorts[1],
                     op_hdr_optype = PUTREQ_TYPE,
+                    meta_isvalid = 1)
+            actnspec2 = netbuffer_port_forward_action_spec_t(self.devPorts[0])
+            self.client.put_port_forward_tbl_table_add_with_port_forward(\
+                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
+            matchspec1 = netbuffer_put_port_forward_tbl_match_spec_t(
+                    ig_intr_md_ingress_port = self.devPorts[0],
+                    op_hdr_optype = PUTREQ_S_TYPE,
+                    meta_isvalid = 1)
+            actnspec1 = netbuffer_port_forward_action_spec_t(self.devPorts[1])
+            self.client.put_port_forward_tbl_table_add_with_port_forward(\
+                    self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
+            matchspec2 = netbuffer_put_port_forward_tbl_match_spec_t(
+                    ig_intr_md_ingress_port = self.devPorts[1],
+                    op_hdr_optype = PUTREQ_S_TYPE,
                     meta_isvalid = 1)
             actnspec2 = netbuffer_port_forward_action_spec_t(self.devPorts[0])
             self.client.put_port_forward_tbl_table_add_with_port_forward(\
