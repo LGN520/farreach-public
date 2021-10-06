@@ -90,6 +90,21 @@ table port_forward_tbl {
 	size: 4;  
 }
 
+table put_port_forward_tbl {
+	reads {
+		ig_intr_md.ingress_port: exact;
+		op_hdr.op_type: exact;
+		meta.is_valid: exact;
+	}
+	actions {
+		port_forward;
+		droppkt;
+		nop;
+	}
+	default_action: nop();
+	size: 8;  
+}
+
 /* Hash */
 
 field_list hash_fields {
@@ -476,8 +491,8 @@ control ingress {
 				}
 			}
 
-			apply(clone_putpkt_tbl);
-			apply(port_forward_tbl);
+			apply(clone_putpkt_tbl); // sendback PUTRES
+			apply(put_port_forward_tbl); // Only PUTREQ and meta.isvalid = 1, port_forward; if PUTREQ and meta.isvalid = 0, drop
 		}
 		else if (op_hdr.optype == DELREQ_TYPE) {
 			// Stage 3
