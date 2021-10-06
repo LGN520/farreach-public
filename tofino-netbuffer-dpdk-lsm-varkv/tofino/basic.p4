@@ -42,6 +42,8 @@
 // headers
 #include "p4src/header.p4"
 
+header ethernet_t ethernet_hdr;
+header ipv4_t ipv4_hdr;
 header udp_t udp_hdr;
 header op_t op_hdr;
 header vallen_t vallen_hdr;
@@ -92,7 +94,7 @@ table port_forward_tbl {
 	size: 4;  
 }
 
-table put_port_forward_tbl {
+/*table put_port_forward_tbl {
 	reads {
 		ig_intr_md.ingress_port: exact;
 		op_hdr.optype: exact;
@@ -104,8 +106,8 @@ table put_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 8;  
-}
+	size: 16;  
+}*/
 
 /* Hash */
 
@@ -494,7 +496,9 @@ control ingress {
 			}
 
 			apply(clone_putpkt_tbl); // sendback PUTRES
-			apply(put_port_forward_tbl); // Only PUTREQ and meta.isvalid = 1, port_forward; if PUTREQ and meta.isvalid = 0, drop
+			// NOTE: drop normal packet in ingress will not generate the cloned packet further
+			// Only PUTREQ_S (aka meta.isvalid = 1 for PUT), port_forward; if PUTREQ (aka meta.isvalid = 0), drop
+			//apply(put_port_forward_tbl); 
 		}
 		else if (op_hdr.optype == DELREQ_TYPE) {
 			// Stage 3
@@ -575,6 +579,18 @@ table sendback_delres_tbl {
 	size: 1;
 }
 
+table drop_put_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		droppkt;
+		nop;
+	}
+	default_action: nop();
+	size: 4;
+}
+
 control egress {
 	// NOTE: make sure that normal packet will not apply these tables
 	if (pkt_is_i2e_mirrored) {
@@ -584,5 +600,8 @@ control egress {
 		else if (meta.is_clone == 2) {
 			apply(sendback_delres_tbl); // input is DELREQ or DELREQ_S
 		}
+	}
+	else {
+		apply(drop_put_tbl); // Drop PUTREQ (aka valid = 0 for PUT)
 	}
 }

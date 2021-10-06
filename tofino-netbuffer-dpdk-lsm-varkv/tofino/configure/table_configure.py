@@ -176,48 +176,53 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
 
             # Table: put_port_forward_tbl
-            print "Configuring put_port_forward_tbl"
-            for i in range(len(self.devPorts)):
-                matchspec0 = netbuffer_put_port_forward_tbl_match_spec_t(
-                        ig_intr_md_ingress_port = self.devPorts[i],
-                        op_hdr_optype = PUTREQ_TYPE,
-                        meta_isvalid = 0)
-                self.client.put_port_forward_tbl_table_add_with_droppkt(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-                matchspec0 = netbuffer_put_port_forward_tbl_match_spec_t(
-                        ig_intr_md_ingress_port = self.devPorts[i],
-                        op_hdr_optype = PUTREQ_S_TYPE,
-                        meta_isvalid = 0)
-                self.client.put_port_forward_tbl_table_add_with_droppkt(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_put_port_forward_tbl_match_spec_t(
-                    ig_intr_md_ingress_port = self.devPorts[0],
-                    op_hdr_optype = PUTREQ_TYPE,
-                    meta_isvalid = 1)
-            actnspec1 = netbuffer_port_forward_action_spec_t(self.devPorts[1])
-            self.client.put_port_forward_tbl_table_add_with_port_forward(\
-                    self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
-            matchspec2 = netbuffer_put_port_forward_tbl_match_spec_t(
-                    ig_intr_md_ingress_port = self.devPorts[1],
-                    op_hdr_optype = PUTREQ_TYPE,
-                    meta_isvalid = 1)
-            actnspec2 = netbuffer_port_forward_action_spec_t(self.devPorts[0])
-            self.client.put_port_forward_tbl_table_add_with_port_forward(\
-                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
-            matchspec1 = netbuffer_put_port_forward_tbl_match_spec_t(
-                    ig_intr_md_ingress_port = self.devPorts[0],
-                    op_hdr_optype = PUTREQ_S_TYPE,
-                    meta_isvalid = 1)
-            actnspec1 = netbuffer_port_forward_action_spec_t(self.devPorts[1])
-            self.client.put_port_forward_tbl_table_add_with_port_forward(\
-                    self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
-            matchspec2 = netbuffer_put_port_forward_tbl_match_spec_t(
-                    ig_intr_md_ingress_port = self.devPorts[1],
-                    op_hdr_optype = PUTREQ_S_TYPE,
-                    meta_isvalid = 1)
-            actnspec2 = netbuffer_port_forward_action_spec_t(self.devPorts[0])
-            self.client.put_port_forward_tbl_table_add_with_port_forward(\
-                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
+            #print "Configuring put_port_forward_tbl"
+            #for i in range(len(self.devPorts)):
+            #    matchspec0 = netbuffer_put_port_forward_tbl_match_spec_t(
+            #            ig_intr_md_ingress_port = self.devPorts[i],
+            #            op_hdr_optype = PUTREQ_TYPE,
+            #            meta_isvalid = 0)
+            #    self.client.put_port_forward_tbl_table_add_with_droppkt(\
+            #            self.sess_hdl, self.dev_tgt, matchspec0)
+            #    matchspec0 = netbuffer_put_port_forward_tbl_match_spec_t(
+            #            ig_intr_md_ingress_port = self.devPorts[i],
+            #            op_hdr_optype = PUTREQ_S_TYPE,
+            #            meta_isvalid = 0)
+            #    self.client.put_port_forward_tbl_table_add_with_droppkt(\
+            #            self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_put_port_forward_tbl_match_spec_t(
+            #        ig_intr_md_ingress_port = self.devPorts[0],
+            #        op_hdr_optype = PUTREQ_TYPE,
+            #        meta_isvalid = 1)
+            #actnspec1 = netbuffer_port_forward_action_spec_t(self.devPorts[1])
+            #self.client.put_port_forward_tbl_table_add_with_port_forward(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
+            #matchspec2 = netbuffer_put_port_forward_tbl_match_spec_t(
+            #        ig_intr_md_ingress_port = self.devPorts[1],
+            #        op_hdr_optype = PUTREQ_TYPE,
+            #        meta_isvalid = 1)
+            #actnspec2 = netbuffer_port_forward_action_spec_t(self.devPorts[0])
+            #self.client.put_port_forward_tbl_table_add_with_port_forward(\
+            #        self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
+            #matchspec1 = netbuffer_put_port_forward_tbl_match_spec_t(
+            #        ig_intr_md_ingress_port = self.devPorts[0],
+            #        op_hdr_optype = PUTREQ_S_TYPE,
+            #        meta_isvalid = 1)
+            #actnspec1 = netbuffer_port_forward_action_spec_t(self.devPorts[1])
+            #self.client.put_port_forward_tbl_table_add_with_port_forward(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
+            #matchspec2 = netbuffer_put_port_forward_tbl_match_spec_t(
+            #        ig_intr_md_ingress_port = self.devPorts[1],
+            #        op_hdr_optype = PUTREQ_S_TYPE,
+            #        meta_isvalid = 1)
+            #actnspec2 = netbuffer_port_forward_action_spec_t(self.devPorts[0])
+            #self.client.put_port_forward_tbl_table_add_with_port_forward(\
+            #        self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
+
+            # Table: drop_put_tbl
+            print "Configuring drop_put_tbl"
+            matchspec0 = netbuffer_drop_put_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE)
+            self.client.drop_put_tbl_table_add_with_droppkt(self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: sendback_getres_tbl
             #print "Configuring sendback_getres_tbl"

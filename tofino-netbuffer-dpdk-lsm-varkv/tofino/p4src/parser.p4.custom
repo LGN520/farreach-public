@@ -1,24 +1,7 @@
 /* Parser */
 
 parser start {
-	return parse_ethernet;
-}
-
-parser parse_ethernet {
-	extract(ethernet_hdr);
-	return select(ethernet_hdr.etherType) {
-		ETHERTYPE_IPV4: parse_ipv4;
-		default: ingress;
-	}
-}
-
-parser parse_ipv4 {
-	extract(ipv4_hdr);
-	return select(ipv4_hdr.protocol) {
-		PROTOTYPE_UDP: parse_udp;
-		//PROTOTYPE_NETBUFFER: parse_op;
-		default: ingress;
-	}
+	return parse_udp;
 }
 
 parser parse_udp {

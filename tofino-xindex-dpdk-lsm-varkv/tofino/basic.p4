@@ -10,6 +10,31 @@
 
 /* Packet Header Types */
 
+header_type ethernet_t {
+	fields {
+		dstAddr: 48;
+		srcAddr: 48;
+		etherType: 16;
+	}
+}
+
+header_type ipv4_t {
+	fields {
+		version: 4;
+		ihl: 4;
+		diffserv: 8;
+		totalLen: 16;
+		identification: 16;
+		flags: 3;
+		fragOffset: 13;
+		ttl: 8;
+		protocol: 8;
+		hdrChecksum: 16;
+		srcAddr: 32;
+		dstAddr: 32;
+	}
+}
+
 header_type udp_t {
 	fields {
 		srcPort: 16;
@@ -30,7 +55,24 @@ header udp_t udp_hdr;
 /* Parser */
 
 parser start {
-	return parse_udp;
+	return parse_ethernet;
+}
+
+parser parse_ethernet {
+	extract(ethernet_hdr);
+	return select(ethernet_hdr.etherType) {
+		ETHERTYPE_IPV4: parse_ipv4;
+		default: ingress;
+	}
+}
+
+parser parse_ipv4 {
+	extract(ipv4_hdr);
+	return select(ipv4_hdr.protocol) {
+		PROTOTYPE_UDP: parse_udp;
+		//PROTOTYPE_NETBUFFER: parse_op;
+		default: ingress;
+	}
 }
 
 parser parse_udp {
