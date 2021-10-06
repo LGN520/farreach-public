@@ -448,7 +448,7 @@ int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
 
 	//payload_begin = data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + sizeof(udp_hdr);
 	payload_begin = data + 6;
-	payload_size = *(uint16_t*)(data+4) - 6;
+	payload_size = ntohs(*(uint16_t*)(data+4)) - 6;
 	rte_memcpy(payload, payload_begin, payload_size);
 	return payload_size;
 }
