@@ -472,10 +472,10 @@ static int run_sfg(void * param) {
 			case packet_type_t::GET_REQ: 
 				{
 					get_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string())
+					COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
-					//COUT_THIS("[server] val = " << tmp_val.to_string())
+					COUT_THIS("[server] val = " << tmp_val.to_string())
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 
@@ -490,9 +490,9 @@ static int run_sfg(void * param) {
 			case packet_type_t::PUT_REQ:
 				{
 					put_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+					COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
-					//COUT_THIS("[server] stat = " << tmp_stat)
+					COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
@@ -506,9 +506,9 @@ static int run_sfg(void * param) {
 			case packet_type_t::DEL_REQ:
 				{
 					del_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string())
+					COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
-					//COUT_THIS("[server] stat = " << tmp_stat)
+					COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
@@ -522,14 +522,14 @@ static int run_sfg(void * param) {
 			case packet_type_t::SCAN_REQ:
 				{
 					scan_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
+					COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
 					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
-					/*COUT_THIS("[server] num = " << tmp_num)
+					COUT_THIS("[server] num = " << tmp_num)
 					for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 						COUT_VAR(results[val_i].first.to_string())
 						COUT_VAR(results[val_i].second.to_string())
-					}*/
+					}
 					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, results);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
@@ -547,6 +547,7 @@ static int run_sfg(void * param) {
 					exit(-1);
 				}
 		}
+		break;
 
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;

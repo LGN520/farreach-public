@@ -349,7 +349,7 @@ void *run_sfg(void * param) {
 
     double d = ratio_dis(gen);
 
-	int tmprun = 2;
+	int tmprun = 4;
     //if (d <= read_ratio) {  // get
     if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
@@ -451,7 +451,6 @@ void *run_sfg(void * param) {
     	}
     } // END of SCAN
     thread_param.throughput++;
-	break;
   } // END of loop
 
   pthread_exit(nullptr);
