@@ -30,8 +30,8 @@
 // (fields in the same ALU msut be in the same PHV group)
 // -> (64-1)/2=31 -> 31*4=124B val -> 15*8=120B val
 // 32K * (4*2B keylo + 4*2B keyhi + 96B val + 1bit valid)
-#define KV_BUCKET_COUNT 32768
-//#define KV_BUCKET_COUNT 1
+//#define KV_BUCKET_COUNT 32768
+#define KV_BUCKET_COUNT 1
 
 //#define MAX_VAL_LEN 12
 #define VAL_PKTLEN 97
@@ -591,6 +591,23 @@ table drop_put_tbl {
 	size: 4;
 }
 
+action swap_macaddr(tmp_srcmac, tmp_dstmac) {
+	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
+	modify_field(ethernet_hdr.srcAddr, tmp_dstmac);
+}
+
+table swap_macaddr_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		swap_macaddr;
+		nop;
+	}
+	default_action: nop();
+	size: 4;
+}
+
 control egress {
 	// NOTE: make sure that normal packet will not apply these tables
 	if (pkt_is_i2e_mirrored) {
@@ -604,4 +621,5 @@ control egress {
 	else {
 		apply(drop_put_tbl); // Drop PUTREQ (aka valid = 0 for PUT)
 	}
+	apply(swap_macaddr_tbl); // Swap mac addr for res
 }

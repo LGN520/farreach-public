@@ -1,6 +1,6 @@
 /* Packet Header Types */
 
-// PUT ethernet and ipv4 in T-PHV
+// PUT ipv4 in T-PHV
 
 header_type ethernet_t {
 	fields {
