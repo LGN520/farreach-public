@@ -42,6 +42,8 @@
 // headers
 #include "p4src/header.p4"
 
+header ethernet_t ethernet_hdr;
+header ipv4_t ipv4_hdr;
 header udp_t udp_hdr;
 header op_t op_hdr;
 header vallen_t vallen_hdr;
