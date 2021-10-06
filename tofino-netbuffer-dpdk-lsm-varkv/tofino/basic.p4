@@ -1,5 +1,7 @@
+#include "tofino/constants.p4"
 #include "tofino/intrinsic_metadata.p4"
 #include "tofino/stateful_alu_blackbox.p4"
+#include "tofino/primitives.p4"
 
 #define ETHERTYPE_IPV4 0x0800
 #define ETHERTYPE_VLAN 0x8100
@@ -497,8 +499,8 @@ control ingress {
 		else if (op_hdr.optype == DELREQ_TYPE) {
 			// Stage 3
 			if (meta.isvalid == 1) { // Only if key matches and original valid bit is 1, meta.isvalid is 1
-				apply(update_delreq_tbl);
 				apply(clone_delpkt_tbl);
+				apply(update_delreq_tbl);
 			}
 			apply(port_forward_tbl);
 		}
@@ -574,10 +576,13 @@ table sendback_delres_tbl {
 }
 
 control egress {
-	if (meta.is_clone == 1) {
-		apply(sendback_putres_tbl);
-	}
-	else if (meta.is_clone == 2) {
-		apply(sendback_delres_tbl);
+	// NOTE: make sure that normal packet will not apply these tables
+	if (pkt_is_i2e_mirrored) {
+		if (meta.is_clone == 1) {
+			apply(sendback_putres_tbl); // input is PUTREQ or PUTREQ_S
+		}
+		else if (meta.is_clone == 2) {
+			apply(sendback_delres_tbl); // input is DELREQ or DELREQ_S
+		}
 	}
 }

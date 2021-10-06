@@ -415,7 +415,7 @@ static int run_receiver(void *param) {
 				uint16_t received_port = (uint16_t)ret;
 				int idx = received_port - dst_port_start;
 				if (idx < 0 || unsigned(idx) >= fg_n) {
-					COUT_THIS("Invalid dst port received by server: %u" << received_port)
+					COUT_THIS("Invalid dst port received by server: " << received_port)
 					continue;
 				}
 				else {
