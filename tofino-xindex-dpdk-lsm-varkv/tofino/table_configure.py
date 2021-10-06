@@ -92,8 +92,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #macaddr = macAddr_to_string("00:11:11:11:11:11")
             matchspec0 = xindex_port_forward_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[1])
             actnspec0 = xindex_port_forward_action_spec_t(self.devPorts[0])
-            matchspec0 = xindex_port_forward_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
-            actnspec0 = xindex_port_forward_action_spec_t(self.devPorts[1])
+            matchspec1 = xindex_port_forward_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
+            actnspec1 = xindex_port_forward_action_spec_t(self.devPorts[1])
 
             # program match and action spec entries
             print "Populating table entries"
