@@ -547,7 +547,6 @@ static int run_sfg(void * param) {
 					exit(-1);
 				}
 		}
-		break;
 
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;
