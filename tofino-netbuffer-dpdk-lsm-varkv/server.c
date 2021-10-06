@@ -870,7 +870,7 @@ static int run_sfg(void * param) {
   }
 
   //close(sockfd);
-  COUT_THIS("[thread" << thread_id << "] exits")
+  COUT_THIS("[thread" << uint32_t(thread_id) << "] exits")
   //pthread_exit(nullptr);
   return 0;
 }

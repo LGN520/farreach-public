@@ -90,16 +90,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # create data structures
             # match on ipaddr and set output to self.devPorts[1]
             #macaddr = macAddr_to_string("00:11:11:11:11:11")
-            matchspec0 = xindex_port_forward_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[1])
-            actnspec0 = xindex_port_forward_tbl_action_spec_t(self.devPorts[0])
-            matchspec0 = xindex_port_forward_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
-            actnspec0 = xindex_port_forward_tbl_action_spec_t(self.devPorts[1])
+            ipv4addr0 = ipv4Addr_to_i32(src_ip)
+            matchspec0 = xindex_ipv4_lpm_match_spec_t(ipv4_hdr_dstAddr=ipv4addr0, ipv4_hdr_dstAddr_prefix_length=32)
+            actnspec0 = xindex_ipv4_forward_action_spec_t(self.devPorts[0])
+            ipv4addr1 = ipv4Addr_to_i32(dst_ip)
+            matchspec1 = xindex_ipv4_lpm_match_spec_t(ipv4_hdr_dstAddr=ipv4addr1, ipv4_hdr_dstAddr_prefix_length=32)
+            actnspec1 = xindex_ipv4_forward_action_spec_t(self.devPorts[1])
 
             # program match and action spec entries
             print "Populating table entries"
-            result0 = self.client.port_forward_tbl_table_add_with_port_forward(\
+            result0 = self.client.ipv4_lpm_table_add_with_ipv4_forward(\
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            result0 = self.client.port_forward_tbl_table_add_with_port_forward(\
+            result1 = self.client.ipv4_lpm_table_add_with_ipv4_forward(\
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
 
             self.conn_mgr.complete_operations(self.sess_hdl)

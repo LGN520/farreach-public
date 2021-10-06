@@ -78,10 +78,15 @@ void Group<key_t, val_t, seq, max_model_n>::init(
 	// Write original data (execute at the first time)
 	/*rocksdb::WriteBatch batch;
 	for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
-		batch.Put((*(keys_begin + rec_i)).to_slice(), *(vals_begin + rec_i).to_slice());
+		batch.Put((*(keys_begin + rec_i)).to_slice(), (*(vals_begin + rec_i)).to_slice());
 	}
 	s = data->Write(rocksdb::WriteOptions(), &batch);
-	assert(s.ok());*/
+	COUT_VAR((*keys_begin).to_string());
+	COUT_VAR((*vals_begin).to_string());
+	val_t old_val;
+	COUT_VAR(get_from_lsm(*keys_begin, old_val, data));
+	COUT_VAR(old_val.to_string());*/
+	assert(s.ok());
 
 	// RocksDB will train model_n linear models for each new sstable 
 }

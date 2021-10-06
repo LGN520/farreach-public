@@ -243,10 +243,10 @@ void run_server(xindex_t *table, size_t sec) {
 	}
 
 	// Launch workers
-	for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
+	for (size_t worker_i = 0; worker_i < fg_n; worker_i++) {
 		sfg_params[worker_i].table = table;
     	sfg_params[worker_i].throughput = 0;
-		sfg_params[worker_i].thread_id = worker_i;
+		sfg_params[worker_i].thread_id = static_cast<uint8_t>(worker_i);
 		int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error:" << ret);
@@ -317,16 +317,16 @@ void *run_sfg(void * param) {
   }
 
   int res = 0;
-  uint64_t dummy_value_data[1] = {1234};
-  val_t dummy_value = val_t(dummy_value_data, 1);
+  uint64_t dummy_value_data[2] = {1234, 5678};
+  val_t dummy_value = val_t(dummy_value_data, 2);
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
-  COUT_THIS("[localtest " << thread_id << "] Ready.");
+  COUT_THIS("[localtest " << uint32_t(thread_id) << "] Ready.");
 
   ready_threads++;
 
 #if !defined(NDEBUGGING_LOG)
   std::string logname;
-  GET_STRING(logname, "tmp_localtest"<<thread_id<<".out");
+  GET_STRING(logname, "tmp_localtest"<< uint32_t(thread_id)<<".out");
   std::ofstream ofs(logname, std::ofstream::out);
 #endif
 
@@ -349,22 +349,22 @@ void *run_sfg(void * param) {
 
     double d = ratio_dis(gen);
 
-	int tmprun = 4;
+	int tmprun = 2;
     //if (d <= read_ratio) {  // get
     if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
 	  Key tmp_key;
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << tmp_key.to_string());
+	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << tmp_key.to_string());
 	  bool tmp_stat = table->get(tmp_key, tmp_val, thread_id);
 	  if (!tmp_stat) {
 		tmp_val = 0;
 	  }
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << tmp_key.to_string() << " val = " << tmp_val);*/
+	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << tmp_key.to_string() << " val = " << tmp_val);*/
 
 	  val_t tmp_val;
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string());
+	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string());
 	  bool tmp_stat = table->get(op_keys[(query_i + delete_i) % op_keys.size()], tmp_val, thread_id);
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " val = " << tmp_val.to_string());
+	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " val = " << tmp_val.to_string());
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
@@ -372,7 +372,7 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio) {  // update
     } else if (tmprun == 1) {  // update
 	  bool tmp_stat = table->put(op_keys[(update_i + delete_i) % op_keys.size()], dummy_value, thread_id);
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << dummy_value.to_string()
+	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << dummy_value.to_string()
 			  << " stat = " << tmp_stat);
       update_i++;
       if (unlikely(update_i == op_keys.size() / 2)) {
@@ -381,7 +381,7 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     } else if (tmprun == 2) {  // insert
 	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value.to_string()
+	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value.to_string()
 			  << " stat = " << tmp_stat);
       insert_i++;
       if (unlikely(insert_i == op_keys.size())) {
@@ -390,8 +390,7 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
     } else if (tmprun == 3) {  // remove
 	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id);
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[delete_i].to_string() << " val = " << dummy_value.to_string()
-			  << " stat = " << tmp_stat);
+	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[delete_i].to_string() << " stat = " << tmp_stat);
       delete_i++;
       if (unlikely(delete_i == op_keys.size())) {
         delete_i = 0;
@@ -400,11 +399,11 @@ void *run_sfg(void * param) {
 	  std::vector<std::pair<index_key_t, val_t>> results;
 	  size_t targetnum = 10;
 	  size_t tmp_num = table->scan(op_keys[(query_i + delete_i) % op_keys.size()], targetnum, results, thread_id);
-	  FDEBUG_THIS(ofs, "[localtest " << thread_id << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " num = " << tmp_num);
-	  /*for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
+	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " num = " << tmp_num);
+	  for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 		  FDEBUG_THIS(ofs, results[val_i].first.to_string());
-		  FDEBUG_THIS(ofs, results[val_i].second);
-	  }*/
+		  FDEBUG_THIS(ofs, results[val_i].second.to_string());
+	  }
 
 		std::vector<std::pair<index_key_t, val_t>> merge_results;
 		//std::map<index_key_t, val_t> *kvdata = listener_data;
@@ -446,15 +445,14 @@ void *run_sfg(void * param) {
 				}
 			}
 		}
-
-
-      query_i++;
-      if (unlikely(query_i == op_keys.size() / 2)) {
-        query_i = 0;
-      }
-    }
+    	query_i++;
+    	if (unlikely(query_i == op_keys.size() / 2)) {
+    		query_i = 0;
+    	}
+    } // END of SCAN
     thread_param.throughput++;
-  }
+	break;
+  } // END of loop
 
   pthread_exit(nullptr);
 #if !defined(NDEBUGGING_LOG)
