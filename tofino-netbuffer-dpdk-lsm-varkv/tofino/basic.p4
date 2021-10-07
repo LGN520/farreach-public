@@ -94,19 +94,22 @@ table port_forward_tbl {
 	size: 4;  
 }
 
-/*table put_port_forward_tbl {
+/*action ig_drop_unicast() {
+	modify_field(ig_intr_md_for_tm.drop_ctl, 1); // Disable unicast, but enable mirroring
+}
+
+table put_port_forward_tbl {
 	reads {
 		ig_intr_md.ingress_port: exact;
 		op_hdr.optype: exact;
-		meta.isvalid: exact;
 	}
 	actions {
 		port_forward;
-		droppkt;
+		ig_drop_unicast;
 		nop;
 	}
 	default_action: nop();
-	size: 16;  
+	size: 8;  
 }*/
 
 /* Hash */
@@ -496,9 +499,11 @@ control ingress {
 			}
 
 			apply(clone_putpkt_tbl); // sendback PUTRES
-			// NOTE: drop normal packet in ingress will not generate the cloned packet further
+			// NOTE: drop normal packet in ingress will not generate the cloned packet further (we need to set drop_ctl)
 			// Only PUTREQ_S (aka meta.isvalid = 1 for PUT), port_forward; if PUTREQ (aka meta.isvalid = 0), drop
 			//apply(put_port_forward_tbl); 
+			// NOTE: we must set egress port for normal packet; otherwise it will be dropped
+			apply(port_forward_tbl);
 		}
 		else if (op_hdr.optype == DELREQ_TYPE) {
 			// Stage 3
@@ -579,12 +584,16 @@ table sendback_delres_tbl {
 	size: 1;
 }
 
+action eg_drop_unicast {
+	modify_field(eg_intr_md_for_oport, 1); // Disable unicast, but enable mirroring
+}
+
 table drop_put_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		droppkt;
+		eg_drop_unicast;
 		nop;
 	}
 	default_action: nop();
@@ -621,5 +630,5 @@ control egress {
 	else {
 		apply(drop_put_tbl); // Drop PUTREQ (aka valid = 0 for PUT)
 	}
-	apply(swap_macaddr_tbl); // Swap mac addr for res
+	apply(swap_macaddr_tbl); // Swap mac addr for res (not only PUTREQ and DELRES, but also GETRS)
 }
