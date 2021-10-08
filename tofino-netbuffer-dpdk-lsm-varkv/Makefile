@@ -87,13 +87,16 @@ include mk/recipes.mk
 
 DEPS :=
 CLEAN :=
-TARGETS := client server prepare localtest
+TARGETS := client server prepare localtest test_parser
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
 
 DEPS += key.d val.d
 CLEAN += key.o val.o
+
+DEPS += ycsb/parser.d
+CLEAN += ycsb/parser.o
 
 prepare: prepare.o key.o val.o
 	$(LINK) $^ $(LDLIBS) -o $@
@@ -116,6 +119,11 @@ localtest: localtest.o key.o val.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += localtest.d
 CLEAN += localtest.o localtest
+
+test_parser: test_parser.o key.o val.o ycsb/parser.o
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += test_parser.d
+CLEAN += test_parser.o test_parser
 
 ##############################################################################
 # Top level targets

@@ -8,6 +8,7 @@ server
 microbench
 prepare
 localtest
+test_parser
 *.log
 *.out
 *.pyc
