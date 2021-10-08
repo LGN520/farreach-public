@@ -23,6 +23,7 @@ ParserIterator::ParserIterator(const ParserIterator& other) {
 	_key = other._key;
 	_val = other._val;
 	_type = other._type;
+	_line = other._line;
 	fp = other.fp;
 }
 
@@ -43,6 +44,10 @@ Val ParserIterator::val() {
 
 uint8_t ParserIterator::type() {
 	return _type;
+}
+
+std::string ParserIterator::line() {
+	return _line;
 }
 
 bool ParserIterator::next() {
@@ -132,6 +137,8 @@ bool ParserIterator::parsekv(const char* line) {
 	memset(val_buf, '\0', val_len * 8);
 	memcpy(val_buf, val_begin, VAL_STRLEN);
 	_val = Val((uint64_t*)val_buf, val_len);
+
+	_line = std::string(line, strlen(line));
 	return true;
 }
 
@@ -153,6 +160,7 @@ bool ParserIterator::parsekey(const char* line) {
 	_key = Key(keylo, keyhi);
 
 	_val = Val();
+	_line = std::string(line, strlen(line));
 	return true;
 }
 

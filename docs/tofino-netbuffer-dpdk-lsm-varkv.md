@@ -30,6 +30,7 @@
 - Support YCSB
 	+ Prepare netbuffer.dat to set properties of workload
 	+ Implement parser to parser YCSB workload (ycsb/parser.h, ycsb/parser.c)
+	+ Split workload into different parts for different client threads (split_workload.c)
 - TODO: if workload is not skewed, server will be overloaded
 
 ## How to run
@@ -42,6 +43,7 @@
 	+ For example:
 	+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > loada.out`
 	+ `./bin/ycsb.sh run basic -P workloads/workloada -P netbuffer.dat > runa.out`
+	+ `./split_workload filename threadnum`
 - Run `cd tofino`
 	+ Run `su` to enter root account
 	+ Run `bash compile.sh` to compile p4 into binary code

@@ -8,7 +8,7 @@ server
 microbench
 prepare
 localtest
-test_parser
+split_workload
 *.log
 *.out
 *.pyc

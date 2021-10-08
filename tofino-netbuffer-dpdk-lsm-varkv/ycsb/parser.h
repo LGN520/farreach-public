@@ -16,12 +16,14 @@ class ParserIterator {
 		Key key();
 		Val val();
 		uint8_t type();
+		std::string line();
 		bool next();
 		void close();
 	private:
 		Key _key;
 		Val _val;
 		uint8_t _type;
+		std::string _line;
 		FILE *fp = nullptr;
 
 		bool parsekv(const char* line);

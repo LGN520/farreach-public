@@ -87,7 +87,7 @@ include mk/recipes.mk
 
 DEPS :=
 CLEAN :=
-TARGETS := client server prepare localtest test_parser
+TARGETS := client server prepare localtest split_workload
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
@@ -120,10 +120,10 @@ localtest: localtest.o key.o val.o
 DEPS += localtest.d
 CLEAN += localtest.o localtest
 
-test_parser: test_parser.o key.o val.o ycsb/parser.o
+split_workload: split_workload.o key.o val.o ycsb/parser.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-DEPS += test_parser.d
-CLEAN += test_parser.o test_parser
+DEPS += split_workload.d
+CLEAN += split_workload.o split_workload
 
 ##############################################################################
 # Top level targets
