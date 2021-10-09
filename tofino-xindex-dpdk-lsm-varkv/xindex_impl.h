@@ -34,7 +34,7 @@ namespace xindex {
 template <class key_t, class val_t, bool seq>
 XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t> &keys,
                                   const std::vector<val_t> &vals,
-                                  size_t worker_num, size_t bg_n)
+                                  size_t worker_num, size_t bg_n, std::string workload_name)
     : bg_num(bg_n) {
   config.worker_n = worker_num;
   // sanity checks
@@ -54,7 +54,29 @@ XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t> &keys,
 
   // malloc memory for root & init root
   root = new root_t();
-  root->init(keys, vals);
+  root->init(keys, vals, workload_name);
+  start_bg();
+}
+
+template <class key_t, class val_t, bool seq>
+XIndex<key_t, val_t, seq>::XIndex(size_t worker_num, size_t bg_n, std::string workload_name)
+    : bg_num(bg_n) {
+  config.worker_n = worker_num;
+  // sanity checks
+  INVARIANT(config.root_error_bound > 0);
+  INVARIANT(config.root_memory_constraint > 0);
+  INVARIANT(config.group_error_bound > 0);
+  INVARIANT(config.group_error_tolerance > 0);
+  INVARIANT(config.buffer_size_bound > 0);
+  INVARIANT(config.buffer_size_tolerance > 0);
+  INVARIANT(config.buffer_compact_threshold > 0);
+  INVARIANT(config.worker_n > 0);
+
+  rcu_init();
+
+  // malloc memory for root & init root
+  root = new root_t();
+  root->open(workload_name);
   start_bg();
 }
 
@@ -76,6 +98,17 @@ inline bool XIndex<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
   result_t res;
   rcu_progress(worker_id);
   while ((res = root->put(key, val)) == result_t::retry) {
+    rcu_progress(worker_id);
+  }
+  return res == result_t::ok;
+}
+
+template <class key_t, class val_t, bool seq>
+inline bool XIndex<key_t, val_t, seq>::data_put(const key_t &key, const val_t &val,
+                                           const uint32_t worker_id) {
+  result_t res;
+  rcu_progress(worker_id);
+  while ((res = root->data_put(key, val)) == result_t::retry) {
     rcu_progress(worker_id);
   }
   return res == result_t::ok;

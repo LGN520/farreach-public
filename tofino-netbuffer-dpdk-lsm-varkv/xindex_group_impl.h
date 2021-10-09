@@ -23,6 +23,7 @@
 #include "xindex_group.h"
 
 #include <fstream>
+#include <sys/stat.h>
 #include <experimental/filesystem>
 
 #if !defined(XINDEX_GROUP_IMPL_H)
@@ -56,36 +57,102 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq, max_model_n>::init(
 		const typename std::vector<key_t>::const_iterator &keys_begin,
 		const typename std::vector<val_t>::const_iterator &vals_begin,
-		uint32_t array_size, uint32_t group_idx) {
+		uint32_t array_size, uint32_t group_idx, std::string workload_name) {
 		//uint32_t model_n, uint32_t array_size, uint32_t group_idx) {
-	assert(array_size > 0);
+	INVARIANT(array_size > 0);
 	this->pivot = *keys_begin;
 	//this->array_size = array_size;
 	//this->capacity = array_size * seq_insert_reserve_factor;
 	//this->model_n = model_n; // # of models per sstable
 	this->group_idx = group_idx;
+	this->workload_name = workload_name;
 
 	// Create original data
-	std::string data_path;
-	GET_STRING(data_path, "/tmp/netbuffer/group"<<group_idx<<".db");
-	rocksdb::Status s = rocksdb::TransactionDB::Open(data_options, rocksdb::TransactionDBOptions(), data_path, &data);
+	char data_path[256];
+	GET_DATAPATH(data_path, workload_name.c_str(), group_idx);
+	struct stat dir_stat;
+	if (!(stat(data_path, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
+		printf("Create directory: %s\n", data_path);
+		/*int status = mkdir(data_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		if (status != 0) {
+			printf("Fail to create directory: %s\n", data_path);
+			exit(-1);
+		}*/
+		bool status = std::experimental::filesystem::create_directories(std::string(data_path, strlen(data_path)));
+		if (!status) {
+			printf("Fail to create directory: %s\n", data_path);
+			exit(-1);
+		}
+	}
+	else {
+		printf("Database already exists: %s\n", data_path);
+		exit(-1);
+	}
+	rocksdb::Status s = rocksdb::TransactionDB::Open(data_options, 
+			rocksdb::TransactionDBOptions(), 
+			std::string(data_path, strlen(data_path)), &data);
 	assert(s.ok());
 	
 	// Create delta index
 	init_cur_buffer_id();
 	std::string buffer_path = get_buffer_path(cur_buffer_id);
+	if (!(stat(buffer_path.c_str(), &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
+		printf("Create directory: %s\n", buffer_path.c_str());
+		int status = mkdir(buffer_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		if (status != 0) {
+			printf("Fail to create directory: %s\n", buffer_path.c_str());
+			exit(-1);
+		}
+	}
+	else {
+		printf("Database already exists: %s\n", buffer_path);
+		exit(-1);
+	}
 	s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_path, &buffer);
 	assert(s.ok());
 
 	cbf = new cbf_t(CBF_BYTES_NUM);
 
 	// Write original data (execute at the first time)
-	/*rocksdb::WriteBatch batch;
+	rocksdb::WriteBatch batch;
 	for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
 		batch.Put((*(keys_begin + rec_i)).to_slice(), (*(vals_begin + rec_i)).to_slice());
 	}
 	s = data->Write(rocksdb::WriteOptions(), &batch);
-	assert(s.ok());*/
+	assert(s.ok());
+
+	// RocksDB will train model_n linear models for each new sstable 
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+void Group<key_t, val_t, seq, max_model_n>::open(uint32_t group_idx, std::string workload_name) {
+	this->group_idx = group_idx;
+	this->workload_name = workload_name;
+
+	// Create original data
+	char data_path[256];
+	GET_DATAPATH(data_path, workload_name.c_str(), group_idx);
+	struct stat dir_stat;
+	if (!(stat(data_path, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
+		printf("Database does not exist: %s\n", data_path);
+		exit(-1);
+	}
+	rocksdb::Status s = rocksdb::TransactionDB::Open(data_options, 
+			rocksdb::TransactionDBOptions(), 
+			std::string(data_path, strlen(data_path)), &data);
+	assert(s.ok());
+	
+	// Create delta index
+	init_cur_buffer_id();
+	std::string buffer_path = get_buffer_path(cur_buffer_id);
+	if (!(stat(buffer_path.c_str(), &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
+		printf("Database does not exist: %s\n", buffer_path);
+		exit(-1);
+	}
+	s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_path, &buffer);
+	assert(s.ok());
+
+	cbf = new cbf_t(CBF_BYTES_NUM);
 
 	// RocksDB will train model_n linear models for each new sstable 
 }
@@ -190,6 +257,14 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
 	if (rwlock != nullptr) {
 		rwlock->unlock_shared();
 	}
+	return res;
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline result_t Group<key_t, val_t, seq, max_model_n>::data_put(
+		const key_t &key, const val_t &val) {
+	result_t res = result_t::failed;
+	res = update_to_lsm(key, val, data);
 	return res;
 }
 
@@ -462,9 +537,9 @@ inline void Group<key_t, val_t, seq, max_model_n>::init_cur_buffer_id() {
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline std::string Group<key_t, val_t, seq, max_model_n>::get_buffer_path(uint32_t buffer_id) {
 	INVARIANT(buffer_id == 0 || buffer_id == 1);
-	std::string buffer_path;
-	GET_STRING(buffer_path, "/tmp/netbuffer/buffer"<<group_idx<<"-"<<buffer_id<<".db");
-	return buffer_path;
+	char buffer_path[256];
+	GET_BUFFERPATH(buffer_path, workload_name.c_str(), group_idx, buffer_id);
+	return std::string(buffer_path, strlen(buffer_path));
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>

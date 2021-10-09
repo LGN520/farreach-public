@@ -20,6 +20,7 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 #include <unordered_map>
+#include <stdio.h>
 
 #include "xindex_root.h"
 
@@ -37,7 +38,7 @@ Root<key_t, val_t, seq>::~Root() {
 
 template <class key_t, class val_t, bool seq>
 void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
-                                   const std::vector<val_t> &vals, uint32_t group_n) {
+                                   const std::vector<val_t> &vals, std::string workload_name, uint32_t group_n) {
   INVARIANT(seq == false);
 
   size_t record_n = keys.size();
@@ -63,14 +64,40 @@ void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
     groups[group_i].first = keys[begin_i];
     groups[group_i].second = new group_t();
     groups[group_i].second->init(keys.begin() + begin_i, vals.begin() + begin_i,
-                                 end_i - begin_i, group_i);
+                                 end_i - begin_i, group_i, workload_name);
   }
 
   // Disable OS-cache
   //system("hdparm -W 0 /tmp/netbuffer");
 
   // then decide # of 2nd stage model of root RMI
+  COUT_THIS("Training RMI model at root node...")
   adjust_rmi();
+
+  char root_filename[256];
+  GET_ROOT(root_filename, workload_name.c_str());
+  printf("Serializing root node to %s\n", root_filename);
+  serialize_root(root_filename);
+
+  DEBUG_THIS("--- [root] final XIndex Paramater: group_n = "
+             << group_n << ", rmi_2nd_stage_model_n=" << rmi_2nd_stage_model_n);
+}
+
+template <class key_t, class val_t, bool seq>
+void Root<key_t, val_t, seq>::open(std::string workload_name) {
+  INVARIANT(seq == false);
+
+  char root_filename[256];
+  GET_ROOT(root_filename, workload_name.c_str());
+  printf("Deserializing root node from %s\n", root_filename);
+  deserialize_root(root_filename);
+
+  for (size_t group_i = 0; group_i < group_n; group_i++) {
+	  groups[group_i].second->open(group_i, workload_name);
+  }
+
+  // Disable OS-cache
+  //system("hdparm -W 0 /tmp/netbuffer");
 
   DEBUG_THIS("--- [root] final XIndex Paramater: group_n = "
              << group_n << ", rmi_2nd_stage_model_n=" << rmi_2nd_stage_model_n);
@@ -136,6 +163,11 @@ inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val) {
 template <class key_t, class val_t, bool seq>
 inline result_t Root<key_t, val_t, seq>::put(const key_t &key, const val_t &val) {
   return locate_group(key)->put(key, val);
+}
+
+template <class key_t, class val_t, bool seq>
+inline result_t Root<key_t, val_t, seq>::data_put(const key_t &key, const val_t &val) {
+  return locate_group(key)->data_put(key, val);
 }
 
 /*
@@ -506,6 +538,82 @@ Root<key_t, val_t, seq>::locate_group_pt2(const key_t &key, group_t *begin) {
     next = group->next;
   }
   return group;
+}
+
+template <class key_t, class val_t, bool seq>
+void Root<key_t, val_t, seq>::serialize_root(char *filename) {
+	struct stat dir_stat;
+	if (stat(filename, &dir_stat) == 0) {
+		if (std::remove(filename) != 0) {
+			printf("File exists while cannot remove: %s\n", filename);
+			exit(-1);
+		}
+	}
+
+	FILE *fp = fopen(filename, "w+");
+	INVARIANT(fp != nullptr);
+
+	// rmi 1st stage 
+	fwrite((void *)rmi_1st_stage.weights.data(), sizeof(double), key_t::model_key_size() + 1, fp);
+	// # of rmi 2st stage
+	fwrite((void *)&rmi_2nd_stage_model_n, sizeof(size_t), 1, fp);
+	// rmi 2nd stage
+	for (size_t i = 0; i < rmi_2nd_stage_model_n; i++) {
+		fwrite((void *)rmi_2nd_stage[i].weights.data(), sizeof(double), key_t::model_key_size() + 1, fp);
+	}
+
+	// group_n
+	fwrite((void *)&group_n, sizeof(size_t), 1, fp);
+	for (size_t i = 0; i < group_n; i++) {
+		// key
+		fwrite((void *)&(groups[i].first), sizeof(uint64_t), key_t::model_key_size(), fp);
+		// pivot
+		fwrite((void *)&(groups[i].second->pivot), sizeof(uint64_t), key_t::model_key_size(), fp);
+	}
+
+	fclose(fp);
+}
+
+template <class key_t, class val_t, bool seq>
+void Root<key_t, val_t, seq>::deserialize_root(char *filename) {
+	struct stat dir_stat;
+	if (stat(filename, &dir_stat) != 0) {
+		printf("No such file: %s\n", filename);
+		exit(-1);
+	}
+
+	FILE *fp = fopen(filename, "r");
+	INVARIANT(fp != nullptr);
+
+	double buf[key_t::model_key_size() + 1];
+	// rmi 1st stage 
+	fread((void *)buf, sizeof(double), key_t::model_key_size() + 1, fp);
+	for (size_t weight_idx = 0; weight_idx < (key_t::model_key_size()+1); weight_idx++) {
+		rmi_1st_stage.weights[weight_idx] = buf[weight_idx];
+	}
+	// # of rmi 2st stage
+	fread((void *)&rmi_2nd_stage_model_n, sizeof(size_t), 1, fp);
+	rmi_2nd_stage = new linear_model_t[rmi_2nd_stage_model_n]();
+	// rmi 2nd stage
+	for (size_t i = 0; i < rmi_2nd_stage_model_n; i++) {
+		fread((void *)buf, sizeof(double), key_t::model_key_size() + 1, fp);
+		for (size_t weight_idx = 0; weight_idx < (key_t::model_key_size()+1); weight_idx++) {
+			rmi_2nd_stage[i].weights[weight_idx] = buf[weight_idx];
+		}
+	}
+
+	// group_n
+	fread((void *)&group_n, sizeof(size_t), 1, fp);
+	groups = std::make_unique<std::pair<key_t, group_t *volatile>[]>(group_n);
+	for (size_t i = 0; i < group_n; i++) {
+		// key
+		fread((void *)&(groups[i].first), sizeof(uint64_t), key_t::model_key_size(), fp);
+		groups[i].second = new group_t();
+		// pivot
+		fread((void *)&(groups[i].second->pivot), sizeof(uint64_t), key_t::model_key_size(), fp);
+	}
+
+	fclose(fp);
 }
 
 }  // namespace xindex

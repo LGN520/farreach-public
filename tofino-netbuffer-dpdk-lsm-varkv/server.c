@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
   // prepare xindex
   uint64_t init_val_data[1] = {1};
   std::vector<val_t> vals(exist_keys.size(), Val(init_val_data, 1));
-  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
+  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, "microbench"); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   // register signal handler
   signal(SIGTERM, SIG_IGN); // Ignore SIGTERM for subthreads
@@ -539,7 +539,7 @@ void *run_listener(void *param) {
 
 	while (running) {
 		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
-		double t0 = CUR_TIME();
+		//double t0 = CUR_TIME();
 		if (recv_size == -1) {
 			if (errno == EWOULDBLOCK || errno == EINTR) {
 				continue; // timeout or interrupted system call
@@ -569,7 +569,7 @@ void *run_listener(void *param) {
 			old_listener_data = nullptr;
 		}
 
-		double t1 = CUR_TIME();
+		//double t1 = CUR_TIME();
 		//COUT_THIS("Update KV: " << (t1 - t0) << "us")
 	}
 	pthread_exit(nullptr);
@@ -689,7 +689,7 @@ static int run_sfg(void * param) {
 		}*/
 
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
-		double tmpt0 = CUR_TIME();
+		//double tmpt0 = CUR_TIME();
 		switch (pkt_type) {
 			case packet_type_t::GET_REQ: 
 				{

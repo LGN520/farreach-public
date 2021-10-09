@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
   // prepare xindex
   uint64_t init_val_data[1] = {1};
   std::vector<val_t> vals(exist_keys.size(), val_t(init_val_data, 1));
-  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
+  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, "microbench"); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   run_server(tab_xi, runtime);
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads

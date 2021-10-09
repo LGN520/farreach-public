@@ -36,6 +36,30 @@
 	v = ss.str(); \
 }
 
+#define LOAD_RAW_WORKLOAD(buf, workload) \
+	sprintf(buf, "%s-load.out", workload)
+
+#define RUN_RAW_WORKLOAD(buf, workload) \
+	sprintf(buf, "%s-run.out", workload)
+
+#define LOAD_SPLIT_DIR(buf, workload, threadnum) \
+	sprintf(buf, "%s-load-%d", workload, threadnum)
+
+#define RUN_SPLIT_DIR(buf, workload, threadnum) \
+	sprintf(buf, "%s-run-%d", workload, threadnum)
+
+#define GET_SPLIT_WORKLOAD(buf, dir, threadid) \
+	sprintf(buf, "%s/%u.out", dir, threadid);
+
+#define GET_DATAPATH(buf, workload_name, group_idx) \
+	sprintf(buf, "/tmp/netbuffer/%s/group%d.db", workload_name, group_idx)
+
+#define GET_BUFFERPATH(buf, workload_name, group_idx, buffer_id) \
+	sprintf(buf, "/tmp/netbuffer/%s/buffer%d-%d.db", workload_name, group_idx, buffer_id)
+
+#define GET_ROOT(buf, workload_name)  \
+	sprintf(buf, "%s-root.out", workload_name)
+
 #define CUR_TIME() (double) clock() / CLOCKS_PER_SEC * 1000.0 * 1000.0; // us
 
 #define COUT_THIS(this) std::cout << this << std::endl;

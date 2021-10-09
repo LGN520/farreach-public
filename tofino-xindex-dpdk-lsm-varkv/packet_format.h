@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstring>
+#include <vector>
 
 #include "helper.h"
 

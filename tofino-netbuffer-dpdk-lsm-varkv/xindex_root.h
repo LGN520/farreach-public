@@ -39,7 +39,8 @@ class Root {
 
  public:
   ~Root();
-  void init(const std::vector<key_t> &keys, const std::vector<val_t> &vals, uint32_t group_n = 10);
+  void init(const std::vector<key_t> &keys, const std::vector<val_t> &vals, std::string workload_name, uint32_t group_n = 10);
+  void open(std::string workload_name);
   void calculate_err(const std::vector<key_t> &keys,
                      const std::vector<val_t> &vals, size_t group_n_trial,
                      double &err_at_percentile, double &max_err,
@@ -47,6 +48,7 @@ class Root {
 
   inline result_t get(const key_t &key, val_t &val);
   inline result_t put(const key_t &key, const val_t &val);
+  inline result_t data_put(const key_t &key, const val_t &val);
   inline result_t remove(const key_t &key);
   inline size_t scan(const key_t &begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result);
@@ -56,6 +58,9 @@ class Root {
   static void *do_adjustment(void *args);
   Root *create_new_root();
   void trim_root();
+
+  void serialize_root(char* filename);
+  void deserialize_root(char* filename);
 
  private:
   void adjust_rmi();

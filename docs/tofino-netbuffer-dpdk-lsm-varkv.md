@@ -31,19 +31,34 @@
 	+ Prepare netbuffer.dat to set properties of workload
 	+ Implement parser to parser YCSB workload (ycsb/parser.h, ycsb/parser.c)
 	+ Split workload into different parts for different client threads (split_workload.c)
-- TODO: if workload is not skewed, server will be overloaded
+	+ Add ycsb_local_client.c for loading phase (running in server side)
+	+ Add data_put in xindex.h, xindex_impl.h, xindex_root.h, xindex_root_impl.h, xindex_group.h, and xindex_group_impl.h
+	+ Pass workload_name to xindex (xindex.h, xindex_impl.h, xindex_root.h, xindex_root_impl.h, xindex_group.h, and xindex_group_impl.h)
+	+ Update helper.h to get the directory name or file name related with workload
+	+ Add serialize_root and deserialize_root in xindex_root.h and xindex_root_impl.h
+	+ Add open in xindex.h, xindex_impl.h, xindex_root.h, xindex_root_impl.h, xindex_group.h, and xindex_group_impl.h
+- NOTE: if workload is not skewed, server will be overloaded
+- TODO: dump RMI model after loading phase, load RMI model before transaction phase
 
 ## How to run
 
-- Prepare randomly-generated keys
-	+ NOTE: we direclty use makefile to enable DPDK (to detet ports) without cmake
-	+ `make all`
-	+ `./prepare`
-- Prepare workload for loading or transaction phase
-	+ For example:
-	+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > loada.out`
-	+ `./bin/ycsb.sh run basic -P workloads/workloada -P netbuffer.dat > runa.out`
-	+ `./split_workload filename threadnum`
+- Microbenchmark
+	- Prepare randomly-generated keys
+		+ NOTE: we direclty use makefile to enable DPDK (to detet ports) without cmake
+		+ `make all`
+		+ `./prepare`
+- YCSB
+	- Prepare workload for loading or transaction phase
+		+ For example:
+		+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > workloada-load.out`
+		+ `./bin/ycsb.sh run basic -P workloads/workloada -P netbuffer.dat > workloada-run.out`
+		+ `./split_workload load workloada threadnum`
+		+ `./split_workload run workloada threadnum`
+	- `./ycsb_local_client -h threadnum -p workloada`
+	- Directory structure
+		+ Raw workload file: workloada-load.out, workloada-run.out
+		+ Split workload file: e.g., workloada-load-5/2.out
+		+ Database directory: e.g., /tmp/netbuffer/workloada/group0.db, /tmp/netbuffer/workloada/buffer0-0.db
 - Run `cd tofino`
 	+ Run `su` to enter root account
 	+ Run `bash compile.sh` to compile p4 into binary code

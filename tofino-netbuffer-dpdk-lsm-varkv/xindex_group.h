@@ -54,7 +54,8 @@ class alignas(CACHELINE_SIZE) Group {
   ~Group();
   void init(const typename std::vector<key_t>::const_iterator &keys_begin,
             const typename std::vector<val_t>::const_iterator &vals_begin,
-            uint32_t array_size, uint32_t group_idx);
+            uint32_t array_size, uint32_t group_idx, std::string workload_name);
+  void open(uint32_t group_idx, std::string workload_name);
   /*void init(const typename std::vector<key_t>::const_iterator &keys_begin,
             const typename std::vector<val_t>::const_iterator &vals_begin,
             uint32_t model_n, uint32_t array_size, uint32_t group_idx);*/
@@ -62,6 +63,7 @@ class alignas(CACHELINE_SIZE) Group {
 
   inline result_t get(const key_t &key, val_t &val);
   inline result_t put(const key_t &key, const val_t &val);
+  inline result_t data_put(const key_t &key, const val_t &val);
   inline result_t remove(const key_t &key);
   inline size_t scan(const key_t &begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result);
@@ -117,6 +119,7 @@ class alignas(CACHELINE_SIZE) Group {
   uint32_t buffer_size_temp = 0;
   boost::shared_mutex rwlockmap[RWLOCKMAP_SIZE];
   uint32_t group_idx = 0;
+  std::string workload_name;
   uint32_t cur_buffer_id = 0;
 };
 
