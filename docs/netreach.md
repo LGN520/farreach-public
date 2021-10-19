@@ -6,7 +6,10 @@
 - Directly use reserved dst port 1111 instead of dst port start (client.c)
 	+ For changing dst port to simulate different servers, we deploy it in switch
 	+ In server, we use multiple thresholds to simulate servers, and a concurrent key-value store to simulate distributed key-value store
-- Set val length as 8B for fast debug (val.h, tofino/*)
+- Set val length as 8B for fast debug (val.h, tofino/*.p4, tofino/*.py)
+- Add key-based routing in switch (hash_partition_tbl and select_server_tbl in basic.p4)
+- Read config.ini in ptf test files (config.ini)
+- TODO: read config.ini in *.c files
 
 ## How to run
 

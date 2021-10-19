@@ -39,6 +39,13 @@ from res_pd_rpc.ttypes import *
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
+import ConfigParser
+config = ConfigParser().ConfigParser()
+config.read("config.ini")
+
+server_num = int(config.get("server", "server_num"))
+server_port = int(config.get("server", "server_port"))
+
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
 #   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
@@ -163,6 +170,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             #self.client.ipv4_lpm_table_add_with_ipv4_forward(\
             #        self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
+
+            # Table: hash_partition_tbl
+            print "hash_partition_tbl"
+            matchspec0 = netbuffer_hash_partition_tbl_match_spec_t(udp_hdr_dstPort=server_port)
+            actnspec0 = netbuffer_hash_partition_action_spec_t(server_num)
+            self.client.hash_partition_tbl_table_add_with_calculate_hash(\
+                    self.sess_hdl, self.dev_tgt, actnspec0)
 
             # Table: port_forward_tbl
             print "Configuring port_forward_tbl"
@@ -442,115 +456,115 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.update_vallo1_tbl_table_add_with_get_vallo1(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo2_tbl"
-            matchspec0 = netbuffer_update_vallo2_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo2_tbl_table_add_with_put_vallo2(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo2_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo2_tbl_table_add_with_get_vallo2(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo2_tbl"
+            #matchspec0 = netbuffer_update_vallo2_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo2_tbl_table_add_with_put_vallo2(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo2_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo2_tbl_table_add_with_get_vallo2(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo3_tbl"
-            matchspec0 = netbuffer_update_vallo3_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo3_tbl_table_add_with_put_vallo3(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo3_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo3_tbl_table_add_with_get_vallo3(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo3_tbl"
+            #matchspec0 = netbuffer_update_vallo3_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo3_tbl_table_add_with_put_vallo3(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo3_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo3_tbl_table_add_with_get_vallo3(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo4_tbl"
-            matchspec0 = netbuffer_update_vallo4_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo4_tbl_table_add_with_put_vallo4(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo4_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo4_tbl_table_add_with_get_vallo4(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo4_tbl"
+            #matchspec0 = netbuffer_update_vallo4_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo4_tbl_table_add_with_put_vallo4(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo4_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo4_tbl_table_add_with_get_vallo4(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo5_tbl"
-            matchspec0 = netbuffer_update_vallo5_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo5_tbl_table_add_with_put_vallo5(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo5_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo5_tbl_table_add_with_get_vallo5(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo5_tbl"
+            #matchspec0 = netbuffer_update_vallo5_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo5_tbl_table_add_with_put_vallo5(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo5_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo5_tbl_table_add_with_get_vallo5(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo6_tbl"
-            matchspec0 = netbuffer_update_vallo6_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo6_tbl_table_add_with_put_vallo6(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo6_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo6_tbl_table_add_with_get_vallo6(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo6_tbl"
+            #matchspec0 = netbuffer_update_vallo6_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo6_tbl_table_add_with_put_vallo6(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo6_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo6_tbl_table_add_with_get_vallo6(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo7_tbl"
-            matchspec0 = netbuffer_update_vallo7_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo7_tbl_table_add_with_put_vallo7(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo7_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo7_tbl_table_add_with_get_vallo7(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo7_tbl"
+            #matchspec0 = netbuffer_update_vallo7_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo7_tbl_table_add_with_put_vallo7(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo7_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo7_tbl_table_add_with_get_vallo7(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo8_tbl"
-            matchspec0 = netbuffer_update_vallo8_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo8_tbl_table_add_with_put_vallo8(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo8_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo8_tbl_table_add_with_get_vallo8(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo8_tbl"
+            #matchspec0 = netbuffer_update_vallo8_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo8_tbl_table_add_with_put_vallo8(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo8_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo8_tbl_table_add_with_get_vallo8(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo9_tbl"
-            matchspec0 = netbuffer_update_vallo9_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo9_tbl_table_add_with_put_vallo9(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo9_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo9_tbl_table_add_with_get_vallo9(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo9_tbl"
+            #matchspec0 = netbuffer_update_vallo9_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo9_tbl_table_add_with_put_vallo9(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo9_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo9_tbl_table_add_with_get_vallo9(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo10_tbl"
-            matchspec0 = netbuffer_update_vallo10_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo10_tbl_table_add_with_put_vallo10(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo10_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo10_tbl_table_add_with_get_vallo10(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo10_tbl"
+            #matchspec0 = netbuffer_update_vallo10_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo10_tbl_table_add_with_put_vallo10(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo10_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo10_tbl_table_add_with_get_vallo10(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo11_tbl"
-            matchspec0 = netbuffer_update_vallo11_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo11_tbl_table_add_with_put_vallo11(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo11_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo11_tbl_table_add_with_get_vallo11(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo11_tbl"
+            #matchspec0 = netbuffer_update_vallo11_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo11_tbl_table_add_with_put_vallo11(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo11_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo11_tbl_table_add_with_get_vallo11(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_vallo12_tbl"
-            matchspec0 = netbuffer_update_vallo12_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_vallo12_tbl_table_add_with_put_vallo12(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_vallo12_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_vallo12_tbl_table_add_with_get_vallo12(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_vallo12_tbl"
+            #matchspec0 = netbuffer_update_vallo12_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_vallo12_tbl_table_add_with_put_vallo12(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_vallo12_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_vallo12_tbl_table_add_with_get_vallo12(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo13_tbl"
             #matchspec0 = netbuffer_update_vallo13_tbl_match_spec_t(
@@ -629,95 +643,95 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.update_valhi1_tbl_table_add_with_get_valhi1(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_valhi2_tbl"
-            matchspec0 = netbuffer_update_valhi2_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_valhi2_tbl_table_add_with_put_valhi2(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_valhi2_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_valhi2_tbl_table_add_with_get_valhi2(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_valhi2_tbl"
+            #matchspec0 = netbuffer_update_valhi2_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_valhi2_tbl_table_add_with_put_valhi2(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_valhi2_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_valhi2_tbl_table_add_with_get_valhi2(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_valhi3_tbl"
-            matchspec0 = netbuffer_update_valhi3_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_valhi3_tbl_table_add_with_put_valhi3(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_valhi3_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_valhi3_tbl_table_add_with_get_valhi3(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_valhi3_tbl"
+            #matchspec0 = netbuffer_update_valhi3_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_valhi3_tbl_table_add_with_put_valhi3(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_valhi3_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_valhi3_tbl_table_add_with_get_valhi3(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_valhi4_tbl"
-            matchspec0 = netbuffer_update_valhi4_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_valhi4_tbl_table_add_with_put_valhi4(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_valhi4_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_valhi4_tbl_table_add_with_get_valhi4(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_valhi4_tbl"
+            #matchspec0 = netbuffer_update_valhi4_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_valhi4_tbl_table_add_with_put_valhi4(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_valhi4_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_valhi4_tbl_table_add_with_get_valhi4(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_valhi5_tbl"
-            matchspec0 = netbuffer_update_valhi5_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_valhi5_tbl_table_add_with_put_valhi5(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_valhi5_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_valhi5_tbl_table_add_with_get_valhi5(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_valhi5_tbl"
+            #matchspec0 = netbuffer_update_valhi5_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_valhi5_tbl_table_add_with_put_valhi5(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_valhi5_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_valhi5_tbl_table_add_with_get_valhi5(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_valhi6_tbl"
-            matchspec0 = netbuffer_update_valhi6_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_valhi6_tbl_table_add_with_put_valhi6(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_valhi6_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_valhi6_tbl_table_add_with_get_valhi6(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_valhi6_tbl"
+            #matchspec0 = netbuffer_update_valhi6_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_valhi6_tbl_table_add_with_put_valhi6(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_valhi6_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_valhi6_tbl_table_add_with_get_valhi6(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_valhi7_tbl"
-            matchspec0 = netbuffer_update_valhi7_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_valhi7_tbl_table_add_with_put_valhi7(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_valhi7_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_valhi7_tbl_table_add_with_get_valhi7(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_valhi7_tbl"
+            #matchspec0 = netbuffer_update_valhi7_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_valhi7_tbl_table_add_with_put_valhi7(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_valhi7_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_valhi7_tbl_table_add_with_get_valhi7(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_valhi8_tbl"
-            matchspec0 = netbuffer_update_valhi8_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_valhi8_tbl_table_add_with_put_valhi8(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_valhi8_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_valhi8_tbl_table_add_with_get_valhi8(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_valhi8_tbl"
+            #matchspec0 = netbuffer_update_valhi8_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_valhi8_tbl_table_add_with_put_valhi8(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_valhi8_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_valhi8_tbl_table_add_with_get_valhi8(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_valhi9_tbl"
-            matchspec0 = netbuffer_update_valhi9_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_valhi9_tbl_table_add_with_put_valhi9(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_valhi9_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_valhi9_tbl_table_add_with_get_valhi9(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_valhi9_tbl"
+            #matchspec0 = netbuffer_update_valhi9_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_valhi9_tbl_table_add_with_put_valhi9(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_valhi9_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_valhi9_tbl_table_add_with_get_valhi9(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            print "Configuring update_valhi10_tbl"
-            matchspec0 = netbuffer_update_valhi10_tbl_match_spec_t(
-                    op_hdr_optype=PUTREQ_TYPE)
-            self.client.update_valhi10_tbl_table_add_with_put_valhi10(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_update_valhi10_tbl_match_spec_t(
-                    op_hdr_optype=GETREQ_TYPE)
-            self.client.update_valhi10_tbl_table_add_with_get_valhi10(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            #print "Configuring update_valhi10_tbl"
+            #matchspec0 = netbuffer_update_valhi10_tbl_match_spec_t(
+            #        op_hdr_optype=PUTREQ_TYPE)
+            #self.client.update_valhi10_tbl_table_add_with_put_valhi10(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #matchspec1 = netbuffer_update_valhi10_tbl_match_spec_t(
+            #        op_hdr_optype=GETREQ_TYPE)
+            #self.client.update_valhi10_tbl_table_add_with_get_valhi10(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi11_tbl"
             #matchspec0 = netbuffer_update_valhi11_tbl_match_spec_t(
