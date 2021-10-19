@@ -28,6 +28,19 @@
 	+ NOTE: Tofino will drop all packets without Ethernet header!!!
 	+ NOTE: DPDK port will drop all packets without correct ethernet address even if enable promisc mode!!!
 - Support YCSB
+	+ Read source code of YCSB to see how to generate the workload from the parameter file
+		* Client::main -> ClientThread::run -> Workload::doTransaction(DB db)
+			- The workload will generate operation including key and fields according to the parameter file (not measured in statistics)
+				+ DiscreteGenerator operationchooser.nextString (generate operation)
+				+ NumberGenerator keychooser.nextValue().intValue() -> CoreWorkload::buildKeyName() (generate key)
+				+ NumberGenerator fieldlengthgenerator.nextValue().longValue() (get size of value fields) -> StringByteIterator/RandomByteIterator (generate value)
+			- Then it performs the operation by the given DB abstraction layer
+		* Client::main -> Measurements::getMeasurements -> Get a global/static Measurements instance
+			- Measurements::measure(operation, latency) -> Measurements::getOpMeasurement -> OneMeasurement::measure
+				+ CoreWorkload will measure ReadModifyWrite
+				+ BDWrapper will measure each operation
+			- Measurements::exportMeasurements -> OneMeasurement::exportMeasurements -> Call TextMeasurementsExporter::write
+			to output the measurement statistics saved by OneMeasurement
 	+ Prepare netbuffer.dat to set properties of workload
 	+ Implement parser to parser YCSB workload (ycsb/parser.h, ycsb/parser.c)
 	+ Split workload into different parts for different client threads (split_workload.c)
@@ -37,8 +50,8 @@
 	+ Update helper.h to get the directory name or file name related with workload
 	+ Add serialize_root and deserialize_root in xindex_root.h and xindex_root_impl.h
 	+ Add open in xindex.h, xindex_impl.h, xindex_root.h, xindex_root_impl.h, xindex_group.h, and xindex_group_impl.h
+	+ CHECKPOINT: copy the previous change to tofino-xindex-dpdk-lsm-varkv
 - NOTE: if workload is not skewed, server will be overloaded
-- TODO: dump RMI model after loading phase, load RMI model before transaction phase
 
 ## How to run
 
