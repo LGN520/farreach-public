@@ -94,24 +94,6 @@ table port_forward_tbl {
 	size: 4;  
 }
 
-/*action ig_drop_unicast() {
-	modify_field(ig_intr_md_for_tm.drop_ctl, 1); // Disable unicast, but enable mirroring
-}
-
-table put_port_forward_tbl {
-	reads {
-		ig_intr_md.ingress_port: exact;
-		op_hdr.optype: exact;
-	}
-	actions {
-		port_forward;
-		ig_drop_unicast;
-		nop;
-	}
-	default_action: nop();
-	size: 8;  
-}*/
-
 /* Hash */
 
 field_list hash_fields {
@@ -409,13 +391,30 @@ table send_scanpkt_tbl {
 	size: 2;
 }
 
+action ig_drop_unicast() {
+	modify_field(ig_intr_md_for_tm.drop_ctl, 1); // Disable unicast, but enable mirroring
+}
+
+table drop_put_tbl {
+	reads {
+		ig_intr_md.ingress_port: exact;
+		op_hdr.optype: exact;
+	}
+	actions {
+		ig_drop_unicast;
+		nop;
+	}
+	default_action: nop();
+	size: 8;  
+}
+
 control ingress {
 	if (valid(op_hdr)) {
 
 		// Stage 0
 		apply(calculate_hash_tbl);
 		apply(save_info_tbl); // save dst port
-		apply(hash_partition_tbl);
+		apply(hash_partition_tbl); // calculate dst port for req
 
 		// Stage 1
 		apply(select_server_tbl); // update dst port
@@ -533,7 +532,7 @@ control ingress {
 			apply(clone_putpkt_tbl); // sendback PUTRES
 			// NOTE: drop normal packet in ingress will not generate the cloned packet further (we need to set drop_ctl)
 			// Only PUTREQ_S (aka meta.isvalid = 1 for PUT), port_forward; if PUTREQ (aka meta.isvalid = 0), drop
-			//apply(put_port_forward_tbl); 
+			apply(drop_put_tbl); 
 			// NOTE: we must set egress port for normal packet; otherwise it will be dropped
 			apply(port_forward_tbl);
 		}
@@ -616,8 +615,8 @@ table sendback_delres_tbl {
 	size: 1;
 }
 
-action eg_drop_unicast {
-	modify_field(eg_intr_md_for_oport, 1); // Disable unicast, but enable mirroring
+/*action eg_drop_unicast {
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 }
 
 table drop_put_tbl {
@@ -630,7 +629,7 @@ table drop_put_tbl {
 	}
 	default_action: nop();
 	size: 4;
-}
+}*/
 
 action swap_macaddr(tmp_srcmac, tmp_dstmac) {
 	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
@@ -659,8 +658,8 @@ control egress {
 			apply(sendback_delres_tbl); // input is DELREQ or DELREQ_S
 		}
 	}
-	else {
-		apply(drop_put_tbl); // Drop PUTREQ (aka valid = 0 for PUT)
-	}
+	/*else {
+		apply(drop_put_tbl); // Drop PUTREQ (aka valid = 0 for PUT) 
+	}*/
 	apply(swap_macaddr_tbl); // Swap mac addr for res (not only PUTREQ and DELRES, but also GETRS)
 }
