@@ -23,6 +23,7 @@
 #include "dpdk_helper.h"
 #include "key.h"
 #include "val.h"
+#include "iniparser/iniparser.h"
 
 #define MQ_SIZE 256
 #define KV_BUCKET_COUT 32768
@@ -46,6 +47,7 @@ typedef ScanResponse<index_key_t, val_t> scan_response_t;
 typedef PutRequestS<index_key_t, val_t> put_request_s_t;
 typedef DelRequestS<index_key_t> del_request_s_t;
 
+inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
 void load();
 void run_server(xindex_t *table);
@@ -100,6 +102,7 @@ void test_merge_latency() {
 }
 
 int main(int argc, char **argv) {
+  parse_ini("config.ini");
   parse_args(argc, argv);
   xindex::init_options(); // init options of rocksdb
   load();
@@ -180,9 +183,30 @@ int main(int argc, char **argv) {
   exit(0);
 }
 
+inline void parse_ini(const char* config_file) {
+	dictionary *ini = iniparser_load(config_file);
+	if (ini == nullptr) {
+		printf("Cannot parse ini file: %s\n", config_file);
+		exit(-1);
+	}
+
+	int tmp = iniparser_getint(ini, "server:server_num", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:server_num]: %d\n", tmp);
+		exit(-1);
+	}
+	fg_n = size_t(tmp);
+
+	tmp - iniparser_getint(ini, "server:server_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:server_port]: %d\n", tmp);
+		exit(-1);
+	}
+	dst_port_start = short(tmp);
+}
+
 inline void parse_args(int argc, char **argv) {
   struct option long_options[] = {
-      {"fg", required_argument, 0, 'h'},
       {"bg", required_argument, 0, 'i'},
       {"xindex-root-err-bound", required_argument, 0, 'j'},
       {"xindex-root-memory", required_argument, 0, 'k'},
@@ -191,7 +215,7 @@ inline void parse_args(int argc, char **argv) {
       {"xindex-buf-size-bound", required_argument, 0, 'n'},
       {"xindex-buf-compact-threshold", required_argument, 0, 'o'},
       {0, 0, 0, 0}};
-  std::string ops = "h:i:j:k:l:m:n:o:";
+  std::string ops = "i:j:k:l:m:n:o:";
   int option_index = 0;
 
   while (1) {
@@ -202,10 +226,6 @@ inline void parse_args(int argc, char **argv) {
       case 0:
         if (long_options[option_index].flag != 0) break;
         abort();
-        break;
-      case 'h':
-        fg_n = strtoul(optarg, NULL, 10);
-        INVARIANT(fg_n > 0);
         break;
       case 'i':
         bg_n = strtoul(optarg, NULL, 10);

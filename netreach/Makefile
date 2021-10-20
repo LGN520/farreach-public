@@ -98,6 +98,9 @@ CLEAN += key.o val.o
 DEPS += ycsb/parser.d
 CLEAN += ycsb/parser.o
 
+DEPS += iniparser/iniparser.d iniparser/dictionary.d
+CLEAN += iniparser/iniparser.o iniparser/dictionary.o
+
 prepare: prepare.o key.o val.o
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += prepare.d
@@ -110,10 +113,10 @@ client: client.o dpdk_helper.o key.o val.o
 DEPS += client.d
 CLEAN += client.o client
 
-server: server.o dpdk_helper.o key.o val.o
+server: server.o dpdk_helper.o key.o val.o iniparser/iniparser.o iniparser/dictionary.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += server.d
-CLEAN += server.o serer
+CLEAN += server.o server
 
 localtest: localtest.o key.o val.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@

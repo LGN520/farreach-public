@@ -159,19 +159,6 @@ table hash_partition_tbl {
 	size: 1;
 }
 
-action select_server() {
-	add_to_field(udp_hdr.dstPort, meta.server_idx);
-}
-
-//@pragma stage 1
-table select_server_tbl {
-	actions {
-		select_server;
-	}
-	default_action: select_server();
-	size: 1;
-}
-
 /* KV (hash table) */
 
 // registers and MATs related with 16B key
@@ -408,6 +395,22 @@ table drop_put_tbl {
 	size: 8;  
 }
 
+action select_server() {
+	add_to_field(udp_hdr.dstPort, meta.server_idx);
+}
+
+table select_server_tbl {
+	reads {
+		udp_hdr.dstPort: exact;
+		ig_intr_md_for_tm.ucast_egress_port: exact;
+	}
+	actions {
+		select_server;
+	}
+	default_action: select_server();
+	size: 1;
+}
+
 control ingress {
 	if (valid(op_hdr)) {
 
@@ -415,9 +418,6 @@ control ingress {
 		apply(calculate_hash_tbl);
 		apply(save_info_tbl); // save dst port
 		apply(hash_partition_tbl); // calculate dst port for req
-
-		// Stage 1
-		apply(select_server_tbl); // update dst port
 
 		// Stage 1 and 2
 		// Different MAT entries for getreq/putreq
@@ -556,6 +556,8 @@ control ingress {
 	else {
 		apply(port_forward_tbl);
 	}
+
+	apply(select_server_tbl); // update dst port for dst_port = 1111 and egress_port = server port
 }
 
 /* Egress Processing */

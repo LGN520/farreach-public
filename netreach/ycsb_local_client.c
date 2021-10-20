@@ -21,7 +21,7 @@
 #include "val.h"
 #include "ycsb/parser.h"
 
-#if 1
+#if 0
 #define CORRECTNESS_TEST
 #endif
 

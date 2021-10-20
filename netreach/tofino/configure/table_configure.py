@@ -172,11 +172,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #        self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
 
             # Table: hash_partition_tbl
-            print "hash_partition_tbl"
+            print "COnfiguring hash_partition_tbl"
             matchspec0 = netbuffer_hash_partition_tbl_match_spec_t(udp_hdr_dstPort=server_port)
             actnspec0 = netbuffer_hash_partition_action_spec_t(server_num)
             self.client.hash_partition_tbl_table_add_with_calculate_hash(\
-                    self.sess_hdl, self.dev_tgt, actnspec0)
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
+            # Table: select_server_tbl
+            print "Configuring select_server_tbl"
+            matchspec0 = netbuffer_select_server_tbl_match_spec_t(udp_hdr_dstPort=server_port,
+                    ig_intr_md_ingress_port_ucast_egress_port=self.devPorts[1])
+            self.client.select_server_tbl_table_add_with_select_server(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: port_forward_tbl
             print "Configuring port_forward_tbl"

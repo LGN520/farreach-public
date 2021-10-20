@@ -9,7 +9,9 @@
 - Set val length as 8B for fast debug (val.h, tofino/*.p4, tofino/*.py)
 - Add key-based routing in switch (hash_partition_tbl and select_server_tbl in basic.p4)
 - Read config.ini in ptf test files (config.ini)
-- TODO: read config.ini in *.c files
+- Read config.ini in *.c files (server.c)
+	+ Add iniparser module
+	+ Update Makefile
 - TODO: For put req
 	+ If the entry is empty, we need to update the cache directly and notify the server (do not need to drop put_req, which becomes put_req_n; need to clone for put_res)
 	+ If the entry is not empty but key matches, we need to update value (need to drop original put req; need to clone for put_res)
@@ -18,6 +20,7 @@
 			- If the original entry is not dirty, we still need to notify the server by changing pkt to put_req_n (do not need to drop put_req_u; need to clone for put_res)
 			- If it is dirty, we need to change pkt to put_req_s (a new key and evicted key-value pair) (do not need to drop put_req_s; need to clone for put_res)
 		* If without cache update, we need to forward put_req (do not need to clone pkt for put_res)
+	+ NOTE: in design, put_req_n and put_req_s must be two packets since the two servers may be different
 
 ## How to run
 
