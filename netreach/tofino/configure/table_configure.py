@@ -40,11 +40,14 @@ from res_pd_rpc.ttypes import *
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
 import ConfigParser
-config = ConfigParser().ConfigParser()
-config.read("config.ini")
+config = ConfigParser.ConfigParser()
+with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
+    config.readfp(f)
+print(config.sections())
 
 server_num = int(config.get("server", "server_num"))
 server_port = int(config.get("server", "server_port"))
+bucket_num = int(config.get("switch", "bucket_num"))
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
@@ -172,18 +175,24 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #        self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
 
             # Table: hash_partition_tbl
-            print "COnfiguring hash_partition_tbl"
-            matchspec0 = netbuffer_hash_partition_tbl_match_spec_t(udp_hdr_dstPort=server_port)
-            actnspec0 = netbuffer_hash_partition_action_spec_t(server_num)
-            self.client.hash_partition_tbl_table_add_with_calculate_hash(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-
-            # Table: select_server_tbl
-            print "Configuring select_server_tbl"
-            matchspec0 = netbuffer_select_server_tbl_match_spec_t(udp_hdr_dstPort=server_port,
-                    ig_intr_md_ingress_port_ucast_egress_port=self.devPorts[1])
-            self.client.select_server_tbl_table_add_with_select_server(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            print "Configuring hash_partition_tbl"
+            hash_start = 0
+            hash_range_per_server = bucket_num / server_num
+            for i in range(server_num):
+                if i == server_num - 1:
+                    hash_end = bucket_num - 1 # if end is not included, then it is just processed by port 1111
+                else:
+                    hash_end = hash_start + hash_range_per_server
+                matchspec0 = netbuffer_hash_partition_tbl_match_spec_t(\
+                        udp_hdr_dstPort=server_port, \
+                        ig_intr_md_for_tm_ucast_egress_port=self.devPorts[1], \
+                        meta_hashidx_start = hash_start, \
+                        meta_hashidx_end = hash_end)
+                actnspec0 = netbuffer_hash_partition_action_spec_t(\
+                        server_port + i)
+                self.client.hash_partition_tbl_table_add_with_hash_partition(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                hash_start = hash_end
 
             # Table: port_forward_tbl
             print "Configuring port_forward_tbl"

@@ -73,7 +73,6 @@ header_type res_t {
 header_type metadata_t {
 	fields {
 		hashidx: 16;
-		server_idx: 8; // add to dst port for request
 		ismatch_keylololo: 4; // predicate 
 		ismatch_keylolohi: 4; // predicate 
 		ismatch_keylohilo: 4; // predicate 

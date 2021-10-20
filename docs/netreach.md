@@ -3,15 +3,17 @@
 ## Implementation log
 
 - Copy tofino-netbuffer-dpdk-lsm-varkv to netreach
-- Directly use reserved dst port 1111 instead of dst port start (client.c)
-	+ For changing dst port to simulate different servers, we deploy it in switch
-	+ In server, we use multiple thresholds to simulate servers, and a concurrent key-value store to simulate distributed key-value store
 - Set val length as 8B for fast debug (val.h, tofino/*.p4, tofino/*.py)
-- Add key-based routing in switch (hash_partition_tbl and select_server_tbl in basic.p4)
-- Read config.ini in ptf test files (config.ini)
-- Read config.ini in *.c files (server.c)
-	+ Add iniparser module
-	+ Update Makefile
+- Add config module (config.ini, iniparser/\**)
+	- Read config.ini in ptf test files (configure/table_configure.py)
+	- Read config.ini in \*.c files (server.c)
+	- Update Makefile
+- Key-based routing
+	- Directly use reserved dst port 1111 instead of dst port start (client.c)
+		+ For changing dst port to simulate different servers, we deploy it in switch
+		+ In server, we use multiple threads to simulate servers, and a concurrent key-value store to simulate distributed key-value store
+	- Add key-based routing in switch (hash_partition_tbl in basic.p4)
+		+ Add range matching rules (configure/table_configure.py)
 - TODO: For put req
 	+ If the entry is empty, we need to update the cache directly and notify the server (do not need to drop put_req, which becomes put_req_n; need to clone for put_res)
 	+ If the entry is not empty but key matches, we need to update value (need to drop original put req; need to clone for put_res)

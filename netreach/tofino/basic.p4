@@ -144,21 +144,6 @@ table save_info_tbl {
 	size: 1;
 }
 
-action hash_partition(server_num) {
-	modify_field_with_hash_based_offset(meta.server_idx, 0, hash_field_calc, server_num);
-}
-
-//@pragma stage 0
-table hash_partition_tbl {
-	reads {
-		udp_hdr.dstPort: exact;
-	}
-	actions {
-		hash_partition;
-	}
-	size: 1;
-}
-
 /* KV (hash table) */
 
 // registers and MATs related with 16B key
@@ -384,7 +369,6 @@ action ig_drop_unicast() {
 
 table drop_put_tbl {
 	reads {
-		ig_intr_md.ingress_port: exact;
 		op_hdr.optype: exact;
 	}
 	actions {
@@ -395,20 +379,20 @@ table drop_put_tbl {
 	size: 8;  
 }
 
-action select_server() {
-	add_to_field(udp_hdr.dstPort, meta.server_idx);
+action hash_partition(port) {
+	add_to_field(udp_hdr.dstPort, port);
 }
 
-table select_server_tbl {
+table hash_partition_tbl {
 	reads {
 		udp_hdr.dstPort: exact;
 		ig_intr_md_for_tm.ucast_egress_port: exact;
+		meta.hashidx: range;
 	}
 	actions {
-		select_server;
+		hash_partition;
 	}
-	default_action: select_server();
-	size: 1;
+	size: 128;
 }
 
 control ingress {
@@ -417,7 +401,6 @@ control ingress {
 		// Stage 0
 		apply(calculate_hash_tbl);
 		apply(save_info_tbl); // save dst port
-		apply(hash_partition_tbl); // calculate dst port for req
 
 		// Stage 1 and 2
 		// Different MAT entries for getreq/putreq
@@ -557,7 +540,7 @@ control ingress {
 		apply(port_forward_tbl);
 	}
 
-	apply(select_server_tbl); // update dst port for dst_port = 1111 and egress_port = server port
+	apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 }
 
 /* Egress Processing */

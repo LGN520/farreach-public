@@ -82,7 +82,7 @@ parser parse_val_len1 {
 	return ingress;
 }
 
-parser parse_val_len2 {
+/*parser parse_val_len2 {
 	extract(val1_hdr);
 	extract(val2_hdr);
 	return ingress;
@@ -257,7 +257,7 @@ parser parse_val_len15 {
 	return ingress;
 }
 
-/*parser parse_val_len16 {
+parser parse_val_len16 {
 	extract(val1_hdr);
 	extract(val2_hdr);
 	extract(val3_hdr);
