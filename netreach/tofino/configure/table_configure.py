@@ -43,7 +43,6 @@ import ConfigParser
 config = ConfigParser.ConfigParser()
 with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
     config.readfp(f)
-print(config.sections())
 
 server_num = int(config.get("server", "server_num"))
 server_port = int(config.get("server", "server_port"))

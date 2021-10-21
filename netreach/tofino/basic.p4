@@ -34,8 +34,11 @@
 //#define KV_BUCKET_COUNT 1
 
 //#define MAX_VAL_LEN 12
-#define VAL_PKTLEN 97
-#define VAL_PKTLEN_MINUS_ONE 96
+// NOTE: you should change the two macros according to maximum val length
+//#define VAL_PKTLEN 97
+//#define VAL_PKTLEN_MINUS_ONE 96
+#define VAL_PKTLEN 9
+##define VAL_PKTLEN_MINUS_ONE 8
 
 //#define CPU_PORT 192
 
@@ -380,7 +383,7 @@ table drop_put_tbl {
 }
 
 action hash_partition(port) {
-	add_to_field(udp_hdr.dstPort, port);
+	modify_field(udp_hdr.dstPort, port);
 }
 
 table hash_partition_tbl {
