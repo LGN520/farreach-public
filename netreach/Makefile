@@ -87,7 +87,7 @@ include mk/recipes.mk
 
 DEPS :=
 CLEAN :=
-TARGETS := client server prepare localtest split_workload ycsb_local_client
+TARGETS := client server prepare localtest split_workload ycsb_local_client ycsb_remote_client
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
@@ -124,7 +124,7 @@ localtest: localtest.o key.o val.o $(INIPARSER_OBJECTS)
 DEPS += localtest.d
 CLEAN += localtest.o localtest
 
-split_workload: split_workload.o key.o val.o ycsb/parser.o
+split_workload: split_workload.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += split_workload.d
 CLEAN += split_workload.o split_workload
@@ -133,6 +133,11 @@ ycsb_local_client: ycsb_local_client.o key.o val.o ycsb/parser.o $(INIPARSER_OBJ
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += ycsb_local_client.d
 CLEAN += ycsb_local_client.o ycsb_local_client
+
+ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += ycsb_remote_client.d
+CLEAN += ycsb_remote_client.o ycsb_remote_client
 
 ##############################################################################
 # Top level targets

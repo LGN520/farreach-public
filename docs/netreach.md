@@ -6,7 +6,7 @@
 - Set val length as 8B for fast debug (val.h, tofino/*.p4, tofino/*.py)
 - Add config module (config.ini, iniparser/\**)
 	- Read config.ini in ptf test files (configure/table_configure.py)
-	- Read config.ini in \*.c files (server.c, client.c, localtest.c, split_workload,c, ycsb_local_client.c)
+	- Read config.ini in \*.c files (server.c, client.c, localtest.c, split_workload,c, ycsb_local_client.c, ycsb_remote_client.c)
 	- Update Makefile
 - Key-based routing
 	- Directly use reserved dst port 1111 instead of dst port start (client.c)
@@ -15,7 +15,7 @@
 	- Add key-based routing in switch (hash_partition_tbl in basic.p4)
 		+ Add range matching rules (configure/table_configure.py)
 - Support YCSB
-	- Copy client.c to yscb_remote_client.c and integrate YCSB parser into transaction phase (TODO: ycsb_remote_client.c)
+	- Copy client.c to yscb_remote_client.c and integrate YCSB parser into transaction phase (ycsb_remote_client.c)
 - TODO: For put req
 	+ If the entry is empty, we need to update the cache directly and notify the server (do not need to drop put_req, which becomes put_req_n; need to clone for put_res)
 	+ If the entry is not empty but key matches, we need to update value (need to drop original put req; need to clone for put_res)
@@ -38,9 +38,9 @@
 		+ For example:
 		+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > workloada-load.out`
 		+ `./bin/ycsb.sh run basic -P workloads/workloada -P netbuffer.dat > workloada-run.out`
-		+ `./split_workload load workloada threadnum`
-		+ `./split_workload run workloada threadnum`
-	- `./ycsb_local_client -h threadnum -p workloada`
+		+ `./split_workload load`
+		+ `./split_workload run`
+	- `./ycsb_local_client` for loading phase
 	- Directory structure
 		+ Raw workload file: workloada-load.out, workloada-run.out
 		+ Split workload file: e.g., workloada-load-5/2.out

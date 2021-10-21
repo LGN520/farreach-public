@@ -10,6 +10,7 @@ prepare
 localtest
 split_workload
 ycsb_local_client
+ycsb_remote_client
 *.log
 *.out
 *.pyc

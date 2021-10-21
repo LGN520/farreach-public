@@ -4,8 +4,6 @@
 #include "parser.h"
 //#include "utf8.h"
 
-#define VAL_STRLEN 96
-
 ParserIterator::ParserIterator(const char* filename) {
 	fp = fopen(filename, "r");
 	if (fp == nullptr) {
@@ -135,7 +133,7 @@ bool ParserIterator::parsekv(const char* line) {
 	uint8_t val_len = uint8_t(((val_end - val_begin) + 7) / 8);
 	char val_buf[val_len * 8];
 	memset(val_buf, '\0', val_len * 8);
-	memcpy(val_buf, val_begin, VAL_STRLEN);
+	memcpy(val_buf, val_begin, val_end - val_begin);
 	_val = Val((uint64_t*)val_buf, val_len);
 
 	_line = std::string(line, strlen(line));

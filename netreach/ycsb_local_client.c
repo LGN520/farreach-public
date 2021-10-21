@@ -34,7 +34,6 @@ typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef SFGParam sfg_param_t;
 
 inline void parse_ini(const char * config_file);
-inline void parse_args(int, char **);
 void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals);
 void run_server(xindex_t *table);
 void *run_sfg(void *param);
@@ -54,8 +53,7 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 };
 
 int main(int argc, char **argv) {
-
-	parse_args(argc, argv);
+	parse_ini("config.ini");
 	xindex::init_options(); // init options of rocksdb
 
 	// prepare xindex

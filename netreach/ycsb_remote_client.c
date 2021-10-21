@@ -20,6 +20,7 @@
 #include "dpdk_helper.h"
 #include "key.h"
 #include "val.h"
+#include "ycsb/parser.h"
 #include "iniparser/iniparser_wrapper.h"
 
 struct alignas(CACHELINE_SIZE) FGParam;
@@ -37,9 +38,8 @@ typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
 
 inline void parse_ini(const char * config_file);
-inline void parse_args(int, char **);
 void load();
-void run_benchmark(size_t sec);
+void run_benchmark();
 //void *run_fg(void *param); // sender
 
 // DPDK
@@ -50,18 +50,20 @@ volatile struct rte_mbuf **pkts;
 volatile bool *stats;
 
 // parameters
-size_t runtime = 10;
-size_t fg_n = 1;
 uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa5};
 uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
 char src_ipaddr[16] = "10.0.0.31";
 char server_addr[16] = "10.0.0.32";
 short src_port_start = 8888;
+size_t fg_n;
 //short dst_port_start = 1111;
-short dst_port = 1111;
+short dst_port;
+const char *workload_name;
+char output_dir[256];
 
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
+std::atomic<size_t> finish_threads(0);
 
 struct alignas(CACHELINE_SIZE) FGParam {
   uint64_t throughput;
@@ -70,8 +72,6 @@ struct alignas(CACHELINE_SIZE) FGParam {
 
 int main(int argc, char **argv) {
   parse_ini("config.ini");
-  parse_args(argc, argv);
-  load();
 
   // Prepare DPDK EAL param
   int dpdk_argc = 3;
@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
 	dpdk_argv[i] = new char[20];
 	memset(dpdk_argv[i], '\0', 20);
   }
-  std::string arg_proc = "./client";
+  std::string arg_proc = "./ycsb_remote_client";
   std::string arg_iovamode = "--iova-mode";
   std::string arg_iovamode_val = "pa";
   //std::string arg_whitelist = "-w";
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 	pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
   }
 
-  run_benchmark(runtime);
+  run_benchmark();
 
   // Free DPDK mbufs
   for (size_t i = 0; i < fg_n; i++) {
@@ -117,89 +117,22 @@ int main(int argc, char **argv) {
   exit(0);
 }
 
-inline void parse_args(int argc, char **argv) {
-  struct option long_options[] = {
-      {"runtime", required_argument, 0, 'g'},
-      //{"fg", required_argument, 0, 'h'},
-	  {"server-addr", required_argument, 0, 'i'},
-	  //{"server-port", required_argument, 0, 'j'},
-      {0, 0, 0, 0}};
-  std::string ops = "g:i:";
-  int option_index = 0;
-
-  while (1) {
-    int c = getopt_long(argc, argv, ops.c_str(), long_options, &option_index);
-    if (c == -1) break;
-
-    switch (c) {
-      case 0:
-        if (long_options[option_index].flag != 0) break;
-        abort();
-        break;
-      case 'g':
-        runtime = strtoul(optarg, NULL, 10);
-        INVARIANT(runtime > 0);
-        break;
-	  case 'i':
-		INVARIANT(strlen(optarg) > 0);
-		memcpy(server_addr, optarg, strlen(optarg));
-		break;
-	  /*case 'j':
-		server_port = atoi(optarg);
-		INVARIANT(server_port > 0);
-		break;*/
-      default:
-        abort();
-    }
-  }
-
-  COUT_VAR(runtime);
-  COUT_VAR(fg_n);
-}
-
 inline void parse_ini(const char* config_file) {
 	IniparserWrapper ini;
 	ini.load(config_file);
 
 	fg_n = ini.get_client_num();
 	dst_port = ini.get_server_port();
+	workload_name = ini.get_workload_name();
+	RUN_SPLIT_DIR(output_dir, workload_name, fg_n);
+
+	COUT_VAR(fg_n);
+	COUT_VAR(dst_port);
+	COUT_VAR(workload_name);
+	printf("output_dir: %s\n", output_dir);
 }
 
-void load() {
-	std::ifstream fd("exist_keys.out", std::ios::in | std::ios::binary);
-	INVARIANT(fd);
-	while (true) {
-		index_key_t tmp;
-		fd.read((char *)&tmp, sizeof(index_key_t));
-		if (likely(!fd.eof())) {
-			exist_keys.push_back(tmp);
-		}
-		else {
-			break;
-		}
-	}
-	fd.close();
-	COUT_THIS("[client] # of exist keys = " << exist_keys.size());
-
-	if (insert_ratio > 0) {
-		fd.open("nonexist_keys.out", std::ios::in | std::ios::binary);
-		INVARIANT(fd);
-		while (true) {
-			index_key_t tmp;
-			fd.read((char *)&tmp, sizeof(index_key_t));
-			if (likely(!fd.eof())) {
-				non_exist_keys.push_back(tmp);
-			}
-			else {
-				break;
-			}
-		}
-		fd.close();
-	}
-	COUT_THIS("[client] # of nonexist keys = " << non_exist_keys.size());
-}
-
-void run_benchmark(size_t sec) {
+void run_benchmark() {
   int ret = 0;
   unsigned lcoreid = 1;
 
@@ -244,26 +177,13 @@ void run_benchmark(size_t sec) {
   while (ready_threads < fg_n) sleep(1);
 
   running = true;
-  std::vector<size_t> tput_history(fg_n, 0);
-  size_t current_sec = 0;
-  while (current_sec < sec) {
-    sleep(1);
-    uint64_t tput = 0;
-    for (size_t i = 0; i < fg_n; i++) {
-      tput += fg_params[i].throughput - tput_history[i];
-      tput_history[i] = fg_params[i].throughput;
-    }
-    COUT_THIS("[client] >>> sec " << current_sec << " throughput: " << tput);
-    ++current_sec;
-  }
+  while (finish_threads < fg_n) sleep(1);
+  COUT_THIS("[client] all workers finish!");
 
-  running = false;
-
-  size_t throughput = 0;
-  for (auto &p : fg_params) {
-    throughput += p.throughput;
-  }
-  COUT_THIS("[client] Throughput(op/s): " << throughput / sec);
+  // TODO: process statistics
+  
+  // TODO: uncomment it after processing statistics
+  // running = false;
 
   /*void *status;
   for (size_t i = 0; i < fg_n; i++) {
@@ -279,25 +199,12 @@ static int run_receiver(void *param) {
 	while (!running)
 		;
 
-  //DEBUG
-  //double prevt0 = 0;
-  //double t0 = CUR_TIME();
-  //uint32_t debug_idx = 0;
-
 	struct rte_mbuf *received_pkts[32];
 	while (running) {
-		//double tmpt0 = CUR_TIME();
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
 		if (n_rx == 0) {
-			//double tmpt1 = CUR_TIME();
-			//t0 += (tmpt1 - tmpt0);
 			continue;
 		}
-		/*if ((debug_idx + 1) % 10001 == 0) {
-			COUT_VAR((t0 - prevt0) / 10000.0);
-			prevt0 = t0;
-			COUT_VAR(n_rx);
-		}*/
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);
 			if (unlikely(ret == -1)) {
@@ -322,9 +229,6 @@ static int run_receiver(void *param) {
 				}
 			}
 		}
-		//debug_idx++;
-		//double tmpt1 = CUR_TIME();
-		//t0 += (tmpt1 - tmpt0);
 	}
 	return 0;
 }
@@ -333,54 +237,16 @@ static int run_fg(void *param) {
   fg_param_t &thread_param = *(fg_param_t *)param;
   uint8_t thread_id = thread_param.thread_id;
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<> ratio_dis(0, 1);
+  char load_filename[256];
+  memset(load_filename, '\0', 256);
+  GET_SPLIT_WORKLOAD(load_filename, output_dir, thread_id);
 
-  size_t exist_key_n_per_thread = exist_keys.size() / fg_n;
-  size_t exist_key_start = thread_id * exist_key_n_per_thread;
-  size_t exist_key_end = (thread_id + 1) * exist_key_n_per_thread;
-  std::vector<index_key_t> op_keys(exist_keys.begin() + exist_key_start,
-                                   exist_keys.begin() + exist_key_end);
-
-  if (non_exist_keys.size() > 0) {
-    size_t non_exist_key_n_per_thread = non_exist_keys.size() / fg_n;
-    size_t non_exist_key_start = thread_id * non_exist_key_n_per_thread,
-           non_exist_key_end = (thread_id + 1) * non_exist_key_n_per_thread;
-    op_keys.insert(op_keys.end(), non_exist_keys.begin() + non_exist_key_start,
-                   non_exist_keys.begin() + non_exist_key_end);
-  }
+  Parser parser(load_filename);
+  ParserIterator iter = parser.begin();
+  index_key_t tmpkey;
+  val_t tmpval;
 
   int res = 0;
-
-  // Prepare socket
-  /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  INVARIANT(sockfd >= 0);
-  int disable = 1;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-	perror("Disable udp checksum failed");
-  }
-  short src_port = src_port_start + thread_id;
-  short dst_port = dst_port_start + thread_id;
-  // Client address
-  struct sockaddr_in client_sockaddr;
-  memset(&client_sockaddr, 0, sizeof(struct sockaddr_in));
-  client_sockaddr.sin_family = AF_INET;
-  client_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  client_sockaddr.sin_port = htons(src_port);
-  res = bind(sockfd, (struct sockaddr *)&client_sockaddr, sizeof(struct sockaddr_in));
-  INVARIANT(res != -1)
-  // Server address
-  struct sockaddr_in remote_sockaddr;
-  memset(&remote_sockaddr, 0, sizeof(struct sockaddr_in));
-  remote_sockaddr.sin_family = AF_INET;
-  INVARIANT(inet_pton(AF_INET, server_addr, &remote_sockaddr.sin_addr) > 0);
-  remote_sockaddr.sin_port = htons(dst_port);*/
-  // Set timeout
-  /*struct timeval tv;
-  tv.tv_sec = 1;
-  tv.tv_usec =  0;
-  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));*/
 
   // DPDK
   short src_port = src_port_start + thread_id;
@@ -397,15 +263,6 @@ static int run_fg(void *param) {
   char buf[MAX_BUFSIZE];
   int req_size = 0;
   int recv_size = 0;
-  uint64_t dummy_value_data[1] = {1234};
-  val_t dummy_value = Val(dummy_value_data, 1);
-  size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
-  COUT_THIS("[client " << uint32_t(thread_id) << "] Ready.");
-  ready_threads++;
-
-  // DEBUG TEST
-  //uint32_t debugtest_idx = 0;
-  //uint32_t debugtest_i = 0;
 
 #if !defined(NDEBUGGING_LOG)
   std::string logname;
@@ -413,57 +270,27 @@ static int run_fg(void *param) {
   std::ofstream ofs(logname, std::ofstream::out);
 #endif
 
+  COUT_THIS("[client " << uint32_t(thread_id) << "] Ready.");
+  ready_threads++;
+
   while (!running)
     ;
 
-  //DEBUG
-  //double t0 = CUR_TIME();
-  //uint32_t debug_idx = 0;
-  //uint32_t tmploop = 0;
-
   while (running) {
-	// DEBUG TEST
-	/*int tmprun = 0;
-	query_i = debugtest_idx;
-	update_i = debugtest_idx;
-	if (debugtest_i == 0) tmprun = 1;
-	debugtest_i++;*/
-
 	sent_pkt = sent_pkts[sent_pkt_idx];
 
-    double d = ratio_dis(gen);
-
-	/*if ((debug_idx + 1) % 10001 == 0) {
-		COUT_VAR(t0 / 10000.0);
-		t0 = 0;
-		COUT_VAR(tmploop / 10000.0);
-		tmploop = 0;
-	}*/
-
-	int tmprun = 0;
-    //if (d <= read_ratio) {  // get
-    if (tmprun == 0) {  // get
-	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
-	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string());
+	tmpkey = iter.key();
+	if (iter.type() == uint8_t(packet_type_t::GET_REQ)) { // get
+	  get_request_t req(thread_id, tmpkey);
+	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
-	  // UDP socket
-	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  //INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  //INVARIANT(recv_size != -1);
-	  
 	  // DPDK
 	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
-	  //double tmpt0 = CUR_TIME();
 	  res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 	  INVARIANT(res == 1);
 	  while (!stats[thread_id])
-		  //tmploop++;
 		  ;
-      //debug_idx++;
-	  //double tmpt1 = CUR_TIME();
-	  //t0 += (tmpt1 - tmpt0);
 	  stats[thread_id] = false;
 	  recv_size = get_payload(pkts[thread_id], buf);
 	  rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
@@ -473,21 +300,13 @@ static int run_fg(void *param) {
 	  INVARIANT(pkt_type == packet_type_t::GET_RES);
 	  get_response_t rsp(buf, recv_size);
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
-      query_i++;
-      if (unlikely(query_i == op_keys.size() / 2)) {
-        query_i = 0;
-      }
-    //} else if (d <= read_ratio + update_ratio) {  // update
-    } else if (tmprun == 1) {  // update
-	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
-	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << req.val().to_string());
-	  req_size = req.serialize(buf, MAX_BUFSIZE);
+	}
+	else if (iter.type() == uint8_t(packet_type_t::PUT_REQ)) { // update or insert
+	  tmpval = iter.val();
 
-	  // UDP socket
-	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  //INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  //INVARIANT(recv_size != -1);
+	  put_request_t req(thread_id, tmpkey, tmpval);
+	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
+	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
 	  // DPDK
 	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
@@ -504,52 +323,11 @@ static int run_fg(void *param) {
 	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
 	  put_response_t rsp(buf, recv_size);
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
-      update_i++;
-      if (unlikely(update_i == op_keys.size() / 2)) {
-        update_i = 0;
-      }
-    //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
-    } else if (tmprun == 2) {  // insert
-	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
-	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << req.val().to_string());
+	}
+	else if (iter.type() == uint8_t(packet_type_t::DEL_REQ)) {
+	  del_request_t req(thread_id, tmpkey);
+	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
-
-	  // UDP socket
-	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  //INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  //INVARIANT(recv_size != -1);
-	  
-	  // DPDK
-	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
-	  res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
-	  INVARIANT(res == 1);
-	  while (!stats[thread_id])
-		  ;
-	  stats[thread_id] = false;
-	  recv_size = get_payload(pkts[thread_id], buf);
-	  rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
-	  INVARIANT(recv_size != -1);
-	  
-	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
-	  INVARIANT(pkt_type == packet_type_t::PUT_RES);
-	  put_response_t rsp(buf, recv_size);
-	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
-      insert_i++;
-      if (unlikely(insert_i == op_keys.size())) {
-        insert_i = 0;
-      }
-    //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
-    } else if (tmprun == 3) {  // remove
-	  del_request_t req(thread_id, op_keys[delete_i]);
-	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << op_keys[delete_i].to_string());
-	  req_size = req.serialize(buf, MAX_BUFSIZE);
-
-	  // UDP socket
-	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  //INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  //INVARIANT(recv_size != -1);
 
 	  // DPDK
 	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
@@ -566,45 +344,11 @@ static int run_fg(void *param) {
 	  INVARIANT(pkt_type == packet_type_t::DEL_RES);
 	  del_response_t rsp(buf, recv_size);
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
-      delete_i++;
-      if (unlikely(delete_i == op_keys.size())) {
-        delete_i = 0;
-      }
-    } else {  // scan
-	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], 10);
-	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << req.key().to_string());
-	  req_size = req.serialize(buf, MAX_BUFSIZE);
-
-	  // UDP socket
-	  //res = sendto(sockfd, buf, req_size, 0, (struct sockaddr *)&remote_sockaddr, sizeof(struct sockaddr));
-	  //INVARIANT(res != -1);
-	  //recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, NULL, NULL);
-	  //INVARIANT(recv_size != -1);
-
-	  // DPDK
-	  encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
-	  res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
-	  INVARIANT(res == 1);
-	  while (!stats[thread_id])
-		  ;
-	  stats[thread_id] = false;
-	  recv_size = get_payload(pkts[thread_id], buf);
-	  rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
-	  INVARIANT(recv_size != -1);
-
-	  packet_type_t pkt_type = get_packet_type(buf, recv_size);
-	  INVARIANT(pkt_type == packet_type_t::SCAN_RES);
-	  scan_response_t rsp(buf, recv_size);
-	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] num = " << rsp.num());
-	  for (uint32_t val_i = 0; val_i < rsp.num(); val_i++) {
-		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].first.to_string());
-		  FDEBUG_THIS(ofs, rsp.pairs()[val_i].second.to_string());
-	  }
-      query_i++;
-      if (unlikely(query_i == op_keys.size() / 2)) {
-        query_i = 0;
-      }
-    }
+	}
+	else {
+	  printf("Invalid request type: %u\n", uint32_t(iter.type()));
+	  exit(-1);
+	}
     thread_param.throughput++;
 
 	sent_pkt_idx++;
@@ -612,6 +356,10 @@ static int run_fg(void *param) {
 		sent_pkt_idx = 0;
 		res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
 		INVARIANT(res == 0);
+	}
+
+	if (!iter.next()) {
+		break;
 	}
   }
 
@@ -621,10 +369,9 @@ static int run_fg(void *param) {
 	}
   }
 
-  //close(sockfd);
-  //pthread_exit(nullptr); // UDP socket
 #if !defined(NDEBUGGING_LOG)
   ofs.close();
 #endif
+  finish_threads++;
   return 0;
 }

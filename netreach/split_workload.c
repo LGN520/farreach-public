@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv) {
 
-	if (argc != 4) {
+	if (argc != 2) {
 		printf("Usage: ./split_workload load/run\n");
 		exit(-1);
 	}
@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 
 	IniparserWrapper ini;
 	ini.load("config.ini");
-	char *workload_name = ini.get_workload_name();
+	const char *workload_name = ini.get_workload_name();
 	uint32_t splitnum = 0;
 	if (op == 0) {
 		splitnum = ini.get_split_num();
