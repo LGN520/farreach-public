@@ -50,11 +50,6 @@ volatile struct rte_mbuf **pkts;
 volatile bool *stats;
 
 // parameters
-double read_ratio = 1;
-double insert_ratio = 0;
-double update_ratio = 0;
-double delete_ratio = 0;
-double scan_ratio = 0;
 size_t runtime = 10;
 size_t fg_n = 1;
 uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa5};
@@ -67,8 +62,6 @@ short dst_port = 1111;
 
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
-std::vector<index_key_t> exist_keys;
-std::vector<index_key_t> non_exist_keys;
 
 struct alignas(CACHELINE_SIZE) FGParam {
   uint64_t throughput;
@@ -126,17 +119,12 @@ int main(int argc, char **argv) {
 
 inline void parse_args(int argc, char **argv) {
   struct option long_options[] = {
-      {"read", required_argument, 0, 'a'},
-      {"insert", required_argument, 0, 'b'},
-      {"remove", required_argument, 0, 'c'},
-      {"update", required_argument, 0, 'd'},
-      {"scan", required_argument, 0, 'e'},
       {"runtime", required_argument, 0, 'g'},
       //{"fg", required_argument, 0, 'h'},
 	  {"server-addr", required_argument, 0, 'i'},
 	  //{"server-port", required_argument, 0, 'j'},
       {0, 0, 0, 0}};
-  std::string ops = "a:b:c:d:e:g:i:";
+  std::string ops = "g:i:";
   int option_index = 0;
 
   while (1) {
@@ -147,26 +135,6 @@ inline void parse_args(int argc, char **argv) {
       case 0:
         if (long_options[option_index].flag != 0) break;
         abort();
-        break;
-      case 'a':
-        read_ratio = strtod(optarg, NULL);
-        INVARIANT(read_ratio >= 0 && read_ratio <= 1);
-        break;
-      case 'b':
-        insert_ratio = strtod(optarg, NULL);
-        INVARIANT(insert_ratio >= 0 && insert_ratio <= 1);
-        break;
-      case 'c':
-        delete_ratio = strtod(optarg, NULL);
-        INVARIANT(delete_ratio >= 0 && delete_ratio <= 1);
-        break;
-      case 'd':
-        update_ratio = strtod(optarg, NULL);
-        INVARIANT(update_ratio >= 0 && update_ratio <= 1);
-        break;
-      case 'e':
-        scan_ratio = strtod(optarg, NULL);
-        INVARIANT(scan_ratio >= 0 && scan_ratio <= 1);
         break;
       case 'g':
         runtime = strtoul(optarg, NULL, 10);
@@ -185,12 +153,6 @@ inline void parse_args(int argc, char **argv) {
     }
   }
 
-  COUT_THIS("[micro] Read:Insert:Update:Delete:Scan = "
-            << read_ratio << ":" << insert_ratio << ":" << update_ratio << ":"
-            << delete_ratio << ":" << scan_ratio)
-  double ratio_sum =
-      read_ratio + insert_ratio + delete_ratio + scan_ratio + update_ratio;
-  INVARIANT(ratio_sum > 0.9999 && ratio_sum < 1.0001);  // avoid precision lost
   COUT_VAR(runtime);
   COUT_VAR(fg_n);
 }

@@ -56,3 +56,12 @@ uint32_t IniparserWrapper::get_bucket_num() {
 	}
 	return uint32_t(tmp);
 }
+
+size_t IniparserWrapper::get_split_num() {
+	int tmp = iniparser_getint(ini, "other:split_num", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [other:split_num]: %d\n", tmp);
+		exit(-1);
+	}
+	return size_t(tmp);
+}

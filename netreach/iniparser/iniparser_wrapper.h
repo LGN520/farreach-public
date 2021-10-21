@@ -15,6 +15,7 @@ class IniparserWrapper {
 		short get_server_port();
 		const char *get_workload_name();
 		uint32_t get_bucket_num();
+		size_t get_split_num();
 
 	private:
 		dictionary *ini = nullptr;

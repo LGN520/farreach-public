@@ -82,51 +82,20 @@ inline void parse_ini(const char* config_file) {
 	IniparserWrapper ini;
 	ini.load(config_file);
 
-	workload_name = ini.get_workload_name();
-}
-
-inline void parse_args(int argc, char **argv) {
-	struct option long_options[] = {
-			{"splitnum", required_argument, 0, 'h'},
-			//{"workload_name", required_argument, 0, 'p'},
-			{0, 0, 0, 0}};
-	std::string ops = "h:";
-	int option_index = 0;
-
-	while (1) {
-		int c = getopt_long(argc, argv, ops.c_str(), long_options, &option_index);
-		if (c == -1) break;
-
-		switch (c) {
-			case 0:
-				if (long_options[option_index].flag != 0) break;
-				abort();
-				break;
-			case 'h':
-				split_n = strtoul(optarg, NULL, 10);
+	split_n = ini.get_split_num();
+	INVARIANT(split_n >= 2);
 #ifndef CORRECTNESS_TEST
-				fg_n = split_n - 1;
+	fg_n = split_n - 1;
 #else
-				fg_n = split_n;
+	fg_n = split_n;
 #endif
-				INVARIANT(split_n >= 2);
-				break;
-		/*case 'p':
-			INVARIANT(strlen(optarg) < 32);
-			memset(workload_name, '\0', 32);
-			strncpy(workload_name, optarg, strlen(optarg));*/
-		break;
-			default:
-				abort();
-		}
-	}
+	workload_name = ini.get_workload_name();
 
 	COUT_VAR(split_n);
 	COUT_VAR(fg_n);
 	COUT_VAR(std::string(workload_name, strlen(workload_name)));
 
-
-	LOAD_SPLIT_DIR(output_dir, workload_name, split_n);
+	LOAD_SPLIT_DIR(output_dir, workload_name, split_n); // get the split directory for loading phase
 	struct stat dir_stat;
 	if (!(stat(output_dir, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
 		printf("Output directory does not exist: %s\n", output_dir);
