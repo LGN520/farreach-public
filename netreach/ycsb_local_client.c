@@ -20,6 +20,7 @@
 #include "key.h"
 #include "val.h"
 #include "ycsb/parser.h"
+#include "iniparser/iniparser_wrapper.h"
 
 #if 0
 #define CORRECTNESS_TEST
@@ -32,6 +33,7 @@ typedef Val val_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef SFGParam sfg_param_t;
 
+inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
 void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals);
 void run_server(xindex_t *table);
@@ -40,7 +42,7 @@ void *run_sfg(void *param);
 // parameters
 size_t split_n = 1;
 size_t fg_n = 1;
-char workload_name[32] = "workloada";
+const char *workload_name;
 char output_dir[256];
 
 volatile bool running = false;
@@ -76,12 +78,19 @@ int main(int argc, char **argv) {
 	exit(0);
 }
 
+inline void parse_ini(const char* config_file) {
+	IniparserWrapper ini;
+	ini.load(config_file);
+
+	workload_name = ini.get_workload_name();
+}
+
 inline void parse_args(int argc, char **argv) {
 	struct option long_options[] = {
 			{"splitnum", required_argument, 0, 'h'},
-			{"workload_name", required_argument, 0, 'p'},
+			//{"workload_name", required_argument, 0, 'p'},
 			{0, 0, 0, 0}};
-	std::string ops = "h:p:";
+	std::string ops = "h:";
 	int option_index = 0;
 
 	while (1) {
@@ -102,10 +111,10 @@ inline void parse_args(int argc, char **argv) {
 #endif
 				INVARIANT(split_n >= 2);
 				break;
-		case 'p':
+		/*case 'p':
 			INVARIANT(strlen(optarg) < 32);
 			memset(workload_name, '\0', 32);
-			strncpy(workload_name, optarg, strlen(optarg));
+			strncpy(workload_name, optarg, strlen(optarg));*/
 		break;
 			default:
 				abort();

@@ -23,11 +23,9 @@
 #include "dpdk_helper.h"
 #include "key.h"
 #include "val.h"
-#include "iniparser/iniparser.h"
+#include "iniparser/iniparser_wrapper.h"
 
 #define MQ_SIZE 256
-#define KV_BUCKET_COUT 32768
-//#define KV_BUCKET_COUT 65536
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
 struct alignas(CACHELINE_SIZE) SFGParam;
@@ -81,6 +79,8 @@ short backup_port = 3333;
 short controller_port = 3334;
 short listener_port = 3335;
 char controller_ip[20] = "172.16.112.19";
+const char *workload_name = nullptr;
+uint32_t kv_bucket_num;
 
 std::vector<index_key_t> exist_keys;
 
@@ -95,7 +95,7 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 
 void test_merge_latency() {
 	backup_data = new std::map<index_key_t, val_t>;
-	for (size_t i = 0; i < KV_BUCKET_COUT; i++) {
+	for (size_t i = 0; i < kv_bucket_num; i++) {
 		uint64_t init_val_data[1] = {1};
 		backup_data->insert(std::pair<index_key_t, val_t>(exist_keys[i], Val(init_val_data, 1)));
 	}
@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
   // prepare xindex
   uint64_t init_val_data[1] = {1};
   std::vector<val_t> vals(exist_keys.size(), Val(init_val_data, 1));
-  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, "microbench"); // fg_n to create array of RCU status; bg_n background threads have been launched
+  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   // register signal handler
   signal(SIGTERM, SIG_IGN); // Ignore SIGTERM for subthreads
@@ -184,25 +184,13 @@ int main(int argc, char **argv) {
 }
 
 inline void parse_ini(const char* config_file) {
-	dictionary *ini = iniparser_load(config_file);
-	if (ini == nullptr) {
-		printf("Cannot parse ini file: %s\n", config_file);
-		exit(-1);
-	}
+	IniparserWrapper ini;
+	ini.load(config_file);
 
-	int tmp = iniparser_getint(ini, "server:server_num", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [server:server_num]: %d\n", tmp);
-		exit(-1);
-	}
-	fg_n = size_t(tmp);
-
-	tmp - iniparser_getint(ini, "server:server_port", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [server:server_port]: %d\n", tmp);
-		exit(-1);
-	}
-	dst_port_start = short(tmp);
+	fg_n = ini.get_server_num();
+	dst_port_start = ini.get_server_port();
+	workload_name = ini.get_workload_name();
+	kv_bucket_num = ini.get_bucket_num();
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -487,7 +475,7 @@ void *run_backuper(void *param) {
 	INVARIANT(res >= 0);
 	
 	int recv_size = 0;
-	char recv_buf[KV_BUCKET_COUT * 114]; // n * (16+1+96) + 14 + 20 + 8 < n * 114
+	char recv_buf[kv_bucket_num * 114]; // n * (16+1+96) + 14 + 20 + 8 < n * 114
 	memset(recv_buf, 0, sizeof(recv_buf));
 
 	while (!running)
@@ -551,7 +539,7 @@ void *run_listener(void *param) {
 	INVARIANT(res >= 0);
 	
 	int recv_size = 0;
-	char recv_buf[KV_BUCKET_COUT * 26]; // n * 25 + 14 + 20 + 8 < n * 26
+	char recv_buf[kv_bucket_num * 114]; // n * 25 + 14 + 20 + 8 < n * 26
 	memset(recv_buf, 0, sizeof(recv_buf));
 
 	while (!running)

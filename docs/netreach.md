@@ -6,7 +6,7 @@
 - Set val length as 8B for fast debug (val.h, tofino/*.p4, tofino/*.py)
 - Add config module (config.ini, iniparser/\**)
 	- Read config.ini in ptf test files (configure/table_configure.py)
-	- Read config.ini in \*.c files (server.c)
+	- Read config.ini in \*.c files (server.c, client.c, localtest.c, ycsb_local_client.c)
 	- Update Makefile
 - Key-based routing
 	- Directly use reserved dst port 1111 instead of dst port start (client.c)
@@ -14,6 +14,8 @@
 		+ In server, we use multiple threads to simulate servers, and a concurrent key-value store to simulate distributed key-value store
 	- Add key-based routing in switch (hash_partition_tbl in basic.p4)
 		+ Add range matching rules (configure/table_configure.py)
+- Support YCSB
+	- Copy client.c to yscb_remote_client.c and integrate YCSB parser into transaction phase (ycsb_remote_client.c)
 - TODO: For put req
 	+ If the entry is empty, we need to update the cache directly and notify the server (do not need to drop put_req, which becomes put_req_n; need to clone for put_res)
 	+ If the entry is not empty but key matches, we need to update value (need to drop original put req; need to clone for put_res)
@@ -43,6 +45,7 @@
 		+ Raw workload file: workloada-load.out, workloada-run.out
 		+ Split workload file: e.g., workloada-load-5/2.out
 		+ Database directory: e.g., /tmp/netbuffer/workloada/group0.db, /tmp/netbuffer/workloada/buffer0-0.db
+		+ RMI model at root node when init key-value store: workloada-root.out
 - Run `cd tofino`
 	+ Run `su` to enter root account
 	+ Run `bash compile.sh` to compile p4 into binary code

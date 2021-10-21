@@ -317,8 +317,8 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const 
 	iphdr->hdr_checksum = checksum((uint16_t *)iphdr, sizeof(struct ipv4_hdr));
 	//udphdr->dgram_cksum = udp4_checksum(iphdr, udphdr, payload, payload_size);
 
-	//printf("pktsize: %d\n", pktsize);
-	//dump_buf(data, pktsize);
+	printf("pktsize: %d\n", pktsize);
+	dump_buf(data, pktsize);
 
 	mbuf->data_len = pktsize;
 	mbuf->pkt_len = pktsize;
@@ -384,8 +384,8 @@ int get_dstport(volatile struct rte_mbuf *mbuf) {
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
-	//printf("pktsize: %d\n", mbuf->pkt_len);
-	//dump_buf(data, mbuf->pkt_len);
+	printf("pktsize: %d\n", mbuf->pkt_len);
+	dump_buf(data, mbuf->pkt_len);
 
 	/*ethhdr = (struct ether_hdr *)data;
 	if (ethhdr->ether_type != 0x0008) {
@@ -439,8 +439,8 @@ int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
-	//printf("pktsize: %d\n", mbuf->pkt_len);
-	//dump_buf(data, mbuf->pkt_len);
+	printf("pktsize: %d\n", mbuf->pkt_len);
+	dump_buf(data, mbuf->pkt_len);
 
 	ethhdr = (struct ether_hdr *)data;
 	if (ethhdr->ether_type != 0x0008) {
