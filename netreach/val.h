@@ -11,7 +11,7 @@ class Val {
 
  public:
 
-  static uint32_t MAX_VAL_LENGTH = 0;
+  static uint32_t MAX_VAL_LENGTH;
 
   // MAX_VAL_LENGTH * 8B
   static uint32_t max_bytesnum() {

@@ -1,6 +1,8 @@
 #include "val.h"
 #include <sstream>
 
+uint32_t Val::MAX_VAL_LENGTH = 1;
+
 Val::Val() {
 	val_length = 0;
 	val_data = nullptr;

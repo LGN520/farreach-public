@@ -673,7 +673,7 @@ static int run_sfg(void * param) {
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr)); // UDP socket
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, src_port, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -689,7 +689,7 @@ static int run_sfg(void * param) {
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, src_port, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -705,7 +705,7 @@ static int run_sfg(void * param) {
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, src_port, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -788,7 +788,7 @@ static int run_sfg(void * param) {
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, src_port, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
