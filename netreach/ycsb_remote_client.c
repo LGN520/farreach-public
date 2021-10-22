@@ -50,11 +50,11 @@ volatile struct rte_mbuf **pkts;
 volatile bool *stats;
 
 // parameters
-uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa5};
-uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
-char src_ipaddr[16] = "10.0.0.31";
-char server_addr[16] = "10.0.0.32";
-short src_port_start = 8888;
+uint8_t src_macaddr[6];
+uint8_t dst_macaddr[6];
+const char *src_ipaddr;
+const char *server_addr;
+short src_port_start;
 size_t fg_n;
 //short dst_port_start = 1111;
 short dst_port;
@@ -121,11 +121,31 @@ inline void parse_ini(const char* config_file) {
 	IniparserWrapper ini;
 	ini.load(config_file);
 
+	ini.get_client_mac(src_macaddr);
+	ini.get_server_mac(dst_macaddr);
+	src_ipaddr = ini.get_client_ip();
+	server_addr = ini.get_server_ip();
+	src_port_start = ini.get_client_port();
 	fg_n = ini.get_client_num();
 	dst_port = ini.get_server_port();
 	workload_name = ini.get_workload_name();
 	RUN_SPLIT_DIR(output_dir, workload_name, fg_n);
 
+	printf("src_macaddr: ");
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", src_macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+	printf("dst_macaddr: ");
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", dst_macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+	printf("src_ipaddr: %s\n", src_ipaddr);
+	printf("server_addr: %s\n", server_addr);
+	COUT_VAR(src_port_start);
 	COUT_VAR(fg_n);
 	COUT_VAR(dst_port);
 	COUT_VAR(workload_name);

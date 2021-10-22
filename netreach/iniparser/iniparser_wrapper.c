@@ -1,4 +1,5 @@
 #include "iniparser_wrapper.h"
+#include <string.h>
 
 IniparserWrapper::IniparserWrapper() {
 	ini = nullptr;
@@ -12,6 +13,15 @@ void IniparserWrapper::load(const char* filename) {
 	}
 }
 
+const char *IniparserWrapper::get_workload_name() {
+	const char *workload_name = iniparser_getstring(ini, "global:workload_name", nullptr);
+	if (workload_name == nullptr) {
+		printf("Invalid entry of [global:workload_name]\n");
+		exit(-1);
+	}
+	return workload_name;
+}
+
 size_t IniparserWrapper::get_client_num() {
 	int tmp = iniparser_getint(ini, "client:client_num", -1);
 	if (tmp == -1) {
@@ -19,6 +29,33 @@ size_t IniparserWrapper::get_client_num() {
 		exit(-1);
 	}
 	return size_t(tmp);
+}
+
+short IniparserWrapper::get_client_port() {
+	int tmp = iniparser_getint(ini, "client:client_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [client:client_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+const char *IniparserWrapper::get_client_ip() {
+	const char *client_ip = iniparser_getstring(ini, "client:client_ip", nullptr);
+	if (client_ip == nullptr) {
+		printf("Invalid entry of [client:client_ip]\n");
+		exit(-1);
+	}
+	return client_ip;
+}
+
+void IniparserWrapper::get_client_mac(uint8_t *macaddr) {
+	const char *client_mac = iniparser_getstring(ini, "client:client_mac", nullptr);
+	if (client_mac == nullptr) {
+		printf("Invalid entry of [client:client_mac]\n");
+		exit(-1);
+	}
+	parse_mac(macaddr, client_mac);
 }
 
 size_t IniparserWrapper::get_server_num() {
@@ -39,13 +76,22 @@ short IniparserWrapper::get_server_port() {
 	return short(tmp);
 }
 
-const char *IniparserWrapper::get_workload_name() {
-	const char *workload_name = iniparser_getstring(ini, "global:workload_name", nullptr);
-	if (workload_name == nullptr) {
-		printf("Invalid entry of [global:workload_name]\n");
+const char *IniparserWrapper::get_server_ip() {
+	const char *server_ip = iniparser_getstring(ini, "server:server_ip", nullptr);
+	if (server_ip == nullptr) {
+		printf("Invalid entry of [server:server_ip]\n");
 		exit(-1);
 	}
-	return workload_name;
+	return server_ip;
+}
+
+void IniparserWrapper::get_server_mac(uint8_t *macaddr) {
+	const char *server_mac = iniparser_getstring(ini, "server:server_mac", nullptr);
+	if (server_mac == nullptr) {
+		printf("Invalid entry of [server:server_mac]\n");
+		exit(-1);
+	}
+	parse_mac(macaddr, server_mac);
 }
 
 uint32_t IniparserWrapper::get_bucket_num() {
@@ -64,4 +110,23 @@ size_t IniparserWrapper::get_split_num() {
 		exit(-1);
 	}
 	return size_t(tmp);
+}
+
+void IniparserWrapper::parse_mac(uint8_t *macaddr, const char* macstr) {
+	const char *curpos = macstr;
+	for (size_t i = 0; i < 6; i++) {
+		if (curpos == nullptr) {
+			printf("Invalid mac string: %s\n", macstr);
+			exit(-1);
+		}
+		else {
+			macaddr[i] = uint8_t(strtol(curpos, nullptr, 16));
+		}
+		if (i != 5) {
+			curpos = strchr(curpos, ':') + 1;
+		}
+		else {
+			curpos = macstr + strlen(macstr);
+		}
+	}
 }

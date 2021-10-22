@@ -10,15 +10,26 @@ class IniparserWrapper {
 		
 		void load(const char* filename);
 
-		size_t get_server_num();
-		size_t get_client_num();
-		short get_server_port();
 		const char *get_workload_name();
+
+		size_t get_client_num();
+		short get_client_port();
+		const char *get_client_ip();
+		void get_client_mac(uint8_t* macaddr);
+		
+		size_t get_server_num();
+		short get_server_port();
+		const char *get_server_ip();
+		void get_server_mac(uint8_t* macaddr);
+
 		uint32_t get_bucket_num();
+
 		size_t get_split_num();
 
 	private:
 		dictionary *ini = nullptr;
+
+		void parse_mac(uint8_t* macaddr, const char* macstr);
 };
 
 #endif

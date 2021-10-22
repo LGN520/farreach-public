@@ -39,7 +39,7 @@ void run_server(xindex_t *table);
 void *run_sfg(void *param);
 
 // parameters
-size_t split_n = 1;
+size_t split_n;
 size_t fg_n = 1;
 const char *workload_name;
 char output_dir[256];
