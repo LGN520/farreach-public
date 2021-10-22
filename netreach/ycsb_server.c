@@ -73,7 +73,6 @@ volatile uint64_t listener_version = 0;
 // parameters
 size_t fg_n;
 size_t bg_n;
-short src_port;
 short dst_port_start;
 short backup_port = 3333;
 short controller_port = 3334;
@@ -173,14 +172,12 @@ inline void parse_ini(const char* config_file) {
 	ini.load(config_file);
 
 	fg_n = ini.get_server_num();
-	src_port = ini.get_server_port();
 	dst_port_start = ini.get_server_port();
 	workload_name = ini.get_workload_name();
 	kv_bucket_num = ini.get_bucket_num();
 	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
 
 	COUT_VAR(fg_n);
-	COUT_VAR(src_port);
 	COUT_VAR(dst_port_start);
 	printf("workload_name: %s\n", workload_name);
 	COUT_VAR(kv_bucket_num);
@@ -597,8 +594,8 @@ static int run_sfg(void * param) {
   uint8_t dstmac[6];
   char srcip[16];
   char dstip[16];
-  uint16_t unused_srcport; // we use src_port to hide server-side partition for client
-  uint16_t dstport;
+  uint16_t srcport;
+  uint16_t unused_dstport; // we use dst_port_start instead of received dstport to hide server-side partition for client
 
   // UDP socket for SCAN
   int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -648,7 +645,7 @@ static int run_sfg(void * param) {
 		memset(dstip, '\0', 16);
 		memset(srcmac, 0, 6);
 		memset(dstmac, 0, 6);
-		recv_size = decode_mbuf(pkts_list[thread_id][tails[thread_id]], srcmac, dstmac, srcip, dstip, &unused_srcport, &dstport, buf);
+		recv_size = decode_mbuf(pkts_list[thread_id][tails[thread_id]], srcmac, dstmac, srcip, dstip, &srcport, &unused_dstport, buf);
 		rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 		tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
 
@@ -673,7 +670,7 @@ static int run_sfg(void * param) {
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr)); // UDP socket
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, src_port, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -689,7 +686,7 @@ static int run_sfg(void * param) {
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, src_port, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -705,7 +702,7 @@ static int run_sfg(void * param) {
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, src_port, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -788,7 +785,7 @@ static int run_sfg(void * param) {
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dstport, src_port, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;

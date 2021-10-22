@@ -18,6 +18,7 @@
 		+ Fix a bug in ycsb/parser.c: do not use macro of VALLEN at parsekv
 		+ Fix two bugs in tofino/basic.p4: (1) use modify_field instead of add_to_field in hash_partition_tbl; (2) we should change
 		two macros about maximum value length accordingly in basic.p4
+		+ Fix a bug in ycsb_parser.c: we need to add_header for get response
 - Support YCSB
 	- Copy client.c to yscb_remote_client.c and integrate YCSB parser into transaction phase (ycsb_remote_client.c)
 - TODO: For put req
