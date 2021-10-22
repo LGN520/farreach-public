@@ -41,6 +41,13 @@ import struct
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
+import ConfigParser
+config = ConfigParser.ConfigParser()
+with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
+    config.readfp(f)
+
+bucket_count = int(config.get("switch", "bucket_num"))
+
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
 #   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
@@ -48,8 +55,6 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 #   ex: ["1/0", "1/1"]
 #
 
-#bucket_count = 8 # Must be the same as basic.p4
-bucket_count =32768 # Must be the same as basic.p4
 fp_ports = ["2/0", "3/0"]
 #switch_ip = "1.1.1.1" # useless
 #switch_mac = "01:01:01:01:01:01" # useless
@@ -113,8 +118,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         vallo_list_list = []
         valhi_list_list = []
         for i in range(max_val_len):
-            vallo_list_list.append(self.client.__dict__["register_range_read_vallo{}_reg".format(i+1)](self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
-            valhi_list_list.append(self.client.__dict__["register_range_read_valhi{}_reg".format(i+1)](self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
+            vallo_list_list.append(getattr(self.client, "register_range_read_vallo{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
+            valhi_list_list.append(getattr(self.client, "register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
         vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         valid_list = self.client.register_range_read_valid_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
 

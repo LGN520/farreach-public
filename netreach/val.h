@@ -7,13 +7,13 @@
 #include "rocksdb/slice.h"
 #include "helper.h"
 
-// MAX_VAL_LENGTH * 8B
-#define MAX_VAL_LENGTH 1
-
 class Val {
 
  public:
 
+  static uint32_t MAX_VAL_LENGTH = 0;
+
+  // MAX_VAL_LENGTH * 8B
   static uint32_t max_bytesnum() {
 	return MAX_VAL_LENGTH * sizeof(uint64_t);
   }

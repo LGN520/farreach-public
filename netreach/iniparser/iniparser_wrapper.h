@@ -11,6 +11,7 @@ class IniparserWrapper {
 		void load(const char* filename);
 
 		const char *get_workload_name();
+		uint32_t get_max_val_length();
 
 		size_t get_client_num();
 		short get_client_port();

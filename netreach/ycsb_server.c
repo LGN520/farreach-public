@@ -71,9 +71,10 @@ std::map<index_key_t, val_t>* volatile listener_data = nullptr;
 volatile uint64_t listener_version = 0;
 
 // parameters
-size_t fg_n = 1;
-size_t bg_n = 1;
-short dst_port_start = 1111;
+size_t fg_n;
+size_t bg_n;
+short src_port;
+short dst_port_start;
 short backup_port = 3333;
 short controller_port = 3334;
 short listener_port = 3335;
@@ -172,9 +173,18 @@ inline void parse_ini(const char* config_file) {
 	ini.load(config_file);
 
 	fg_n = ini.get_server_num();
+	src_port = ini.get_server_port();
 	dst_port_start = ini.get_server_port();
 	workload_name = ini.get_workload_name();
 	kv_bucket_num = ini.get_bucket_num();
+	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
+
+	COUT_VAR(fg_n);
+	COUT_VAR(src_port);
+	COUT_VAR(dst_port_start);
+	printf("workload_name: %s\n", workload_name);
+	COUT_VAR(kv_bucket_num);
+	COUT_VAR(val_t::MAX_VAL_LENGTH);
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -232,7 +242,6 @@ inline void parse_args(int argc, char **argv) {
     }
   }
 
-  COUT_VAR(fg_n);
   COUT_VAR(bg_n);
   COUT_VAR(xindex::config.root_error_bound);
   COUT_VAR(xindex::config.root_memory_constraint);
@@ -588,7 +597,7 @@ static int run_sfg(void * param) {
   uint8_t dstmac[6];
   char srcip[16];
   char dstip[16];
-  uint16_t srcport;
+  uint16_t unused_srcport; // we use src_port to hide server-side partition for client
   uint16_t dstport;
 
   // UDP socket for SCAN
@@ -639,7 +648,7 @@ static int run_sfg(void * param) {
 		memset(dstip, '\0', 16);
 		memset(srcmac, 0, 6);
 		memset(dstmac, 0, 6);
-		recv_size = decode_mbuf(pkts_list[thread_id][tails[thread_id]], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
+		recv_size = decode_mbuf(pkts_list[thread_id][tails[thread_id]], srcmac, dstmac, srcip, dstip, &unused_srcport, &dstport, buf);
 		rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 		tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
 
