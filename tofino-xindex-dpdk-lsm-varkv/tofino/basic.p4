@@ -7,6 +7,8 @@
 #define PROTOTYPE_UDP 0x11
 
 #define DELTA_THRESHOLD 10
+#define OP_PORT 1111
+#define KV_BUCKET_COUNT 32768
 
 /* Packet Header Types */
 
@@ -58,12 +60,12 @@ header_type op_t {
 	}
 }
 
-/*header_type metadata_t {
+header_type metadata_t {
 	fields {
 		// TODO: Your Metadata
-		hash_idx: 16;
+		hashidx: 16;
 	}
-}*/
+}
 
 header ethernet_t ethernet_hdr;
 header ipv4_t ipv4_hdr;
@@ -98,7 +100,7 @@ parser parse_udp {
 	extract(udp_hdr);
 	return select(udp_hdr.dstPort) {
 		OP_PORT: parse_op;
-		default: parse_udp_src;
+		default: ingress;
 	}
 }
 

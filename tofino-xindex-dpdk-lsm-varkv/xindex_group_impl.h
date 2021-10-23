@@ -102,7 +102,7 @@ void Group<key_t, val_t, seq, max_model_n>::init(
 		}
 	}
 	else {
-		printf("Database already exists: %s\n", buffer_path);
+		printf("Database already exists: %s\n", buffer_path.c_str());
 		exit(-1);
 	}
 	s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_path, &buffer);
@@ -141,7 +141,7 @@ void Group<key_t, val_t, seq, max_model_n>::open(uint32_t group_idx, std::string
 	init_cur_buffer_id();
 	std::string buffer_path = get_buffer_path(cur_buffer_id);
 	if (!(stat(buffer_path.c_str(), &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
-		printf("Database does not exist: %s\n", buffer_path);
+		printf("Database does not exist: %s\n", buffer_path.c_str());
 		exit(-1);
 	}
 	s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_path, &buffer);
@@ -512,9 +512,9 @@ inline void Group<key_t, val_t, seq, max_model_n>::init_cur_buffer_id() {
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline std::string Group<key_t, val_t, seq, max_model_n>::get_buffer_path(uint32_t buffer_id) {
 	INVARIANT(buffer_id == 0 || buffer_id == 1);
-	std::string buffer_path;
-	GET_STRING(buffer_path, "/tmp/netbuffer/buffer"<<group_idx<<"-"<<buffer_id<<".db");
-	return buffer_path;
+	char buffer_path[256];
+	GET_BUFFERPATH(buffer_path, workload_name.c_str(), group_idx, buffer_id);
+	return std::string(buffer_path, strlen(buffer_path));
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>

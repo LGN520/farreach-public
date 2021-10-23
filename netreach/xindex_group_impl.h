@@ -105,7 +105,7 @@ void Group<key_t, val_t, seq, max_model_n>::init(
 		}
 	}
 	else {
-		printf("Database already exists: %s\n", buffer_path);
+		printf("Database already exists: %s\n", buffer_path.c_str());
 		exit(-1);
 	}
 	s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_path, &buffer);
@@ -146,7 +146,7 @@ void Group<key_t, val_t, seq, max_model_n>::open(uint32_t group_idx, std::string
 	init_cur_buffer_id();
 	std::string buffer_path = get_buffer_path(cur_buffer_id);
 	if (!(stat(buffer_path.c_str(), &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
-		printf("Database does not exist: %s\n", buffer_path);
+		printf("Database does not exist: %s\n", buffer_path.c_str());
 		exit(-1);
 	}
 	s = rocksdb::TransactionDB::Open(buffer_options, rocksdb::TransactionDBOptions(), buffer_path, &buffer);
