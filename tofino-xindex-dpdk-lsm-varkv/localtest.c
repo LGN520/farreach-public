@@ -18,6 +18,7 @@
 #include "packet_format_impl.h"
 #include "key.h"
 #include "val.h"
+#include "iniparser/iniparser_wrapper.h"
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 
@@ -34,6 +35,7 @@ typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
 
+inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
 void load();
 void run_server(xindex_t *table, size_t sec);
@@ -48,6 +50,7 @@ double scan_ratio = 0;
 size_t runtime = 10;
 size_t fg_n = 1;
 size_t bg_n = 1;
+const char *workload_name;
 
 std::vector<index_key_t> exist_keys;
 std::vector<index_key_t> non_exist_keys;
@@ -63,6 +66,7 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 
 int main(int argc, char **argv) {
 
+  parse_ini("config.ini");
   parse_args(argc, argv);
   xindex::init_options(); // init options of rocksdb
   load();
@@ -70,13 +74,21 @@ int main(int argc, char **argv) {
   // prepare xindex
   uint64_t init_val_data[1] = {1};
   std::vector<val_t> vals(exist_keys.size(), val_t(init_val_data, 1));
-  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, "microbench"); // fg_n to create array of RCU status; bg_n background threads have been launched
+  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   run_server(tab_xi, runtime);
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
 
   COUT_THIS("[localtest] Exit successfully")
   exit(0);
+}
+
+inline void parse_ini(const char* config_file) {
+	IniparserWrapper ini;
+	ini.load(config_file);
+
+	fg_n = ini.get_server_num();
+	workload_name = ini.get_workload_name();
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -87,7 +99,7 @@ inline void parse_args(int argc, char **argv) {
       {"update", required_argument, 0, 'd'},
       {"scan", required_argument, 0, 'e'},
       {"runtime", required_argument, 0, 'g'},
-      {"fg", required_argument, 0, 'h'},
+      //{"fg", required_argument, 0, 'h'},
       {"bg", required_argument, 0, 'i'},
       {"xindex-root-err-bound", required_argument, 0, 'j'},
       {"xindex-root-memory", required_argument, 0, 'k'},
@@ -96,7 +108,7 @@ inline void parse_args(int argc, char **argv) {
       {"xindex-buf-size-bound", required_argument, 0, 'n'},
       {"xindex-buf-compact-threshold", required_argument, 0, 'o'},
       {0, 0, 0, 0}};
-  std::string ops = "a:b:c:d:e:f:g:h:i:j:k:l:m:n:o:";
+  std::string ops = "a:b:c:d:e:f:g:i:j:k:l:m:n:o:";
   int option_index = 0;
 
   while (1) {
@@ -131,10 +143,6 @@ inline void parse_args(int argc, char **argv) {
       case 'g':
         runtime = strtoul(optarg, NULL, 10);
         INVARIANT(runtime > 0);
-        break;
-      case 'h':
-        fg_n = strtoul(optarg, NULL, 10);
-        INVARIANT(fg_n > 0);
         break;
       case 'i':
         bg_n = strtoul(optarg, NULL, 10);
@@ -232,7 +240,7 @@ void run_server(xindex_t *table, size_t sec) {
 	for (size_t worker_i = 0; worker_i < fg_n; worker_i++) {
 		sfg_params[worker_i].table = table;
     	sfg_params[worker_i].throughput = 0;
-		sfg_params[worker_i].thread_id = worker_i;
+		sfg_params[worker_i].thread_id = static_cast<uint8_t>(worker_i);
 		int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error:" << ret);

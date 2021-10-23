@@ -20,8 +20,9 @@
 #include "key.h"
 #include "val.h"
 #include "ycsb/parser.h"
+#include "iniparser/iniparser_wrapper.h"
 
-#if 1
+#if 0
 #define CORRECTNESS_TEST
 #endif
 
@@ -32,15 +33,15 @@ typedef Val val_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef SFGParam sfg_param_t;
 
-inline void parse_args(int, char **);
+inline void parse_ini(const char * config_file);
 void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals);
 void run_server(xindex_t *table);
 void *run_sfg(void *param);
 
 // parameters
-size_t split_n = 1;
+size_t split_n;
 size_t fg_n = 1;
-char workload_name[32] = "workloada";
+const char *workload_name;
 char output_dir[256];
 
 volatile bool running = false;
@@ -52,8 +53,7 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 };
 
 int main(int argc, char **argv) {
-
-	parse_args(argc, argv);
+	parse_ini("config.ini");
 	xindex::init_options(); // init options of rocksdb
 
 	// prepare xindex
@@ -76,48 +76,24 @@ int main(int argc, char **argv) {
 	exit(0);
 }
 
-inline void parse_args(int argc, char **argv) {
-	struct option long_options[] = {
-			{"splitnum", required_argument, 0, 'h'},
-			{"workload_name", required_argument, 0, 'p'},
-			{0, 0, 0, 0}};
-	std::string ops = "h:p:";
-	int option_index = 0;
+inline void parse_ini(const char* config_file) {
+	IniparserWrapper ini;
+	ini.load(config_file);
 
-	while (1) {
-		int c = getopt_long(argc, argv, ops.c_str(), long_options, &option_index);
-		if (c == -1) break;
-
-		switch (c) {
-			case 0:
-				if (long_options[option_index].flag != 0) break;
-				abort();
-				break;
-			case 'h':
-				split_n = strtoul(optarg, NULL, 10);
+	split_n = ini.get_split_num();
+	INVARIANT(split_n >= 2);
 #ifndef CORRECTNESS_TEST
-				fg_n = split_n - 1;
+	fg_n = split_n - 1;
 #else
-				fg_n = split_n;
+	fg_n = split_n;
 #endif
-				INVARIANT(split_n >= 2);
-				break;
-		case 'p':
-			INVARIANT(strlen(optarg) < 32);
-			memset(workload_name, '\0', 32);
-			strncpy(workload_name, optarg, strlen(optarg));
-		break;
-			default:
-				abort();
-		}
-	}
+	workload_name = ini.get_workload_name();
 
 	COUT_VAR(split_n);
 	COUT_VAR(fg_n);
 	COUT_VAR(std::string(workload_name, strlen(workload_name)));
 
-
-	LOAD_SPLIT_DIR(output_dir, workload_name, split_n);
+	LOAD_SPLIT_DIR(output_dir, workload_name, split_n); // get the split directory for loading phase
 	struct stat dir_stat;
 	if (!(stat(output_dir, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
 		printf("Output directory does not exist: %s\n", output_dir);

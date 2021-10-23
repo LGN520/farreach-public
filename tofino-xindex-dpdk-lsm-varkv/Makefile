@@ -87,7 +87,7 @@ include mk/recipes.mk
 
 DEPS :=
 CLEAN :=
-TARGETS := client server prepare localtest split_workload ycsb_local_client
+TARGETS := client server prepare localtest split_workload ycsb_local_client ycsb_remote_client ycsb_server
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
@@ -98,37 +98,54 @@ CLEAN += key.o val.o
 DEPS += ycsb/parser.d
 CLEAN += ycsb/parser.o
 
+DEPS += crc32.d
+CLEAN += crc32.o
+
+INIPARSER_OBJECTS := iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
+DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
+CLEAN += iniparser/iniparser.o iniparser/dictionary.o iniparser/iniparser_wrapper.o
+
 prepare: prepare.o key.o val.o
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += prepare.d
 CLEAN += prepare.o prepare
 
-client: client.o dpdk_helper.o key.o val.o
+client: client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) crc32.o
 	echo $(LDFLAGS)
 	echo $(LDLIBS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += client.d
 CLEAN += client.o client
 
-server: server.o dpdk_helper.o key.o val.o
+server: server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += server.d
-CLEAN += server.o serer
+CLEAN += server.o server
 
-localtest: localtest.o key.o val.o
+localtest: localtest.o key.o val.o $(INIPARSER_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += localtest.d
 CLEAN += localtest.o localtest
 
-split_workload: split_workload.o key.o val.o ycsb/parser.o
+split_workload: split_workload.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += split_workload.d
 CLEAN += split_workload.o split_workload
 
-ycsb_local_client: ycsb_local_client.o key.o val.o ycsb/parser.o
+ycsb_local_client: ycsb_local_client.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += ycsb_local_client.d
 CLEAN += ycsb_local_client.o ycsb_local_client
+
+ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += ycsb_remote_client.d
+CLEAN += ycsb_remote_client.o ycsb_remote_client
+
+ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS)
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += ycsb_server.d
+CLEAN += ycsb_server.o ycsb_server
 
 ##############################################################################
 # Top level targets

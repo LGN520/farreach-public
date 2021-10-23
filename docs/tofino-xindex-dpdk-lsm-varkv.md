@@ -5,6 +5,7 @@
 - Copy from tofino-xindex-dpdk-lsm to tofino-xindex-dpdk-lsm-varkv
 - Support 16B key
 	+ Modify client.c and server.c
+- Apply config module, key-based routing and YCSB integration (see docs/netreach.md)
 
 ## How to run
 

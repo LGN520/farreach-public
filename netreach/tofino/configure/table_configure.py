@@ -47,6 +47,10 @@ with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini")
 server_num = int(config.get("server", "server_num"))
 server_port = int(config.get("server", "server_port"))
 bucket_num = int(config.get("switch", "bucket_num"))
+src_mac = str(config.get("client", "client_mac"))
+dst_mac = str(config.get("server", "server_mac"))
+src_ip = str(config.get("client", "client_ip"))
+dst_ip = str(config.get("server", "server_ip"))
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
@@ -56,10 +60,10 @@ bucket_num = int(config.get("switch", "bucket_num"))
 #
 fp_ports = ["2/0", "3/0"]
 #CPU_PORT = 192
-src_mac = "9c:69:b4:60:ef:a5"
-dst_mac = "9c:69:b4:60:ef:8d"
-src_ip = "10.0.0.31"
-dst_ip = "10.0.0.32"
+#src_mac = "9c:69:b4:60:ef:a5"
+#dst_mac = "9c:69:b4:60:ef:8d"
+#src_ip = "10.0.0.31"
+#dst_ip = "10.0.0.32"
 
 GETREQ_TYPE = 0x00
 PUTREQ_TYPE = 0x01

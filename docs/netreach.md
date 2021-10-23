@@ -1,4 +1,4 @@
-# Tofino-based NetBuffer + DPDK-based XIndex with persistency + variable-length key-value pair (tofino-netbuffer-dpdk-lsm-varkv)
+# Tofino-based NetREACH (hashtable-based) + DPDK-based XIndex with persistence + variable-length key-value pair (netreach)
 
 ## Implementation log
 
@@ -6,9 +6,9 @@
 - Set val length as 8B for fast debug (val.h, tofino/*.p4, tofino/*.py)
 - Add config module (config.ini, iniparser/\**)
 	- Read config.ini in ptf test files (configure/table_configure.py)
-	- Read config.ini in \*.c files (server.c, client.c, localtest.c, split_workload,c, ycsb_local_client.c, ycsb_remote_client.c)
+	- Read config.ini in \*.c files (server.c, client.c, localtest.c, split_workload.c, ycsb_local_client.c, ycsb_remote_client.c)
 	- Update Makefile
-- Key-based routing
+- Key-based routing (switch-side)
 	- Directly use reserved dst port 1111 instead of dst port start (client.c)
 		+ For changing dst port to simulate different servers, we deploy it in switch
 		+ In server, we use multiple threads to simulate servers, and a concurrent key-value store to simulate distributed key-value store
@@ -21,6 +21,16 @@
 		+ Fix a bug in ycsb_parser.c: we need to add_header for get response
 - Support YCSB
 	- Copy client.c to yscb_remote_client.c and integrate YCSB parser into transaction phase (ycsb_remote_client.c)
+	- Copy server.c to ycsb_server.c and remove unuseful codes (ycsb_server.c)
+- Apply to baseline (from netreach towards tofino-xindex-dpdk-lsm-varkv)
+	- Config module in tofino-xindex-dpdk-lsm-varkv
+		- Copy val.*, config.ini, iniparser/*, split_workload.c, ycsb_local_client.c, ycsb_remote_client.c, and MakeFile
+		- Modify tofino/table_configure.py, server.c, client.c, localtest.c
+	- Support YCSB in tofino-xindex-dpdk-lsm-varkv
+		- Copy ycsb_remote_client.c and ycsb_server.c
+	- Key-based routing (client-side) in tofino-xindex-dpdk-lsm-varkv
+		- Modify client.c and ycsb_remote_client.c to introduce client-side hashing overhead
+		- Modify tofino/basic.p4 and tofino/table_configure.py to support hash partition (trick)
 - TODO: For put req
 	+ If the entry is empty, we need to update the cache directly and notify the server (do not need to drop put_req, which becomes put_req_n; need to clone for put_res)
 	+ If the entry is not empty but key matches, we need to update value (need to drop original put req; need to clone for put_res)

@@ -43,16 +43,33 @@ header_type udp_t {
 	}
 }
 
+header_type op_t {
+	fields {
+		optype: 8;
+		threadid: 8;
+		keylololo: 16;
+		keylolohi: 16;
+		keylohilo: 16;
+		keylohihi: 16;
+		keyhilolo: 16;
+		keyhilohi: 16;
+		keyhihilo: 16;
+		keyhihihi: 16;
+	}
+}
+
 /*header_type metadata_t {
 	fields {
 		// TODO: Your Metadata
+		hash_idx: 16;
 	}
 }*/
 
 header ethernet_t ethernet_hdr;
 header ipv4_t ipv4_hdr;
 header udp_t udp_hdr;
-//metadata metadata_t meta;
+header op_t op_hdr;
+metadata metadata_t meta;
 
 /* Parser */
 
@@ -79,6 +96,14 @@ parser parse_ipv4 {
 
 parser parse_udp {
 	extract(udp_hdr);
+	return select(udp_hdr.dstPort) {
+		OP_PORT: parse_op;
+		default: parse_udp_src;
+	}
+}
+
+parser parse_op {
+	extract(op_hdr);
 	return ingress;
 }
 
@@ -107,12 +132,64 @@ table port_forward_tbl {
 	size: 4;  
 }
 
+field_list hash_fields {
+	op_hdr.keylololo;
+	op_hdr.keylolohi;
+	op_hdr.keylohilo;
+	op_hdr.keylohihi;
+	op_hdr.keyhilolo;
+	op_hdr.keyhilohi;
+	op_hdr.keyhihilo;
+	op_hdr.keyhihihi;
+}
+
+field_list_calculation hash_field_calc {
+	input {
+		hash_fields;
+	}
+	algorithm: crc32;
+	output_width: 16;
+}
+
+action calculate_hash() {
+	modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT);
+	// NOTE: we cannot use dynamic hash
+	// modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT - ipv4_hdr.totalLen);
+}
+
+//@pragma stage 0
+table calculate_hash_tbl {
+	actions {
+		calculate_hash;
+	}
+	default_action: calculate_hash();
+	size: 1;
+}
+
+action hash_partition(port) {
+	modify_field(udp_hdr.dstPort, port);
+}
+
+table hash_partition_tbl {
+	reads {
+		udp_hdr.dstPort: exact;
+		ig_intr_md_for_tm.ucast_egress_port: exact;
+		meta.hashidx: range;
+	}
+	actions {
+		hash_partition;
+	}
+	size: 128;
+}
+
 /* Ingress Processing */
 
 control ingress {
 	/*if (valid(udp_hdr)) {
 	}*/
+	apply(calculate_hash_tbl);
 	apply(port_forward_tbl);
+	apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 }
 
 /* Egress Processing */

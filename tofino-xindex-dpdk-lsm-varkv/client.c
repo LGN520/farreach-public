@@ -21,6 +21,8 @@
 #include <getopt.h>
 #include "key.h"
 #include "val.h"
+#include "iniparser/iniparser_wrapper.h"
+#include "crc32.h"
 
 struct alignas(CACHELINE_SIZE) FGParam;
 
@@ -36,6 +38,7 @@ typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
 
+inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
 void load();
 void run_benchmark(size_t sec);
@@ -56,12 +59,14 @@ double delete_ratio = 0;
 double scan_ratio = 0;
 size_t runtime = 10;
 size_t fg_n = 1;
-uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa5};
-uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
-char src_ipaddr[16] = "10.0.0.31";
-char server_addr[16] = "10.0.0.32";
-short src_port_start = 8888;
-short dst_port_start = 1111;
+uint8_t src_macaddr[6];
+uint8_t dst_macaddr[6];
+const char *src_ipaddr;
+const char *server_addr;
+short src_port_start;
+//short dst_port_start = 1111;
+short dst_port;
+uint32_t server_num;
 
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
@@ -74,6 +79,7 @@ struct alignas(CACHELINE_SIZE) FGParam {
 };
 
 int main(int argc, char **argv) {
+  parse_ini("config.ini");
   parse_args(argc, argv);
   load();
 
@@ -121,6 +127,39 @@ int main(int argc, char **argv) {
   exit(0);
 }
 
+inline void parse_ini(const char* config_file) {
+	IniparserWrapper ini;
+	ini.load(config_file);
+
+	ini.get_client_mac(src_macaddr);
+	ini.get_server_mac(dst_macaddr);
+	src_ipaddr = ini.get_client_ip();
+	server_addr = ini.get_server_ip();
+	src_port_start = ini.get_client_port();
+	fg_n = ini.get_client_num();
+	dst_port = ini.get_server_port();
+	server_num = ini.get_server_num();
+
+	printf("src_macaddr: ");
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", src_macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+	printf("dst_macaddr: ");
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", dst_macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+	printf("src_ipaddr: %s\n", src_ipaddr);
+	printf("server_addr: %s\n", server_addr);
+	COUT_VAR(src_port_start);
+	COUT_VAR(fg_n);
+	COUT_VAR(dst_port);
+	COUT_VAR(server_num);
+}
+
 inline void parse_args(int argc, char **argv) {
   struct option long_options[] = {
       {"read", required_argument, 0, 'a'},
@@ -129,11 +168,8 @@ inline void parse_args(int argc, char **argv) {
       {"update", required_argument, 0, 'd'},
       {"scan", required_argument, 0, 'e'},
       {"runtime", required_argument, 0, 'g'},
-      {"fg", required_argument, 0, 'h'},
-	  {"server-addr", required_argument, 0, 'i'},
-	  //{"server-port", required_argument, 0, 'j'},
       {0, 0, 0, 0}};
-  std::string ops = "a:b:c:d:e:g:h:i:";
+  std::string ops = "a:b:c:d:e:g:";
   int option_index = 0;
 
   while (1) {
@@ -169,18 +205,6 @@ inline void parse_args(int argc, char **argv) {
         runtime = strtoul(optarg, NULL, 10);
         INVARIANT(runtime > 0);
         break;
-      case 'h':
-        fg_n = strtoul(optarg, NULL, 10);
-        INVARIANT(fg_n > 0);
-        break;
-	  case 'i':
-		INVARIANT(strlen(optarg) > 0);
-		memcpy(server_addr, optarg, strlen(optarg));
-		break;
-	  /*case 'j':
-		server_port = atoi(optarg);
-		INVARIANT(server_port > 0);
-		break;*/
       default:
         abort();
     }
@@ -319,12 +343,12 @@ static int run_receiver(void *param) {
 	while (running) {
 		//double tmpt0 = CUR_TIME();
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
-		/*if (n_rx == 0) {
-			double tmpt1 = CUR_TIME();
-			t0 += (tmpt1 - tmpt0);
+		if (n_rx == 0) {
+			//double tmpt1 = CUR_TIME();
+			//t0 += (tmpt1 - tmpt0);
 			continue;
 		}
-		if ((debug_idx + 1) % 10001 == 0) {
+		/*if ((debug_idx + 1) % 10001 == 0) {
 			COUT_VAR((t0 - prevt0) / 10000.0);
 			prevt0 = t0;
 			COUT_VAR(n_rx);
@@ -415,7 +439,7 @@ static int run_fg(void *param) {
 
   // DPDK
   short src_port = src_port_start + thread_id;
-  short dst_port = dst_port_start + thread_id;
+  //short dst_port = dst_port_start + thread_id;
   // Optimize mbuf allocation
   uint16_t burst_size = 256;
   struct rte_mbuf *sent_pkts[burst_size];
@@ -474,6 +498,8 @@ static int run_fg(void *param) {
     //if (d <= read_ratio) {  // get
     if (tmprun == 0) {  // get
 	  get_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()]);
+	  unsigned int unused_hash_value = crc32((unsigned char *)(&(op_keys[(query_i + delete_i) % op_keys.size()])), index_key_t::model_key_size() * 8);
+	  short unused_dst_port = dst_port + unused_hash_value % server_num;
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
@@ -510,6 +536,8 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio) {  // update
     } else if (tmprun == 1) {  // update
 	  put_request_t req(thread_id, op_keys[(update_i + delete_i) % op_keys.size()], dummy_value);
+	  unsigned int unused_hash_value = crc32((unsigned char *)(&(op_keys[(update_i + delete_i) % op_keys.size()])), index_key_t::model_key_size() * 8);
+	  short unused_dst_port = dst_port + unused_hash_value % server_num;
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << req.val().to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
@@ -541,6 +569,8 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     } else if (tmprun == 2) {  // insert
 	  put_request_t req(thread_id, op_keys[insert_i], dummy_value);
+	  unsigned int unused_hash_value = crc32((unsigned char *)(&(op_keys[insert_i])), index_key_t::model_key_size() * 8);
+	  short unused_dst_port = dst_port + unused_hash_value % server_num;
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << req.val().to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
@@ -572,6 +602,8 @@ static int run_fg(void *param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
     } else if (tmprun == 3) {  // remove
 	  del_request_t req(thread_id, op_keys[delete_i]);
+	  unsigned int unused_hash_value = crc32((unsigned char *)(&(op_keys[delete_i])), index_key_t::model_key_size() * 8);
+	  short unused_dst_port = dst_port + unused_hash_value % server_num;
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << op_keys[delete_i].to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 
@@ -602,6 +634,8 @@ static int run_fg(void *param) {
       }
     } else {  // scan
 	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], 10);
+	  unsigned int unused_hash_value = crc32((unsigned char *)(&(op_keys[(query_i + delete_i) % op_keys.size()])), index_key_t::model_key_size() * 8);
+	  short unused_dst_port = dst_port + unused_hash_value % server_num;
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << req.key().to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 

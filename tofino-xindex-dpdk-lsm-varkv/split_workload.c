@@ -5,11 +5,12 @@
 #include <sys/stat.h>
 #include "ycsb/parser.h"
 #include "helper.h"
+#include "iniparser/iniparser_wrapper.h"
 
 int main(int argc, char **argv) {
 
-	if (argc != 4) {
-		printf("Usage: ./split_workload load/run workloada splitnum\n");
+	if (argc != 2) {
+		printf("Usage: ./split_workload load/run\n");
 		exit(-1);
 	}
 
@@ -18,21 +19,15 @@ int main(int argc, char **argv) {
 		op = 1; // run
 	}
 
-
-	if (strlen(argv[2]) >= 32) {
-		printf("Workloadname is too long: %s\n", argv[2]);
-		exit(-1);
-	}
-
-	char workload_name[32];
-	memset(workload_name, '\0', 32);
-	memcpy(workload_name, argv[2], strlen(argv[2]));
-
+	IniparserWrapper ini;
+	ini.load("config.ini");
+	const char *workload_name = ini.get_workload_name();
 	uint32_t splitnum = 0;
-	splitnum = std::stoi(argv[3]);
-	if (splitnum <= 1) {
-		printf("NOTE: splitnum must >= 2!\n");
-		exit(-1);
+	if (op == 0) {
+		splitnum = ini.get_split_num();
+	}
+	else {
+		splitnum = ini.get_client_num();
 	}
 
 	/*char prefix[256];

@@ -38,6 +38,16 @@ from res_pd_rpc.ttypes import *
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
+import ConfigParser
+config = ConfigParser.ConfigParser()
+with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
+    config.readfp(f)
+
+server_num = int(config.get("server", "server_num"))
+server_port = int(config.get("server", "server_port"))
+src_ip = str(config.get("client", "client_ip"))
+dst_ip = str(config.get("server", "server_ip"))
+
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
 #   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
@@ -46,8 +56,8 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 #
 #fp_ports = ["1/0", "3/0"]
 fp_ports = ["2/0", "3/0"]
-src_ip = "10.0.0.31"
-dst_ip = "10.0.0.32"
+#src_ip = "10.0.0.31"
+#dst_ip = "10.0.0.32"
 
 class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -94,6 +104,26 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             actnspec0 = xindex_port_forward_action_spec_t(self.devPorts[0])
             matchspec1 = xindex_port_forward_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
             actnspec1 = xindex_port_forward_action_spec_t(self.devPorts[1])
+
+            # Table: hash_partition_tbl
+            print "Configuring hash_partition_tbl"
+            hash_start = 0
+            hash_range_per_server = bucket_num / server_num
+            for i in range(server_num):
+                if i == server_num - 1:
+                    hash_end = bucket_num - 1 # if end is not included, then it is just processed by port 1111
+                else:
+                    hash_end = hash_start + hash_range_per_server
+                matchspec0 = netbuffer_hash_partition_tbl_match_spec_t(\
+                        udp_hdr_dstPort=server_port, \
+                        ig_intr_md_for_tm_ucast_egress_port=self.devPorts[1], \
+                        meta_hashidx_start = hash_start, \
+                        meta_hashidx_end = hash_end)
+                actnspec0 = netbuffer_hash_partition_action_spec_t(\
+                        server_port + i)
+                self.client.hash_partition_tbl_table_add_with_hash_partition(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                hash_start = hash_end
 
             # program match and action spec entries
             print "Populating table entries"

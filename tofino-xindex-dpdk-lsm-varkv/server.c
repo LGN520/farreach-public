@@ -23,6 +23,7 @@
 #include "dpdk_helper.h"
 #include "key.h"
 #include "val.h"
+#include "iniparser/iniparser_wrapper.h"
 
 #define MQ_SIZE 256
 
@@ -42,6 +43,7 @@ typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
 
+inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
 void load();
 void run_server(xindex_t *table);
@@ -55,13 +57,14 @@ struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
 volatile struct rte_mbuf ***pkts_list;
-volatile uint32_t *heads;
-volatile uint32_t *tails;
+uint32_t* volatile heads;
+uint32_t* volatile tails;
 
 // parameters
 size_t fg_n = 1;
 size_t bg_n = 1;
 short dst_port_start = 1111;
+const char *workload_name = nullptr;
 
 std::vector<index_key_t> exist_keys;
 
@@ -75,7 +78,7 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 };
 
 int main(int argc, char **argv) {
-
+  parse_ini("config.ini");
   parse_args(argc, argv);
   xindex::init_options(); // init options of rocksdb
   load();
@@ -112,8 +115,8 @@ int main(int argc, char **argv) {
   //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
   //}
   pkts_list = new volatile struct rte_mbuf**[fg_n];
-  heads = new volatile uint32_t[fg_n];
-  tails = new volatile uint32_t[fg_n];
+  heads = new uint32_t[fg_n];
+  tails = new uint32_t[fg_n];
   memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
   memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
   //int res = 0;
@@ -128,7 +131,7 @@ int main(int argc, char **argv) {
   // prepare xindex
   uint64_t init_val_data[1] = {1};
   std::vector<val_t> vals(exist_keys.size(), val_t(init_val_data, 1));
-  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, "microbench"); // fg_n to create array of RCU status; bg_n background threads have been launched
+  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   // register signal handler
   signal(SIGTERM, SIG_IGN); // Ignore SIGTERM for subthreads
@@ -151,9 +154,17 @@ int main(int argc, char **argv) {
   exit(0);
 }
 
+inline void parse_ini(const char* config_file) {
+	IniparserWrapper ini;
+	ini.load(config_file);
+
+	fg_n = ini.get_server_num();
+	dst_port_start = ini.get_server_port();
+	workload_name = ini.get_workload_name();
+}
+
 inline void parse_args(int argc, char **argv) {
   struct option long_options[] = {
-      {"fg", required_argument, 0, 'h'},
       {"bg", required_argument, 0, 'i'},
       {"xindex-root-err-bound", required_argument, 0, 'j'},
       {"xindex-root-memory", required_argument, 0, 'k'},
@@ -162,7 +173,7 @@ inline void parse_args(int argc, char **argv) {
       {"xindex-buf-size-bound", required_argument, 0, 'n'},
       {"xindex-buf-compact-threshold", required_argument, 0, 'o'},
       {0, 0, 0, 0}};
-  std::string ops = "h:i:j:k:l:m:n:o:";
+  std::string ops = "i:j:k:l:m:n:o:";
   int option_index = 0;
 
   while (1) {
@@ -173,10 +184,6 @@ inline void parse_args(int argc, char **argv) {
       case 0:
         if (long_options[option_index].flag != 0) break;
         abort();
-        break;
-      case 'h':
-        fg_n = strtoul(optarg, NULL, 10);
-        INVARIANT(fg_n > 0);
         break;
       case 'i':
         bg_n = strtoul(optarg, NULL, 10);

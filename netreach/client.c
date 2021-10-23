@@ -57,13 +57,13 @@ double delete_ratio = 0;
 double scan_ratio = 0;
 size_t runtime = 10;
 size_t fg_n = 1;
-uint8_t src_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0xa5};
-uint8_t dst_macaddr[6] = {0x9c, 0x69, 0xb4, 0x60, 0xef, 0x8d};
-char src_ipaddr[16] = "10.0.0.31";
-char server_addr[16] = "10.0.0.32";
-short src_port_start = 8888;
+uint8_t src_macaddr[6];
+uint8_t dst_macaddr[6];
+const char *src_ipaddr;
+const char *server_addr;
+short src_port_start;
 //short dst_port_start = 1111;
-short dst_port = 1111;
+short dst_port;
 
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
@@ -132,11 +132,8 @@ inline void parse_args(int argc, char **argv) {
       {"update", required_argument, 0, 'd'},
       {"scan", required_argument, 0, 'e'},
       {"runtime", required_argument, 0, 'g'},
-      //{"fg", required_argument, 0, 'h'},
-	  {"server-addr", required_argument, 0, 'i'},
-	  //{"server-port", required_argument, 0, 'j'},
       {0, 0, 0, 0}};
-  std::string ops = "a:b:c:d:e:g:i:";
+  std::string ops = "a:b:c:d:e:g:";
   int option_index = 0;
 
   while (1) {
@@ -172,14 +169,6 @@ inline void parse_args(int argc, char **argv) {
         runtime = strtoul(optarg, NULL, 10);
         INVARIANT(runtime > 0);
         break;
-	  case 'i':
-		INVARIANT(strlen(optarg) > 0);
-		memcpy(server_addr, optarg, strlen(optarg));
-		break;
-	  /*case 'j':
-		server_port = atoi(optarg);
-		INVARIANT(server_port > 0);
-		break;*/
       default:
         abort();
     }
@@ -199,8 +188,31 @@ inline void parse_ini(const char* config_file) {
 	IniparserWrapper ini;
 	ini.load(config_file);
 
+	ini.get_client_mac(src_macaddr);
+	ini.get_server_mac(dst_macaddr);
+	src_ipaddr = ini.get_client_ip();
+	server_addr = ini.get_server_ip();
+	src_port_start = ini.get_client_port();
 	fg_n = ini.get_client_num();
 	dst_port = ini.get_server_port();
+
+	printf("src_macaddr: ");
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", src_macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+	printf("dst_macaddr: ");
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", dst_macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+	printf("src_ipaddr: %s\n", src_ipaddr);
+	printf("server_addr: %s\n", server_addr);
+	COUT_VAR(src_port_start);
+	COUT_VAR(fg_n);
+	COUT_VAR(dst_port);
 }
 
 void load() {

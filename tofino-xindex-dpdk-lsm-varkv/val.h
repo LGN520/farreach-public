@@ -7,13 +7,13 @@
 #include "rocksdb/slice.h"
 #include "helper.h"
 
-// MAX_VAL_LENGTH * 8B
-#define MAX_VAL_LENGTH 12
-
 class Val {
 
  public:
 
+  static uint32_t MAX_VAL_LENGTH;
+
+  // MAX_VAL_LENGTH * 8B
   static uint32_t max_bytesnum() {
 	return MAX_VAL_LENGTH * sizeof(uint64_t);
   }
@@ -29,6 +29,7 @@ class Val {
   void from_slice(rocksdb::Slice& slice);
   void from_string(std::string& str);
 
+  // operation on packet buf (1B vallength + valdata)
   uint32_t deserialize(const char *buf);
   uint32_t serialize(char *buf);
 

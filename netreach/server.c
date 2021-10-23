@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
 
   // prepare xindex
   uint64_t init_val_data[1] = {1};
-  std::vector<val_t> vals(exist_keys.size(), Val(init_val_data, 1));
+  std::vector<val_t> vals(exist_keys.size(), val_t(init_val_data, 1));
   xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   // register signal handler
