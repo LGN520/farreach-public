@@ -6,7 +6,17 @@
 - Support voting-based decision
 	+ Match key for all requests -> is_match (key.p4, basic.p4, and configure/table_configure.py)
 	+ Add pos/neg vote for get/put (vote.p4, basic.p4, and configure/table_configure.py)
-	+ TODO: add dirty and voting-based decision
+		* If valid = 1 and key matches, increase corresponding positive vote
+		* Otherwise, increase corresponding negative vote
+	+ Add dirty bit (dirty.p4, basic.p4, and configure/table_configure.py)
+	+ Add voting-based decision
+		* Add vote diff calculate (ingerss_mat.p4, basic.p4, and configure/table_configure.py)
+		* Add two thresholds (basic.p4, ingress_mat.p4, and configure/table_configure.py (TODO))
+		* TODO: compare vote diff and corresponding threshold to update lock bit; also get original lock bit
+		* TODO: Key matches -> response
+		* TODO: Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
+		* TODO: Key does not match, and original lock bit = 0 -> forward
+		* TODO: Key does not match, and original lock bit = 1 -> also recirculate
 - TODO: For put req
 	+ If the entry is empty, we need to update the cache directly and notify the server (do not need to drop put_req, which becomes put_req_n; need to clone for put_res)
 	+ If the entry is not empty but key matches, we need to update value (need to drop original put req; need to clone for put_res)

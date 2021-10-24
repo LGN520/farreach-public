@@ -48,83 +48,6 @@
 // parsers
 #include "p4src/parser.p4"
 
-/* Ingress Processing (Normal Operation) */
-
-action nop() {}
-
-action port_forward(port) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-}
-
-action droppkt() {
-	drop();
-}
-
-table port_forward_tbl {
-	reads {
-		ig_intr_md.ingress_port: exact;
-	}
-	actions {
-		port_forward;
-		droppkt;
-		nop;
-	}
-	default_action: nop();
-	size: 4;  
-}
-
-/* Hash */
-
-field_list hash_fields {
-	op_hdr.keylololo;
-	op_hdr.keylolohi;
-	op_hdr.keylohilo;
-	op_hdr.keylohihi;
-	op_hdr.keyhilolo;
-	op_hdr.keyhilohi;
-	op_hdr.keyhihilo;
-	op_hdr.keyhihihi;
-}
-
-field_list_calculation hash_field_calc {
-	input {
-		hash_fields;
-	}
-	algorithm: crc32;
-	output_width: 16;
-}
-
-action calculate_hash() {
-	modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT);
-	// NOTE: we cannot use dynamic hash
-	// modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT - ipv4_hdr.totalLen);
-}
-
-//@pragma stage 0
-table calculate_hash_tbl {
-	actions {
-		calculate_hash;
-	}
-	default_action: calculate_hash();
-	size: 1;
-}
-
-action save_info() {
-	modify_field(meta.tmp_sport, udp_hdr.srcPort);
-	modify_field(meta.tmp_dport, udp_hdr.dstPort);
-}
-
-//@pragma stage 0
-table save_info_tbl {
-	actions {
-		save_info;
-	}
-	default_action: save_info();
-	size: 1;
-}
-
-/* KV (hash table) */
-
 // registers and MATs related with 16B key
 #include "p4src/regs/key.p4"
 
@@ -136,6 +59,11 @@ table save_info_tbl {
 
 // registers and MATs related with votes
 #include "p4src/regs/vote.p4"
+
+// registers and MATs related with dirty
+#include "p4src/regs/dirty.p4"
+
+#include "p4src/ingress_mat.p4"
 
 /* Ingress Processing */
 
@@ -383,6 +311,8 @@ control ingress {
 		// Stage 0
 		apply(calculate_hash_tbl);
 		apply(save_info_tbl); // save dst port
+		apply(load_gthreshold_tbl);
+		apply(load_pthreshold_tbl);
 
 		// Stage 1 and 2
 		// Different MAT entries for getreq/putreq
@@ -396,15 +326,43 @@ control ingress {
 		apply(access_keyhihihi_tbl);
 
 		// Stage 3
+		// NOTE: we put valid_reg in stage 3 to support DEL operation
+		apply(access_valid_tbl); 
+		apply(access_dirty_tbl);
+		apply(update_vallen_tbl);
+
+		// Stage 4
 		apply(access_gposvote_tbl);
 		apply(access_gnegvote_tbl);
 		apply(access_pposvote_tbl);
 		apply(access_pnegvote_tbl);
 
-		// Stage 4
-		// NOTE: we put valid_reg in stage 2 to support DEL operation
-		apply(access_valid_tbl); 
-		apply(update_vallen_tbl);
+		// Stage 5
+		// Do preliminary decision
+		if (meta.isdirty == 1) {
+			if (op_hdr.optype == GETREQ_TYPE) {
+				if (meta.gnegvote > meta.pposvote) {
+					apply(calculate_diff_tbl);
+				}
+			}
+			else if (op_hdr.optype == PUTREQ_TYPE) {
+				if (meta.pnegvote > meta.pposvote) {
+					apply(calculate_diff_tbl);
+				}
+			}
+		}
+		else {
+			if (op_hdr.optype == GETREQ_TYPE) {
+				if (meta.gnegvote > meta.gposvote) {
+					apply(calculate_diff_tbl);
+				}
+			}
+			else if (op_hdr.optype == PUTREQ_TYPE) {
+				if (meta.pnegvote > meta.gposvote) {
+					apply(calculate_diff_tbl);
+				}
+			}
+		}
 
 		// Start from stage 4
 		// NOTE: we just get/put val directly; we decide whether to put the original val in getres or 

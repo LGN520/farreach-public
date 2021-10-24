@@ -52,7 +52,6 @@ table clear_valid_tbl {
 	default_action: clear_valid();
 }*/
 
-@pragma stage 3
 table access_valid_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -69,8 +68,7 @@ table access_valid_tbl {
 		get_valid;
 		set_valid;
 		clear_valid;
-		nop;
 	}
-	default_action: nop();
+	default_action: get_valid();
 	size: 2048;
 }

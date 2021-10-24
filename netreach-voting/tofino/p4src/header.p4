@@ -73,6 +73,8 @@ header_type res_t {
 header_type metadata_t {
 	fields {
 		hashidx: 16;
+		gthreshold: 16;
+		pthreshold: 16;
 		ismatch_keylololo: 4; // predicate 
 		ismatch_keylolohi: 4; // predicate 
 		ismatch_keylohilo: 4; // predicate 
@@ -82,6 +84,14 @@ header_type metadata_t {
 		ismatch_keyhihilo: 4; // predicate
 		ismatch_keyhihihi: 4; // predicate
 		isvalid: 1;
+		isdirty: 1;
+		origin_vallen: 8;
+		gposvote: 16;
+		gnegvote: 16;
+		pposvote: 16;
+		pnegvote: 16;
+		vote_diff: 16;
+		islock: 1;
 		origin_keylololo: 16;
 		origin_keylolohi: 16;
 		origin_keylohilo: 16;
@@ -90,7 +100,6 @@ header_type metadata_t {
 		origin_keyhilohi: 16;
 		origin_keyhihilo: 16;
 		origin_keyhihihi: 16;
-		origin_vallen: 8;
 		origin_vallo1: 32;
 		origin_valhi1: 32;
 		/*origin_vallo2: 32;
