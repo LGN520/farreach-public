@@ -11,16 +11,18 @@
 	+ Add dirty bit (dirty.p4, basic.p4, and configure/table_configure.py)
 	+ Add voting-based decision
 		* Add vote diff calculate (ingerss_mat.p4, basic.p4, and configure/table_configure.py)
-		* Add two thresholds (basic.p4, ingress_mat.p4, and configure/table_configure.py (TODO))
+		* Add two thresholds (basic.p4, ingress_mat.p4, and configure/table_configure.py (TODO 1))
 		* Only if key does not match: compare vote diff and corresponding threshold to update lock bit; also get original lock bit
 		* Key matches -> response
 			- Only if it is valid and key matches, put value register (basic.p4, val.p4, and configure/table_configure.py)
 			- Only if it is valid and key matches, sendback getres direcctly or by cloning (basic.p4, ingress_mat.p4, and configure/table_configure.py)
 				+ For GETREQ: sendback GETRES directly
 				+ For PUTREQ: sendback PUTRES directly
-				+ For DELREQ: update transferred packet as DELRES_S and sendback DELRES by cloning (TODO: delete cached keys in server)
-			- TODO: add cached keys in server-side
-		* TODO: Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
+				+ For DELREQ: update transferred packet as DELRES_S and sendback DELRES by cloning (TODO 2: delete cached keys in server)
+			- TODO 3: add cached keys in server-side
+		* Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
+			- For GETREQ: update transferred packet as GETREQ_S
+				+ TODO: Server receives GETREQ_S and gives GETRES_S to switch; switch processes GETRES_S and updates it as GETRES towards client
 		* TODO: Key does not match, and original lock bit = 0 && diff < threshold -> forward
 		* TODO: Key does not match, and original lock bit = 1 -> also recirculate
 - TODO: For put req

@@ -163,7 +163,14 @@ action sendback_putres() {
 	add_header(res_hdr);
 }
 
-action update_delreq_and_notify(sid) {
+// NOTE: clone field list cannot exceed 32 bytes
+field_list clone_field_list {
+	meta.is_clone;
+	meta.tmp_sport;
+	meta.tmp_dport;
+}
+
+action update_delreq_and_clone(sid) {
 	// Update transferred packet as delreq_s
 	modify_field(op_hdr.optype, DELREQ_S_TYPE);
 
@@ -188,7 +195,7 @@ table try_res_tbl {
 	actions {
 		sendback_getres;
 		sendback_putres;
-		sendback_delres_and_notify;
+		update_delreq_and_clone;
 		nop;
 	}
 	default_action: nop();
@@ -231,6 +238,31 @@ table calculate_diff_tbl {
 	}
 	default_action: default_diff();
 	size: 4;
+}
+
+// Stage 5+n + 3
+
+action update_getreq_tbl() {
+	modify_field(op_hdr.optype, GETREQ_S_TYPE);
+}
+
+table update_getreq_tbl {
+	reads {
+		meta.islock: exact;
+		op_hdr.optype: exact;
+		meta.ismatch_keylololo: exact;
+		meta.ismatch_keylolohi: exact;
+		meta.ismatch_keylohilo: exact;
+		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keyhilolo: exact;
+		meta.ismatch_keyhilohi: exact;
+		meta.ismatch_keyhihilo: exact;
+		meta.ismatch_keyhihihi: exact;
+	}
+	actions {
+		update_get_req;
+	}
+	size: 1024;
 }
 
 // Last Stage of ingress pipeline

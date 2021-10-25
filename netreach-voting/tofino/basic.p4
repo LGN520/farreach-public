@@ -21,8 +21,10 @@
 #define PUTRES_TYPE 0x05
 #define DELRES_TYPE 0x06
 #define SCANRES_TYPE 0x07
-#define PUTREQ_S_TYPE 0x08
-#define DELREQ_S_TYPE 0x09
+#define GETREQ_S_TYPE 0x08
+#define PUTREQ_S_TYPE 0x09
+#define DELREQ_S_TYPE 0x0a
+#define GETRES_S_TYPE 0x0b
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -136,13 +138,6 @@ table update_putreq_tbl {
 	}
 	default_action: update_putreq();
 	size: 1;
-}
-
-// NOTE: clone field list cannot exceed 32 bytes
-field_list clone_field_list {
-	meta.is_clone;
-	meta.tmp_sport;
-	meta.tmp_dport;
 }
 
 action clone_putpkt(sid) {
@@ -329,13 +324,14 @@ control ingress {
 		apply(access_lock_tbl);
 
 		// Stage 5+n + 3
-		/*if (meta.islock == 0) {
+		if (meta.islock == 0) {
 			if (op_hdr.optype == GETREQ_TYPE) {
 				if (meta.vote_diff >= meta.gthreshold) {
-					// TODO: generate cache update for get
+					// Generate get_req_s for cache update
+					apply(update_getreq_tbl);
 				}
 			}
-		}*/
+		}
 
 		else if (op_hdr.optype == PUTREQ_TYPE) {
 			// Stage 4 (rely on val)

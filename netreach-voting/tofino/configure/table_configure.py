@@ -166,6 +166,23 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                      pal_fec_type_t.BF_FEC_TYP_NONE)
                self.pal.pal_port_enable(0, i)
 
+            # Bind sid with port for packet mirror
+            sidnum = 1
+            sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
+            print "Binding sid {} with port {}".format(sids[0], self.devPorts[0]) # clone to client
+            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                  Direction_e.PD_DIR_INGRESS,
+                                  sids[0],
+                                  self.devPorts[0],
+                                  True)
+            #print "Binding sid {} with port {}".format(sids[0], self.devPorts[1]) # clone to server
+            #info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+            #                      Direction_e.PD_DIR_INGRESS,
+            #                      sids[0],
+            #                      self.devPorts[1],
+            #                      True)
+            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+
 	    # Table: load_gthreshold_tbl
 	    # TODO
 	    #self.client.load_gthreshold_tbl_table_set_default_action_load_gthreshold(\
@@ -1027,25 +1044,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_ismatch_keyhilohi=2,
                     meta_ismatch_keyhihilo=2,
                     meta_ismatch_keyhihihi=2)
-            self.client.try_res_tbl_table_add_with_update_delreq_and_notify(\
+            actnspec2 = netbuffer_update_delreq_and_clone_action_spec_t(sids[0]) # Clone for DELRES to client
+            self.client.try_res_tbl_table_add_with_update_delreq_and_clone(\
                     self.sess_hdl, self.dev_tgt, matchspec2)
-
-            # Bind sid with port for packet mirror
-            sidnum = 1
-            sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
-            print "Binding sid {} with port {}".format(sids[0], self.devPorts[0]) # clone to client
-            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-                                  Direction_e.PD_DIR_INGRESS,
-                                  sids[0],
-                                  self.devPorts[0],
-                                  True)
-            #print "Binding sid {} with port {}".format(sids[0], self.devPorts[1]) # clone to server
-            #info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-            #                      Direction_e.PD_DIR_INGRESS,
-            #                      sids[0],
-            #                      self.devPorts[1],
-            #                      True)
-            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
             # Table: clone_putpkt_tbl
             print "Configuring clone_putpkt_tbl"
