@@ -32,13 +32,21 @@ action put_vallen() {
 table update_vallen_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.isvalid: exact;
+		meta.ismatch_keylololo: exact;
+		meta.ismatch_keylolohi: exact;
+		meta.ismatch_keylohilo: exact;
+		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keyhilolo: exact;
+		meta.ismatch_keyhilohi: exact;
+		meta.ismatch_keyhihilo: exact;
+		meta.ismatch_keyhihihi: exact;
 	}
 	actions {
 		get_vallen;
 		put_vallen;
-		nop;
 	}
-	default_action: nop();
+	default_action: get_vallen();
 	size: 4;
 }
 
@@ -76,18 +84,21 @@ action put_vallo1() {
 table update_vallo1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		/*meta.isvalid: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;*/
+		meta.isvalid: exact;
+		meta.ismatch_keylololo: exact;
+		meta.ismatch_keylolohi: exact;
+		meta.ismatch_keylohilo: exact;
+		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keyhilolo: exact;
+		meta.ismatch_keyhilohi: exact;
+		meta.ismatch_keyhihilo: exact;
+		meta.ismatch_keyhihihi: exact;
 	}
 	actions {
 		get_vallo1;
 		put_vallo1;
-		nop;
 	}
-	default_action: nop();
+	default_action: get_vallo1();
 	size: 4;
 }
 
@@ -125,18 +136,21 @@ action put_valhi1() {
 table update_valhi1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		/*meta.isvalid: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;*/
+		meta.isvalid: exact;
+		meta.ismatch_keylololo: exact;
+		meta.ismatch_keylolohi: exact;
+		meta.ismatch_keylohilo: exact;
+		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keyhilolo: exact;
+		meta.ismatch_keyhilohi: exact;
+		meta.ismatch_keyhihilo: exact;
+		meta.ismatch_keyhihihi: exact;
 	}
 	actions {
 		get_valhi1;
 		put_valhi1;
-		nop;
 	}
-	default_action: nop();
+	default_action: get_valhi1();
 	size: 4;
 }
 

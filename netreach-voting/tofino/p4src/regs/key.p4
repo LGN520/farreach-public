@@ -46,9 +46,8 @@ table access_keylololo_tbl {
 	actions {
 		match_keylololo;
 		modify_keylololo;
-		nop;
 	}
-	default_action: nop();
+	default_action: match_keylololo();
 	size: 4;
 }
 
@@ -98,9 +97,8 @@ table access_keylolohi_tbl {
 	actions {
 		match_keylolohi;
 		modify_keylolohi;
-		nop;
 	}
-	default_action: nop();
+	default_action: match_keylolohi();
 	size: 4;
 }
 
@@ -150,9 +148,8 @@ table access_keylohilo_tbl {
 	actions {
 		match_keylohilo;
 		modify_keylohilo;
-		nop;
 	}
-	default_action: nop();
+	default_action: match_keylohilo();
 	size: 4;
 }
 
@@ -202,9 +199,8 @@ table access_keylohihi_tbl {
 	actions {
 		match_keylohihi;
 		modify_keylohihi;
-		nop;
 	}
-	default_action: nop();
+	default_action: match_keylohihi();
 	size: 4;
 }
 
@@ -254,9 +250,8 @@ table access_keyhilolo_tbl {
 	actions {
 		match_keyhilolo;
 		modify_keyhilolo;
-		nop;
 	}
-	default_action: nop();
+	default_action: match_keyhilolo();
 	size: 4;
 }
 
@@ -306,9 +301,8 @@ table access_keyhilohi_tbl {
 	actions {
 		match_keyhilohi;
 		modify_keyhilohi;
-		nop;
 	}
-	default_action: nop();
+	default_action: match_keyhilohi();
 	size: 4;
 }
 
@@ -358,9 +352,8 @@ table access_keyhihilo_tbl {
 	actions {
 		match_keyhihilo;
 		modify_keyhihilo;
-		nop;
 	}
-	default_action: nop();
+	default_action: match_keyhihilo();
 	size: 4;
 }
 
@@ -410,8 +403,7 @@ table access_keyhihihi_tbl {
 	actions {
 		match_keyhihihi;
 		modify_keyhihihi;
-		nop;
 	}
-	default_action: nop();
+	default_action: match_keyhihihi();
 	size: 4;
 }

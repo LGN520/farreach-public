@@ -13,9 +13,13 @@
 		* Add vote diff calculate (ingerss_mat.p4, basic.p4, and configure/table_configure.py)
 		* Add two thresholds (basic.p4, ingress_mat.p4, and configure/table_configure.py (TODO))
 		* Only if key does not match: compare vote diff and corresponding threshold to update lock bit; also get original lock bit
-		* TODO: Key matches -> response
+		* Key matches -> response
+			- Only if it is valid and key matches, put value register (basic.p4, val.p4, and configure/table_configure.py)
+			- Only if it is valid and key matches, sendback get/put response (basic.p4, ingress_mat.p4, and configure/table_configure.py)
+			- TODO: support delete (remove valid bit, sendback del response, clone a del_req_s to server (delete cached keys))
+			- TODO: add cached keys in server-side
 		* TODO: Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
-		* TODO: Key does not match, and original lock bit = 0 -> forward
+		* TODO: Key does not match, and original lock bit = 0 && diff < threshold -> forward
 		* TODO: Key does not match, and original lock bit = 1 -> also recirculate
 - TODO: For put req
 	+ If the entry is empty, we need to update the cache directly and notify the server (do not need to drop put_req, which becomes put_req_n; need to clone for put_res)
