@@ -15,8 +15,10 @@
 		* Only if key does not match: compare vote diff and corresponding threshold to update lock bit; also get original lock bit
 		* Key matches -> response
 			- Only if it is valid and key matches, put value register (basic.p4, val.p4, and configure/table_configure.py)
-			- Only if it is valid and key matches, sendback get/put response (basic.p4, ingress_mat.p4, and configure/table_configure.py)
-			- TODO: support delete (remove valid bit, sendback del response, clone a del_req_s to server (delete cached keys))
+			- Only if it is valid and key matches, sendback getres direcctly or by cloning (basic.p4, ingress_mat.p4, and configure/table_configure.py)
+				+ For GETREQ: sendback GETRES directly
+				+ For PUTREQ: sendback PUTRES directly
+				+ For DELREQ: update transferred packet as DELRES_S and sendback DELRES by cloning (TODO: delete cached keys in server)
 			- TODO: add cached keys in server-side
 		* TODO: Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
 		* TODO: Key does not match, and original lock bit = 0 && diff < threshold -> forward

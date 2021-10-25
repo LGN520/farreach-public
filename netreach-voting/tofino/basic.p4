@@ -138,18 +138,6 @@ table update_putreq_tbl {
 	size: 1;
 }
 
-action update_delreq() {
-	modify_field(op_hdr.optype, DELREQ_S_TYPE);
-}
-
-table update_delreq_tbl {
-	actions {
-		update_delreq;
-	}
-	default_action: update_delreq();
-	size: 1;
-}
-
 // NOTE: clone field list cannot exceed 32 bytes
 field_list clone_field_list {
 	meta.is_clone;
@@ -305,8 +293,9 @@ control ingress {
 		apply(update_valhi16_tbl);*/
 
 		// Stage 5 + n, where n is the number of stages for values
-		// NOTE: it will change op_type to response if key matches, which
-		// will not perform diff calculation, lock access, and cache update
+		// NOTE: it will change op_type from GETREQ/PUTREQ/DELREQ to
+		// GETRES/PUTRES/DELREQ_S(cloned DELRES) if key matches, which
+		// will not perform diff calculation, lock access, and cache update further
 		apply(try_res_tbl);
 
 		// Stage 5+n + 1
@@ -348,35 +337,6 @@ control ingress {
 			}
 		}*/
 
-		if (op_hdr.optype == GETREQ_TYPE) {
-			// Stage 4 (rely on val)
-			if (meta.isvalid == 1) {
-				if (meta.ismatch_keylololo == 2 and meta.ismatch_keylolohi == 2) {
-					if (meta.ismatch_keylohilo == 2 and meta.ismatch_keylohihi == 2) {
-						if (meta.ismatch_keyhilolo == 2 and meta.ismatch_keyhilohi == 2) {
-							if (meta.ismatch_keyhihilo == 2 and meta.ismatch_keyhihihi == 2) {
-								apply(sendback_getres_tbl);
-							}
-							else {
-								apply(port_forward_tbl);
-							}
-						}
-						else {
-							apply(port_forward_tbl);
-						}
-					}
-					else {
-						apply(port_forward_tbl);
-					}
-				}
-				else {
-					apply(port_forward_tbl);
-				}
-			}
-			else {
-				apply(port_forward_tbl);
-			}
-		}
 		else if (op_hdr.optype == PUTREQ_TYPE) {
 			// Stage 4 (rely on val)
 			if (meta.isvalid == 1) { // pkt is cloned to egress and will not execute this code
@@ -413,14 +373,6 @@ control ingress {
 			// NOTE: we must set egress port for normal packet; otherwise it will be dropped
 			apply(port_forward_tbl);
 		}
-		else if (op_hdr.optype == DELREQ_TYPE) {
-			// Stage 3
-			if (meta.isvalid == 1) { // Only if key matches and original valid bit is 1, meta.isvalid is 1
-				apply(clone_delpkt_tbl);
-				apply(update_delreq_tbl);
-			}
-			apply(port_forward_tbl);
-		}
 		else if (op_hdr.optype == SCANREQ_TYPE) {
 			// Stage 3/0
 			apply(send_scanpkt_tbl);
@@ -438,6 +390,22 @@ control ingress {
 }
 
 /* Egress Processing */
+
+/*action eg_drop_unicast {
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+}
+
+table drop_put_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		eg_drop_unicast;
+		nop;
+	}
+	default_action: nop();
+	size: 4;
+}*/
 
 action sendback_delres() {
 	// Swap udp port
@@ -457,22 +425,6 @@ table sendback_delres_tbl {
 	default_action: sendback_delres();
 	size: 1;
 }
-
-/*action eg_drop_unicast {
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
-}
-
-table drop_put_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		eg_drop_unicast;
-		nop;
-	}
-	default_action: nop();
-	size: 4;
-}*/
 
 action swap_macaddr(tmp_srcmac, tmp_dstmac) {
 	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
@@ -494,9 +446,6 @@ table swap_macaddr_tbl {
 control egress {
 	// NOTE: make sure that normal packet will not apply these tables
 	if (pkt_is_i2e_mirrored) {
-		if (meta.is_clone == 1) {
-			apply(sendback_putres_tbl); // input is PUTREQ or PUTREQ_S
-		}
 		else if (meta.is_clone == 2) {
 			apply(sendback_delres_tbl); // input is DELREQ or DELREQ_S
 		}

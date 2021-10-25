@@ -1016,6 +1016,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_ismatch_keyhihihi=2)
             self.client.try_res_tbl_table_add_with_sendback_putres(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
+            matchspec2 = netbuffer_try_res_tbl_match_spec_t(\
+                    op_hdr_optype=DELREQ_TYPE,
+                    meta_isvalid=1,
+                    meta_ismatch_keylololo=2, 
+                    meta_ismatch_keylolohi=2,
+                    meta_ismatch_keylohilo=2, 
+                    meta_ismatch_keylohihi=2,
+                    meta_ismatch_keyhilolo=2, 
+                    meta_ismatch_keyhilohi=2,
+                    meta_ismatch_keyhihilo=2,
+                    meta_ismatch_keyhihihi=2)
+            self.client.try_res_tbl_table_add_with_update_delreq_and_notify(\
+                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Bind sid with port for packet mirror
             sidnum = 1

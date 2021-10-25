@@ -163,12 +163,13 @@ action sendback_putres() {
 	add_header(res_hdr);
 }
 
-table sendback_putres_tbl {
-	actions {
-		sendback_putres;
-	}
-	default_action: sendback_putres();
-	size: 1;
+action update_delreq_and_notify(sid) {
+	// Update transferred packet as delreq_s
+	modify_field(op_hdr.optype, DELREQ_S_TYPE);
+
+	// Clone a packet for delres 
+	modify_field(meta.is_clone, 2);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
 table try_res_tbl {
@@ -187,6 +188,7 @@ table try_res_tbl {
 	actions {
 		sendback_getres;
 		sendback_putres;
+		sendback_delres_and_notify;
 		nop;
 	}
 	default_action: nop();
