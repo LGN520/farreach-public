@@ -364,6 +364,18 @@ control ingress {
 			}
 		}
 
+		// Stage 6
+		apply(access_lock_tbl);
+
+		// Stage 7
+		/*if (meta.islock == 0) {
+			if (op_hdr.optype == GETREQ_TYPE) {
+				if (meta.vote_diff >= meta.gthreshold) {
+					// TODO: generate cache update for get
+				}
+			}
+		}*/
+
 		// Start from stage 4
 		// NOTE: we just get/put val directly; we decide whether to put the original val in getres or 
 		// putreq in control flow
@@ -399,6 +411,8 @@ control ingress {
 		apply(update_valhi15_tbl);
 		apply(update_vallo16_tbl);
 		apply(update_valhi16_tbl);*/
+
+		// TODO: apply(try_res_tbl);
 
 		if (op_hdr.optype == GETREQ_TYPE) {
 			// Stage 4 (rely on val)

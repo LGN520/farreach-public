@@ -12,7 +12,7 @@
 	+ Add voting-based decision
 		* Add vote diff calculate (ingerss_mat.p4, basic.p4, and configure/table_configure.py)
 		* Add two thresholds (basic.p4, ingress_mat.p4, and configure/table_configure.py (TODO))
-		* TODO: compare vote diff and corresponding threshold to update lock bit; also get original lock bit
+		* Only if key does not match: compare vote diff and corresponding threshold to update lock bit; also get original lock bit
 		* TODO: Key matches -> response
 		* TODO: Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
 		* TODO: Key does not match, and original lock bit = 0 -> forward

@@ -381,7 +381,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 					    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
 					    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
 					    	continue
-                                            matchspec0 = netbuffer_access_valid_tbl_match_spec_t(
+                                            matchspec0 = netbuffer_access_gnegvote_tbl_match_spec_t(
                                                     meta_isvalid=1,
                                                     op_hdr_optype=GETREQ_TYPE, 
                                                     meta_ismatch_keylololo=ismatch_keylololo, 
@@ -402,7 +402,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for ismatch_keyhilohi in predicate_list:
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
-                                            matchspec0 = netbuffer_access_valid_tbl_match_spec_t(
+                                            matchspec0 = netbuffer_access_gnegvote_tbl_match_spec_t(
                                                     meta_isvalid=0,
                                                     op_hdr_optype=GETREQ_TYPE, 
                                                     meta_ismatch_keylololo=ismatch_keylololo, 
@@ -448,7 +448,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 					    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
 					    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
 					    	continue
-                                            matchspec0 = netbuffer_access_valid_tbl_match_spec_t(
+                                            matchspec0 = netbuffer_access_pnegvote_tbl_match_spec_t(
                                                     meta_isvalid=1,
                                                     op_hdr_optype=PUTREQ_TYPE, 
                                                     meta_ismatch_keylololo=ismatch_keylololo, 
@@ -469,7 +469,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for ismatch_keyhilohi in predicate_list:
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
-                                            matchspec0 = netbuffer_access_valid_tbl_match_spec_t(
+                                            matchspec0 = netbuffer_access_pnegvote_tbl_match_spec_t(
                                                     meta_isvalid=0,
                                                     op_hdr_optype=PUTREQ_TYPE, 
                                                     meta_ismatch_keylololo=ismatch_keylololo, 
@@ -505,6 +505,47 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype=PUTREQ_TYPE)
 	    self.client.calculate_diff_tbl_table_add_with_pneg_gpos_diff(\
 		    self.sess_hdl, self.dev_tgt, matchspec3)
+
+            # Table: access_lock_tbl
+            print "Configuring access_lock_tbl"
+            predicate_list = [0, 2]
+            for ismatch_keylololo in predicate_list:
+                for ismatch_keylolohi in predicate_list:
+                    for ismatch_keylohilo in predicate_list:
+                        for ismatch_keylohihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+					    if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
+					    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
+					    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
+					    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
+					    	continue
+                                            matchspec0 = netbuffer_access_lock_tbl_match_spec_t(
+                                                    op_hdr_optype=GETREQ_TYPE, 
+                                                    meta_ismatch_keylololo=ismatch_keylololo, 
+                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                            self.client.access_lock_tbl_table_add_with_try_glock(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                            matchspec1 = netbuffer_access_lock_tbl_match_spec_t(
+                                                    op_hdr_optype=PUTREQ_TYPE, 
+                                                    meta_ismatch_keylololo=ismatch_keylololo, 
+                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                            self.client.access_lock_tbl_table_add_with_try_plock(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec1)
 
             # Table: ipv4_lpm
             #print "Configuring ipv4_lpm"
