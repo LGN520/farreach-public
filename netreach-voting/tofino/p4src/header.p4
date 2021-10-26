@@ -73,6 +73,9 @@ header_type res_t {
 header_type metadata_t {
 	fields {
 		hashidx: 16;
+		origin_hashidx: 16;
+		tmp_sport: 16;
+		tmp_dport: 16;
 		gthreshold: 16;
 		pthreshold: 16;
 		ismatch_keylololo: 4; // predicate 
@@ -132,8 +135,6 @@ header_type metadata_t {
 		origin_valhi15: 32;
 		origin_vallo16: 32;
 		origin_valhi16: 32;*/
-		tmp_sport: 16;
-		tmp_dport: 16;
 		is_clone: 2;
 	}
 }

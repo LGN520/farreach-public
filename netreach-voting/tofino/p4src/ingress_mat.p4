@@ -29,11 +29,34 @@ action calculate_hash() {
 	// modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT - ipv4_hdr.totalLen);
 }
 
-table calculate_hash_tbl {
-	actions {
-		calculate_hash;
+field_list origin_hash_fields {
+	meta.origin_keylololo;
+	meta.origin_keylolohi;
+	meta.origin_keylohilo;
+	meta.origin_keylohihi;
+	meta.origin_keyhilolo;
+	meta.origin_keyhilohi;
+	meta.origin_keyhihilo;
+	meta.origin_keyhihihi;
+}
+
+field_list_calculation origin_hash_field_calc {
+	input {
+		origin_hash_fields;
 	}
-	default_action: calculate_hash();
+	algorithm: crc32;
+	output_width: 16;
+}
+
+action calculate_origin_hash() {
+	modify_field_with_hash_based_offset(meta.origin_hashidx, 0, origin_hash_field_calc, KV_BUCKET_COUNT);
+}
+
+table calculate_origin_hash_tbl {
+	actions {
+		calculate_origin_hash;
+	}
+	default_action: calculate_origin_hash();
 	size: 1;
 }
 
@@ -42,6 +65,7 @@ action save_info() {
 	modify_field(meta.tmp_dport, udp_hdr.dstPort);
 }
 
+//@pragma stage 0
 table save_info_tbl {
 	actions {
 		save_info;
@@ -175,7 +199,7 @@ action update_delreq_and_clone(sid) {
 	modify_field(op_hdr.optype, DELREQ_S_TYPE);
 
 	// Clone a packet for delres 
-	modify_field(meta.is_clone, 2);
+	modify_field(meta.is_clone, CLONE_FOR_DELRES);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
@@ -267,8 +291,8 @@ table update_getreq_tbl {
 
 // Last Stage of ingress pipeline
 
-action update_getres_s_and_clone(sid) {
-	modify_field(op_hdr.optype, PUTREQ_S_TYPE);
+action update_getres_s_and_clone(sid, port) {
+	modify_field(op_hdr.optype, PUTREQ_GS_TYPE);
 
 	modify_field(op_hdr.keylololo, meta.origin_keylololo);
 	modify_field(op_hdr.keylolohi, meta.origin_keylolohi);
@@ -329,17 +353,16 @@ action update_getres_s_and_clone(sid) {
 	modify_field(val16_hdr.valhi, meta.origin_valhi16);
 	add_header(val16_hdr);*/
 
-	// Clone a packet for delres 
-	modify_field(meta.is_clone, 1);
+	// Forward PUTREQ_GS to server
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+
+	// Clone a packet for GETRES 
+	modify_field(meta.is_clone, CLONE_FOR_GETRES);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
 action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-}
-
-action droppkt() {
-	drop();
 }
 
 table port_forward_tbl {
@@ -351,9 +374,55 @@ table port_forward_tbl {
 	}
 	actions {
 		port_forward;
-		droppkt;
+		update_delres_s_and_clone;
 		nop;
 	}
 	default_action: nop();
 	size: 4;  
+}
+
+
+action update_dstport(port) {
+	modify_field(udp_hdr.dstPort, port);
+}
+
+action update_dstport_reverse(port) {
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	modify_field(udp_hdr.dstPort, port);
+}
+
+table hash_partition_tbl {
+	reads {
+		udp_hdr.dstPort: exact;
+		ig_intr_md_for_tm.ucast_egress_port: exact;
+		meta.hashidx: range;
+	}
+	actions {
+		update_dstport;
+	}
+	size: 128;
+}
+
+table origin_hash_partition_tbl {
+	reads {
+		udp_hdr.dstPort: exact;
+		ig_intr_md_for_tm.ucast_egress_port: exact;
+		meta.origin_hashidx: range;
+	}
+	actions {
+		update_dstport;
+	}
+	size: 128;
+}
+
+table origin_hash_partition_reverse_tbl {
+	reads {
+		udp_hdr.srcPort: exact;
+		ig_intr_md_for_tm.ucast_egress_port: exact;
+		meta.origin_hashidx: range;
+	}
+	actions {
+		update_dstport_reverse;
+	}
+	size: 128;
 }

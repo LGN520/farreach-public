@@ -22,9 +22,13 @@
 #define DELRES_TYPE 0x06
 #define SCANRES_TYPE 0x07
 #define GETREQ_S_TYPE 0x08
-#define PUTREQ_S_TYPE 0x09
-#define DELREQ_S_TYPE 0x0a
-#define GETRES_S_TYPE 0x0b
+#define PUTREQ_GS_TYPE 0x09
+#define PUTREQ_PS_TYPE 0x0a
+#define DELREQ_S_TYPE 0x0b
+#define GETRES_S_TYPE 0x0c
+
+#define CLONE_FOR_GETRES 1
+#define CLONE_FOR_DELRES 2
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -66,6 +70,7 @@
 #include "p4src/regs/dirty.p4"
 
 #include "p4src/ingress_mat.p4"
+#include "p4src/egress_mat.p4"
 
 /* Ingress Processing */
 
@@ -132,28 +137,12 @@ table drop_put_tbl {
 	size: 8;  
 }
 
-action hash_partition(port) {
-	modify_field(udp_hdr.dstPort, port);
-}
-
-table hash_partition_tbl {
-	reads {
-		udp_hdr.dstPort: exact;
-		ig_intr_md_for_tm.ucast_egress_port: exact;
-		meta.hashidx: range;
-	}
-	actions {
-		hash_partition;
-	}
-	size: 128;
-}
-
 control ingress {
 	if (valid(op_hdr)) {
 
 		// Stage 0
 		apply(calculate_hash_tbl);
-		apply(save_info_tbl); // save dst port
+		apply(save_info_tbl);
 		apply(load_gthreshold_tbl);
 		apply(load_pthreshold_tbl);
 
@@ -170,6 +159,7 @@ control ingress {
 
 		// Stage 3
 		// NOTE: we put valid_reg in stage 3 to support DEL operation
+		apply(calculate_origin_hash_tbl);
 		apply(access_valid_tbl); 
 		apply(access_dirty_tbl);
 		apply(update_vallen_tbl);
@@ -262,8 +252,18 @@ control ingress {
 			}
 		}
 
-		// For GETRES_S, we convert it as PUTREQ_S and forward to server, ans also clone a packet for GETRES
+		// For GETRES_S, we convert it as PUTREQ_GS and forward to server, ans also clone a packet for GETRES to client
 		apply(port_forward_tbl);
+
+		if (op_hdr.optype == PUTREQ_GS_TYPE) {
+			apply(origin_hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
+		}
+		else if (op_hdr.optype == PUTREQ_PS_TYPE) {
+			apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
+		}
+		else { // GETREQ, PUTREQ, DELREQ, SCANREQ, GETREQ_S, DELREQ_S, and PUTREQ_N
+			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
+		}
 
 		else if (op_hdr.optype == PUTREQ_TYPE) {
 			// Stage 4 (rely on val)
@@ -313,46 +313,9 @@ control ingress {
 	else {
 		apply(port_forward_tbl);
 	}
-
-	apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 }
 
 /* Egress Processing */
-
-/*action eg_drop_unicast {
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
-}
-
-table drop_put_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		eg_drop_unicast;
-		nop;
-	}
-	default_action: nop();
-	size: 4;
-}*/
-
-action sendback_delres() {
-	// Swap udp port
-	modify_field(udp_hdr.dstPort, meta.tmp_sport);
-	modify_field(udp_hdr.srcPort, meta.tmp_dport);
-	add_to_field(udp_hdr.hdrlen, 1);
-
-	modify_field(op_hdr.optype, DELRES_TYPE);
-	modify_field(res_hdr.stat, 1);
-	add_header(res_hdr);
-}
-
-table sendback_delres_tbl {
-	actions {
-		sendback_delres;
-	}
-	default_action: sendback_delres();
-	size: 1;
-}
 
 action swap_macaddr(tmp_srcmac, tmp_dstmac) {
 	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
@@ -374,15 +337,12 @@ table swap_macaddr_tbl {
 control egress {
 	// NOTE: make sure that normal packet will not apply these tables
 	if (pkt_is_i2e_mirrored) {
-		if (meta.is_clone == 1) {
-			apply(sendback_getres_tbl); // input is PUTREQ_S converted from GETRES_S (we do not need swap port, ip, and mac)
+		if (meta.is_clone == CLONE_FOR_GETRES) {
+			apply(sendback_cloned_getres_tbl); // input is PUTREQ_GS converted from GETRES_S (we do not need swap port, ip, and mac)
 		}
-		else if (meta.is_clone == 2) {
-			apply(sendback_delres_tbl); // input is DELREQ or DELREQ_S (we need swap port, ip, and mac)
+		else if (meta.is_clone == CLONE_FOR_DELRES) {
+			apply(sendback_cloned_delres_tbl); // input is DELREQ_S converted from DELREQ (we need swap port, ip, and mac)
 		}
 	}
-	/*else {
-		apply(drop_put_tbl); // Drop PUTREQ (aka valid = 0 for PUT) 
-	}*/
-	apply(swap_macaddr_tbl); // Swap mac addr for res (not only PUTREQ and DELRES, but also GETRS)
+	apply(update_macaddr_tbl); // Update mac addr
 }

@@ -76,9 +76,14 @@ PUTRES_TYPE = 0x05
 DELRES_TYPE = 0x06
 SCANRES_TYPE = 0x07
 GETREQ_S_TYPE = 0x08
-PUTREQ_S_TYPE = 0x09
-DELREQ_S_TYPE = 0x0a
-GETRES_S_TYPE = 0x0b
+PUTREQ_GS_TYPE = 0x09
+PUTREQ_PS_TYPE = 0x0a
+DELREQ_S_TYPE = 0x0b
+GETRES_S_TYPE = 0x0c
+
+valid_list = [0, 1]
+dirty_list = [0, 1]
+predicate_list = [0, 2]
 
 if test_param_get("arch") == "tofino":
   MIR_SESS_COUNT = 1024
@@ -184,6 +189,128 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             eval("self.client.update_val{}_tbl_table_add_with_put_val{}".format(valname, valname))(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0)
 
+    def configure_access_key_tbl(self, keyname):
+        #matchspec0 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=GETREQ_TYPE);
+        #matchspec1 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=PUTREQ_TYPE);
+        #matchspec2 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=DELREQ_TYPE);
+        #eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
+        #        self.sess_hdl, self.dev_tgt, matchspec0)
+        #eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
+        #        self.sess_hdl, self.dev_tgt, matchspec1)
+        #eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
+        #        self.sess_hdl, self.dev_tgt, matchspec2)
+        matchspec0 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=GETRES_S_TYPE)
+        eval("self.client.access_key{}_tbl_table_add_with_modify_key{}".format(keyname, keyname))(\
+                self.sess_hdl, self.dev_tgt, matchspec0)
+
+    def configure_access_posvote_tbl(self, opname, optype):
+        matchspec0 = eval("netbuffer_access_{}posvote_tbl_match_spec_t".format(opname))(
+                meta_isvalid=1,
+                op_hdr_optype=optype, 
+                meta_ismatch_keylololo=2, 
+                meta_ismatch_keylolohi=2, 
+                meta_ismatch_keylohilo=2, 
+                meta_ismatch_keylohihi=2, 
+                meta_ismatch_keyhilolo=2,
+                meta_ismatch_keyhilohi=2,
+                meta_ismatch_keyhihilo=2,
+                meta_ismatch_keyhihihi=2)
+        eval("self.client.access_{}posvote_tbl_table_add_with_increase_{}posvote".format(opname, opname))(\
+                self.sess_hdl, self.dev_tgt, matchspec0)
+        for ismatch_keylololo in predicate_list:
+            for ismatch_keylolohi in predicate_list:
+                for ismatch_keylohilo in predicate_list:
+                    for ismatch_keylohihi in predicate_list:
+                        for ismatch_keyhilolo in predicate_list:
+                            for ismatch_keyhilohi in predicate_list:
+                                for ismatch_keyhihilo in predicate_list:
+                                    for ismatch_keyhihihi in predicate_list:
+                                        for isvalid in valid_list:
+                                            matchspec0 = eval("netbuffer_access_{}posvote_tbl_match_spec_t".format("g"))(\
+                                                    meta_isvalid=isvalid,
+                                                    op_hdr_optype=GETRES_S_TYPE, 
+                                                    meta_ismatch_keylololo=ismatch_keylololo, 
+                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                            eval("self.client.access_{}posvote_tbl_table_add_with_reset_{}posvote".format(opname, opname))(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+    def configure_access_negvote_tbl(self, opname, optype):
+        for ismatch_keylololo in predicate_list:
+            for ismatch_keylolohi in predicate_list:
+                for ismatch_keylohilo in predicate_list:
+                    for ismatch_keylohihi in predicate_list:
+                        for ismatch_keyhilolo in predicate_list:
+                            for ismatch_keyhilohi in predicate_list:
+                                for ismatch_keyhihilo in predicate_list:
+                                    for ismatch_keyhihihi in predicate_list:
+                                        if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
+                                        ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
+                                        ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
+                                        ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
+                                            continue
+                                        matchspec0 = eval("netbuffer_access_{}negvote_tbl_match_spec_t".format(opname))(
+                                                meta_isvalid=1,
+                                                op_hdr_optype=optype, 
+                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                        eval("self.client.access_{}negvote_tbl_table_add_with_increase_{}negvote".format(opname, opname))(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0)
+        for ismatch_keylololo in predicate_list:
+            for ismatch_keylolohi in predicate_list:
+                for ismatch_keylohilo in predicate_list:
+                    for ismatch_keylohihi in predicate_list:
+                        for ismatch_keyhilolo in predicate_list:
+                            for ismatch_keyhilohi in predicate_list:
+                                for ismatch_keyhihilo in predicate_list:
+                                    for ismatch_keyhihihi in predicate_list:
+                                        matchspec0 = eval("netbuffer_access_{}negvote_tbl_match_spec_t".format(opname))(
+                                                meta_isvalid=0,
+                                                op_hdr_optype=optype, 
+                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                        eval("self.client.access_{}negvote_tbl_table_add_with_increase_{}negvote".format(opname, opname))(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0)
+        for ismatch_keylololo in predicate_list:
+            for ismatch_keylolohi in predicate_list:
+                for ismatch_keylohilo in predicate_list:
+                    for ismatch_keylohihi in predicate_list:
+                        for ismatch_keyhilolo in predicate_list:
+                            for ismatch_keyhilohi in predicate_list:
+                                for ismatch_keyhihilo in predicate_list:
+                                    for ismatch_keyhihihi in predicate_list:
+                                        for isvalid in valid_list:
+                                            matchspec0 = eval("netbuffer_access_{}negvote_tbl_match_spec_t".format(opname))(\
+                                                    meta_isvalid=isvalid,
+                                                    op_hdr_optype=GETRES_S_TYPE, 
+                                                    meta_ismatch_keylololo=ismatch_keylololo, 
+                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                            eval("self.client.access_{}negvote_tbl_table_add_with_reset_{}negvote".format(opname, opname))(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+
     def setUp(self):
         print '\nSetup'
 
@@ -207,12 +334,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.devPorts.append(devPort)
         #self.devPorts.append(CPU_PORT)
 
+    ### MAIN ###
+
     def runTest(self):
         if test_param_get('cleanup') != True:
             print '\nTest'
-
-            valid_list = [0, 1]
-            predicate_list = [0, 2]
 
             # add and enable the platform ports
             for i in self.devPorts:
@@ -233,7 +359,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #print "Binding sid {} with port {}".format(sids[0], self.devPorts[1]) # clone to server
             #info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
             #                      Direction_e.PD_DIR_INGRESS,
-            #                      sids[0],
+            #                      sids[1],
             #                      self.devPorts[1],
             #                      True)
             self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
@@ -247,123 +373,35 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_keylololo_tbl (default: match_keylololo)
             print "Configuring match_keylololo_tbl"
-            #matchspec0 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            #matchspec1 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            #matchspec2 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            #self.client.access_keylololo_tbl_table_add_with_match_keylololo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #self.client.access_keylololo_tbl_table_add_with_match_keylololo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec1)
-            #self.client.access_keylololo_tbl_table_add_with_match_keylololo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec2)
-            matchspec0 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
-            self.client.access_keylololo_tbl_table_add_with_modify_keylololo(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_key_tbl("lololo")
 
             # Table: access_keylolohi_tbl (default: match_keylolohi)
             print "Configuring match_keylolohi_tbl"
-            #matchspec0 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            #matchspec1 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            #matchspec2 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            #self.client.access_keylolohi_tbl_table_add_with_match_keylolohi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #self.client.access_keylolohi_tbl_table_add_with_match_keylolohi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec1)
-            #self.client.access_keylolohi_tbl_table_add_with_match_keylolohi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec2)
-            matchspec0 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
-            self.client.access_keylolohi_tbl_table_add_with_modify_keylolohi(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_key_tbl("lolohi")
 
             # Table: access_keylohilo_tbl (default: match_keylohilo)
             print "Configuring match_keylohilo_tbl"
-            #matchspec0 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            #matchspec1 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            #matchspec2 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            #self.client.access_keylohilo_tbl_table_add_with_match_keylohilo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #self.client.access_keylohilo_tbl_table_add_with_match_keylohilo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec1)
-            #self.client.access_keylohilo_tbl_table_add_with_match_keylohilo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec2)
-            matchspec0 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
-            self.client.access_keylohilo_tbl_table_add_with_modify_keylohilo(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_key_tbl("lohilo")
 
             # Table: access_keylohihi_tbl (default: match_keylohihi)
             print "Configuring match_keylohihi_tbl"
-            #matchspec0 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            #matchspec1 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            #matchspec2 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            #self.client.access_keylohihi_tbl_table_add_with_match_keylohihi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #self.client.access_keylohihi_tbl_table_add_with_match_keylohihi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec1)
-            #self.client.access_keylohihi_tbl_table_add_with_match_keylohihi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec2)
-            matchspec0 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
-            self.client.access_keylohihi_tbl_table_add_with_modify_keylohihi(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_key_tbl("lohihi")
 
             # Table: access_keyhilolo_tbl (default: match_keyhilolo)
             print "Configuring match_keyhilolo_tbl"
-            #matchspec0 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            #matchspec1 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            #matchspec2 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            #self.client.access_keyhilolo_tbl_table_add_with_match_keyhilolo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #self.client.access_keyhilolo_tbl_table_add_with_match_keyhilolo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec1)
-            #self.client.access_keyhilolo_tbl_table_add_with_match_keyhilolo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec2)
-            matchspec0 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
-            self.client.access_keyhilolo_tbl_table_add_with_modify_keyhilolo(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_key_tbl("hilolo")
 
             # Table: access_keyhilohi_tbl (default: match_keyhilohi)
             print "Configuring match_keyhilohi_tbl"
-            #matchspec0 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            #matchspec1 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            #matchspec2 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            #self.client.access_keyhilohi_tbl_table_add_with_match_keyhilohi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #self.client.access_keyhilohi_tbl_table_add_with_match_keyhilohi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec1)
-            #self.client.access_keyhilohi_tbl_table_add_with_match_keyhilohi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec2)
-            matchspec0 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
-            self.client.access_keyhilohi_tbl_table_add_with_modify_keyhilohi(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_key_tbl("hilohi")
 
             # Table: access_keyhihilo_tbl (default: match_keyhihilo)
             print "Configuring match_keyhihilo_tbl"
-            #matchspec0 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            #matchspec1 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            #matchspec2 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            #self.client.access_keyhihilo_tbl_table_add_with_match_keyhihilo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #self.client.access_keyhihilo_tbl_table_add_with_match_keyhihilo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec1)
-            #self.client.access_keyhihilo_tbl_table_add_with_match_keyhihilo(\
-            #        self.sess_hdl, self.dev_tgt, matchspec2)
-            matchspec0 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
-            self.client.access_keyhihilo_tbl_table_add_with_modify_keyhihilo(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_key_tbl("hihilo")
 
             # Table: access_keyhihihi_tbl (default: match_keyhihihi)
             print "Configuring match_keyhihihi_tbl"
-            #matchspec0 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            #matchspec1 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            #matchspec2 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            #self.client.access_keyhihihi_tbl_table_add_with_match_keyhihihi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #self.client.access_keyhihihi_tbl_table_add_with_match_keyhihihi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec1)
-            #self.client.access_keyhihihi_tbl_table_add_with_match_keyhihihi(\
-            #        self.sess_hdl, self.dev_tgt, matchspec2)
-            matchspec0 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
-            self.client.access_keyhihihi_tbl_table_add_with_modify_keyhihihi(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_key_tbl("hihihi")
 
             # Table: access_valid_tbl (default: get_valid)
             print "Configuring access_valid_tbl"
@@ -491,224 +529,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_gposvote_tbl (default: get_gposvote)
             print "Configuring access_gposvote_tbl"
-	    matchspec0 = netbuffer_access_gposvote_tbl_match_spec_t(
-                    meta_isvalid=1,
-		    op_hdr_optype=GETREQ_TYPE, 
-		    meta_ismatch_keylololo=2, 
-		    meta_ismatch_keylolohi=2, 
-		    meta_ismatch_keylohilo=2, 
-		    meta_ismatch_keylohihi=2, 
-		    meta_ismatch_keyhilolo=2,
-		    meta_ismatch_keyhilohi=2,
-		    meta_ismatch_keyhihilo=2,
-		    meta_ismatch_keyhihihi=2)
-	    self.client.access_gposvote_tbl_table_add_with_increase_gposvote(\
-		    self.sess_hdl, self.dev_tgt, matchspec0)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for isvalid in valid_list:
-                                                matchspec0 = netbuffer_access_gposvote_tbl_match_spec_t(\
-                                                        meta_isvalid=isvalid,
-                                                        op_hdr_optype=GETRES_S_TYPE, 
-                                                        meta_ismatch_keylololo=ismatch_keylololo, 
-                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                self.client.access_gposvote_tbl_table_add_with_reset_gposvote(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_posvote_tbl("g", GETREQ_TYPE)
 
             # Table: access_gnegvote_tbl (default: get_gnegvote)
 	    print "Configuring access_gnegvote_tbl"
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-					    if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
-					    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
-					    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
-					    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
-					    	continue
-                                            matchspec0 = netbuffer_access_gnegvote_tbl_match_spec_t(
-                                                    meta_isvalid=1,
-                                                    op_hdr_optype=GETREQ_TYPE, 
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_gnegvote_tbl_table_add_with_increase_gnegvote(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            matchspec0 = netbuffer_access_gnegvote_tbl_match_spec_t(
-                                                    meta_isvalid=0,
-                                                    op_hdr_optype=GETREQ_TYPE, 
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_gnegvote_tbl_table_add_with_increase_gnegvote(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for isvalid in valid_list:
-                                                matchspec0 = netbuffer_access_gnegvote_tbl_match_spec_t(\
-                                                        meta_isvalid=isvalid,
-                                                        op_hdr_optype=GETRES_S_TYPE, 
-                                                        meta_ismatch_keylololo=ismatch_keylololo, 
-                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                self.client.access_gnegvote_tbl_table_add_with_reset_gnegvote(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_negvote_tbl("g", GETREQ_TYPE)
 
             # Table: access_pposvote_tbl (default: get_pposvote)
             print "Configuring access_pposvote_tbl"
-	    matchspec0 = netbuffer_access_pposvote_tbl_match_spec_t(
-                    meta_isvalid=1,
-		    op_hdr_optype=PUTREQ_TYPE, 
-		    meta_ismatch_keylololo=2, 
-		    meta_ismatch_keylolohi=2, 
-		    meta_ismatch_keylohilo=2, 
-		    meta_ismatch_keylohihi=2, 
-		    meta_ismatch_keyhilolo=2,
-		    meta_ismatch_keyhilohi=2,
-		    meta_ismatch_keyhihilo=2,
-		    meta_ismatch_keyhihihi=2)
-	    self.client.access_pposvote_tbl_table_add_with_increase_pposvote(\
-		    self.sess_hdl, self.dev_tgt, matchspec0)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for isvalid in valid_list:
-                                                matchspec0 = netbuffer_access_pposvote_tbl_match_spec_t(\
-                                                        meta_isvalid=isvalid,
-                                                        op_hdr_optype=GETRES_S_TYPE, 
-                                                        meta_ismatch_keylololo=ismatch_keylololo, 
-                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                self.client.access_pposvote_tbl_table_add_with_reset_pposvote(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_posvote_tbl("p", PUTREQ_TYPE)
 
             # Table: access_pnegvote_tbl (default: get_pnegvote)
 	    print "Configuring access_pnegvote_tbl"
-            predicate_list = [0, 2]
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-					    if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
-					    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
-					    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
-					    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
-					    	continue
-                                            matchspec0 = netbuffer_access_pnegvote_tbl_match_spec_t(
-                                                    meta_isvalid=1,
-                                                    op_hdr_optype=PUTREQ_TYPE, 
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_pnegvote_tbl_table_add_with_increase_pnegvote(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            matchspec0 = netbuffer_access_pnegvote_tbl_match_spec_t(
-                                                    meta_isvalid=0,
-                                                    op_hdr_optype=PUTREQ_TYPE, 
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_pnegvote_tbl_table_add_with_increase_pnegvote(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for isvalid in valid_list:
-                                                matchspec0 = netbuffer_access_pnegvote_tbl_match_spec_t(\
-                                                        meta_isvalid=isvalid,
-                                                        op_hdr_optype=GETRES_S_TYPE, 
-                                                        meta_ismatch_keylololo=ismatch_keylololo, 
-                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                self.client.access_pnegvote_tbl_table_add_with_reset_pnegvote(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+            self.configure_access_negvote_tbl("p", PUTREQ_TYPE)
 
             # Start from stage 5 (after keys, valid bits, and votes (occupying entire stage 4))
 
@@ -1175,6 +1008,37 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             self.client.update_getreq_tbl_table_add_with_update_getreq(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0)
 
+            # Table: port_forward_tbl (default: nop)
+            print "Configuring port_forward_tbl"
+            for isvalid in valid_list:
+                for isdirty in dirty_list:
+                    for optype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE, SCANREQ_TYPE, GETRES_TYPE, PUTRES_TYPE, DELRES_TYPE, SCANRES_TYPE]:
+                        matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                op_hdr_optype = optype,
+                                meta_isvalid = isvalid,
+                                meta_isdirty = isdirty,
+                                ig_intr_md_ingress_port=self.devPorts[0])
+                        actnspec0 = netbuffer_port_forward_action_spec_t(self.devPorts[1])
+                        self.client.port_forward_tbl_table_add_with_port_forward(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                        matchspec1 = netbuffer_port_forward_tbl_match_spec_t(\
+                                op_hdr_optype = optype,
+                                meta_isvalid = isvalid,
+                                meta_isdirty = isdirty,
+                                ig_intr_md_ingress_port=self.devPorts[1])
+                        actnspec1 = netbuffer_port_forward_action_spec_t(self.devPorts[0])
+                        self.client.port_forward_tbl_table_add_with_port_forward(\
+                                self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
+            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = GETRES_S_TYPE,
+                    meta_isvalid = 1,
+                    meta_isdirty = 1,
+                    ig_intr_md_ingress_port=self.devPorts[1])
+            actnspec0 = netbuffer_update_delres_s_and_clone_action_spec_t(\
+                    sids[0], self.devPorts[1])
+            self.client.port_forward_tbl_table_add_with_update_delres_s_and_clone(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
             # Table: hash_partition_tbl
             print "Configuring hash_partition_tbl"
             hash_start = 0
@@ -1189,22 +1053,51 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         ig_intr_md_for_tm_ucast_egress_port=self.devPorts[1], \
                         meta_hashidx_start = hash_start, \
                         meta_hashidx_end = hash_end)
-                actnspec0 = netbuffer_hash_partition_action_spec_t(\
+                actnspec0 = netbuffer_update_dstport_action_spec_t(\
                         server_port + i)
-                self.client.hash_partition_tbl_table_add_with_hash_partition(\
+                self.client.hash_partition_tbl_table_add_with_update_dstport(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                 hash_start = hash_end
 
-            # Table: port_forward_tbl (default: nop)
-            print "Configuring port_forward_tbl"
-            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
-            actnspec0 = netbuffer_port_forward_action_spec_t(self.devPorts[1])
-            self.client.port_forward_tbl_table_add_with_port_forward(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            matchspec1 = netbuffer_port_forward_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[1])
-            actnspec1 = netbuffer_port_forward_action_spec_t(self.devPorts[0])
-            self.client.port_forward_tbl_table_add_with_port_forward(\
-                    self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
+            # Table: origin_hash_partition_tbl
+            print "Configuring origin_hash_partition_tbl"
+            hash_start = 0
+            hash_range_per_server = bucket_num / server_num
+            for i in range(server_num):
+                if i == server_num - 1:
+                    hash_end = bucket_num - 1 # if end is not included, then it is just processed by port 1111
+                else:
+                    hash_end = hash_start + hash_range_per_server
+                matchspec0 = netbuffer_origin_hash_partition_tbl_match_spec_t(\
+                        udp_hdr_dstPort=server_port, \
+                        ig_intr_md_for_tm_ucast_egress_port=self.devPorts[1], \
+                        meta_origin_hashidx_start = hash_start, \
+                        meta_origin_hashidx_end = hash_end)
+                actnspec0 = netbuffer_update_dstport_action_spec_t(\
+                        server_port + i)
+                self.client.origin_hash_partition_tbl_table_add_with_update_dstport(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                hash_start = hash_end
+
+            # Table: origin_hash_partition_reverse_tbl
+            print "Configuring origin_hash_partition_reverse_tbl"
+            hash_start = 0
+            hash_range_per_server = bucket_num / server_num
+            for i in range(server_num):
+                if i == server_num - 1:
+                    hash_end = bucket_num - 1 # if end is not included, then it is just processed by port 1111
+                else:
+                    hash_end = hash_start + hash_range_per_server
+                matchspec0 = netbuffer_origin_hash_partition_reverse_tbl_match_spec_t(\
+                        udp_hdr_srcPort=server_port, \
+                        ig_intr_md_for_tm_ucast_egress_port=self.devPorts[1], \
+                        meta_origin_hashidx_start = hash_start, \
+                        meta_origin_hashidx_end = hash_end)
+                actnspec0 = netbuffer_update_dstport_reverse_action_spec_t(\
+                        server_port + i)
+                self.client.origin_hash_partition_reverse_tbl_table_add_with_update_dstport_reverse(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                hash_start = hash_end
 
             # Table: drop_put_tbl
             #print "Configuring drop_put_tbl"
@@ -1230,6 +1123,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             self.conn_mgr.complete_operations(self.sess_hdl)
             self.conn_mgr.client_cleanup(self.sess_hdl)
+
+            # Egress pipeline
+
+            # Table: update_cloned_udpports_tbl
+            print "Configuring update_cloned_udpports_tbl"
 
     #def tearDown(self):
     #    if test_param_get('cleanup') == True:
