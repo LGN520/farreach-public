@@ -75,8 +75,10 @@ GETRES_TYPE = 0x04
 PUTRES_TYPE = 0x05
 DELRES_TYPE = 0x06
 SCANRES_TYPE = 0x07
-PUTREQ_S_TYPE = 0x08
-DELREQ_S_TYPE = 0x09
+GETREQ_S_TYPE = 0x08
+PUTREQ_S_TYPE = 0x09
+DELREQ_S_TYPE = 0x0a
+GETRES_S_TYPE = 0x0b
 
 if test_param_get("arch") == "tofino":
   MIR_SESS_COUNT = 1024
@@ -192,99 +194,123 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_keylololo_tbl (default: match_keylololo)
             print "Configuring match_keylololo_tbl"
-            matchspec0 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            matchspec1 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            matchspec2 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            self.client.access_keylololo_tbl_table_add_with_match_keylololo(\
+            #matchspec0 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            #matchspec1 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            #matchspec2 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
+            #self.client.access_keylololo_tbl_table_add_with_match_keylololo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #self.client.access_keylololo_tbl_table_add_with_match_keylololo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
+            #self.client.access_keylololo_tbl_table_add_with_match_keylololo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec2)
+            matchspec0 = netbuffer_access_keylololo_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
+            self.client.access_keylololo_tbl_table_add_with_modify_keylololo(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            self.client.access_keylololo_tbl_table_add_with_match_keylololo(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
-            self.client.access_keylololo_tbl_table_add_with_match_keylololo(\
-                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: access_keylolohi_tbl (default: match_keylolohi)
             print "Configuring match_keylolohi_tbl"
-            matchspec0 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            matchspec1 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            matchspec2 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            self.client.access_keylolohi_tbl_table_add_with_match_keylolohi(\
+            #matchspec0 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            #matchspec1 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            #matchspec2 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
+            #self.client.access_keylolohi_tbl_table_add_with_match_keylolohi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #self.client.access_keylolohi_tbl_table_add_with_match_keylolohi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
+            #self.client.access_keylolohi_tbl_table_add_with_match_keylolohi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec2)
+            matchspec0 = netbuffer_access_keylolohi_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
+            self.client.access_keylolohi_tbl_table_add_with_modify_keylolohi(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            self.client.access_keylolohi_tbl_table_add_with_match_keylolohi(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
-            self.client.access_keylolohi_tbl_table_add_with_match_keylolohi(\
-                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: access_keylohilo_tbl (default: match_keylohilo)
             print "Configuring match_keylohilo_tbl"
-            matchspec0 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            matchspec1 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            matchspec2 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            self.client.access_keylohilo_tbl_table_add_with_match_keylohilo(\
+            #matchspec0 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            #matchspec1 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            #matchspec2 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
+            #self.client.access_keylohilo_tbl_table_add_with_match_keylohilo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #self.client.access_keylohilo_tbl_table_add_with_match_keylohilo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
+            #self.client.access_keylohilo_tbl_table_add_with_match_keylohilo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec2)
+            matchspec0 = netbuffer_access_keylohilo_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
+            self.client.access_keylohilo_tbl_table_add_with_modify_keylohilo(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            self.client.access_keylohilo_tbl_table_add_with_match_keylohilo(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
-            self.client.access_keylohilo_tbl_table_add_with_match_keylohilo(\
-                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: access_keylohihi_tbl (default: match_keylohihi)
             print "Configuring match_keylohihi_tbl"
-            matchspec0 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            matchspec1 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            matchspec2 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            self.client.access_keylohihi_tbl_table_add_with_match_keylohihi(\
+            #matchspec0 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            #matchspec1 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            #matchspec2 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
+            #self.client.access_keylohihi_tbl_table_add_with_match_keylohihi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #self.client.access_keylohihi_tbl_table_add_with_match_keylohihi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
+            #self.client.access_keylohihi_tbl_table_add_with_match_keylohihi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec2)
+            matchspec0 = netbuffer_access_keylohihi_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
+            self.client.access_keylohihi_tbl_table_add_with_modify_keylohihi(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            self.client.access_keylohihi_tbl_table_add_with_match_keylohihi(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
-            self.client.access_keylohihi_tbl_table_add_with_match_keylohihi(\
-                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: access_keyhilolo_tbl (default: match_keyhilolo)
             print "Configuring match_keyhilolo_tbl"
-            matchspec0 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            matchspec1 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            matchspec2 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            self.client.access_keyhilolo_tbl_table_add_with_match_keyhilolo(\
+            #matchspec0 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            #matchspec1 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            #matchspec2 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
+            #self.client.access_keyhilolo_tbl_table_add_with_match_keyhilolo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #self.client.access_keyhilolo_tbl_table_add_with_match_keyhilolo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
+            #self.client.access_keyhilolo_tbl_table_add_with_match_keyhilolo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec2)
+            matchspec0 = netbuffer_access_keyhilolo_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
+            self.client.access_keyhilolo_tbl_table_add_with_modify_keyhilolo(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            self.client.access_keyhilolo_tbl_table_add_with_match_keyhilolo(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
-            self.client.access_keyhilolo_tbl_table_add_with_match_keyhilolo(\
-                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: access_keyhilohi_tbl (default: match_keyhilohi)
             print "Configuring match_keyhilohi_tbl"
-            matchspec0 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            matchspec1 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            matchspec2 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            self.client.access_keyhilohi_tbl_table_add_with_match_keyhilohi(\
+            #matchspec0 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            #matchspec1 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            #matchspec2 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
+            #self.client.access_keyhilohi_tbl_table_add_with_match_keyhilohi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #self.client.access_keyhilohi_tbl_table_add_with_match_keyhilohi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
+            #self.client.access_keyhilohi_tbl_table_add_with_match_keyhilohi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec2)
+            matchspec0 = netbuffer_access_keyhilohi_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
+            self.client.access_keyhilohi_tbl_table_add_with_modify_keyhilohi(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            self.client.access_keyhilohi_tbl_table_add_with_match_keyhilohi(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
-            self.client.access_keyhilohi_tbl_table_add_with_match_keyhilohi(\
-                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: access_keyhihilo_tbl (default: match_keyhihilo)
             print "Configuring match_keyhihilo_tbl"
-            matchspec0 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            matchspec1 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            matchspec2 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            self.client.access_keyhihilo_tbl_table_add_with_match_keyhihilo(\
+            #matchspec0 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            #matchspec1 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            #matchspec2 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
+            #self.client.access_keyhihilo_tbl_table_add_with_match_keyhihilo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #self.client.access_keyhihilo_tbl_table_add_with_match_keyhihilo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
+            #self.client.access_keyhihilo_tbl_table_add_with_match_keyhihilo(\
+            #        self.sess_hdl, self.dev_tgt, matchspec2)
+            matchspec0 = netbuffer_access_keyhihilo_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
+            self.client.access_keyhihilo_tbl_table_add_with_modify_keyhihilo(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            self.client.access_keyhihilo_tbl_table_add_with_match_keyhihilo(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
-            self.client.access_keyhihilo_tbl_table_add_with_match_keyhihilo(\
-                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: access_keyhihihi_tbl (default: match_keyhihihi)
             print "Configuring match_keyhihihi_tbl"
-            matchspec0 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
-            matchspec1 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
-            matchspec2 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
-            self.client.access_keyhihihi_tbl_table_add_with_match_keyhihihi(\
+            #matchspec0 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=GETREQ_TYPE);
+            #matchspec1 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=PUTREQ_TYPE);
+            #matchspec2 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=DELREQ_TYPE);
+            #self.client.access_keyhihihi_tbl_table_add_with_match_keyhihihi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            #self.client.access_keyhihihi_tbl_table_add_with_match_keyhihihi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec1)
+            #self.client.access_keyhihihi_tbl_table_add_with_match_keyhihihi(\
+            #        self.sess_hdl, self.dev_tgt, matchspec2)
+            matchspec0 = netbuffer_access_keyhihihi_tbl_match_spec_t(op_hdr_optype=GETRES_S_TYPE)
+            self.client.access_keyhihihi_tbl_table_add_with_modify_keyhihihi(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            self.client.access_keyhihihi_tbl_table_add_with_match_keyhihihi(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
-            self.client.access_keyhihihi_tbl_table_add_with_match_keyhihihi(\
-                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: access_valid_tbl (default: get_valid)
             print "Configuring access_valid_tbl"
@@ -333,6 +359,28 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_ismatch_keyhihihi=2)
             self.client.access_valid_tbl_table_add_with_clear_valid(\
                     self.sess_hdl, self.dev_tgt, matchspec2)
+            predicate_list = [0, 2]
+            for ismatch_keylololo in predicate_list:
+                for ismatch_keylolohi in predicate_list:
+                    for ismatch_keylohilo in predicate_list:
+                        for ismatch_keylohihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+                                            # NOTE: GETRES_S triggers modify_key which does not set ismatch_key but set origin_key
+                                            matchspec3 = netbuffer_access_valid_tbl_match_spec_t(
+                                                    op_hdr_optype=GETRES_S_TYPE, 
+                                                    meta_ismatch_keylololo=ismatch_keylololo, 
+                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                            self.client.access_valid_tbl_table_add_with_set_valid(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec3)
 
             # Table: access_dirty_tbl (default: get_dirty)
             #matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(
@@ -347,6 +395,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #                op_hdr_optype=DELREQ_TYPE)
             #self.client.access_dirty_tbl_table_add_with_get_dirty(
             #                self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(\
+                    op_hdr_optype=GETRES_S_TYPE)
+            self.client.access_dirty_tbl_table_add_with_clear_dirty(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: update_vallen_tbl (default: get_vallen)
             matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
@@ -496,70 +548,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_ismatch_keyhihihi=ismatch_keyhihihi)
                                             self.client.access_pnegvote_tbl_table_add_with_increase_pnegvote(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: calculate_diff_tbl (default: default_diff)
-            print "Configuring calculate_diff_tbl"
-	    matchspec0 = netbuffer_calculate_diff_tbl_match_spec_t(
-                    meta_isdirty=1,
-                    op_hdr_optype=GETREQ_TYPE)
-	    self.client.calculate_diff_tbl_table_add_with_gneg_ppos_diff(\
-		    self.sess_hdl, self.dev_tgt, matchspec0)
-	    matchspec1 = netbuffer_calculate_diff_tbl_match_spec_t(
-                    meta_isdirty=1,
-                    op_hdr_optype=PUTREQ_TYPE)
-	    self.client.calculate_diff_tbl_table_add_with_pneg_ppos_diff(\
-		    self.sess_hdl, self.dev_tgt, matchspec1)
-	    matchspec2 = netbuffer_calculate_diff_tbl_match_spec_t(
-                    meta_isdirty=0,
-                    op_hdr_optype=GETREQ_TYPE)
-	    self.client.calculate_diff_tbl_table_add_with_gneg_gpos_diff(\
-		    self.sess_hdl, self.dev_tgt, matchspec2)
-	    matchspec3 = netbuffer_calculate_diff_tbl_match_spec_t(
-                    meta_isdirty=0,
-                    op_hdr_optype=PUTREQ_TYPE)
-	    self.client.calculate_diff_tbl_table_add_with_pneg_gpos_diff(\
-		    self.sess_hdl, self.dev_tgt, matchspec3)
-
-            # Table: access_lock_tbl (default: nop)
-            print "Configuring access_lock_tbl"
-            predicate_list = [0, 2]
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-					    if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
-					    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
-					    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
-					    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
-					    	continue
-                                            matchspec0 = netbuffer_access_lock_tbl_match_spec_t(
-                                                    op_hdr_optype=GETREQ_TYPE, 
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_lock_tbl_table_add_with_try_glock(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                                            matchspec1 = netbuffer_access_lock_tbl_match_spec_t(
-                                                    op_hdr_optype=PUTREQ_TYPE, 
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_lock_tbl_table_add_with_try_plock(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec1)
 
             # Table: hash_partition_tbl
             print "Configuring hash_partition_tbl"
@@ -1048,19 +1036,99 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.try_res_tbl_table_add_with_update_delreq_and_clone(\
                     self.sess_hdl, self.dev_tgt, matchspec2)
 
-            # Table: clone_putpkt_tbl
-            print "Configuring clone_putpkt_tbl"
-            matchspec0 = netbuffer_clone_putpkt_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
-            actnspec0 = netbuffer_clone_putpkt_action_spec_t(sids[0])
-            self.client.clone_putpkt_tbl_table_add_with_clone_putpkt(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            # Table: calculate_diff_tbl (default: default_diff)
+            print "Configuring calculate_diff_tbl"
+	    matchspec0 = netbuffer_calculate_diff_tbl_match_spec_t(
+                    meta_isdirty=1,
+                    op_hdr_optype=GETREQ_TYPE)
+	    self.client.calculate_diff_tbl_table_add_with_gneg_ppos_diff(\
+		    self.sess_hdl, self.dev_tgt, matchspec0)
+	    matchspec1 = netbuffer_calculate_diff_tbl_match_spec_t(
+                    meta_isdirty=1,
+                    op_hdr_optype=PUTREQ_TYPE)
+	    self.client.calculate_diff_tbl_table_add_with_pneg_ppos_diff(\
+		    self.sess_hdl, self.dev_tgt, matchspec1)
+	    matchspec2 = netbuffer_calculate_diff_tbl_match_spec_t(
+                    meta_isdirty=0,
+                    op_hdr_optype=GETREQ_TYPE)
+	    self.client.calculate_diff_tbl_table_add_with_gneg_gpos_diff(\
+		    self.sess_hdl, self.dev_tgt, matchspec2)
+	    matchspec3 = netbuffer_calculate_diff_tbl_match_spec_t(
+                    meta_isdirty=0,
+                    op_hdr_optype=PUTREQ_TYPE)
+	    self.client.calculate_diff_tbl_table_add_with_pneg_gpos_diff(\
+		    self.sess_hdl, self.dev_tgt, matchspec3)
 
-            # Table: clone_delpkt_tbl
-            print "Configuring clone_delpkt_tbl"
-            matchspec0 = netbuffer_clone_delpkt_tbl_match_spec_t(ig_intr_md_ingress_port=self.devPorts[0])
-            actnspec0 = netbuffer_clone_delpkt_action_spec_t(sids[0])
-            self.client.clone_delpkt_tbl_table_add_with_clone_delpkt(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            # Table: access_lock_tbl (default: nop)
+            print "Configuring access_lock_tbl"
+            predicate_list = [0, 2]
+            for ismatch_keylololo in predicate_list:
+                for ismatch_keylolohi in predicate_list:
+                    for ismatch_keylohilo in predicate_list:
+                        for ismatch_keylohihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+					    if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
+					    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
+					    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
+					    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
+					    	continue
+                                            matchspec0 = netbuffer_access_lock_tbl_match_spec_t(
+                                                    op_hdr_optype=GETREQ_TYPE, 
+                                                    meta_ismatch_keylololo=ismatch_keylololo, 
+                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                            self.client.access_lock_tbl_table_add_with_try_glock(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                            matchspec1 = netbuffer_access_lock_tbl_match_spec_t(
+                                                    op_hdr_optype=PUTREQ_TYPE, 
+                                                    meta_ismatch_keylololo=ismatch_keylololo, 
+                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                            self.client.access_lock_tbl_table_add_with_try_plock(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec1)
+
+            # Table: update_getreq_tbl (default: nop)
+            print "Configuring update_getreq_tbl"
+            predicate_list = [0, 2]
+            for ismatch_keylololo in predicate_list:
+                for ismatch_keylolohi in predicate_list:
+                    for ismatch_keylohilo in predicate_list:
+                        for ismatch_keylohihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+					    if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
+					    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
+					    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
+					    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
+					    	continue
+                                            matchspec0 = netbuffer_update_getreq_tbl_match_spec_t(
+                                                    meta_islock=0,
+                                                    op_hdr_optype=GETREQ_TYPE, 
+                                                    meta_ismatch_keylololo=ismatch_keylololo, 
+                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                            self.client.update_getreq_tbl_table_add_with_update_getreq(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
             self.conn_mgr.client_cleanup(self.sess_hdl)

@@ -35,6 +35,7 @@ class Packet {
 template<class key_t>
 class GetRequest : public Packet<key_t> {
 	public: 
+		GetRequest();
 		GetRequest(uint8_t thread_id, key_t key);
 		GetRequest(const char * data, uint32_t recv_size);
 
@@ -93,6 +94,7 @@ class ScanRequest : public Packet<key_t> {
 template<class key_t, class val_t>
 class GetResponse : public Packet<key_t> {
 	public:
+		GetResponse();
 		GetResponse(uint8_t thread_id, key_t key, val_t val);
 		GetResponse(const char * data, uint32_t recv_size);
 
@@ -156,6 +158,15 @@ class ScanResponse : public Packet<key_t> {
 		std::vector<std::pair<key_t, val_t>> _pairs;
 };
 
+template<class key_t>
+class GetRequestS : public GetRequest<key_t> {
+	public: 
+		GetRequestS(uint8_t thread_id, key_t key);
+		GetRequestS(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
 template<class key_t, class val_t>
 class PutRequestS : public PutRequest<key_t, val_t> {
 	public:
@@ -172,6 +183,15 @@ class DelRequestS : public DelRequest<key_t> {
 		DelRequestS(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class GetResponseS : public GetResponse<key_t, val_t> {
+	public:
+		GetResponseS(uint8_t thread_id, key_t key, val_t val);
+		GetResponseS(const char * data, uint32_t recv_size);
+
+		virtual void deserialize(const char * data, uint32_t recv_size);
 };
 
 // APIs

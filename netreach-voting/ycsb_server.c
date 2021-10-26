@@ -666,8 +666,6 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr)); // UDP socket
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
@@ -683,7 +681,6 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
@@ -699,7 +696,6 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
@@ -782,7 +778,22 @@ static int run_sfg(void * param) {
 						rsp = new scan_response_t(req.thread_id(), req.key(), tmp_num, results);
 					}
 					rsp_size = rsp->serialize(buf, MAX_BUFSIZE);
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::GET_REQ_S: 
+				{
+					get_request_s_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					val_t tmp_val;
+					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
+					//COUT_THIS("[server] val = " << tmp_val.to_string())
+					get_response_s_t rsp(req.thread_id(), req.key(), tmp_val);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
@@ -804,6 +815,7 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
+					// TODO: delete cached keys
 					break;
 				}
 			default:

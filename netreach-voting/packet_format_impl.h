@@ -30,6 +30,13 @@ key_t Packet<key_t>::key() const {
 
 
 // GetRequest
+
+template<class key_t>
+GetRequest<key_t>::GetRequest()
+	: Packet<key_t>()
+{
+}
+
 template<class key_t>
 GetRequest<key_t>::GetRequest(uint8_t thread_id, key_t key)
 	: Packet<key_t>(packet_type_t::GET_REQ, thread_id, key)
@@ -235,6 +242,12 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 
 // GetResponse
+
+template<class key_t, class val_t>
+GetResponse<key_t, val_t>::GetResponse()
+	: Packet<key_t>(), _val()
+{
+}
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse(uint8_t thread_id, key_t key, val_t val) 
@@ -487,6 +500,28 @@ void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	}
 }
 
+// GetRequestS
+
+template<class key_t>
+GetRequestS<key_t>::GetRequestS(uint8_t thread_id, key_t key)
+	: GetRequest<key_t>::GetRequest(thread_id, key)
+{
+	this->type = PacketType::GET_REQ_S;
+}
+
+template<class key_t>
+GetRequestS<key_t>::GetRequestS(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->type) == PacketType::GET_REQ_S);
+}
+
+template<class key_t>
+GetRequestS<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for GetReqestS");
+}
+
 // PutRequestS
 
 template<class key_t, class val_t>
@@ -525,6 +560,25 @@ DelRequestS<key_t>::DelRequestS(const char * data, uint32_t recv_size) {
 template<class key_t>
 uint32_t DelRequestS<key_t>::serialize(char * const data, uint32_t max_size) {
 	COUT_N_EXIT("Invalid invoke of serialize for DelReqestS");
+}
+
+// GetResponseS
+
+template<class key_t, class val_t>
+GetResponseS<key_t, val_t>::GetResponseS(uint8_t thread_id, key_t key, val_t val)
+	: GetResponse(thread_id, key, val)
+{
+	this->type = PacketType::GET_RES_S;
+}
+
+template<class key_t, class val_t>
+GetResponseS<key_t, val_t>::GetResponseS(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of GetResponseS(char * const data, uint32_t max_size)");
+}
+
+template<class key_t, class val_t>
+void GetResponseS<key_t, val_t>::deserialize(const char *data, uint32_t recv_size) {
+	COUT_N_EXIT("Invalid invoke of deserialize of GetResponseS");
 }
 
 // APIs

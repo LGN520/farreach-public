@@ -242,7 +242,7 @@ table calculate_diff_tbl {
 
 // Stage 5+n + 3
 
-action update_getreq_tbl() {
+action update_getreq() {
 	modify_field(op_hdr.optype, GETREQ_S_TYPE);
 }
 
@@ -260,7 +260,7 @@ table update_getreq_tbl {
 		meta.ismatch_keyhihihi: exact;
 	}
 	actions {
-		update_get_req;
+		update_getreq;
 	}
 	size: 1024;
 }

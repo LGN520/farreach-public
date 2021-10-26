@@ -1,5 +1,12 @@
 # Tofino-based NetREACH (voting-based) + DPDK-based XIndex with persistence + variable-length key-value pair (netreach)
 
+## In-switch eviction mechanism
+
+- For GETREQ/PUTREQ
+	+ hash -> match keys -> get valid/dirty bit -> update votes -> try response directly -> calculate vote diff -> access lock -> cache update decision
+- For GETRES_S (for GETREQ_S which is cache update decision for GETREQ)
+	+ hash -> replace keys -> set valid bit as 1 and dirty bit as 0 -> reset votes as 0 (TODO 4) -> reset lock as 0 -> clone a packet as GETRES [update GETRES_S as PUTREQ_S to server for eviction if necessary]
+
 ## Implementation log
 
 - Copy netreach to netreach-voting
@@ -14,15 +21,16 @@
 		* Add two thresholds (basic.p4, ingress_mat.p4, and configure/table_configure.py (TODO 1))
 		* Only if key does not match: compare vote diff and corresponding threshold to update lock bit; also get original lock bit
 		* Key matches -> response
-			- Only if it is valid and key matches, put value register (basic.p4, val.p4, and configure/table_configure.py)
-			- Only if it is valid and key matches, sendback getres direcctly or by cloning (basic.p4, ingress_mat.p4, and configure/table_configure.py)
+			- Only if it is valid and key matches, get/put value register (basic.p4, val.p4, and configure/table_configure.py)
+			- Only if it is valid and key matches, sendback responses direcctly or by cloning (basic.p4, ingress_mat.p4, and configure/table_configure.py)
 				+ For GETREQ: sendback GETRES directly
 				+ For PUTREQ: sendback PUTRES directly
-				+ For DELREQ: update transferred packet as DELRES_S and sendback DELRES by cloning (TODO 2: delete cached keys in server)
+				+ For DELREQ: update transferred packet as DELREQ_S and sendback DELRES by cloning (TODO 2: delete cached keys in server)
 			- TODO 3: add cached keys in server-side
 		* Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
-			- For GETREQ: update transferred packet as GETREQ_S
-				+ TODO: Server receives GETREQ_S and gives GETRES_S to switch; switch processes GETRES_S and updates it as GETRES towards client
+			- For GETREQ: update transferred packet as GETREQ_S (basic.p4, ingress_mat.p4, and configure/table_configure.py)
+				+ Server receives GETREQ_S and gives GETRES_S to switch (ycsb_server.c, packet_format.h, packet_format_impl.h)
+				+ Switch processes GETRES_S and updates it as GETRES towards client (configure/table_configure.py)
 		* TODO: Key does not match, and original lock bit = 0 && diff < threshold -> forward
 		* TODO: Key does not match, and original lock bit = 1 -> also recirculate
 - TODO: For put req
