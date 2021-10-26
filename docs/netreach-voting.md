@@ -3,9 +3,15 @@
 ## In-switch eviction mechanism
 
 - For GETREQ/PUTREQ
-	+ hash -> match keys -> get valid/dirty bit -> update votes -> try response directly -> calculate vote diff -> access lock -> cache update decision
+	+ hash -> match keys -> get valid/dirty bit and vallen -> update votes -> get/put values -> try response directly -> 
+	calculate vote diff -> access lock -> cache update decision
 - For GETRES_S (for GETREQ_S which is cache update decision for GETREQ)
-	+ hash -> replace keys -> set valid bit as 1 and dirty bit as 0 -> reset votes as 0 (TODO 4) -> reset lock as 0 -> clone a packet as GETRES [update GETRES_S as PUTREQ_S to server for eviction if necessary]
+	+ hash -> replace keys -> set valid bit as 1, dirty bit as 0, and set corresponding vallen -> reset votes as 0 -> put values ->
+	reset lock as 0 -> clone a packet as GETRES [update GETRES_S as PUTREQ_S to server for eviction if necessary]
+	+ TODO
+		* update port_forward_tbl configuration
+		* update sendback_getres_tbl (no need to swap ports)
+		* update sendback_delres_tbl (need to swap ports)
 
 ## Implementation log
 
@@ -30,7 +36,7 @@
 		* Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
 			- For GETREQ: update transferred packet as GETREQ_S (basic.p4, ingress_mat.p4, and configure/table_configure.py)
 				+ Server receives GETREQ_S and gives GETRES_S to switch (ycsb_server.c, packet_format.h, packet_format_impl.h)
-				+ Switch processes GETRES_S and updates it as GETRES towards client (configure/table_configure.py)
+				+ Switch processes GETRES_S, updates it as PUTREQ_S towards server, and clones a packet as GETRES to client (configure/table_configure.py)
 		* TODO: Key does not match, and original lock bit = 0 && diff < threshold -> forward
 		* TODO: Key does not match, and original lock bit = 1 -> also recirculate
 - TODO: For put req

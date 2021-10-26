@@ -69,77 +69,6 @@
 
 /* Ingress Processing */
 
-action update_putreq() {
-	modify_field(op_hdr.optype, PUTREQ_S_TYPE);
-
-	modify_field(op_hdr.keylololo, meta.origin_keylololo);
-	modify_field(op_hdr.keylolohi, meta.origin_keylolohi);
-	modify_field(op_hdr.keylohilo, meta.origin_keylohilo);
-	modify_field(op_hdr.keylohihi, meta.origin_keylohihi);
-	modify_field(op_hdr.keyhilolo, meta.origin_keyhilolo);
-	modify_field(op_hdr.keyhilohi, meta.origin_keyhilohi);
-	modify_field(op_hdr.keyhihilo, meta.origin_keyhihilo);
-	modify_field(op_hdr.keyhihihi, meta.origin_keyhihihi);
-	modify_field(vallen_hdr.vallen, meta.origin_vallen);
-	add_header(vallen_hdr);
-	modify_field(val1_hdr.vallo, meta.origin_vallo1);
-	modify_field(val1_hdr.valhi, meta.origin_valhi1);
-	add_header(val1_hdr);
-	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
-	modify_field(val2_hdr.valhi, meta.origin_valhi2);
-	add_header(val2_hdr);
-	modify_field(val3_hdr.vallo, meta.origin_vallo3);
-	modify_field(val3_hdr.valhi, meta.origin_valhi3);
-	add_header(val3_hdr);
-	modify_field(val4_hdr.vallo, meta.origin_vallo4);
-	modify_field(val4_hdr.valhi, meta.origin_valhi4);
-	add_header(val4_hdr);
-	modify_field(val5_hdr.vallo, meta.origin_vallo5);
-	modify_field(val5_hdr.valhi, meta.origin_valhi5);
-	add_header(val5_hdr);
-	modify_field(val6_hdr.vallo, meta.origin_vallo6);
-	modify_field(val6_hdr.valhi, meta.origin_valhi6);
-	add_header(val6_hdr);
-	modify_field(val7_hdr.vallo, meta.origin_vallo7);
-	modify_field(val7_hdr.valhi, meta.origin_valhi7);
-	add_header(val7_hdr);
-	modify_field(val8_hdr.vallo, meta.origin_vallo8);
-	modify_field(val8_hdr.valhi, meta.origin_valhi8);
-	add_header(val8_hdr);
-	modify_field(val9_hdr.vallo, meta.origin_vallo9);
-	modify_field(val9_hdr.valhi, meta.origin_valhi9);
-	add_header(val9_hdr);
-	modify_field(val10_hdr.vallo, meta.origin_vallo10);
-	modify_field(val10_hdr.valhi, meta.origin_valhi10);
-	add_header(val10_hdr);
-	modify_field(val11_hdr.vallo, meta.origin_vallo11);
-	modify_field(val11_hdr.valhi, meta.origin_valhi11);
-	add_header(val11_hdr);
-	modify_field(val12_hdr.vallo, meta.origin_vallo12);
-	modify_field(val12_hdr.valhi, meta.origin_valhi12);
-	add_header(val12_hdr);
-	modify_field(val13_hdr.vallo, meta.origin_vallo13);
-	modify_field(val13_hdr.valhi, meta.origin_valhi13);
-	add_header(val13_hdr);
-	modify_field(val14_hdr.vallo, meta.origin_vallo14);
-	modify_field(val14_hdr.valhi, meta.origin_valhi14);
-	add_header(val14_hdr);
-	modify_field(val15_hdr.vallo, meta.origin_vallo15);
-	modify_field(val15_hdr.valhi, meta.origin_valhi15);
-	add_header(val15_hdr);
-	modify_field(val16_hdr.vallo, meta.origin_vallo16);
-	modify_field(val16_hdr.valhi, meta.origin_valhi16);
-	add_header(val16_hdr);*/
-}
-
-table update_putreq_tbl {
-	actions {
-		update_putreq;
-	}
-	default_action: update_putreq();
-	size: 1;
-}
-
 action clone_putpkt(sid) {
 	modify_field(meta.is_clone, 1);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
@@ -323,7 +252,7 @@ control ingress {
 		// Stage 5+n + 2
 		apply(access_lock_tbl);
 
-		// Stage 5+n + 3
+		// Stage 5+n + 3 (trigger cache update)
 		if (meta.islock == 0) {
 			if (op_hdr.optype == GETREQ_TYPE) {
 				if (meta.vote_diff >= meta.gthreshold) {
@@ -332,6 +261,9 @@ control ingress {
 				}
 			}
 		}
+
+		// For GETRES_S, we convert it as PUTREQ_S and forward to server, ans also clone a packet for GETRES
+		apply(port_forward_tbl);
 
 		else if (op_hdr.optype == PUTREQ_TYPE) {
 			// Stage 4 (rely on val)
@@ -442,8 +374,11 @@ table swap_macaddr_tbl {
 control egress {
 	// NOTE: make sure that normal packet will not apply these tables
 	if (pkt_is_i2e_mirrored) {
+		if (meta.is_clone == 1) {
+			apply(sendback_getres_tbl); // input is PUTREQ_S converted from GETRES_S (we do not need swap port, ip, and mac)
+		}
 		else if (meta.is_clone == 2) {
-			apply(sendback_delres_tbl); // input is DELREQ or DELREQ_S
+			apply(sendback_delres_tbl); // input is DELREQ or DELREQ_S (we need swap port, ip, and mac)
 		}
 	}
 	/*else {
