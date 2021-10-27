@@ -274,14 +274,6 @@ table update_getreq_tbl {
 	reads {
 		meta.islock: exact;
 		op_hdr.optype: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
 	}
 	actions {
 		update_getreq;
@@ -289,7 +281,23 @@ table update_getreq_tbl {
 	size: 1024;
 }
 
+action update_putreq() {
+	modify_field(op_hdr.optype, PUTREQ_S_TYPE);
+}
+
+table update_putreq_tbl {
+	reads {
+		meta.islock: exact;
+		op_hdr.optype: exact;
+	}
+}
+
 // Last Stage of ingress pipeline
+
+action update_getres_s(port) {
+	modify_field(op_hdr.optype, GETRES_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
 
 action update_getres_s_and_clone(sid, port) {
 	modify_field(op_hdr.optype, PUTREQ_GS_TYPE);
@@ -365,16 +373,23 @@ action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
+action recirculate_pkt(port) {
+	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
+	recirculate(port);
+}
+
 table port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.isvalid: exact;
 		meta.isdirty: exact;
-		ig_intr_md.ingress_port: exact;
+		meta.islock: exact;
 	}
 	actions {
-		port_forward;
+		update_delres_s;
 		update_delres_s_and_clone;
+		recirculate_pkt;
+		port_forward;
 		nop;
 	}
 	default_action: nop();

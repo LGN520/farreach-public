@@ -80,9 +80,11 @@ PUTREQ_GS_TYPE = 0x09
 PUTREQ_PS_TYPE = 0x0a
 DELREQ_S_TYPE = 0x0b
 GETRES_S_TYPE = 0x0c
+PUTREQ_U_TYPE = 0x20
 
 valid_list = [0, 1]
 dirty_list = [0, 1]
+lock_list = [0, 1]
 predicate_list = [0, 2]
 
 if test_param_get("arch") == "tofino":
@@ -473,22 +475,38 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.sess_hdl, self.dev_tgt, matchspec3)
 
             # Table: access_dirty_tbl (default: get_dirty)
-            #matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(
-            #                op_hdr_optype=GETREQ_TYPE)
-            #self.client.access_dirty_tbl_table_add_with_get_dirty(
-            #                self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(
-            #                op_hdr_optype=PUTREQ_TYPE)
-            #self.client.access_dirty_tbl_table_add_with_get_dirty(
-            #                self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(
-            #                op_hdr_optype=DELREQ_TYPE)
-            #self.client.access_dirty_tbl_table_add_with_get_dirty(
-            #                self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(\
-                    op_hdr_optype=GETRES_S_TYPE)
-            self.client.access_dirty_tbl_table_add_with_clear_dirty(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            for ismatch_keylololo in predicate_list:
+                for ismatch_keylolohi in predicate_list:
+                    for ismatch_keylohilo in predicate_list:
+                        for ismatch_keylohihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+                                            matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(\
+                                                    op_hdr_optype=GETRES_S_TYPE,
+                                                    meta_ismatch_keylololo=ismatch_keylololo, 
+                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                            self.client.access_dirty_tbl_table_add_with_clear_dirty(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec1 = netbuffer_access_dirty_tbl_match_spec_t(\
+                    op_hdr_optype=PUTREQ_TYPE,
+                    meta_ismatch_keylololo=2,
+                    meta_ismatch_keylolohi=2,
+                    meta_ismatch_keylohilo=2,
+                    meta_ismatch_keylohihi=2,
+                    meta_ismatch_keyhilolo=2,
+                    meta_ismatch_keyhilohi=2,
+                    meta_ismatch_keyhihilo=2,
+                    meta_ismatch_keyhihihi=2)
+            self.client.access_dirty_tbl_table_add_with_set_dirty(\
+                    self.sess_hdl, self.dev_tgt, matchspec1)
 
             # Table: update_vallen_tbl (default: get_vallen)
             matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
@@ -920,124 +938,122 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_lock_tbl (default: nop)
             print "Configuring access_lock_tbl"
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-					    if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
-					    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
-					    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
-					    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
-					    	continue
-                                            matchspec0 = netbuffer_access_lock_tbl_match_spec_t(
-                                                    op_hdr_optype=GETREQ_TYPE, 
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_lock_tbl_table_add_with_try_glock(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                                            matchspec1 = netbuffer_access_lock_tbl_match_spec_t(
-                                                    op_hdr_optype=PUTREQ_TYPE, 
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_lock_tbl_table_add_with_try_plock(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec1)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            matchspec1 = netbuffer_access_lock_tbl_match_spec_t(
-                                                    op_hdr_optype=GETRES_S_TYPE, 
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_lock_tbl_table_add_with_clear_lock(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec1)
+            matchspec0 = netbuffer_access_lock_tbl_match_spec_t(
+                    op_hdr_optype=GETREQ_TYPE)
+            self.client.access_lock_tbl_table_add_with_try_glock(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec1 = netbuffer_access_lock_tbl_match_spec_t(
+                    op_hdr_optype=PUTREQ_TYPE)
+            self.client.access_lock_tbl_table_add_with_try_plock(\
+                    self.sess_hdl, self.dev_tgt, matchspec1)
+            matchspec2 = netbuffer_access_lock_tbl_match_spec_t(
+                    op_hdr_optype=GETRES_S_TYPE)
+            self.client.access_lock_tbl_table_add_with_clear_lock(\
+                    self.sess_hdl, self.dev_tgt, matchspec2)
 
             # Table: update_getreq_tbl (default: nop)
             print "Configuring update_getreq_tbl"
-            predicate_list = [0, 2]
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-					    if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
-					    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
-					    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
-					    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
-					    	continue
-                                            matchspec0 = netbuffer_update_getreq_tbl_match_spec_t(
-                                                    meta_islock=0,
-                                                    op_hdr_optype=GETREQ_TYPE, 
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.update_getreq_tbl_table_add_with_update_getreq(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbuffer_update_getreq_tbl_match_spec_t(
+                    meta_islock=0,
+                    op_hdr_optype=GETREQ_TYPE)
+            self.client.update_getreq_tbl_table_add_with_update_getreq(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: update_putreq_tbl (default: nop)
+            print "Configuring update_putreq_tbl"
+            matchspec0 = netbuffer_update_putreq_tbl_match_spec_t(
+                    meta_islock=0,
+                    op_hdr_optype=PUTREQ_TYPE)
+            self.client.update_putreq_tbl_table_add_with_update_putreq(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: port_forward_tbl (default: nop)
             print "Configuring port_forward_tbl"
             for isvalid in valid_list:
                 for isdirty in dirty_list:
-                    for optype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE, SCANREQ_TYPE, GETRES_TYPE, PUTRES_TYPE, DELRES_TYPE, SCANRES_TYPE]:
+                    for islock in lock_list:
+                        if isvalid == 1 and isdirty == 1:
+                            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = GETRES_S_TYPE,
+                                    meta_isvalid = 1,
+                                    meta_isdirty = 1,
+                                    meta_islock = islock)
+                            actnspec0 = netbuffer_update_delres_s_and_clone_action_spec_t(\
+                                    sids[0], self.devPorts[1]) # Clone to client port, output to server port
+                            self.client.port_forward_tbl_table_add_with_update_delres_s_and_clone(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                        else:
+                            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = GETRES_S_TYPE,
+                                    meta_isvalid = isvalid,
+                                    meta_isdirty = isdirty,
+                                    meta_islock = islock)
+                            actnspec0 = netbuffer_update_delres_s_action_spec_t(\
+                                    self.devPorts[0]) # Output to client port
+                            self.client.port_forward_tbl_table_add_with_update_delres_s(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for isvalid in valid_list:
+                for isdirty in dirty_list:
+                    for islock in lock_list:
+                        matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                op_hdr_optype = PUTREQ_U_TYPE,
+                                meta_isvalid = isvalid,
+                                meta_isdirty = isdirty,
+                                meta_islock = islock)
+                        actnspec0 = netbuffer_recirculate_pkt_action_spec_t(\
+                                self.devPorts[1]) # Server port should have less load?
+                        self.client.port_forward_tbl_table_add_with_recirculate_pkt(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for isvalid in valid_list:
+                for isdirty in dirty_list:
+                    for optype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
                         matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
                                 op_hdr_optype = optype,
                                 meta_isvalid = isvalid,
                                 meta_isdirty = isdirty,
-                                ig_intr_md_ingress_port=self.devPorts[0])
-                        actnspec0 = netbuffer_port_forward_action_spec_t(self.devPorts[1])
-                        self.client.port_forward_tbl_table_add_with_port_forward(\
+                                meta_islock = 1)
+                        actnspec0 = netbuffer_recirculate_pkt_action_spec_t(\
+                                self.devPorts[1]) # Server port should have less load?
+                        self.client.port_forward_tbl_table_add_with_recirculate_pkt(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                        matchspec1 = netbuffer_port_forward_tbl_match_spec_t(\
+            for isvalid in valid_list:
+                for isdirty in dirty_list:
+                    for optype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
+                        matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
                                 op_hdr_optype = optype,
                                 meta_isvalid = isvalid,
                                 meta_isdirty = isdirty,
-                                ig_intr_md_ingress_port=self.devPorts[1])
-                        actnspec1 = netbuffer_port_forward_action_spec_t(self.devPorts[0])
-                        self.client.port_forward_tbl_table_add_with_port_forward(\
-                                self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
-            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_S_TYPE,
-                    meta_isvalid = 1,
-                    meta_isdirty = 1,
-                    ig_intr_md_ingress_port=self.devPorts[1])
-            actnspec0 = netbuffer_update_delres_s_and_clone_action_spec_t(\
-                    sids[0], self.devPorts[1])
-            self.client.port_forward_tbl_table_add_with_update_delres_s_and_clone(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                meta_islock = 0)
+                        actnspec0 = netbuffer_port_forward_action_spec_t(\
+                                self.devPorts[1]) # Output to server
+                        self.client.port_forward_tbl_table_add_with_recirculate_pkt(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for isvalid in valid_list:
+                for isdirty in dirty_list:
+                    for islock in lock_list:
+                        for optype in [SCANREQ_TYPE, GETREQ_S_TYPE, DELREQ_S_TYPE]:
+                            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = optype,
+                                    meta_isvalid = isvalid,
+                                    meta_isdirty = isdirty,
+                                    meta_islock = islock)
+                            actnspec0 = netbuffer_port_forward_action_spec_t(\
+                                    self.devPorts[1]) # Output to server
+                            self.client.port_forward_tbl_table_add_with_recirculate_pkt(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for isvalid in valid_list:
+                for isdirty in dirty_list:
+                    for islock in lock_list:
+                        for optype in [GETRES_TYPE, PUTRES_TYPE, DELRES_TYPE, SCANRES_TYPE]:
+                            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = optype,
+                                    meta_isvalid = isvalid,
+                                    meta_isdirty = isdirty,
+                                    meta_islock = islock)
+                            actnspec0 = netbuffer_port_forward_action_spec_t(\
+                                    self.devPorts[0]) # Output to client
+                            self.client.port_forward_tbl_table_add_with_recirculate_pkt(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: hash_partition_tbl
             print "Configuring hash_partition_tbl"

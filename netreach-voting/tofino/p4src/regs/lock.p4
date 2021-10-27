@@ -55,14 +55,6 @@ action clear_lock() {
 table access_lock_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
 	}
 	actions {
 		try_glock;

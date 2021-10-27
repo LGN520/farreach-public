@@ -4,11 +4,10 @@
 
 - For GETREQ/PUTREQ
 	+ hash -> match keys -> get valid/dirty bit and vallen -> update votes -> get/put values -> try response directly -> 
-	calculate vote diff -> access lock -> cache update decision
+	calculate vote diff -> access lock -> cache update decision -> port forward and hash partition
 - For GETRES_S (for GETREQ_S which is cache update decision for GETREQ)
 	+ hash -> replace keys -> set valid bit as 1, dirty bit as 0, and set corresponding vallen -> reset votes as 0 -> put values ->
-	reset lock as 0 -> clone a packet as GETRES [update GETRES_S as PUTREQ_S to server for eviction if necessary]
-	+ TODO
+	reset lock as 0 -> clone a packet as GETRES [update GETRES_S as PUTREQ_GS to server for eviction if necessary]
 
 ## Other notes
 
@@ -44,7 +43,7 @@
 		* If valid = 1 and key matches, increase corresponding positive vote
 		* Otherwise, increase corresponding negative vote
 	+ Add dirty bit (dirty.p4, basic.p4, and configure/table_configure.py)
-	+ Add voting-based decision
+	+ Add in-switch eviction mechanism
 		* Add vote diff calculate (ingerss_mat.p4, basic.p4, and configure/table_configure.py)
 		* Add two thresholds (basic.p4, ingress_mat.p4, and configure/table_configure.py (TODO 1))
 		* Only if key does not match: compare vote diff and corresponding threshold to update lock bit; also get original lock bit
@@ -53,12 +52,20 @@
 			- Only if it is valid and key matches, sendback responses direcctly or by cloning (basic.p4, ingress_mat.p4, and configure/table_configure.py)
 				+ For GETREQ: sendback GETRES directly
 				+ For PUTREQ: sendback PUTRES directly
+					* If PUTREQ and key matches, we need to set dirty as 1 immediately
+					* NOTE: even if valid is 0, set dirty as 1 does not affect correctness
+						- In basic.p4, we need to use g/pposvote to calculate diff based on isdirty. However, if valid is 0, posvote
+						must be 0. So using gposvote or pposvote does not matter.
+						- In port_forward_tbl, we use dirty to decide whether we need to evict keys for GETRES_S. However, we do it only
+						if dirty is 1 and valid is 1. If valid is 0, we will never evicte keys for GETRES_S.
+						- TODO: For PUTREQ_U, we should also judge whether valid is 1
 				+ For DELREQ: update transferred packet as DELREQ_S and sendback DELRES by cloning (TODO 2: delete cached keys in server)
 		* Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
 			- For GETREQ (response-based update): update transferred packet as GETREQ_S (basic.p4, ingress_mat.p4, and configure/table_configure.py)
 				+ Server receives GETREQ_S and gives GETRES_S to switch (ycsb_server.c, packet_format.h, packet_format_impl.h)
 				+ Switch processes GETRES_S, updates it as PUTREQ_GS towards server, and clones a packet as GETRES to client (basic.p4, ingress_mat.p4, egress_mat.p4, and configure/table_configure.py)
-			- TODO: For PUTREQ (recirculation-based update): update packet as PUTREQ_U and then recirculate
+			- For PUTREQ (recirculation-based update): update packet as PUTREQ_U and then recirculate
+				+ TODO: For PUTREQ_U, we need to update regs including keys, vals, votes, lock, valid, dirty, vallen, etc.
 				+ TODO: For PUTREQ_U, we convert it as PUTREQ_PS or PUTREQ_N in ingress pipeline and clone a PUTRES to client
 				+ TODO: Server receives PUTREQ_N to update cached keys; Server receives PUTREQ_PS to update cached keys and key-value store
 				+ TODO: For PUTRES,set udp port correspondingly

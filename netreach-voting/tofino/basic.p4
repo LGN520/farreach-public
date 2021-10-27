@@ -26,6 +26,8 @@
 #define PUTREQ_PS_TYPE 0x0a
 #define DELREQ_S_TYPE 0x0b
 #define GETRES_S_TYPE 0x0c
+// Only used in switch
+#define PUTREQ_U_TYPE 0x20
 
 #define CLONE_FOR_GETRES 1
 #define CLONE_FOR_DELRES 2
@@ -208,9 +210,17 @@ control ingress {
 
 		// Stage 5 + n, where n is the number of stages for values
 		// NOTE: it will change op_type from GETREQ/PUTREQ/DELREQ to
-		// GETRES/PUTRES/DELREQ_S(cloned DELRES) if key matches, which
-		// will not perform diff calculation, lock access, and cache update further
+		// GETRES/PUTRES/DELREQ_S(cloned DELRES) only if valid = 1 and
+		// key matches, which will not perform diff calculation, lock 
+		// access, and cache update further. If optype is changed to RES,
+		// port_forward_tbl will forward it as usual.
 		apply(try_res_tbl);
+
+
+		// NOTE: if packet arriving here is still GETREQ/PUTREQ/DELREQ,
+		// it means that valid is 0, or valid is 1 yet key does not match.
+		// So we do not need to compare whether key matches for the following
+		// tables.
 
 		// Stage 5+n + 1
 		// Do preliminary decision
@@ -250,9 +260,24 @@ control ingress {
 					apply(update_getreq_tbl);
 				}
 			}
+			else if (op_hdr.optype == PUTREQ_TYPE) {
+				if (meta.vote_diff >= meta.pthreshold) {
+					// Generate put_req_u for cache update
+					apply(update_putreq_tbl);
+				}
+			}
 		}
 
-		// For GETRES_S, we convert it as PUTREQ_GS and forward to server, ans also clone a packet for GETRES to client
+		// (1) For GETRES_S, only if valid = 1 and dirty = 1. we convert it as PUTREQ_GS and forward to 
+		// server, ans also clone a packet for GETRES to client; otherwise, we convert it as GETRES and
+		forward it as usual
+		// (2) For PUTREQ_U, we recirculate it to update cache
+		// (3) For GETREQ, PUTREQ, and DELREQ, only if (lock = 1 and valid = 0) or (lock = 1 and valid = 1 
+		// yet key does not match), we recirculate it. But NOTE that if valid = 1 and key matches, optype has
+		// been set as RES by try_res_tbl. So if pkt arriving here is still REQ, it must satisfy (valid = 0)
+		// or (valid = 1 and key does not match) -> we only need to check whether lock is 1! (TODO: we need 
+		// local seq number here)
+		// (4) For other packets, we set egress_port as usual
 		apply(port_forward_tbl);
 
 		if (op_hdr.optype == PUTREQ_GS_TYPE) {
@@ -261,38 +286,18 @@ control ingress {
 		else if (op_hdr.optype == PUTREQ_PS_TYPE) {
 			apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
 		}
-		else { // GETREQ, PUTREQ, DELREQ, SCANREQ, GETREQ_S, DELREQ_S, and PUTREQ_N
+		else if (op_hdr.optype != PUTREQ_U_TYPE){ // Only if dst port = server port: GETREQ, PUTREQ, DELREQ, SCANREQ, GETREQ_S, DELREQ_S, and PUTREQ_N (without PUTREQ_U)
 			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 		}
 
+
+
+
+
+
+
+
 		else if (op_hdr.optype == PUTREQ_TYPE) {
-			// Stage 4 (rely on val)
-			if (meta.isvalid == 1) { // pkt is cloned to egress and will not execute this code
-				if (meta.origin_keylololo != op_hdr.keylololo) {
-					apply(update_putreq_tbl);
-				}
-				else if (meta.origin_keylolohi != op_hdr.keylolohi) {
-					apply(update_putreq_tbl);
-				}
-				else if (meta.origin_keylohilo != op_hdr.keylohilo) {
-					apply(update_putreq_tbl);
-				}
-				else if (meta.origin_keylohihi != op_hdr.keylohihi) {
-					apply(update_putreq_tbl);
-				}
-				else if (meta.origin_keyhilolo != op_hdr.keyhilolo) {
-					apply(update_putreq_tbl);
-				}
-				else if (meta.origin_keyhilohi != op_hdr.keyhilohi) {
-					apply(update_putreq_tbl);
-				}
-				else if (meta.origin_keyhihilo != op_hdr.keyhihilo) {
-					apply(update_putreq_tbl);
-				}
-				else if (meta.origin_keyhihihi != op_hdr.keyhihihi) {
-					apply(update_putreq_tbl);
-				}
-			}
 
 			apply(clone_putpkt_tbl); // sendback PUTRES
 			// NOTE: drop normal packet in ingress will not generate the cloned packet further (we need to set drop_ctl)
