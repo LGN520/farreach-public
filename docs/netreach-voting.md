@@ -7,7 +7,10 @@
 	calculate vote diff -> access lock -> cache update decision -> port forward and hash partition
 - For GETRES_S (for GETREQ_S which is cache update decision for GETREQ)
 	+ hash -> replace keys -> set valid bit as 1, dirty bit as 0, and set corresponding vallen -> reset votes as 0 -> put values ->
-	reset lock as 0 -> clone a packet as GETRES [update GETRES_S as PUTREQ_GS to server for eviction if necessary]
+	reset lock as 0 -> TODO: clone a packet as GETRES [update GETRES_S as PUTREQ_GS to server for eviction if necessary]
+- For PUTREQ_U (for PUTREQ which is recirculation-based cache update)
+	+ hash -> replace keys -> set valid bit as 1, dirty bit as 1, and set corresponding vallen -> reset votes as 0 -> put values ->
+	reeset lock as 0 -> clone a packet as PUTRES, and update PUTREQ_U as PUTREQ_PS or PUTREQ_N to server for eviction or notification
 
 ## Other notes
 
@@ -58,14 +61,14 @@
 						must be 0. So using gposvote or pposvote does not matter.
 						- In port_forward_tbl, we use dirty to decide whether we need to evict keys for GETRES_S. However, we do it only
 						if dirty is 1 and valid is 1. If valid is 0, we will never evicte keys for GETRES_S.
-						- TODO: For PUTREQ_U, we should also judge whether valid is 1
+						- TODO: Also, for PUTREQ_U, we should convert PUTREQ_U to PUTREQ_PS only if valid is 1 and dirty is 1
 				+ For DELREQ: update transferred packet as DELREQ_S and sendback DELRES by cloning (TODO 2: delete cached keys in server)
 		* Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
 			- For GETREQ (response-based update): update transferred packet as GETREQ_S (basic.p4, ingress_mat.p4, and configure/table_configure.py)
 				+ Server receives GETREQ_S and gives GETRES_S to switch (ycsb_server.c, packet_format.h, packet_format_impl.h)
 				+ Switch processes GETRES_S, updates it as PUTREQ_GS towards server, and clones a packet as GETRES to client (basic.p4, ingress_mat.p4, egress_mat.p4, and configure/table_configure.py)
-			- For PUTREQ (recirculation-based update): update packet as PUTREQ_U and then recirculate
-				+ TODO: For PUTREQ_U, we need to update regs including keys, vals, votes, lock, valid, dirty, vallen, etc.
+			- For PUTREQ (recirculation-based update): update packet as PUTREQ_U and then recirculate (ingress_mat.p4, and configure/table_configure.py)
+				+ For PUTREQ_U, we need to update regs including keys, vals, votes, lock, valid, dirty, vallen, etc. (configure/table_configure.py)
 				+ TODO: For PUTREQ_U, we convert it as PUTREQ_PS or PUTREQ_N in ingress pipeline and clone a PUTRES to client
 				+ TODO: Server receives PUTREQ_N to update cached keys; Server receives PUTREQ_PS to update cached keys and key-value store
 				+ TODO: For PUTRES,set udp port correspondingly
