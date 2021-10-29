@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <set>
 #include <signal.h> // for signal and raise
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
@@ -61,14 +62,21 @@ volatile struct rte_mbuf ***pkts_list;
 uint32_t* volatile heads;
 uint32_t* volatile tails;
 
+// Process backup data
 void parse_kv(const char* recv_buf, std::map<index_key_t, val_t>* data);
+
+// Periodic backup
 void *run_backuper(__attribute__((unused)) void *param); // backuper
 std::map<index_key_t, val_t>* volatile backup_data = nullptr;
 uint32_t* volatile backup_rcu;
 
+// Triggerred backup
 void *run_listener(__attribute__((unused)) void *param); // listener to listen the responses of KV pull requests for SCAN
 std::map<index_key_t, val_t>* volatile listener_data = nullptr;
 volatile uint64_t listener_version = 0;
+
+// Per-server cached keys
+std::set<index_key_t> *cached_keys_list = nullptr; // an array of cached keys for each server
 
 // parameters
 size_t fg_n;
@@ -113,12 +121,10 @@ int main(int argc, char **argv) {
   memcpy(dpdk_argv[2], arg_iovamode_val.c_str(), arg_iovamode_val.size());
   //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
   //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
-
-  // Init DPDK
-  rte_eal_init_helper(&dpdk_argc, &dpdk_argv);
+  rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
   dpdk_init(&mbuf_pool, fg_n, 1);
 
-  // Prepare pkts and stats for receiver
+  // Prepare pkts and stats for receiver (based on ring buffer)
   //pkts = new volatile struct rte_mbuf*[fg_n];
   //stats = new volatile bool[fg_n];
   //memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
@@ -140,8 +146,11 @@ int main(int argc, char **argv) {
 	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
   }
 
+  // RCU for backup data (NOTE: necessary only if SCAN needs to access backup data)
   backup_rcu = new uint32_t[fg_n];
   memset((void *)backup_rcu, 0, fg_n * sizeof(uint32_t));
+
+  // TODO: prepare for per-server cached keys
 
   // prepare xindex
   xindex_t *tab_xi = new xindex_t(fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
@@ -801,13 +810,17 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::PUT_REQ_S:
+			case packet_type_t::PUT_REQ_GS:
 				{
-					put_request_s_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
-					//COUT_THIS("[server] stat = " << tmp_stat)
-					break;
+					// TODO: update key-value store and delete cached keys
+				}
+			case packet_type::PUT_REQ_N:
+				{
+					// TODO: update cached keys
+				}
+			case packet_type_t::PUT_REQ_PS:
+				{
+					// TODO: update key-value store and update cached keys
 				}
 			case packet_type_t::DEL_REQ_S:
 				{
@@ -815,7 +828,7 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
-					// TODO: delete cached keys
+					// TODO: delete cached keys if any
 					break;
 				}
 			default:

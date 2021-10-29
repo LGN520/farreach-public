@@ -388,6 +388,9 @@ action update_putreq_ru_to_ps_and_clone(sid, port) {
 
 	// Format: original key (op_hdr) - evicted key - evicted vallen - evicted val
 
+	// Increase udp length
+	add_to_field(udp_hdr.hdrlen, 16); // add evicted key of 16B
+
 	// Add evicted key
 	add_header(evicted_key_hdr);
 	modify_field(evicted_key_hdr.keylololo, meta.origin_keylololo);

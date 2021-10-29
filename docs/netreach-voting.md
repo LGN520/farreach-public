@@ -56,6 +56,7 @@
 				+ For GETREQ: sendback GETRES directly
 				+ For PUTREQ: sendback PUTRES directly
 					* If PUTREQ and key matches, we need to set dirty as 1 immediately
+						- TODO: we need to send a PUTREQ_N to update the cached keys in server
 					* NOTE: even if valid is 0, set dirty as 1 does not affect correctness
 						- In basic.p4, we need to use g/pposvote to calculate diff based on isdirty. However, if valid is 0, posvote
 						must be 0. So using gposvote or pposvote does not matter.
@@ -67,16 +68,22 @@
 			- For GETREQ (response-based update): update transferred packet as GETREQ_S (basic.p4, ingress_mat.p4, and configure/table_configure.py)
 				+ Server receives GETREQ_S and gives GETRES_S to switch (ycsb_server.c, packet_format.h, packet_format_impl.h)
 				+ Switch processes GETRES_S, updates it as PUTREQ_GS towards server, and clones a packet as GETRES to client (basic.p4, ingress_mat.p4, egress_mat.p4, and configure/table_configure.py)
+				+ TODO: server receives PUTREQ_GS to update key-value store and remove cached keys
 			- For PUTREQ (recirculation-based update): update packet as PUTREQ_U for port_forward_tbl, and 
 			then update it as PUTREQ_RU and recirculate (ingress_mat.p4, and configure/table_configure.py)
 				+ For PUTREQ_RU, we need to update regs including keys, vals, votes, lock, valid, dirty, vallen, etc. (configure/table_configure.py)
 				+ For PUTREQ_RU, we convert it as PUTREQ_PS or PUTREQ_N in ingress pipeline and clone a PUTRES to client (basic.p4, ingress_mat.p4, egress_mat.p4, and configure.table_configure,py)
-				+ TODO: Server receives PUTREQ_N to update cached keys; Server receives PUTREQ_PS to update cached keys and key-value store
+				+ TODO: Server receives PUTREQ_N to update cached keys; Server receives PUTREQ_PS to update cached keys and key-value store (packet_format.h, packet_format_impl.h, ycsb_server.c)
 				+ TODO: For PUTRES,set udp port correspondingly
 				* TODO: We should set MAC addr according to optype
 				+ TODO 4: local sequence number
 		* TODO: Key does not match, and original lock bit = 0 && diff < threshold -> forward
 		* TODO: Key does not match, and original lock bit = 1 -> also recirculate
+		* TODO: We maintain a set of cached keys for each server thread; for scan, we simulate multiple packets in server-side by
+		split the request to multiple server threads by range partition
+			- TODO: support SCAN with as much latest data as possible
+			- TODO: support SCAN with a guarantee of some point-in-time?
+	+ TODO: If req does not need to access backup data for SCAN, then we do not need RCU for backup data
 - TODO: For put req
 	+ If the entry is empty, we need to update the cache directly and notify the server (do not need to drop put_req, which becomes put_req_n; need to clone for put_res)
 	+ If the entry is not empty but key matches, we need to update value (need to drop original put req; need to clone for put_res)
