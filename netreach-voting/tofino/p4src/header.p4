@@ -70,6 +70,19 @@ header_type res_t {
 	}
 }
 
+header_type key_t {
+	fields {
+		keylololo: 16;
+		keylolohi: 16;
+		keylohilo: 16;
+		keylohihi: 16;
+		keyhilolo: 16;
+		keyhilohi: 16;
+		keyhihilo: 16;
+		keyhihihi: 16;			  
+	}
+}
+
 header_type metadata_t {
 	fields {
 		hashidx: 16;
@@ -145,6 +158,7 @@ header ethernet_t ethernet_hdr;
 header ipv4_t ipv4_hdr;
 header udp_t udp_hdr;
 header op_t op_hdr;
+header key_t evicted_key_hdr;
 header vallen_t vallen_hdr;
 header val_t val1_hdr;
 /*header val_t val2_hdr;

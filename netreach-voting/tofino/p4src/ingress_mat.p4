@@ -282,7 +282,7 @@ table update_getreq_tbl {
 }
 
 action update_putreq() {
-	modify_field(op_hdr.optype, PUTREQ_S_TYPE);
+	modify_field(op_hdr.optype, PUTREQ_U_TYPE);
 }
 
 table update_putreq_tbl {
@@ -369,8 +369,86 @@ action update_getres_s_and_clone(sid, port) {
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
+action update_putreq_ru_to_n_and_clone(sid, port) {
+	modify_field(op_hdr.optye, PUTREQ_N_TYPE);
+
+	// We do not remove header fields of value here
+	// Server only needs to save the key into cached set
+
+	// Forward PUTREQ_N to server
+	modify_field(ig_intr_md_for_tm.ucase_egress_port, port);
+
+	// Clone a packet for PUTRES to client
+	modify_field(meta.is_clone, CLONE_FOR_PUTRES);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+action update_putreq_ru_to_ps_and_clone(sid, port) {
+	modify_field(op_hdr.optye, PUTREQ_PS_TYPE);
+
+	// Format: original key (op_hdr) - evicted key - evicted vallen - evicted val
+
+	// Add evicted key
+	add_header(evicted_key_hdr);
+	modify_field(evicted_key_hdr.keylololo, meta.origin_keylololo);
+	modify_field(evicted_key_hdr.keylolohi, meta.origin_keylolohi);
+	modify_field(evicted_key_hdr.keylohilo, meta.origin_keylohilo);
+	modify_field(evicted_key_hdr.keylohihi, meta.origin_keylohihi);
+	modify_field(evicted_key_hdr.keyhilolo, meta.origin_keyhilolo);
+	modify_field(evicted_key_hdr.keyhilohi, meta.origin_keyhilohi);
+	modify_field(evicted_key_hdr.keyhihilo, meta.origin_keyhihilo);
+	modify_field(evicted_key_hdr.keyhihihi, meta.origin_keyhihihi);
+
+	// Overwrite original vallen and val as evicted vallen and val
+	modify_field(val1_hdr.vallo, meta.origin_vallo1);
+	modify_field(val1_hdr.valhi, meta.origin_valhi1);
+	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
+	modify_field(val2_hdr.valhi, meta.origin_valhi2);
+	modify_field(val3_hdr.vallo, meta.origin_vallo3);
+	modify_field(val3_hdr.valhi, meta.origin_valhi3);
+	modify_field(val4_hdr.vallo, meta.origin_vallo4);
+	modify_field(val4_hdr.valhi, meta.origin_valhi4);
+	modify_field(val5_hdr.vallo, meta.origin_vallo5);
+	modify_field(val5_hdr.valhi, meta.origin_valhi5);
+	modify_field(val6_hdr.vallo, meta.origin_vallo6);
+	modify_field(val6_hdr.valhi, meta.origin_valhi6);
+	modify_field(val7_hdr.vallo, meta.origin_vallo7);
+	modify_field(val7_hdr.valhi, meta.origin_valhi7);
+	modify_field(val8_hdr.vallo, meta.origin_vallo8);
+	modify_field(val8_hdr.valhi, meta.origin_valhi8);
+	modify_field(val9_hdr.vallo, meta.origin_vallo9);
+	modify_field(val9_hdr.valhi, meta.origin_valhi9);
+	modify_field(val10_hdr.vallo, meta.origin_vallo10);
+	modify_field(val10_hdr.valhi, meta.origin_valhi10);
+	modify_field(val11_hdr.vallo, meta.origin_vallo11);
+	modify_field(val11_hdr.valhi, meta.origin_valhi11);
+	modify_field(val12_hdr.vallo, meta.origin_vallo12);
+	modify_field(val12_hdr.valhi, meta.origin_valhi12);
+	modify_field(val13_hdr.vallo, meta.origin_vallo13);
+	modify_field(val13_hdr.valhi, meta.origin_valhi13);
+	modify_field(val14_hdr.vallo, meta.origin_vallo14);
+	modify_field(val14_hdr.valhi, meta.origin_valhi14);
+	modify_field(val15_hdr.vallo, meta.origin_vallo15);
+	modify_field(val15_hdr.valhi, meta.origin_valhi15);
+	modify_field(val16_hdr.vallo, meta.origin_vallo16);
+	modify_field(val16_hdr.valhi, meta.origin_valhi16);*/
+
+	// Forward PUTREQ_PS to server
+	modify_field(ig_intr_md_for_tm.ucase_egress_port, port);
+
+	// Clone a packet for PUTRES to client
+	modify_field(meta.is_clone, CLONE_FOR_PUTRES);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
 action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
+action recirculate_putreq_u(port) {
+	modify_field(op_hdr.optype, PUTREQ_RU_TYPE); // convert into PUTREQ_RU (recirculated update)
+	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
+	recirculate(port);
 }
 
 action recirculate_pkt(port) {
@@ -386,8 +464,11 @@ table port_forward_tbl {
 		meta.islock: exact;
 	}
 	actions {
-		update_delres_s;
-		update_delres_s_and_clone;
+		update_gelres_s;
+		update_gelres_s_and_clone;
+		update_putreq_ru_to_n_and_clone;
+		update_putreq_ru_to_ps_and_clone;
+		recirculate_putreq_u;
 		recirculate_pkt;
 		port_forward;
 		nop;

@@ -23,14 +23,17 @@
 #define SCANRES_TYPE 0x07
 #define GETREQ_S_TYPE 0x08
 #define PUTREQ_GS_TYPE 0x09
-#define PUTREQ_PS_TYPE 0x0a
-#define DELREQ_S_TYPE 0x0b
-#define GETRES_S_TYPE 0x0c
+#define PUTREQ_N_TYPE 0x0a
+#define PUTREQ_PS_TYPE 0x0b
+#define DELREQ_S_TYPE 0x0c
+#define GETRES_S_TYPE 0x0d
 // Only used in switch
 #define PUTREQ_U_TYPE 0x20
+#define PUTREQ_RU_TYPE 0x21
 
 #define CLONE_FOR_GETRES 1
 #define CLONE_FOR_DELRES 2
+#define CLONE_FOR_PUTRES 3
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -271,13 +274,15 @@ control ingress {
 		// (1) For GETRES_S, only if valid = 1 and dirty = 1. we convert it as PUTREQ_GS and forward to 
 		// server, ans also clone a packet for GETRES to client; otherwise, we convert it as GETRES and
 		forward it as usual
-		// (2) For PUTREQ_U, we recirculate it to update cache
-		// (3) For GETREQ, PUTREQ, and DELREQ, only if (lock = 1 and valid = 0) or (lock = 1 and valid = 1 
+		// (2) For PUTREQ_U, we convert it as PUTREQ_RU and recirculate it to update cache
+		// (3) For PUTREQ_RU, we convert it as PUTREQ_N or PUTREQ_PS (only if valid = 1 and dirty = 1) 
+		// and forward to server, and also clone a packet for PUTRES to client
+		// (4) For GETREQ, PUTREQ, and DELREQ, only if (lock = 1 and valid = 0) or (lock = 1 and valid = 1 
 		// yet key does not match), we recirculate it. But NOTE that if valid = 1 and key matches, optype has
 		// been set as RES by try_res_tbl. So if pkt arriving here is still REQ, it must satisfy (valid = 0)
 		// or (valid = 1 and key does not match) -> we only need to check whether lock is 1! (TODO: we need 
 		// local seq number here)
-		// (4) For other packets, we set egress_port as usual
+		// (5) For other packets, we set egress_port as usual
 		apply(port_forward_tbl);
 
 		if (op_hdr.optype == PUTREQ_GS_TYPE) {
@@ -286,7 +291,7 @@ control ingress {
 		else if (op_hdr.optype == PUTREQ_PS_TYPE) {
 			apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
 		}
-		else if (op_hdr.optype != PUTREQ_U_TYPE){ // Only if dst port = server port: GETREQ, PUTREQ, DELREQ, SCANREQ, GETREQ_S, DELREQ_S, and PUTREQ_N (without PUTREQ_U)
+		else if (op_hdr.optype != PUTREQ_RU_TYPE){ // Only if dst port = server port: GETREQ, PUTREQ, DELREQ, SCANREQ, GETREQ_S, DELREQ_S, and PUTREQ_N (without PUTREQ_U)
 			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 		}
 
@@ -347,6 +352,9 @@ control egress {
 		}
 		else if (meta.is_clone == CLONE_FOR_DELRES) {
 			apply(sendback_cloned_delres_tbl); // input is DELREQ_S converted from DELREQ (we need swap port, ip, and mac)
+		}
+		else if (meta.is_clone == CLONE_FOR_PUTRES) {
+			apply(sendback_cloned_putres_tbl); // input is PUTREQ_N/PUTREQ_PS converted form PUTREQ_RU from PUTREQ_U from PUTREQ (we need to swap port, ip, and mac)
 		}
 	}
 	apply(update_macaddr_tbl); // Update mac addr

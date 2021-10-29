@@ -77,10 +77,12 @@ DELRES_TYPE = 0x06
 SCANRES_TYPE = 0x07
 GETREQ_S_TYPE = 0x08
 PUTREQ_GS_TYPE = 0x09
-PUTREQ_PS_TYPE = 0x0a
-DELREQ_S_TYPE = 0x0b
-GETRES_S_TYPE = 0x0c
+PUTREQ_N_TYPE = 0x0a
+PUTREQ_PS_TYPE = 0x0b
+DELREQ_S_TYPE = 0x0c
+GETRES_S_TYPE = 0x0d
 PUTREQ_U_TYPE = 0x20
+PUTREQ_RU_TYPE = 0x21
 
 valid_list = [0, 1]
 dirty_list = [0, 1]
@@ -177,7 +179,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for ismatch_keyhihilo in predicate_list:
                                     for ismatch_keyhihihi in predicate_list:
                                         for isvalid in valid_list:
-                                            for tmpoptype in [GETRES_S_TYPE, PUTREQ_U_TYPE]:
+                                            for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
                                                 matchspec0 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(\
                                                         op_hdr_optype=tmpoptype, 
                                                         meta_isvalid=isvalid,
@@ -205,7 +207,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         matchspec0 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=GETRES_S_TYPE)
         eval("self.client.access_key{}_tbl_table_add_with_modify_key{}".format(keyname, keyname))(\
                 self.sess_hdl, self.dev_tgt, matchspec0)
-        matchspec1 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=PUTREQ_U_TYPE)
+        matchspec1 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=PUTREQ_RU_TYPE)
         eval("self.client.access_key{}_tbl_table_add_with_modify_key{}".format(keyname, keyname))(\
                 self.sess_hdl, self.dev_tgt, matchspec1)
 
@@ -232,7 +234,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for ismatch_keyhihilo in predicate_list:
                                     for ismatch_keyhihihi in predicate_list:
                                         for isvalid in valid_list:
-                                            for tmpoptype in [GETRES_S_TYPE, PUTREQ_U_TYPE]:
+                                            for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
                                                 matchspec0 = eval("netbuffer_access_{}posvote_tbl_match_spec_t".format("g"))(\
                                                         meta_isvalid=isvalid,
                                                         op_hdr_optype=tmpoptype, 
@@ -304,7 +306,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for ismatch_keyhihilo in predicate_list:
                                     for ismatch_keyhihihi in predicate_list:
                                         for isvalid in valid_list:
-                                            for tmpoptype in [GETRES_S_TYPE, PUTREQ_U_TYPE]:
+                                            for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
                                                 matchspec0 = eval("netbuffer_access_{}negvote_tbl_match_spec_t".format(opname))(\
                                                         meta_isvalid=isvalid,
                                                         op_hdr_optype=tmpoptype,
@@ -467,7 +469,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
                                             # NOTE: GETRES_S/PUTREQ_U_S triggers modify_key which does not set ismatch_key but set origin_key
-                                            for tmpoptype in [GETREQ_S_TYPE, PUTREQ_U_TYPE]:
+                                            for tmpoptype in [GETREQ_S_TYPE, PUTREQ_RU_TYPE]:
                                                 matchspec3 = netbuffer_access_valid_tbl_match_spec_t(
                                                         op_hdr_optype=tmpoptype, 
                                                         meta_ismatch_keylololo=ismatch_keylololo, 
@@ -503,7 +505,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             self.client.access_dirty_tbl_table_add_with_clear_dirty(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                             matchspec1 = netbuffer_access_dirty_tbl_match_spec_t(\
-                                                    op_hdr_optype=PUTREQ_U_TYPE,
+                                                    op_hdr_optype=PUTREQ_RU_TYPE,
                                                     meta_ismatch_keylololo=ismatch_keylololo, 
                                                     meta_ismatch_keylolohi=ismatch_keylolohi, 
                                                     meta_ismatch_keylohilo=ismatch_keylohilo, 
@@ -550,7 +552,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
                                             for isvalid in valid_list:
-                                                for tmpoptype in [GETRES_S_TYPE, PUTREQ_U_TYPE]:
+                                                for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
                                                     matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
                                                             op_hdr_optype=tmpoptype, 
                                                             meta_isvalid=isvalid,
@@ -966,7 +968,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype=PUTREQ_TYPE)
             self.client.access_lock_tbl_table_add_with_try_plock(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
-            for tmpoptype in [GETRES_S_TYPE, PUTREQ_U_TYPE]:
+            for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
                 matchspec2 = netbuffer_access_lock_tbl_match_spec_t(
                         op_hdr_optype=tmpoptype)
                 self.client.access_lock_tbl_table_add_with_clear_lock(\
@@ -999,9 +1001,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     meta_isvalid = 1,
                                     meta_isdirty = 1,
                                     meta_islock = islock)
-                            actnspec0 = netbuffer_update_delres_s_and_clone_action_spec_t(\
+                            actnspec0 = netbuffer_update_gelres_s_and_clone_action_spec_t(\
                                     sids[0], self.devPorts[1]) # Clone to client port, output to server port
-                            self.client.port_forward_tbl_table_add_with_update_delres_s_and_clone(\
+                            self.client.port_forward_tbl_table_add_with_update_gelres_s_and_clone(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                         else:
                             matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
@@ -1009,9 +1011,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     meta_isvalid = isvalid,
                                     meta_isdirty = isdirty,
                                     meta_islock = islock)
-                            actnspec0 = netbuffer_update_delres_s_action_spec_t(\
+                            actnspec0 = netbuffer_update_gelres_s_action_spec_t(\
                                     self.devPorts[0]) # Output to client port
-                            self.client.port_forward_tbl_table_add_with_update_delres_s(\
+                            self.client.port_forward_tbl_table_add_with_update_gelres_s(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for isvalid in valid_list:
                 for isdirty in dirty_list:
@@ -1021,10 +1023,33 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_isvalid = isvalid,
                                 meta_isdirty = isdirty,
                                 meta_islock = islock)
-                        actnspec0 = netbuffer_recirculate_pkt_action_spec_t(\
+                        actnspec0 = netbuffer_recirculate_putreq_u_action_spec_t(\
                                 self.devPorts[1]) # Server port should have less load?
-                        self.client.port_forward_tbl_table_add_with_recirculate_pkt(\
+                        self.client.port_forward_tbl_table_add_with_recirculate_putreq_u(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for isvalid in valid_list:
+                for isdirty in dirty_list:
+                    for islock in lock_list:
+                        if isvalid == 1 and isdirty == 1:
+                            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = PUTREQ_RU_TYPE,
+                                    meta_isvalid = 1,
+                                    meta_isdirty = 1,
+                                    meta_islock = islock)
+                            actnspec0 = netbuffer_update_putreq_ru_to_ps_action_spec_t(\
+                                    sids[0], self.devPorts[1]) # Clone to client, forward to server
+                            self.client.port_forward_tbl_table_add_with_update_putreq_ru_to_ps(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                        else:
+                            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = PUTREQ_RU_TYPE,
+                                    meta_isvalid = isvalid,
+                                    meta_isdirty = isdirty,
+                                    meta_islock = islock)
+                            actnspec0 = netbuffer_update_putreq_ru_to_n_action_spec_t(\
+                                    sids[0], self.devPorts[1]) # Clone to client, forward to server
+                            self.client.port_forward_tbl_table_add_with_update_putreq_ru_to_n(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for isvalid in valid_list:
                 for isdirty in dirty_list:
                     for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
