@@ -32,7 +32,7 @@ action put_vallen() {
 table update_vallen_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.isvalid: exact;
+		meta.canput: exact;
 		meta.ismatch_keylololo: exact;
 		meta.ismatch_keylolohi: exact;
 		meta.ismatch_keylohilo: exact;
@@ -84,7 +84,7 @@ action put_vallo1() {
 table update_vallo1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.isvalid: exact;
+		meta.canput: exact;
 		meta.ismatch_keylololo: exact;
 		meta.ismatch_keylolohi: exact;
 		meta.ismatch_keylohilo: exact;
@@ -136,7 +136,7 @@ action put_valhi1() {
 table update_valhi1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.isvalid: exact;
+		meta.canput: exact;
 		meta.ismatch_keylololo: exact;
 		meta.ismatch_keylolohi: exact;
 		meta.ismatch_keylohilo: exact;

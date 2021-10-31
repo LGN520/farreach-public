@@ -64,6 +64,13 @@ header_type val_t {
 	}
 }
 
+header_type seq_t {
+	fields {
+		seq: 32;
+		is_assigned: 8;
+	}
+}
+
 header_type res_t {
 	fields {
 		stat: 8;
@@ -116,6 +123,7 @@ header_type metadata_t {
 		origin_keyhilohi: 16;
 		origin_keyhihilo: 16;
 		origin_keyhihihi: 16;
+		canput: 4; // predicate
 		origin_vallo1: 32;
 		origin_valhi1: 32;
 		/*origin_vallo2: 32;
@@ -176,5 +184,6 @@ header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
 header val_t val16_hdr;*/
+header seq_t seq_hdr;
 header res_t res_hdr;
 metadata metadata_t meta;

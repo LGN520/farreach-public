@@ -159,7 +159,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         #        self.sess_hdl, self.dev_tgt, matchspec0)
         matchspec1 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(
                 op_hdr_optype=PUTREQ_TYPE, 
-                meta_isvalid=1, 
+                meta_canput=2,
                 meta_ismatch_keylololo=2, 
                 meta_ismatch_keylolohi=2,
                 meta_ismatch_keylohilo=2, 
@@ -178,11 +178,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             for ismatch_keyhilohi in predicate_list:
                                 for ismatch_keyhihilo in predicate_list:
                                     for ismatch_keyhihihi in predicate_list:
-                                        for isvalid in valid_list:
+                                        for canput in predicate_list:
                                             for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
                                                 matchspec0 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(\
                                                         op_hdr_optype=tmpoptype, 
-                                                        meta_isvalid=isvalid,
+                                                        meta_canput=canput,
                                                         meta_ismatch_keylololo=ismatch_keylololo, 
                                                         meta_ismatch_keylolohi=ismatch_keylolohi, 
                                                         meta_ismatch_keylohilo=ismatch_keylohilo, 
@@ -376,10 +376,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
 	    # Table: load_gthreshold_tbl
 	    # TODO
+            #print "Configuring load_g/pthreshold_tbl"
 	    #self.client.load_gthreshold_tbl_table_set_default_action_load_gthreshold(\
 	    #	    self.sess_hdl, self.dev_tgt, gthreshold)
 	    #self.client.load_pthreshold_tbl_table_set_default_action_load_pthreshold(\
 	    #	    self.sess_hdl, self.dev_tgt, pthreshold)
+
+            # Table assign_seq_tbl
+            print "Configuring assign_seq_tbl"
+            matchspec0 = netbuffer_assign_seq_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_TYPE, 
+                    seq_hdr_is_assigned = 0)
+            self.client.assign_seq_tbl_table_assign_seq(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_keylololo_tbl (default: match_keylololo)
             print "Configuring match_keylololo_tbl"
@@ -529,10 +538,51 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.access_dirty_tbl_table_add_with_set_dirty(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
 
+            # Table: access_savedseq_tbl (no default)
+            print "Configuring access_savedseq_tbl"
+            matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_TYPE,
+                    seq_hdr_is_assigned = 1,
+		    meta_ismatch_keylololo=2, 
+		    meta_ismatch_keylolohi=2, 
+		    meta_ismatch_keylohilo=2, 
+		    meta_ismatch_keylohihi=2, 
+		    meta_ismatch_keyhilolo=2,
+		    meta_ismatch_keyhilohi=2,
+		    meta_ismatch_keyhihilo=2,
+		    meta_ismatch_keyhihihi=2)
+            self.client.access_savedseq_tbl_table_add_with_try_update_savedseq(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            for ismatch_keylololo in predicate_list:
+                for ismatch_keylolohi in predicate_list:
+                    for ismatch_keylohilo in predicate_list:
+                        for ismatch_keylohihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+                                            for isassigned in [0, 1]:
+                                                for optype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
+                                                        matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
+                                                                op_hdr_optype = optype,
+                                                                seq_hdr_is_assigned = isassigned,
+                                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                                meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                                meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                                meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                                meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                                        self.client.access_savedseq_tbl_table_add_with_reset_savedseq(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Start from stage 4 (after keys and savedseq)
+
             # Table: update_vallen_tbl (default: get_vallen)
             matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
                     op_hdr_optype=PUTREQ_TYPE, 
-                    meta_isvalid=1,
+                    meta_canput=2,
 		    meta_ismatch_keylololo=2, 
 		    meta_ismatch_keylolohi=2, 
 		    meta_ismatch_keylohilo=2, 
@@ -551,11 +601,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for ismatch_keyhilohi in predicate_list:
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
-                                            for isvalid in valid_list:
+                                            for canput in predicate_list:
                                                 for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
                                                     matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
                                                             op_hdr_optype=tmpoptype, 
-                                                            meta_isvalid=isvalid,
+                                                            meta_canput=canput,
                                                             meta_ismatch_keylololo=ismatch_keylololo, 
                                                             meta_ismatch_keylolohi=ismatch_keylolohi, 
                                                             meta_ismatch_keylohilo=ismatch_keylohilo, 
@@ -566,24 +616,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             meta_ismatch_keyhihihi=ismatch_keyhihihi)
                                                     self.client.update_vallen_tbl_table_add_with_put_vallen(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: access_gposvote_tbl (default: get_gposvote)
-            print "Configuring access_gposvote_tbl"
-            self.configure_access_posvote_tbl("g", GETREQ_TYPE)
-
-            # Table: access_gnegvote_tbl (default: get_gnegvote)
-	    print "Configuring access_gnegvote_tbl"
-            self.configure_access_negvote_tbl("g", GETREQ_TYPE)
-
-            # Table: access_pposvote_tbl (default: get_pposvote)
-            print "Configuring access_pposvote_tbl"
-            self.configure_access_posvote_tbl("p", PUTREQ_TYPE)
-
-            # Table: access_pnegvote_tbl (default: get_pnegvote)
-	    print "Configuring access_pnegvote_tbl"
-            self.configure_access_negvote_tbl("p", PUTREQ_TYPE)
-
-            # Start from stage 5 (after keys, valid bits, and votes (occupying entire stage 4))
 
             # Table: update_vallo1_tbl (default: get_vallo1)
             print "Configuring update_vallo1_tbl"
@@ -892,6 +924,24 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi16_tbl_table_add_with_get_valhi8(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
+
+            # Stage 4 + n
+
+            # Table: access_gposvote_tbl (default: get_gposvote)
+            print "Configuring access_gposvote_tbl"
+            self.configure_access_posvote_tbl("g", GETREQ_TYPE)
+
+            # Table: access_gnegvote_tbl (default: get_gnegvote)
+	    print "Configuring access_gnegvote_tbl"
+            self.configure_access_negvote_tbl("g", GETREQ_TYPE)
+
+            # Table: access_pposvote_tbl (default: get_pposvote)
+            print "Configuring access_pposvote_tbl"
+            self.configure_access_posvote_tbl("p", PUTREQ_TYPE)
+
+            # Table: access_pnegvote_tbl (default: get_pnegvote)
+	    print "Configuring access_pnegvote_tbl"
+            self.configure_access_negvote_tbl("p", PUTREQ_TYPE)
             
             # Table: try_res_tbl (default: nop)
             matchspec0 = netbuffer_try_res_tbl_match_spec_t(\
@@ -1160,6 +1210,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.origin_hash_partition_reverse_tbl_table_add_with_update_dstport_reverse(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                 hash_start = hash_end
+
+            # Table: sendback_cloned_putres_tbl
+            print "Configuring sendback_cloned_putres_tbl"
+            matchspec0 = netbuffer_sendback_cloned_putres_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_N_TYPE)
+            self.client.sendback_cloned_putres_tbl_table_add_with_sendback_cloned_putres_from_n(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec1 = netbuffer_sendback_cloned_putres_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_PS_TYPE)
+            self.client.sendback_cloned_putres_tbl_table_add_with_sendback_cloned_putres_from_ps(\
+                    self.sess_hdl, self.dev_tgt, matchspec1)
 
             # Table: drop_put_tbl
             #print "Configuring drop_put_tbl"

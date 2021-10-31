@@ -44,12 +44,15 @@
 //#define KV_BUCKET_COUNT 32768
 #define KV_BUCKET_COUNT 1
 
-//#define MAX_VAL_LEN 12
 // NOTE: you should change the two macros according to maximum val length
-//#define VAL_PKTLEN 97
-//#define VAL_PKTLEN_MINUS_ONE 96
-#define VAL_PKTLEN 9
-#define VAL_PKTLEN_MINUS_ONE 8
+// VAL_PKTLEN: sizeof(vallen) + sizeof(val) + sizeof(seq) + sizeof(is_assigned)
+// VAL_PKTLEN_MINUS_ONE: sizeof(vallen) + sizeof(val) + sizeof(seq) + sizeof(is_assigned) - sizeof(stat)
+// KEY_VAL_PKTLEN_MINUS_ONE: + sizeof(evcited_key) + sizeof(vallen) + sizeof(val) + sizeof(seq) + sizeof(is_assigned) - sizeof(stat)
+//#define VAL_PKTLEN 102
+//#define VAL_PKTLEN_MINUS_ONE 101
+#define VAL_PKTLEN 14
+#define VAL_PKTLEN_MINUS_ONE 13
+#define KEY_VAL_PKTLEN_MINUS_ONE 29
 
 //#define CPU_PORT 192
 
@@ -58,6 +61,8 @@
 
 // parsers
 #include "p4src/parser.p4"
+
+#include "p4src/regs/seq.p4"
 
 // registers and MATs related with 16B key
 #include "p4src/regs/key.p4"
@@ -150,6 +155,7 @@ control ingress {
 		apply(save_info_tbl);
 		apply(load_gthreshold_tbl);
 		apply(load_pthreshold_tbl);
+		apply(assign_seq_tbl);
 
 		// Stage 1 and 2
 		// Different MAT entries for getreq/putreq
@@ -167,17 +173,12 @@ control ingress {
 		apply(calculate_origin_hash_tbl);
 		apply(access_valid_tbl); 
 		apply(access_dirty_tbl);
-		apply(update_vallen_tbl);
+		apply(access_savedseq_tbl);
 
-		// Stage 4
-		apply(access_gposvote_tbl);
-		apply(access_gnegvote_tbl);
-		apply(access_pposvote_tbl);
-		apply(access_pnegvote_tbl);
-
-		// Start from stage 5 (after keys, valid bits, and votes (occupying entire stage 4))
+		// Start from stage 4 (after keys and savedseq)
 		// NOTE: we just get/put val directly; we decide whether to put the original val in getres or 
 		// putreq in control flow
+		apply(update_vallen_tbl);
 		apply(update_vallo1_tbl);
 		apply(update_valhi1_tbl);
 		/*apply(update_vallo2_tbl);
@@ -210,6 +211,12 @@ control ingress {
 		apply(update_valhi15_tbl);
 		apply(update_vallo16_tbl);
 		apply(update_valhi16_tbl);*/
+
+		// Stage 4 + n (after keys and valid)
+		apply(access_gposvote_tbl);
+		apply(access_gnegvote_tbl);
+		apply(access_pposvote_tbl);
+		apply(access_pnegvote_tbl);
 
 		// Stage 5 + n, where n is the number of stages for values
 		// NOTE: it will change op_type from GETREQ/PUTREQ/DELREQ to
@@ -295,33 +302,6 @@ control ingress {
 			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 		}
 
-
-
-
-
-
-
-
-		else if (op_hdr.optype == PUTREQ_TYPE) {
-
-			apply(clone_putpkt_tbl); // sendback PUTRES
-			// NOTE: drop normal packet in ingress will not generate the cloned packet further (we need to set drop_ctl)
-			// Only PUTREQ_S (aka meta.isvalid = 1 for PUT), port_forward; if PUTREQ (aka meta.isvalid = 0), drop
-			apply(drop_put_tbl); 
-			// NOTE: we must set egress port for normal packet; otherwise it will be dropped
-			apply(port_forward_tbl);
-		}
-		else if (op_hdr.optype == SCANREQ_TYPE) {
-			// Stage 3/0
-			apply(send_scanpkt_tbl);
-			apply(port_forward_tbl);
-		}
-		else {
-			apply(port_forward_tbl);
-		}
-	}
-	else {
-		apply(port_forward_tbl);
 	}
 }
 

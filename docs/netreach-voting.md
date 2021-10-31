@@ -3,14 +3,17 @@
 ## In-switch eviction mechanism
 
 - For GETREQ/PUTREQ
-	+ hash -> match keys -> get valid/dirty bit and vallen -> update votes -> get/put values -> try response directly -> 
-	calculate vote diff -> access lock -> cache update decision -> port forward and hash partition
+	+ get seq for PUTREQ and hash -> match keys -> get valid/dirty bit, and access savedseq -> update vallen and get/put values 
+	(meta.canput = 2 for PUTREQ with matched key) -> update votes -> try response directly (still send PUTRES for PUTREQ 
+	with matched key even if canput = 0) -> calculate vote diff -> access lock -> cache update decision -> port forward and 
+	hash partition
 - For GETRES_S (for GETREQ_S which is cache update decision for GETREQ)
-	+ hash -> replace keys -> set valid bit as 1, dirty bit as 0, and set corresponding vallen -> reset votes as 0 -> put values ->
-	reset lock as 0 -> TODO: clone a packet as GETRES [update GETRES_S as PUTREQ_GS to server for eviction if necessary]
+	+ hash -> replace keys -> set valid bit as 1, dirty bit as 0, and reset savedseq -> set corresponding vallen and put values -> 
+	-> reset votes as 0 -> reset lock as 0 -> clone a packet as GETRES [update GETRES_S as PUTREQ_GS to server for eviction if necessary]
 - For PUTREQ_RU (for PUTREQ_U which is recirculation-based cache update for PUTREQ)
-	+ hash -> replace keys -> set valid bit as 1, dirty bit as 1, and set corresponding vallen -> reset votes as 0 -> put values ->
-	reeset lock as 0 -> clone a packet as PUTRES, and update PUTREQ_RU as PUTREQ_PS or PUTREQ_N to server for eviction or notification
+	+ hash -> replace keys -> set valid bit as 1, dirty bit as 1, and reset savedseq -> reset corresponding vallen and put values ->
+	-> reset votes as 0 -> reeset lock as 0 -> clone a packet as PUTRES, and update PUTREQ_RU as PUTREQ_PS or PUTREQ_N to server for 
+	eviction or notification
 
 ## Other notes
 
@@ -56,38 +59,64 @@
 				+ For GETREQ: sendback GETRES directly
 				+ For PUTREQ: sendback PUTRES directly
 					* If PUTREQ and key matches, we need to set dirty as 1 immediately
-						- TODO: we need to send a PUTREQ_N to update the cached keys in server
+						- We need to send a PUTREQ_N to update the cached keys in server
 					* NOTE: even if valid is 0, set dirty as 1 does not affect correctness
 						- In basic.p4, we need to use g/pposvote to calculate diff based on isdirty. However, if valid is 0, posvote
 						must be 0. So using gposvote or pposvote does not matter.
 						- In port_forward_tbl, we use dirty to decide whether we need to evict keys for GETRES_S. However, we do it only
 						if dirty is 1 and valid is 1. If valid is 0, we will never evicte keys for GETRES_S.
-						- TODO: Also, for PUTREQ_RU, we should convert PUTREQ_RU to PUTREQ_PS only if valid is 1 and dirty is 1
-				+ For DELREQ: update transferred packet as DELREQ_S and sendback DELRES by cloning (TODO 2: delete cached keys in server)
+						- Also, for PUTREQ_RU, we should convert PUTREQ_RU to PUTREQ_PS only if valid is 1 and dirty is 1
+				+ For DELREQ: update transferred packet as DELREQ_S and sendback DELRES by cloning (delete cached keys in server)
 		* Key does not match, and original lock bit = 0 && diff >= threshold -> trigger cache update
 			- For GETREQ (response-based update): update transferred packet as GETREQ_S (basic.p4, ingress_mat.p4, and configure/table_configure.py)
 				+ Server receives GETREQ_S and gives GETRES_S to switch (ycsb_server.c, packet_format.h, packet_format_impl.h)
 				+ Switch processes GETRES_S, updates it as PUTREQ_GS towards server, and clones a packet as GETRES to client (basic.p4, ingress_mat.p4, egress_mat.p4, and configure/table_configure.py)
-				+ TODO: server receives PUTREQ_GS to update key-value store and remove cached keys
+				+ Server receives PUTREQ_GS to update key-value store and remove cached keys
 			- For PUTREQ (recirculation-based update): update packet as PUTREQ_U for port_forward_tbl, and 
 			then update it as PUTREQ_RU and recirculate (ingress_mat.p4, and configure/table_configure.py)
 				+ For PUTREQ_RU, we need to update regs including keys, vals, votes, lock, valid, dirty, vallen, etc. (configure/table_configure.py)
 				+ For PUTREQ_RU, we convert it as PUTREQ_PS or PUTREQ_N in ingress pipeline and clone a PUTRES to client (basic.p4, ingress_mat.p4, egress_mat.p4, and configure.table_configure,py)
-				+ TODO: Server receives PUTREQ_N to update cached keys; Server receives PUTREQ_PS to update cached keys and key-value store (packet_format.h, packet_format_impl.h, ycsb_server.c)
-				+ TODO: For PUTRES,set udp port correspondingly
+				+ Server receives PUTREQ_N to update cached keys; Server receives PUTREQ_PS to update cached keys and key-value store (packet_format.h, packet_format_impl.h, ycsb_server.c)
+				+ For PUTRES,set udp port and udp hdr length correspondingly (egress_mat.p4 and configure/table_configure.py)
 				* TODO: We should set MAC addr according to optype
-				+ TODO 4: local sequence number
-		* TODO: Key does not match, and original lock bit = 0 && diff < threshold -> forward
-		* TODO: Key does not match, and original lock bit = 1 -> also recirculate
-		* TODO: We maintain a set of cached keys for each server thread; for scan, we simulate multiple packets in server-side by
-		split the request to multiple server threads by range partition
-			- TODO: support SCAN with as much latest data as possible
-			- TODO: support SCAN with a guarantee of some point-in-time?
+		* Key does not match (GETREQ/PUTREQ/DELREQ), and original lock bit = 0 && diff < threshold -> forward
+		* Key does not match (GETREQ/PUTREQ/DELREQ), and original lock bit = 1 -> also recirculate
+		* We maintain a set of cached keys for each server thread
+	+ Add in-switch local sequence number
+		* Change packet format (header.p4, parser.p4, packet_format.h, packet_format_impl.h)
+			- PUTREQ: <op_hdr, vallen, val, seq, is_assigned>
+			- PUTREQ_GS: <op_hdr, vallen, val, seq, is_assigned> (seq is useless)
+			- PUTREQ_N: <op_hdr, vallen, val, seq, is_assigned> (seq is useless)
+			- PUTREQ_PS: <op_hdr, evicted_key, vallen, val, seq, is_assigned> (seq is useless)
+			- GETRES: <op_hdr, vallen, val, seq, is_assigned> (seq is useless)
+			- Only in switch-side
+				- GETRES_S: <op_hdr, vallen, val, seq, is_assigned> (seq is useless)
+				- PUTREQ_U: <op_hdr, vallen, val, seq, is_assigned> (seq is useless)
+				- PUTREQ_RU: <op_hdr, vallen, val, seq, is_assigned> (seq is useless)
+		* Assign a local sequence number for PUTREQ whose is_assigned = 0 at Stage 0, and set is_assigned as 1
+		* Compare seq number before accessing val for PUTREQ with matched key and valid = 1 -> set meta.canput as 2 (predicate) 
+		if seq > saved_seq or saved_seq - seq == 0xFFFFFFFF
+			- If optype is GETRES_S or PUTREQ_RU, we reset savedseq
+		* For PUTREQ, only if key matches and meta.canput = 2 (we do not need to see whether it is valid, valid is only important for
+		sending back responses), we update the value
+			* NOTE: we drectly sendback PUTRES in try_res_tbl as long as key matches and valid = 1 even if meta.canput = 0
+	+ TODO: consider how to optimize the extra latency introduced by responsed-based cache update
+		* We can use a register array to save the key to be cached, only if the key does not match the cached key and the key to be 
+		cached, we need to recirculate it (extra latency for these requests)
+	+ TODO: if server does not have the key-value pair, generate a GETRES_NS to set the valid as 0
+	+ Support scan
+		- TODO: change scan from key+num to start_key+end_key
+		- TODO: get the key range of each server thread in loading phase
+		- TODO: simulate multiple packets in server-side by split the request to multiple server threads by range partition
+		- TODO: support SCAN with as much latest data as possible or SCAN with a guarantee of some point-in-time?
 	+ TODO: If req does not need to access backup data for SCAN, then we do not need RCU for backup data
+	+ TODO: For backup, we only need to remember the evicted data from PUTREQ_GS and PUTREQ_PS instead of PUTREQ_N in server
+	+ TODO: If we do not use recirculation-based range query, we do not need key coherence. For PUTREQ_PS, we only keep evicted data
+	instead of the new key; For PUTREQ_N, we drop the original packet by drop_put_tbl
+	+ TODO: set size of each table accordingly
 - TODO: For put req
-	+ If the entry is empty, we need to update the cache directly and notify the server (do not need to drop put_req, which becomes put_req_n; need to clone for put_res)
-	+ If the entry is not empty but key matches, we need to update value (need to drop original put req; need to clone for put_res)
-	+ If the entry is not emtpy and key does not match
+	+ If key matches, we need to update value (need to drop original put req; need to clone for put_res)
+	+ If key does not match
 		* If with cache update, we need to change pkt to put_req_u and update cache by recirculation
 			- If the original entry is not dirty, we still need to notify the server by changing pkt to put_req_n (do not need to drop put_req_u; need to clone for put_res)
 			- If it is dirty, we need to change pkt to put_req_s (a new key and evicted key-value pair) (do not need to drop put_req_s; need to clone for put_res)

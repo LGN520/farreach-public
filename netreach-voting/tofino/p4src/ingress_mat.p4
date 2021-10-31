@@ -403,6 +403,7 @@ action update_putreq_ru_to_ps_and_clone(sid, port) {
 	modify_field(evicted_key_hdr.keyhihihi, meta.origin_keyhihihi);
 
 	// Overwrite original vallen and val as evicted vallen and val
+	modify_field(vallen_hdr.vallen, meta.origin_vallen);
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
 	modify_field(val1_hdr.valhi, meta.origin_valhi1);
 	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);

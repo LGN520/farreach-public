@@ -61,6 +61,9 @@ class PutRequest : public Packet<key_t> {
 		virtual void deserialize(const char * data, uint32_t recv_size);
 	private:
 		val_t _val;
+		// Useless in server-side
+		uint32_t _seq;
+		uint8_t _is_assigned;
 };
 
 template<class key_t>
@@ -107,6 +110,9 @@ class GetResponse : public Packet<key_t> {
 		virtual void deserialize(const char * data, uint32_t recv_size);
 	private:
 		val_t _val;
+		// Useless in client-side
+		uint32_t _seq;
+		uint8_t _is_assigned;
 };
 
 template<class key_t>
@@ -168,13 +174,57 @@ class GetRequestS : public GetRequest<key_t> {
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
-template<class key_t, class val_t>
+// For hash-table-based eviction
+/*template<class key_t, class val_t>
 class PutRequestS : public PutRequest<key_t, val_t> {
 	public:
 		PutRequestS(uint8_t thread_id, key_t key, val_t val);
 		PutRequestS(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};*/
+
+template<class key_t, class val_t>
+class GetResponseS : public GetResponse<key_t, val_t> {
+	public:
+		GetResponseS(uint8_t thread_id, key_t key, val_t val);
+		GetResponseS(const char * data, uint32_t recv_size);
+
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestGS : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestGS(uint8_t thread_id, key_t key, val_t val);
+		PutRequestGS(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestN : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestN(uint8_t thread_id, key_t key, val_t val);
+		PutRequestN(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestPS : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestPS(uint8_t thread_id, key_t key, val_t val, key_t evicted_key);
+		PutRequestPS(const char * data, uint32_t recv_size);
+
+		key_t evicted_key();
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+	private:
+		key_t _evicted_key;
 };
 
 template<class key_t>
@@ -184,15 +234,6 @@ class DelRequestS : public DelRequest<key_t> {
 		DelRequestS(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class GetResponseS : public GetResponse<key_t, val_t> {
-	public:
-		GetResponseS(uint8_t thread_id, key_t key, val_t val);
-		GetResponseS(const char * data, uint32_t recv_size);
-
-		virtual void deserialize(const char * data, uint32_t recv_size);
 };
 
 // APIs

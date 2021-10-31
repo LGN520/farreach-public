@@ -48,6 +48,9 @@ typedef DelRequestS<index_key_t> del_request_s_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
+void prepare_dpdk();
+void prepare_receiver();
+
 void run_server(xindex_t *table);
 //void *run_sfg(void *param);
 void kill(int signum);
@@ -104,53 +107,17 @@ int main(int argc, char **argv) {
   xindex::init_options(); // init options of rocksdb
 
   // Prepare DPDK EAL param
-  int dpdk_argc = 3;
-  char **dpdk_argv;
-  dpdk_argv = new char *[dpdk_argc];
-  for (int i = 0; i < dpdk_argc; i++) {
-	dpdk_argv[i] = new char[20];
-	memset(dpdk_argv[i], '\0', 20);
-  }
-  std::string arg_proc = "./client";
-  std::string arg_iovamode = "--iova-mode";
-  std::string arg_iovamode_val = "pa";
-  //std::string arg_whitelist = "-w";
-  //std::string arg_whitelist_val = "0000:5e:00.1";
-  memcpy(dpdk_argv[0], arg_proc.c_str(), arg_proc.size());
-  memcpy(dpdk_argv[1], arg_iovamode.c_str(), arg_iovamode.size());
-  memcpy(dpdk_argv[2], arg_iovamode_val.c_str(), arg_iovamode_val.size());
-  //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
-  //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
-  rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
-  dpdk_init(&mbuf_pool, fg_n, 1);
+  prepare_dpdk();
 
   // Prepare pkts and stats for receiver (based on ring buffer)
-  //pkts = new volatile struct rte_mbuf*[fg_n];
-  //stats = new volatile bool[fg_n];
-  //memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
-  //memset((void *)stats, 0, sizeof(bool)*fg_n);
-  //for (size_t i = 0; i < fg_n; i++) {
-  //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
-  //}
-  pkts_list = new volatile struct rte_mbuf**[fg_n];
-  heads = new uint32_t[fg_n];
-  tails = new uint32_t[fg_n];
-  memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
-  memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
-  //int res = 0;
-  for (size_t i = 0; i < fg_n; i++) {
-	  pkts_list[i] = new volatile struct rte_mbuf*[MQ_SIZE];
-	  for (size_t j = 0; j < MQ_SIZE; j++) {
-		  pkts_list[i][j] = nullptr;
-	  }
-	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
-  }
+  prepare_receiver();
 
   // RCU for backup data (NOTE: necessary only if SCAN needs to access backup data)
   backup_rcu = new uint32_t[fg_n];
   memset((void *)backup_rcu, 0, fg_n * sizeof(uint32_t));
 
-  // TODO: prepare for per-server cached keys
+  // Prepare for per-server cached keys
+  cached_keys_list = new std::set<index_key_t>[fg_n];
 
   // prepare xindex
   xindex_t *tab_xi = new xindex_t(fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
@@ -256,6 +223,51 @@ inline void parse_args(int argc, char **argv) {
   COUT_VAR(xindex::config.buffer_size_bound);
   COUT_VAR(xindex::config.buffer_size_tolerance);
   COUT_VAR(xindex::config.buffer_compact_threshold);
+}
+
+void prepare_dpdk() {
+  int dpdk_argc = 3;
+  char **dpdk_argv;
+  dpdk_argv = new char *[dpdk_argc];
+  for (int i = 0; i < dpdk_argc; i++) {
+	dpdk_argv[i] = new char[20];
+	memset(dpdk_argv[i], '\0', 20);
+  }
+  std::string arg_proc = "./client";
+  std::string arg_iovamode = "--iova-mode";
+  std::string arg_iovamode_val = "pa";
+  //std::string arg_whitelist = "-w";
+  //std::string arg_whitelist_val = "0000:5e:00.1";
+  memcpy(dpdk_argv[0], arg_proc.c_str(), arg_proc.size());
+  memcpy(dpdk_argv[1], arg_iovamode.c_str(), arg_iovamode.size());
+  memcpy(dpdk_argv[2], arg_iovamode_val.c_str(), arg_iovamode_val.size());
+  //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
+  //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
+  rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
+  dpdk_init(&mbuf_pool, fg_n, 1);
+}
+
+void prepare_receiver() {
+  //pkts = new volatile struct rte_mbuf*[fg_n];
+  //stats = new volatile bool[fg_n];
+  //memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
+  //memset((void *)stats, 0, sizeof(bool)*fg_n);
+  //for (size_t i = 0; i < fg_n; i++) {
+  //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
+  //}
+  pkts_list = new volatile struct rte_mbuf**[fg_n];
+  heads = new uint32_t[fg_n];
+  tails = new uint32_t[fg_n];
+  memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
+  memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
+  //int res = 0;
+  for (size_t i = 0; i < fg_n; i++) {
+	  pkts_list[i] = new volatile struct rte_mbuf*[MQ_SIZE];
+	  for (size_t j = 0; j < MQ_SIZE; j++) {
+		  pkts_list[i][j] = nullptr;
+	  }
+	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
+  }
 }
 
 void run_server(xindex_t *table) {
@@ -812,23 +824,43 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::PUT_REQ_GS:
 				{
-					// TODO: update key-value store and delete cached keys
+					// Put evicted data into key-value store and delete evicted key from cached keys
+					put_request_gs_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					cached_keys_list[thread_id].erase(req.key());
+					break;
 				}
 			case packet_type::PUT_REQ_N:
 				{
-					// TODO: update cached keys
+					// Insert new key into cached keys
+					// Although it contains both key and value, we only need to store the key into cached set
+					// The value is stored and updated in switch
+					put_request_n_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					cached_keys_list[thread_id].insert(req.key());
+					break;
 				}
 			case packet_type_t::PUT_REQ_PS:
 				{
-					// TODO: update key-value store and update cached keys
+					// Put evicted data into key-value store, and put new key into cached keys and delete evicted key from cached keys
+					put_request_ps_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string() << " evicted val = " 
+					//		<< req.val().to_string() << "evicted key = " << req.evicted_key().to_string())
+					bool tmp_stat = table->put(req.evicted_key(), req.val(), req.thread_id());
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					cached_keys_list[thread_id].erase(req.evicted_key());
+					cached_keys_list[thread_id].insert(req.key());
 				}
 			case packet_type_t::DEL_REQ_S:
 				{
+					// Delete data from key-value storen and delete key from cached keys if any
 					del_request_s_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
-					// TODO: delete cached keys if any
+					cached_keyst_list[thread_id].erase(req.key());
 					break;
 				}
 			default:
@@ -837,6 +869,15 @@ static int run_sfg(void * param) {
 					std::cout << std::flush;
 					exit(-1);
 				}
+			// For hash-table-based eviction
+			/*case packet_type_t::PUT_REQ_S:
+				{
+					put_request_s_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					break;
+				}*/
 		}
 		backup_rcu[thread_id]++;
 
