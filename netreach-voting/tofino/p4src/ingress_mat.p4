@@ -29,6 +29,14 @@ action calculate_hash() {
 	// modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT - ipv4_hdr.totalLen);
 }
 
+table calculate_hash_tbl {
+	actions {
+		calculate_hash;
+	}
+	default_action: calculate_hash();
+	size: 1;
+}
+
 field_list origin_hash_fields {
 	meta.origin_keylololo;
 	meta.origin_keylolohi;
@@ -290,6 +298,10 @@ table update_putreq_tbl {
 		meta.islock: exact;
 		op_hdr.optype: exact;
 	}
+	actions {
+		update_putreq;
+	}
+	size: 1;
 }
 
 // Last Stage of ingress pipeline
@@ -371,13 +383,13 @@ action update_getres_s_and_clone(sid, port) {
 }
 
 action update_putreq_ru_to_n_and_clone(sid, port) {
-	modify_field(op_hdr.optye, PUTREQ_N_TYPE);
+	modify_field(op_hdr.optype, PUTREQ_N_TYPE);
 
 	// We do not remove header fields of value here
 	// Server only needs to save the key into cached set
 
 	// Forward PUTREQ_N to server
-	modify_field(ig_intr_md_for_tm.ucase_egress_port, port);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 
 	// Clone a packet for PUTRES to client
 	modify_field(meta.is_clone, CLONE_FOR_PUTRES);
@@ -385,7 +397,7 @@ action update_putreq_ru_to_n_and_clone(sid, port) {
 }
 
 action update_putreq_ru_to_ps_and_clone(sid, port) {
-	modify_field(op_hdr.optye, PUTREQ_PS_TYPE);
+	modify_field(op_hdr.optype, PUTREQ_PS_TYPE);
 
 	// Format: original key (op_hdr) - evicted key - evicted vallen - evicted val
 
@@ -439,7 +451,7 @@ action update_putreq_ru_to_ps_and_clone(sid, port) {
 	modify_field(val16_hdr.valhi, meta.origin_valhi16);*/
 
 	// Forward PUTREQ_PS to server
-	modify_field(ig_intr_md_for_tm.ucase_egress_port, port);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 
 	// Clone a packet for PUTRES to client
 	modify_field(meta.is_clone, CLONE_FOR_PUTRES);
@@ -469,8 +481,8 @@ table port_forward_tbl {
 		meta.islock: exact;
 	}
 	actions {
-		update_gelres_s;
-		update_gelres_s_and_clone;
+		update_getres_s;
+		update_getres_s_and_clone;
 		update_putreq_ru_to_n_and_clone;
 		update_putreq_ru_to_ps_and_clone;
 		recirculate_putreq_u;

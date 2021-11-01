@@ -64,6 +64,7 @@
 #include "p4src/parser.p4"
 
 #include "p4src/regs/seq.p4"
+#include "p4src/regs/lock.p4"
 
 // registers and MATs related with 16B key
 #include "p4src/regs/key.p4"
@@ -281,7 +282,7 @@ control ingress {
 
 		// (1) For GETRES_S, only if valid = 1 and dirty = 1. we convert it as PUTREQ_GS and forward to 
 		// server, ans also clone a packet for GETRES to client; otherwise, we convert it as GETRES and
-		forward it as usual
+		// forward it as usual
 		// (2) For GETRES_NS, directly convert it as GETRES and forward it as usual
 		// (3) For PUTREQ_U, we convert it as PUTREQ_RU and recirculate it to update cache
 		// (4) For PUTREQ_RU, we convert it as PUTREQ_N or PUTREQ_PS (only if valid = 1 and dirty = 1) 

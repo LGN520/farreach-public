@@ -3,7 +3,7 @@ register gposvote_reg {
 	instance_count: KV_BUCKET_COUNT;
 }
 
-blackbox get_gposvote_alu {
+blackbox stateful_alu get_gposvote_alu {
 	reg: gposvote_reg;
 
 	update_lo_1_value: register_lo;
@@ -16,7 +16,7 @@ action get_gposvote() {
 	get_gposvote_alu.execute_stateful_alu(meta.hashidx);
 }
 
-blackbox increase_gposvote_alu {
+blackbox stateful_alu increase_gposvote_alu {
 	reg: gposvote_reg;
 
 	update_lo_1_value: register_lo + 1;
@@ -29,7 +29,7 @@ action increase_gposvote() {
 	increase_gposvote_alu.execute_stateful_alu(meta.hashidx);
 }
 
-blackbox reset_gposvote_alu {
+blackbox stateful_alu reset_gposvote_alu {
 	reg: gposvote_reg;
 
 	update_lo_1_value: 0;
@@ -38,7 +38,11 @@ blackbox reset_gposvote_alu {
 	output_dst: meta.gposvote;
 }
 
-table access_gposvote_alu {
+action reset_gposvote() {
+	reset_gposvote_alu.execute_stateful_alu(meta.hashidx);
+}
+
+table access_gposvote_tbl {
 	reads {
 		meta.isvalid: exact;
 		op_hdr.optype: exact;
@@ -56,7 +60,7 @@ table access_gposvote_alu {
 		increase_gposvote;
 		reset_gposvote;
 	}
-	default_action = get_gposvote();
+	default_action: get_gposvote();
 	size: 2048;
 }
 
@@ -65,7 +69,7 @@ register gnegvote_reg {
 	instance_count: KV_BUCKET_COUNT;
 }
 
-blackbox get_gnegvote_alu {
+blackbox stateful_alu get_gnegvote_alu {
 	reg: gnegvote_reg;
 
 	update_lo_1_value: register_lo;
@@ -78,7 +82,7 @@ action get_gnegvote() {
 	get_gnegvote_alu.execute_stateful_alu(meta.hashidx);
 }
 
-blackbox increase_gnegvote_alu {
+blackbox stateful_alu increase_gnegvote_alu {
 	reg: gnegvote_reg;
 
 	update_lo_1_value: register_lo + 1;
@@ -91,7 +95,7 @@ action increase_gnegvote() {
 	increase_gnegvote_alu.execute_stateful_alu(meta.hashidx);
 }
 
-blackbox reset_gnegvote_alu {
+blackbox stateful_alu reset_gnegvote_alu {
 	reg: gnegvote_reg;
 
 	update_lo_1_value: 0;
@@ -100,7 +104,11 @@ blackbox reset_gnegvote_alu {
 	output_dst: meta.gnegvote;
 }
 
-table access_gnegvote_alu {
+action reset_gnegvote() {
+	reset_gnegvote_alu.execute_stateful_alu(meta.hashidx);
+}
+
+table access_gnegvote_tbl {
 	reads {
 		meta.isvalid: exact;
 		op_hdr.optype: exact;
@@ -127,7 +135,7 @@ register pposvote_reg {
 	instance_count: KV_BUCKET_COUNT;
 }
 
-blackbox increase_pposvote_alu {
+blackbox stateful_alu increase_pposvote_alu {
 	reg: pposvote_reg;
 
 	update_lo_1_value: register_lo + 1;
@@ -136,7 +144,7 @@ blackbox increase_pposvote_alu {
 	output_dst: meta.pposvote;
 }
 
-blackbox get_pposvote_alu {
+blackbox stateful_alu get_pposvote_alu {
 	reg: pposvote_reg;
 
 	update_lo_1_value: register_lo;
@@ -153,7 +161,7 @@ action increase_pposvote() {
 	increase_pposvote_alu.execute_stateful_alu(meta.hashidx);
 }
 
-blackbox reset_pposvote_alu {
+blackbox stateful_alu reset_pposvote_alu {
 	reg: pposvote_reg;
 
 	update_lo_1_value: 0;
@@ -162,7 +170,11 @@ blackbox reset_pposvote_alu {
 	output_dst: meta.pposvote;
 }
 
-table access_pposvote_alu {
+action reset_pposvote() {
+	reset_pposvote_alu.execute_stateful_alu(meta.hashidx);
+}
+
+table access_pposvote_tbl {
 	reads {
 		meta.isvalid: exact;
 		op_hdr.optype: exact;
@@ -189,7 +201,7 @@ register pnegvote_reg {
 	instance_count: KV_BUCKET_COUNT;
 }
 
-blackbox get_pnegvote_alu {
+blackbox stateful_alu get_pnegvote_alu {
 	reg: pnegvote_reg;
 
 	update_lo_1_value: register_lo;
@@ -202,7 +214,7 @@ action get_pnegvote() {
 	get_pnegvote_alu.execute_stateful_alu(meta.hashidx);
 }
 
-blackbox increase_pnegvote_alu {
+blackbox stateful_alu increase_pnegvote_alu {
 	reg: pnegvote_reg;
 
 	update_lo_1_value: register_lo + 1;
@@ -215,7 +227,7 @@ action increase_pnegvote() {
 	increase_pnegvote_alu.execute_stateful_alu(meta.hashidx);
 }
 
-blackbox reset_pnegvote_alu {
+blackbox stateful_alu reset_pnegvote_alu {
 	reg: pnegvote_reg;
 
 	update_lo_1_value: 0;
@@ -224,7 +236,11 @@ blackbox reset_pnegvote_alu {
 	output_dst: meta.pnegvote;
 }
 
-table access_pnegvote_alu {
+action reset_pnegvote() {
+	reset_pnegvote_alu.execute_stateful_alu(meta.hashidx);
+}
+
+table access_pnegvote_tbl {
 	reads {
 		meta.isvalid: exact;
 		op_hdr.optype: exact;

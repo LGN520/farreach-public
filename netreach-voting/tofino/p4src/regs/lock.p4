@@ -6,14 +6,14 @@ register lock_reg {
 blackbox stateful_alu try_glock_alu {
 	reg: lock_reg;
 
-	condition_lo: meta.vote_diff >= meta.gthreshold
+	condition_lo: meta.vote_diff >= meta.gthreshold;
 
 	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: set_bit;
 	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: read_bit;
+	update_lo_2_value: register_lo; // read_bit
 
-	output_value: alu_lo;
+	output_value: register_lo; // alu_lo
 	output_dst: meta.islock;
 }
 
@@ -24,14 +24,14 @@ action try_glock() {
 blackbox stateful_alu try_plock_alu {
 	reg: lock_reg;
 
-	condition_lo: meta.vote_diff >= meta.pthreshold
+	condition_lo: meta.vote_diff >= meta.pthreshold;
 
 	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: set_bit;
 	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: read_bit;
+	update_lo_2_value: register_lo; // read_bit
 
-	output_value: alu_lo;
+	output_value: register_lo; // alu_lo
 	output_dst: meta.islock;
 }
 

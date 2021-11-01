@@ -2,7 +2,7 @@ import time
 import signal, os
 
 running = True
-cmd = "$SDE/run_p4_tests.sh -p netbuffer -t /home/ssy/NetBuffer/netreach/tofino/reportkv/ --target hw --setup"
+cmd = "$SDE/run_p4_tests.sh -p netbuffer -t /home/ssy/NetBuffer/netreach-voting/tofino/reportkv/ --target hw --setup"
 
 def handler(signum, frame):
     global running
