@@ -3,40 +3,18 @@ register lock_reg {
 	instance_count: KV_BUCKET_COUNT;
 }
 
-blackbox stateful_alu try_glock_alu {
+blackbox stateful_alu try_lock_alu {
 	reg: lock_reg;
-
-	condition_lo: meta.vote_diff >= meta.gthreshold;
 
 	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: set_bit;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: register_lo; // read_bit
 
-	output_value: register_lo; // alu_lo
+	output_value: alu_lo;
 	output_dst: meta.islock;
 }
 
-action try_glock() {
-	try_glock_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu try_plock_alu {
-	reg: lock_reg;
-
-	condition_lo: meta.vote_diff >= meta.pthreshold;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: set_bit;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: register_lo; // read_bit
-
-	output_value: register_lo; // alu_lo
-	output_dst: meta.islock;
-}
-
-action try_plock() {
-	try_plock_alu.execute_stateful_alu(meta.hashidx);
+action try_lock() {
+	try_lock_alu.execute_stateful_alu(meta.hashidx);
 }
 
 blackbox stateful_alu clear_lock_alu {
@@ -54,14 +32,13 @@ action clear_lock() {
 
 table access_lock_tbl {
 	reads {
-		op_hdr.optype: exact;
+		meta.isevict: exact;
 	}
 	actions {
-		try_glock;
-		try_plock;
+		try_lock;
 		clear_lock;
 		nop;
 	}
 	default_action: nop();
-	size: 2048;
+	size: 2;
 }

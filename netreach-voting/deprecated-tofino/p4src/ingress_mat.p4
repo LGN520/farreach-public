@@ -82,6 +82,28 @@ table save_info_tbl {
 	size: 1;
 }
 
+action load_gthreshold(threshold) {
+	modify_field(meta.gthreshold, threshold);
+}
+
+table load_gthreshold_tbl {
+	actions {
+		load_gthreshold;
+	}
+	size: 1;
+}
+
+action load_pthreshold(threshold) {
+	modify_field(meta.pthreshold, threshold);
+}
+
+table load_pthreshold_tbl {
+	actions {
+		load_pthreshold;
+	}
+	size: 1;
+}
+
 // Stage 5 + n
 
 action sendback_getres() {
@@ -212,27 +234,74 @@ table try_res_tbl {
 	size: 8;
 }
 
-// Stage 5+n + 2
+// Stage 5+n + 1
+
+action gneg_ppos_diff() {
+	subtract(meta.vote_diff, meta.gnegvote, meta.pposvote);
+}
+
+action pneg_ppos_diff() {
+	subtract(meta.vote_diff, meta.pnegvote, meta.pposvote);
+}
+
+action gneg_gpos_diff() {
+	subtract(meta.vote_diff, meta.gnegvote, meta.gposvote);
+}
+
+action pneg_gpos_diff() {
+	subtract(meta.vote_diff, meta.pnegvote, meta.gposvote);
+}
+
+action default_diff() {
+	modify_field(meta.vote_diff, 0);
+}
+
+table calculate_diff_tbl {
+	reads {
+		meta.isdirty: exact;
+		op_hdr.optype: exact;
+	}
+	actions {
+		gneg_ppos_diff;
+		pneg_ppos_diff;
+		gneg_gpos_diff;
+		pneg_gpos_diff;
+		default_diff;
+	}
+	default_action: default_diff();
+	size: 4;
+}
+
+// Stage 5+n + 3
 
 action update_getreq() {
 	modify_field(op_hdr.optype, GETREQ_S_TYPE);
+}
+
+table update_getreq_tbl {
+	reads {
+		meta.islock: exact;
+		op_hdr.optype: exact;
+	}
+	actions {
+		update_getreq;
+	}
+	size: 1024;
 }
 
 action update_putreq() {
 	modify_field(op_hdr.optype, PUTREQ_U_TYPE);
 }
 
-table trigger_cache_update_tbl {
+table update_putreq_tbl {
 	reads {
 		meta.islock: exact;
 		op_hdr.optype: exact;
-		meta.isevict: exact;
 	}
 	actions {
-		update_getreq;
 		update_putreq;
 	}
-	size: 2;
+	size: 1;
 }
 
 // Last Stage of ingress pipeline

@@ -96,6 +96,8 @@ header_type metadata_t {
 		origin_hashidx: 16;
 		tmp_sport: 16;
 		tmp_dport: 16;
+		gthreshold: 16;
+		pthreshold: 16;
 		ismatch_keylololo: 4; // predicate 
 		ismatch_keylolohi: 4; // predicate 
 		ismatch_keylohilo: 4; // predicate 
@@ -114,7 +116,7 @@ header_type metadata_t {
 		origin_keyhihihi: 16;
 		isvalid: 1;
 		isdirty: 1;
-		canput: 4; // predicate for seq
+		canput: 4; // predicate
 		origin_vallen: 8;
 		origin_vallo1: 32;
 		origin_valhi1: 32;
@@ -148,6 +150,11 @@ header_type metadata_t {
 		origin_valhi15: 32;
 		origin_vallo16: 32;
 		origin_valhi16: 32;*/
+		gposvote: 16;
+		gnegvote: 16;
+		pposvote: 16;
+		pnegvote: 16;
+		vote_diff: 16;
 		islock: 1;
 		/*isfuture_valid: 1;
 		ismatch_future_keylololo: 4; // predicate 

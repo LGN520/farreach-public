@@ -1,5 +1,14 @@
 # Tofino-based NetREACH (voting-based) + DPDK-based XIndex with persistence + variable-length key-value pair (netreach)
 
+## Important changes
+
+- Change threshold voting into major voting
+	+ Remove load_gthreshold_tbl and load_pthreshold_tbl
+	+ Remove gposvote, gnegvote, pposvote, and pnegvote; add vote
+	+ Remove try_glock and try_plock; add try_lock
+	+ Remove diff calculation between pos vote and neg vote
+	+ Remove update_getreq_tbl and update_putreq_tbl; add trigger_cache_update_tbl
+
 ## In-switch eviction mechanism
 
 - For GETREQ/PUTREQ

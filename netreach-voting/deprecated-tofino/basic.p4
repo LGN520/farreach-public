@@ -155,6 +155,8 @@ control ingress {
 		// Stage 0
 		apply(calculate_hash_tbl);
 		apply(save_info_tbl);
+		apply(load_gthreshold_tbl);
+		apply(load_pthreshold_tbl);
 		apply(assign_seq_tbl);
 
 		// Stage 1 and 2
@@ -172,7 +174,7 @@ control ingress {
 		// NOTE: we put valid_reg in stage 3 to support DEL operation
 		apply(calculate_origin_hash_tbl);
 		apply(access_valid_tbl); 
-		apply(access_dirty_tbl); // we need dirty to decide whether to evict when cache update
+		apply(access_dirty_tbl);
 		apply(access_savedseq_tbl);
 
 		// Start from stage 4 (after keys and savedseq)
@@ -213,7 +215,10 @@ control ingress {
 		apply(update_valhi16_tbl);*/
 
 		// Stage 4 + n (after keys and valid)
-		apply(access_vote_tbl);
+		apply(access_gposvote_tbl);
+		apply(access_gnegvote_tbl);
+		apply(access_pposvote_tbl);
+		apply(access_pnegvote_tbl);
 
 		// Stage 5 + n, where n is the number of stages for values
 		// NOTE: it will change op_type from GETREQ/PUTREQ/DELREQ to
@@ -223,16 +228,57 @@ control ingress {
 		// port_forward_tbl will forward it as usual.
 		apply(try_res_tbl);
 
+
 		// NOTE: if packet arriving here is still GETREQ/PUTREQ/DELREQ,
 		// it means that valid is 0, or valid is 1 yet key does not match.
 		// So we do not need to compare whether key matches for the following
 		// tables.
 
 		// Stage 5+n + 1
+		// Do preliminary decision
+		if (meta.isdirty == 1) {
+			if (op_hdr.optype == GETREQ_TYPE) {
+				if (meta.gnegvote > meta.pposvote) {
+					apply(calculate_diff_tbl);
+				}
+			}
+			else if (op_hdr.optype == PUTREQ_TYPE) {
+				if (meta.pnegvote > meta.pposvote) {
+					apply(calculate_diff_tbl);
+				}
+			}
+		}
+		else {
+			if (op_hdr.optype == GETREQ_TYPE) {
+				if (meta.gnegvote > meta.gposvote) {
+					apply(calculate_diff_tbl);
+				}
+			}
+			else if (op_hdr.optype == PUTREQ_TYPE) {
+				if (meta.pnegvote > meta.gposvote) {
+					apply(calculate_diff_tbl);
+				}
+			}
+		}
+
+		// Stage 5+n + 2
 		apply(access_lock_tbl);
 
-		// Stage 5+n + 2 (trigger cache update)
-		apply(trigger_cache_update_tbl);
+		// Stage 5+n + 3 (trigger cache update)
+		if (meta.islock == 0) {
+			if (op_hdr.optype == GETREQ_TYPE) {
+				if (meta.vote_diff >= meta.gthreshold) {
+					// Generate get_req_s for cache update
+					apply(update_getreq_tbl);
+				}
+			}
+			else if (op_hdr.optype == PUTREQ_TYPE) {
+				if (meta.vote_diff >= meta.pthreshold) {
+					// Generate put_req_u for cache update
+					apply(update_putreq_tbl);
+				}
+			}
+		}
 
 		// (1) For GETRES_S, only if valid = 1 and dirty = 1. we convert it as PUTREQ_GS and forward to 
 		// server, ans also clone a packet for GETRES to client; otherwise, we convert it as GETRES and
