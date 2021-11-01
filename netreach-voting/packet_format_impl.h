@@ -522,7 +522,7 @@ template<class key_t>
 GetRequestS<key_t>::GetRequestS(uint8_t thread_id, key_t key)
 	: GetRequest<key_t>::GetRequest(thread_id, key)
 {
-	this->_type = PacketType::GET_REQ_S;
+	this->_type = static_cast<uint8_t>(PacketType::GET_REQ_S);
 }
 
 template<class key_t>
@@ -533,7 +533,7 @@ GetRequestS<key_t>::GetRequestS(const char *data, uint32_t recv_size)
 }
 
 template<class key_t>
-GetRequestS<key_t>::serialize(char * const data, uint32_t max_size)
+uint32_t GetRequestS<key_t>::serialize(char * const data, uint32_t max_size)
 {
 	COUT_N_EXIT("Invalid invoke of serialize for GetReqestS");
 }
@@ -544,7 +544,7 @@ template<class key_t>
 DelRequestS<key_t>::DelRequestS(uint8_t thread_id, key_t key) 
 	: DelRequest<key_t>::DelRequest(thread_id, key)
 {	
-	this->_type = PacketType::DEL_REQ_S;
+	this->_type = static_cast<uint8_t>(PacketType::DEL_REQ_S);
 }
 
 template<class key_t>
@@ -562,13 +562,13 @@ uint32_t DelRequestS<key_t>::serialize(char * const data, uint32_t max_size) {
 
 template<class key_t, class val_t>
 GetResponseS<key_t, val_t>::GetResponseS(uint8_t thread_id, key_t key, val_t val)
-	: GetResponse(thread_id, key, val)
+	: GetResponse<key_t, val_t>(thread_id, key, val)
 {
-	this->_type = PacketType::GET_RES_S;
+	this->_type = static_cast<uint8_t>(PacketType::GET_RES_S);
 }
 
 template<class key_t, class val_t>
-GetResponseS<key_t, val_t>::GetResponseS(char * const data, uint32_t max_size) {
+GetResponseS<key_t, val_t>::GetResponseS(const char *data, uint32_t max_size) {
 	COUT_N_EXIT("Invalid invoke of GetResponseS(char * const data, uint32_t max_size)");
 }
 
@@ -581,13 +581,13 @@ void GetResponseS<key_t, val_t>::deserialize(const char *data, uint32_t recv_siz
 
 template<class key_t, class val_t>
 GetResponseNS<key_t, val_t>::GetResponseNS(uint8_t thread_id, key_t key, val_t val)
-	: GetResponse(thread_id, key, val)
+	: GetResponse<key_t, val_t>(thread_id, key, val)
 {
-	this->_type = PacketType::GET_RES_NS;
+	this->_type = static_cast<uint8_t>(PacketType::GET_RES_NS);
 }
 
 template<class key_t, class val_t>
-GetResponseNS<key_t, val_t>::GetResponseNS(char * const data, uint32_t max_size) {
+GetResponseNS<key_t, val_t>::GetResponseNS(const char * data, uint32_t max_size) {
 	COUT_N_EXIT("Invalid invoke of GetResponseNS(char * const data, uint32_t max_size)");
 }
 
@@ -602,7 +602,7 @@ template<class key_t, class val_t>
 PutRequestGS<key_t, val_t>::PutRequestGS(uint8_t thread_id, key_t key, val_t val) 
 	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
 {	
-	this->_type = PacketType::PUT_REQ_GS;
+	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_GS);
 }
 
 template<class key_t, class val_t>
@@ -622,7 +622,7 @@ template<class key_t, class val_t>
 PutRequestN<key_t, val_t>::PutRequestN(uint8_t thread_id, key_t key, val_t val) 
 	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
 {	
-	this->_type = PacketType::PUT_REQ_N;
+	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_N);
 }
 
 template<class key_t, class val_t>
@@ -642,7 +642,7 @@ template<class key_t, class val_t>
 PutRequestPS<key_t, val_t>::PutRequestPS(uint8_t thread_id, key_t key, val_t val, key_t evicted_key) 
 	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
 {	
-	this->_type = PacketType::PUT_REQ_PS;
+	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_PS);
 	this->_evicted_key = evicted_key;
 }
 
@@ -653,7 +653,7 @@ PutRequestPS<key_t, val_t>::PutRequestPS(const char * data, uint32_t recv_size) 
 }
 
 template<class key_t, class val_t>
-PutRequestPS<key_t, val_t>::evicted_key() {
+key_t PutRequestPS<key_t, val_t>::evicted_key() {
 	return this->_evicted_key;
 }
 
@@ -677,7 +677,7 @@ void PutRequestPS<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
-	begin += sizeof(key_t)
+	begin += sizeof(key_t);
 	memcpy((void *)&this->_evicted_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
 	this->_val.deserialize(begin);

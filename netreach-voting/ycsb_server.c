@@ -45,12 +45,12 @@ typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
 //typedef PutRequestS<index_key_t, val_t> put_request_s_t;
 typedef GetRequestS<index_key_t> get_request_s_t;
-typedef PutRequestGS<index_key_t> put_request_gs_t;
-typedef PutRequestN<index_key_t> put_request_n_t;
-typedef PutRequestPS<index_key_t> put_request_ps_t;
+typedef PutRequestGS<index_key_t, val_t> put_request_gs_t;
+typedef PutRequestN<index_key_t, val_t> put_request_n_t;
+typedef PutRequestPS<index_key_t, val_t> put_request_ps_t;
 typedef DelRequestS<index_key_t> del_request_s_t;
-typedef GetResponseS<index_key_t> get_response_s_t;
-typedef GetResponseNS<index_key_t> get_response_ns_t;
+typedef GetResponseS<index_key_t, val_t> get_response_s_t;
+typedef GetResponseNS<index_key_t, val_t> get_response_ns_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -845,7 +845,7 @@ static int run_sfg(void * param) {
 					cached_keys_list[thread_id].erase(req.key());
 					break;
 				}
-			case packet_type::PUT_REQ_N:
+			case packet_type_t::PUT_REQ_N:
 				{
 					// Insert new key into cached keys
 					// Although it contains both key and value, we only need to store the key into cached set
@@ -873,7 +873,7 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
-					cached_keyst_list[thread_id].erase(req.key());
+					cached_keys_list[thread_id].erase(req.key());
 					break;
 				}
 			default:

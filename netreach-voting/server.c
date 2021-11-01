@@ -42,7 +42,7 @@ typedef GetResponse<index_key_t, val_t> get_response_t;
 typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
-typedef PutRequestS<index_key_t, val_t> put_request_s_t;
+//typedef PutRequestS<index_key_t, val_t> put_request_s_t;
 typedef DelRequestS<index_key_t> del_request_s_t;
 
 inline void parse_ini(const char * config_file);
@@ -832,14 +832,14 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::PUT_REQ_S:
+			/*case packet_type_t::PUT_REQ_S:
 				{
 					put_request_s_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
-				}
+				}*/
 			case packet_type_t::DEL_REQ_S:
 				{
 					del_request_s_t req(buf, recv_size);

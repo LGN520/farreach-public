@@ -59,7 +59,6 @@ class PutRequest : public Packet<key_t> {
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-	private:
 		val_t _val;
 		// Useless in server-side
 		uint32_t _seq;
