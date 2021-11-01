@@ -64,3 +64,62 @@ table access_valid_tbl {
 	default_action: get_valid();
 	size: 2048;
 }
+
+// Optimization for recirculation
+
+/*register future_valid_reg {
+	width: 1;
+	instance_count: KV_BUCKET_COUNT;
+}
+
+blackbox stateful_alu get_future_valid_alu {
+	reg: future_valid_reg;
+
+	update_lo_1_value: read_bit;
+
+	output_value: alu_lo;
+	output_dst: meta.isfuture_valid;
+}
+
+action get_future_valid() {
+	get_future_valid_alu.execute_stateful_alu(meta.hashidx);
+}
+
+blackbox stateful_alu set_future_valid_alu {
+	reg: future_valid_reg;
+
+	update_lo_1_value: set_bit;
+
+	output_value: alu_lo;
+	output_dst: meta.isfuture_valid;
+}
+
+action set_future_valid() {
+	set_future_valid_alu.execute_stateful_alu(meta.hashidx);
+}
+
+blackbox stateful_alu clear_future_valid_alu {
+	reg: future_valid_reg;
+
+	update_lo_1_value: clr_bit;
+
+	output_value: alu_lo;
+	output_dst: meta.isfuture_valid;
+}
+
+action clear_future_valid() {
+	clear_future_valid_alu.execute_stateful_alu(meta.hashidx);
+}
+
+table access_future_valid_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		get_future_valid;
+		set_future_valid;
+		clear_future_valid;
+	}
+	default_action: get_future_valid();
+	size: 2048;
+}*/

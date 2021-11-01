@@ -106,15 +106,6 @@ header_type metadata_t {
 		ismatch_keyhilohi: 4; // predicate
 		ismatch_keyhihilo: 4; // predicate
 		ismatch_keyhihihi: 4; // predicate
-		isvalid: 1;
-		isdirty: 1;
-		origin_vallen: 8;
-		gposvote: 16;
-		gnegvote: 16;
-		pposvote: 16;
-		pnegvote: 16;
-		vote_diff: 16;
-		islock: 1;
 		origin_keylololo: 16;
 		origin_keylolohi: 16;
 		origin_keylohilo: 16;
@@ -123,7 +114,10 @@ header_type metadata_t {
 		origin_keyhilohi: 16;
 		origin_keyhihilo: 16;
 		origin_keyhihihi: 16;
+		isvalid: 1;
+		isdirty: 1;
 		canput: 4; // predicate
+		origin_vallen: 8;
 		origin_vallo1: 32;
 		origin_valhi1: 32;
 		/*origin_vallo2: 32;
@@ -156,6 +150,21 @@ header_type metadata_t {
 		origin_valhi15: 32;
 		origin_vallo16: 32;
 		origin_valhi16: 32;*/
+		gposvote: 16;
+		gnegvote: 16;
+		pposvote: 16;
+		pnegvote: 16;
+		vote_diff: 16;
+		islock: 1;
+		/*isfuture_valid: 1;
+		ismatch_future_keylololo: 4; // predicate 
+		ismatch_future_keylolohi: 4; // predicate 
+		ismatch_future_keylohilo: 4; // predicate 
+		ismatch_future_keylohihi: 4; // predicate 
+		ismatch_future_keyhilolo: 4; // predicate
+		ismatch_future_keyhilohi: 4; // predicate
+		ismatch_future_keyhihilo: 4; // predicate
+		ismatch_future_keyhihihi: 4; // predicate*/
 		is_clone: 2;
 	}
 }

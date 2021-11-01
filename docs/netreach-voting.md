@@ -104,9 +104,12 @@
 		* For PUTREQ, only if key matches and meta.canput = 2 (we do not need to see whether it is valid, valid is only important for
 		sending back responses), we update the value
 			* NOTE: we drectly sendback PUTRES in try_res_tbl as long as key matches and valid = 1 even if meta.canput = 0
-	+ TODO: consider how to optimize the extra latency introduced by responsed-based cache update
+	+ TODO: Consider how to optimize the extra latency introduced by responsed-based cache update
 		* We can use a register array to save the key to be cached, only if the key does not match the cached key and the key to be 
 		cached, we need to recirculate it (extra latency for these requests)
+		* Add future_valid and future_keys (valid.p4, key.p4)
+		* TODO: update metadata
+		* NOTE: do it after compile -> get current resource usage
 	+ If server does not have the key-value pair for GETREQ_S, generate a GETRES_NS to set the valid as 0 
 	(configure/table_configure.py, packet_format.h, packet_format_impl.h, ycsb_server.c)
 		* NOTE: we keep original keys, valid, dirty, savedseq, vallen, values, and pos votes. We only reset neg votes and lock. We
