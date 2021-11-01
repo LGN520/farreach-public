@@ -6,7 +6,12 @@ register seq_reg {
 blackbox stateful_alu assign_seq_alu {
 	reg: seq_reg;
 
+	condition_lo: register_lo == 0x7FFFFFFF;
+
+	update_lo_1_predicate: not condition_lo;
 	update_lo_1_value: register_lo + 1;
+	update_lo_2_predicate: condition_lo;
+	update_lo_2_value: 0;
 
 	output_value: alu_lo;
 	output_dst: seq_hdr.seq;
@@ -36,7 +41,9 @@ register savedseq_reg {
 blackbox stateful_alu try_update_savedseq_alu {
 	reg: savedseq_reg;
 
-	condition_lo: (seq_hdr.seq > register_lo) or ((register_lo - seq_hdr.seq) == 0xFFFFFFFF);
+	// NOTE: Tofino treats 32-bit field as signed integer, so seq is from [-0x80000000, 7fffffff]
+	// TODO: now we do not consider seq overflow. If it occurs, we can use more register array to fix.
+	condition_lo: seq_hdr.seq > register_lo;
 
 	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: seq_hdr.seq;
@@ -77,6 +84,8 @@ table access_savedseq_tbl {
 	actions {
 		try_update_savedseq;
 		reset_savedseq;
+		nop;
 	}
+	default_action: nop();
 	size: 1;
 }

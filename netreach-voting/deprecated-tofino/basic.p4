@@ -236,6 +236,8 @@ control ingress {
 
 		// Stage 5+n + 1
 		// Do preliminary decision
+		// TODO: we can directly subtract neg vote by pos vote, and judge whether
+		// the result is smaller than 0 (Tofino treats each field as signed integer)
 		if (meta.isdirty == 1) {
 			if (op_hdr.optype == GETREQ_TYPE) {
 				if (meta.gnegvote > meta.pposvote) {

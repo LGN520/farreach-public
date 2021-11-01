@@ -70,6 +70,8 @@ table access_vote_tbl {
 		decrease_vote;
 		init_vote;
 		reset_vote;
+		nop;
 	}
+	default_action: nop();
 	size: 2048;
 }

@@ -231,7 +231,9 @@ table trigger_cache_update_tbl {
 	actions {
 		update_getreq;
 		update_putreq;
+		nop;
 	}
+	default_action: nop();
 	size: 2;
 }
 
@@ -443,7 +445,9 @@ table hash_partition_tbl {
 	}
 	actions {
 		update_dstport;
+		nop;
 	}
+	default_action: nop();
 	size: 128;
 }
 
@@ -455,7 +459,9 @@ table origin_hash_partition_tbl {
 	}
 	actions {
 		update_dstport;
+		nop;
 	}
+	default_action: nop();
 	size: 128;
 }
 
@@ -467,6 +473,8 @@ table origin_hash_partition_reverse_tbl {
 	}
 	actions {
 		update_dstport_reverse;
+		nop;
 	}
+	default_action: nop();
 	size: 128;
 }

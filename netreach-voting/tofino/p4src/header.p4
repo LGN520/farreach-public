@@ -148,6 +148,7 @@ header_type metadata_t {
 		origin_valhi15: 32;
 		origin_vallo16: 32;
 		origin_valhi16: 32;*/
+		isevict: 1;
 		islock: 1;
 		/*isfuture_valid: 1;
 		ismatch_future_keylololo: 4; // predicate 

@@ -100,7 +100,9 @@ table sendback_cloned_putres_tbl {
 	actions {
 		sendback_cloned_putres_from_n;
 		sendback_cloned_putres_from_ps;
+		nop;
 	}
+	default_action: nop();
 	size: 1;
 }
 
@@ -115,6 +117,8 @@ table update_macaddr_tbl {
 	}
 	actions {
 		update_macaddr;
+		nop;
 	}
+	default_action: nop();
 	size: 8;
 }
