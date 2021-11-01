@@ -294,6 +294,7 @@ table update_putreq_tbl {
 
 // Last Stage of ingress pipeline
 
+// Used by GETRES_S when original cached data is not dirty, and GETRES_NS
 action update_getres_s(port) {
 	modify_field(op_hdr.optype, GETRES_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);

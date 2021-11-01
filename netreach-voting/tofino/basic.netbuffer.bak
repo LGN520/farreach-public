@@ -585,7 +585,7 @@ table sendback_delres_tbl {
 }
 
 action eg_drop_unicast {
-	modify_field(eg_intr_md_for_oport, 1); // Disable unicast, but enable mirroring
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 }
 
 table drop_put_tbl {

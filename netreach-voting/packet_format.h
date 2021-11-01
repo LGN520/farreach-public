@@ -10,7 +10,7 @@
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, 
 	GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
 	GET_REQ_S, PUT_REQ_GS, PUT_REQ_N, PUT_REQ_PS, 
-	DEL_REQ_S, GET_RES_S};
+	DEL_REQ_S, GET_RES_S, GET_RES_NS};
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -189,6 +189,15 @@ class GetResponseS : public GetResponse<key_t, val_t> {
 	public:
 		GetResponseS(uint8_t thread_id, key_t key, val_t val);
 		GetResponseS(const char * data, uint32_t recv_size);
+
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t, class val_t>
+class GetResponseNS : public GetResponse<key_t, val_t> {
+	public:
+		GetResponseNS(uint8_t thread_id, key_t key, val_t val);
+		GetResponseNS(const char * data, uint32_t recv_size);
 
 		virtual void deserialize(const char * data, uint32_t recv_size);
 };

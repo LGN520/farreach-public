@@ -577,6 +577,25 @@ void GetResponseS<key_t, val_t>::deserialize(const char *data, uint32_t recv_siz
 	COUT_N_EXIT("Invalid invoke of deserialize of GetResponseS");
 }
 
+// GetResponseNS
+
+template<class key_t, class val_t>
+GetResponseNS<key_t, val_t>::GetResponseNS(uint8_t thread_id, key_t key, val_t val)
+	: GetResponse(thread_id, key, val)
+{
+	this->_type = PacketType::GET_RES_NS;
+}
+
+template<class key_t, class val_t>
+GetResponseNS<key_t, val_t>::GetResponseNS(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of GetResponseNS(char * const data, uint32_t max_size)");
+}
+
+template<class key_t, class val_t>
+void GetResponseNS<key_t, val_t>::deserialize(const char *data, uint32_t recv_size) {
+	COUT_N_EXIT("Invalid invoke of deserialize of GetResponseNS");
+}
+
 // PutRequestGS
 
 template<class key_t, class val_t>

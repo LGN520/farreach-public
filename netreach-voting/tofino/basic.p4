@@ -27,6 +27,7 @@
 #define PUTREQ_PS_TYPE 0x0b
 #define DELREQ_S_TYPE 0x0c
 #define GETRES_S_TYPE 0x0d
+#define GETRES_NS_TYPE 0x0e
 // Only used in switch
 #define PUTREQ_U_TYPE 0x20
 #define PUTREQ_RU_TYPE 0x21
@@ -281,15 +282,16 @@ control ingress {
 		// (1) For GETRES_S, only if valid = 1 and dirty = 1. we convert it as PUTREQ_GS and forward to 
 		// server, ans also clone a packet for GETRES to client; otherwise, we convert it as GETRES and
 		forward it as usual
-		// (2) For PUTREQ_U, we convert it as PUTREQ_RU and recirculate it to update cache
-		// (3) For PUTREQ_RU, we convert it as PUTREQ_N or PUTREQ_PS (only if valid = 1 and dirty = 1) 
+		// (2) For GETRES_NS, directly convert it as GETRES and forward it as usual
+		// (3) For PUTREQ_U, we convert it as PUTREQ_RU and recirculate it to update cache
+		// (4) For PUTREQ_RU, we convert it as PUTREQ_N or PUTREQ_PS (only if valid = 1 and dirty = 1) 
 		// and forward to server, and also clone a packet for PUTRES to client
-		// (4) For GETREQ, PUTREQ, and DELREQ, only if (lock = 1 and valid = 0) or (lock = 1 and valid = 1 
+		// (5) For GETREQ, PUTREQ, and DELREQ, only if (lock = 1 and valid = 0) or (lock = 1 and valid = 1 
 		// yet key does not match), we recirculate it. But NOTE that if valid = 1 and key matches, optype has
 		// been set as RES by try_res_tbl. So if pkt arriving here is still REQ, it must satisfy (valid = 0)
 		// or (valid = 1 and key does not match) -> we only need to check whether lock is 1! (TODO: we need 
 		// local seq number here)
-		// (5) For other packets, we set egress_port as usual
+		// (6) For other packets, we set egress_port as usual
 		apply(port_forward_tbl);
 
 		if (op_hdr.optype == PUTREQ_GS_TYPE) {
@@ -307,23 +309,6 @@ control ingress {
 
 /* Egress Processing */
 
-action swap_macaddr(tmp_srcmac, tmp_dstmac) {
-	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
-	modify_field(ethernet_hdr.srcAddr, tmp_dstmac);
-}
-
-table swap_macaddr_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		swap_macaddr;
-		nop;
-	}
-	default_action: nop();
-	size: 4;
-}
-
 control egress {
 	// NOTE: make sure that normal packet will not apply these tables
 	if (pkt_is_i2e_mirrored) {
@@ -337,5 +322,5 @@ control egress {
 			apply(sendback_cloned_putres_tbl); // input is PUTREQ_N/PUTREQ_PS converted form PUTREQ_RU from PUTREQ_U from PUTREQ (we need to swap port, ip, and mac)
 		}
 	}
-	apply(update_macaddr_tbl); // Update mac addr
+	apply(update_macaddr_tbl); // Update mac addr for responses
 }

@@ -9,10 +9,14 @@
 	hash partition
 - For GETRES_S (for GETREQ_S which is cache update decision for GETREQ)
 	+ hash -> replace keys -> set valid bit as 1, dirty bit as 0, and reset savedseq -> set corresponding vallen and put values -> 
-	-> reset votes as 0 -> reset lock as 0 -> clone a packet as GETRES [update GETRES_S as PUTREQ_GS to server for eviction if necessary]
+	-> reset all votes as 0 -> reset lock as 0 -> clone/convert a packet as GETRES [update GETRES_S as PUTREQ_GS to server for eviction 
+	if necessary]
+- For GETRES_NS (for GETREQ_S which is cache update decision for GETREQ but without data in server)
+	+ hash -> keep original keys -> keep original valid, dirty, and savedseq -> keep original vallen and values -> 
+	-> reset neg votes as 0 -> reset lock as 0 -> convert a packet as GETRES 
 - For PUTREQ_RU (for PUTREQ_U which is recirculation-based cache update for PUTREQ)
 	+ hash -> replace keys -> set valid bit as 1, dirty bit as 1, and reset savedseq -> reset corresponding vallen and put values ->
-	-> reset votes as 0 -> reeset lock as 0 -> clone a packet as PUTRES, and update PUTREQ_RU as PUTREQ_PS or PUTREQ_N to server for 
+	-> reset all votes as 0 -> reeset lock as 0 -> clone a packet as PUTRES, and update PUTREQ_RU as PUTREQ_PS or PUTREQ_N to server for 
 	eviction or notification
 
 ## Other notes
@@ -78,7 +82,7 @@
 				+ For PUTREQ_RU, we convert it as PUTREQ_PS or PUTREQ_N in ingress pipeline and clone a PUTRES to client (basic.p4, ingress_mat.p4, egress_mat.p4, and configure.table_configure,py)
 				+ Server receives PUTREQ_N to update cached keys; Server receives PUTREQ_PS to update cached keys and key-value store (packet_format.h, packet_format_impl.h, ycsb_server.c)
 				+ For PUTRES,set udp port and udp hdr length correspondingly (egress_mat.p4 and configure/table_configure.py)
-				* TODO: We should set MAC addr according to optype
+				* We should set MAC addr according to optype
 		* Key does not match (GETREQ/PUTREQ/DELREQ), and original lock bit = 0 && diff < threshold -> forward
 		* Key does not match (GETREQ/PUTREQ/DELREQ), and original lock bit = 1 -> also recirculate
 		* We maintain a set of cached keys for each server thread
@@ -103,14 +107,17 @@
 	+ TODO: consider how to optimize the extra latency introduced by responsed-based cache update
 		* We can use a register array to save the key to be cached, only if the key does not match the cached key and the key to be 
 		cached, we need to recirculate it (extra latency for these requests)
-	+ TODO: if server does not have the key-value pair, generate a GETRES_NS to set the valid as 0
+	+ If server does not have the key-value pair for GETREQ_S, generate a GETRES_NS to set the valid as 0 
+	(configure/table_configure.py, packet_format.h, packet_format_impl.h, ycsb_server.c)
+		* NOTE: we keep original keys, valid, dirty, savedseq, vallen, values, and pos votes. We only reset neg votes and lock. We
+		do not generate PUTREQ_PS, instead we directly convert it as GETRES.
 	+ Support scan
 		- TODO: change scan from key+num to start_key+end_key
 		- TODO: get the key range of each server thread in loading phase
 		- TODO: simulate multiple packets in server-side by split the request to multiple server threads by range partition
 		- TODO: support SCAN with as much latest data as possible or SCAN with a guarantee of some point-in-time?
 	+ TODO: If req does not need to access backup data for SCAN, then we do not need RCU for backup data
-	+ TODO: For backup, we only need to remember the evicted data from PUTREQ_GS and PUTREQ_PS instead of PUTREQ_N in server
+	+ TODO: For carsh-consistent backup, we only need to remember the evicted data from PUTREQ_GS and PUTREQ_PS instead of PUTREQ_N in server
 	+ TODO: If we do not use recirculation-based range query, we do not need key coherence. For PUTREQ_PS, we only keep evicted data
 	instead of the new key; For PUTREQ_N, we drop the original packet by drop_put_tbl
 	+ TODO: set size of each table accordingly

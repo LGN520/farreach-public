@@ -43,8 +43,14 @@ typedef GetResponse<index_key_t, val_t> get_response_t;
 typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
-typedef PutRequestS<index_key_t, val_t> put_request_s_t;
+//typedef PutRequestS<index_key_t, val_t> put_request_s_t;
+typedef GetRequestS<index_key_t> get_request_s_t;
+typedef PutRequestGS<index_key_t> put_request_gs_t;
+typedef PutRequestN<index_key_t> put_request_n_t;
+typedef PutRequestPS<index_key_t> put_request_ps_t;
 typedef DelRequestS<index_key_t> del_request_s_t;
+typedef GetResponseS<index_key_t> get_response_s_t;
+typedef GetResponseNS<index_key_t> get_response_ns_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -813,8 +819,15 @@ static int run_sfg(void * param) {
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
-					get_response_s_t rsp(req.thread_id(), req.key(), tmp_val);
-					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					if (tmp_stat) {
+						get_response_s_t rsp(req.thread_id(), req.key(), tmp_val);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					}
+					else {
+						get_response_ns_t rsp(req.thread_id(), req.key(), tmp_val);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					}
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
