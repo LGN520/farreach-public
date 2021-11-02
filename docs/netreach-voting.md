@@ -8,12 +8,12 @@
 	+ Remove try_glock and try_plock; add try_lock
 	+ Remove vote diff calculation between pos vote and neg vote
 	+ Remove update_getreq_tbl and update_putreq_tbl; add trigger_cache_update_tbl
-- We use backup-based range query
-	+ Remove PUTREQ_N (change update_putreq_to_n_and_clone into sendback_putres)
+- We use backup-based range query (do not need key coherence for recirculation-based range query now)
+	+ Remove PUTREQ_N (change update_putreq_ru_to_n_and_clone into sendback_putres)
 	+ Remove evicted key and its header
 	+ Remove notified key in PUTREQ_PS
 	+ Remove cached keys in server
-	+ TODO: remove listener for triggerred backup in server
+	+ Remove listener for triggerred backup in server
 
 ## In-switch eviction mechanism
 
@@ -133,11 +133,9 @@
 		- TODO: change scan from key+num to start_key+end_key
 		- TODO: get the key range of each server thread in loading phase
 		- TODO: simulate multiple packets in server-side by split the request to multiple server threads by range partition
-		- TODO: support SCAN with as much latest data as possible or SCAN with a guarantee of some point-in-time?
-	+ TODO: If req does not need to access backup data for SCAN, then we do not need RCU for backup data
-	+ TODO: For carsh-consistent backup, we only need to remember the evicted data from PUTREQ_GS and PUTREQ_PS instead of PUTREQ_N in server
-	+ TODO: If we do not use recirculation-based range query, we do not need key coherence. For PUTREQ_PS, we only keep evicted data
-	instead of the new key; For PUTREQ_N, we drop the original packet by drop_put_tbl
+		- TODO: support SCAN with a guarantee of some point-in-time: we still need RCU for backup data
+	+ TODO: For carsh-consistent backup, we only need to remember the evicted data from PUTREQ_GS and PUTREQ_PS instead of PUTREQ_N 
+	in server; switch also needs to send the original value of the cached key for the first update
 	+ TODO: set size of each table accordingly
 - TODO: For put req
 	+ If key matches, we need to update value (need to drop original put req; need to clone for put_res)

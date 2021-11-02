@@ -78,19 +78,11 @@ void *run_backuper(__attribute__((unused)) void *param); // backuper
 std::map<index_key_t, val_t>* volatile backup_data = nullptr;
 uint32_t* volatile backup_rcu;
 
-// Triggerred backup
-void *run_listener(__attribute__((unused)) void *param); // listener to listen the responses of KV pull requests for SCAN
-std::map<index_key_t, val_t>* volatile listener_data = nullptr;
-volatile uint64_t listener_version = 0;
-
 // parameters
 size_t fg_n;
 size_t bg_n;
 short dst_port_start;
 short backup_port = 3333;
-short controller_port = 3334;
-short listener_port = 3335;
-char controller_ip[20] = "172.16.112.19";
 const char *workload_name = nullptr;
 uint32_t kv_bucket_num;
 
@@ -290,13 +282,6 @@ void run_server(xindex_t *table) {
 		COUT_N_EXIT("Error: unable to create backuper " << ret);
 	}
 
-	// Launch listener
-	pthread_t listener_thread;
-	ret = pthread_create(&listener_thread, nullptr, run_listener, nullptr);
-	if (ret) {
-		COUT_N_EXIT("Error: unable to create listener " << ret);
-	}
-
 	// Prepare fg params
 	//pthread_t threads[fg_n];
 	sfg_param_t sfg_params[fg_n];
@@ -344,10 +329,6 @@ void run_server(xindex_t *table) {
 	}*/
 	void * status;
 	int rc = pthread_join(backuper_thread, &status);
-	if (rc) {
-		COUT_N_EXIT("Error: unable to join," << rc);
-	}
-	rc = pthread_join(listener_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join," << rc);
 	}
@@ -492,75 +473,6 @@ void *run_backuper(void *param) {
 	pthread_exit(nullptr);
 }
 
-void *run_listener(void *param) {
-
-	int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
-	INVARIANT(sock_fd >= 0);
-	// Diskable udp check
-	int disable = 1;
-	if (setsockopt(sock_fd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-		COUT_N_EXIT("Disable udp checksum failed");
-	}
-	// Set timeout
-	struct timeval tv;
-	tv.tv_sec = 1;
-	tv.tv_usec =  0;
-	int res = setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-	INVARIANT(res >= 0);
-	// Set listen addr
-	struct sockaddr_in listener_server_addr;
-	memset(&listener_server_addr, 0, sizeof(sockaddr_in));
-	listener_server_addr.sin_family = AF_INET;
-	listener_server_addr.sin_port = htons(listener_port);
-	listener_server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	res = bind(sock_fd, (struct sockaddr *)&listener_server_addr, sizeof(listener_server_addr));
-	INVARIANT(res >= 0);
-	
-	int recv_size = 0;
-	char recv_buf[kv_bucket_num * 114]; // n * 25 + 14 + 20 + 8 < n * 26
-	memset(recv_buf, 0, sizeof(recv_buf));
-
-	while (!running)
-		;
-
-	while (running) {
-		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
-		//double t0 = CUR_TIME();
-		if (recv_size == -1) {
-			if (errno == EWOULDBLOCK || errno == EINTR) {
-				continue; // timeout or interrupted system call
-			}
-			else {
-				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
-			}
-		}
-		//COUT_THIS("listener recvsize: "<<recv_size)
-		//dump_buf(recv_buf, recv_size);
-
-		std::map<index_key_t, val_t> *new_listener_data = new std::map<index_key_t, val_t>;
-		parse_kv(recv_buf, new_listener_data);
-
-		volatile std::map<index_key_t, val_t> *old_listener_data = listener_data;
-		listener_data = new_listener_data;
-		if (unlikely(listener_version == MAX_VERSION)) { // avoid overflow
-			listener_version = 0;
-		}
-		else {
-			listener_version += 1;
-		}
-
-		// Do no need peace period of RCU since SCAN will never use old listener data
-		if (old_listener_data != nullptr) {
-			delete old_listener_data;
-			old_listener_data = nullptr;
-		}
-
-		//double t1 = CUR_TIME();
-		//COUT_THIS("Update KV: " << (t1 - t0) << "us")
-	}
-	pthread_exit(nullptr);
-}
-
 static int run_sfg(void * param) {
 //void *run_sfg(void * param) {
   // Parse param
@@ -617,15 +529,6 @@ static int run_sfg(void * param) {
   uint16_t srcport;
   uint16_t unused_dstport; // we use dst_port_start instead of received dstport to hide server-side partition for client
 
-  // UDP socket for SCAN
-  int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
-  INVARIANT(sock_fd >= 0);
-  struct sockaddr_in controller_addr;
-  memset(&controller_addr, 0, sizeof(sockaddr_in));
-  controller_addr.sin_family = AF_INET;
-  controller_addr.sin_port = htons(controller_port);
-  controller_addr.sin_addr.s_addr = inet_addr(controller_ip);
-
   ready_threads++;
 
   while (!running) {
@@ -651,8 +554,6 @@ static int run_sfg(void * param) {
 	//if (stats[thread_id]) {
 	if (heads[thread_id] != tails[thread_id]) {
 		//COUT_THIS("[server] Receive packet!")
-		
-		uint64_t old_version = listener_version;
 
 		// DPDK
 		//stats[thread_id] = false;
@@ -725,10 +626,6 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::SCAN_REQ:
 				{
-					// Send KV pull request to switch (should not be counted into latency)
-					// Comment it for thpt
-					//sendto(sock_fd , "1", 1, 0, (struct sockaddr *)&controller_addr, sizeof(controller_addr));
-
 					scan_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
@@ -742,15 +639,10 @@ static int run_sfg(void * param) {
 						COUT_VAR(results[val_i].second)
 					}*/
 
-					// wait the new KV from switch (only for latency)
-					// Comment it for thpt to trade consistency for perf (directly use backup_data, uncomment the later sentence)
-					//while (listener_version == old_version) {}
-
 					// Merge results with backup data
 					//double t0 = CUR_TIME();
 					std::vector<std::pair<index_key_t, val_t>> merge_results;
-					//std::map<index_key_t, val_t> *kvdata = listener_data;
-					std::map<index_key_t, val_t> *kvdata = backup_data; // uncomment it for thpt
+					std::map<index_key_t, val_t> *kvdata = backup_data;
 					if (kvdata != nullptr) {
 						std::map<index_key_t, val_t>::iterator kviter = kvdata->lower_bound(req.key());
 						uint32_t result_idx = 0;
