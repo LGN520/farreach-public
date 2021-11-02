@@ -46,6 +46,7 @@ typedef ScanResponse<index_key_t, val_t> scan_response_t;
 //typedef PutRequestS<index_key_t, val_t> put_request_s_t;
 typedef GetRequestS<index_key_t> get_request_s_t;
 typedef PutRequestGS<index_key_t, val_t> put_request_gs_t;
+typedef PutRequestN<index_key_t, val_t> put_request_n_t;
 typedef PutRequestPS<index_key_t, val_t> put_request_ps_t;
 typedef DelRequestS<index_key_t> del_request_s_t;
 typedef GetResponseS<index_key_t, val_t> get_response_s_t;
@@ -83,6 +84,9 @@ void *run_listener(__attribute__((unused)) void *param); // listener to listen t
 std::map<index_key_t, val_t>* volatile listener_data = nullptr;
 volatile uint64_t listener_version = 0;
 
+// Per-server cached keys
+std::set<index_key_t> *cached_keys_list = nullptr; // an array of cached keys for each server
+
 // parameters
 size_t fg_n;
 size_t bg_n;
@@ -117,6 +121,9 @@ int main(int argc, char **argv) {
   // RCU for backup data (NOTE: necessary only if SCAN needs to access backup data)
   backup_rcu = new uint32_t[fg_n];
   memset((void *)backup_rcu, 0, fg_n * sizeof(uint32_t));
+
+  // Prepare for per-server cached keys
+  cached_keys_list = new std::set<index_key_t>[fg_n];
 
   // prepare xindex
   xindex_t *tab_xi = new xindex_t(fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
@@ -830,28 +837,43 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::PUT_REQ_GS:
 				{
-					// Put evicted data into key-value store
+					// Put evicted data into key-value store and delete evicted key from cached keys
 					put_request_gs_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
+					cached_keys_list[thread_id].erase(req.key());
+					break;
+				}
+			case packet_type_t::PUT_REQ_N:
+				{
+					// Insert new key into cached keys
+					// Although it contains both key and value, we only need to store the key into cached set
+					// The value is stored and updated in switch
+					put_request_n_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					cached_keys_list[thread_id].insert(req.key());
 					break;
 				}
 			case packet_type_t::PUT_REQ_PS:
 				{
-					// Put evicted data into key-value store
+					// Put evicted data into key-value store, and put new key into cached keys and delete evicted key from cached keys
 					put_request_ps_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string()
-					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					//COUT_THIS("[server] key = " << req.key().to_string() << " evicted val = " 
+					//		<< req.val().to_string() << "evicted key = " << req.evicted_key().to_string())
+					bool tmp_stat = table->put(req.evicted_key(), req.val(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
+					cached_keys_list[thread_id].erase(req.evicted_key());
+					cached_keys_list[thread_id].insert(req.key());
 				}
 			case packet_type_t::DEL_REQ_S:
 				{
-					// Delete data from key-value storen
+					// Delete data from key-value storen and delete key from cached keys if any
 					del_request_s_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), req.thread_id());
 					//COUT_THIS("[server] stat = " << tmp_stat)
+					cached_keys_list[thread_id].erase(req.key());
 					break;
 				}
 			default:

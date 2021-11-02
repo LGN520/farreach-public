@@ -77,11 +77,10 @@ DELRES_TYPE = 0x06
 SCANRES_TYPE = 0x07
 GETREQ_S_TYPE = 0x08
 PUTREQ_GS_TYPE = 0x09
-PUTREQ_N_TYPE = 0x0a
-PUTREQ_PS_TYPE = 0x0b
-DELREQ_S_TYPE = 0x0c
-GETRES_S_TYPE = 0x0d
-GETRES_NS_TYPE = 0x0e
+PUTREQ_PS_TYPE = 0x0a
+DELREQ_S_TYPE = 0x0b
+GETRES_S_TYPE = 0x0c
+GETRES_NS_TYPE = 0x0d
 
 PUTREQ_U_TYPE = 0x20
 PUTREQ_RU_TYPE = 0x21
@@ -1019,9 +1018,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     meta_isvalid = isvalid,
                                     meta_isdirty = isdirty,
                                     meta_islock = islock)
-                            actnspec0 = netbuffer_update_putreq_ru_to_n_action_spec_t(\
-                                    sids[0], self.devPorts[1]) # Clone to client, forward to server
-                            self.client.port_forward_tbl_table_add_with_update_putreq_ru_to_n(\
+                            actnspec0 = netbuffer_sendback_putres_action_spec_t(\
+                                    self.devPorts[0]) # Forward to client
+                            self.client.port_forward_tbl_table_add_with_sendback_putres(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for isvalid in valid_list:
                 for isdirty in dirty_list:
@@ -1133,17 +1132,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.origin_hash_partition_reverse_tbl_table_add_with_update_dstport_reverse(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                 hash_start = hash_end
-
-            # Table: sendback_cloned_putres_tbl
-            print "Configuring sendback_cloned_putres_tbl"
-            matchspec0 = netbuffer_sendback_cloned_putres_tbl_match_spec_t(\
-                    op_hdr_optype = PUTREQ_N_TYPE)
-            self.client.sendback_cloned_putres_tbl_table_add_with_sendback_cloned_putres_from_n(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_sendback_cloned_putres_tbl_match_spec_t(\
-                    op_hdr_optype = PUTREQ_PS_TYPE)
-            self.client.sendback_cloned_putres_tbl_table_add_with_sendback_cloned_putres_from_ps(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
 
             # Table: drop_put_tbl (if key coherence is unnecessary)
             #print "Configuring drop_put_tbl"

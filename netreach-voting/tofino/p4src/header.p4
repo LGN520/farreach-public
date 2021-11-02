@@ -169,7 +169,6 @@ header ethernet_t ethernet_hdr;
 header ipv4_t ipv4_hdr;
 header udp_t udp_hdr;
 header op_t op_hdr;
-header key_t evicted_key_hdr;
 header vallen_t vallen_hdr;
 header val_t val1_hdr;
 /*header val_t val2_hdr;

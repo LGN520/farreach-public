@@ -36,7 +36,7 @@ table sendback_cloned_delres_tbl {
 	size: 1;
 }
 
-action sendback_cloned_putres_from_n() {
+action sendback_cloned_putres() {
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_ONE);
@@ -64,45 +64,14 @@ action sendback_cloned_putres_from_n() {
 	add_header(res_hdr);
 }
 
-action sendback_cloned_putres_from_ps() {
-	modify_field(udp_hdr.srcPort, meta.tmp_dport);
-	modify_field(udp_hdr.dstPort, meta.tmp_sport);
-	subtract_from_field(udp_hdr.hdrlen, KEY_VAL_PKTLEN_MINUS_ONE);
-
-	remove_header(vallen_hdr);
-	remove_header(val1_hdr);
-	/*remove_header(val2_hdr);
-	remove_header(val3_hdr);
-	remove_header(val4_hdr);
-	remove_header(val5_hdr);
-	remove_header(val6_hdr);
-	remove_header(val7_hdr);
-	remove_header(val8_hdr);
-	remove_header(val9_hdr);
-	remove_header(val10_hdr);
-	remove_header(val11_hdr);
-	remove_header(val12_hdr);
-	remove_header(val13_hdr);
-	remove_header(val14_hdr);
-	remove_header(val15_hdr);
-	remove_header(val16_hdr);*/
-	remove_header(evicted_key_hdr);
-
-	modify_field(op_hdr.optype, PUTRES_TYPE);
-	modify_field(res_hdr.stat, 1);
-	add_header(res_hdr);
-}
-
 table sendback_cloned_putres_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		sendback_cloned_putres_from_n;
-		sendback_cloned_putres_from_ps;
-		nop;
+		sendback_cloned_putres;
 	}
-	default_action: nop();
+	default_action: sendbac_cloned_putres();
 	size: 1;
 }
 

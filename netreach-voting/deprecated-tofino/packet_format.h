@@ -9,7 +9,7 @@
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, 
 	GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
-	GET_REQ_S, PUT_REQ_GS, PUT_REQ_PS, 
+	GET_REQ_S, PUT_REQ_GS, PUT_REQ_N, PUT_REQ_PS, 
 	DEL_REQ_S, GET_RES_S, GET_RES_NS};
 typedef PacketType packet_type_t;
 
@@ -211,12 +211,28 @@ class PutRequestGS : public PutRequest<key_t, val_t> {
 };
 
 template<class key_t, class val_t>
-class PutRequestPS : public PutRequest<key_t, val_t> {
+class PutRequestN : public PutRequest<key_t, val_t> {
 	public:
-		PutRequestPS(uint8_t thread_id, key_t key, val_t val);
-		PutRequestPS(const char * data, uint32_t recv_size);
+		PutRequestN(uint8_t thread_id, key_t key, val_t val);
+		PutRequestN(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestPS : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestPS(uint8_t thread_id, key_t key, val_t val, key_t evicted_key);
+		PutRequestPS(const char * data, uint32_t recv_size);
+
+		key_t evicted_key();
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+	private:
+		key_t _evicted_key;
 };
 
 template<class key_t>

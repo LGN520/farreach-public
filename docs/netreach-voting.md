@@ -6,8 +6,14 @@
 	+ Remove load_gthreshold_tbl and load_pthreshold_tbl
 	+ Remove gposvote, gnegvote, pposvote, and pnegvote; add vote
 	+ Remove try_glock and try_plock; add try_lock
-	+ Remove diff calculation between pos vote and neg vote
+	+ Remove vote diff calculation between pos vote and neg vote
 	+ Remove update_getreq_tbl and update_putreq_tbl; add trigger_cache_update_tbl
+- We use backup-based range query
+	+ Remove PUTREQ_N (change update_putreq_to_n_and_clone into sendback_putres)
+	+ Remove evicted key and its header
+	+ Remove notified key in PUTREQ_PS
+	+ Remove cached keys in server
+	+ TODO: remove listener for triggerred backup in server
 
 ## In-switch eviction mechanism
 

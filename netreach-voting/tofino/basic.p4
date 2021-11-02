@@ -23,11 +23,10 @@
 #define SCANRES_TYPE 0x07
 #define GETREQ_S_TYPE 0x08
 #define PUTREQ_GS_TYPE 0x09
-#define PUTREQ_N_TYPE 0x0a
-#define PUTREQ_PS_TYPE 0x0b
-#define DELREQ_S_TYPE 0x0c
-#define GETRES_S_TYPE 0x0d
-#define GETRES_NS_TYPE 0x0e
+#define PUTREQ_PS_TYPE 0x0a
+#define DELREQ_S_TYPE 0x0b
+#define GETRES_S_TYPE 0x0c
+#define GETRES_NS_TYPE 0x0d
 // Only used in switch
 #define PUTREQ_U_TYPE 0x20
 #define PUTREQ_RU_TYPE 0x21
@@ -239,7 +238,7 @@ control ingress {
 		// forward it as usual
 		// (2) For GETRES_NS, directly convert it as GETRES and forward it as usual
 		// (3) For PUTREQ_U, we convert it as PUTREQ_RU and recirculate it to update cache
-		// (4) For PUTREQ_RU, we convert it as PUTREQ_N or PUTREQ_PS (only if valid = 1 and dirty = 1) 
+		// (4) For PUTREQ_RU, we drop original packet or convert it to PUTREQ_PS (only if valid = 1 and dirty = 1) 
 		// and forward to server, and also clone a packet for PUTRES to client
 		// (5) For GETREQ, PUTREQ, and DELREQ, only if (lock = 1 and valid = 0) or (lock = 1 and valid = 1 
 		// yet key does not match), we recirculate it. But NOTE that if valid = 1 and key matches, optype has
@@ -255,7 +254,7 @@ control ingress {
 		else if (op_hdr.optype == PUTREQ_PS_TYPE) {
 			apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
 		}
-		else if (op_hdr.optype != PUTREQ_RU_TYPE){ // Only if dst port = server port: GETREQ, PUTREQ, DELREQ, SCANREQ, GETREQ_S, DELREQ_S, and PUTREQ_N (without PUTREQ_U)
+		else if (op_hdr.optype != PUTREQ_RU_TYPE){ // Only if dst port = server port: GETREQ, PUTREQ, DELREQ, SCANREQ, GETREQ_S, and DELREQ_S (without PUTREQ_U)
 			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 		}
 
@@ -274,7 +273,7 @@ control egress {
 			apply(sendback_cloned_delres_tbl); // input is DELREQ_S converted from DELREQ (we need swap port, ip, and mac)
 		}
 		else if (meta.is_clone == CLONE_FOR_PUTRES) {
-			apply(sendback_cloned_putres_tbl); // input is PUTREQ_N/PUTREQ_PS converted form PUTREQ_RU from PUTREQ_U from PUTREQ (we need to swap port, ip, and mac)
+			apply(sendback_cloned_putres_tbl); // input is PUTREQ_RU/PUTREQ_PS converted from PUTREQ_RU from PUTREQ_U from PUTREQ (we need to swap port, ip, and mac)
 		}
 	}
 	apply(update_macaddr_tbl); // Update mac addr for responses

@@ -315,38 +315,20 @@ action update_getres_s_and_clone(sid, port) {
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
-action update_putreq_ru_to_n_and_clone(sid, port) {
-	modify_field(op_hdr.optype, PUTREQ_N_TYPE);
-
-	// We do not remove header fields of value here
-	// Server only needs to save the key into cached set
-
-	// Forward PUTREQ_N to server
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-
-	// Clone a packet for PUTRES to client
-	modify_field(meta.is_clone, CLONE_FOR_PUTRES);
-	clone_ingress_pkt_to_egress(sid, clone_field_list);
-}
-
 action update_putreq_ru_to_ps_and_clone(sid, port) {
 	modify_field(op_hdr.optype, PUTREQ_PS_TYPE);
 
-	// Format: original key (op_hdr) - evicted key - evicted vallen - evicted val
+	// Format: evicted key (op_hdr) - evicted vallen - evicted val
 
-	// Increase udp length
-	add_to_field(udp_hdr.hdrlen, 16); // add evicted key of 16B
-
-	// Add evicted key
-	add_header(evicted_key_hdr);
-	modify_field(evicted_key_hdr.keylololo, meta.origin_keylololo);
-	modify_field(evicted_key_hdr.keylolohi, meta.origin_keylolohi);
-	modify_field(evicted_key_hdr.keylohilo, meta.origin_keylohilo);
-	modify_field(evicted_key_hdr.keylohihi, meta.origin_keylohihi);
-	modify_field(evicted_key_hdr.keyhilolo, meta.origin_keyhilolo);
-	modify_field(evicted_key_hdr.keyhilohi, meta.origin_keyhilohi);
-	modify_field(evicted_key_hdr.keyhihilo, meta.origin_keyhihilo);
-	modify_field(evicted_key_hdr.keyhihihi, meta.origin_keyhihihi);
+	// Overwrite original key as evicted key
+	modify_field(op_hdr.keylololo, meta.origin_keylololo);
+	modify_field(op_hdr.keylolohi, meta.origin_keylolohi);
+	modify_field(op_hdr.keylohilo, meta.origin_keylohilo);
+	modify_field(op_hdr.keylohihi, meta.origin_keylohihi);
+	modify_field(op_hdr.keyhilolo, meta.origin_keyhilolo);
+	modify_field(op_hdr.keyhilohi, meta.origin_keyhilohi);
+	modify_field(op_hdr.keyhihilo, meta.origin_keyhihilo);
+	modify_field(op_hdr.keyhihihi, meta.origin_keyhihihi);
 
 	// Overwrite original vallen and val as evicted vallen and val
 	modify_field(vallen_hdr.vallen, meta.origin_vallen);
@@ -416,7 +398,7 @@ table port_forward_tbl {
 	actions {
 		update_getres_s;
 		update_getres_s_and_clone;
-		update_putreq_ru_to_n_and_clone;
+		sendback_putres;
 		update_putreq_ru_to_ps_and_clone;
 		recirculate_putreq_u;
 		recirculate_pkt;

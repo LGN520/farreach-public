@@ -616,13 +616,34 @@ uint32_t PutRequestGS<key_t, val_t>::serialize(char * const data, uint32_t max_s
 	COUT_N_EXIT("Invalid invoke of serialize for PutReqestGS");
 }
 
+// PutRequestN
+
+template<class key_t, class val_t>
+PutRequestN<key_t, val_t>::PutRequestN(uint8_t thread_id, key_t key, val_t val) 
+	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
+{	
+	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_N);
+}
+
+template<class key_t, class val_t>
+PutRequestN<key_t, val_t>::PutRequestN(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_N);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestN<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for PutReqestN");
+}
+
 // PutRequestPS
 
 template<class key_t, class val_t>
-PutRequestPS<key_t, val_t>::PutRequestPS(uint8_t thread_id, key_t key, val_t val) 
+PutRequestPS<key_t, val_t>::PutRequestPS(uint8_t thread_id, key_t key, val_t val, key_t evicted_key) 
 	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
 {	
 	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_PS);
+	this->_evicted_key = evicted_key;
 }
 
 template<class key_t, class val_t>
@@ -632,8 +653,38 @@ PutRequestPS<key_t, val_t>::PutRequestPS(const char * data, uint32_t recv_size) 
 }
 
 template<class key_t, class val_t>
+key_t PutRequestPS<key_t, val_t>::evicted_key() {
+	return this->_evicted_key;
+}
+
+template<class key_t, class val_t>
 uint32_t PutRequestPS<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of serialize for PutReqestN");
+	COUT_N_EXIT("Invalid invoke of serialize for PutReqestPS");
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestPS<key_t, val_t>::size() {
+	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum() + sizeof(uint32_t) + sizeof(uint8_t);
+}
+
+template<class key_t, class val_t>
+void PutRequestPS<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size <= recv_size);
+	const char *begin = data;
+	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
+	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
+	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_key, begin, sizeof(key_t));
+	begin += sizeof(key_t);
+	memcpy((void *)&this->_evicted_key, begin, sizeof(key_t));
+	begin += sizeof(key_t);
+	this->_val.deserialize(begin);
+	begin += (sizeof(uint8_t) + val_t::max_bytesnum());
+	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	memcpy((void *)&this->_is_assigned, begin, sizeof(uint8_t));
 }
 
 // APIs
