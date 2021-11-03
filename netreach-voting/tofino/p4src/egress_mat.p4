@@ -71,7 +71,7 @@ table sendback_cloned_putres_tbl {
 	actions {
 		sendback_cloned_putres;
 	}
-	default_action: sendbac_cloned_putres();
+	default_action: sendback_cloned_putres();
 	size: 1;
 }
 

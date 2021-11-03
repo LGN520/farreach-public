@@ -6,7 +6,6 @@ register lock_reg {
 blackbox stateful_alu try_lock_alu {
 	reg: lock_reg;
 
-	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: set_bit;
 
 	output_value: alu_lo;

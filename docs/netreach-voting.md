@@ -22,6 +22,8 @@
 	(meta.canput = 2 for PUTREQ with matched key) -> update votes -> try response directly (still send PUTRES for PUTREQ 
 	with matched key even if canput = 0) -> calculate vote diff -> access lock -> cache update decision -> port forward and 
 	hash partition
+	+ NOTE: it is ok to set savedseq, vallen, and val without meta.isvalid; Even if the entry is invalid, set those data does not
+	affect the correctness of responses and cache update, as long as we check meta.isvalid for try_res_tbl and cache update
 - For GETRES_S (for GETREQ_S which is cache update decision for GETREQ)
 	+ hash -> replace keys -> set valid bit as 1, dirty bit as 0, and reset savedseq -> set corresponding vallen and put values -> 
 	-> reset all votes as 0 -> reset lock as 0 -> clone/convert a packet as GETRES [update GETRES_S as PUTREQ_GS to server for eviction 

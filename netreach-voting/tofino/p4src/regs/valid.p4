@@ -60,8 +60,9 @@ table access_valid_tbl {
 		get_valid;
 		set_valid;
 		clear_valid;
+		nop;
 	}
-	default_action: get_valid();
+	default_action: nop();
 	size: 2048;
 }
 

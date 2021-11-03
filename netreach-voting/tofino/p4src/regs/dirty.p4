@@ -57,7 +57,8 @@ table access_dirty_tbl {
 		get_dirty;
 		set_dirty;
 		clear_dirty;
+		nop;
 	}
-	default_action: get_dirty();
+	default_action: nop();
 	size: 8;
 }

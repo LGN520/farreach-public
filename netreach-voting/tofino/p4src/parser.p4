@@ -40,7 +40,6 @@ parser parse_op_req {
 	return select(op_hdr.optype) {
 		PUTREQ_TYPE: parse_vallen;
 		PUTREQ_RU_TYPE: parse_vallen;
-		PUTREQ_N_TYPE: parse_vallen;
 		PUTREQ_PS_TYPE: parse_vallen;
 		PUTREQ_GS_TYPE: parse_vallen;
 		default: ingress;

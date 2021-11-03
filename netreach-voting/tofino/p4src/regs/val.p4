@@ -45,8 +45,9 @@ table update_vallen_tbl {
 	actions {
 		get_vallen;
 		put_vallen;
+		nop;
 	}
-	default_action: get_vallen();
+	default_action: nop();
 	size: 4;
 }
 
@@ -97,8 +98,9 @@ table update_vallo1_tbl {
 	actions {
 		get_vallo1;
 		put_vallo1;
+		nop;
 	}
-	default_action: get_vallo1();
+	default_action: nop();
 	size: 4;
 }
 
@@ -149,8 +151,9 @@ table update_valhi1_tbl {
 	actions {
 		get_valhi1;
 		put_valhi1;
+		nop;
 	}
-	default_action: get_valhi1();
+	default_action: nop();
 	size: 4;
 }
 

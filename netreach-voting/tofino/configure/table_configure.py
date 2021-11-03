@@ -145,19 +145,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbuffer"])
 
     def configure_update_val_tbl(self, valname):
-        #matchspec0 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(
-        #        op_hdr_optype=GETREQ_TYPE, 
-        #        meta_isvalid=1, 
-        #        meta_ismatch_keylololo=2, 
-        #        meta_ismatch_keylolohi=2,
-        #        meta_ismatch_keylohilo=2, 
-        #        meta_ismatch_keylohihi=2,
-        #        meta_ismatch_keyhilolo=2, 
-        #        meta_ismatch_keyhilohi=2,
-        #        meta_ismatch_keyhihilo=2,
-        #        meta_ismatch_keyhihihi=2)
-        #eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
-        #        self.sess_hdl, self.dev_tgt, matchspec0)
+        for canput in predicate_list:
+            matchspec0 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(
+                    op_hdr_optype=GETREQ_TYPE, 
+                    meta_canput=canput,
+                    meta_ismatch_keylololo=2, 
+                    meta_ismatch_keylolohi=2,
+                    meta_ismatch_keylohilo=2, 
+                    meta_ismatch_keylohihi=2,
+                    meta_ismatch_keyhilolo=2, 
+                    meta_ismatch_keyhilohi=2,
+                    meta_ismatch_keyhihilo=2,
+                    meta_ismatch_keyhihihi=2)
+            eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
         matchspec1 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(
                 op_hdr_optype=PUTREQ_TYPE, 
                 meta_canput=2,
@@ -196,15 +197,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_access_key_tbl(self, keyname):
-        #matchspec0 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=GETREQ_TYPE);
-        #matchspec1 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=PUTREQ_TYPE);
-        #matchspec2 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=DELREQ_TYPE);
-        #eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
-        #        self.sess_hdl, self.dev_tgt, matchspec0)
-        #eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
-        #        self.sess_hdl, self.dev_tgt, matchspec1)
-        #eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
-        #        self.sess_hdl, self.dev_tgt, matchspec2)
+        matchspec0 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=GETREQ_TYPE);
+        matchspec1 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=PUTREQ_TYPE);
+        matchspec2 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=DELREQ_TYPE);
+        eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
+                self.sess_hdl, self.dev_tgt, matchspec0)
+        eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
+                self.sess_hdl, self.dev_tgt, matchspec1)
+        eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
+                self.sess_hdl, self.dev_tgt, matchspec2)
         matchspec0 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=GETRES_S_TYPE)
         eval("self.client.access_key{}_tbl_table_add_with_modify_key{}".format(keyname, keyname))(\
                 self.sess_hdl, self.dev_tgt, matchspec0)
@@ -273,52 +274,40 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.assign_seq_tbl_table_assign_seq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_keylololo_tbl (default: match_keylololo)
+            # Table: access_keylololo_tbl (default: nop)
             print "Configuring match_keylololo_tbl"
             self.configure_access_key_tbl("lololo")
 
-            # Table: access_keylolohi_tbl (default: match_keylolohi)
+            # Table: access_keylolohi_tbl (default: nop)
             print "Configuring match_keylolohi_tbl"
             self.configure_access_key_tbl("lolohi")
 
-            # Table: access_keylohilo_tbl (default: match_keylohilo)
+            # Table: access_keylohilo_tbl (default: nop)
             print "Configuring match_keylohilo_tbl"
             self.configure_access_key_tbl("lohilo")
 
-            # Table: access_keylohihi_tbl (default: match_keylohihi)
+            # Table: access_keylohihi_tbl (default: nop)
             print "Configuring match_keylohihi_tbl"
             self.configure_access_key_tbl("lohihi")
 
-            # Table: access_keyhilolo_tbl (default: match_keyhilolo)
+            # Table: access_keyhilolo_tbl (default: nop)
             print "Configuring match_keyhilolo_tbl"
             self.configure_access_key_tbl("hilolo")
 
-            # Table: access_keyhilohi_tbl (default: match_keyhilohi)
+            # Table: access_keyhilohi_tbl (default: nop)
             print "Configuring match_keyhilohi_tbl"
             self.configure_access_key_tbl("hilohi")
 
-            # Table: access_keyhihilo_tbl (default: match_keyhihilo)
+            # Table: access_keyhihilo_tbl (default: nop)
             print "Configuring match_keyhihilo_tbl"
             self.configure_access_key_tbl("hihilo")
 
-            # Table: access_keyhihihi_tbl (default: match_keyhihihi)
+            # Table: access_keyhihihi_tbl (default: nop)
             print "Configuring match_keyhihihi_tbl"
             self.configure_access_key_tbl("hihihi")
 
-            # Table: access_valid_tbl (default: get_valid)
+            # Table: access_valid_tbl (default: nop)
             print "Configuring access_valid_tbl"
-            matchspec2 = netbuffer_access_valid_tbl_match_spec_t(
-                    op_hdr_optype=DELREQ_TYPE, 
-                    meta_ismatch_keylololo=2, 
-                    meta_ismatch_keylolohi=2, 
-                    meta_ismatch_keylohilo=2, 
-                    meta_ismatch_keylohihi=2, 
-                    meta_ismatch_keyhilolo=2, 
-                    meta_ismatch_keyhilohi=2, 
-                    meta_ismatch_keyhihilo=2,
-                    meta_ismatch_keyhihihi=2)
-            self.client.access_valid_tbl_table_add_with_clear_valid(\
-                    self.sess_hdl, self.dev_tgt, matchspec2)
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
                     for ismatch_keylohilo in predicate_list:
@@ -327,9 +316,30 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for ismatch_keyhilohi in predicate_list:
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
+                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
+                                                matchspec0 = netbuffer_access_valid_tbl_match_spec_t(
+                                                        op_hdr_optype=tmpoptype, 
+                                                        meta_ismatch_keylololo=ismatch_keylololo, 
+                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                                if (tmpoptype == DELREQ_TYPE and \
+                                                ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
+                                                ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
+                                                ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
+                                                ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
+                                                    self.client.access_valid_tbl_table_add_with_clear_valid(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                else: 
+                                                    self.client.access_valid_tbl_table_add_with_get_valid(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
                                             # NOTE: GETRES_S/PUTREQ_U_S triggers modify_key which does not set ismatch_key but set origin_key
                                             for tmpoptype in [GETREQ_S_TYPE, PUTREQ_RU_TYPE]:
-                                                matchspec3 = netbuffer_access_valid_tbl_match_spec_t(
+                                                matchspec0 = netbuffer_access_valid_tbl_match_spec_t(
                                                         op_hdr_optype=tmpoptype, 
                                                         meta_ismatch_keylololo=ismatch_keylololo, 
                                                         meta_ismatch_keylolohi=ismatch_keylolohi, 
@@ -340,9 +350,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         meta_ismatch_keyhihilo=ismatch_keyhihilo,
                                                         meta_ismatch_keyhihihi=ismatch_keyhihihi)
                                                 self.client.access_valid_tbl_table_add_with_set_valid(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec3)
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_dirty_tbl (default: get_dirty)
+            # Table: access_dirty_tbl (default: nop)
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
                     for ismatch_keylohilo in predicate_list:
@@ -375,20 +385,37 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_ismatch_keyhihihi=ismatch_keyhihihi)
                                             self.client.access_dirty_tbl_table_add_with_set_dirty(\
                                                     self.sess_hdl, self.dev_tgt, matchspec1)
-            matchspec1 = netbuffer_access_dirty_tbl_match_spec_t(\
-                    op_hdr_optype=PUTREQ_TYPE,
-                    meta_ismatch_keylololo=2,
-                    meta_ismatch_keylolohi=2,
-                    meta_ismatch_keylohilo=2,
-                    meta_ismatch_keylohihi=2,
-                    meta_ismatch_keyhilolo=2,
-                    meta_ismatch_keyhilohi=2,
-                    meta_ismatch_keyhihilo=2,
-                    meta_ismatch_keyhihihi=2)
-            self.client.access_dirty_tbl_table_add_with_set_dirty(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
+            for ismatch_keylololo in predicate_list:
+                for ismatch_keylolohi in predicate_list:
+                    for ismatch_keylohilo in predicate_list:
+                        for ismatch_keylohihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
+                                                matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(\
+                                                        op_hdr_optype=tmpoptype,
+                                                        meta_ismatch_keylololo=ismatch_keylololo, 
+                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                                if (tmpoptype == PUTREQ_TYPE and \
+                                                ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
+                                                ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
+                                                ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
+                                                ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
+                                                    self.client.access_dirty_tbl_table_add_with_set_dirty(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                else:
+                                                    self.client.access_dirty_tbl_table_add_with_get_dirty(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_savedseq_tbl (no default)
+            # Table: access_savedseq_tbl (default: nop)
             print "Configuring access_savedseq_tbl"
             matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_TYPE,
@@ -429,20 +456,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Start from stage 4 (after keys and savedseq)
 
-            # Table: update_vallen_tbl (default: get_vallen)
-            matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
-                    op_hdr_optype=PUTREQ_TYPE, 
-                    meta_canput=2,
-		    meta_ismatch_keylololo=2, 
-		    meta_ismatch_keylolohi=2, 
-		    meta_ismatch_keylohilo=2, 
-		    meta_ismatch_keylohihi=2, 
-		    meta_ismatch_keyhilolo=2,
-		    meta_ismatch_keyhilohi=2,
-		    meta_ismatch_keyhihilo=2,
-		    meta_ismatch_keyhihihi=2)
-            self.client.update_vallen_tbl_table_add_with_put_vallen(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            # Table: update_vallen_tbl (default: nop)
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
                     for ismatch_keylohilo in predicate_list:
@@ -452,6 +466,28 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
                                             for canput in predicate_list:
+                                                for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
+                                                    matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
+                                                            op_hdr_optype=tmpoptype, 
+                                                            meta_canput=canput,
+                                                            meta_ismatch_keylololo=ismatch_keylololo, 
+                                                            meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                            meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                                    if (tmpoptype == PUTREQ_TYPE and canput == 2 and \
+                                                    ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
+                                                    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
+                                                    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
+                                                    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
+                                                        self.client.update_vallen_tbl_table_add_with_put_vallen(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    else:
+                                                        self.client.update_vallen_tbl_table_add_with_get_vallen(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
                                                 for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
                                                     matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
                                                             op_hdr_optype=tmpoptype, 
@@ -467,7 +503,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.update_vallen_tbl_table_add_with_put_vallen(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: update_vallo1_tbl (default: get_vallo1)
+            # Table: update_vallo1_tbl (default: nop)
             print "Configuring update_vallo1_tbl"
             self.configure_update_val_tbl("lo1")
 
@@ -621,7 +657,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #self.client.update_vallo16_tbl_table_add_with_get_vallo8(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            # Table: update_valhi1_tbl (default: get_valhi1)
+            # Table: update_valhi1_tbl (default: nop)
             print "Configuring update_valhi1_tbl"
             self.configure_update_val_tbl("hi1")
 
