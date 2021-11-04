@@ -72,7 +72,7 @@
 	+ Add dirty bit (dirty.p4, basic.p4, and configure/table_configure.py)
 	+ Add in-switch eviction mechanism
 		* Add vote diff calculate (ingerss_mat.p4, basic.p4, and configure/table_configure.py)
-		* Add two thresholds (basic.p4, ingress_mat.p4, and configure/table_configure.py (TODO 1))
+		* DEPRECATED: Add two thresholds (basic.p4, ingress_mat.p4, and configure/table_configure.py)
 		* Only if key does not match: compare vote diff and corresponding threshold to update lock bit; also get original lock bit
 		* Key matches -> response
 			- Only if it is valid and key matches, get/put value register (basic.p4, val.p4, and configure/table_configure.py)
@@ -139,14 +139,18 @@
 	+ TODO: For carsh-consistent backup, we only need to remember the evicted data from PUTREQ_GS and PUTREQ_PS instead of PUTREQ_N 
 	in server; switch also needs to send the original value of the cached key for the first update
 	+ Set size of each table accordingly
-- TODO: For put req
-	+ If key matches, we need to update value (need to drop original put req; need to clone for put_res)
-	+ If key does not match
-		* If with cache update, we need to change pkt to put_req_u and update cache by recirculation
-			- If the original entry is not dirty, we still need to notify the server by changing pkt to put_req_n (do not need to drop put_req_u; need to clone for put_res)
-			- If it is dirty, we need to change pkt to put_req_s (a new key and evicted key-value pair) (do not need to drop put_req_s; need to clone for put_res)
-		* If without cache update, we need to forward put_req (do not need to clone pkt for put_res)
-	+ NOTE: in design, put_req_n and put_req_s must be two packets since the two servers may be different
+- Debug
+	+ Use thread_id of server thread to perform operation in key-value store instead of req.thread_id() (ycsb_server.c)
+
+## Simple test
+
+- See directory of "testcases"
+	+ Case 1: single read
+		* Read the value of a given key
+		* It should read the value from the server
+	+ Case 2: single write
+		* Write new value for a given key
+		* It should write the value into switch by recirculation
 
 ## How to run
 

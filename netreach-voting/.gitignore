@@ -18,3 +18,4 @@ ycsb_server
 *.a
 *.o
 *.d
+!testcases/*

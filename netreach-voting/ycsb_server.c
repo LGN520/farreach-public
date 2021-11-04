@@ -583,7 +583,7 @@ static int run_sfg(void * param) {
 					get_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
-					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
+					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -598,7 +598,7 @@ static int run_sfg(void * param) {
 				{
 					put_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -613,7 +613,7 @@ static int run_sfg(void * param) {
 				{
 					del_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
-					bool tmp_stat = table->remove(req.key(), req.thread_id());
+					bool tmp_stat = table->remove(req.key(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -630,7 +630,7 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
 					//double t00 = CUR_TIME();
-					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
+					size_t tmp_num = table->scan(req.key(), req.num(), results, thread_id);
 					//double t11 = CUR_TIME();
 					//COUT_THIS("Index SCAN: " << (t11 - t00) << "us")
 					//COUT_THIS("[server] num = " << tmp_num)
@@ -702,7 +702,7 @@ static int run_sfg(void * param) {
 					get_request_s_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
-					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
+					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
 					if (tmp_stat) {
@@ -725,7 +725,7 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					put_request_gs_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
 				}
@@ -734,7 +734,7 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					put_request_ps_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string()
-					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
 				}
 			case packet_type_t::DEL_REQ_S:
@@ -742,7 +742,7 @@ static int run_sfg(void * param) {
 					// Delete data from key-value storen
 					del_request_s_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
-					bool tmp_stat = table->remove(req.key(), req.thread_id());
+					bool tmp_stat = table->remove(req.key(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
 				}
@@ -757,7 +757,7 @@ static int run_sfg(void * param) {
 				{
 					put_request_s_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
 				}*/
