@@ -63,7 +63,7 @@ table access_valid_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2048;
+	size: 1280;
 }
 
 // Optimization for recirculation
@@ -122,5 +122,5 @@ table access_future_valid_tbl {
 		clear_future_valid;
 	}
 	default_action: get_future_valid();
-	size: 2048;
+	size: 4;
 }*/

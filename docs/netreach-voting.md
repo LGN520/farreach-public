@@ -138,7 +138,7 @@
 		- TODO: support SCAN with a guarantee of some point-in-time: we still need RCU for backup data
 	+ TODO: For carsh-consistent backup, we only need to remember the evicted data from PUTREQ_GS and PUTREQ_PS instead of PUTREQ_N 
 	in server; switch also needs to send the original value of the cached key for the first update
-	+ TODO: set size of each table accordingly
+	+ Set size of each table accordingly
 - TODO: For put req
 	+ If key matches, we need to update value (need to drop original put req; need to clone for put_res)
 	+ If key does not match

@@ -51,8 +51,8 @@ src_mac = str(config.get("client", "client_mac"))
 dst_mac = str(config.get("server", "server_mac"))
 src_ip = str(config.get("client", "client_ip"))
 dst_ip = str(config.get("server", "server_ip"))
-gthreshold = int(config.get("switch", "gthreshold"))
-pthreshold = int(config.get("switch", "pthreshold"))
+#gthreshold = int(config.get("switch", "gthreshold"))
+#pthreshold = int(config.get("switch", "pthreshold"))
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
@@ -145,6 +145,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbuffer"])
 
     def configure_update_val_tbl(self, valname):
+        # 1026
         for canput in predicate_list:
             matchspec0 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(
                     op_hdr_optype=GETREQ_TYPE, 
@@ -197,6 +198,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_access_key_tbl(self, keyname):
+        # 5
         matchspec0 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=GETREQ_TYPE);
         matchspec1 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=PUTREQ_TYPE);
         matchspec2 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(op_hdr_optype=DELREQ_TYPE);
@@ -236,6 +238,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.devPorts.append(devPort)
         #self.devPorts.append(CPU_PORT)
 
+        # get recirculate port from device port (remove the first 2-bit pipe ID)
+        self.recirPorts = []
+        for i in range(len(self.devPorts)):
+            self.recirPorts.append(self.devPorts[i] & 0x7F)
+
     ### MAIN ###
 
     def runTest(self):
@@ -266,15 +273,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #                      True)
             self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
-            # Table assign_seq_tbl
+            # Table assign_seq_tbl (default: nop; 1)
             print "Configuring assign_seq_tbl"
             matchspec0 = netbuffer_assign_seq_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_TYPE, 
                     seq_hdr_is_assigned = 0)
-            self.client.assign_seq_tbl_table_assign_seq(\
+            self.client.assign_seq_tbl_table_add_with_assign_seq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_keylololo_tbl (default: nop)
+            # Table: access_keylololo_tbl (default: nop; 5)
             print "Configuring match_keylololo_tbl"
             self.configure_access_key_tbl("lololo")
 
@@ -306,7 +313,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring match_keyhihihi_tbl"
             self.configure_access_key_tbl("hihihi")
 
-            # Table: access_valid_tbl (default: nop)
+            # Table: access_valid_tbl (default: nop; 1280)
             print "Configuring access_valid_tbl"
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
@@ -352,7 +359,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 self.client.access_valid_tbl_table_add_with_set_valid(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_dirty_tbl (default: nop)
+            # Table: access_dirty_tbl (default: nop; 1024)
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
                     for ismatch_keylohilo in predicate_list:
@@ -393,7 +400,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for ismatch_keyhilohi in predicate_list:
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
-                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
+                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]: # DELREQ does not to read dirty bit
                                                 matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(\
                                                         op_hdr_optype=tmpoptype,
                                                         meta_ismatch_keylololo=ismatch_keylololo, 
@@ -415,7 +422,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.access_dirty_tbl_table_add_with_get_dirty(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_savedseq_tbl (default: nop)
+            # Table: access_savedseq_tbl (default: nop; 1026)
             print "Configuring access_savedseq_tbl"
             matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_TYPE,
@@ -429,6 +436,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 		    meta_ismatch_keyhihilo=2,
 		    meta_ismatch_keyhihihi=2)
             self.client.access_savedseq_tbl_table_add_with_try_update_savedseq(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
+                    op_hdr_optype = DELREQ_TYPE,
+                    seq_hdr_is_assigned = 0,
+		    meta_ismatch_keylololo=2, 
+		    meta_ismatch_keylolohi=2, 
+		    meta_ismatch_keylohilo=2, 
+		    meta_ismatch_keylohihi=2, 
+		    meta_ismatch_keyhilolo=2,
+		    meta_ismatch_keyhilohi=2,
+		    meta_ismatch_keyhihilo=2,
+		    meta_ismatch_keyhihihi=2)
+            self.client.access_savedseq_tbl_table_add_with_reset_savedseq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
@@ -456,7 +476,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Start from stage 4 (after keys and savedseq)
 
-            # Table: update_vallen_tbl (default: nop)
+            # Table: update_vallen_tbl (default: nop; 2048)
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
                     for ismatch_keylohilo in predicate_list:
@@ -466,7 +486,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
                                             for canput in predicate_list:
-                                                for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
+                                                for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]: # DELREQ does not need vallen
                                                     matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
                                                             op_hdr_optype=tmpoptype, 
                                                             meta_canput=canput,
@@ -503,7 +523,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.update_vallen_tbl_table_add_with_put_vallen(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: update_vallo1_tbl (default: nop)
+            # Table: update_vallo1_tbl (default: nop; 1026)
             print "Configuring update_vallo1_tbl"
             self.configure_update_val_tbl("lo1")
 
@@ -813,7 +833,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 4 + n
 
-            # Table: access_vote_tbl (default: nop)
+            # Table: access_vote_tbl (default: nop; 2050)
             print "Configuring access_vote_tbl"
             # GETREQ and PUTREQ
             for optype in [GETREQ_TYPE, PUTREQ_TYPE]:
@@ -828,7 +848,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         meta_ismatch_keyhilohi=2,
                         meta_ismatch_keyhihilo=2,
                         meta_ismatch_keyhihihi=2)
-            self.client_access_vote_tbl_table_add_with_increase_vote(
+            self.client.access_vote_tbl_table_add_with_increase_vote(
                     self.sess_hdl, self.dev_tgt, matchspec0)
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
@@ -891,7 +911,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_ismatch_keyhilohi=2,
                     meta_ismatch_keyhihilo=2,
                     meta_ismatch_keyhihihi=2)
-            self.client_access_vote_tbl_table_add_with_reset_vote(
+            self.client.access_vote_tbl_table_add_with_reset_vote(
                     self.sess_hdl, self.dev_tgt, matchspec0)
             # Cache update: GETRES_S and PUTREQ_RU (set vote as 1) (GETRES_NS: keep original vote)
             for ismatch_keylololo in predicate_list:
@@ -918,7 +938,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.access_vote_tbl_table_add_with_init_vote(
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
             
-            # Table: try_res_tbl (default: nop)
+            # Table: try_res_tbl (default: nop; 3)
+            print "Configuring try_res_tbl"
             matchspec0 = netbuffer_try_res_tbl_match_spec_t(\
                     op_hdr_optype=GETREQ_TYPE,
                     meta_isvalid=1,
@@ -930,7 +951,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_ismatch_keyhilohi=2,
                     meta_ismatch_keyhihilo=2,
                     meta_ismatch_keyhihihi=2)
-            self.client.try_res_tbl_table_add_with_sendback_getres(\
+            self.client.try_res_tbl_table_add_with_update_getreq_to_getres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec1 = netbuffer_try_res_tbl_match_spec_t(\
                     op_hdr_optype=PUTREQ_TYPE,
@@ -943,7 +964,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_ismatch_keyhilohi=2,
                     meta_ismatch_keyhihilo=2,
                     meta_ismatch_keyhihihi=2)
-            self.client.try_res_tbl_table_add_with_sendback_putres(\
+            self.client.try_res_tbl_table_add_with_update_putreq_to_putres(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
             matchspec2 = netbuffer_try_res_tbl_match_spec_t(\
                     op_hdr_optype=DELREQ_TYPE,
@@ -956,37 +977,42 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_ismatch_keyhilohi=2,
                     meta_ismatch_keyhihilo=2,
                     meta_ismatch_keyhihihi=2)
-            actnspec2 = netbuffer_update_delreq_and_clone_action_spec_t(sids[0]) # Clone for DELRES to client
-            self.client.try_res_tbl_table_add_with_update_delreq_and_clone(\
-                    self.sess_hdl, self.dev_tgt, matchspec2)
+            actnspec2 = netbuffer_update_delreq_to_s_and_clone_action_spec_t(sids[0]) # Clone for DELRES to client
+            self.client.try_res_tbl_table_add_with_update_delreq_to_s_and_clone(\
+                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
 
-            # Table: access_lock_tbl (default: nop)
+            # Table: access_lock_tbl (default: nop; 8)
             print "Configuring access_lock_tbl"
-            matchspec0 = netbuffer_access_lock_tbl_match_spec_t(
-                    meta_isevict=1)
-            self.client.access_lock_tbl_table_add_with_try_lock(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE, GETRES_NS_TYPE]:
-                matchspec1 = netbuffer_access_lock_tbl_match_spec_t(
-                        op_hdr_optype=tmpoptype)
-                self.client.access_lock_tbl_table_add_with_clear_lock(\
-                        self.sess_hdl, self.dev_tgt, matchspec1)
+            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
+                matchspec0 = netbuffer_access_lock_tbl_match_spec_t(
+                        op_hdr_optype=tmpoptype,
+                        meta_isevict=2)
+                self.client.access_lock_tbl_table_add_with_try_lock(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+            for isevict in predicate_list:
+                for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE, GETRES_NS_TYPE]:
+                    matchspec1 = netbuffer_access_lock_tbl_match_spec_t(
+                            op_hdr_optype=tmpoptype,
+                            meta_isevict=isevict)
+                    self.client.access_lock_tbl_table_add_with_clear_lock(\
+                            self.sess_hdl, self.dev_tgt, matchspec1)
 
-            # Table: trigger_cache_update_tbl
+            # Table: trigger_cache_update_tbl (default: nop; 2)
+            print "Configuring trigger_cache_update_tbl"
             matchspec0 = netbuffer_trigger_cache_update_tbl_match_spec_t(\
-                    meta_is_lock=0,
+                    meta_islock=0,
                     op_hdr_optype=GETREQ_TYPE,
-                    meta_isevict=1)
+                    meta_isevict=2)
             self.client.trigger_cache_update_tbl_table_add_with_update_getreq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec1 = netbuffer_trigger_cache_update_tbl_match_spec_t(\
-                    meta_is_lock=0,
+                    meta_islock=0,
                     op_hdr_optype=PUTREQ_TYPE,
-                    meta_isevict=1)
+                    meta_isevict=2)
             self.client.trigger_cache_update_tbl_table_add_with_update_putreq(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+                    self.sess_hdl, self.dev_tgt, matchspec1)
 
-            # Table: port_forward_tbl (default: nop)
+            # Table: port_forward_tbl (default: nop; 112)
             print "Configuring port_forward_tbl"
             for isvalid in valid_list:
                 for isdirty in dirty_list:
@@ -1032,7 +1058,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_isdirty = isdirty,
                                 meta_islock = islock)
                         actnspec0 = netbuffer_recirculate_putreq_u_action_spec_t(\
-                                self.devPorts[1]) # Server port should have less load?
+                                self.recirPorts[1]) # Server port should have less load?
                         self.client.port_forward_tbl_table_add_with_recirculate_putreq_u(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for isvalid in valid_list:
@@ -1044,9 +1070,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     meta_isvalid = 1,
                                     meta_isdirty = 1,
                                     meta_islock = islock)
-                            actnspec0 = netbuffer_update_putreq_ru_to_ps_action_spec_t(\
+                            actnspec0 = netbuffer_update_putreq_ru_to_ps_and_clone_action_spec_t(\
                                     sids[0], self.devPorts[1]) # Clone to client, forward to server
-                            self.client.port_forward_tbl_table_add_with_update_putreq_ru_to_ps(\
+                            self.client.port_forward_tbl_table_add_with_update_putreq_ru_to_ps_and_clone(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                         else:
                             matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
@@ -1054,9 +1080,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     meta_isvalid = isvalid,
                                     meta_isdirty = isdirty,
                                     meta_islock = islock)
-                            actnspec0 = netbuffer_sendback_putres_action_spec_t(\
+                            actnspec0 = netbuffer_update_putreq_ru_to_putres_action_spec_t(\
                                     self.devPorts[0]) # Forward to client
-                            self.client.port_forward_tbl_table_add_with_sendback_putres(\
+                            self.client.port_forward_tbl_table_add_with_update_putreq_ru_to_putres(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for isvalid in valid_list:
                 for isdirty in dirty_list:
@@ -1067,7 +1093,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_isdirty = isdirty,
                                 meta_islock = 1)
                         actnspec0 = netbuffer_recirculate_pkt_action_spec_t(\
-                                self.devPorts[1]) # Server port should have less load?
+                                self.recirPorts[1]) # Server port should have less load?
                         self.client.port_forward_tbl_table_add_with_recirculate_pkt(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for isvalid in valid_list:
@@ -1109,7 +1135,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.client.port_forward_tbl_table_add_with_port_forward(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-            # Table: hash_partition_tbl
+            # Table: hash_partition_tbl (default: nop; server_num <= 128)
             print "Configuring hash_partition_tbl"
             hash_start = 0
             hash_range_per_server = bucket_num / server_num
@@ -1129,7 +1155,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                 hash_start = hash_end
 
-            # Table: origin_hash_partition_tbl
+            # Table: origin_hash_partition_tbl (default: nop; server_num <= 128)
             print "Configuring origin_hash_partition_tbl"
             hash_start = 0
             hash_range_per_server = bucket_num / server_num
@@ -1149,7 +1175,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                 hash_start = hash_end
 
-            # Table: origin_hash_partition_reverse_tbl
+            # Table: origin_hash_partition_reverse_tbl (default: nop; server_num <= 128)
             print "Configuring origin_hash_partition_reverse_tbl"
             hash_start = 0
             hash_range_per_server = bucket_num / server_num
@@ -1176,28 +1202,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #self.client.drop_put_tbl_table_add_with_ig_drop_unicast(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: update_macaddr_tbl
+            # Egress pipeline
+
+            # Table: update_macaddr_tbl (default: nop; 3)
             print "Configuring update_macaddr_tbl"
             actnspec = netbuffer_update_macaddr_action_spec_t(\
                     macAddr_to_string(src_mac), \
                     macAddr_to_string(dst_mac))
-            matchspec0 = netbuffer_swap_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_TYPE)
-            matchspec1 = netbuffer_swap_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES_TYPE)
-            matchspec2 = netbuffer_swap_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES_TYPE)
-            self.client.swap_macaddr_tbl_table_add_with_swap_macaddr(\
+            matchspec0 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_TYPE)
+            matchspec1 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES_TYPE)
+            matchspec2 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES_TYPE)
+            self.client.update_macaddr_tbl_table_add_with_update_macaddr(\
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec)
-            self.client.swap_macaddr_tbl_table_add_with_swap_macaddr(\
+            self.client.update_macaddr_tbl_table_add_with_update_macaddr(\
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec)
-            self.client.swap_macaddr_tbl_table_add_with_swap_macaddr(\
+            self.client.update_macaddr_tbl_table_add_with_update_macaddr(\
                     self.sess_hdl, self.dev_tgt, matchspec2, actnspec)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
             self.conn_mgr.client_cleanup(self.sess_hdl)
-
-            # Egress pipeline
-
-            # Table: update_cloned_udpports_tbl
-            print "Configuring update_cloned_udpports_tbl"
 
     #def tearDown(self):
     #    if test_param_get('cleanup') == True:

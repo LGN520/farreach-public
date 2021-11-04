@@ -29,7 +29,9 @@ table assign_seq_tbl {
 	}
 	actions {
 		assign_seq;
+		nop;
 	}
+	default_action: nop();
 	size: 1;
 }
 
@@ -87,5 +89,5 @@ table access_savedseq_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1;
+	size: 1152;
 }

@@ -84,7 +84,7 @@ table save_info_tbl {
 
 // Stage 5 + n
 
-action sendback_getres() {
+action update_getreq_to_getres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
@@ -145,7 +145,7 @@ action sendback_getres() {
 	add_header(val16_hdr);*/
 }
 
-action sendback_putres() {
+action update_putreq_to_putres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
@@ -180,7 +180,7 @@ field_list clone_field_list {
 	meta.tmp_dport;
 }
 
-action update_delreq_and_clone(sid) {
+action update_delreq_to_s_and_clone(sid) {
 	// Update transferred packet as delreq_s
 	modify_field(op_hdr.optype, DELREQ_S_TYPE);
 
@@ -203,13 +203,13 @@ table try_res_tbl {
 		meta.ismatch_keyhihihi: exact;
 	}
 	actions {
-		sendback_getres;
-		sendback_putres;
-		update_delreq_and_clone;
+		update_getreq_to_getres;
+		update_putreq_to_putres;
+		update_delreq_to_s_and_clone;
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 4;
 }
 
 // Stage 5+n + 2
@@ -373,6 +373,37 @@ action update_putreq_ru_to_ps_and_clone(sid, port) {
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
+action update_putreq_ru_to_putres(port) {
+	// Swap udp port
+	modify_field(udp_hdr.dstPort, meta.tmp_sport);
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_ONE);
+
+	remove_header(vallen_hdr);
+	remove_header(val1_hdr);
+	/*remove_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);*/
+	modify_field(op_hdr.optype, PUTRES_TYPE);
+	modify_field(res_hdr.stat, 1);
+	add_header(res_hdr);
+
+	// Forward PUTRES to client
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
 action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -398,7 +429,7 @@ table port_forward_tbl {
 	actions {
 		update_getres_s;
 		update_getres_s_and_clone;
-		sendback_putres;
+		update_putreq_ru_to_putres;
 		update_putreq_ru_to_ps_and_clone;
 		recirculate_putreq_u;
 		recirculate_pkt;
@@ -406,7 +437,7 @@ table port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;  
+	size: 128;  
 }
 
 

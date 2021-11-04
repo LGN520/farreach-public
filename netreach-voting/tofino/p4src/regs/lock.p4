@@ -31,6 +31,7 @@ action clear_lock() {
 
 table access_lock_tbl {
 	reads {
+		op_hdr.optype: exact;
 		meta.isevict: exact;
 	}
 	actions {
@@ -39,5 +40,5 @@ table access_lock_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 8;
 }

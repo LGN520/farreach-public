@@ -89,5 +89,5 @@ table update_macaddr_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 4;
 }

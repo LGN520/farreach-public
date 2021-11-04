@@ -48,7 +48,7 @@ table access_keylololo_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register keylolohi_reg {
@@ -99,7 +99,7 @@ table access_keylolohi_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register keylohilo_reg {
@@ -150,7 +150,7 @@ table access_keylohilo_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register keylohihi_reg {
@@ -201,7 +201,7 @@ table access_keylohihi_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register keyhilolo_reg {
@@ -252,7 +252,7 @@ table access_keyhilolo_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register keyhilohi_reg {
@@ -303,7 +303,7 @@ table access_keyhilohi_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register keyhihilo_reg {
@@ -354,7 +354,7 @@ table access_keyhihilo_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register keyhihihi_reg {
@@ -405,7 +405,7 @@ table access_keyhihihi_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 // Optimization for unnecessary recirculation
@@ -455,7 +455,7 @@ table access_future_keylololo_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register future_keylolohi_reg {
@@ -503,7 +503,7 @@ table access_future_keylolohi_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register future_keylohilo_reg {
@@ -551,7 +551,7 @@ table access_future_keylohilo_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register future_keylohihi_reg {
@@ -599,7 +599,7 @@ table access_future_keylohihi_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register future_keyhilolo_reg {
@@ -647,7 +647,7 @@ table access_future_keyhilolo_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register future_keyhilohi_reg {
@@ -695,7 +695,7 @@ table access_future_keyhilohi_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register future_keyhihilo_reg {
@@ -743,7 +743,7 @@ table access_future_keyhihilo_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 
 register future_keyhihihi_reg {
@@ -791,5 +791,5 @@ table access_future_keyhihihi_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }*/
