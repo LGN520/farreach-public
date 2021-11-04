@@ -141,6 +141,9 @@
 	+ Set size of each table accordingly
 - Debug
 	+ Use thread_id of server thread to perform operation in key-value store instead of req.thread_id() (ycsb_server.c)
+	+ If condition_lo is true, the predicate is 2; (NOTE) if condition_lo is false, the predicate is 1 instead of 0!!!
+		* Solution: add initialize_tbl to initialize predicate fields in meta as 1 to reduce MAT entries
+	+ TODO: try official example of resubmit
 
 ## Simple test
 

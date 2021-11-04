@@ -14,7 +14,6 @@ blackbox stateful_alu try_lock_alu {
 
 action try_lock() {
 	try_lock_alu.execute_stateful_alu(meta.hashidx);
-	modify_field(op_hdr.thread_id, 10);
 }
 
 blackbox stateful_alu clear_lock_alu {

@@ -88,7 +88,7 @@ PUTREQ_RU_TYPE = 0x21
 valid_list = [0, 1]
 dirty_list = [0, 1]
 lock_list = [0, 1]
-predicate_list = [0, 2]
+predicate_list = [1, 2]
 
 if test_param_get("arch") == "tofino":
   MIR_SESS_COUNT = 1024
@@ -833,13 +833,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 4 + n
 
-            # Table: access_vote_tbl (default: nop; 2050)
+            # Table: access_vote_tbl (default: nop; 2049)
             print "Configuring access_vote_tbl"
             # GETREQ and PUTREQ
-            for optype in [GETREQ_TYPE, PUTREQ_TYPE]:
+            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
                 matchspec0 = netbuffer_access_vote_tbl_match_spec_t(
                         meta_isvalid=1,
-                        op_hdr_optype=optype, 
+                        op_hdr_optype=tmpoptype, 
                         meta_ismatch_keylololo=2, 
                         meta_ismatch_keylolohi=2, 
                         meta_ismatch_keylohilo=2, 
@@ -848,8 +848,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         meta_ismatch_keyhilohi=2,
                         meta_ismatch_keyhihilo=2,
                         meta_ismatch_keyhihihi=2)
-            self.client.access_vote_tbl_table_add_with_increase_vote(
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+                self.client.access_vote_tbl_table_add_with_increase_vote(
+                        self.sess_hdl, self.dev_tgt, matchspec0)
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
                     for ismatch_keylohilo in predicate_list:
@@ -1057,10 +1057,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_isvalid = isvalid,
                                 meta_isdirty = isdirty,
                                 meta_islock = islock)
-                        actnspec0 = netbuffer_recirculate_putreq_u_action_spec_t(\
-                                self.recirPorts[1]) # Server port should have less load?
+                        #actnspec0 = netbuffer_recirculate_putreq_u_action_spec_t(\
+                        #        self.recirPorts[1]) # Server port should have less load?
                         self.client.port_forward_tbl_table_add_with_recirculate_putreq_u(\
-                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                #self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for isvalid in valid_list:
                 for isdirty in dirty_list:
                     for islock in lock_list:
@@ -1092,10 +1093,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_isvalid = isvalid,
                                 meta_isdirty = isdirty,
                                 meta_islock = 1)
-                        actnspec0 = netbuffer_recirculate_pkt_action_spec_t(\
-                                self.recirPorts[1]) # Server port should have less load?
+                        #actnspec0 = netbuffer_recirculate_pkt_action_spec_t(\
+                        #        self.recirPorts[1]) # Server port should have less load?
                         self.client.port_forward_tbl_table_add_with_recirculate_pkt(\
-                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                #self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for isvalid in valid_list:
                 for isdirty in dirty_list:
                     for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
@@ -1201,6 +1203,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #        op_hdr_optype = PUTREQ_TYPE)
             #self.client.drop_put_tbl_table_add_with_ig_drop_unicast(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # TMPDEBUG
+            print "Configuring forward_to_server_tbl"
+            matchspec0 = netbuffer_forward_to_server_tbl_match_spec_t(\
+                    ig_intr_md_ingress_port=self.devPorts[0])
+            actnspec0 = netbuffer_forward_to_server_action_spec_t(\
+                    self.devPorts[1])
+            self.client.forward_to_server_tbl_table_add_with_forward_to_server(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Egress pipeline
 

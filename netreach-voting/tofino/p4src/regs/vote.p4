@@ -12,7 +12,6 @@ blackbox stateful_alu increase_vote_alu {
 action increase_vote() {
 	increase_vote_alu.execute_stateful_alu(meta.hashidx);
 	modify_field(meta.isevict, 0);
-	modify_field(op_hdr.thread_id, 9); // TMPDEBUG
 }
 
 blackbox stateful_alu decrease_vote_alu {
@@ -31,7 +30,6 @@ blackbox stateful_alu decrease_vote_alu {
 
 action decrease_vote() {
 	decrease_vote_alu.execute_stateful_alu(meta.hashidx);
-	modify_field(op_hdr.thread_id, meta.isevict); // TMPDEBUG
 }
 
 blackbox stateful_alu reset_vote_alu {

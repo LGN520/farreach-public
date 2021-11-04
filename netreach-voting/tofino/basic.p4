@@ -154,6 +154,7 @@ control ingress {
 		// Stage 0
 		apply(calculate_hash_tbl);
 		apply(save_info_tbl);
+		apply(initialize_tbl);
 		apply(assign_seq_tbl);
 
 		// Stage 1 and 2
@@ -258,6 +259,9 @@ control ingress {
 			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 		}
 
+		if (ig_intr_md.resubmit_flag != 0) {
+			apply(forward_to_server_tbl); // TMPDEBUG
+		}
 	}
 }
 

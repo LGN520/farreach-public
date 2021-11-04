@@ -37,6 +37,44 @@ table calculate_hash_tbl {
 	size: 1;
 }
 
+action save_info() {
+	modify_field(meta.tmp_sport, udp_hdr.srcPort);
+	modify_field(meta.tmp_dport, udp_hdr.dstPort);
+}
+
+//@pragma stage 0
+table save_info_tbl {
+	actions {
+		save_info;
+	}
+	default_action: save_info();
+	size: 1;
+}
+
+action initialize() {
+	// NOTE: condition_lo = false -> predicate = 1
+	// Make such an initialization to reduce MAT entries
+	modify_field(meta.ismatch_keylololo, 1);
+	modify_field(meta.ismatch_keylolohi, 1);
+	modify_field(meta.ismatch_keylohilo, 1);
+	modify_field(meta.ismatch_keylohihi, 1);
+	modify_field(meta.ismatch_keyhilolo, 1);
+	modify_field(meta.ismatch_keyhilohi, 1);
+	modify_field(meta.ismatch_keyhihilo, 1);
+	modify_field(meta.ismatch_keyhihihi, 1);
+	modify_field(meta.canput, 1);
+	modify_field(meta.isevict, 1);
+}
+
+table initialize_tbl {
+	actions {
+		initialize;
+	}
+	default_action: initialize();
+}
+
+// Stage 3
+
 field_list origin_hash_fields {
 	meta.origin_keylololo;
 	meta.origin_keylolohi;
@@ -65,20 +103,6 @@ table calculate_origin_hash_tbl {
 		calculate_origin_hash;
 	}
 	default_action: calculate_origin_hash();
-	size: 1;
-}
-
-action save_info() {
-	modify_field(meta.tmp_sport, udp_hdr.srcPort);
-	modify_field(meta.tmp_dport, udp_hdr.dstPort);
-}
-
-//@pragma stage 0
-table save_info_tbl {
-	actions {
-		save_info;
-	}
-	default_action: save_info();
 	size: 1;
 }
 
@@ -408,7 +432,7 @@ action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
-action recirculate_putreq_u(port) {
+/*action recirculate_putreq_u(port) {
 	modify_field(op_hdr.optype, PUTREQ_RU_TYPE); // convert into PUTREQ_RU (recirculated update)
 	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
 	recirculate(port);
@@ -417,6 +441,15 @@ action recirculate_putreq_u(port) {
 action recirculate_pkt(port) {
 	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
 	recirculate(port);
+}*/
+
+action recirculate_putreq_u() {
+	modify_field(op_hdr.optype, PUTREQ_RU_TYPE); // convert into PUTREQ_RU (recirculated update)
+	resubmit();
+}
+
+action recirculate_pkt() {
+	resubmit();
 }
 
 table port_forward_tbl {
@@ -490,4 +523,20 @@ table origin_hash_partition_reverse_tbl {
 	}
 	default_action: nop();
 	size: 128;
+}
+
+action forward_to_server(port) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
+table forward_to_server_tbl {
+	reads {
+		ig_intr_md.ingress_port: exact;
+	}
+	actions {
+		forward_to_server;
+		nop;
+	}
+	default_action: nop();
+	size: 1;
 }
