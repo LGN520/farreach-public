@@ -448,7 +448,7 @@ action recirculate_pkt(port) {
 }*/
 
 field_list resubmit_fields {
-	meta.is_cache_update;
+	meta.is_putreq_ru;
 }
 
 action recirculate_putreq_u() {
