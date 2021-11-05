@@ -81,20 +81,20 @@ parser parse_vallen {
 
 parser parse_val_len1 {
 	extract(val1_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 /*parser parse_val_len2 {
 	extract(val1_hdr);
 	extract(val2_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len3 {
 	extract(val1_hdr);
 	extract(val2_hdr);
 	extract(val3_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len4 {
@@ -102,7 +102,7 @@ parser parse_val_len4 {
 	extract(val2_hdr);
 	extract(val3_hdr);
 	extract(val4_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len5 {
@@ -111,7 +111,7 @@ parser parse_val_len5 {
 	extract(val3_hdr);
 	extract(val4_hdr);
 	extract(val5_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len6 {
@@ -121,7 +121,7 @@ parser parse_val_len6 {
 	extract(val4_hdr);
 	extract(val5_hdr);
 	extract(val6_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len7 {
@@ -132,7 +132,7 @@ parser parse_val_len7 {
 	extract(val5_hdr);
 	extract(val6_hdr);
 	extract(val7_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len8 {
@@ -144,7 +144,7 @@ parser parse_val_len8 {
 	extract(val6_hdr);
 	extract(val7_hdr);
 	extract(val8_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len9 {
@@ -157,7 +157,7 @@ parser parse_val_len9 {
 	extract(val7_hdr);
 	extract(val8_hdr);
 	extract(val9_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len10 {
@@ -171,7 +171,7 @@ parser parse_val_len10 {
 	extract(val8_hdr);
 	extract(val9_hdr);
 	extract(val10_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len11 {
@@ -186,7 +186,7 @@ parser parse_val_len11 {
 	extract(val9_hdr);
 	extract(val10_hdr);
 	extract(val11_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len12 {
@@ -202,7 +202,7 @@ parser parse_val_len12 {
 	extract(val10_hdr);
 	extract(val11_hdr);
 	extract(val12_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 /*parser parse_val_len13 {
@@ -219,7 +219,7 @@ parser parse_val_len12 {
 	extract(val11_hdr);
 	extract(val12_hdr);
 	extract(val13_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len14 {
@@ -237,7 +237,7 @@ parser parse_val_len14 {
 	extract(val12_hdr);
 	extract(val13_hdr);
 	extract(val14_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len15 {
@@ -256,7 +256,7 @@ parser parse_val_len15 {
 	extract(val13_hdr);
 	extract(val14_hdr);
 	extract(val15_hdr);
-	return parse_seq;
+	return ingress;
 }
 
 parser parse_val_len16 {
@@ -276,13 +276,8 @@ parser parse_val_len16 {
 	extract(val14_hdr);
 	extract(val15_hdr);
 	extract(val16_hdr);
-	return parse_seq;
-}*/
-
-parser parse_seq {
-	extract(seq_hdr);
 	return ingress;
-}
+}*/
 
 parser parse_res {
 	extract(res_hdr);

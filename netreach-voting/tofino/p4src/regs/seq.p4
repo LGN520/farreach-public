@@ -14,18 +14,18 @@ blackbox stateful_alu assign_seq_alu {
 	update_lo_2_value: 0;
 
 	output_value: alu_lo;
-	output_dst: seq_hdr.seq;
+	output_dst: meta.seq;
 }
 
 action assign_seq() {
 	assign_seq_alu.execute_stateful_alu(0);
-	modify_field(seq_hdr.is_assigned, 1);
+	modify_field(meta.is_assigned, 1);
 }
 
 table assign_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
-		seq_hdr.is_assigned: exact;
+		meta.is_assigned: exact;
 		meta.is_putreq_ru: exact;
 		ig_intr_md.resubmit_flag: exact;
 	}
@@ -47,10 +47,10 @@ blackbox stateful_alu try_update_savedseq_alu {
 
 	// NOTE: Tofino treats 32-bit field as signed integer, so seq is from [-0x80000000, 7fffffff]
 	// TODO: now we do not consider seq overflow. If it occurs, we can use more register array to fix.
-	condition_lo: seq_hdr.seq > register_lo;
+	condition_lo: meta.seq > register_lo;
 
 	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: seq_hdr.seq;
+	update_lo_1_value: meta.seq;
 	update_lo_2_predicate: not condition_lo;
 	update_lo_2_value: register_lo;
 
@@ -75,7 +75,7 @@ action reset_savedseq() {
 table access_savedseq_tbl {
 	reads {
 		op_hdr.optype: exact;
-		seq_hdr.is_assigned: exact;
+		meta.is_assigned: exact;
 		meta.ismatch_keylololo: exact;
 		meta.ismatch_keylolohi: exact;
 		meta.ismatch_keylohilo: exact;

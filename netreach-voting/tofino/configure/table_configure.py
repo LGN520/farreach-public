@@ -303,7 +303,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring assign_seq_tbl"
             matchspec0 = netbuffer_assign_seq_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_TYPE, 
-                    seq_hdr_is_assigned = 0,
+                    meta_is_assigned = 0,
                     meta_is_putreq_ru = 0,
                     ig_intr_md_resubmit_flag = 0)
             self.client.assign_seq_tbl_table_add_with_assign_seq(\
@@ -471,7 +471,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring access_savedseq_tbl"
             matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_TYPE,
-                    seq_hdr_is_assigned = 1,
+                    meta_is_assigned = 1,
 		    meta_ismatch_keylololo=2, 
 		    meta_ismatch_keylolohi=2, 
 		    meta_ismatch_keylohilo=2, 
@@ -485,7 +485,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
                     op_hdr_optype = DELREQ_TYPE,
-                    seq_hdr_is_assigned = 0,
+                    meta_is_assigned = 0,
 		    meta_ismatch_keylololo=2, 
 		    meta_ismatch_keylolohi=2, 
 		    meta_ismatch_keylohilo=2, 
@@ -508,7 +508,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             for isassigned in [0, 1]:
                                                 matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
                                                         op_hdr_optype = GETRES_S_TYPE,
-                                                        seq_hdr_is_assigned = isassigned,
+                                                        meta_is_assigned = isassigned,
                                                         meta_ismatch_keylololo=ismatch_keylololo, 
                                                         meta_ismatch_keylolohi=ismatch_keylolohi, 
                                                         meta_ismatch_keylohilo=ismatch_keylohilo, 
@@ -522,7 +522,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                                 matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
                                                         op_hdr_optype = PUTREQ_TYPE,
-                                                        seq_hdr_is_assigned = isassigned,
+                                                        meta_is_assigned = isassigned,
                                                         meta_ismatch_keylololo=ismatch_keylololo, 
                                                         meta_ismatch_keylolohi=ismatch_keylolohi, 
                                                         meta_ismatch_keylohilo=ismatch_keylohilo, 

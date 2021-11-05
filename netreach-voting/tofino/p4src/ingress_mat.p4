@@ -449,6 +449,8 @@ action recirculate_pkt(port) {
 
 field_list resubmit_fields {
 	meta.is_putreq_ru;
+	meta.seq;
+	meta.is_assigned;
 }
 
 action recirculate_putreq_u() {
@@ -457,7 +459,7 @@ action recirculate_putreq_u() {
 }
 
 action recirculate_pkt() {
-	resubmit(); // meta.is_cache_update = 0
+	resubmit(resubmit_fields); // meta.is_cache_update = 0
 }
 
 table port_forward_tbl {

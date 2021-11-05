@@ -19,6 +19,7 @@
 	fields in ingress pipeline
 	+ Remove PUTREQ_RU, instead we use PUTREQ + meta.is_putreq_ru of 1 to distinguish it (port_forward_tbl)
 	+ Update MATs for PUTREQ_RU (val.p4 for value and vallen, key.p4, valid.p4, dirty.p4, seq.p4 for seq and savedseq, vote.p4, lock.p4)
+	+ Use meta fields to store seq and is_assigned (thus we can carry the information with recirculated pkt) instead of in packet header
 
 ## In-switch eviction mechanism
 
@@ -148,9 +149,10 @@
 	+ Use thread_id of server thread to perform operation in key-value store instead of req.thread_id() (ycsb_server.c)
 	+ If condition_lo is true, the predicate is 2; (NOTE) if condition_lo is false, the predicate is 1 instead of 0!!!
 		* Solution: add initialize_tbl to initialize predicate fields in meta as 1 to reduce MAT entries
-	+ Try official example of resubmit -> success -> fix bugs of recirculation
+	+ Try official example of resubmit -> success
 		* NOTE: clone/recirculate/resubmit will only reprocess the original packet before ingress pipeline even if you modify the packet
 		field in ingress pipeline (making no sense for recirculated pkt)
+	+ Fix bugs of recirculation and seq
 
 ## Simple test
 
@@ -163,6 +165,7 @@
 		* It should write the value into switch by recirculation and sendback PUTRES (no PUTREQ_PS)
 	+ Case 3: read-after-write
 		* Write value of k1 and then read k1
+		* It should write the value in switch and read the value from switch (not touch server)
 
 ## How to run
 
