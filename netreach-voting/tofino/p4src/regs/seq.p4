@@ -26,6 +26,8 @@ table assign_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
 		seq_hdr.is_assigned: exact;
+		meta.is_putreq_ru: exact;
+		ig_intr_md.resubmit_flag: exact;
 	}
 	actions {
 		assign_seq;

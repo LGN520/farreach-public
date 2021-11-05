@@ -18,7 +18,7 @@
 	+ NOTE: clone/recirculate/resubmit will use the original packet before ingress pipeline even if we change some packet header 
 	fields in ingress pipeline
 	+ Remove PUTREQ_RU, instead we use PUTREQ + meta.is_putreq_ru of 1 to distinguish it (port_forward_tbl)
-	+ Update MATs for PUTREQ_RU (val.p4 for value and vallen, key.p4, valid.p4, dirty.p4, seq.p4 for savedseq, vote.p4, lock.p4)
+	+ Update MATs for PUTREQ_RU (val.p4 for value and vallen, key.p4, valid.p4, dirty.p4, seq.p4 for seq and savedseq, vote.p4, lock.p4)
 
 ## In-switch eviction mechanism
 
@@ -154,13 +154,15 @@
 
 ## Simple test
 
-- See directory of "testcases"
+- See directory of "testcases" (with only 1 bucket in sketch)
 	+ Case 1: single read
 		* Read the value of a given key
 		* It should read the value from the server
 	+ Case 2: single write
 		* Write new value for a given key
-		* It should write the value into switch by recirculation
+		* It should write the value into switch by recirculation and sendback PUTRES (no PUTREQ_PS)
+	+ Case 3: read-after-write
+		* Write value of k1 and then read k1
 
 ## How to run
 

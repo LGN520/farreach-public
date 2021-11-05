@@ -303,7 +303,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring assign_seq_tbl"
             matchspec0 = netbuffer_assign_seq_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_TYPE, 
-                    seq_hdr_is_assigned = 0)
+                    seq_hdr_is_assigned = 0,
+                    meta_is_putreq_ru = 0,
+                    ig_intr_md_resubmit_flag = 0)
             self.client.assign_seq_tbl_table_add_with_assign_seq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -1315,13 +1317,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # TMPDEBUG
-            print "Configuring forward_to_server_tbl"
-            matchspec0 = netbuffer_forward_to_server_tbl_match_spec_t(\
-                    ig_intr_md_ingress_port=self.devPorts[0])
-            actnspec0 = netbuffer_forward_to_server_action_spec_t(\
-                    self.devPorts[1])
-            self.client.forward_to_server_tbl_table_add_with_forward_to_server(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            #print "Configuring forward_to_server_tbl"
+            #matchspec0 = netbuffer_forward_to_server_tbl_match_spec_t(\
+            #        ig_intr_md_ingress_port=self.devPorts[0])
+            #actnspec0 = netbuffer_forward_to_server_action_spec_t(\
+            #        self.devPorts[1])
+            #self.client.forward_to_server_tbl_table_add_with_forward_to_server(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Egress pipeline
 
