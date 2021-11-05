@@ -112,9 +112,9 @@ header_type metadata_t {
 		origin_keyhilohi: 16;
 		origin_keyhihilo: 16;
 		origin_keyhihihi: 16;
-		isvalid: 1;
-		isdirty: 1;
-		canput: 4; // predicate for seq
+		isvalid: 1; // if the entry is valid
+		isdirty: 1; // if the entry is dirty
+		canput: 4; // predicate for seq (update vallen and val only if with valid seq)
 		origin_vallen: 8;
 		origin_vallo1: 32;
 		origin_valhi1: 32;
@@ -148,8 +148,9 @@ header_type metadata_t {
 		origin_valhi15: 32;
 		origin_vallo16: 32;
 		origin_valhi16: 32;*/
-		isevict: 4; // predicate
-		islock: 1;
+		isevict: 4; // predicate (if we need to trigger cache update)
+		islock: 1; // if the entry is locked before
+		is_putreq_ru: 1; // if the PUTREQ is PUTREQ_RU
 		/*isfuture_valid: 1;
 		ismatch_future_keylololo: 4; // predicate 
 		ismatch_future_keylolohi: 4; // predicate 

@@ -14,6 +14,11 @@
 	+ Remove notified key in PUTREQ_PS
 	+ Remove cached keys in server
 	+ Remove listener for triggerred backup in server
+- Update operations related with clone/recirculate
+	+ NOTE: clone/recirculate/resubmit will use the original packet before ingress pipeline even if we change some packet header 
+	fields in ingress pipeline
+	+ Remove PUTREQ_RU, instead we use PUTREQ + meta.is_putreq_ru of 1 to distinguish it (port_forward_tbl)
+	+ Update MATs for PUTREQ_RU (val.p4 for value and vallen, key.p4, valid.p4, dirty.p4, seq.p4 for savedseq, vote.p4, lock.p4)
 
 ## In-switch eviction mechanism
 
@@ -143,7 +148,9 @@
 	+ Use thread_id of server thread to perform operation in key-value store instead of req.thread_id() (ycsb_server.c)
 	+ If condition_lo is true, the predicate is 2; (NOTE) if condition_lo is false, the predicate is 1 instead of 0!!!
 		* Solution: add initialize_tbl to initialize predicate fields in meta as 1 to reduce MAT entries
-	+ TODO: try official example of resubmit
+	+ Try official example of resubmit -> success -> fix bugs of recirculation
+		* NOTE: clone/recirculate/resubmit will only reprocess the original packet before ingress pipeline even if you modify the packet
+		field in ingress pipeline (making no sense for recirculated pkt)
 
 ## Simple test
 

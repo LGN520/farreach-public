@@ -41,6 +41,7 @@ action modify_keylololo() {
 table access_keylololo_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		match_keylololo;
@@ -92,6 +93,7 @@ action modify_keylolohi() {
 table access_keylolohi_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		match_keylolohi;
@@ -143,6 +145,7 @@ action modify_keylohilo() {
 table access_keylohilo_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		match_keylohilo;
@@ -194,6 +197,7 @@ action modify_keylohihi() {
 table access_keylohihi_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		match_keylohihi;
@@ -245,6 +249,7 @@ action modify_keyhilolo() {
 table access_keyhilolo_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		match_keyhilolo;
@@ -296,6 +301,7 @@ action modify_keyhilohi() {
 table access_keyhilohi_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		match_keyhilohi;
@@ -347,6 +353,7 @@ action modify_keyhihilo() {
 table access_keyhihilo_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		match_keyhihilo;
@@ -398,6 +405,7 @@ action modify_keyhihihi() {
 table access_keyhihihi_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		match_keyhihihi;

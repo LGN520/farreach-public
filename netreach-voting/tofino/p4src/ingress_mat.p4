@@ -264,12 +264,16 @@ table trigger_cache_update_tbl {
 // Last Stage of ingress pipeline
 
 // Used by GETRES_S when original cached data is not dirty, and GETRES_NS
-action update_getres_s(port) {
+action update_getres_s_to_getres(port) {
+	modify_field(op_hdr.optype, GETRES_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+action update_getres_ns_to_getres(port) {
 	modify_field(op_hdr.optype, GETRES_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
-action update_getres_s_and_clone(sid, port) {
+action update_getres_s_to_putreq_gs_and_clone(sid, port) {
 	modify_field(op_hdr.optype, PUTREQ_GS_TYPE);
 
 	modify_field(op_hdr.keylololo, meta.origin_keylololo);
@@ -443,13 +447,17 @@ action recirculate_pkt(port) {
 	recirculate(port);
 }*/
 
+field_list resubmit_fields {
+	meta.is_cache_update;
+}
+
 action recirculate_putreq_u() {
-	modify_field(op_hdr.optype, PUTREQ_RU_TYPE); // convert into PUTREQ_RU (recirculated update)
-	resubmit();
+	modify_field(meta.is_putreq_ru, 1);
+	resubmit(resubmit_fields); // it will carry the meta field after ingress pipelie
 }
 
 action recirculate_pkt() {
-	resubmit();
+	resubmit(); // meta.is_cache_update = 0
 }
 
 table port_forward_tbl {
@@ -458,10 +466,12 @@ table port_forward_tbl {
 		meta.isvalid: exact;
 		meta.isdirty: exact;
 		meta.islock: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
-		update_getres_s;
-		update_getres_s_and_clone;
+		update_getres_s_to_getres;
+		update_getres_ns_to_getres;
+		update_getres_s_to_putreq_gs_and_clone;
 		update_putreq_ru_to_putres;
 		update_putreq_ru_to_ps_and_clone;
 		recirculate_putreq_u;
@@ -525,7 +535,7 @@ table origin_hash_partition_reverse_tbl {
 	size: 128;
 }
 
-action forward_to_server(port) {
+/*action forward_to_server(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
@@ -539,4 +549,4 @@ table forward_to_server_tbl {
 	}
 	default_action: nop();
 	size: 1;
-}
+}*/

@@ -115,6 +115,7 @@ action clear_future_valid() {
 table access_future_valid_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		get_future_valid;

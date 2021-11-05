@@ -29,7 +29,6 @@
 #define GETRES_NS_TYPE 0x0d
 // Only used in switch
 #define PUTREQ_U_TYPE 0x20
-#define PUTREQ_RU_TYPE 0x21
 
 #define CLONE_FOR_GETRES 1
 #define CLONE_FOR_DELRES 2
@@ -232,21 +231,28 @@ control ingress {
 		apply(access_lock_tbl);
 
 		// Stage 5+n + 2 (trigger cache update)
+		// GETREQ -> GETREQ_S; PUTREQ -> PUTREQ_U
 		apply(trigger_cache_update_tbl);
 
 		// (1) For GETRES_S, only if valid = 1 and dirty = 1. we convert it as PUTREQ_GS and forward to 
 		// server, ans also clone a packet for GETRES to client; otherwise, we convert it as GETRES and
 		// forward it as usual
 		// (2) For GETRES_NS, directly convert it as GETRES and forward it as usual
-		// (3) For PUTREQ_U, we convert it as PUTREQ_RU and recirculate it to update cache
-		// (4) For PUTREQ_RU, we drop original packet or convert it to PUTREQ_PS (only if valid = 1 and dirty = 1) 
-		// and forward to server, and also clone a packet for PUTRES to client
+		// (3) For PUTREQ_U, we set meta.is_putreq_ru as 1 and recirculate it (PUTREQ) to update cache
+		// (4) For PUTREQ with meta.is_putreq_ru of 1, we convert it as PUTRES, or convert it to PUTREQ_PS
+		// (only if valid = 1 and dirty = 1), forward to server, and clone a packet for PUTRES to client
 		// (5) For GETREQ, PUTREQ, and DELREQ, only if (lock = 1 and valid = 0) or (lock = 1 and valid = 1 
 		// yet key does not match), we recirculate it. But NOTE that if valid = 1 and key matches, optype has
 		// been set as RES by try_res_tbl. So if pkt arriving here is still REQ, it must satisfy (valid = 0)
 		// or (valid = 1 and key does not match) -> we only need to check whether lock is 1! (TODO: we need 
 		// local seq number here)
 		// (6) For other packets, we set egress_port as usual
+		/*if (ig_intr_md.resubmit_flag != 0) {
+			apply(forward_to_server_tbl); // TMPDEBUG
+		}
+		else {
+			apply(port_forward_tbl);
+		}*/
 		apply(port_forward_tbl);
 
 		if (op_hdr.optype == PUTREQ_GS_TYPE) {
@@ -258,10 +264,6 @@ control ingress {
 		else if (op_hdr.optype != PUTREQ_RU_TYPE){ // Only if dst port = server port: GETREQ, PUTREQ, DELREQ, SCANREQ, GETREQ_S, and DELREQ_S (without PUTREQ_U)
 			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 		}
-
-		if (ig_intr_md.resubmit_flag != 0) {
-			apply(forward_to_server_tbl); // TMPDEBUG
-		}
 	}
 }
 
@@ -271,13 +273,13 @@ control egress {
 	// NOTE: make sure that normal packet will not apply these tables
 	if (pkt_is_i2e_mirrored) {
 		if (meta.is_clone == CLONE_FOR_GETRES) {
-			apply(sendback_cloned_getres_tbl); // input is PUTREQ_GS converted from GETRES_S (we do not need swap port, ip, and mac)
+			apply(sendback_cloned_getres_tbl); // input is GETRES_S (original pkt becomes PUTREQ_GS) (we do not need swap port, ip, and mac)
 		}
 		else if (meta.is_clone == CLONE_FOR_DELRES) {
-			apply(sendback_cloned_delres_tbl); // input is DELREQ_S converted from DELREQ (we need swap port, ip, and mac)
+			apply(sendback_cloned_delres_tbl); // input is DELREQ (original pkt becomes DELREQ_S) (we need swap port, ip, and mac)
 		}
 		else if (meta.is_clone == CLONE_FOR_PUTRES) {
-			apply(sendback_cloned_putres_tbl); // input is PUTREQ_RU/PUTREQ_PS converted from PUTREQ_RU from PUTREQ_U from PUTREQ (we need to swap port, ip, and mac)
+			apply(sendback_cloned_putres_tbl); // input is PUTREQ (original pkt becomes PUTREQ_PS) (we need to swap port, ip, and mac)
 		}
 	}
 	apply(update_macaddr_tbl); // Update mac addr for responses

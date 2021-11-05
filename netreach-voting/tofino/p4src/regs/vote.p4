@@ -64,6 +64,7 @@ table access_vote_tbl {
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
 		meta.ismatch_keyhihihi: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		increase_vote;
