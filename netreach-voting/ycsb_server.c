@@ -736,6 +736,7 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string()
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
+					break;
 				}
 			case packet_type_t::DEL_REQ_S:
 				{

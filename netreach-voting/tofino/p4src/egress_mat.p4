@@ -75,9 +75,14 @@ table sendback_cloned_putres_tbl {
 	size: 1;
 }
 
-action update_macaddr(tmp_srcmac, tmp_dstmac) {
+action update_macaddr_s2c(tmp_srcmac, tmp_dstmac) {
 	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
 	modify_field(ethernet_hdr.srcAddr, tmp_dstmac);
+}
+
+action update_macaddr_c2s(tmp_srcmac, tmp_dstmac) {
+	modify_field(ethernet_hdr.srcAddr, tmp_srcmac);
+	modify_field(ethernet_hdr.dstAddr, tmp_dstmac);
 }
 
 table update_macaddr_tbl {
@@ -85,7 +90,8 @@ table update_macaddr_tbl {
 		op_hdr.optype: exact;
 	}
 	actions {
-		update_macaddr;
+		update_macaddr_s2c;
+		update_macaddr_c2s;
 		nop;
 	}
 	default_action: nop();

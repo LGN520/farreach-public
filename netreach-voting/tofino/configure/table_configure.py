@@ -1329,18 +1329,24 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: update_macaddr_tbl (default: nop; 3)
             print "Configuring update_macaddr_tbl"
-            actnspec = netbuffer_update_macaddr_action_spec_t(\
+            actnspec0 = netbuffer_update_macaddr_s2c_action_spec_t(\
+                    macAddr_to_string(src_mac), \
+                    macAddr_to_string(dst_mac))
+            actnspec1 = netbuffer_update_macaddr_c2s_action_spec_t(\
                     macAddr_to_string(src_mac), \
                     macAddr_to_string(dst_mac))
             matchspec0 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_TYPE)
             matchspec1 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES_TYPE)
             matchspec2 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES_TYPE)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr(\
-                    self.sess_hdl, self.dev_tgt, matchspec1, actnspec)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr(\
-                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec)
+            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
+                    self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
+            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
+                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
+            matchspec3 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_type=PUTREQ_GS_TYPE)
+            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
+                    self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
             self.conn_mgr.client_cleanup(self.sess_hdl)

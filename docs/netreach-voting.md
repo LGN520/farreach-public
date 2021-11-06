@@ -154,6 +154,8 @@
 		field in ingress pipeline (making no sense for recirculated pkt)
 	+ Fix bugs of recirculation and seq
 	+ Fix a bug of packet format (incorrect size for PUTREQ and GETRES)
+	+ Fix a bug of udp hdrlen (remove seq and is_assigned from PKT_VALLEN and PKT_VALLEN_MINUS_ONE)
+	+ Fix a bug of incorrect MAC addr of PUTREQ_GS (converted from GETRES_S)
 
 ## Simple test
 
@@ -191,6 +193,11 @@
 		* PUT of k1 writes the value in switch and sendback PUTRES, 1st PUT of k2 is forwarded to server, 2nd PUT of k2 evicts k1, GET
 		is directly processed by switch
 		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 3, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 2
+	+ Case 9: two-reads-after-write
+		* Write value of k1, read k2 twice
+		* It writes value of k1 in switch, GETs of k2 evicted k1
+		* In-switch result: non-zero key, vallen, and val of k2, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
+	+ Case 10: two-reads-after-read
 
 ## How to run
 
