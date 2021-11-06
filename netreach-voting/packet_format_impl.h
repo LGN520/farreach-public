@@ -127,6 +127,7 @@ uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 template<class key_t, class val_t>
 void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
+	printf("PUT %d, mysize: %u, recvsize: %u\n", int(this->_type), my_size, recv_size);
 	INVARIANT(my_size == recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
@@ -179,6 +180,7 @@ uint32_t DelRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 template<class key_t>
 void DelRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
+	printf("DEL %d, mysize: %u, recvsize: %u\n", int(this->_type), my_size, recv_size);
 	INVARIANT(my_size == recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
