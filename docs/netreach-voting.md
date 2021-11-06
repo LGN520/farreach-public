@@ -156,15 +156,16 @@
 	+ Fix a bug of packet format (incorrect size for PUTREQ and GETRES)
 	+ Fix a bug of udp hdrlen (remove seq and is_assigned from PKT_VALLEN and PKT_VALLEN_MINUS_ONE)
 	+ Fix a bug of incorrect MAC addr of PUTREQ_GS (converted from GETRES_S)
+	+ Fix a bug of processing GETREQ_S for non-existing key (judge by vallen instead of status in server)
 
 ## Simple test
 
 - See directory of "testcases" (with only 1 bucket in sketch)
-	+ Case 1: single read
+	+ Case 1: single read (GET evicts invalid)
 		* Read the value of a given key
 		* It should read the value from the server and also store it in switch
 		* In-switch result: non-zero key, vallen, and val, seq = 0, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
-	+ Case 2: single write
+	+ Case 2: single write (PUT evicts invalid)
 		* Write new value for a given key
 		* It should write the value into switch by recirculation and sendback PUTRES (no PUTREQ_PS)
 		* In-switch result: non-zero key, vallen, and val, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 1
@@ -184,20 +185,29 @@
 		* Read value of k1 and then write k2
 		* It should read the value of k1 from server and store it in switch, k2 will decrease vote and be forwarded to server (no cache update)
 		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 0
-	+ Case 7: two-writes-after-read
+	+ Case 7: two-writes-after-read (PUT evicts GET)
 		* Read value of k1 and then write k2 twice
 		* It should read the value of k1 from server and store it in switch, k2 will replace k1 finally (PUTs touch server only once)
 		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 2, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 1
-	+ Case 8: read-after-two-writes-after-write
+	+ Case 8: read-after-two-writes-after-write (PUT evicts PUT)
 		* Write value of k1, write k2 twice, and then read k2
 		* PUT of k1 writes the value in switch and sendback PUTRES, 1st PUT of k2 is forwarded to server, 2nd PUT of k2 evicts k1, GET
 		is directly processed by switch
 		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 3, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 2
-	+ Case 9: two-reads-after-write
+	+ Case 9: two-reads-after-write (GET evicts PUT)
 		* Write value of k1, read k2 twice
-		* It writes value of k1 in switch, GETs of k2 evicted k1
+		* It writes value of k1 in switch, GETs of k2 evicted k1 (the evicted data touches server)
 		* In-switch result: non-zero key, vallen, and val of k2, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
-	+ Case 10: two-reads-after-read
+	+ Case 10: two-reads-after-read (GET evicts GET)
+		* Read value of k1, read k2 twice
+		* It first gets value of k1 from server and stores it in switch, the 2nd GET of k2 replaces k1 in switch
+		* In-switch result: non-zero key, vallen, and val of k2, seq = 0, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
+	+ Case 11: read-delete-read
+		* Read value of k1, delete k1, and then read k1 again
+		* It first gets value of k1 from server and stores it in switch, then it deletes k1 and sends DELREQ_S to server, the 2nd GET
+		of k1 does not have value and triggers a GETRES_NS
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 0, dirty = 0, vote = 0
+	+ Case 12: write-read-delete-read
 
 ## How to run
 

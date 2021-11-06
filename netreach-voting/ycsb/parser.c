@@ -88,6 +88,15 @@ bool ParserIterator::next() {
 			result = true;
 			break;
 		}
+		else if (strncmp(line, "DELETE", 6) == 0) {
+			_type = uint8_t(packet_type_t::DEL_REQ);
+			if (!parsekey(line)) {
+				printf("No key after DELETE: %s\n", line);
+				exit(-1);
+			}
+			result = true;
+			break;
+		}
 	}
 
 

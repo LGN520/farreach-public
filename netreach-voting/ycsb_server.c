@@ -705,7 +705,7 @@ static int run_sfg(void * param) {
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
-					if (tmp_stat) {
+					if (tmp_val.val_length > 0) {
 						get_response_s_t rsp(req.thread_id(), req.key(), tmp_val);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
