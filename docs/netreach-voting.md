@@ -207,7 +207,6 @@
 		* It first gets value of k1 from server and stores it in switch, then it deletes k1 and sends DELREQ_S to server, the 2nd GET
 		of k1 does not have value and triggers a GETRES_NS
 		* In-switch result: non-zero key, vallen, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 0, dirty = 0, vote = 0
-	+ Case 12: write-read-delete-read
 
 ## How to run
 
