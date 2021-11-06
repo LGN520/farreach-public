@@ -106,7 +106,7 @@ val_t PutRequest<key_t, val_t>::val() const {
 
 template<class key_t, class val_t>
 uint32_t PutRequest<key_t, val_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum() + sizeof(uint32_t) + sizeof(uint8_t);
+	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
 }
 
 template<class key_t, class val_t>
@@ -268,7 +268,7 @@ val_t GetResponse<key_t, val_t>::val() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum() + sizeof(uint32_t) + sizeof(uint8_t);
+	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
 }
 
 template<class key_t, class val_t>

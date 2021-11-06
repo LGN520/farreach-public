@@ -153,19 +153,44 @@
 		* NOTE: clone/recirculate/resubmit will only reprocess the original packet before ingress pipeline even if you modify the packet
 		field in ingress pipeline (making no sense for recirculated pkt)
 	+ Fix bugs of recirculation and seq
+	+ Fix a bug of packet format (incorrect size for PUTREQ and GETRES)
 
 ## Simple test
 
 - See directory of "testcases" (with only 1 bucket in sketch)
 	+ Case 1: single read
 		* Read the value of a given key
-		* It should read the value from the server
+		* It should read the value from the server and also store it in switch
+		* In-switch result: non-zero key, vallen, and val, seq = 0, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
 	+ Case 2: single write
 		* Write new value for a given key
 		* It should write the value into switch by recirculation and sendback PUTRES (no PUTREQ_PS)
+		* In-switch result: non-zero key, vallen, and val, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 1
 	+ Case 3: read-after-write
 		* Write value of k1 and then read k1
 		* It should write the value in switch and read the value from switch (not touch server)
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 2
+	+ Case 4: read-after-two-writes
+		* Write value of k1 twice, and then read k1
+		* It should write the value in switch and read the value from switch (not touch server)
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 2, savedseq = 2, lock = 0, valid = 1, dirty = 1, vote = 3
+	+ Case 5: write-after-read1
+		* Read value of k1 and then write k1
+		* It reads the value of k1 from server and store it in switch, PUT increases vote, updates vallen & val, and does not touch server
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 1, lock = 0, valid = 1, dirty = 1, vote = 2
+	+ Case 6: write-after-read2
+		* Read value of k1 and then write k2
+		* It should read the value of k1 from server and store it in switch, k2 will decrease vote and be forwarded to server (no cache update)
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 0
+	+ Case 7: two-writes-after-read
+		* Read value of k1 and then write k2 twice
+		* It should read the value of k1 from server and store it in switch, k2 will replace k1 finally (PUTs touch server only once)
+		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 2, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 1
+	+ Case 8: read-after-two-writes-after-write
+		* Write value of k1, write k2 twice, and then read k2
+		* PUT of k1 writes the value in switch and sendback PUTRES, 1st PUT of k2 is forwarded to server, 2nd PUT of k2 evicts k1, GET
+		is directly processed by switch
+		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 3, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 2
 
 ## How to run
 
