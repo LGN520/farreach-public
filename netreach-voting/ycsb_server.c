@@ -217,7 +217,7 @@ inline void parse_args(int argc, char **argv) {
 }
 
 void prepare_dpdk() {
-  int dpdk_argc = 3;
+  int dpdk_argc = 5;
   char **dpdk_argv;
   dpdk_argv = new char *[dpdk_argc];
   for (int i = 0; i < dpdk_argc; i++) {
@@ -227,11 +227,15 @@ void prepare_dpdk() {
   std::string arg_proc = "./client";
   std::string arg_iovamode = "--iova-mode";
   std::string arg_iovamode_val = "pa";
+  std::string arg_file_prefix = "--file-prefix";
+  std::string arg_file_prefix_val = "netbuffer";
   //std::string arg_whitelist = "-w";
   //std::string arg_whitelist_val = "0000:5e:00.1";
   memcpy(dpdk_argv[0], arg_proc.c_str(), arg_proc.size());
   memcpy(dpdk_argv[1], arg_iovamode.c_str(), arg_iovamode.size());
   memcpy(dpdk_argv[2], arg_iovamode_val.c_str(), arg_iovamode_val.size());
+  memcpy(dpdk_argv[3], arg_file_prefix.c_str(), arg_file_prefix.size());
+  memcpy(dpdk_argv[4], arg_file_prefix_val.c_str(), arg_file_prefix_val.size());
   //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
   //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
   rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
