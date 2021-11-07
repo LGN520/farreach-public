@@ -36,6 +36,10 @@ from ptf import config
 from ptf.testutils import *
 from ptf.thriftutils import *
 from res_pd_rpc.ttypes import *
+from conn_mgr_pd_rpc.ttypes import *
+from mc_pd_rpc.ttypes import *
+from devport_mgr_pd_rpc.ttypes import *
+from ptf_port import *
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -244,7 +248,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         self.recirPorts = [64, 192]
 
         # NOTE: in each pipeline, 64-67 are recir/cpu ports, 68-71 are recir/pktgen ports
-        #self.cpuPorts = [65, 193]
+        #self.cpuPorts = [64, 192] # CPU port is 100G
 
     ### MAIN ###
 
@@ -252,9 +256,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         if test_param_get('cleanup') != True:
             print '\nTest'
 
+            for i in range(64, 72):
+                try:
+                    self.devport_mgr.devport_mgr_remove_port(0, i)
+                except InvalidDevportMgrOperation as e:
+                    pass
+            for i in range(192, 200):
+                try:
+                    self.devport_mgr.devport_mgr_remove_port(0, i)
+                except InvalidDevportMgrOperation as e:
+                    pass
+
             # Enable recirculation before add port
             for i in self.recirPorts:
-                self.conn_mgr.recirculation_enable(self.sess_hdl, self.dev_tgt, i);
+                self.conn_mgr.recirculation_enable(self.sess_hdl, 0, i);
 
             # add and enable the platform ports
             for i in self.devPorts:
@@ -262,11 +277,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                      pal_port_speed_t.BF_SPEED_40G,
                                      pal_fec_type_t.BF_FEC_TYP_NONE)
                self.pal.pal_port_enable(0, i)
+
+            speed_10g = 2
+            speed_25g = 4
+            speed_40g = 8
+            speed_40g_nb = 16
+            speed_50g = 32
+            speed_100g = 64
+
             for i in self.recirPorts:
                self.devport_mgr.devport_mgr_add_port(0, i, speed_100g, 0)
 
             #for i in self.cpuPorts:
-            #    self.devport_mgr.devport_mgr_set_copy_to_cpu(dev_id, True, i)
+            #    self.devport_mgr.devport_mgr_set_copy_to_cpu(0, True, i)
 
             # Bind sid with port for packet mirror
             sidnum = 1
