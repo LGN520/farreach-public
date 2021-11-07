@@ -163,6 +163,7 @@
 	+ Fix a bug of incorrect MAC addr of PUTREQ_GS (converted from GETRES_S)
 	+ Fix a bug of processing GETREQ_S for non-existing key (judge by vallen instead of status in server)
 	+ Find a bug of resubmit: resubmitted packet cannot be resubmitted again; (recirculate is performed as setting egress port)
+		* Solution: use recirculation (we must enable and add port for recir/cpu/pktgen in ptf before usage)
 
 ## Simple test
 
