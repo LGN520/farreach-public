@@ -83,13 +83,13 @@ void GetRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 template<class key_t, class val_t>
 PutRequest<key_t, val_t>::PutRequest()
-	: Packet<key_t>(), _val()
+	: Packet<key_t>(), _val(), _seq(0), _is_assigned(0)
 {
 }
 
 template<class key_t, class val_t>
 PutRequest<key_t, val_t>::PutRequest(uint8_t thread_id, key_t key, val_t val) 
-	: Packet<key_t>(PacketType::PUT_REQ, thread_id, key), _val(val)
+	: Packet<key_t>(PacketType::PUT_REQ, thread_id, key), _val(val), _seq(0), _is_assigned(0)
 {	
 }
 
@@ -111,8 +111,8 @@ uint32_t PutRequest<key_t, val_t>::size() {
 
 template<class key_t, class val_t>
 uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	uint32_t my_size = this->size();
-	INVARIANT(max_size >= my_size);
+	//uint32_t my_size = this->size();
+	//INVARIANT(max_size >= my_size);
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
@@ -120,14 +120,18 @@ uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 	begin += sizeof(uint8_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
-	this->_val.serialize(begin);
+	uint32_t tmpsize = this->_val.serialize(begin);
+	begin += tmpsize;
+	memcpy(begin, (void *)&this->_seq, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	memcpy(begin, (void *)&this->_is_assigned, sizeof(uint8_t));
 	return my_size;
 }
 
 template<class key_t, class val_t>
 void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
-	uint32_t my_size = this->size();
-	INVARIANT(my_size == recv_size);
+	//uint32_t my_size = this->size();
+	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
@@ -135,7 +139,11 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
-	this->_val.deserialize(begin);
+	uint32_t tmpsize = this->_val.deserialize(begin);
+	begin += tmpsize;
+	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	memcpy((void *)&this->_is_assigned, sizeof(uint8_t));
 }
 
 // DelRequest
@@ -245,13 +253,13 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse()
-	: Packet<key_t>(), _val()
+	: Packet<key_t>(), _val(), _seq(0), _is_assigned(0)
 {
 }
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse(uint8_t thread_id, key_t key, val_t val) 
-	: Packet<key_t>(PacketType::GET_RES, thread_id, key), _val(val)
+	: Packet<key_t>(PacketType::GET_RES, thread_id, key), _val(val), _seq(0), _is_assigned(0)
 {	
 }
 
@@ -273,8 +281,8 @@ uint32_t GetResponse<key_t, val_t>::size() {
 
 template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	uint32_t my_size = this->size();
-	INVARIANT(max_size >= my_size);
+	//uint32_t my_size = this->size();
+	//INVARIANT(max_size >= my_size);
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
@@ -282,7 +290,11 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	begin += sizeof(uint8_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
-	this->_val.serialize(begin);
+	uint32_t tmpsize = this->_val.serialize(begin);
+	begin += tmpsize;
+	memcpy(begin, (void *)&this->_seq, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	memcpy(begin, (void *)&this->_is_assigned, sizeof(uint8_t));
 	return my_size;
 }
 
@@ -297,7 +309,11 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
-	this->_val.deserialize(begin);
+	uint32_t tmpsize = this->_val.deserialize(begin);
+	begin += tmpsize;
+	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	memcpy((void *)&this->_is_assigned, sizeof(uint8_t));
 }
 
 // PutResponse

@@ -436,7 +436,7 @@ action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
-action recirculate_putreq_u(port) {
+/*action recirculate_putreq_u(port) {
 	modify_field(op_hdr.optype, PUTREQ_RU_TYPE); // convert into PUTREQ_RU (recirculated update)
 	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
 	recirculate(port);
@@ -445,6 +445,21 @@ action recirculate_putreq_u(port) {
 action recirculate_pkt(port) {
 	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
 	recirculate(port);
+}*/
+
+field_list resubmit_fields {
+	meta.is_putreq_ru;
+	meta.seq;
+	meta.is_assigned;
+}
+
+action recirculate_putreq_u() {
+	modify_field(meta.is_putreq_ru, 1);
+	resubmit(resubmit_fields); // it will carry the meta field after ingress pipelie
+}
+
+action recirculate_pkt() {
+	resubmit(resubmit_fields); // meta.is_putreq_ru = 0
 }
 
 table port_forward_tbl {
@@ -453,6 +468,7 @@ table port_forward_tbl {
 		meta.isvalid: exact;
 		meta.isdirty: exact;
 		meta.islock: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		update_getres_s_to_getres;
@@ -532,6 +548,7 @@ table forward_to_server_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.islock: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		forward_to_server;

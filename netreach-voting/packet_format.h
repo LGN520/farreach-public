@@ -60,6 +60,9 @@ class PutRequest : public Packet<key_t> {
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
+		// Unused in server
+		uint32_t _seq;
+		uint8_t _is_assigned;
 };
 
 template<class key_t>
@@ -106,6 +109,9 @@ class GetResponse : public Packet<key_t> {
 		virtual void deserialize(const char * data, uint32_t recv_size);
 	private:
 		val_t _val;
+		// Unused in server
+		uint32_t _seq;
+		uint8_t _is_assigned;
 };
 
 template<class key_t>

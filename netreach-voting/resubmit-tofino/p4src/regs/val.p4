@@ -41,6 +41,7 @@ table update_vallen_tbl {
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
 		meta.ismatch_keyhihihi: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		get_vallen;
@@ -94,6 +95,7 @@ table update_vallo1_tbl {
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
 		meta.ismatch_keyhihihi: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		get_vallo1;
@@ -147,6 +149,7 @@ table update_valhi1_tbl {
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
 		meta.ismatch_keyhihihi: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		get_valhi1;

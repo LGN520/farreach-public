@@ -46,6 +46,7 @@ table access_lock_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.isevict: exact;
+		meta.is_putreq_ru: exact;
 	}
 	actions {
 		try_lock;

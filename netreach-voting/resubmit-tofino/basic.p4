@@ -29,7 +29,6 @@
 #define GETRES_NS_TYPE 0x0d
 // Only used in switch
 #define PUTREQ_U_TYPE 0x20
-#define PUTREQ_RU_TYPE 0x21
 
 #define CLONE_FOR_GETRES 1
 #define CLONE_FOR_DELRES 2
@@ -45,12 +44,12 @@
 #define KV_BUCKET_COUNT 1
 
 // NOTE: you should change the two macros according to maximum val length
-// VAL_PKTLEN: sizeof(vallen) + sizeof(val) + sizeof(seq) + sizeof(is_assigned)
-// VAL_PKTLEN_MINUS_ONE: sizeof(vallen) + sizeof(val) - sizeof(stat) + sizeof(seq) + sizeof(is_assigned)
-//#define VAL_PKTLEN 102
-//#define VAL_PKTLEN_MINUS_ONE 101
-#define VAL_PKTLEN 14
-#define VAL_PKTLEN_MINUS_ONE 13
+// VAL_PKTLEN: sizeof(vallen) + sizeof(val)
+// VAL_PKTLEN_MINUS_ONE: sizeof(vallen) + sizeof(val) - sizeof(stat)
+//#define VAL_PKTLEN 97
+//#define VAL_PKTLEN_MINUS_ONE 96
+#define VAL_PKTLEN 9
+#define VAL_PKTLEN_MINUS_ONE 8
 
 //#define CPU_PORT 192
 

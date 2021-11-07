@@ -14,12 +14,17 @@
 	+ Remove notified key in PUTREQ_PS
 	+ Remove cached keys in server
 	+ Remove listener for triggerred backup in server
-- Update operations related with clone/recirculate
-	+ NOTE: clone/recirculate/resubmit will use the original packet before ingress pipeline even if we change some packet header 
+- DEPRECATED: Update operations related with recirculate
+	+ NOTE: resubmit will use the original packet before ingress pipeline even if we change some packet header 
 	fields in ingress pipeline
 	+ Remove PUTREQ_RU, instead we use PUTREQ + meta.is_putreq_ru of 1 to distinguish it (port_forward_tbl)
 	+ Update MATs for PUTREQ_RU (val.p4 for value and vallen, key.p4, valid.p4, dirty.p4, seq.p4 for seq and savedseq, vote.p4, lock.p4)
 	+ Use meta fields to store seq and is_assigned (thus we can carry the information with recirculated pkt) instead of in packet header
+- Use recirculate instead of resubmit (resubmitted packet cannot be resubmitted again)
+	+ NOTE: recirculate will use the packet after ingress deparser?
+	+ Use PUTREQ_RU instead of meta.is_putreq_ru
+	+ Re-update MATs for PUTREQ_RU
+	+ Use packet header fields to store seq and is_assigned
 
 ## In-switch eviction mechanism
 
@@ -157,6 +162,7 @@
 	+ Fix a bug of udp hdrlen (remove seq and is_assigned from PKT_VALLEN and PKT_VALLEN_MINUS_ONE)
 	+ Fix a bug of incorrect MAC addr of PUTREQ_GS (converted from GETRES_S)
 	+ Fix a bug of processing GETREQ_S for non-existing key (judge by vallen instead of status in server)
+	+ Find a bug of resubmit: resubmitted packet cannot be resubmitted again; (recirculate is performed as setting egress port)
 
 ## Simple test
 

@@ -64,13 +64,6 @@ header_type val_t {
 	}
 }
 
-header_type seq_t {
-	fields {
-		seq: 32;
-		is_assigned: 8;
-	}
-}
-
 header_type res_t {
 	fields {
 		stat: 8;
@@ -114,6 +107,8 @@ header_type metadata_t {
 		origin_keyhihihi: 16;
 		isvalid: 1; // if the entry is valid
 		isdirty: 1; // if the entry is dirty
+		seq: 32;
+		is_assigned: 1; // if seq has been assigned
 		canput: 4; // predicate for seq (update vallen and val only if with valid seq)
 		origin_vallen: 8;
 		origin_vallo1: 32;
@@ -150,6 +145,7 @@ header_type metadata_t {
 		origin_valhi16: 32;*/
 		isevict: 4; // predicate (if we need to trigger cache update)
 		islock: 1; // if the entry is locked before
+		is_putreq_ru: 1; // if the PUTREQ is PUTREQ_RU
 		/*isfuture_valid: 1;
 		ismatch_future_keylololo: 4; // predicate 
 		ismatch_future_keylolohi: 4; // predicate 
@@ -186,6 +182,5 @@ header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
 header val_t val16_hdr;*/
-header seq_t seq_hdr;
 header res_t res_hdr;
 metadata metadata_t meta;
