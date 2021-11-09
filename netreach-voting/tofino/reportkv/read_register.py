@@ -62,7 +62,7 @@ fp_ports = ["2/0", "3/0"]
 server_ip = "172.16.112.32"
 #server_mac = "9c:69:b4:60:ef:8d"
 server_port = 3333
-max_val_len = 12
+max_val_len = 1
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -106,6 +106,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         return tmpreg
 
     def runTest(self):
+        print "Start reading..."
         flags = netbuffer_register_flags_t(read_hw_sync=True)
         keylololo_list = self.client.register_range_read_keylololo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         keylolohi_list = self.client.register_range_read_keylolohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
@@ -122,15 +123,19 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             valhi_list_list.append(eval("self.client.register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
         vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         valid_list = self.client.register_range_read_valid_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        dirty_list = self.client.register_range_read_dirty_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
 
         count = 0
-        buf = []
-        for idx in range(bucket_count):
-            i = idx + bucket_count # Our ports are in the 2nd pipeline
+        buf = bytearray()
+        for i in range(2*bucket_count): # Two pipelines
+            #i = idx + bucket_count # Our ports are in the 2nd pipeline
             tmpvalid = valid_list[i]
             if tmpvalid <= 0:
+                continue
+            tmpdirty = dirty_list[i]
+            if tmpdirty <= 0:
                 continue
             tmpvallen = vallen_list[i]
             if tmpvallen <= 0:
@@ -147,19 +152,17 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmpkeylo = (((tmpkeylohihi << 16) + tmpkeylohilo) << 32) + ((tmpkeylolohi << 16) + tmpkeylololo)
             tmpkeyhi = (((tmpkeyhihihi << 16) + tmpkeyhihilo) << 32) + ((tmpkeyhilohi << 16) + tmpkeyhilolo)
             buf = buf + struct.pack("2QB", tmpkeylo, tmpkeyhi, tmpvallen)
-            #print("keylo: {} keyhi: {} vallen: {}".format(tmpkeylo, tmpkeyhi, tmpvallen))
+            print("keylo: {:016x} keyhi: {:016x} vallen: {:02x}".format(tmpkeylo, tmpkeyhi, tmpvallen))
             for val_idx in range(tmpvallen):
                 tmpvallo = RegisterUpdate.get_reg32(vallo_list_list[val_idx], i)
                 tmpvalhi = RegisterUpdate.get_reg32(valhi_list_list[val_idx], i)
                 tmpval = (tmpvalhi << 32) + tmpvallo
                 buf = buf + struct.pack("Q", tmpval)
             count += 1
-            if idx >= 1024:
-                break
         buf = struct.pack("I", count) + buf
 
-        sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sockfd.sendto(buf, (server_ip, server_port))
+        #sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        #sockfd.sendto(buf, (server_ip, server_port))
 
         self.conn_mgr.client_cleanup(self.sess_hdl)
 
