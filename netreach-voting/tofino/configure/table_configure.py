@@ -84,14 +84,22 @@ PUTREQ_PS_TYPE = 0x0a
 DELREQ_S_TYPE = 0x0b
 GETRES_S_TYPE = 0x0c
 GETRES_NS_TYPE = 0x0d
+PUTREQ_CASE1_TYPE = 0x0e
+PUTREQ_GS_CASE2_TYPE = 0x0f
+PUTREQ_PS_CASE2_TYPE = 0x10
 
 PUTREQ_U_TYPE = 0x20
 PUTREQ_RU_TYPE = 0x21
+GETRES_S_CASE2_TYPE = 0x22
+PUTREQ_RU_CASE2_TYPE = 0x23
 
 valid_list = [0, 1]
 dirty_list = [0, 1]
 lock_list = [0, 1]
 predicate_list = [1, 2]
+backup_list = [0, 1]
+case1_list = [0, 1]
+case2_list = [0, 1]
 
 if test_param_get("arch") == "tofino":
   MIR_SESS_COUNT = 1024
@@ -973,49 +981,168 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             meta_ismatch_keyhihihi=ismatch_keyhihihi)
                                                     self.client.access_vote_tbl_table_add_with_init_vote(
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
-            
-            # Table: try_res_tbl (default: nop; 3)
+
+            # Table: access_case1_tbl (default: nop; 1024)
+            print "Configuring access_case1_tbl"
+            for ismatch_keylololo in predicate_list:
+                for ismatch_keylolohi in predicate_list:
+                    for ismatch_keylohilo in predicate_list:
+                        for ismatch_keylohihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+                                            for isvalid in valid_list:
+                                                for isbackup in backup_list:
+                                                    matchspec0 = netbuffer_access_case1_tbl_match_spec_t(
+                                                            op_hdr_optype=PUTREQ_TYPE, 
+                                                            meta_isvalid = isvalid,
+                                                            meta_ismatch_keylololo=ismatch_keylololo, 
+                                                            meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                            meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi,
+                                                            meta_isbackup=isbackup)
+                                                    if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
+                                                    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
+                                                    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
+                                                    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2 and \
+                                                    isvalid == 1 and isbackup == 1):
+                                                        self.client.access_case1_tbl_table_add_with_try_case1(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    else:
+                                                        self.client.access_case1_tbl_table_add_with_read_case1(
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: access_case2_tbl (default: nop; 4)
+            for isbackup in backup_list:
+                for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
+                    matchspec0 = netbuffer_access_case2_tbl_match_spec_t(\
+                            op_hdr_optype=tmpoptype,
+                            meta_isbackup=isbackup)
+                    if isbackup == 1:
+                        self.client.access_case2_tbl_table_add_with_try_case2(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+                    else:
+                        self.client.access_case2_tbl_table_add_with_read_case2(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: try_res_tbl (default: nop; 4144)
             print "Configuring try_res_tbl"
-            matchspec0 = netbuffer_try_res_tbl_match_spec_t(\
-                    op_hdr_optype=GETREQ_TYPE,
-                    meta_isvalid=1,
-                    meta_ismatch_keylololo=2, 
-                    meta_ismatch_keylolohi=2,
-                    meta_ismatch_keylohilo=2, 
-                    meta_ismatch_keylohihi=2,
-                    meta_ismatch_keyhilolo=2, 
-                    meta_ismatch_keyhilohi=2,
-                    meta_ismatch_keyhihilo=2,
-                    meta_ismatch_keyhihihi=2)
-            self.client.try_res_tbl_table_add_with_update_getreq_to_getres(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec1 = netbuffer_try_res_tbl_match_spec_t(\
-                    op_hdr_optype=PUTREQ_TYPE,
-                    meta_isvalid=1,
-                    meta_ismatch_keylololo=2, 
-                    meta_ismatch_keylolohi=2,
-                    meta_ismatch_keylohilo=2, 
-                    meta_ismatch_keylohihi=2,
-                    meta_ismatch_keyhilolo=2, 
-                    meta_ismatch_keyhilohi=2,
-                    meta_ismatch_keyhihilo=2,
-                    meta_ismatch_keyhihihi=2)
-            self.client.try_res_tbl_table_add_with_update_putreq_to_putres(\
-                    self.sess_hdl, self.dev_tgt, matchspec1)
-            matchspec2 = netbuffer_try_res_tbl_match_spec_t(\
-                    op_hdr_optype=DELREQ_TYPE,
-                    meta_isvalid=1,
-                    meta_ismatch_keylololo=2, 
-                    meta_ismatch_keylolohi=2,
-                    meta_ismatch_keylohilo=2, 
-                    meta_ismatch_keylohihi=2,
-                    meta_ismatch_keyhilolo=2, 
-                    meta_ismatch_keyhilohi=2,
-                    meta_ismatch_keyhihilo=2,
-                    meta_ismatch_keyhihihi=2)
-            actnspec2 = netbuffer_update_delreq_to_s_and_clone_action_spec_t(sids[0]) # Clone for DELRES to client
-            self.client.try_res_tbl_table_add_with_update_delreq_to_s_and_clone(\
-                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
+            for isbackup in backup_list:
+                for iscase1 in case1_list:
+                    for iscase2 in case2_list:
+                        for isdirty in dirty_list:
+                            matchspec0 = netbuffer_try_res_tbl_match_spec_t(\
+                                    op_hdr_optype=GETREQ_TYPE,
+                                    meta_isvalid=1,
+                                    meta_ismatch_keylololo=2, 
+                                    meta_ismatch_keylolohi=2,
+                                    meta_ismatch_keylohilo=2, 
+                                    meta_ismatch_keylohihi=2,
+                                    meta_ismatch_keyhilolo=2, 
+                                    meta_ismatch_keyhilohi=2,
+                                    meta_ismatch_keyhihilo=2,
+                                    meta_ismatch_keyhihihi=2,
+                                    meta_isbackup = isbackup,
+                                    meta_iscase1 = iscase1,
+                                    meta_iscase2 = iscase2,
+                                    meta_isdirty = isdirty)
+                            self.client.try_res_tbl_table_add_with_update_getreq_to_getres(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                            matchspec2 = netbuffer_try_res_tbl_match_spec_t(\
+                                    op_hdr_optype=DELREQ_TYPE,
+                                    meta_isvalid=1,
+                                    meta_ismatch_keylololo=2, 
+                                    meta_ismatch_keylolohi=2,
+                                    meta_ismatch_keylohilo=2, 
+                                    meta_ismatch_keylohihi=2,
+                                    meta_ismatch_keyhilolo=2, 
+                                    meta_ismatch_keyhilohi=2,
+                                    meta_ismatch_keyhihilo=2,
+                                    meta_ismatch_keyhihihi=2,
+                                    meta_isbackup = isbackup,
+                                    meta_iscase1 = iscase1,
+                                    meta_iscase2 = iscase2,
+                                    meta_isdirty = isdirty)
+                            actnspec2 = netbuffer_update_delreq_to_s_and_clone_action_spec_t(sids[0]) # Clone for DELRES to client
+                            self.client.try_res_tbl_table_add_with_update_delreq_to_s_and_clone(\
+                                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
+                            matchspec1 = netbuffer_try_res_tbl_match_spec_t(\
+                                    op_hdr_optype=PUTREQ_TYPE,
+                                    meta_isvalid=1,
+                                    meta_ismatch_keylololo=2, 
+                                    meta_ismatch_keylolohi=2,
+                                    meta_ismatch_keylohilo=2, 
+                                    meta_ismatch_keylohihi=2,
+                                    meta_ismatch_keyhilolo=2, 
+                                    meta_ismatch_keyhilohi=2,
+                                    meta_ismatch_keyhihilo=2,
+                                    meta_ismatch_keyhihihi=2,
+                                    meta_isbackup = isbackup,
+                                    meta_iscase1 = iscase1,
+                                    meta_iscase2 = iscase2,
+                                    meta_isdirty = isdirty)
+                            if isbackup == 1 and iscase1 == 0:
+                                self.client.try_res_tbl_table_add_with_update_putreq_to_case1(\
+                                        self.sess_hdl, self.dev_tgt, matchspec1)
+                            else:
+                                self.client.try_res_tbl_table_add_with_update_putreq_to_putres(\
+                                        self.sess_hdl, self.dev_tgt, matchspec1)
+            for ismatch_keylololo in predicate_list:
+                for ismatch_keylolohi in predicate_list:
+                    for ismatch_keylohilo in predicate_list:
+                        for ismatch_keylohihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+                                            for isvalid in valid_list:
+                                                for iscase1 in case1_list:
+                                                    for isdirty in dirty_list:
+                                                        matchspec0 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                op_hdr_optype=GETRES_S_TYPE,
+                                                                meta_isvalid=isvalid,
+                                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                                meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                                meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                                meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                                meta_ismatch_keyhihihi=ismatch_keyhihihi,
+                                                                meta_isbackup = 1,
+                                                                meta_iscase1 = iscase1,
+                                                                meta_iscase2 = 0,
+                                                                meta_isdirty = isdirty)
+                                                        matchspec1 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                op_hdr_optype=PUTREQ_RU_TYPE,
+                                                                meta_isvalid=isvalid,
+                                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                                meta_ismatch_keylolohi=ismatch_keylolohi, 
+                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                                meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                                meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                                meta_ismatch_keyhihihi=ismatch_keyhihihi,
+                                                                meta_isbackup = 1,
+                                                                meta_iscase1 = iscase1,
+                                                                meta_iscase2 = 0,
+                                                                meta_isdirty = isdirty)
+                                                        if isvalid == 1 and isdirty == 1:
+                                                            actnspec0 = netbuffer_update_getres_s_to_case2_action_spec_t(1)
+                                                            actnspec1 = netbuffer_update_putreq_ru_to_case2_action_spec_t(1)
+                                                        else:
+                                                            actnspec0 = netbuffer_update_getres_s_to_case2_action_spec_t(0)
+                                                            actnspec1 = netbuffer_update_putreq_ru_to_case2_action_spec_t(0)
+                                                        self.client.try_res_tbl_table_add_with_update_getres_s_to_case2(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                        self.client.try_res_tbl_table_add_with_update_putreq_ru_to_case2(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec1, actnspec1)
 
             # Table: access_lock_tbl (default: nop; 10)
             print "Configuring access_lock_tbl"
@@ -1053,7 +1180,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.trigger_cache_update_tbl_table_add_with_update_putreq(\
                     self.sess_hdl, self.dev_tgt, matchspec1)
 
-            # Table: port_forward_tbl (default: nop; 112)
+            # Table: port_forward_tbl (default: nop; 132)
             print "Configuring port_forward_tbl"
             for isvalid in valid_list:
                 for isdirty in dirty_list:
@@ -1175,6 +1302,43 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.devPorts[0]) # Output to client
                             self.client.port_forward_tbl_table_add_with_port_forward(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for isdirty in dirty_list:
+                for islock in lock_list:
+                    matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                            op_hdr_optype = PUTREQ_CASE1_TYPE,
+                            meta_isvalid = 1,
+                            meta_isdirty = isdirty,
+                            meta_islock = islock)
+                    actnspec0 = netbuffer_forward_putreq_case1_and_clone_action_spec_t(\
+                            sids[0], self.devPorts[1]) # Clone to client, forward to server
+                    self.client.port_forward_tbl_table_add_with_forward_putreq_case1_and_clone(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for isvalid in valid_list:
+                for isdirty in dirty_list:
+                    for islock in lock_list:
+                        matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                op_hdr_optype = GETRES_S_CASE2_TYPE,
+                                meta_isvalid = isvalid,
+                                meta_isdirty = isdirty,
+                                meta_islock = islock)
+                        actnspec0 = netbuffer_update_getres_s_case2_to_putreq_gs_case2_and_clone_action_spec_t(\
+                                sids[0], self.devPorts[1]) # Clone to client port, output to server port
+                        self.client.port_forward_tbl_table_add_with_update_getres_s_case2_to_putreq_gs_case2_and_clone(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for isvalid in valid_list:
+                for isdirty in dirty_list:
+                    for islock in lock_list:
+                        matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                op_hdr_optype = PUTREQ_RU_CASE2_TYPE,
+                                meta_isvalid = isvalid,
+                                meta_isdirty = isdirty,
+                                meta_islock = islock)
+                        actnspec0 = netbuffer_update_putreq_ru_case2_to_putreq_ps_case2_and_clone_action_spec_t(\
+                                sids[0], self.devPorts[1]) # Clone to client port, output to server port
+                        self.client.port_forward_tbl_table_add_with_update_putreq_ru_case2_to_putreq_ps_case2_and_clone(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
+
 
             # Table: hash_partition_tbl (default: nop; server_num <= 128)
             print "Configuring hash_partition_tbl"

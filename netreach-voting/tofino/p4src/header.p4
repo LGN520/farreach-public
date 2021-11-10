@@ -160,6 +160,8 @@ header_type metadata_t {
 		ismatch_future_keyhihilo: 4; // predicate
 		ismatch_future_keyhihihi: 4; // predicate*/
 		is_clone: 2;
+		isbackup: 1; // backup flag
+		iscase1: 1; // case 1 of backup
 	}
 }
 

@@ -150,6 +150,30 @@
 	+ TODO: For carsh-consistent backup, we only need to remember the evicted data from PUTREQ_GS and PUTREQ_PS instead of PUTREQ_N 
 	in server; switch also needs to send the original value of the cached key for the first update
 	+ Set size of each table accordingly
+- Support crash-consistent backup
+	+ Switch: add flag to mark three cases (load_backup_flag_tbl)
+		* NOTE: for invalid or valid but non-dirty, we set is_assigned as 0; otherwise, we set it as 1 (need to remember in server's backup)
+		* Case 1: first PUT in switch for each bucket -> evict old value
+			- Use case1_reg to mark whether case 1 has been triggered in access_case1_tbl (keymatches, valid = 1, and backup = 1 for PUTREQ)
+			- In try_res_tbl, if PUTREQ, valid = 1, key matches, isbackup = 1, iscase1 = 0, convert it to PUTREQ_CASE1 and set value in packet
+			header as old value (set hashidx in seq, and set dirty bit in is_assigned (valid must be 1 in this case))
+			- In port_forward_tbl, if PUTREQ_CASE1, forward it to server and clone PUTRES to client
+			- Use hash_partition_tbl directly
+		* Case 2: first eviction for each bucket -> evicted data
+			- Use case2_reg to mark whether case 2 has been triggered in access_case2_tbl (backup = 1 for GETRES_S and PUTREQ_RU)
+			- In try_res_tbl, if GETRES_S/PUTREQ_RU, isbackup = 1, iscase2 = 0, convert it to GETRES_S_CASE2 and PUTREQ_RU_CASE2,
+			set key and value in header as evicted data, set hashidx in seq, and set is_assigned (as 1 only if valid = 1 and dirty = 1)
+			- In port_forward_tbl, if GETRES_S_CASE2/PUTREQ_RU_CASE2, convert it to PUTREQ_GS_CASE2/PUTREQ_PS_CASE2 to server, and
+			clone GETRES/PUTRES to client
+			- Use the same hash parition table as PUTREQ_GS/PUTREQ_PS
+		* TODO: first PUT to server
+	+ Controller
+		* TODO: reset registers: case1_reg, case2_reg
+		* TODO: set flag
+		* TODO: reset flag -> no PUTREQ_CASE1, GETRES_S_CASE2, PUTREQ_RU_CASE2, PUTREQ_PS_CASE2, and PUTREQ_GS_CASE2
+		* TODO: reset registers: case1_reg, case2_reg
+	+ Server
+		* TODO: Process PUTREQ_CASE1, PUTREQ_GS_CASE2, PUTREQ_PS_CASE2
 - Debug
 	+ Use thread_id of server thread to perform operation in key-value store instead of req.thread_id() (ycsb_server.c)
 	+ If condition_lo is true, the predicate is 2; (NOTE) if condition_lo is false, the predicate is 1 instead of 0!!!
