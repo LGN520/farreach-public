@@ -178,9 +178,8 @@
 		* TODO: reset registers: case1_reg, case2_reg, case3_reg
 	+ Server
 		* TODO: Process PUTREQ_CASE1, DELREQ_CASE1, PUTREQ_GS_CASE2, PUTREQ_PS_CASE2, PUTREQ_CASE3, DELREQ_CASE3
-- TODO: Try default action with hashidx by removing condition for hash calculation
-- Optimize for stage
-	+ TODO: Combine access_lock_tbl into try_res_tbl
+- Try default action with hashidx by removing condition for hash calculation
+	+ Fail! Even if the hash calculation must be performed.
 - Debug
 	+ Use thread_id of server thread to perform operation in key-value store instead of req.thread_id() (ycsb_server.c)
 	+ If condition_lo is true, the predicate is 2; (NOTE) if condition_lo is false, the predicate is 1 instead of 0!!!
@@ -195,6 +194,8 @@
 	+ Fix a bug of processing GETREQ_S for non-existing key (judge by vallen instead of status in server)
 	+ Find a bug of resubmit: resubmitted packet cannot be resubmitted again; (recirculate is performed as setting egress port)
 		* Solution: use recirculation (we must enable and add port for recir/cpu/pktgen in ptf before usage)
+- TODO: Optimize for stage (at most 32B -> 48B; optional after we finish all implementation)
+	+ TODO: Combine access_lock_tbl into try_res_tbl
 
 ## Simple test
 

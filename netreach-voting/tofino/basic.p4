@@ -30,7 +30,7 @@
 #define PUTREQ_CASE1_TYPE 0x0e
 #define DELREQ_CASE1_TYPE 0x0f
 #define PUTREQ_GS_CASE2_TYPE 0x10
-#define PUTRES_PS_CASE2_TYPE 0x11
+#define PUTREQ_PS_CASE2_TYPE 0x11
 #define PUTREQ_CASE3_TYPE 0x12
 #define DELREQ_CASE3_TYPE 0x13
 // Only used in switch
@@ -49,8 +49,8 @@
 // (fields in the same ALU msut be in the same PHV group)
 // -> (64-1)/2=31 -> 31*4=124B val -> 15*8=120B val
 // 32K * (4*2B keylo + 4*2B keyhi + 96B val + 1bit valid)
-#define KV_BUCKET_COUNT 32768
-//#define KV_BUCKET_COUNT 1
+//#define KV_BUCKET_COUNT 32768
+#define KV_BUCKET_COUNT 1
 
 // NOTE: you should change the two macros according to maximum val length
 // VAL_PKTLEN: sizeof(vallen) + sizeof(val) + sizeof(seq) + sizeof(is_assigned)

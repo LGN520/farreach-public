@@ -46,6 +46,7 @@ parser parse_op_req {
 		//PUTREQ_RU_CASE2_TYPE: parse_vallen;
 		PUTREQ_PS_CASE2_TYPE: parse_vallen;
 		PUTREQ_GS_CASE2_TYPE: parse_vallen;
+		PUTREQ_CASE3_TYPE: parse_vallen;
 		default: ingress;
 	}
 }
