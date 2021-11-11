@@ -162,6 +162,8 @@ header_type metadata_t {
 		is_clone: 2;
 		isbackup: 1; // backup flag
 		iscase1: 1; // case 1 of backup
+		iscase2: 1; // case 2 of backup
+		iscase3: 1; // case 3 of backup
 	}
 }
 

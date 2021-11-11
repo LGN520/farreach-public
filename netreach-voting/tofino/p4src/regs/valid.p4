@@ -62,7 +62,8 @@ table access_valid_tbl {
 		clear_valid;
 		nop;
 	}
-	default_action: nop();
+	default_action: get_valid();
+	//default_action: nop();
 	size: 1280;
 }
 
