@@ -153,7 +153,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 tmpval = (tmpvalhi << 32) + tmpvallo
                 buf = buf + struct.pack("Q", tmpval)
             count += 1
-        buf = struct.pack("I", count) + buf
+        bufsize = len(buf) + 4 + 4
+        buf = struct.pack("I", bufsize) + struct.pack("I", count) + buf
 
         self.conn_mgr.client_cleanup(self.sess_hdl)
 

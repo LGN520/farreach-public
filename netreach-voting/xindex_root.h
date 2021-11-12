@@ -62,6 +62,8 @@ class Root {
   void serialize_root(char* filename);
   void deserialize_root(char* filename);
 
+  void make_snapshot();
+
  private:
   void adjust_rmi();
   void train_rmi(size_t rmi_2nd_stage_model_n);

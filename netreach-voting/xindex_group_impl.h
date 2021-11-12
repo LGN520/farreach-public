@@ -158,6 +158,24 @@ void Group<key_t, val_t, seq, max_model_n>::open(uint32_t group_idx, std::string
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
+void Group<key_t, val_t, seq, max_model_n>::make_snapshot() {
+	// TODO: we should trigger compaction before making snapshot of data
+	if (data != nullptr) {
+		rocksdb::Snapshot *tmpsp = const_cast<rocksdb::Snapshot*>(data->GetSnapshot());
+		old_data_sp = data_sp;
+		data_sp = tmpsp;
+	}
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+void Group<key_t, val_t, seq, max_model_n>::free_old_snapshot() {
+	if (old_data_sp != nullptr) {
+		data->ReleaseSnapshot(old_data_sp);
+		old_data_sp = nullptr;
+	}
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
 const key_t &Group<key_t, val_t, seq, max_model_n>::get_pivot() {
 	return pivot;
 }
@@ -605,6 +623,7 @@ Group<key_t, val_t, seq, max_model_n>
 	Group *new_group = new Group();
 	new_group->pivot = pivot;
 	new_group->data = data;
+	new_group->data_sp = data_sp;
 	new_group->buffer = buffer_temp;
 	new_group->buffer_size = buffer_size_temp;
 	new_group->cbf = cbf_temp;

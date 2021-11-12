@@ -285,6 +285,7 @@ action update_putreq_to_case1() {
 
 action update_delreq_to_case1() {
 	modify_field(op_hdr.optype, DELREQ_CASE1_TYPE);
+	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN);
 
 	// Set old value
 	modify_field(vallen_hdr.vallen, meta.origin_vallen);

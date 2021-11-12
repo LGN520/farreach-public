@@ -10,7 +10,10 @@
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, 
 	GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
 	GET_REQ_S, PUT_REQ_GS, PUT_REQ_PS, 
-	DEL_REQ_S, GET_RES_S, GET_RES_NS};
+	DEL_REQ_S, GET_RES_S, GET_RES_NS,
+	PUT_REQ_CASE1, DEL_REQ_CASE1,
+	PUT_REQ_GS_CASE2, PUT_REQ_PS_CASE2,
+	PUT_REQ_CASE3, DEL_REQ_CASE3};
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -54,6 +57,9 @@ class PutRequest : public Packet<key_t> {
 		PutRequest(const char * data, uint32_t recv_size);
 
 		val_t val() const;
+
+		uint32_t seq() const;
+		uint8_t is_assigned() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -224,6 +230,60 @@ class DelRequestS : public DelRequest<key_t> {
 	public:
 		DelRequestS(uint8_t thread_id, key_t key);
 		DelRequestS(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestCase1 : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestCase1(uint8_t thread_id, key_t key, val_t val);
+		PutRequestCase1(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class DelRequestCase1 : public PutRequest<key_t, val_t> {
+	public:
+		DelRequestCase1(uint8_t thread_id, key_t key, val_t val);
+		DelRequestCase1(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestGSCase2 : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestGSCase2(uint8_t thread_id, key_t key, val_t val);
+		PutRequestGSCase2(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestPSCase2 : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestPSCase2(uint8_t thread_id, key_t key, val_t val);
+		PutRequestPSCase2(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestCase3 : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestCase3(uint8_t thread_id, key_t key, val_t val);
+		PutRequestCase3(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t>
+class DelRequestCase3 : public DelRequest<key_t> {
+	public:
+		DelRequestCase3(uint8_t thread_id, key_t key);
+		DelRequestCase3(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };

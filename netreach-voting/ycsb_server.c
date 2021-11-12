@@ -25,12 +25,16 @@
 #include "key.h"
 #include "val.h"
 #include "iniparser/iniparser_wrapper.h"
+#include "backup_data.h"
+#include "special_case.h"
 
 #define MQ_SIZE 256
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 
+typedef BackupData backup_data_t;
+typedef SpecialCase special_case_t;
 typedef Key index_key_t;
 typedef Val val_t;
 typedef SFGParam sfg_param_t;
@@ -50,6 +54,12 @@ typedef PutRequestPS<index_key_t, val_t> put_request_ps_t;
 typedef DelRequestS<index_key_t> del_request_s_t;
 typedef GetResponseS<index_key_t, val_t> get_response_s_t;
 typedef GetResponseNS<index_key_t, val_t> get_response_ns_t;
+typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
+typedef DelRequestCase1<index_key_t, val_t> del_request_case1_t;
+typedef PutRequestGSCase2<index_key_t, val_t> put_request_gs_case2_t;
+typedef PutRequestPSCase2<index_key_t, val_t> put_request_ps_case2_t;
+typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
+typedef DelRequestCase3<index_key_t> del_request_case3_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -70,19 +80,21 @@ volatile struct rte_mbuf ***pkts_list;
 uint32_t* volatile heads;
 uint32_t* volatile tails;
 
-// Process backup data
-void parse_kv(const char* recv_buf, std::map<index_key_t, val_t>* data);
-
 // Periodic backup
+short backup_port;
 void *run_backuper(__attribute__((unused)) void *param); // backuper
-std::map<index_key_t, val_t>* volatile backup_data = nullptr;
+void *run_kvparser(void *param); // KV parser 
+void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expected_count, backup_data_t *new_backup_data); // Helper to process backup data
+void rollback(backup_data_t *new_backup_data);
+backup_data_t * volatile backup_data = nullptr;
 uint32_t* volatile backup_rcu;
+std::map<unsigned short, special_case_t> **special_cases_list = nullptr; // per-thread special cases
+bool volatile isbackup = false;
 
 // parameters
 size_t fg_n;
 size_t bg_n;
 short dst_port_start;
-short backup_port = 3333;
 const char *workload_name = nullptr;
 uint32_t kv_bucket_num;
 
@@ -99,6 +111,12 @@ int main(int argc, char **argv) {
   parse_ini("config.ini");
   parse_args(argc, argv);
   xindex::init_options(); // init options of rocksdb
+
+  // Prepare per-thread special case
+  special_cases_list = new std::map<unsigned short, special_case_t> *[fg_n];
+  for (size_t i = 0; i < fg_n; i++) {
+	special_cases_list[i] = new std::map<unsigned short, special_case_t>;
+  }
 
   // Prepare DPDK EAL param
   prepare_dpdk();
@@ -118,7 +136,6 @@ int main(int argc, char **argv) {
 
   run_server(tab_xi);
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
-
 
   // Free DPDK mbufs
   for (size_t i = 0; i < fg_n; i++) {
@@ -143,12 +160,14 @@ inline void parse_ini(const char* config_file) {
 	workload_name = ini.get_workload_name();
 	kv_bucket_num = ini.get_bucket_num();
 	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
+	backup_port = ini.get_server_backup_port();
 
 	COUT_VAR(fg_n);
 	COUT_VAR(dst_port_start);
 	printf("workload_name: %s\n", workload_name);
 	COUT_VAR(kv_bucket_num);
 	COUT_VAR(val_t::MAX_VAL_LENGTH);
+	COUT_VAR(backup_port);
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -334,35 +353,9 @@ void run_server(xindex_t *table) {
 	void * status;
 	int rc = pthread_join(backuper_thread, &status);
 	if (rc) {
-		COUT_N_EXIT("Error: unable to join," << rc);
+		COUT_N_EXIT("Error: unable to join " << rc);
 	}
 	rte_eal_mp_wait_lcore();
-}
-
-void parse_kv(const char* recv_buf, std::map<index_key_t, val_t>* data) {
-	INVARIANT(recv_buf != nullptr && data != nullptr);
-	const char *cur = recv_buf;
-	uint32_t kvnum = *(uint32_t *)cur;
-	cur += 4;
-	for (uint32_t i = 0; i < kvnum; i++) {
-#ifdef LARGE_KEY
-		index_key_t curkey(*(uint64_t*)cur, *(uint64_t*)(cur+8));
-		cur += 16;
-#else
-		index_key_t curkey(*(uint64_t*)cur);
-		cur += 8;
-#endif
-		uint8_t curvallen = *(uint8_t*)cur;
-		cur += 1;
-		INVARIANT(curvallen > 0);
-		uint64_t curval_data[curvallen];
-		for (uint8_t val_idx = 0; val_idx < curvallen; val_idx++) {
-			curval_data[val_idx] = *(uint64_t*)cur;
-			cur += 8;
-		}
-		val_t curval(curval_data, curvallen);
-		data->insert(std::pair<index_key_t, val_t>(curkey, curval));
-	}
 }
 
 static int run_receiver(void *param) {
@@ -414,15 +407,14 @@ static int run_receiver(void *param) {
 }
 
 void *run_backuper(void *param) {
-
-	int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	INVARIANT(sock_fd >= 0);
-	// Diskable udp check
+	// Disable udp/tcp check
 	int disable = 1;
 	if (setsockopt(sock_fd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-		COUT_N_EXIT("Disable udp checksum failed");
+		COUT_N_EXIT("Disable tcp checksum failed");
 	}
-	// Set timeout
+	// Set timeout for recvfrom/accept of udp/tcp
 	struct timeval tv;
 	tv.tv_sec = 1;
 	tv.tv_usec =  0;
@@ -436,45 +428,180 @@ void *run_backuper(void *param) {
 	backup_server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	res = bind(sock_fd, (struct sockaddr *)&backup_server_addr, sizeof(backup_server_addr));
 	INVARIANT(res >= 0);
-	
-	int recv_size = 0;
-	char recv_buf[kv_bucket_num * 114]; // n * (16+1+96) + 14 + 20 + 8 < n * 114
-	memset(recv_buf, 0, sizeof(recv_buf));
+	// Mark tcp socket as passive to process SYN packets
+	res = listen(sock_fd, 5); // 5 is the max number of pending connections
+	INVARIANT(res >= 0);
 
 	while (!running)
 		;
 
+	bool iscreate = false;
+	pthread_t latest_thread;
 	while (running) {
-		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
-		if (recv_size == -1) {
+		struct sockaddr_in controller_addr;
+		unsigned int controller_addr_len;
+		int connfd = accept(sock_fd, (struct sockaddr *)&controller_addr, &controller_addr_len);
+		if (connfd == -1) {
 			if (errno == EWOULDBLOCK || errno == EINTR) {
 				continue; // timeout or interrupted system call
 			}
 			else {
-				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
+				COUT_N_EXIT("[server] Error of accept: errno = " << errno);
 			}
 		}
-		COUT_THIS("backuper recvsize: "<<recv_size)
-		//dump_buf(recv_buf, recv_size);
 
-		std::map<index_key_t, val_t> *new_backup_data = new std::map<index_key_t, val_t>;
-		parse_kv(recv_buf, new_backup_data);
+		if (!isbackup) {
+			isbackup = true; // Disable other worker threads from touching special_cases_list
 
-		volatile std::map<index_key_t, val_t> *old_backup_data = backup_data;
-		backup_data = new_backup_data;
-
-		// peace period of RCU (may not need if we do not use them in SCAN)
-		for (uint32_t i = 0; i < fg_n; i++) {
-			uint32_t prev_val = backup_rcu[i];
-			while (running && backup_rcu[i] == prev_val) {}
+			int ret = pthread_create(&latest_thread, nullptr, run_kvparser, (void *)&connfd); // It finally sets backup as false
+			iscreate = true;
+			if (ret) {
+				COUT_N_EXIT("Error: unable to create kv parser " << ret);
+			}
 		}
-		if (old_backup_data != nullptr) {
-			delete old_backup_data;
-			old_backup_data = nullptr;
-		}
-		
+
+		close(connfd); // socket should not be freed until sub-thread also closes the descriptor
 	}
+
+	if (iscreate) {
+		void * status;
+		int rc = pthread_join(latest_thread, &status);
+		if (rc) {
+			COUT_N_EXIT("Error: unable to join " << rc);
+		}
+	}
+
 	pthread_exit(nullptr);
+}
+
+void *run_kvparser(void *param) {
+	uint32_t max_recv_buf_size = kv_bucket_num * (34 + val_t::max_bytesnum()); // n * (16+16+1+Val::max_bytesnum) + 8 < n * (34 + Val::max_bytesnum)
+	char recv_buf[max_recv_buf_size];
+	memset(recv_buf, 0, sizeof(recv_buf));
+
+	int connfd = *((int *)param);
+
+	// Metadata
+	bool isfirst = true;
+	unsigned int count = 0;
+	unsigned int expected_size = 0;
+	// Data
+	uint32_t start_idx = 0;
+	while (true) {
+		int recv_size = recv(connfd, recv_buf + start_idx, max_recv_buf_size - start_idx, 0);
+		if (recv_size < 0) {
+			COUT_N_EXIT("[server] kvparser recv fails: " << recv_size);
+		}
+		if (isfirst) {
+			isfirst = false;
+			expected_size = *((unsigned int *)recv_buf);
+			if (expected_size >= max_recv_buf_size) {
+				COUT_N_EXIT("[server] kvparser expected bytes (" << expected_size << ") exceeds max bytes (" << max_recv_buf_size << ")");
+			}
+			count = *((unsigned int *)(recv_buf + 4));
+		}
+		start_idx += recv_size;
+		if (start_idx >= expected_size) {
+			break;
+		}
+		else if (start_idx >= max_recv_buf_size) {
+			COUT_N_EXIT("[server] kvparser received bytes (" << start_idx << ") exceeds max bytes (" << max_recv_buf_size << ")");
+		}
+	}
+	close(connfd);
+
+	backup_data_t *new_backup_data = new backup_data_t();
+	parse_kv(recv_buf + 8, expected_size - 8, count, new_backup_data); // databuf pointer, data size, expected count, new backup data
+	rollback(new_backup_data);
+
+	volatile backup_data_t *old_backup_data = backup_data;
+	backup_data = new_backup_data;
+
+	// peace period of RCU (may not need if we do not use them in SCAN)
+	for (uint32_t i = 0; i < fg_n; i++) {
+		uint32_t prev_val = backup_rcu[i];
+		while (running && backup_rcu[i] == prev_val) {}
+	}
+
+	if (old_backup_data != nullptr) {
+		delete old_backup_data;
+		old_backup_data = nullptr;
+	}
+	for (size_t i = 0; i < fg_n; i++) {
+		special_cases_list[i]->clear();
+	}
+
+	isbackup = false;
+
+	pthread_exit(nullptr);
+}
+
+void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expected_count, backup_data_t *new_backup_data) {
+	INVARIANT(data_buf != nullptr && new_backup_data != nullptr);
+	const char *cur = data_buf;
+	for (uint32_t i = 0; i < expected_count; i++) {
+		// Parse data
+		unsigned short curhashidx = *((unsigned short *)cur);
+		cur += 2;
+#ifdef LARGE_KEY
+		index_key_t curkey(*(uint64_t*)cur, *(uint64_t*)(cur+8));
+		cur += 16;
+#else
+		index_key_t curkey(*(uint64_t*)cur);
+		cur += 8;
+#endif
+		uint8_t curvallen = *(uint8_t*)cur;
+		cur += 1;
+		INVARIANT(curvallen > 0);
+		uint64_t curval_data[curvallen];
+		for (uint8_t val_idx = 0; val_idx < curvallen; val_idx++) {
+			curval_data[val_idx] = *(uint64_t*)cur;
+			cur += 8;
+		}
+		val_t curval(curval_data, curvallen);
+
+		// Update new backup data
+		new_backup_data->_kvmap.insert(std::pair<index_key_t, val_t>(curkey, curval));
+		new_backup_data->_idxmap.insert(std::pair<unsigned short, index_key_t>(curhashidx, curkey));
+	}
+}
+
+void rollback(backup_data_t *new_backup_data) {
+	for (size_t i = 0; i < fg_n; i++) {
+		std::map<unsigned short, special_case_t> *cur_special_cases = special_cases_list[i];
+		for (std::map<unsigned short, special_case_t>::iterator iter = cur_special_cases->begin(); 
+				iter != cur_special_cases->end(); iter++) {
+			if (!iter->second._valid) { // Invalid case
+				std::map<unsigned short, index_key_t>::iterator tmpiter = new_backup_data->_idxmap.find(iter->first);
+				if (tmpiter != new_backup_data->_idxmap.end()) { // Remove the idx and kv
+					new_backup_data->_kvmap.erase(tmpiter->second);
+					new_backup_data->_idxmap.erase(tmpiter->first);
+				}
+			}
+			else { // Valid case
+				std::map<unsigned short, index_key_t>::iterator tmpiter = new_backup_data->_idxmap.find(iter->first);
+				if (tmpiter != new_backup_data->_idxmap.end()) { // Has the idx
+					if (tmpiter->second == iter->second._key) { // Same key
+						if (new_backup_data->_kvmap.find(tmpiter->second) != new_backup_data->_kvmap.end()) { // Has the key
+							new_backup_data->_kvmap[tmpiter->second] = iter->second._val; // Update val
+						}
+						else { // Without the key
+							new_backup_data->_kvmap.insert(std::pair<index_key_t, val_t>(iter->second._key, iter->second._val)); // Insert kv
+						}
+					}
+					else { // Different keys
+						new_backup_data->_kvmap.erase(tmpiter->second); // Remove original kv
+						new_backup_data->_idxmap[tmpiter->first] = iter->second._key; // Replace the key in idxmap
+						new_backup_data->_kvmap.insert(std::pair<index_key_t, val_t>(iter->second._key, iter->second._val)); // Insert new kv in kvmap
+					}
+				}
+				else { // Without the idx
+					new_backup_data->_idxmap.insert(std::pair<unsigned short, index_key_t>(iter->first, iter->second._key)); // Insert idx
+					new_backup_data->_kvmap.insert(std::pair<index_key_t, val_t>(iter->second._key, iter->second._val)); // Insert new kv
+				}
+			}
+		}
+	}
 }
 
 static int run_sfg(void * param) {
@@ -646,7 +773,7 @@ static int run_sfg(void * param) {
 					// Merge results with backup data
 					//double t0 = CUR_TIME();
 					std::vector<std::pair<index_key_t, val_t>> merge_results;
-					std::map<index_key_t, val_t> *kvdata = backup_data;
+					/*std::map<index_key_t, val_t> *kvdata = backup_data;
 					if (kvdata != nullptr) {
 						std::map<index_key_t, val_t>::iterator kviter = kvdata->lower_bound(req.key());
 						uint32_t result_idx = 0;
@@ -698,7 +825,7 @@ static int run_sfg(void * param) {
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
-					sent_pkt_idx++;
+					sent_pkt_idx++;*/
 					break;
 				}
 			case packet_type_t::GET_REQ_S: 
@@ -749,6 +876,113 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
+					break;
+				}
+			case packet_type_t::PUT_REQ_CASE1:
+				{
+					if (!isbackup) {
+						put_request_case1_t req(buf, recv_size);
+						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
+								== special_cases_list[thread_id]->end()) { // No such hashidx
+							SpecialCase tmpcase;
+							tmpcase._key = req.key();
+							tmpcase._val = req.val();
+							tmpcase._valid = (req.is_assigned() == 1);
+							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+										(unsigned short)req.seq(), tmpcase));
+						}
+						// TODO: snapshot
+					}
+					break;
+				}
+			case packet_type_t::DEL_REQ_CASE1:
+				{
+					del_request_case1_t req(buf, recv_size);
+					if (!isbackup) {
+						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
+								== special_cases_list[thread_id]->end()) { // No such hashidx
+							SpecialCase tmpcase;
+							tmpcase._key = req.key();
+							tmpcase._val = req.val();
+							tmpcase._valid = (req.is_assigned() == 1);
+							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+										(unsigned short)req.seq(), tmpcase));
+						}
+						// TODO: snapshot
+					}
+					bool tmp_stat = table->remove(req.key(), thread_id);
+					break;
+				}
+			case packet_type_t:: PUT_REQ_GS_CASE2:
+				{
+					put_request_gs_case2_t req(buf, recv_size);
+					if (!isbackup) {
+						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
+								== special_cases_list[thread_id]->end()) { // No such hashidx
+							SpecialCase tmpcase;
+							tmpcase._key = req.key();
+							tmpcase._val = req.val();
+							tmpcase._valid = (req.is_assigned() == 1);
+							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+										(unsigned short)req.seq(), tmpcase));
+						}
+						// TODO: snapshot
+					}
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					break;
+				}
+			case packet_type_t::PUT_REQ_PS_CASE2:
+				{
+					put_request_ps_case2_t req(buf, recv_size);
+					if (!isbackup) {
+						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
+								== special_cases_list[thread_id]->end()) { // No such hashidx
+							SpecialCase tmpcase;
+							tmpcase._key = req.key();
+							tmpcase._val = req.val();
+							tmpcase._valid = (req.is_assigned() == 1);
+							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+										(unsigned short)req.seq(), tmpcase));
+						}
+						// TODO: snapshot
+					}
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					break;
+				}
+			case packet_type_t::PUT_REQ_CASE3:
+				{
+					put_request_case3_t req(buf, recv_size);
+
+					if (!isbackup) {
+						// TODO: snapshot
+					}
+
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::DEL_REQ_CASE3:
+				{
+					del_request_case3_t req(buf, recv_size);
+
+					if (!isbackup) {
+						// TODO: snapshot
+					}
+
+					bool tmp_stat = table->remove(req.key(), thread_id);
+					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
 					break;
 				}
 			default:

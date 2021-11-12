@@ -616,6 +616,19 @@ void Root<key_t, val_t, seq>::deserialize_root(char *filename) {
 	fclose(fp);
 }
 
+template <class key_t, class val_t, bool seq>
+void Root<key_t, val_t, seq>::make_snapshot() {
+	for (size_t i = 0; i < group_n - 1; i++) {
+		groups[i].second->make_snapshot();
+	}
+	memory_fence();
+	rcu_barrier(); // No threads access old snapshots
+	for (size_t i = 0; i < group_n - 1; i++) {
+		groups[i].second->free_old_snapshot();
+	}
+}
+	
+
 }  // namespace xindex
 
 #endif  // XINDEX_ROOT_IMPL_H

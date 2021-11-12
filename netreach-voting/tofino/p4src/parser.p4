@@ -43,6 +43,7 @@ parser parse_op_req {
 		PUTREQ_PS_TYPE: parse_vallen;
 		PUTREQ_GS_TYPE: parse_vallen;
 		PUTREQ_CASE1_TYPE: parse_vallen;
+		DELREQ_CASE1_TYPE: parse_vallen;
 		//PUTREQ_RU_CASE2_TYPE: parse_vallen;
 		PUTREQ_PS_CASE2_TYPE: parse_vallen;
 		PUTREQ_GS_CASE2_TYPE: parse_vallen;

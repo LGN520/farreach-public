@@ -103,6 +103,24 @@ void IniparserWrapper::get_server_mac(uint8_t *macaddr) {
 	parse_mac(macaddr, server_mac);
 }
 
+const char* IniparserWrapper::get_server_backup_ip() {
+	const char *server_backup_ip = iniparser_getstring(ini, "server:server_backup_ip", nullptr);
+	if (server_backup_ip == nullptr) {
+		printf("Invalid entry of [server:server_backup_ip]\n");
+		exit(-1);
+	}
+	return server_backup_ip;
+}
+
+short IniparserWrapper::get_server_backup_port() {
+	int tmp = iniparser_getint(ini, "server:server_backup_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:server_backup_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 uint32_t IniparserWrapper::get_bucket_num() {
 	int tmp = iniparser_getint(ini, "switch:bucket_num", -1);
 	if (tmp == -1) {

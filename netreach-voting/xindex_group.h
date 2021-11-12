@@ -77,6 +77,11 @@ class alignas(CACHELINE_SIZE) Group {
   //void free_data();
   void free_buffer();
 
+  // NOTE: we leave RCU barrier between make and free in root node to avoid high latency
+  // NOTE: in each period of backup, make_snapshot can only be caused once (controlled by atomic boolean in main file)
+  void make_snapshot();
+  void free_old_snapshot();
+
  private:
   inline bool get_from_lsm(const key_t &key, val_t &val, rocksdb::TransactionDB *txn_db);
   inline result_t update_to_lsm(const key_t &key, const val_t &val, rocksdb::TransactionDB *txn_db);
@@ -114,6 +119,9 @@ class alignas(CACHELINE_SIZE) Group {
   cbf_t* cbf = nullptr;
   rocksdb::TransactionDB *buffer_temp = nullptr;
   cbf_t* cbf_temp = nullptr;
+
+  rocksdb::Snapshot *data_sp = nullptr;
+  rocksdb::Snapshot *old_data_sp = nullptr;
 
   uint32_t buffer_size = 0; // The size of puts in buffer instead of the number of elements in buffer
   uint32_t buffer_size_temp = 0;
