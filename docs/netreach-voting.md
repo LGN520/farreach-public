@@ -172,12 +172,18 @@
 				+ For DELREQ: isbackup = 1, key does not match or entry is invalid, lock = 0 -> try_case3
 			- In port_forward_tbl, if isbackup = 1, islock = 0, isevcit = 1 only for PUTREQ, iscase3 = 0, convert PUTREQ/DELREQ to PUTREQ_CASE3/DELREQ_CASE3, and forward to server
 	+ Controller
-		* TODO: reset registers: case1_reg, case2_reg, case3_reg
-		* TODO: set flag
-		* TODO: reset flag -> no special optype from now on
-		* TODO: reset registers: case1_reg, case2_reg, case3_reg
+		* Phase 1
+			* Reset registers: case1_reg, case2_reg, case3_reg
+			* Set flag
+		* Phase 2
+			* Read registers
+			* Reset flag -> no special optype from now on
+			* Send backup data by TCP
+			* Optional: reset registers: case1_reg, case2_reg, case3_reg
 	+ Server
-		* TODO: Process PUTREQ_CASE1, DELREQ_CASE1, PUTREQ_GS_CASE2, PUTREQ_PS_CASE2, PUTREQ_CASE3, DELREQ_CASE3
+		* TODO: Use TCP to receive backup data
+		* TODO: Process PUTREQ_CASE1, DELREQ_CASE1, PUTREQ_GS_CASE2, PUTREQ_PS_CASE2, PUTREQ_CASE3, DELREQ_CASE3 to remember speical cases
+		* TODO: rollback received backup data to crash-consistent backup data
 - Try default action with hashidx by removing condition for hash calculation
 	+ Fail! Even if the hash calculation must be performed.
 - Debug

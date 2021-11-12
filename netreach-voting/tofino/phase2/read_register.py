@@ -41,13 +41,6 @@ import struct
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
-import ConfigParser
-config = ConfigParser.ConfigParser()
-with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
-    config.readfp(f)
-
-bucket_count = int(config.get("switch", "bucket_num"))
-
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
 #   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
@@ -55,14 +48,17 @@ bucket_count = int(config.get("switch", "bucket_num"))
 #   ex: ["1/0", "1/1"]
 #
 
+import ConfigParser
+config = ConfigParser.ConfigParser()
+with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
+    config.readfp(f)
+
+server_backup_ip = str(config.get("server", "server_backup_ip"))
+server_backup_port = str(config.get("server", "server_backup_port"))
+bucket_count = int(config.get("switch", "bucket_num"))
+max_val_len = int(config.get("global", "max_val_length"))
+
 fp_ports = ["2/0", "3/0"]
-#switch_ip = "1.1.1.1" # useless
-#switch_mac = "01:01:01:01:01:01" # useless
-#switch_port = 1 #useless
-server_ip = "172.16.112.32"
-#server_mac = "9c:69:b4:60:ef:8d"
-server_port = 3333
-max_val_len = 1
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -84,13 +80,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         elif re.search("0x2234|0x3234", hex(board_type)):
             self.platform_type = "montara"
 
-        self.devPorts = []
-        # get the device ports from front panel ports
-        for fpPort in fp_ports:
-            port, chnl = fpPort.split("/")
-            devPort = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-            self.devPorts.append(devPort)
-
     @staticmethod
     def get_reg16(reglist, idx):
         tmpreg = reglist[idx]
@@ -106,7 +95,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         return tmpreg
 
     def runTest(self):
-        print "Start reading..."
+        print "Reading reagisters"
         flags = netbuffer_register_flags_t(read_hw_sync=True)
         keylololo_list = self.client.register_range_read_keylololo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         keylolohi_list = self.client.register_range_read_keylolohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
@@ -125,12 +114,17 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         valid_list = self.client.register_range_read_valid_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         dirty_list = self.client.register_range_read_dirty_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
 
+        print "Reset flag"
+        actnspec0 = netbuffer_load_backup_flag_action_spec_t(0)
+        self.client.load_backup_flag_tbl_set_default_action_load_backup_flag(\
+                self.sess_hdl, self.dev_tgt, actnspec0)
+
         self.conn_mgr.complete_operations(self.sess_hdl)
 
+        print "Filtering data"
         count = 0
         buf = bytearray()
         for i in range(2*bucket_count): # Two pipelines
-            #i = idx + bucket_count # Our ports are in the 2nd pipeline
             tmpvalid = valid_list[i]
             if tmpvalid <= 0:
                 continue
@@ -151,8 +145,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmpkeyhihihi = RegisterUpdate.get_reg16(keyhihihi_list, i)
             tmpkeylo = (((tmpkeylohihi << 16) + tmpkeylohilo) << 32) + ((tmpkeylolohi << 16) + tmpkeylololo)
             tmpkeyhi = (((tmpkeyhihihi << 16) + tmpkeyhihilo) << 32) + ((tmpkeyhilohi << 16) + tmpkeyhilolo)
-            buf = buf + struct.pack("2QB", tmpkeylo, tmpkeyhi, tmpvallen)
-            print("keylo: {:016x} keyhi: {:016x} vallen: {:02x}".format(tmpkeylo, tmpkeyhi, tmpvallen))
+            buf = buf + struct.pack("H2QB", i, tmpkeylo, tmpkeyhi, tmpvallen)
+            #print("keylo: {:016x} keyhi: {:016x} vallen: {:02x}".format(tmpkeylo, tmpkeyhi, tmpvallen))
             for val_idx in range(tmpvallen):
                 tmpvallo = RegisterUpdate.get_reg32(vallo_list_list[val_idx], i)
                 tmpvalhi = RegisterUpdate.get_reg32(valhi_list_list[val_idx], i)
@@ -161,10 +155,23 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             count += 1
         buf = struct.pack("I", count) + buf
 
-        #sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        #sockfd.sendto(buf, (server_ip, server_port))
-
         self.conn_mgr.client_cleanup(self.sess_hdl)
+
+        print "Connecting server"
+        sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sockfd.connect((server_backup_ip, server_bakcup_port))
+
+        print "Sending backup data"
+        startidx = 0
+        totalnum = len(buf)
+        sentnum = 0
+        while True:
+            sentnum += sockfd.send(buf[startidx:])
+            if sentnum >= totalnum:
+                print "sentnum: {} totalnum: {}".format(sentnum, totalnum)
+                break
+            else:
+                startidx = sentnum
 
         #pktlen = 14 + 20 + 8 + 4 + 17 * bucket_count
         #pkt = simple_udp_packet(pktlen, eth_dst=server_mac, eth_src=switch_mac, 

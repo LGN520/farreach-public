@@ -80,9 +80,8 @@ action load_backup_flag(flag) {
 table load_backup_flag_tbl {
 	actions {
 		load_backup_flag;
-		nop;
 	}
-	default_action: nop();
+	default_action: load_backup_flag(0);
 }
 
 // Stage 3

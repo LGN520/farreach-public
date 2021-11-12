@@ -19,3 +19,4 @@ ycsb_server
 *.o
 *.d
 !testcases/*
+*.pcap
