@@ -147,7 +147,6 @@
 		- TODO: get the key range of each server thread in loading phase
 		- TODO: simulate multiple packets in server-side by split the request to multiple server threads by range partition
 		- TODO: support SCAN with a guarantee of some point-in-time: we still need RCU for backup data
-	+ TODO: For carsh-consistent backup, we only need to remember the evicted data from PUTREQ_GS and PUTREQ_PS instead of PUTREQ_N 
 	in server; switch also needs to send the original value of the cached key for the first update
 	+ Set size of each table accordingly
 - Support crash-consistent backup
@@ -182,21 +181,23 @@
 			* Optional: reset registers: case1_reg, case2_reg, case3_reg
 	+ Server
 		* Make a snapshot when init or open
+		* Ensure that in each period of backup, kv snapshot can only be performance once
+			* Use std::atomic_flag: test_and_set & clear
 		* Steps
 			* Set isbackup as true to disable server threads from touching per-thread special cases
-			* TODO: If is_kvsnapshot is false, mark it as true and make kv snapshot by RCU
+			* If is_kvsnapshot is false, mark it as true and make kv snapshot by RCU
 			* Use TCP to receive new backup data
 			* Rollback per-thread special cases from new backup data
 			* Replace old backup data with new backup data
 			* RCU barrier (no other threads touching per-thread special cases and old backup data)
-			* TODO: Free old backup data and emptize per-thread special cases, set isbackup as false and is_kvsnapshot as false
+			* Free old backup data and emptize per-thread special cases, set isbackup as false and is_kvsnapshot as false
 		* If not isbackup, process PUTREQ_CASE1, DELREQ_CASE1, PUTREQ_GS_CASE2, PUTREQ_PS_CASE2, PUTREQ_CASE3, DELREQ_CASE3 to remember speical cases
 			* Add all packet formats
 			* PUTREQ_CASE1: add it into special cases if hashidx does not exist
 			* DELREQ_CASE1: delete kv-store, add it into special cases if hashidx does not exist
 			* PUTREQ_GS/PS_CASE2: insert into kv-store, add it into special cases if hashidx does not exist
 			* PUT/DELREQ_CASE3: insert/delete in kv-store, sendback response
-			* TODO: ALL: if not is_kvsnapshot, mark is_kvsnapshot as true (data plane will only report at most one 
+			* ALL: if not is_kvsnapshot, mark is_kvsnapshot as true (data plane will only report at most one 
 			such packet for each server) -> make snapshot of kv-store for each group by RCU
 - Try default action with hashidx by removing condition for hash calculation
 	+ Fail! Even if the hash calculation must be performed.

@@ -82,7 +82,7 @@ uint32_t* volatile tails;
 
 // Periodic backup
 short backup_port;
-void *run_backuper(__attribute__((unused)) void *param); // backuper
+void *run_backuper(void *param); // backuper
 void *run_kvparser(void *param); // KV parser 
 void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expected_count, backup_data_t *new_backup_data); // Helper to process backup data
 void rollback(backup_data_t *new_backup_data);
@@ -90,6 +90,8 @@ backup_data_t * volatile backup_data = nullptr;
 uint32_t* volatile backup_rcu;
 std::map<unsigned short, special_case_t> **special_cases_list = nullptr; // per-thread special cases
 bool volatile isbackup = false;
+std::atomic_flag is_kvsnapshot = ATOMIC_FLAG_INIT;
+void try_kvsnapshot(xindex_t *table);
 
 // parameters
 size_t fg_n;
@@ -300,7 +302,7 @@ void run_server(xindex_t *table) {
 
 	// Launch backuper
 	pthread_t backuper_thread;
-	ret = pthread_create(&backuper_thread, nullptr, run_backuper, nullptr);
+	ret = pthread_create(&backuper_thread, nullptr, run_backuper, (void *)table);
 	if (ret) {
 		COUT_N_EXIT("Error: unable to create backuper " << ret);
 	}
@@ -407,6 +409,8 @@ static int run_receiver(void *param) {
 }
 
 void *run_backuper(void *param) {
+	xindex_t *table = (xindex_t*)param;
+
 	int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	INVARIANT(sock_fd >= 0);
 	// Disable udp/tcp check
@@ -451,7 +455,14 @@ void *run_backuper(void *param) {
 		}
 
 		if (!isbackup) {
-			isbackup = true; // Disable other worker threads from touching special_cases_list
+			isbackup = true; 
+			// Ensure that all other worker threads do not touch special_cases_list
+			for (uint32_t i = 0; i < fg_n; i++) {
+				uint32_t prev_val = backup_rcu[i];
+				while (running && backup_rcu[i] == prev_val) {}
+			}
+
+			try_kvsnapshot(table);
 
 			int ret = pthread_create(&latest_thread, nullptr, run_kvparser, (void *)&connfd); // It finally sets backup as false
 			iscreate = true;
@@ -531,6 +542,7 @@ void *run_kvparser(void *param) {
 		special_cases_list[i]->clear();
 	}
 
+	is_kvsnapshot.clear(std::memory_order_release);
 	isbackup = false;
 
 	pthread_exit(nullptr);
@@ -601,6 +613,12 @@ void rollback(backup_data_t *new_backup_data) {
 				}
 			}
 		}
+	}
+}
+
+void try_kvsnapshot(xindex_t *table) {
+	if (!is_kvsnapshot.test_and_set(std::memory_order_acquire)) {
+		table->make_snapshot();
 	}
 }
 
@@ -891,7 +909,7 @@ static int run_sfg(void * param) {
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
 										(unsigned short)req.seq(), tmpcase));
 						}
-						// TODO: snapshot
+						try_kvsnapshot(table);
 					}
 					break;
 				}
@@ -908,7 +926,7 @@ static int run_sfg(void * param) {
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
 										(unsigned short)req.seq(), tmpcase));
 						}
-						// TODO: snapshot
+						try_kvsnapshot(table);
 					}
 					bool tmp_stat = table->remove(req.key(), thread_id);
 					break;
@@ -926,7 +944,7 @@ static int run_sfg(void * param) {
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
 										(unsigned short)req.seq(), tmpcase));
 						}
-						// TODO: snapshot
+						try_kvsnapshot(table);
 					}
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					break;
@@ -944,7 +962,7 @@ static int run_sfg(void * param) {
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
 										(unsigned short)req.seq(), tmpcase));
 						}
-						// TODO: snapshot
+						try_kvsnapshot(table);
 					}
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					break;
@@ -954,7 +972,7 @@ static int run_sfg(void * param) {
 					put_request_case3_t req(buf, recv_size);
 
 					if (!isbackup) {
-						// TODO: snapshot
+						try_kvsnapshot(table);
 					}
 
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
@@ -972,7 +990,7 @@ static int run_sfg(void * param) {
 					del_request_case3_t req(buf, recv_size);
 
 					if (!isbackup) {
-						// TODO: snapshot
+						try_kvsnapshot(table);
 					}
 
 					bool tmp_stat = table->remove(req.key(), thread_id);
