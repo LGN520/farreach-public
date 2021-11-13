@@ -142,12 +142,6 @@
 	(configure/table_configure.py, packet_format.h, packet_format_impl.h, ycsb_server.c)
 		* NOTE: we keep original keys, valid, dirty, savedseq, vallen, values, and pos votes. We only reset neg votes and lock. We
 		do not generate PUTREQ_PS, instead we directly convert it as GETRES.
-	+ Support scan
-		- TODO: change scan from key+num to start_key+end_key
-		- TODO: get the key range of each server thread in loading phase
-		- TODO: simulate multiple packets in server-side by split the request to multiple server threads by range partition
-		- TODO: support SCAN with a guarantee of some point-in-time: we still need RCU for backup data
-	in server; switch also needs to send the original value of the cached key for the first update
 	+ Set size of each table accordingly
 - Support crash-consistent backup
 	+ Switch: add flag to mark three cases (load_backup_flag_tbl)
@@ -201,6 +195,18 @@
 			such packet for each server) -> make snapshot of kv-store for each group by RCU
 - Try default action with hashidx by removing condition for hash calculation
 	+ Fail! Even if the hash calculation must be performed.
++ Support scan (range query)
+	- Change scan from key+num to start_key+end_key (TODO: apply to baseline)
+		+ Add endkey into ScanRequest and ScanResponse (packet_format.h, packet_format_impl.h)
+		+ Change switch side accordingly
+			+ Disable hash parition for SCAN request (basic.p4)
+		+ TODO: Change client side accordingly
+			+ TODO: client split the SCAN request into multiple sub-requests
+			+ TODO: send sub-requests one by one (thpt: count in client side since all requests are handled by server; latency: count in 
+		the granularity of sub-requests)
+		+ TODO: Change server side accordingly
+			+ TODO: add endkey limitation for range query
+	- TODO: support SCAN with a guarantee of some point-in-time: we still need RCU for backup data in server (only for NetReach)
 - Debug
 	+ Use thread_id of server thread to perform operation in key-value store instead of req.thread_id() (ycsb_server.c)
 	+ If condition_lo is true, the predicate is 2; (NOTE) if condition_lo is false, the predicate is 1 instead of 0!!!

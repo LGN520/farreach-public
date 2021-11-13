@@ -208,8 +208,8 @@ void DelRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 // ScanRequest
 template<class key_t>
-ScanRequest<key_t>::ScanRequest(uint8_t thread_id, key_t key, uint32_t num)
-	: Packet<key_t>(packet_type_t::SCAN_REQ, thread_id, key), _num(num)
+ScanRequest<key_t>::ScanRequest(uint8_t thread_id, key_t key, key_t endkey, uint32_t num)
+	: Packet<key_t>(packet_type_t::SCAN_REQ, thread_id, key), _endkey(endkey), _num(num)
 {
 }
 
@@ -220,13 +220,18 @@ ScanRequest<key_t>::ScanRequest(const char * data, uint32_t recv_size) {
 }
 
 template<class key_t>
+key_t ScanRequest<key_t>::endkey() const {
+	return this->_endkey;
+}
+
+template<class key_t>
 uint32_t ScanRequest<key_t>::num() const {
 	return this->_num;
 }
 
 template<class key_t>
 uint32_t ScanRequest<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t);
+	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -239,6 +244,8 @@ uint32_t ScanRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	memcpy(begin, (void *)&this->_thread_id, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
+	begin += sizeof(key_t);
+	memcpy(begin, (void *)&this->_endkey, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy(begin, (void *)&this->_num, sizeof(uint32_t));
 	return my_size;
@@ -254,6 +261,8 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
+	begin += sizeof(key_t);
+	memcpy((void *)&this->_endkey, begin, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy((void *)&this->_num, begin, sizeof(uint32_t));
 }
@@ -435,8 +444,8 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 // ScanResponse
 
 template<class key_t, class val_t>
-ScanResponse<key_t, val_t>::ScanResponse(uint8_t thread_id, key_t key, uint32_t num, std::vector<std::pair<key_t, val_t>> pairs) 
-	: Packet<key_t>(PacketType::SCAN_RES, thread_id, key), _num(num)
+ScanResponse<key_t, val_t>::ScanResponse(uint8_t thread_id, key_t key, key_t endkey, uint32_t num, std::vector<std::pair<key_t, val_t>> pairs) 
+	: Packet<key_t>(PacketType::SCAN_RES, thread_id, key), _endkey(endkey), _num(num)
 {	
 	INVARIANT(pairs.size() == num);
 	this->_pairs.assign(pairs.begin(), pairs.end());
@@ -446,6 +455,11 @@ template<class key_t, class val_t>
 ScanResponse<key_t, val_t>::ScanResponse(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::SCAN_RES);
+}
+
+template<class key_t, class val_t>
+key_t ScanResponse<key_t, val_t>::endkey() const {
+	return this->_endkey;
 }
 
 template<class key_t, class val_t>
@@ -465,7 +479,7 @@ uint32_t ScanResponse<key_t, val_t>::size() {
 	// However, SCANRES does't need alignment
 	//return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + 
 	//	this->_num*(sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t);
+	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint32_t);
 }
 
 template<class key_t, class val_t>
@@ -478,6 +492,8 @@ uint32_t ScanResponse<key_t, val_t>::serialize(char * const data, uint32_t max_s
 	memcpy(begin, (void *)&this->_thread_id, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
+	begin += sizeof(key_t);
+	memcpy(begin, (void *)&this->_endkey, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy(begin, (void *)&this->_num, sizeof(val_t));
 	begin += sizeof(uint32_t);
@@ -505,6 +521,8 @@ void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
+	begin += sizeof(key_t);
+	memcpy((void *)&this->_endkey, begin, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy((void *)&this->_num, begin, sizeof(uint32_t));
 	begin += sizeof(uint32_t);

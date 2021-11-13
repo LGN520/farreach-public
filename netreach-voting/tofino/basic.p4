@@ -228,7 +228,7 @@ control ingress {
 	else if (op_hdr.optype == PUTREQ_PS_CASE2_TYPE) {
 		apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
 	}
-	else{ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
+	else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
 		apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 	}
 }

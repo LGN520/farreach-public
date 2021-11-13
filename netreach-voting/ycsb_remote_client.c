@@ -61,6 +61,19 @@ short dst_port;
 const char *workload_name;
 char output_dir[256];
 
+const uint32_t range_gap = 0x80000000; // add 2^31 to keylo of startkey
+const int range_num = 10; // max number of returned kv pairs
+key_t generate_endkey(key_t &startkey) {
+	key_t endkey = startkey;
+	if (std::numeric_limits<uint64_t>::max() - endkey.keylo > range_gap) {
+		endkey.keylo += range_gap;
+	}
+	else {
+		endkey.keylo = std::numeric_limits<uint64_t>::max();
+	}
+	return endkey;
+}
+
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
 std::atomic<size_t> finish_threads(0);
@@ -364,6 +377,12 @@ static int run_fg(void *param) {
 	  INVARIANT(pkt_type == packet_type_t::DEL_RES);
 	  del_response_t rsp(buf, recv_size);
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+	}
+	else if (iter.type() == uint8_t(packet_type_t::SCAN_REQ)) {
+	  index_key_t endkey = generate_endkey(tmpkey);
+	  scan_request_t req(thread_id, tmpkey, endkey, range_num);
+	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() << "endkey = " << endkey.to_string());
+	  req_size = req.serialize(buf, MAX_BUFSIZE);
 	}
 	else {
 	  printf("Invalid request type: %u\n", uint32_t(iter.type()));
