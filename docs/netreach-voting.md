@@ -197,7 +197,9 @@
 	+ Fail! Even if the hash calculation must be performed.
 + Support scan (range query)
 	- Change scan from key+num to start_key+end_key (TODO: apply all the followings to baseline)
-		+ Add endkey into ScanRequest and ScanResponse (packet_format.h, packet_format_impl.h)
+		+ Optional: use num to restrict # of per-subrequest kv pairs
+		+ Change volatile rte_mbuf * to rte_mbuf * volatile (client.c, server.c, ycsb_remote_client.c, ycsb_server.c)
+		+ Add endkey into ScanRequest and ScanResponse (packet_format.h, packet_format_impl.h, client.c, server.,c ycsb_remote_cliet.c, ycsb_server.c)
 		+ Change switch side accordingly
 			+ Disable hash parition for SCAN request (basic.p4)
 		+ Change client side accordingly (ycsb_remote_client.c)
@@ -208,8 +210,9 @@
 			+ Receiver split the SCAN request into multiple sub-requests
 			+ Process sub-requests by different server threads (thpt: count in client side since all requests are handled by server; latency: count in 
 			the granularity of sub-requests, split latency should not be counted which is happened in switch)
-			+ TODO: add endkey limitation for per-sub-request range query
-	- TODO: support SCAN with a guarantee of some point-in-time: we still need RCU for backup data in server (only for NetReach)
+			+ Implement range scan of kv-store (xindex_root_impl.h, xindex_group.h, xindex_group_impl.h)
+			+ Perform range scan on both kv-store and backup -> reply the final results
+	- Support SCAN with a guarantee of some point-in-time: we still need RCU for backup data in server (only for NetReach)
 - Debug
 	+ Use thread_id of server thread to perform operation in key-value store instead of req.thread_id() (ycsb_server.c)
 	+ If condition_lo is true, the predicate is 2; (NOTE) if condition_lo is false, the predicate is 1 instead of 0!!!

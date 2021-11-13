@@ -474,17 +474,17 @@ bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, 
 	//dump_buf(data, mbuf->pkt_len);
 	uint8_t optype = *(uint8_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 6);
 	if (optype == (uint8_t)packet_type_t::SCAN_REQ) {
-		*startkey.keylo = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 8);
-		*startkey.keyhi = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 16);
-		*endkey.keylo = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 24);
-		*endkey.keyhi = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 32);
+		startkey->keylo = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 8);
+		startkey->keyhi = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 16);
+		endkey->keylo = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 24);
+		endkey->keyhi = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 32);
 		*num = *(uint32_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 40);
 		return true;
 	}
 	return false;
 }
 
-void get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num) {
+void set_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num) {
 	char *data;
 
 	data = rte_pktmbuf_mtod(mbuf, char *);

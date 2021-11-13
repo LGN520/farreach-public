@@ -289,7 +289,7 @@ void prepare_receiver() {
   memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
   //int res = 0;
   for (size_t i = 0; i < fg_n; i++) {
-	  pkts_list[i] = new volatile struct rte_mbuf*[MQ_SIZE];
+	  pkts_list[i] = new struct rte_mbuf*[MQ_SIZE];
 	  for (size_t j = 0; j < MQ_SIZE; j++) {
 		  pkts_list[i][j] = nullptr;
 	  }
@@ -408,17 +408,18 @@ static int run_receiver(void *param) {
 
 					index_key_t tmpkey = startkey;
 					uint64_t avg_range = (endkey.keylo - startkey.keylo) / split_num;
-					uint32_t avg_num = num / split_num;
+					//uint32_t avg_num = num / split_num;
+					uint32_t avg_num = num;
 					tmpkey.keylo += avg_range;
 					for (size_t idx = first_server_idx; idx <= last_server_idx; idx++) {
 						struct rte_mbuf *cur_mbuf = sub_scan_reqs[idx - first_server_idx];
 						if (idx == last_server_idx) {
 							tmpkey = endkey;
-							avg_num = num - avg_num * (split_num - 1);
+							//avg_num = num - avg_num * (split_num - 1);
 						}
 						set_scan_keys(cur_mbuf, &startkey, &tmpkey, &avg_num);
 						startkey = tmpkey;
-						tmpkey == avg_range;
+						tmpkey.keylo += avg_range;
 
 						if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
 							pkts_list[idx][heads[idx]] = cur_mbuf; // cur_mbuf will be freed in run_server
@@ -830,74 +831,30 @@ static int run_sfg(void * param) {
 			case packet_type_t::SCAN_REQ:
 				{
 					scan_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
+					//COUT_THIS("[server] startkey = " << req.key().to_string() << 
+					//		<< "endkey = " << req.endkey().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
-					//double t00 = CUR_TIME();
-					size_t tmp_num = table->scan(req.key(), req.num(), results, thread_id);
-					//double t11 = CUR_TIME();
-					//COUT_THIS("Index SCAN: " << (t11 - t00) << "us")
-					//COUT_THIS("[server] num = " << tmp_num)
-					/*for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
-						COUT_VAR(results[val_i].first.to_string())
-						COUT_VAR(results[val_i].second)
-					}*/
+					//size_t tmp_num = table->scan(req.key(), req.num(), results, thread_id);
+					size_t tmp_num = table->range_scan(req.key(), req.endkey(), results, thread_id);
 
-					// Merge results with backup data
-					//double t0 = CUR_TIME();
-					std::vector<std::pair<index_key_t, val_t>> merge_results;
-					/*std::map<index_key_t, val_t> *kvdata = backup_data;
+					// Add kv pairs of backup data into results
+					std::map<index_key_t, val_t> *kvdata = &backup_data->_kvmap;
 					if (kvdata != nullptr) {
 						std::map<index_key_t, val_t>::iterator kviter = kvdata->lower_bound(req.key());
-						uint32_t result_idx = 0;
-						if (kvdata->size() != 0 && results.size() != 0) {
-							for (; kviter != kvdata->end(); kviter++) {
-								if (kviter->first >= results[result_idx].first) {
-									merge_results.push_back(results[result_idx]);
-									result_idx++;
-									if (result_idx >= results.size()) {
-										break;
-									}
-								}
-								else {
-									merge_results.push_back(*kviter);
-								}
-								if (merge_results.size() == req.num()) {
-									break;
-								}
-							}
-						}
-						if (merge_results.size() < req.num()) {
-							// Only enter one loop
-							for (; result_idx < results.size(); result_idx++) {
-								merge_results.push_back(results[result_idx]);
-								if (merge_results.size() == req.num()) {
-									break;
-								}
-							}
-							for (; kviter != kvdata->end(); kviter++) {
-								merge_results.push_back(*kviter);
-								if (merge_results.size() == req.num()) {
-									break;
-								}
-							}
+						for (; kviter != kvdata->end() && kviter->first < req.endkey(); kviter++) {
+							results.push_back(*kviter);
 						}
 					}
-					//double t1 = CUR_TIME();
-					//COUT_THIS("Merge: "<< (t1-t0) <<"us")
+					//COUT_THIS("SCAN results size: " << results.size())
 
 					scan_response_t *rsp = nullptr;
-					if (kvdata != nullptr) {
-						rsp = new scan_response_t(req.thread_id(), req.key(), merge_results.size(), merge_results);
-					}
-					else {
-						rsp = new scan_response_t(req.thread_id(), req.key(), tmp_num, results);
-					}
+					rsp = new scan_response_t(req.thread_id(), req.key(), req.endkey(), results.size(), results);
 					rsp_size = rsp->serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
-					sent_pkt_idx++;*/
+					sent_pkt_idx++;
 					break;
 				}
 			case packet_type_t::GET_REQ_S: 

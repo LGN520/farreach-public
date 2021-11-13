@@ -23,6 +23,8 @@
 #include "ycsb/parser.h"
 #include "iniparser/iniparser_wrapper.h"
 
+#define MQ_SIZE 256
+
 struct alignas(CACHELINE_SIZE) FGParam;
 
 typedef FGParam fg_param_t;
@@ -77,10 +79,11 @@ size_t get_server_idx(index_key_t key) {
 	return server_idx;
 }
 
-const uint32_t range_gap = 0x80000000; // add 2^31 to keylo of startkey
+const uint32_t range_gap = 1024; // add 2^10 to keylo of startkey
+//const uint32_t range_gap = 0x80000000; // add 2^31 to keylo of startkey
 const int range_num = 10; // max number of returned kv pairs
-key_t generate_endkey(key_t &startkey) {
-	key_t endkey = startkey;
+index_key_t generate_endkey(index_key_t &startkey) {
+	index_key_t endkey = startkey;
 	if (std::numeric_limits<uint64_t>::max() - endkey.keylo > range_gap) {
 		endkey.keylo += range_gap;
 	}
@@ -112,7 +115,10 @@ int main(int argc, char **argv) {
 
 	// Free DPDK mbufs
 	for (size_t i = 0; i < fg_n; i++) {
-	rte_pktmbuf_free((struct rte_mbuf *)pkts[i]);
+		while (heads[i] != tails[i]) {
+			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[i][tails[i]]);
+			tails[i] += 1;
+		}
 	}
 	dpdk_free();
 
@@ -199,7 +205,7 @@ void prepare_receiver() {
 	memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
 	//int res = 0;
 	for (size_t i = 0; i < fg_n; i++) {
-		pkts_list[i] = new volatile struct rte_mbuf*[MQ_SIZE];
+		pkts_list[i] = new struct rte_mbuf*[MQ_SIZE];
 		for (size_t j = 0; j < MQ_SIZE; j++) {
 			pkts_list[i][j] = nullptr;
 		}

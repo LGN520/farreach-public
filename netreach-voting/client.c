@@ -46,7 +46,7 @@ void run_benchmark(size_t sec);
 static int run_fg(void *param); // sender
 static int run_receiver(__attribute__((unused)) void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
-volatile struct rte_mbuf **pkts;
+struct rte_mbuf **volatile pkts;
 volatile bool *stats;
 
 // parameters
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 
   // Prepare pkts and stats for receiver
   COUT_THIS("Prepare " << fg_n << "pkts and stats")
-  pkts = new volatile struct rte_mbuf*[fg_n];
+  pkts = new struct rte_mbuf*[fg_n];
   stats = new volatile bool[fg_n];
   memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
   memset((void *)stats, 0, sizeof(bool)*fg_n);
@@ -621,7 +621,7 @@ static int run_fg(void *param) {
         delete_i = 0;
       }
     } else {  // scan
-	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], 10);
+	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], index_key_t::max(), 10);
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << req.key().to_string());
 	  req_size = req.serialize(buf, MAX_BUFSIZE);
 

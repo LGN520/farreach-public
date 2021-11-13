@@ -58,7 +58,7 @@ static int run_receiver(__attribute__((unused)) void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
-volatile struct rte_mbuf ***pkts_list;
+struct rte_mbuf ***volatile pkts_list;
 uint32_t* volatile heads;
 uint32_t* volatile tails;
 
@@ -140,14 +140,14 @@ int main(int argc, char **argv) {
   //for (size_t i = 0; i < fg_n; i++) {
   //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
   //}
-  pkts_list = new volatile struct rte_mbuf**[fg_n];
+  pkts_list = new struct rte_mbuf**[fg_n];
   heads = new uint32_t[fg_n];
   tails = new uint32_t[fg_n];
   memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
   memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
   //int res = 0;
   for (size_t i = 0; i < fg_n; i++) {
-	  pkts_list[i] = new volatile struct rte_mbuf*[MQ_SIZE];
+	  pkts_list[i] = new struct rte_mbuf*[MQ_SIZE];
 	  for (size_t j = 0; j < MQ_SIZE; j++) {
 		  pkts_list[i][j] = nullptr;
 	  }
@@ -818,10 +818,10 @@ static int run_sfg(void * param) {
 
 					scan_response_t *rsp = nullptr;
 					if (kvdata != nullptr) {
-						rsp = new scan_response_t(req.thread_id(), req.key(), merge_results.size(), merge_results);
+						rsp = new scan_response_t(req.thread_id(), req.key(), req.endkey(), merge_results.size(), merge_results);
 					}
 					else {
-						rsp = new scan_response_t(req.thread_id(), req.key(), tmp_num, results);
+						rsp = new scan_response_t(req.thread_id(), req.key(), req.endkey(), tmp_num, results);
 					}
 					rsp_size = rsp->serialize(buf, MAX_BUFSIZE);
 					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));

@@ -211,7 +211,25 @@ template <class key_t, class val_t, bool seq>
 inline size_t Root<key_t, val_t, seq>::range_scan(
     const key_t &begin, const key_t &end,
     std::vector<std::pair<key_t, val_t>> &result) {
-  COUT_N_EXIT("not implemented yet");
+  //COUT_N_EXIT("not implemented yet");
+  result.clear();
+  key_t latest_group_pivot = key_t::min();  // for cross-slot chained groups
+
+  bool done = false;
+  int group_i;
+  group_t *group = locate_group_pt2(begin, locate_group_pt1(begin, group_i));
+  while (group_i < (int)group_n) {
+    while (group && group->get_pivot() > latest_group_pivot) { // avoid re-entry
+      done = group->range_scan(begin, end, result);
+	  if (done) break;
+      latest_group_pivot = group->get_pivot();
+      group = group->next;
+    }
+	if (done) break;
+    group_i++;
+    group = groups[group_i].second;
+  }
+  return result.size();
 }
 
 template <class key_t, class val_t, bool seq>
