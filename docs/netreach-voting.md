@@ -196,16 +196,19 @@
 - Try default action with hashidx by removing condition for hash calculation
 	+ Fail! Even if the hash calculation must be performed.
 + Support scan (range query)
-	- Change scan from key+num to start_key+end_key (TODO: apply to baseline)
+	- Change scan from key+num to start_key+end_key (TODO: apply all the followings to baseline)
 		+ Add endkey into ScanRequest and ScanResponse (packet_format.h, packet_format_impl.h)
 		+ Change switch side accordingly
 			+ Disable hash parition for SCAN request (basic.p4)
-		+ TODO: Change client side accordingly
-			+ TODO: client split the SCAN request into multiple sub-requests
-			+ TODO: send sub-requests one by one (thpt: count in client side since all requests are handled by server; latency: count in 
-		the granularity of sub-requests)
-		+ TODO: Change server side accordingly
-			+ TODO: add endkey limitation for range query
+		+ Change client side accordingly (ycsb_remote_client.c)
+			+ Use message queue for each client thread
+			+ Get number of sub-requests
+		+ Change server side accordingly (ycsb_server.c)
+			+ Get optype and scan keys in receiver (dpdk_helper.h, dpdk_helper.c)
+			+ Receiver split the SCAN request into multiple sub-requests
+			+ Process sub-requests by different server threads (thpt: count in client side since all requests are handled by server; latency: count in 
+			the granularity of sub-requests, split latency should not be counted which is happened in switch)
+			+ TODO: add endkey limitation for per-sub-request range query
 	- TODO: support SCAN with a guarantee of some point-in-time: we still need RCU for backup data in server (only for NetReach)
 - Debug
 	+ Use thread_id of server thread to perform operation in key-value store instead of req.thread_id() (ycsb_server.c)

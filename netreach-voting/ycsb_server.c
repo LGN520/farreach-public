@@ -76,7 +76,7 @@ static int run_receiver(__attribute__((unused)) void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
-volatile struct rte_mbuf ***pkts_list;
+struct rte_mbuf*** volatile pkts_list;
 uint32_t* volatile heads;
 uint32_t* volatile tails;
 
@@ -99,6 +99,15 @@ size_t bg_n;
 short dst_port_start;
 const char *workload_name = nullptr;
 uint32_t kv_bucket_num;
+
+size_t per_server_range;
+size_t get_server_idx(index_key_t key) {
+	size_t server_idx = key.keylo / per_server_range;
+	if (server_idx >= fg_n) {
+		server_idx = fg_n - 1;
+	}
+	return server_idx;
+}
 
 bool killed = false;
 volatile bool running = false;
@@ -163,6 +172,7 @@ inline void parse_ini(const char* config_file) {
 	kv_bucket_num = ini.get_bucket_num();
 	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
 	backup_port = ini.get_server_backup_port();
+	per_server_range = std::numeric_limits<size_t>::max() / fg_n;
 
 	COUT_VAR(fg_n);
 	COUT_VAR(dst_port_start);
@@ -170,6 +180,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(kv_bucket_num);
 	COUT_VAR(val_t::MAX_VAL_LENGTH);
 	COUT_VAR(backup_port);
+	COUT_VAR(per_server_range);
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -271,7 +282,7 @@ void prepare_receiver() {
   //for (size_t i = 0; i < fg_n; i++) {
   //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
   //}
-  pkts_list = new volatile struct rte_mbuf**[fg_n];
+  pkts_list = new struct rte_mbuf**[fg_n];
   heads = new uint32_t[fg_n];
   tails = new uint32_t[fg_n];
   memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
@@ -365,6 +376,8 @@ static int run_receiver(void *param) {
 		;
 
 	struct rte_mbuf *received_pkts[32];
+	index_key_t startkey, endkey;
+	uint32_t num;
 	while (running) {
 		uint16_t n_rx;
 		n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
@@ -378,28 +391,69 @@ static int run_receiver(void *param) {
 				continue;
 			}
 			else {
-				uint16_t received_port = (uint16_t)ret;
-				int idx = received_port - dst_port_start;
-				if (idx < 0 || unsigned(idx) >= fg_n) {
-					COUT_THIS("Invalid dst port received by server: " << received_port)
-					continue;
+				bool isscan = get_scan_keys(received_pkts[i], &startkey, &endkey, &num);
+				if (isscan) {
+					size_t first_server_idx = get_server_idx(startkey);
+					size_t last_server_idx = get_server_idx(endkey);
+					size_t split_num = last_server_idx - first_server_idx + 1;
+					struct rte_mbuf *sub_scan_reqs[split_num];
+					sub_scan_reqs[0] = received_pkts[i];
+					if (split_num > 1) {
+						int res = rte_pktmbuf_alloc_bulk(mbuf_pool, sub_scan_reqs + 1, split_num - 1);
+						INVARIANT(res == 0);
+						for (size_t mbufidx = 1; mbufidx < split_num; mbufidx ++) {
+							memcpy(sub_scan_reqs[mbufidx], received_pkts[i], sizeof(struct rte_mbuf));
+						}
+					}
+
+					index_key_t tmpkey = startkey;
+					uint64_t avg_range = (endkey.keylo - startkey.keylo) / split_num;
+					uint32_t avg_num = num / split_num;
+					tmpkey.keylo += avg_range;
+					for (size_t idx = first_server_idx; idx <= last_server_idx; idx++) {
+						struct rte_mbuf *cur_mbuf = sub_scan_reqs[idx - first_server_idx];
+						if (idx == last_server_idx) {
+							tmpkey = endkey;
+							avg_num = num - avg_num * (split_num - 1);
+						}
+						set_scan_keys(cur_mbuf, &startkey, &tmpkey, &avg_num);
+						startkey = tmpkey;
+						tmpkey == avg_range;
+
+						if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
+							pkts_list[idx][heads[idx]] = cur_mbuf; // cur_mbuf will be freed in run_server
+							heads[idx] = (heads[idx] + 1) % MQ_SIZE;
+						}
+						else {
+							COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
+							rte_pktmbuf_free(cur_mbuf);
+						}
+					}
 				}
 				else {
-					/*if (stats[idx]) {
-						COUT_THIS("Invalid stas[" << idx << "] which is true!")
+					uint16_t received_port = (uint16_t)ret;
+					int idx = received_port - dst_port_start;
+					if (idx < 0 || unsigned(idx) >= fg_n) {
+						COUT_THIS("Invalid dst port received by server: " << received_port)
 						continue;
 					}
 					else {
-						pkts[idx] = received_pkts[i];
-						stats[idx] = true;
-					}*/
-					if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
-						pkts_list[idx][heads[idx]] = received_pkts[i];
-						heads[idx] = (heads[idx] + 1) % MQ_SIZE;
-					}
-					else {
-						COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
-						rte_pktmbuf_free(received_pkts[i]);
+						/*if (stats[idx]) {
+							COUT_THIS("Invalid stas[" << idx << "] which is true!")
+							continue;
+						}
+						else {
+							pkts[idx] = received_pkts[i];
+							stats[idx] = true;
+						}*/
+						if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
+							pkts_list[idx][heads[idx]] = received_pkts[i];
+							heads[idx] = (heads[idx] + 1) % MQ_SIZE;
+						}
+						else {
+							COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
+							rte_pktmbuf_free(received_pkts[i]);
+						}
 					}
 				}
 			}

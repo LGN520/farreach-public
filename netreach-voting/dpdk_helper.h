@@ -14,6 +14,8 @@
 #include <rte_flow.h>
 #include <arpa/inet.h>
 
+#include "key.h"
+
 #define RX_RING_SIZE 512
 #define TX_RING_SIZE 512
 
@@ -39,10 +41,12 @@ void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring, uint16_t n
 void dpdk_free();
 
 void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const char *srcip, const char *dstip, uint16_t srcport, uint16_t dstport, char *payload, uint32_t payload_size);
-int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload);
+int decode_mbuf(struct rte_mbuf * volatile mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload);
 // Used by receiver in client side (mbuf is shared by receiver and workers)
-int get_srcport(volatile struct rte_mbuf *mbuf);
-int get_dstport(volatile struct rte_mbuf *mbuf);
-int get_payload(volatile struct rte_mbuf *mbuf, char *payload);
+int get_srcport(struct rte_mbuf * volatile mbuf);
+int get_dstport(struct rte_mbuf * volatile mbuf);
+int get_payload(struct rte_mbuf * volatile mbuf, char *payload);
+bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num);
+void set_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num);
 
 #endif
