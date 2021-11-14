@@ -62,7 +62,7 @@ class Root {
   void serialize_root(char* filename);
   void deserialize_root(char* filename);
 
-  void make_snapshot();
+  void make_snapshot(bool iswarmup=false);
 
  private:
   void adjust_rmi();

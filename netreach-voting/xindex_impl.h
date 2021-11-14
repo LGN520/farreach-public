@@ -55,7 +55,7 @@ XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t> &keys,
   // malloc memory for root & init root
   root = new root_t();
   root->init(keys, vals, workload_name);
-  root->make_snapshot();
+  root->make_snapshot(true);
   start_bg();
 }
 
@@ -78,7 +78,7 @@ XIndex<key_t, val_t, seq>::XIndex(size_t worker_num, size_t bg_n, std::string wo
   // malloc memory for root & init root
   root = new root_t();
   root->open(workload_name);
-  root->make_snapshot();
+  root->make_snapshot(true);
   start_bg();
 }
 
