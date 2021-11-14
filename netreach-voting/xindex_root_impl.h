@@ -635,12 +635,14 @@ void Root<key_t, val_t, seq>::deserialize_root(char *filename) {
 }
 
 template <class key_t, class val_t, bool seq>
-void Root<key_t, val_t, seq>::make_snapshot() {
+void Root<key_t, val_t, seq>::make_snapshot(bool iswarmup) {
 	for (size_t i = 0; i < group_n - 1; i++) {
 		groups[i].second->make_snapshot();
 	}
-	memory_fence();
-	rcu_barrier(); // No threads access old snapshots
+	if (!iswarmup) {
+		memory_fence();
+		rcu_barrier(); // No threads access old snapshots
+	}
 	for (size_t i = 0; i < group_n - 1; i++) {
 		groups[i].second->free_old_snapshot();
 	}

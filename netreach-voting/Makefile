@@ -98,6 +98,10 @@ CLEAN += key.o val.o
 DEPS += ycsb/parser.d
 CLEAN += ycsb/parser.o
 
+DEPS += backup_data.d special_case.d
+CLEAN += backup_data.d backup_data.o special_case.d special_case.o
+BACKUP_OBJECTS := backup_data.o special_case.o
+
 INIPARSER_OBJECTS := iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
 DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
 CLEAN += iniparser/iniparser.o iniparser/dictionary.o iniparser/iniparser_wrapper.o
@@ -139,7 +143,7 @@ ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o
 DEPS += ycsb_remote_client.d
 CLEAN += ycsb_remote_client.o ycsb_remote_client
 
-ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS)
+ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) $(BACKUP_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += ycsb_server.d
 CLEAN += ycsb_server.o ycsb_server
