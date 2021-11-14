@@ -227,6 +227,7 @@
 	+ Fix a bug of processing GETREQ_S for non-existing key (judge by vallen instead of status in server)
 	+ Find a bug of resubmit: resubmitted packet cannot be resubmitted again; (recirculate is performed as setting egress port)
 		* Solution: use recirculation (we must enable and add port for recir/cpu/pktgen in ptf before usage)
+	+ Fix a bug of # of MAT entries; fix a bug of making snapshot when init/open
 - TODO: Optimize for stage (at most 32B -> 48B; optional after we finish all implementation)
 	+ TODO: Combine access_lock_tbl into try_res_tbl
 

@@ -503,7 +503,7 @@ table try_res_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4160;
+	size: 8192;
 }
 
 // Stage 5+n + 2
@@ -800,6 +800,7 @@ table port_forward_tbl {
 		recirculate_pkt;
 		port_forward;
 		forward_putreq_case1_and_clone;
+		forward_delreq_case1_and_clone;
 		update_getres_s_case2_to_putreq_gs_case2_and_clone;
 		update_putreq_ru_case2_to_putreq_ps_case2_and_clone;
 		update_putreq_to_case3;
@@ -807,7 +808,7 @@ table port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 512;  
+	size: 1024;  
 }
 
 

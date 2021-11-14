@@ -1205,7 +1205,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.client.trigger_cache_update_tbl_table_add_with_try_case3(\
                                     self.sess_hdl, self.dev_tgt, matchspec2)
 
-            # Table: port_forward_tbl (default: nop; 512)
+            # Table: port_forward_tbl (default: nop; 544)
             print "Configuring port_forward_tbl"
             for isvalid in valid_list:
                 for isdirty in dirty_list:
