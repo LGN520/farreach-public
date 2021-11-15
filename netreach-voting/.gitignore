@@ -18,5 +18,6 @@ ycsb_server
 *.a
 *.o
 *.d
-!testcases/*
+!testcases/backup/*
+!testcases/normal/*
 *.pcap
