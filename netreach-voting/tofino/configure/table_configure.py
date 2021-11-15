@@ -158,21 +158,22 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbuffer"])
 
     def configure_update_val_tbl(self, valname):
-        # 1026
+        # 1028
         for canput in predicate_list:
-            matchspec0 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(
-                    op_hdr_optype=GETREQ_TYPE, 
-                    meta_canput=canput,
-                    meta_ismatch_keylololo=2, 
-                    meta_ismatch_keylolohi=2,
-                    meta_ismatch_keylohilo=2, 
-                    meta_ismatch_keylohihi=2,
-                    meta_ismatch_keyhilolo=2, 
-                    meta_ismatch_keyhilohi=2,
-                    meta_ismatch_keyhihilo=2,
-                    meta_ismatch_keyhihihi=2)
-            eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            for tmpoptype in [GETREQ_TYPE, DELREQ_TYPE]:
+                matchspec0 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(
+                        op_hdr_optype=tmpoptype, 
+                        meta_canput=canput,
+                        meta_ismatch_keylololo=2, 
+                        meta_ismatch_keylolohi=2,
+                        meta_ismatch_keylohilo=2, 
+                        meta_ismatch_keylohihi=2,
+                        meta_ismatch_keyhilolo=2, 
+                        meta_ismatch_keyhilohi=2,
+                        meta_ismatch_keyhihilo=2,
+                        meta_ismatch_keyhihihi=2)
+                eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
         matchspec1 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(
                 op_hdr_optype=PUTREQ_TYPE, 
                 meta_canput=2,
@@ -405,7 +406,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 self.client.access_valid_tbl_table_add_with_set_valid(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_dirty_tbl (default: nop; 1024)
+            # Table: access_dirty_tbl (default: nop; 1280)
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
                     for ismatch_keylohilo in predicate_list:
@@ -446,7 +447,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for ismatch_keyhilohi in predicate_list:
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
-                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]: # DELREQ does not to read dirty bit
+                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]: # DELREQ reads dirty for DELREQ_CASE1
                                                 matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(\
                                                         op_hdr_optype=tmpoptype,
                                                         meta_ismatch_keylololo=ismatch_keylololo, 
@@ -569,7 +570,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.update_vallen_tbl_table_add_with_put_vallen(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: update_vallo1_tbl (default: nop; 1026)
+            # Table: update_vallo1_tbl (default: nop; 1028)
             print "Configuring update_vallo1_tbl"
             self.configure_update_val_tbl("lo1")
 
@@ -723,7 +724,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #self.client.update_vallo16_tbl_table_add_with_get_vallo8(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            # Table: update_valhi1_tbl (default: nop)
+            # Table: update_valhi1_tbl (default: nop; 1028)
             print "Configuring update_valhi1_tbl"
             self.configure_update_val_tbl("hi1")
 
