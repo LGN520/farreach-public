@@ -523,7 +523,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Start from stage 4 (after keys and savedseq)
 
-            # Table: update_vallen_tbl (default: nop; 2048)
+            # Table: update_vallen_tbl (default: nop; 2560)
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
                     for ismatch_keylohilo in predicate_list:
@@ -533,7 +533,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
                                             for canput in predicate_list:
-                                                for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]: # DELREQ does not need vallen
+                                                for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]: # DELREQ reads vallen for CASE1
                                                     matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
                                                             op_hdr_optype=tmpoptype, 
                                                             meta_canput=canput,
@@ -1520,7 +1520,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Egress pipeline
 
-            # Table: update_macaddr_tbl (default: nop; 3)
+            # Table: update_macaddr_tbl (default: nop; 5)
             print "Configuring update_macaddr_tbl"
             actnspec0 = netbuffer_update_macaddr_s2c_action_spec_t(\
                     macAddr_to_string(src_mac), \
@@ -1540,6 +1540,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec3 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTREQ_GS_TYPE)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
                     self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
+            matchspec4 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTREQ_GS_CASE2_TYPE)
+            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
+                    self.sess_hdl, self.dev_tgt, matchspec4, actnspec1)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
             self.conn_mgr.client_cleanup(self.sess_hdl)

@@ -341,6 +341,7 @@ action update_delreq_to_case1() {
 
 	modify_field(seq_hdr.seq, meta.hashidx);
 	modify_field(seq_hdr.is_assigned, meta.isdirty);
+	add_header(seq_hdr);
 }
 
 action update_getres_s_to_case2(remember_bit) {
@@ -407,6 +408,7 @@ action update_getres_s_to_case2(remember_bit) {
 
 	modify_field(seq_hdr.seq, meta.hashidx);
 	modify_field(seq_hdr.is_assigned, remember_bit);
+	add_header(seq_hdr);
 }
 
 action update_putreq_ru_to_case2(remember_bit) {
@@ -473,6 +475,7 @@ action update_putreq_ru_to_case2(remember_bit) {
 
 	modify_field(seq_hdr.seq, meta.hashidx);
 	modify_field(seq_hdr.is_assigned, remember_bit);
+	add_header(seq_hdr);
 }
 
 table try_res_tbl {
