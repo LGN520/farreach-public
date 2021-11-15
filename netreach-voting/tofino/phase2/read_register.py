@@ -82,14 +82,20 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     @staticmethod
     def get_reg16(reglist, idx):
-        tmpreg = reglist[idx]
+        tmpreg = reglist[idx] # Big-endian
+        tmpreg = (((tmpreg & 0xFF00) >> 8) & 0x00FF) | ((tmpreg & 0x00FF) << 8) # Small-endian
         if (tmpreg < 0):
             tmpreg += pow(2, 16)
         return tmpreg
 
     @staticmethod
     def get_reg32(reglist, idx):
-        tmpreg = reglist[idx]
+        tmpreg = reglist[idx] # Big-endian
+        tmphihi = ((tmpreg & 0xFF000000) >> 24) & 0x000000FF
+        tmphilo = ((tmpreg & 0x00FF0000) >> 16) & 0x000000FF
+        tmplohi = ((tmpreg & 0x0000FF00) >> 8) & 0x000000FF
+        tmplolo = tmpreg & 0x000000FF
+        tmpreg = (tmplolo << 24) | (tmplohi << 16) | (tmphilo << 8) | tmphihi # Small-endian
         if (tmpreg < 0):
             tmpreg += pow(2, 32)
         return tmpreg
