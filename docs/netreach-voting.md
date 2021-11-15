@@ -303,24 +303,24 @@
 	+ Case 2-2: undirty + PUTGS case2
 		* GET <k1, v1> -> Run phase1 -> GET <k2, v2> -> Get <k3, v3> -> Run phase2
 		* Result: receive PUTREQ_GS_CASE2 with <k1, v1> (undirty), receive backup without k3, final backup after rollback without k1
-	+ TODO: Case 2-3: dirty + PUTGS case2
+	+ Case 2-3: dirty + PUTGS case2
 		* PUT <k1, v1> -> Run phase1 -> GET <k2, v2> -> GET <k3, v3> -> Run phase2
 		* Result: receive PUTREQ_GS_CASE2 with <k1, v1> (dirty), receive backup without k3, final backup after rollback with <k1, v1>
 	+ Case 2-4: invalid + PUTPS case2
 		* Run phase1 -> PUT <k1, v1> -> Run phase2
 		* Result: receive PUTREQ_PS_CASE2 with <0, 0>, receive backup with <k1, v1>, final backup after rollback without k1
-	+ TODO: Case 2-5: undirty + PUTPS case2 + PUTREQ case3
+	+ Case 2-5: undirty + PUTPS case2 + PUTREQ case3
 		* GET <k1, v1> -> Run phase1 -> PUT <k2, v2> -> PUT <k3, v3> -> Run phase2
 		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_PS_CASE2 with <k1, v1> (undirty), receive backup with <k3, v3>, final 
 		backup after rollback without k1
-	+ TODO: Case 2-6: dirty + PUTPS case2 + PUTREQ case3
+	+ Case 2-6: dirty + PUTPS case2 + PUTREQ case3
 		* PUT <k1, v1> -> Run phase1 -> PUT <k2, v2> -> PUT <k3, v3> -> Run phase2
 		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_PS_CASE2 with <k1, v1> (dirty), receive backup with <k3, v3>, final 
 		backup after rollback with <k1, v1>
-	+ TODO: Case 3-1: DELREQ case3
+	+ Case 3-1: DELREQ case3
 		* PUT <k1, v1> -> Run phase1 -> DEL <k2, v2> -> Run phase2
 		* Result: receive DELREQ_CASE3 with k2, receive backup with <k1, v1>, final backup after rollback with <k1, v1>
-	+ TODO: Case 4-1: range query
+	+ Case 4-1: range query
 		* DEL <k1, v1> -> PUT <k1, v2> -> Run phase1 -> PUT <k1, v3> -> Run phase2 -> SCAN
 		* Result: receive PUTREQ_CASE1 with <k1, v2>, receive bakup with <k1, v3>, final backup after rollback with <k1, v2>, SCAN
 		result with <k1, v2>
