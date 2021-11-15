@@ -9,12 +9,14 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <errno.h>
 #include <set>
 #include <signal.h> // for signal and raise
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // inetaddr conversion
 #include <sys/time.h> // struct timeval
+#include <string.h>
 
 #include "helper.h"
 #include "xindex.h"
@@ -505,17 +507,18 @@ void *run_backuper(void *param) {
 				continue; // timeout or interrupted system call
 			}
 			else {
-				COUT_N_EXIT("[server] Error of accept: errno = " << errno);
+				COUT_N_EXIT("[server] Error of accept: errno = " << std::string(strerror(errno)));
 			}
 		}
 
 		if (!isbackup) {
 			isbackup = true; 
 			// Ensure that all other worker threads do not touch special_cases_list
-			for (uint32_t i = 0; i < fg_n; i++) {
+			// TODO: test periodic backup with background traffic
+			/*for (uint32_t i = 0; i < fg_n; i++) {
 				uint32_t prev_val = backup_rcu[i];
 				while (running && backup_rcu[i] == prev_val) {}
-			}
+			}*/
 
 			try_kvsnapshot(table);
 
@@ -525,8 +528,9 @@ void *run_backuper(void *param) {
 				COUT_N_EXIT("Error: unable to create kv parser " << ret);
 			}
 		}
-
-		close(connfd); // socket should not be freed until sub-thread also closes the descriptor
+		else {
+			close(connfd); // close(connfd) -> bad file descriptor in sub-thread if without "else" block?
+		}
 	}
 
 	if (iscreate) {
@@ -556,7 +560,7 @@ void *run_kvparser(void *param) {
 	while (true) {
 		int recv_size = recv(connfd, recv_buf + start_idx, max_recv_buf_size - start_idx, 0);
 		if (recv_size < 0) {
-			COUT_N_EXIT("[server] kvparser recv fails: " << recv_size);
+			COUT_N_EXIT("[server] kvparser recv fails: " << recv_size << " errno = " << std::string(strerror(errno)));
 		}
 		if (isfirst) {
 			isfirst = false;
@@ -583,11 +587,18 @@ void *run_kvparser(void *param) {
 	volatile backup_data_t *old_backup_data = backup_data;
 	backup_data = new_backup_data;
 
+	COUT_THIS("After rollback")
+	for (std::map<index_key_t, val_t>::iterator iter = backup_data->_kvmap.begin(); iter != backup_data->_kvmap.end(); iter++) {
+		COUT_VAR(iter->first.to_string());
+		COUT_VAR(iter->second.to_string());
+	}
+
 	// peace period of RCU (may not need if we do not use them in SCAN)
-	for (uint32_t i = 0; i < fg_n; i++) {
+	// TODO: test periodic backup with background traffic
+	/*for (uint32_t i = 0; i < fg_n; i++) {
 		uint32_t prev_val = backup_rcu[i];
 		while (running && backup_rcu[i] == prev_val) {}
-	}
+	}*/
 
 	if (old_backup_data != nullptr) {
 		delete old_backup_data;
@@ -606,6 +617,7 @@ void *run_kvparser(void *param) {
 void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expected_count, backup_data_t *new_backup_data) {
 	INVARIANT(data_buf != nullptr && new_backup_data != nullptr);
 	const char *cur = data_buf;
+	COUT_VAR(expected_count);
 	for (uint32_t i = 0; i < expected_count; i++) {
 		// Parse data
 		unsigned short curhashidx = *((unsigned short *)cur);
@@ -626,6 +638,10 @@ void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expecte
 			cur += 8;
 		}
 		val_t curval(curval_data, curvallen);
+		COUT_VAR(curhashidx);
+		COUT_VAR(curkey.to_string());
+		COUT_VAR(curvallen);
+		COUT_VAR(curval.to_string());
 
 		// Update new backup data
 		new_backup_data->_kvmap.insert(std::pair<index_key_t, val_t>(curkey, curval));
@@ -673,7 +689,9 @@ void rollback(backup_data_t *new_backup_data) {
 
 void try_kvsnapshot(xindex_t *table) {
 	if (!is_kvsnapshot.test_and_set(std::memory_order_acquire)) {
-		table->make_snapshot();
+		// TODO: test periodic backup with background traffic
+		//table->make_snapshot();
+		table->make_snapshot(true);
 	}
 }
 
@@ -909,6 +927,7 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::PUT_REQ_CASE1:
 				{
+					COUT_THIS("PUT_REQ_CASE1")
 					if (!isbackup) {
 						put_request_case1_t req(buf, recv_size);
 						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
@@ -926,6 +945,7 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::DEL_REQ_CASE1:
 				{
+					COUT_THIS("DEL_REQ_CASE1")
 					del_request_case1_t req(buf, recv_size);
 					if (!isbackup) {
 						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
@@ -944,6 +964,7 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t:: PUT_REQ_GS_CASE2:
 				{
+					COUT_THIS("PUT_REQ_GS_CASE2")
 					put_request_gs_case2_t req(buf, recv_size);
 					if (!isbackup) {
 						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
@@ -962,6 +983,7 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::PUT_REQ_PS_CASE2:
 				{
+					COUT_THIS("PUT_REQ_PS_CASE2")
 					put_request_ps_case2_t req(buf, recv_size);
 					if (!isbackup) {
 						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
@@ -980,6 +1002,7 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::PUT_REQ_CASE3:
 				{
+					COUT_THIS("PUT_REQ_CASE3")
 					put_request_case3_t req(buf, recv_size);
 
 					if (!isbackup) {
@@ -998,6 +1021,7 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::DEL_REQ_CASE3:
 				{
+					COUT_THIS("DEL_REQ_CASE3")
 					del_request_case3_t req(buf, recv_size);
 
 					if (!isbackup) {

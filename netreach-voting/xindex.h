@@ -54,7 +54,7 @@ class XIndex {
   size_t range_scan(const key_t &begin, const key_t &end,
                     std::vector<std::pair<key_t, val_t>> &result,
                     const uint32_t worker_id);
-  void make_snapshot();
+  void make_snapshot(bool iswarmup = false);
  private:
   void start_bg();
   void terminate_bg();

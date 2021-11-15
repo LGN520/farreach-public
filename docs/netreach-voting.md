@@ -233,7 +233,8 @@
 
 ## Simple test
 
-- See directory of "testcases" (with only 1 bucket in sketch)
+- NOTE: update bucket_num in config.ini as 1 before test
+- Test cases of normal operations: See directory of "testcases/normal" (with only 1 bucket in sketch)
 	+ Case 1: single read (GET evicts invalid)
 		* Read the value of a given key
 		* It should read the value from the server and also store it in switch
@@ -280,6 +281,13 @@
 		* It first gets value of k1 from server and stores it in switch, then it deletes k1 and sends DELREQ_S to server, the 2nd GET
 		of k1 does not have value and triggers a GETRES_NS
 		* In-switch result: non-zero key, vallen, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 0, dirty = 0, vote = 0
+- Test cases of crash-consistent backup: See "testcases/backup" (with only 1 bucket in sketch)
+	+ Phase1: reset regs and set flag as 1
+	+ Case 1-1: undirty + PUT case1
+	+ Case 1-2: dirty + PUT case1
+	+ Case 2-1: invalid + PUTPS case2
+		* Run phase1 -> PUT <k1, v1> -> Run phase2
+		* Result: receive PUTREQ_PS_CASE2 with <k1, v1>, receive backup with <k1, v1>, final backup after rollback without <k1, v1>
 
 ## How to run
 

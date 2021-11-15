@@ -237,8 +237,8 @@ void XIndex<key_t, val_t, seq>::terminate_bg() {
 }
 
 template <class key_t, class val_t, bool seq>
-void XIndex<key_t, val_t, seq>::make_snapshot() {
-	root->make_snapshot();
+void XIndex<key_t, val_t, seq>::make_snapshot(bool iswarmup) {
+	root->make_snapshot(iswarmup);
 }
 
 }  // namespace xindex
