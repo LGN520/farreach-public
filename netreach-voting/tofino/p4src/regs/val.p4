@@ -48,7 +48,7 @@ table update_vallen_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2048;
+	size: 2560;
 }
 
 register vallo1_reg {

@@ -248,5 +248,5 @@ control egress {
 			apply(sendback_cloned_putres_tbl); // input is PUTREQ (original pkt becomes PUTREQ_PS/PUTREQ_CASE1/PUTREQ_PS_CASE2) (we need to swap port, ip, and mac)
 		}
 	}
-	apply(update_macaddr_tbl); // Update mac addr for responses
+	apply(update_macaddr_tbl); // Update mac addr for responses and PUTREQ_GS/GS_CASE2
 }
