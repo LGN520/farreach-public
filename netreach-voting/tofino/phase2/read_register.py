@@ -54,7 +54,7 @@ with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini")
     config.readfp(f)
 
 server_backup_ip = str(config.get("server", "server_backup_ip"))
-server_backup_port = str(config.get("server", "server_backup_port"))
+server_backup_port = int(config.get("server", "server_backup_port"))
 bucket_count = int(config.get("switch", "bucket_num"))
 max_val_len = int(config.get("global", "max_val_length"))
 
@@ -145,8 +145,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmpkeyhihihi = RegisterUpdate.get_reg16(keyhihihi_list, i)
             tmpkeylo = (((tmpkeylohihi << 16) + tmpkeylohilo) << 32) + ((tmpkeylolohi << 16) + tmpkeylololo)
             tmpkeyhi = (((tmpkeyhihihi << 16) + tmpkeyhihilo) << 32) + ((tmpkeyhilohi << 16) + tmpkeyhilolo)
-            buf = buf + struct.pack("H2QB", i, tmpkeylo, tmpkeyhi, tmpvallen)
-            #print("keylo: {:016x} keyhi: {:016x} vallen: {:02x}".format(tmpkeylo, tmpkeyhi, tmpvallen))
+            hashidx = i
+            if hashidx >= bucket_count:
+                hashidx = (hashidx - bucket_count)
+            buf = buf + struct.pack("=H2QB", hashidx, tmpkeylo, tmpkeyhi, tmpvallen)
+            #print("i: {} keylo: {:016x} keyhi: {:016x} vallen: {:02x}".format(hashidx, tmpkeylo, tmpkeyhi, tmpvallen))
             for val_idx in range(tmpvallen):
                 tmpvallo = RegisterUpdate.get_reg32(vallo_list_list[val_idx], i)
                 tmpvalhi = RegisterUpdate.get_reg32(valhi_list_list[val_idx], i)
@@ -154,13 +157,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 buf = buf + struct.pack("Q", tmpval)
             count += 1
         bufsize = len(buf) + 4 + 4
-        buf = struct.pack("I", bufsize) + struct.pack("I", count) + buf
+        buf = struct.pack("=I", bufsize) + struct.pack("=I", count) + buf
 
         self.conn_mgr.client_cleanup(self.sess_hdl)
 
         print "Connecting server"
         sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sockfd.connect((server_backup_ip, server_bakcup_port))
+        sockfd.connect((server_backup_ip, server_backup_port))
 
         print "Sending backup data"
         startidx = 0
