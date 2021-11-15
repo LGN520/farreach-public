@@ -387,6 +387,7 @@ static int run_receiver(void *param) {
 		//rte_eth_stats_get(0, &ethstats);
 
 		if (n_rx == 0) continue;
+		COUT_VAR(n_rx);
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);
 			if (ret == -1) {
@@ -962,7 +963,7 @@ static int run_sfg(void * param) {
 					bool tmp_stat = table->remove(req.key(), thread_id);
 					break;
 				}
-			case packet_type_t:: PUT_REQ_GS_CASE2:
+			case packet_type_t::PUT_REQ_GS_CASE2:
 				{
 					COUT_THIS("PUT_REQ_GS_CASE2")
 					put_request_gs_case2_t req(buf, recv_size);

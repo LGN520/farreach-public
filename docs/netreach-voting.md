@@ -228,6 +228,7 @@
 	+ Find a bug of resubmit: resubmitted packet cannot be resubmitted again; (recirculate is performed as setting egress port)
 		* Solution: use recirculation (we must enable and add port for recir/cpu/pktgen in ptf before usage)
 	+ Fix a bug of # of MAT entries; fix a bug of making snapshot when init/open
+	+ Fix a bug of DELREQ_CASE1: add header of seq_hdr for DELREQ_CASE1; read val, vallen, and dirty for DELREQ
 - TODO: Optimize for stage (at most 32B -> 48B; optional after we finish all implementation)
 	+ TODO: Combine access_lock_tbl into try_res_tbl
 
@@ -281,7 +282,7 @@
 		* It first gets value of k1 from server and stores it in switch, then it deletes k1 and sends DELREQ_S to server, the 2nd GET
 		of k1 does not have value and triggers a GETRES_NS
 		* In-switch result: non-zero key, vallen, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 0, dirty = 0, vote = 0
-- Test cases of crash-consistent backup: See "testcases/backup" (with only 1 bucket in sketch)
+- Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
 	+ Phase1: reset regs and set flag as 1
 	+ Case 1-1: undirty + PUT case1
 		* Get <k1, v1> -> Run phase1 -> PUT <k1, v2> -> Run phase2
@@ -292,20 +293,19 @@
 	+ Case 1-3: undirty + DEL case1
 		* Get <k1, v1> -> Run phase1 -> DEL k1 -> Run phase2
 		* Result: receive DELREQ_CASE1 with <k1, v1> (undirty), receive backup without k1, final backup after rollback without k1
-	+ TODO: Case 1-4: dirty + DEL case1
+	+ Case 1-4: dirty + DEL case1
 		* PUT <k1, v1> -> Run phase1 -> DEL k1 -> Run phase2
 		* Result: receive DELREQ_CASE1 with <k1, v1> (dirty), receive backup without k1, final backup after rollback with <k1, v1>
-	+ TODO: Case 2-1: invalid + PUTGS case2
+	+ Case 2-1: invalid + PUTGS case2
 		* Run phase1 -> GET <k1, v1> -> Run phase2
-		* Result: receive PUTREQ_GS_CASE2 with <0, 0>, receive backup with <k1, v1> (undirty), final backup after rollback without k1
-	+ TODO: Case 2-2: undirty + PUTGS case2
+		* Result: receive PUTREQ_GS_CASE2 with <0, 0>, receive backup without k1, final backup after rollback without k1
+		* NOTE: GETRES_NS will not trigger cache update and hence no special case
+	+ Case 2-2: undirty + PUTGS case2
 		* GET <k1, v1> -> Run phase1 -> GET <k2, v2> -> Get <k3, v3> -> Run phase2
-		* Result: receive PUTREQ_GS_CASE2 with <k1, v1> (undirty), receive backup with <k3, v3> (undirty), final backup after 
-		rollback without k1
+		* Result: receive PUTREQ_GS_CASE2 with <k1, v1> (undirty), receive backup without k3, final backup after rollback without k1
 	+ TODO: Case 2-3: dirty + PUTGS case2
 		* PUT <k1, v1> -> Run phase1 -> GET <k2, v2> -> GET <k3, v3> -> Run phase2
-		* Result: receive PUTREQ_GS_CASE2 with <k1, v1> (dirty), receive backup with <k3, v3> (undirty), final backup after 
-		rollback with <k1, v1>
+		* Result: receive PUTREQ_GS_CASE2 with <k1, v1> (dirty), receive backup without k3, final backup after rollback with <k1, v1>
 	+ Case 2-4: invalid + PUTPS case2
 		* Run phase1 -> PUT <k1, v1> -> Run phase2
 		* Result: receive PUTREQ_PS_CASE2 with <0, 0>, receive backup with <k1, v1>, final backup after rollback without k1
@@ -318,8 +318,12 @@
 		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_PS_CASE2 with <k1, v1> (dirty), receive backup with <k3, v3>, final 
 		backup after rollback with <k1, v1>
 	+ TODO: Case 3-1: DELREQ case3
-		* PUT <k1, v1> -> Run phase1 -> DEL <k2, v2> -> RUN phase2
+		* PUT <k1, v1> -> Run phase1 -> DEL <k2, v2> -> Run phase2
 		* Result: receive DELREQ_CASE3 with k2, receive backup with <k1, v1>, final backup after rollback with <k1, v1>
+	+ TODO: Case 4-1: range query
+		* DEL <k1, v1> -> PUT <k1, v2> -> Run phase1 -> PUT <k1, v3> -> Run phase2 -> SCAN
+		* Result: receive PUTREQ_CASE1 with <k1, v2>, receive bakup with <k1, v3>, final backup after rollback with <k1, v2>, SCAN
+		result with <k1, v2>
 
 ## How to run
 
