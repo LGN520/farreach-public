@@ -191,7 +191,9 @@ control ingress {
 	}*/
 	apply(calculate_hash_tbl);
 	apply(port_forward_tbl);
-	apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
+	if (op_hdr.optype != SCANREQ_TYPE) {
+		apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
+	}
 }
 
 /* Egress Processing */

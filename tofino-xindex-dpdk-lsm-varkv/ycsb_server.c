@@ -45,6 +45,8 @@ typedef ScanResponse<index_key_t, val_t> scan_response_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
+void prepare_dpdk();
+void prepare_receiver();
 void run_server(xindex_t *table);
 //void *run_sfg(void *param);
 void kill(int signum);
@@ -55,7 +57,7 @@ static int run_receiver(__attribute__((unused)) void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
-volatile struct rte_mbuf ***pkts_list;
+struct rte_mbuf*** volatile pkts_list;
 uint32_t* volatile heads;
 uint32_t* volatile tails;
 
@@ -64,6 +66,15 @@ size_t fg_n = 1;
 size_t bg_n = 1;
 short dst_port_start = 1111;
 const char *workload_name = nullptr;
+
+size_t per_server_range;
+size_t get_server_idx(index_key_t key) {
+	size_t server_idx = key.keylo / per_server_range;
+	if (server_idx >= fg_n) {
+		server_idx = fg_n - 1;
+	}
+	return server_idx;
+}
 
 bool killed = false;
 volatile bool running = false;
@@ -80,49 +91,10 @@ int main(int argc, char **argv) {
   xindex::init_options(); // init options of rocksdb
 
   // Prepare DPDK EAL param
-  int dpdk_argc = 3;
-  char **dpdk_argv;
-  dpdk_argv = new char *[dpdk_argc];
-  for (int i = 0; i < dpdk_argc; i++) {
-	dpdk_argv[i] = new char[20];
-	memset(dpdk_argv[i], '\0', 20);
-  }
-  std::string arg_proc = "./client";
-  std::string arg_iovamode = "--iova-mode";
-  std::string arg_iovamode_val = "pa";
-  //std::string arg_whitelist = "-w";
-  //std::string arg_whitelist_val = "0000:5e:00.1";
-  memcpy(dpdk_argv[0], arg_proc.c_str(), arg_proc.size());
-  memcpy(dpdk_argv[1], arg_iovamode.c_str(), arg_iovamode.size());
-  memcpy(dpdk_argv[2], arg_iovamode_val.c_str(), arg_iovamode_val.size());
-  //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
-  //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
-
-  // Init DPDK
-  rte_eal_init_helper(&dpdk_argc, &dpdk_argv);
-  dpdk_init(&mbuf_pool, fg_n, 1);
+  prepare_dpdk();
 
   // Prepare pkts and stats for receiver
-  //pkts = new volatile struct rte_mbuf*[fg_n];
-  //stats = new volatile bool[fg_n];
-  //memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
-  //memset((void *)stats, 0, sizeof(bool)*fg_n);
-  //for (size_t i = 0; i < fg_n; i++) {
-  //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
-  //}
-  pkts_list = new volatile struct rte_mbuf**[fg_n];
-  heads = new uint32_t[fg_n];
-  tails = new uint32_t[fg_n];
-  memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
-  memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
-  //int res = 0;
-  for (size_t i = 0; i < fg_n; i++) {
-	  pkts_list[i] = new volatile struct rte_mbuf*[MQ_SIZE];
-	  for (size_t j = 0; j < MQ_SIZE; j++) {
-		  pkts_list[i][j] = NULL;
-	  }
-	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
-  }
+  prepare_receiver();
 
   // prepare xindex
   xindex_t *tab_xi = new xindex_t(fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
@@ -156,11 +128,13 @@ inline void parse_ini(const char* config_file) {
 	dst_port_start = ini.get_server_port();
 	workload_name = ini.get_workload_name();
 	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
+	per_server_range = std::numeric_limits<size_t>::max() / fg_n;
 
 	COUT_VAR(fg_n);
 	COUT_VAR(dst_port_start);
 	printf("workload_name: %s\n", workload_name);
 	COUT_VAR(val_t::MAX_VAL_LENGTH);
+	COUT_VAR(per_server_range);
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -226,6 +200,55 @@ inline void parse_args(int argc, char **argv) {
   COUT_VAR(xindex::config.buffer_size_bound);
   COUT_VAR(xindex::config.buffer_size_tolerance);
   COUT_VAR(xindex::config.buffer_compact_threshold);
+}
+
+void prepare_dpdk() {
+  int dpdk_argc = 5;
+  char **dpdk_argv;
+  dpdk_argv = new char *[dpdk_argc];
+  for (int i = 0; i < dpdk_argc; i++) {
+	dpdk_argv[i] = new char[20];
+	memset(dpdk_argv[i], '\0', 20);
+  }
+  std::string arg_proc = "./client";
+  std::string arg_iovamode = "--iova-mode";
+  std::string arg_iovamode_val = "pa";
+  std::string arg_file_prefix = "--file-prefix";
+  std::string arg_file_prefix_val = "netbuffer";
+  //std::string arg_whitelist = "-w";
+  //std::string arg_whitelist_val = "0000:5e:00.1";
+  memcpy(dpdk_argv[0], arg_proc.c_str(), arg_proc.size());
+  memcpy(dpdk_argv[1], arg_iovamode.c_str(), arg_iovamode.size());
+  memcpy(dpdk_argv[2], arg_iovamode_val.c_str(), arg_iovamode_val.size());
+  memcpy(dpdk_argv[3], arg_file_prefix.c_str(), arg_file_prefix.size());
+  memcpy(dpdk_argv[4], arg_file_prefix_val.c_str(), arg_file_prefix_val.size());
+  //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
+  //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
+  rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
+  dpdk_init(&mbuf_pool, fg_n, 1);
+}
+
+void prepare_receiver() {
+  //pkts = new volatile struct rte_mbuf*[fg_n];
+  //stats = new volatile bool[fg_n];
+  //memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
+  //memset((void *)stats, 0, sizeof(bool)*fg_n);
+  //for (size_t i = 0; i < fg_n; i++) {
+  //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
+  //}
+  pkts_list = new struct rte_mbuf**[fg_n];
+  heads = new uint32_t[fg_n];
+  tails = new uint32_t[fg_n];
+  memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
+  memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
+  //int res = 0;
+  for (size_t i = 0; i < fg_n; i++) {
+	  pkts_list[i] = new struct rte_mbuf*[MQ_SIZE];
+	  for (size_t j = 0; j < MQ_SIZE; j++) {
+		  pkts_list[i][j] = nullptr;
+	  }
+	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
+  }
 }
 
 void run_server(xindex_t *table) {
@@ -295,6 +318,8 @@ static int run_receiver(void *param) {
 		;
 
 	struct rte_mbuf *received_pkts[32];
+	index_key_t startkey, endkey;
+	uint32_t num;
 	while (running) {
 		uint16_t n_rx;
 		n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
@@ -308,28 +333,70 @@ static int run_receiver(void *param) {
 				continue;
 			}
 			else {
-				uint16_t received_port = (uint16_t)ret;
-				int idx = received_port - dst_port_start;
-				if (idx < 0 || unsigned(idx) >= fg_n) {
-					COUT_THIS("Invalid dst port received by server: " << received_port)
-					continue;
+				bool isscan = get_scan_keys(received_pkts[i], &startkey, &endkey, &num);
+				if (isscan) {
+					size_t first_server_idx = get_server_idx(startkey);
+					size_t last_server_idx = get_server_idx(endkey);
+					size_t split_num = last_server_idx - first_server_idx + 1;
+					struct rte_mbuf *sub_scan_reqs[split_num];
+					sub_scan_reqs[0] = received_pkts[i];
+					if (split_num > 1) {
+						int res = rte_pktmbuf_alloc_bulk(mbuf_pool, sub_scan_reqs + 1, split_num - 1);
+						INVARIANT(res == 0);
+						for (size_t mbufidx = 1; mbufidx < split_num; mbufidx ++) {
+							memcpy(sub_scan_reqs[mbufidx], received_pkts[i], sizeof(struct rte_mbuf));
+						}
+					}
+
+					index_key_t tmpkey = startkey;
+					uint64_t avg_range = (endkey.keylo - startkey.keylo) / split_num;
+					//uint32_t avg_num = num / split_num;
+					uint32_t avg_num = num;
+					tmpkey.keylo += avg_range;
+					for (size_t idx = first_server_idx; idx <= last_server_idx; idx++) {
+						struct rte_mbuf *cur_mbuf = sub_scan_reqs[idx - first_server_idx];
+						if (idx == last_server_idx) {
+							tmpkey = endkey;
+							//avg_num = num - avg_num * (split_num - 1);
+						}
+						set_scan_keys(cur_mbuf, &startkey, &tmpkey, &avg_num);
+						startkey = tmpkey;
+						tmpkey.keylo += avg_range;
+
+						if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
+							pkts_list[idx][heads[idx]] = cur_mbuf; // cur_mbuf will be freed in run_server
+							heads[idx] = (heads[idx] + 1) % MQ_SIZE;
+						}
+						else {
+							COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
+							rte_pktmbuf_free(cur_mbuf);
+						}
+					}
 				}
 				else {
-					/*if (stats[idx]) {
-						COUT_THIS("Invalid stas[" << idx << "] which is true!")
+					uint16_t received_port = (uint16_t)ret;
+					int idx = received_port - dst_port_start;
+					if (idx < 0 || unsigned(idx) >= fg_n) {
+						COUT_THIS("Invalid dst port received by server: " << received_port)
 						continue;
 					}
 					else {
-						pkts[idx] = received_pkts[i];
-						stats[idx] = true;
-					}*/
-					if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
-						pkts_list[idx][heads[idx]] = received_pkts[i];
-						heads[idx] = (heads[idx] + 1) % MQ_SIZE;
-					}
-					else {
-						COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
-						rte_pktmbuf_free(received_pkts[i]);
+						/*if (stats[idx]) {
+							COUT_THIS("Invalid stas[" << idx << "] which is true!")
+							continue;
+						}
+						else {
+							pkts[idx] = received_pkts[i];
+							stats[idx] = true;
+						}*/
+						if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
+							pkts_list[idx][heads[idx]] = received_pkts[i];
+							heads[idx] = (heads[idx] + 1) % MQ_SIZE;
+						}
+						else {
+							COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
+							rte_pktmbuf_free(received_pkts[i]);
+						}
 					}
 				}
 			}
@@ -448,12 +515,10 @@ static int run_sfg(void * param) {
 					get_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
-					bool tmp_stat = table->get(req.key(), tmp_val, req.thread_id());
+					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr)); // UDP socket
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
@@ -465,11 +530,10 @@ static int run_sfg(void * param) {
 				{
 					put_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), req.thread_id());
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
@@ -481,11 +545,10 @@ static int run_sfg(void * param) {
 				{
 					del_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
-					bool tmp_stat = table->remove(req.key(), req.thread_id());
+					bool tmp_stat = table->remove(req.key(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
@@ -496,17 +559,18 @@ static int run_sfg(void * param) {
 			case packet_type_t::SCAN_REQ:
 				{
 					scan_request_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
+					//COUT_THIS("[server] startkey = " << req.key().to_string() << 
+					//		<< "endkey = " << req.endkey().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
-					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
+					//size_t tmp_num = table->scan(req.key(), req.num(), results, thread_id);
+					size_t tmp_num = table->range_scan(req.key(), req.endkey(), results, thread_id);
 					//COUT_THIS("[server] num = " << tmp_num)
 					/*for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 						COUT_VAR(results[val_i].first.to_string())
 						COUT_VAR(results[val_i].second.to_string())
 					}*/
-					scan_response_t rsp(req.thread_id(), req.key(), tmp_num, results);
+					scan_response_t rsp(req.thread_id(), req.key(), req.endkey(), results.size(), results);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					//res = sendto(sockfd, buf, rsp_size, 0, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);

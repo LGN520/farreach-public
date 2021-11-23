@@ -387,7 +387,6 @@ static int run_receiver(void *param) {
 		//rte_eth_stats_get(0, &ethstats);
 
 		if (n_rx == 0) continue;
-		COUT_VAR(n_rx);
 		for (size_t i = 0; i < n_rx; i++) {
 			int ret = get_dstport(received_pkts[i]);
 			if (ret == -1) {
@@ -866,9 +865,8 @@ static int run_sfg(void * param) {
 					}
 					//COUT_THIS("SCAN results size: " << results.size())
 
-					scan_response_t *rsp = nullptr;
-					rsp = new scan_response_t(req.thread_id(), req.key(), req.endkey(), results.size(), results);
-					rsp_size = rsp->serialize(buf, MAX_BUFSIZE);
+					scan_response_t rsp(req.thread_id(), req.key(), req.endkey(), results.size(), results);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);

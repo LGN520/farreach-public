@@ -57,12 +57,13 @@ void Group<key_t, val_t, seq, max_model_n>::init(
 		const typename std::vector<val_t>::const_iterator &vals_begin,
 		uint32_t array_size, uint32_t group_idx, std::string workload_name) {
 		//uint32_t model_n, uint32_t array_size, uint32_t group_idx) {
-	assert(array_size > 0);
+	INVARIANT(array_size > 0);
 	this->pivot = *keys_begin;
 	//this->array_size = array_size;
 	//this->capacity = array_size * seq_insert_reserve_factor;
 	//this->model_n = model_n; // # of models per sstable
 	this->group_idx = group_idx;
+	this->workload_name = workload_name;
 
 	// Create original data
 	char data_path[256];
@@ -305,6 +306,21 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan(
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline bool Group<key_t, val_t, seq, max_model_n>::range_scan(
+		const key_t &begin, const key_t &end,
+		std::vector<std::pair<key_t, val_t>> &result) {
+	return range_scan_from_lsm(begin, end, result, data, nullptr);
+
+	/*size_t old_size = result.size();
+	if (buffer_temp) {
+		scan_3_way(begin, std::numeric_limits<size_t>::max(), end, result);
+	} else {
+		scan_2_way(begin, std::numeric_limits<size_t>::max(), end, result);
+	}
+	return result.size() - old_size;*/
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
 		const key_t &begin, const size_t n, const key_t &end, std::vector<std::pair<key_t, val_t>> &result) {
 	std::vector<std::pair<key_t, val_t>> data_result;
@@ -405,7 +421,7 @@ void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
 	buffer_size = 0;
 	std::string buffer_path = get_buffer_path(cur_buffer_id);
 	std::uintmax_t n = std::experimental::filesystem::remove_all(buffer_path);
-	COUT_THIS("Remove " << n << " files from " << buffer_path);
+	COUT_THIS("Remove " << n << " files from " << buffer_path)
 }
 
 // semantics: atomically read the value
@@ -487,7 +503,7 @@ inline bool Group<key_t, val_t, seq, max_model_n>::scan_from_lsm(
 		rocksdb::Slice tmpkey_slice = iter->key();
 		key_t tmpkey;
 		tmpkey.from_slice(tmpkey_slice);
-		//if (tmpkey.key >= end.key) break;
+		//if (tmpkey >= end) break;
 		rocksdb::Slice tmpvalue_slice = iter->value();
 		val_t tmpval;
 		tmpval.from_slice(tmpvalue_slice);
@@ -496,6 +512,54 @@ inline bool Group<key_t, val_t, seq, max_model_n>::scan_from_lsm(
 	s = txn->Commit();
 	delete txn;
 	return s.ok();
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline bool Group<key_t, val_t, seq, max_model_n>::range_scan_from_lsm(
+		const key_t &begin, const key_t &end,
+		std::vector<std::pair<key_t, val_t>> &result,
+		rocksdb::TransactionDB *txn_db, rocksdb::Snapshot *txn_db_sp) {
+	rocksdb::Status s;
+	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	rocksdb::ReadOptions read_options;
+	if (txn_db_sp != nullptr) {
+		read_options.snapshot = txn_db_sp; // Use the snapshot
+	}
+	rocksdb::Iterator* iter = txn->GetIterator(read_options);
+	INVARIANT(iter!=nullptr);
+	bool done = false;
+	bool isfirst = true;
+	while (true) {
+		if (isfirst) {
+			isfirst = false;
+			iter->Seek(begin.to_slice());
+			if (!iter->Valid()) {
+				done = true; // no entry > begin -> done
+				break;
+			}
+		}
+		else {
+			iter->Next();
+			if (!iter->Valid()) { // all entries are accessed in this group -> move to next group
+				break;
+			} 
+		}
+		rocksdb::Slice tmpkey_slice = iter->key();
+		key_t tmpkey;
+		tmpkey.from_slice(tmpkey_slice);
+		if (tmpkey >= end) {
+			done = true; // no entry < end -> done
+			break;
+		}
+		rocksdb::Slice tmpvalue_slice = iter->value();
+		val_t tmpval;
+		tmpval.from_slice(tmpvalue_slice);
+		result.push_back(std::pair<key_t, val_t>(tmpkey, tmpval));
+	}
+	s = txn->Commit();
+	delete txn;
+	//return s.ok();
+	return done;
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>

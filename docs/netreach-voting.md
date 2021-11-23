@@ -211,7 +211,7 @@
 			+ Process sub-requests by different server threads (thpt: count in client side since all requests are handled by server; latency: count in 
 			the granularity of sub-requests, split latency should not be counted which is happened in switch)
 			+ Implement range scan of kv-store (xindex_root_impl.h, xindex_group.h, xindex_group_impl.h)
-			+ Perform range scan on both kv-store and backup -> reply the final results
+			+ Perform range scan on both kv-store and backup -> reply the final results (Only for NetReach)
 	- Support SCAN with a guarantee of some point-in-time: we still need RCU for backup data in server (only for NetReach)
 - Debug
 	+ Use thread_id of server thread to perform operation in key-value store instead of req.thread_id() (ycsb_server.c)

@@ -1,5 +1,6 @@
 #include "dpdk_helper.h" 
 #include "helper.h"
+#include "packet_format.h"
 static struct rte_eth_conf port_conf_default;
 
 static inline void dump_buf(char *buf, uint32_t bufsize)
@@ -324,7 +325,7 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const 
 	mbuf->pkt_len = pktsize;
 }
 
-int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload) {
+int decode_mbuf(struct rte_mbuf *volatile mbuf, uint8_t *srcmac, uint8_t *dstmac, char *srcip, char *dstip, uint16_t *srcport, uint16_t *dstport, char *payload) {
 	struct ether_hdr *ethhdr;
 	struct ipv4_hdr *iphdr;
 	//struct udp_hdr *udphdr;
@@ -376,7 +377,7 @@ int decode_mbuf(volatile struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac
 	return payload_size;
 }
 
-int get_dstport(volatile struct rte_mbuf *mbuf) {
+int get_dstport(struct rte_mbuf *volatile mbuf) {
 	//struct ether_hdr *ethhdr;
 	//struct ipv4_hdr *iphdr;
 	//struct udp_hdr *udphdr;
@@ -429,7 +430,7 @@ int get_srcport(volatile struct rte_mbuf *mbuf) {
 	return ntohs(*(uint16_t*)(data+sizeof(ether_hdr) + sizeof(ipv4_hdr)));
 }
 
-int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
+int get_payload(struct rte_mbuf *volatile mbuf, char *payload) {
 	struct ether_hdr *ethhdr;
 	struct ipv4_hdr *iphdr;
 	//struct udp_hdr *udphdr;
@@ -462,4 +463,38 @@ int get_payload(volatile struct rte_mbuf *mbuf, char *payload) {
 	//payload_size = ntohs(*(uint16_t*)(data+4)) - 6;
 	rte_memcpy(payload, payload_begin, payload_size);
 	return payload_size;
+}
+
+bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num) {
+	char *data;
+
+	data = rte_pktmbuf_mtod(mbuf, char *);
+
+	//printf("pktsize: %d\n", mbuf->pkt_len);
+	//dump_buf(data, mbuf->pkt_len);
+	uint8_t optype = *(uint8_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 6);
+	if (optype == (uint8_t)packet_type_t::SCAN_REQ) {
+		startkey->keylo = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 8);
+		startkey->keyhi = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 16);
+		endkey->keylo = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 24);
+		endkey->keyhi = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 32);
+		*num = *(uint32_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 40);
+		return true;
+	}
+	return false;
+}
+
+void set_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num) {
+	char *data;
+
+	data = rte_pktmbuf_mtod(mbuf, char *);
+
+	//printf("pktsize: %d\n", mbuf->pkt_len);
+	//dump_buf(data, mbuf->pkt_len);
+	
+	*(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 8) = startkey->keylo;
+	*(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 16) = startkey->keyhi;
+	*(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 24) = endkey->keylo;
+	*(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 32) = endkey->keyhi;
+	*(uint32_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 40) = *num;
 }

@@ -6,6 +6,21 @@
 - Support 16B key
 	+ Modify client.c and server.c
 - Apply config module, key-based routing and YCSB integration (see docs/netreach.md)
+- Change scan from key+num to start_key+end_key (applied from netreach-voting)
+	+ Optional: use num to restrict # of per-subrequest kv pairs
+	+ Change volatile rte_mbuf * to rte_mbuf * volatile (client.c, server.c, ycsb_remote_client.c, ycsb_server.c)
+	+ Add endkey into ScanRequest and ScanResponse (packet_format.h, packet_format_impl.h, client.c, server.c, ycsb_remote_cliet.c, ycsb_server.c)
+	+ Change switch side accordingly
+		+ Disable hash parition for SCAN request (basic.p4)
+	+ Change client side accordingly (ycsb_remote_client.c)
+		+ Use message queue for each client thread
+		+ Get number of sub-requests
+	+ Change server side accordingly (ycsb_server.c)
+		+ Get optype and scan keys in receiver (dpdk_helper.h, dpdk_helper.c)
+		+ Receiver split the SCAN request into multiple sub-requests
+		+ Process sub-requests by different server threads (thpt: count in client side since all requests are handled by server; latency: count in 
+		the granularity of sub-requests, split latency should not be counted which is happened in switch)
+		+ Implement range scan of kv-store (xindex_root_impl.h, xindex_group.h, xindex_group_impl.h)
 
 ## How to run
 

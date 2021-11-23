@@ -564,7 +564,9 @@ inline bool Group<key_t, val_t, seq, max_model_n>::range_scan_from_lsm(
 	rocksdb::Status s;
 	rocksdb::Transaction* txn = txn_db->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
 	rocksdb::ReadOptions read_options;
-	read_options.snapshot = txn_db_sp; // Use the snapshot
+	if (txn_db_sp != nullptr) {
+		read_options.snapshot = txn_db_sp; // Use the snapshot
+	}
 	rocksdb::Iterator* iter = txn->GetIterator(read_options);
 	INVARIANT(iter!=nullptr);
 	bool done = false;
@@ -624,7 +626,6 @@ inline std::string Group<key_t, val_t, seq, max_model_n>::get_buffer_path(uint32
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>
 		*Group<key_t, val_t, seq, max_model_n>::compact_phase() {
-	COUT_THIS("Compact!")
 	buf_frozen = true;
 	memory_fence();
 	rcu_barrier();

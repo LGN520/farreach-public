@@ -48,7 +48,7 @@ void run_benchmark(size_t sec);
 static int run_fg(void *param); // sender
 static int run_receiver(__attribute__((unused)) void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
-volatile struct rte_mbuf **pkts;
+struct rte_mbuf **volatile pkts;
 volatile bool *stats;
 
 // parameters
@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
 
   // Prepare pkts and stats for receiver
   COUT_THIS("Prepare " << fg_n << "pkts and stats")
-  pkts = new volatile struct rte_mbuf*[fg_n];
+  pkts = new struct rte_mbuf*[fg_n];
   stats = new volatile bool[fg_n];
   memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
   memset((void *)stats, 0, sizeof(bool)*fg_n);
@@ -125,39 +125,6 @@ int main(int argc, char **argv) {
   dpdk_free();
 
   exit(0);
-}
-
-inline void parse_ini(const char* config_file) {
-	IniparserWrapper ini;
-	ini.load(config_file);
-
-	ini.get_client_mac(src_macaddr);
-	ini.get_server_mac(dst_macaddr);
-	src_ipaddr = ini.get_client_ip();
-	server_addr = ini.get_server_ip();
-	src_port_start = ini.get_client_port();
-	fg_n = ini.get_client_num();
-	dst_port = ini.get_server_port();
-	server_num = ini.get_server_num();
-
-	printf("src_macaddr: ");
-	for (size_t i = 0; i < 6; i++) {
-		printf("%02x", src_macaddr[i]);
-		if (i != 5) printf(":");
-		else printf("\n");
-	}
-	printf("dst_macaddr: ");
-	for (size_t i = 0; i < 6; i++) {
-		printf("%02x", dst_macaddr[i]);
-		if (i != 5) printf(":");
-		else printf("\n");
-	}
-	printf("src_ipaddr: %s\n", src_ipaddr);
-	printf("server_addr: %s\n", server_addr);
-	COUT_VAR(src_port_start);
-	COUT_VAR(fg_n);
-	COUT_VAR(dst_port);
-	COUT_VAR(server_num);
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -218,6 +185,39 @@ inline void parse_args(int argc, char **argv) {
   INVARIANT(ratio_sum > 0.9999 && ratio_sum < 1.0001);  // avoid precision lost
   COUT_VAR(runtime);
   COUT_VAR(fg_n);
+}
+
+inline void parse_ini(const char* config_file) {
+	IniparserWrapper ini;
+	ini.load(config_file);
+
+	ini.get_client_mac(src_macaddr);
+	ini.get_server_mac(dst_macaddr);
+	src_ipaddr = ini.get_client_ip();
+	server_addr = ini.get_server_ip();
+	src_port_start = ini.get_client_port();
+	fg_n = ini.get_client_num();
+	dst_port = ini.get_server_port();
+	server_num = ini.get_server_num();
+
+	printf("src_macaddr: ");
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", src_macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+	printf("dst_macaddr: ");
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", dst_macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+	printf("src_ipaddr: %s\n", src_ipaddr);
+	printf("server_addr: %s\n", server_addr);
+	COUT_VAR(src_port_start);
+	COUT_VAR(fg_n);
+	COUT_VAR(dst_port);
+	COUT_VAR(server_num);
 }
 
 void load() {
@@ -633,7 +633,7 @@ static int run_fg(void *param) {
         delete_i = 0;
       }
     } else {  // scan
-	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], 10);
+	  scan_request_t req(thread_id, op_keys[(query_i + delete_i) % op_keys.size()], index_key_t::max(), 10);
 	  unsigned int unused_hash_value = crc32((unsigned char *)(&(op_keys[(query_i + delete_i) % op_keys.size()])), index_key_t::model_key_size() * 8);
 	  short unused_dst_port = dst_port + unused_hash_value % server_num;
 	  FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << req.key().to_string());

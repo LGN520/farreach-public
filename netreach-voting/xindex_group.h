@@ -90,7 +90,7 @@ class alignas(CACHELINE_SIZE) Group {
 		  std::vector<std::pair<key_t, val_t>> &result, rocksdb::TransactionDB *txn_db);
   inline bool range_scan_from_lsm(const key_t &begin, const key_t &end, 
 		  std::vector<std::pair<key_t, val_t>> &result, rocksdb::TransactionDB *txn_db,
-		  rocksdb::Snapshot *txn_db_sp);
+		  rocksdb::Snapshot *txn_db_sp=nullptr);
 
   inline size_t scan_2_way(const key_t &begin, const size_t n, const key_t &end, 
 		  std::vector<std::pair<key_t, val_t>> &result);

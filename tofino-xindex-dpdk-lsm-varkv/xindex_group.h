@@ -20,6 +20,9 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
+#if !defined(XINDEX_GROUP_H)
+#define XINDEX_GROUP_H
+
 #include <boost/thread/shared_mutex.hpp>
 #include "xindex_buffer.h"
 #include "xindex_model.h"
@@ -29,9 +32,6 @@
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction.h"
 #include "rocksdb/utilities/transaction_db.h"
-
-#if !defined(XINDEX_GROUP_H)
-#define XINDEX_GROUP_H
 
 #define RWLOCKMAP_SIZE 1024
 
@@ -63,8 +63,8 @@ class alignas(CACHELINE_SIZE) Group {
   inline result_t remove(const key_t &key);
   inline size_t scan(const key_t &begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result);
-  //inline size_t range_scan(const key_t &begin, const key_t &end,
-  //                         std::vector<std::pair<key_t, val_t>> &result);
+  inline bool range_scan(const key_t &begin, const key_t &end,
+                           std::vector<std::pair<key_t, val_t>> &result);
 
   Group *compact_phase();
   //Group *compact_phase_1();
@@ -79,6 +79,9 @@ class alignas(CACHELINE_SIZE) Group {
   inline bool remove_from_lsm(const key_t &key, rocksdb::TransactionDB *txn_db);
   inline bool scan_from_lsm(const key_t &begin, const size_t n, const key_t &end, 
 		  std::vector<std::pair<key_t, val_t>> &result, rocksdb::TransactionDB *txn_db);
+  inline bool range_scan_from_lsm(const key_t &begin, const key_t &end, 
+		  std::vector<std::pair<key_t, val_t>> &result, rocksdb::TransactionDB *txn_db,
+		  rocksdb::Snapshot *txn_db_sp=nullptr);
 
   inline size_t scan_2_way(const key_t &begin, const size_t n, const key_t &end, 
 		  std::vector<std::pair<key_t, val_t>> &result);
