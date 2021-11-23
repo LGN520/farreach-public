@@ -8,6 +8,7 @@
 - Apply config module, key-based routing and YCSB integration (see docs/netreach.md)
 - Change scan from key+num to start_key+end_key (applied from netreach-voting)
 	+ Optional: use num to restrict # of per-subrequest kv pairs
+	+ Suppose SCAN in ycsb parser (ycsb/parser.c)
 	+ Change volatile rte_mbuf * to rte_mbuf * volatile (client.c, server.c, ycsb_remote_client.c, ycsb_server.c)
 	+ Add endkey into ScanRequest and ScanResponse (packet_format.h, packet_format_impl.h, client.c, server.c, ycsb_remote_cliet.c, ycsb_server.c)
 	+ Change switch side accordingly

@@ -479,7 +479,7 @@ static int run_fg(void *param) {
 			printf("Invalid request type: %u\n", uint32_t(iter.type()));
 			exit(-1);
 		}
-			thread_param.throughput++;
+		thread_param.throughput++;
 
 		sent_pkt_idx++;
 		if (sent_pkt_idx >= burst_size) {

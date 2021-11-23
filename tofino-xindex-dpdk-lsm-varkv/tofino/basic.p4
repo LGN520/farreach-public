@@ -6,6 +6,33 @@
 #define PROTOTYPE_TCP 0x06
 #define PROTOTYPE_UDP 0x11
 
+// NOTE: convert type into Big Endian (not use threadid by now; big endian of key does not make sense)
+#define GETREQ_TYPE 0x00
+#define PUTREQ_TYPE 0x01
+#define DELREQ_TYPE 0x02
+#define SCANREQ_TYPE 0x03
+#define GETRES_TYPE 0x04
+#define PUTRES_TYPE 0x05
+#define DELRES_TYPE 0x06
+#define SCANRES_TYPE 0x07
+#define GETREQ_S_TYPE 0x08
+#define PUTREQ_GS_TYPE 0x09
+#define PUTREQ_PS_TYPE 0x0a
+#define DELREQ_S_TYPE 0x0b
+#define GETRES_S_TYPE 0x0c
+#define GETRES_NS_TYPE 0x0d
+#define PUTREQ_CASE1_TYPE 0x0e
+#define DELREQ_CASE1_TYPE 0x0f
+#define PUTREQ_GS_CASE2_TYPE 0x10
+#define PUTREQ_PS_CASE2_TYPE 0x11
+#define PUTREQ_CASE3_TYPE 0x12
+#define DELREQ_CASE3_TYPE 0x13
+// Only used in switch
+#define PUTREQ_U_TYPE 0x20
+#define PUTREQ_RU_TYPE 0x21
+#define GETRES_S_CASE2_TYPE 0x22
+#define PUTREQ_RU_CASE2_TYPE 0x23
+
 #define DELTA_THRESHOLD 10
 #define OP_PORT 1111
 #define KV_BUCKET_COUNT 32768
