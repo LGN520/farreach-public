@@ -60,7 +60,17 @@
 #define GET_ROOT(buf, workload_name)  \
 	sprintf(buf, "%s-root.out", workload_name)
 
-#define CUR_TIME() (double) clock() / CLOCKS_PER_SEC * 1000.0 * 1000.0; // us
+// us
+//#define CUR_TIME() (double) clock() / CLOCKS_PER_SEC * 1000.0 * 1000.0
+
+// s + ns
+#define CUR_TIME(t) clock_gettime(CLOCK_REALTIME, &t)
+// t3 = t1 - t2
+#define DELTA_TIME(t1, t2, t3) timespecsub(&t1, &t2, &t3)
+// t3 = t1 + t2
+#define SUM_TIME(t1, t2, t3) timespecadd(&t1, &t2, &t3)
+// s + ns -> us
+#define GET_MICROSECOND(t) t.tv_sec * 1000 * 1000 + double(t.tv_nsec) / 1000.0
 
 #define COUT_THIS(this) std::cout << this << std::endl;
 #define COUT_VAR(this) std::cout << #this << ": " << this << std::endl;

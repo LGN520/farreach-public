@@ -25,6 +25,8 @@
 
 #define MQ_SIZE 256
 
+const double dpdk_polling_time = 0.0;
+
 struct alignas(CACHELINE_SIZE) FGParam;
 
 typedef FGParam fg_param_t;
@@ -362,6 +364,9 @@ static int run_fg(void *param) {
 	COUT_THIS("[client " << uint32_t(thread_id) << "] Ready.");
 	ready_threads++;
 
+	std::vector<double> latency_list;
+	std::vector<double> wait_list; // TMP: To count dpdk polling time
+
 	while (!running)
 		;
 
@@ -369,23 +374,32 @@ static int run_fg(void *param) {
 		sent_pkt = sent_pkts[sent_pkt_idx];
 
 		tmpkey = iter.key();
+		struct timespec req_t1, req_t2, req_t3, rsp_t1, rsp_t2, rsp_t3, final_t3;
+		struct timespec wait_t1, wait_t2, wait_t3;
 		if (iter.type() == uint8_t(packet_type_t::GET_REQ)) { // get
+			CUR_TIME(req_t1);
 			get_request_t req(thread_id, tmpkey);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
+			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
 			// DPDK
 			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
+			CUR_TIME(req_t2);
+
 			/*while (!stats[thread_id])
 				;
 			stats[thread_id] = false;
 			recv_size = get_payload(pkts[thread_id], buf);
 			rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);*/
+			CUR_TIME(wait_t1);
 			while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+			CUT_TIME(wait_t2);
+
+			CUR_TIME(rsp_t1);
 			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
 			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
@@ -394,22 +408,30 @@ static int run_fg(void *param) {
 			packet_type_t pkt_type = get_packet_type(buf, recv_size);
 			INVARIANT(pkt_type == packet_type_t::GET_RES);
 			get_response_t rsp(buf, recv_size);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
+			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
+			CUR_TIME(rsp_t2);
 		}
 		else if (iter.type() == uint8_t(packet_type_t::PUT_REQ)) { // update or insert
 			tmpval = iter.val();
 
+			CUR_TIME(req_t1);
 			put_request_t req(thread_id, tmpkey, tmpval);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
+			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
 			// DPDK
 			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
+			CUR_TIME(req_t2);
+
+			CUT_TIME(wait_t1);
 			while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+			CUT_TIME(wait_t2);
+
+			CUR_TIME(rsp_t1);
 			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
 			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
@@ -418,20 +440,28 @@ static int run_fg(void *param) {
 			packet_type_t pkt_type = get_packet_type(buf, recv_size);
 			INVARIANT(pkt_type == packet_type_t::PUT_RES);
 			put_response_t rsp(buf, recv_size);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+			CUR_TIME(rsp_t2);
 		}
 		else if (iter.type() == uint8_t(packet_type_t::DEL_REQ)) {
+			CUR_TIME(req_t1);
 			del_request_t req(thread_id, tmpkey);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
+			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
 			// DPDK
 			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
+			CUR_TIME(req_t2);
+
+			CUR_TIME(wait_t1);
 			while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+			CUT_TIME(wait_t2);
+
+			CUR_TIME(rsp_t1);
 			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
 			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
@@ -440,7 +470,8 @@ static int run_fg(void *param) {
 			packet_type_t pkt_type = get_packet_type(buf, recv_size);
 			INVARIANT(pkt_type == packet_type_t::DEL_RES);
 			del_response_t rsp(buf, recv_size);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+			CUR_TIME(rsp_t2);
 		}
 		else if (iter.type() == uint8_t(packet_type_t::SCAN_REQ)) {
 			index_key_t endkey = generate_endkey(tmpkey);
@@ -448,18 +479,27 @@ static int run_fg(void *param) {
 			size_t last_server_idx = get_server_idx(endkey);
 			size_t split_num = last_server_idx - first_server_idx + 1;
 
+			CUR_TIME(req_t1);
 			scan_request_t req(thread_id, tmpkey, endkey, range_num);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
-					<< "endkey = " << endkey.to_string() << " num = " << range_num);
+			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
+			//		<< "endkey = " << endkey.to_string() << " num = " << range_num);
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
+			CUR_TIME(req_t2);
 
+			struct timespec scan_rsp_t1, scan_rsp_t2, scan_rsp_t3;
+			struct timespec scan_wait_t1, scan_wait_t2, scan_wait_t3;
+			double scan_rsp_latency = 0.0, scan_wait_latency = 0.0;
 			for (size_t tmpsplit = 0; tmpsplit < split_num; tmpsplit++) {
+				CUR_TIME(scan_wait_t1);
 				while (heads[thread_id] == tails[thread_id])
 					;
 				INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+				CUR_TIME(scan_wait_t2);
+
+				CUT_TIME(scan_rsp_t1);
 				recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
 				rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 				tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
@@ -468,15 +508,42 @@ static int run_fg(void *param) {
 				packet_type_t pkt_type = get_packet_type(buf, recv_size);
 				INVARIANT(pkt_type == packet_type_t::SCAN_RES);
 				scan_response_t rsp(buf, recv_size);
-				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
-						<< "endkey = " << rsp.endkey().to_string() << " num = " << rsp.num());
+				//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
+				//		<< "endkey = " << rsp.endkey().to_string() << " num = " << rsp.num());
+				CUR_TIME(scan_rsp_t2);
+
+				DELTA_TIME(scan_rsp_t2, scan_rsp_t1, scan_rsp_t3);
+				double tmp_scan_rsp_latency = GET_MICROSECOND(scan_rsp_t3);
+				if (tmpsplit == 0 || tmp_scan_rsp_latency < scan_rsp_latency) {
+					scan_rsp_latency = tmp_scan_rsp_latency;
+					rsp_t1 = scan_rsp_t1;
+					rsp_t2 = scan_rsp_t2;
+				}
+				DELTA_TIME(scan_wait_t2, scan_wait_t1, scan_wait_t3);
+				double tmp_scan_wait_latency = GET_MICROSECOND(scan_wait_t3);
+				if (tmpsplit == 0 || tmp_scan_wait_latency < scan_wait_latency) {
+					scan_wait_latency = tmp_scan_wait_latency;
+					wait_t1 = scan_wait_t1;
+					wait_t2 = scan_wait_t2;
+				}
 			}
 		}
 		else {
 			printf("Invalid request type: %u\n", uint32_t(iter.type()));
 			exit(-1);
 		}
-			thread_param.throughput++;
+		thread_param.throughput++;
+		DELTA_TIME(req_t2, req_t1, req_t3);
+		DELTA_TIME(rsp_t2, rsp_t1, rsp_t3);
+		DELTA_TIME(wait_t2, wait_t1, wait_t3);
+		SUM_TIME(req_t3, rsp_t3, final_t3);
+		double wait_time = GET_MICROSECOND(wait_t3);
+		double final_time = GET_MICROSECOND(final_t3);
+		if (wait_time > dpdk_polling_time) {
+			final_time += (wait_time - dpdk_polling_time);
+		}
+		latency_list.push_back(final_time);
+		wait_list.push_back(wait_time); // TMP
 
 		sent_pkt_idx++;
 		if (sent_pkt_idx >= burst_size) {
@@ -495,6 +562,29 @@ static int run_fg(void *param) {
 			rte_pktmbuf_free(sent_pkts[free_idx]);
 		}
 	}
+
+	// Dump latency statistics
+	double min_latency, max_latency, avg_latency, 90th_latency, 99th_latency, median_latency;
+	std::sort(latency_list.begin(), latency_list.end());
+	min_latency = latency_list[0];
+	max_latency = latency_list[latency_list.size()-1];
+	90th_latency = latency_list[latency_list.size()*0.9];
+	99th_latency = latency_list[latency_list.size()*0.99];
+	median_latency = latency_list[latency_list.size()/2];
+	for (i = 0; i < latency_list.size(); i++) {
+		avg_latency += latency_list[i];
+	}
+	avg_latency /= double(latency_list.size());
+	FDEBUG_THIS("| min | max | avg | 90th | 99th | median |");
+	FDEBUG_THIS("| " << min_latency << " | " << max_latency << " | " << avg_latency << " | " << 90th_latency \
+			<< " | " << 99th_latency << " | " << median_latency << " |");
+	// TMP
+	double avg_wait;
+	for (i = 0; i < wait_list.size(); i++) {
+		avg_wait += wait_list[i];
+	}
+	avg_wait /= double(wait_list.size());
+	FDEBUG_THIS("Avgerage waiting time (dpdk polling time): " << avg_wait);
 
 #if !defined(NDEBUGGING_LOG)
 	ofs.close();

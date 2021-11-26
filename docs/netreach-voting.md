@@ -229,6 +229,18 @@
 		* Solution: use recirculation (we must enable and add port for recir/cpu/pktgen in ptf before usage)
 	+ Fix a bug of # of MAT entries; fix a bug of making snapshot when init/open
 	+ Fix a bug of DELREQ_CASE1: add header of seq_hdr for DELREQ_CASE1; read val, vallen, and dirty for DELREQ
+- Performance test (TODO: apply to baseline)
+	+ NOTE: use high precision time by clock_gettime (helper.h)
+		* clock(): millisecond
+		* gettimeofday() -> struct timeval: microsecond
+		* clock_gettime() -> struct timespec: nanosecond
+	+ Count client-side latency (ycsb_remote_client.c)
+		* For SCAN
+			- Do not count split latency
+			- Use minimum sub-request for SCAN
+		* Test avg RTT between client and sw for recirculation time
+	+ TODO: Count server-side latency (ycsb_remote.c)
+	+ TODO: throughput
 - TODO: Optimize for stage (at most 32B -> 48B; optional after we finish all implementation)
 	+ TODO: Combine access_lock_tbl into try_res_tbl
 
