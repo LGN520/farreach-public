@@ -756,11 +756,6 @@ static int run_sfg(void * param) {
   while (!running) {
   }
 
-	// DEBUG
-	//double prevt0 = 0;
-	//double t0 = CUR_TIME();
-	//uint32_t debug_idx = 0;
-
   while (running) {
 	/*recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 	if (recv_size == -1) {
@@ -798,7 +793,6 @@ static int run_sfg(void * param) {
 		}*/
 
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
-		//double tmpt0 = CUR_TIME();
 		switch (pkt_type) {
 			case packet_type_t::GET_REQ: 
 				{
@@ -1060,10 +1054,6 @@ static int run_sfg(void * param) {
 			res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
 			INVARIANT(res == 0);
 		}
-
-		//debug_idx++;
-		//double tmpt1 = CUR_TIME();
-		//t0 += (tmpt1 - tmpt0);
 	}
   }
   

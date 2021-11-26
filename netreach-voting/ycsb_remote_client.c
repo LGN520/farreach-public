@@ -536,11 +536,11 @@ static int run_fg(void *param) {
 		DELTA_TIME(req_t2, req_t1, req_t3);
 		DELTA_TIME(rsp_t2, rsp_t1, rsp_t3);
 		DELTA_TIME(wait_t2, wait_t1, wait_t3);
-		SUM_TIME(req_t3, rsp_t3, final_t3);
+		SUM_TIME(req_t3, rsp_t3, final_t3); // time of sending req and receiving rsp
 		double wait_time = GET_MICROSECOND(wait_t3);
 		double final_time = GET_MICROSECOND(final_t3);
 		if (wait_time > dpdk_polling_time) {
-			final_time += (wait_time - dpdk_polling_time);
+			final_time += (wait_time - dpdk_polling_time); // time of in-switch queuing and server-side latency
 		}
 		latency_list.push_back(final_time);
 		wait_list.push_back(wait_time); // TMP

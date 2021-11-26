@@ -234,13 +234,16 @@
 		* clock(): millisecond
 		* gettimeofday() -> struct timeval: microsecond
 		* clock_gettime() -> struct timespec: nanosecond
-	+ Count client-side latency (ycsb_remote_client.c)
-		* For SCAN
-			- Do not count split latency
-			- Use minimum sub-request for SCAN
-		* Test avg RTT between client and sw for recirculation time
-	+ TODO: Count server-side latency (ycsb_remote.c)
+	+ Count latency in client side (ycsb_remote_client.c)
+		* Time of sending req, waiting for rsp (queuing and server-side processing without dpdk polling), and receiving rsp
+		* For SCAN: do not count split latency and use minimum sub-request for SCAN
+		* TODO: Test avg RTT between client and sw for recirculation time
 	+ TODO: throughput
+		* TODO: rate limit client-side throughput to server-side aggregated throughput
+		* TODO: count client-side real throughput and server-side real throughput
+		* TODO: we can normalize the system throughput (client-side) to server-side real aggregate throughput (minimum value: 1)
+	+ TODO: load balance
+		* TODO: per-server received number of requests
 - TODO: Optimize for stage (at most 32B -> 48B; optional after we finish all implementation)
 	+ TODO: Combine access_lock_tbl into try_res_tbl
 
