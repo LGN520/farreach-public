@@ -26,7 +26,7 @@
 
 #define MQ_SIZE 256
 
-const double dpdk_polling_time = 0.0;
+const double dpdk_polling_time = 21.82; // Test by enabling TEST_DPDK_POLLING, and only transmit packets between client and switch
 const size_t max_sending_rate = size_t(1.0 * 1024 * 1024); // 1 MQPS; limit sending rate to x (e.g., the aggregate rate of servers)
 const size_t rate_limit_period = 10 * 1000; // 10 * 1000us
 
@@ -106,9 +106,14 @@ std::atomic<size_t> finish_threads(0);
 struct alignas(CACHELINE_SIZE) FGParam {
 	uint8_t thread_id;
 	std::vector<double> latency_list;
-	std::vector<double> wait_list; // TMP: To count dpdk polling time
+#ifdef TEST_DPDK_POLLING
+	std::vector<double> wait_list; // TMPTMP: To count dpdk polling time
+#endif
 	double sum_latency;
 };
+#ifdef TEST_DPDK_POLLING
+double receiver_sum_latency = 0.0; // TMPTMP
+#endif
 
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
@@ -250,7 +255,9 @@ void run_benchmark() {
 	for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
 		fg_params[worker_i].thread_id = worker_i;
 		fg_params[worker_i].latency_list.clear();
+#ifdef TEST_DPDK_POLLING
 		fg_params[worker_i].wait_list.clear();
+#endif
 		fg_params[worker_i].sum_latency = 0.0;
 		/*int ret = pthread_create(&threads[worker_i], nullptr, run_fg,
 														 (void *)&fg_params[worker_i]);*/
@@ -277,11 +284,15 @@ void run_benchmark() {
 
 	// Dump latency statistics
 	std::vector<double> latency_list;
-	std::vector<double> wait_list; // TMP
+#ifdef TEST_DPDK_POLLING
+	std::vector<double> wait_list; // TMPTMP
+#endif
 	double sum_latency;
 	for (size_t i = 0; i < fg_n; i++) {
 		latency_list.insert(latency_list.end(), fg_params[i].latency_list.begin(), fg_params[i].latency_list.end());
-		wait_list.insert(wait_list.end(), fg_params[i].wait_list.begin(), fg_params[i].wait_list.end()); // TMP
+#ifdef TEST_DPDK_POLLING
+		wait_list.insert(wait_list.end(), fg_params[i].wait_list.begin(), fg_params[i].wait_list.end()); // TMPTMP
+#endif
 		sum_latency += fg_params[i].sum_latency;
 	}
 	double min_latency, max_latency, avg_latency, tail90_latency, tail99_latency, median_latency;
@@ -296,13 +307,20 @@ void run_benchmark() {
 	COUT_THIS("| min | max | avg | 90th | 99th | median | sum |");
 	COUT_THIS("| " << min_latency << " | " << max_latency << " | " << avg_latency << " | " << tail90_latency \
 			<< " | " << tail99_latency << " | " << median_latency << " | " << sum_latency << " |");
-	// TMP
-	double avg_wait;
-	for (size_t i = 0; i < wait_list.size(); i++) {
-		avg_wait += wait_list[i];
-	}
-	avg_wait /= double(wait_list.size());
-	COUT_THIS("Avgerage waiting time (dpdk polling time): " << avg_wait);
+#ifdef TEST_DPDK_POLLING
+	// TMPTMP
+	double avg_receiver_latency = receiver_sum_latency / double(wait_list.size());
+	double median_wait, min_wait; // min_wait can be treated as the cost of dpdk itself without scheduling for PMD
+	std::sort(wait_list.begin(), wait_list.end());
+	min_wait = wait_list[0];
+	median_wait = wait_list[wait_list.size()/2];
+	// wait_time: in-switch queuing + server-side latency + dpdk overhead + client-side packet dispatching (receiver) + schedule cost for PMD (unnecessary)
+	// When testing DPDK PMD scheduling cost, we only transmit packets between client and switch by 1 thread -> no in-switch ququing and server-side latency
+	// median_wait: dpdk overhead + client-side packet dispatching + schedule cost for PMD
+	// min_watt: dpdk overhead
+	// avg_receiver_latency: client-side packet dispatching
+	COUT_THIS("Ddpdk polling time: " << (median_wait - min_wait - avg_receiver_latency)); // schedule cost for PMD
+#endif
 	COUT_THIS("Client-side throughput: " << latency_list.size());
 	
 
@@ -324,7 +342,13 @@ static int run_receiver(void *param) {
 		;
 
 	struct rte_mbuf *received_pkts[32];
+#ifdef TEST_DPDK_POLLING
+	struct timespec receiver_t1, receiver_t2, receiver_t3;
+#endif
 	while (running) {
+#ifdef TEST_DPDK_POLLING
+		CUR_TIME(receiver_t1);
+#endif
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
 		if (n_rx == 0) {
 			continue;
@@ -353,6 +377,11 @@ static int run_receiver(void *param) {
 					if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
 						pkts_list[idx][heads[idx]] = received_pkts[i];
 						heads[idx] = (heads[idx] + 1) % MQ_SIZE;
+#ifdef TEST_DPDK_POLLING
+						CUR_TIME(receiver_t2);
+						DELTA_TIME(receiver_t2, receiver_t1, receiver_t3);
+						receiver_sum_latency += GET_MICROSECOND(receiver_t3);
+#endif
 					}
 					else {
 						COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
@@ -581,12 +610,15 @@ static int run_fg(void *param) {
 		double wait_time = GET_MICROSECOND(wait_t3);
 		double final_time = GET_MICROSECOND(final_t3);
 		if (wait_time > dpdk_polling_time) {
+			// wait_time: in-switch queuing + server-side latency + dpdk overhead + client-side packet dispatching (receiver) + schedule cost for PMD (unnecessary)
 			final_time += (wait_time - dpdk_polling_time); // time of in-switch queuing and server-side latency
 		}
 
 		thread_param.sum_latency += final_time;
 		thread_param.latency_list.push_back(final_time);
-		thread_param.wait_list.push_back(wait_time); // TMP
+#ifdef TEST_DPDK_POLLING
+		thread_param.wait_list.push_back(wait_time); // TMPTMP
+#endif
 
 		// Rate limit (within each rate_limit_period, we can send at most per_client_per_period_max_sending_rate reqs)
 		cur_sending_rate++;

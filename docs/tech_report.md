@@ -162,4 +162,6 @@
 	+ `curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz`
 	+ `tar xfvz ycsb-0.17.0.tar.gz`
 	+ `cd ycsb-0.17.0`
-
+- After restart
+	+ Re-configure dpdk
+	+ Run `~/bf-sde-8.9.1/install/bin/bf_kdrv_mod_load $SDE_INSTALL` and `~/bf-sde-8.9.1/install/bin/bf_knet_mod_load $SDE_INSTALL` in Tofino

@@ -110,6 +110,10 @@
 #define NDEBUGGING_LOG
 #endif
 
+#if 0
+#define TEST_DPDK_POLLING
+#endif
+
 #if defined(NDEBUGGING)
 #define DEBUG_THIS(this)
 #else
