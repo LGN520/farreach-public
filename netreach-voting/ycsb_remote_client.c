@@ -26,6 +26,7 @@
 #define MQ_SIZE 256
 
 const double dpdk_polling_time = 0.0;
+const size_t max_sending_rate = size_t(1.0 * 1024 * 1024); // 1 MQPS; limit sending rate to x (e.g., the aggregate rate of servers)
 
 struct alignas(CACHELINE_SIZE) FGParam;
 
@@ -100,8 +101,10 @@ std::atomic<size_t> ready_threads(0);
 std::atomic<size_t> finish_threads(0);
 
 struct alignas(CACHELINE_SIZE) FGParam {
-	uint64_t throughput;
 	uint8_t thread_id;
+	std::vector<double> latency_list;
+	std::vector<double> wait_list; // TMP: To count dpdk polling time
+	double sum_latency;
 };
 
 int main(int argc, char **argv) {
@@ -242,7 +245,9 @@ void run_benchmark() {
 	// Launch workers
 	for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
 		fg_params[worker_i].thread_id = worker_i;
-		fg_params[worker_i].throughput = 0;
+		fg_params[worker_i].latency_list.clear();
+		fg_params[worker_i].wait_list.clear();
+		fg_params[worker_i].sum_latency = 0.0;
 		/*int ret = pthread_create(&threads[worker_i], nullptr, run_fg,
 														 (void *)&fg_params[worker_i]);*/
 	ret = rte_eal_remote_launch(run_fg, (void *)&fg_params[worker_i], lcoreid);
@@ -263,10 +268,41 @@ void run_benchmark() {
 	while (finish_threads < fg_n) sleep(1);
 	COUT_THIS("[client] all workers finish!");
 
-	// TODO: process statistics
+	/* Process statistics */
+	COUT_THIS("[client] processing statistics");
+
+	// Dump latency statistics
+	std::vector<double> latency_list;
+	std::vector<double> wait_list; // TMP
+	double sum_latency;
+	for (size_t i = 0; i < fg_n; i++) {
+		latency_list.insert(fg_params[i].latency_list.begin(), fg_params[i].latency_list.end());
+		wait_list.insert(fg_params[i].wait_list.begin(), fg_params[i].wait_list.end()); // TMP
+		sum_latency += fg_params[i].sum_latency;
+	}
+	double min_latency, max_latency, avg_latency, 90th_latency, 99th_latency, median_latency;
+	std::sort(latency_list.begin(), latency_list.end());
+	min_latency = latency_list[0];
+	max_latency = latency_list[latency_list.size()-1];
+	90th_latency = latency_list[latency_list.size()*0.9];
+	99th_latency = latency_list[latency_list.size()*0.99];
+	median_latency = latency_list[latency_list.size()/2];
+	avg_latency = sum_latency / double(latency_list.size());
+	COUT_THIS("[Latency Statistics]")
+	COUT_THIS("| min | max | avg | 90th | 99th | median | sum |");
+	COUT_THIS("| " << min_latency << " | " << max_latency << " | " << avg_latency << " | " << 90th_latency \
+			<< " | " << 99th_latency << " | " << median_latency << " | " << sum_latency << " |");
+	// TMP
+	double avg_wait;
+	for (i = 0; i < wait_list.size(); i++) {
+		avg_wait += wait_list[i];
+	}
+	avg_wait /= double(wait_list.size());
+	COUT_THIS("Avgerage waiting time (dpdk polling time): " << avg_wait);
 	
-	// TODO: uncomment it after processing statistics
-	// running = false;
+
+
+	running = false; // After processing statistics
 
 	/*void *status;
 	for (size_t i = 0; i < fg_n; i++) {
@@ -364,8 +400,9 @@ static int run_fg(void *param) {
 	COUT_THIS("[client " << uint32_t(thread_id) << "] Ready.");
 	ready_threads++;
 
-	std::vector<double> latency_list;
-	std::vector<double> wait_list; // TMP: To count dpdk polling time
+	// For rate limit
+	size_t per_client_max_sending_rate = max_sending_rate / fg_n;
+	double rate_limit_sum_latency = 0.0; // Set to 0 periodically
 
 	while (!running)
 		;
@@ -379,7 +416,7 @@ static int run_fg(void *param) {
 		if (iter.type() == uint8_t(packet_type_t::GET_REQ)) { // get
 			CUR_TIME(req_t1);
 			get_request_t req(thread_id, tmpkey);
-			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
+			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
 			// DPDK
@@ -408,7 +445,7 @@ static int run_fg(void *param) {
 			packet_type_t pkt_type = get_packet_type(buf, recv_size);
 			INVARIANT(pkt_type == packet_type_t::GET_RES);
 			get_response_t rsp(buf, recv_size);
-			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
+			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
 			CUR_TIME(rsp_t2);
 		}
 		else if (iter.type() == uint8_t(packet_type_t::PUT_REQ)) { // update or insert
@@ -416,7 +453,7 @@ static int run_fg(void *param) {
 
 			CUR_TIME(req_t1);
 			put_request_t req(thread_id, tmpkey, tmpval);
-			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
+			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
 			// DPDK
@@ -440,13 +477,13 @@ static int run_fg(void *param) {
 			packet_type_t pkt_type = get_packet_type(buf, recv_size);
 			INVARIANT(pkt_type == packet_type_t::PUT_RES);
 			put_response_t rsp(buf, recv_size);
-			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 			CUR_TIME(rsp_t2);
 		}
 		else if (iter.type() == uint8_t(packet_type_t::DEL_REQ)) {
 			CUR_TIME(req_t1);
 			del_request_t req(thread_id, tmpkey);
-			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
+			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
 			// DPDK
@@ -470,7 +507,7 @@ static int run_fg(void *param) {
 			packet_type_t pkt_type = get_packet_type(buf, recv_size);
 			INVARIANT(pkt_type == packet_type_t::DEL_RES);
 			del_response_t rsp(buf, recv_size);
-			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 			CUR_TIME(rsp_t2);
 		}
 		else if (iter.type() == uint8_t(packet_type_t::SCAN_REQ)) {
@@ -481,8 +518,8 @@ static int run_fg(void *param) {
 
 			CUR_TIME(req_t1);
 			scan_request_t req(thread_id, tmpkey, endkey, range_num);
-			//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
-			//		<< "endkey = " << endkey.to_string() << " num = " << range_num);
+			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
+					<< "endkey = " << endkey.to_string() << " num = " << range_num);
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
@@ -508,8 +545,8 @@ static int run_fg(void *param) {
 				packet_type_t pkt_type = get_packet_type(buf, recv_size);
 				INVARIANT(pkt_type == packet_type_t::SCAN_RES);
 				scan_response_t rsp(buf, recv_size);
-				//FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
-				//		<< "endkey = " << rsp.endkey().to_string() << " num = " << rsp.num());
+				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
+						<< "endkey = " << rsp.endkey().to_string() << " num = " << rsp.num());
 				CUR_TIME(scan_rsp_t2);
 
 				DELTA_TIME(scan_rsp_t2, scan_rsp_t1, scan_rsp_t3);
@@ -532,7 +569,6 @@ static int run_fg(void *param) {
 			printf("Invalid request type: %u\n", uint32_t(iter.type()));
 			exit(-1);
 		}
-		thread_param.throughput++;
 		DELTA_TIME(req_t2, req_t1, req_t3);
 		DELTA_TIME(rsp_t2, rsp_t1, rsp_t3);
 		DELTA_TIME(wait_t2, wait_t1, wait_t3);
@@ -542,8 +578,10 @@ static int run_fg(void *param) {
 		if (wait_time > dpdk_polling_time) {
 			final_time += (wait_time - dpdk_polling_time); // time of in-switch queuing and server-side latency
 		}
-		latency_list.push_back(final_time);
-		wait_list.push_back(wait_time); // TMP
+
+		thread_param.sum_latency += final_time;
+		thread_param.latency_list.push_back(final_time);
+		thread_param.wait_list.push_back(wait_time); // TMP
 
 		sent_pkt_idx++;
 		if (sent_pkt_idx >= burst_size) {
@@ -562,29 +600,6 @@ static int run_fg(void *param) {
 			rte_pktmbuf_free(sent_pkts[free_idx]);
 		}
 	}
-
-	// Dump latency statistics
-	double min_latency, max_latency, avg_latency, 90th_latency, 99th_latency, median_latency;
-	std::sort(latency_list.begin(), latency_list.end());
-	min_latency = latency_list[0];
-	max_latency = latency_list[latency_list.size()-1];
-	90th_latency = latency_list[latency_list.size()*0.9];
-	99th_latency = latency_list[latency_list.size()*0.99];
-	median_latency = latency_list[latency_list.size()/2];
-	for (i = 0; i < latency_list.size(); i++) {
-		avg_latency += latency_list[i];
-	}
-	avg_latency /= double(latency_list.size());
-	FDEBUG_THIS("| min | max | avg | 90th | 99th | median |");
-	FDEBUG_THIS("| " << min_latency << " | " << max_latency << " | " << avg_latency << " | " << 90th_latency \
-			<< " | " << 99th_latency << " | " << median_latency << " |");
-	// TMP
-	double avg_wait;
-	for (i = 0; i < wait_list.size(); i++) {
-		avg_wait += wait_list[i];
-	}
-	avg_wait /= double(wait_list.size());
-	FDEBUG_THIS("Avgerage waiting time (dpdk polling time): " << avg_wait);
 
 #if !defined(NDEBUGGING_LOG)
 	ofs.close();

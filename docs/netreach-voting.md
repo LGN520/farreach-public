@@ -239,7 +239,10 @@
 		* For SCAN: do not count split latency and use minimum sub-request for SCAN
 		* TODO: Test avg RTT between client and sw for recirculation time
 	+ TODO: throughput
-		* TODO: rate limit client-side throughput to server-side aggregated throughput
+		* Suppose that max thpt of switch is n, max aggregate thpt of servers is  m, real client-side thpt is x, real server-side aggregate thpt is y
+			- Normalized thpt: min{x/y, n/m}
+		* TODO: rate limit client-side throughput (ycsb_remote_clent.c)
+		* TODO test server-side aggregated throughput
 		* TODO: count client-side real throughput and server-side real throughput
 		* TODO: we can normalize the system throughput (client-side) to server-side real aggregate throughput (minimum value: 1)
 	+ TODO: load balance
