@@ -236,17 +236,19 @@
 		* clock_gettime() -> struct timespec: nanosecond
 	+ Count latency in client side (ycsb_remote_client.c)
 		* Time of sending req, waiting for rsp (queuing and server-side processing without dpdk polling), and receiving rsp
-		* For SCAN: do not count split latency and use minimum sub-request for SCAN
-		* TODO: Test avg RTT between client and sw for recirculation time
-	+ TODO: throughput
-		* Suppose that max thpt of switch is n, max aggregate thpt of servers is  m, real client-side thpt is x, real server-side aggregate thpt is y
-			- Normalized thpt: min{x/y, n/m}
-		* TODO: rate limit client-side throughput (ycsb_remote_clent.c)
-		* TODO test server-side aggregated throughput
-		* TODO: count client-side real throughput and server-side real throughput
-		* TODO: we can normalize the system throughput (client-side) to server-side real aggregate throughput (minimum value: 1)
+			- For SCAN: do not count split latency and use minimum sub-request for SCAN
+		* TODO: Test avg RTT between client and sw for recirculation time -> set dpdk_polling_time
+	+ Count throughput
+		* Suppose that max thpt of switch is n, max aggregate thpt of servers is m, real client-side thpt (system throughput) is x, 
+		real server-side aggregate thpt is y
+			- Normalized thpt: min{x/y, n/m} (minimum value is 1)
+		* Rate limit client-side throughput (MQPS) and count client-side throughput x (ycsb_remote_clent.c)
+		* Count server-side aggregate throughput y (ycsb_server.c)
+			- For SCAN: we count # of received requests instead of sub-requests
+		* TODO: Test max aggregate thpt of servers (m) -> set max sending rate for rate limit
 	+ TODO: load balance
 		* TODO: per-server received number of requests
+			- For SCAN: count # of sub-requests for load balance metric
 - TODO: Optimize for stage (at most 32B -> 48B; optional after we finish all implementation)
 	+ TODO: Combine access_lock_tbl into try_res_tbl
 

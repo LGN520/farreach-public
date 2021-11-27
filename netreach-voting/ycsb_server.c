@@ -34,12 +34,14 @@
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
 struct alignas(CACHELINE_SIZE) SFGParam;
+struct alignas((CACHELINE_SIZE)) ReceiverParam;
 
 typedef BackupData backup_data_t;
 typedef SpecialCase special_case_t;
 typedef Key index_key_t;
 typedef Val val_t;
 typedef SFGParam sfg_param_t;
+typedef ReceiverParam receiver_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
 typedef PutRequest<index_key_t, val_t> put_request_t;
@@ -74,7 +76,8 @@ void kill(int signum);
 
 // DPDK
 static int run_sfg(void *param);
-static int run_receiver(__attribute__((unused)) void *param); // receiver
+//static int run_receiver(__attribute__((unused)) void *param); // receiver
+static int run_receiver(void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
@@ -118,6 +121,10 @@ std::atomic<size_t> ready_threads(0);
 struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
   uint8_t thread_id;
+};
+
+struct alignas(CACHELINE_SIZE) ReceiverParam {
+	size_t overall_thpt;
 };
 
 int main(int argc, char **argv) {
@@ -306,7 +313,9 @@ void run_server(xindex_t *table) {
 	running = false;
 
 	// Launch receiver
-	ret = rte_eal_remote_launch(run_receiver, NULL, lcoreid);
+	receiver_param_t receiver_param;
+	receiver_param.overall_thpt = 0;
+	ret = rte_eal_remote_launch(run_receiver, (void*)&receiver_param, lcoreid);
 	if (ret) {
 		COUT_N_EXIT("Error:" << ret);
 	}
@@ -357,6 +366,9 @@ void run_server(xindex_t *table) {
 		sleep(1);
 	}
 
+	/* Processing Statistics */
+	COUT_THIS("Server-side aggregate throughput: " << receiver_param.overall_thpt);
+
 	running = false;
 	/*void *status;
 	for (size_t i = 0; i < fg_n; i++) {
@@ -374,6 +386,7 @@ void run_server(xindex_t *table) {
 }
 
 static int run_receiver(void *param) {
+	receiver_param_t &receiver_param = *((receiver_param_t *)param);
 	while (!running)
 		;
 
@@ -395,6 +408,7 @@ static int run_receiver(void *param) {
 			else {
 				bool isscan = get_scan_keys(received_pkts[i], &startkey, &endkey, &num);
 				if (isscan) {
+					receiver_param.overall_thpt++;
 					size_t first_server_idx = get_server_idx(startkey);
 					size_t last_server_idx = get_server_idx(endkey);
 					size_t split_num = last_server_idx - first_server_idx + 1;
@@ -450,6 +464,7 @@ static int run_receiver(void *param) {
 							stats[idx] = true;
 						}*/
 						if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
+							receiver_param.overall_thpt++;
 							pkts_list[idx][heads[idx]] = received_pkts[i];
 							heads[idx] = (heads[idx] + 1) % MQ_SIZE;
 						}

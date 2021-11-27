@@ -13,6 +13,7 @@
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // inetaddr conversion
+#include <unistd.h>
 //#include <sys/time.h> // struct timeval
 
 #include "helper.h"
@@ -27,6 +28,7 @@
 
 const double dpdk_polling_time = 0.0;
 const size_t max_sending_rate = size_t(1.0 * 1024 * 1024); // 1 MQPS; limit sending rate to x (e.g., the aggregate rate of servers)
+const size_t rate_limit_period = 10 * 1000; // 10 * 1000us
 
 struct alignas(CACHELINE_SIZE) FGParam;
 
@@ -70,6 +72,7 @@ size_t fg_n; // client num
 short dst_port;
 const char *workload_name;
 char output_dir[256];
+size_t per_client_per_period_max_sending_rate;
 
 // SCAN split
 size_t server_num;
@@ -145,6 +148,7 @@ inline void parse_ini(const char* config_file) {
 	RUN_SPLIT_DIR(output_dir, workload_name, fg_n);
 	server_num = ini.get_server_num();
 	per_server_range = std::numeric_limits<size_t>::max() / server_num;
+	per_client_per_period_max_sending_rate = max_sending_rate / fg_n / (1 * 1000 * 1000 / rate_limit_period);
 
 	printf("src_macaddr: ");
 	for (size_t i = 0; i < 6; i++) {
@@ -299,11 +303,12 @@ void run_benchmark() {
 	}
 	avg_wait /= double(wait_list.size());
 	COUT_THIS("Avgerage waiting time (dpdk polling time): " << avg_wait);
+	COUT_THIS("Client-side throughput: " << latency_list.size());
 	
 
 
 	running = false; // After processing statistics
-
+	COUT_THIS("Finish dumping statistics!")
 	/*void *status;
 	for (size_t i = 0; i < fg_n; i++) {
 		int rc = pthread_join(threads[i], &status);
@@ -401,8 +406,8 @@ static int run_fg(void *param) {
 	ready_threads++;
 
 	// For rate limit
-	size_t per_client_max_sending_rate = max_sending_rate / fg_n;
-	double rate_limit_sum_latency = 0.0; // Set to 0 periodically
+	double cur_sending_time = 0.0; // Set to 0 periodically
+	size_t cur_sending_rate = 0;
 
 	while (!running)
 		;
@@ -582,6 +587,17 @@ static int run_fg(void *param) {
 		thread_param.sum_latency += final_time;
 		thread_param.latency_list.push_back(final_time);
 		thread_param.wait_list.push_back(wait_time); // TMP
+
+		// Rate limit (within each rate_limit_period, we can send at most per_client_per_period_max_sending_rate reqs)
+		cur_sending_rate++;
+		cur_sending_time += final_time;
+		if (cur_sending_rate >= per_client_per_period_max_sending_rate) {
+			if (cur_sending_time < rate_limit_period) {
+				usleep(rate_limit_period - cur_sending_time);
+			}
+			cur_sending_rate = 0;
+			cur_sending_time = 0.0;
+		}
 
 		sent_pkt_idx++;
 		if (sent_pkt_idx >= burst_size) {
