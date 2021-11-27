@@ -246,8 +246,9 @@
 		* Rate limit client-side throughput (MQPS) and count client-side throughput x (ycsb_remote_clent.c)
 		* Count server-side aggregate throughput y including normal reqs, evictions, and notifications (ycsb_server.c)
 			- For SCAN: we count # of received sub-requests for aggregate throughput
-		* TODO: Test max aggregate thpt of servers (m) -> set max sending rate for rate limit
+		* Test max aggregate thpt of servers (m) -> set max sending rate for rate limit
 			- Run baseline (e.g., tofino-xindex-dpdk-lsm-varkv) to tranmist packets between client and server (max threads)
+			- 4-thread: m=0.35 MQPS; 16-thread: m=0.99 MQPS; 32-thread: m=1.19 MQPS
 	+ Count load balance
 		* Count per-server received number of requests (ycsb_server.c)
 			- For SCAN: count # of sub-requests for load balance metric

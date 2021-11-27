@@ -19,7 +19,7 @@
 #define RX_RING_SIZE 512
 #define TX_RING_SIZE 512
 
-#define NUM_MBUFS 4096
+#define NUM_MBUFS 4096 * 64
 #define MBUF_CACHE_SIZE 128
 
 // Internal var
