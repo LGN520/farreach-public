@@ -280,25 +280,25 @@ void run_benchmark() {
 	std::vector<double> wait_list; // TMP
 	double sum_latency;
 	for (size_t i = 0; i < fg_n; i++) {
-		latency_list.insert(fg_params[i].latency_list.begin(), fg_params[i].latency_list.end());
-		wait_list.insert(fg_params[i].wait_list.begin(), fg_params[i].wait_list.end()); // TMP
+		latency_list.insert(latency_list.end(), fg_params[i].latency_list.begin(), fg_params[i].latency_list.end());
+		wait_list.insert(wait_list.end(), fg_params[i].wait_list.begin(), fg_params[i].wait_list.end()); // TMP
 		sum_latency += fg_params[i].sum_latency;
 	}
-	double min_latency, max_latency, avg_latency, 90th_latency, 99th_latency, median_latency;
+	double min_latency, max_latency, avg_latency, tail90_latency, tail99_latency, median_latency;
 	std::sort(latency_list.begin(), latency_list.end());
 	min_latency = latency_list[0];
 	max_latency = latency_list[latency_list.size()-1];
-	90th_latency = latency_list[latency_list.size()*0.9];
-	99th_latency = latency_list[latency_list.size()*0.99];
+	tail90_latency = latency_list[latency_list.size()*0.9];
+	tail99_latency = latency_list[latency_list.size()*0.99];
 	median_latency = latency_list[latency_list.size()/2];
 	avg_latency = sum_latency / double(latency_list.size());
 	COUT_THIS("[Latency Statistics]")
 	COUT_THIS("| min | max | avg | 90th | 99th | median | sum |");
-	COUT_THIS("| " << min_latency << " | " << max_latency << " | " << avg_latency << " | " << 90th_latency \
-			<< " | " << 99th_latency << " | " << median_latency << " | " << sum_latency << " |");
+	COUT_THIS("| " << min_latency << " | " << max_latency << " | " << avg_latency << " | " << tail90_latency \
+			<< " | " << tail99_latency << " | " << median_latency << " | " << sum_latency << " |");
 	// TMP
 	double avg_wait;
-	for (i = 0; i < wait_list.size(); i++) {
+	for (size_t i = 0; i < wait_list.size(); i++) {
 		avg_wait += wait_list[i];
 	}
 	avg_wait /= double(wait_list.size());
@@ -439,7 +439,7 @@ static int run_fg(void *param) {
 			while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
-			CUT_TIME(wait_t2);
+			CUR_TIME(wait_t2);
 
 			CUR_TIME(rsp_t1);
 			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
@@ -467,11 +467,11 @@ static int run_fg(void *param) {
 			INVARIANT(res == 1);
 			CUR_TIME(req_t2);
 
-			CUT_TIME(wait_t1);
+			CUR_TIME(wait_t1);
 			while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
-			CUT_TIME(wait_t2);
+			CUR_TIME(wait_t2);
 
 			CUR_TIME(rsp_t1);
 			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
@@ -501,7 +501,7 @@ static int run_fg(void *param) {
 			while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
-			CUT_TIME(wait_t2);
+			CUR_TIME(wait_t2);
 
 			CUR_TIME(rsp_t1);
 			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
@@ -541,7 +541,7 @@ static int run_fg(void *param) {
 				INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
 				CUR_TIME(scan_wait_t2);
 
-				CUT_TIME(scan_rsp_t1);
+				CUR_TIME(scan_rsp_t1);
 				recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
 				rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 				tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;

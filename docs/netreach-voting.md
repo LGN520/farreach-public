@@ -241,14 +241,15 @@
 	+ Count throughput
 		* Suppose that max thpt of switch is n, max aggregate thpt of servers is m, real client-side thpt (system throughput) is x, 
 		real server-side aggregate thpt is y
-			- Normalized thpt: min{x/y, n/m} (minimum value is 1)
+			- Normalized thpt relative to m: min{x/y, n/m} (minimum value is 1 if without SCAN, smaller than 1 if with SCAN)
 		* Rate limit client-side throughput (MQPS) and count client-side throughput x (ycsb_remote_clent.c)
-		* Count server-side aggregate throughput y (ycsb_server.c)
-			- For SCAN: we count # of received requests instead of sub-requests
+		* Count server-side aggregate throughput y including normal reqs, evictions, and notifications (ycsb_server.c)
+			- For SCAN: we count # of received sub-requests for aggregate throughput
 		* TODO: Test max aggregate thpt of servers (m) -> set max sending rate for rate limit
-	+ TODO: load balance
-		* TODO: per-server received number of requests
+	+ Count load balance
+		* Count per-server received number of requests (ycsb_server.c)
 			- For SCAN: count # of sub-requests for load balance metric
+		* Normalize per-server thpt to average per-server thpt as per-server load balance ratio
 - TODO: Optimize for stage (at most 32B -> 48B; optional after we finish all implementation)
 	+ TODO: Combine access_lock_tbl into try_res_tbl
 

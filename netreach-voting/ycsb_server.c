@@ -34,14 +34,14 @@
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
 struct alignas(CACHELINE_SIZE) SFGParam;
-struct alignas((CACHELINE_SIZE)) ReceiverParam;
+//struct alignas((CACHELINE_SIZE)) ReceiverParam;
 
 typedef BackupData backup_data_t;
 typedef SpecialCase special_case_t;
 typedef Key index_key_t;
 typedef Val val_t;
 typedef SFGParam sfg_param_t;
-typedef ReceiverParam receiver_param_t;
+//typedef ReceiverParam receiver_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
 typedef PutRequest<index_key_t, val_t> put_request_t;
@@ -76,8 +76,8 @@ void kill(int signum);
 
 // DPDK
 static int run_sfg(void *param);
-//static int run_receiver(__attribute__((unused)) void *param); // receiver
-static int run_receiver(void *param); // receiver
+static int run_receiver(__attribute__((unused)) void *param); // receiver
+//static int run_receiver(void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
@@ -121,6 +121,7 @@ std::atomic<size_t> ready_threads(0);
 struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
   uint8_t thread_id;
+  size_t throughput;
 };
 
 struct alignas(CACHELINE_SIZE) ReceiverParam {
@@ -313,9 +314,10 @@ void run_server(xindex_t *table) {
 	running = false;
 
 	// Launch receiver
-	receiver_param_t receiver_param;
-	receiver_param.overall_thpt = 0;
-	ret = rte_eal_remote_launch(run_receiver, (void*)&receiver_param, lcoreid);
+	//receiver_param_t receiver_param;
+	//receiver_param.overall_thpt = 0;
+	//ret = rte_eal_remote_launch(run_receiver, (void*)&receiver_param, lcoreid);
+	ret = rte_eal_remote_launch(run_receiver, NULL, lcoreid);
 	if (ret) {
 		COUT_N_EXIT("Error:" << ret);
 	}
@@ -343,6 +345,7 @@ void run_server(xindex_t *table) {
 	for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
 		sfg_params[worker_i].table = table;
 		sfg_params[worker_i].thread_id = worker_i;
+		sfg_params[worker_i].throughput = 0;
 		//int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
 		ret = rte_eal_remote_launch(run_sfg, (void *)&sfg_params[worker_i], lcoreid);
 		if (ret) {
@@ -357,7 +360,7 @@ void run_server(xindex_t *table) {
 	COUT_THIS("[server] prepare server foreground threads...")
 	while (ready_threads < fg_n) sleep(1);
 
-	signal(SIGTERM, kill); // Set for main thread
+	signal(SIGTERM, kill); // Set for main thread (kill -15)
 
 	running = true;
 	COUT_THIS("[server] start running...")
@@ -367,7 +370,20 @@ void run_server(xindex_t *table) {
 	}
 
 	/* Processing Statistics */
-	COUT_THIS("Server-side aggregate throughput: " << receiver_param.overall_thpt);
+	//COUT_THIS("Server-side aggregate throughput: " << receiver_param.overall_thpt);
+	size_t overall_thpt;
+	std::vector<double> load_balance_ratio_list;
+	for (size_t i = 0; i < fg_n; i++) {
+		overall_thpt += sfg_params[i].throughput;
+	}
+	COUT_THIS("Server-side overall throughput: " << overall_thpt);
+	double avg_per_server_thpt = double(overall_thpt) / double(fg_n);
+	for (size_t i = 0; i < fg_n; i++) {
+		load_balance_ratio_list.push_back(double(sfg_params[i].throughput) / avg_per_server_thpt);
+	}
+	for (size_t i = 0; i < load_balance_ratio_list.size(); i++) {
+		COUT_THIS("Load balance ratio of server " << i << ": " << load_balance_ratio_list[i]);
+	}
 
 	running = false;
 	/*void *status;
@@ -386,7 +402,7 @@ void run_server(xindex_t *table) {
 }
 
 static int run_receiver(void *param) {
-	receiver_param_t &receiver_param = *((receiver_param_t *)param);
+	//receiver_param_t &receiver_param = *((receiver_param_t *)param);
 	while (!running)
 		;
 
@@ -408,7 +424,7 @@ static int run_receiver(void *param) {
 			else {
 				bool isscan = get_scan_keys(received_pkts[i], &startkey, &endkey, &num);
 				if (isscan) {
-					receiver_param.overall_thpt++;
+					//receiver_param.overall_thpt++;
 					size_t first_server_idx = get_server_idx(startkey);
 					size_t last_server_idx = get_server_idx(endkey);
 					size_t split_num = last_server_idx - first_server_idx + 1;
@@ -464,7 +480,7 @@ static int run_receiver(void *param) {
 							stats[idx] = true;
 						}*/
 						if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
-							receiver_param.overall_thpt++;
+							//receiver_param.overall_thpt++;
 							pkts_list[idx][heads[idx]] = received_pkts[i];
 							heads[idx] = (heads[idx] + 1) % MQ_SIZE;
 						}
@@ -1063,6 +1079,7 @@ static int run_sfg(void * param) {
 				}*/
 		}
 		backup_rcu[thread_id]++;
+		thread_param.throughput++;
 
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;
