@@ -122,11 +122,14 @@ struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
   uint8_t thread_id;
   size_t throughput;
+#ifdef TEST_AGG_THPT
+  double sum_latency;
+#endif
 };
 
-struct alignas(CACHELINE_SIZE) ReceiverParam {
+/*struct alignas(CACHELINE_SIZE) ReceiverParam {
 	size_t overall_thpt;
-};
+};*/
 
 int main(int argc, char **argv) {
   parse_ini("config.ini");
@@ -346,6 +349,9 @@ void run_server(xindex_t *table) {
 		sfg_params[worker_i].table = table;
 		sfg_params[worker_i].thread_id = worker_i;
 		sfg_params[worker_i].throughput = 0;
+#ifdef TEST_AGG_THPT
+		sfg_params[worker_i].sum_latency = 0.0;
+#endif
 		//int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
 		ret = rte_eal_remote_launch(run_sfg, (void *)&sfg_params[worker_i], lcoreid);
 		if (ret) {
@@ -371,7 +377,7 @@ void run_server(xindex_t *table) {
 
 	/* Processing Statistics */
 	//COUT_THIS("Server-side aggregate throughput: " << receiver_param.overall_thpt);
-	size_t overall_thpt;
+	size_t overall_thpt = 0;
 	std::vector<double> load_balance_ratio_list;
 	for (size_t i = 0; i < fg_n; i++) {
 		overall_thpt += sfg_params[i].throughput;
@@ -384,6 +390,14 @@ void run_server(xindex_t *table) {
 	for (size_t i = 0; i < load_balance_ratio_list.size(); i++) {
 		COUT_THIS("Load balance ratio of server " << i << ": " << load_balance_ratio_list[i]);
 	}
+#ifdef TEST_AGG_THPT
+	double max_agg_thpt = 0.0;
+	for (size_t i = 0; i < fg_n; i++) {
+		max_agg_thpt += (double(sfg_params[i].throughput) / sfg_params[i].sum_latency * 1000 * 1000);
+	}
+	max_agg_thpt /= double(1024 * 1024);
+	COUT_THIS("Max server-side aggregate throughput: " << max_agg_thpt << " MQPS");
+#endif
 
 	running = false;
 	/*void *status;
@@ -799,6 +813,10 @@ static int run_sfg(void * param) {
 		}
 	}*/
 
+#ifdef TEST_AGG_THPT
+	struct timespec t1, t2, t3;
+	CUR_TIME(t1);
+#endif
 	//if (stats[thread_id]) {
 	if (heads[thread_id] != tails[thread_id]) {
 		//COUT_THIS("[server] Receive packet!")
@@ -1078,6 +1096,11 @@ static int run_sfg(void * param) {
 					break;
 				}*/
 		}
+#ifdef TEST_AGG_THPT
+		CUR_TIME(t2);
+		DELTA_TIME(t2, t1, t3);
+		thread_param.sum_latency += GET_MICROSECOND(t3);
+#endif
 		backup_rcu[thread_id]++;
 		thread_param.throughput++;
 

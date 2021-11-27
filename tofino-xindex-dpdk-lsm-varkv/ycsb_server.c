@@ -9,11 +9,14 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <errno.h>
+#include <set>
 #include <signal.h> // for signal and raise
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // inetaddr conversion
 #include <sys/time.h> // struct timeval
+#include <string.h>
 
 #include "helper.h"
 #include "xindex.h"
@@ -83,6 +86,10 @@ std::atomic<size_t> ready_threads(0);
 struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
   uint8_t thread_id;
+  size_t throughput;
+#ifdef TEST_AGG_THPT
+  double sum_latency;
+#endif
 };
 
 int main(int argc, char **argv) {
@@ -279,6 +286,10 @@ void run_server(xindex_t *table) {
 	for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
 		sfg_params[worker_i].table = table;
 		sfg_params[worker_i].thread_id = worker_i;
+		sfg_params[worker_i].throughput = 0;
+#ifdef TEST_AGG_THPT
+		sfg_params[worker_i].sum_latency = 0.0;
+#endif
 		//int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
 		ret = rte_eal_remote_launch(run_sfg, (void *)&sfg_params[worker_i], lcoreid);
 		if (ret) {
@@ -293,7 +304,7 @@ void run_server(xindex_t *table) {
 	COUT_THIS("[server] prepare server foreground threads...")
 	while (ready_threads < fg_n) sleep(1);
 
-	signal(SIGTERM, kill); // Set for main thread
+	signal(SIGTERM, kill); // Set for main thread (kill -15)
 
 	running = true;
 	COUT_THIS("[server] start running...")
@@ -301,6 +312,29 @@ void run_server(xindex_t *table) {
 	while (!killed) {
 		sleep(1);
 	}
+
+	/* Processing Statistics */
+	size_t overall_thpt = 0;
+	std::vector<double> load_balance_ratio_list;
+	for (size_t i = 0; i < fg_n; i++) {
+		overall_thpt += sfg_params[i].throughput;
+	}
+	COUT_THIS("Server-side overall throughput: " << overall_thpt);
+	double avg_per_server_thpt = double(overall_thpt) / double(fg_n);
+	for (size_t i = 0; i < fg_n; i++) {
+		load_balance_ratio_list.push_back(double(sfg_params[i].throughput) / avg_per_server_thpt);
+	}
+	for (size_t i = 0; i < load_balance_ratio_list.size(); i++) {
+		COUT_THIS("Load balance ratio of server " << i << ": " << load_balance_ratio_list[i]);
+	}
+#ifdef TEST_AGG_THPT
+	double max_agg_thpt = 0.0;
+	for (size_t i = 0; i < fg_n; i++) {
+		max_agg_thpt += (double(sfg_params[i].throughput) / sfg_params[i].sum_latency * 1000 * 1000);
+	}
+	max_agg_thpt /= double(1024 * 1024);
+	COUT_THIS("Max server-side aggregate throughput: " << max_agg_thpt << " MQPS");
+#endif
 
 	running = false;
 	/*void *status;
@@ -466,11 +500,6 @@ static int run_sfg(void * param) {
   while (!running) {
   }
 
-	// DEBUG
-	//double prevt0 = 0;
-	//double t0 = CUR_TIME();
-	//uint32_t debug_idx = 0;
-
   while (running) {
 	/*recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 	if (recv_size == -1) {
@@ -483,17 +512,21 @@ static int run_sfg(void * param) {
 		}
 	}*/
 
+#ifdef TEST_AGG_THPT
+	struct timespec t1, t2, t3;
+	CUR_TIME(t1);
+#endif
 	//if (stats[thread_id]) {
 	if (heads[thread_id] != tails[thread_id]) {
 		//COUT_THIS("[server] Receive packet!")
-
-		sent_pkt = sent_pkts[sent_pkt_idx];
 
 		// DPDK
 		//stats[thread_id] = false;
 		//recv_size = decode_mbuf(pkts[thread_id], srcmac, dstmac, srcip, dstip, &srcport, &dstport, buf);
 		//rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);
-		INVARIANT(pkts_list[thread_id][tails[thread_id]] != NULL);
+		sent_pkt = sent_pkts[sent_pkt_idx];
+
+		INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
 		memset(srcip, '\0', 16);
 		memset(dstip, '\0', 16);
 		memset(srcmac, 0, 6);
@@ -508,7 +541,6 @@ static int run_sfg(void * param) {
 		}*/
 
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
-		//double tmpt0 = CUR_TIME();
 		switch (pkt_type) {
 			case packet_type_t::GET_REQ: 
 				{
@@ -585,16 +617,18 @@ static int run_sfg(void * param) {
 					exit(-1);
 				}
 		}
+#ifdef TEST_AGG_THPT
+		CUR_TIME(t2);
+		DELTA_TIME(t2, t1, t3);
+		thread_param.sum_latency += GET_MICROSECOND(t3);
+#endif
+		thread_param.throughput++;
 
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;
 			res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
 			INVARIANT(res == 0);
 		}
-
-		//debug_idx++;
-		//double tmpt1 = CUR_TIME();
-		//t0 += (tmpt1 - tmpt0);
 	}
   }
   

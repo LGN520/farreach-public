@@ -229,7 +229,7 @@
 		* Solution: use recirculation (we must enable and add port for recir/cpu/pktgen in ptf before usage)
 	+ Fix a bug of # of MAT entries; fix a bug of making snapshot when init/open
 	+ Fix a bug of DELREQ_CASE1: add header of seq_hdr for DELREQ_CASE1; read val, vallen, and dirty for DELREQ
-- Performance test (TODO: apply to baseline)
+- Performance test (apply to baseline)
 	+ NOTE: use high precision time by clock_gettime (helper.h)
 		* clock(): millisecond
 		* gettimeofday() -> struct timeval: microsecond
@@ -237,7 +237,8 @@
 	+ Count latency in client side (ycsb_remote_client.c)
 		* Time of sending req, waiting for rsp (queuing and server-side processing without dpdk polling), and receiving rsp
 			- For SCAN: do not count split latency and use minimum sub-request for SCAN
-		* TODO: Test avg RTT between client and sw for recirculation time -> set dpdk_polling_time
+		* Test avg RTT between client and sw for recirculation time -> set dpdk_polling_time
+			- Run netreach-voting to transmit packets betwen client and switch (single thread)
 	+ Count throughput
 		* Suppose that max thpt of switch is n, max aggregate thpt of servers is m, real client-side thpt (system throughput) is x, 
 		real server-side aggregate thpt is y
@@ -246,6 +247,7 @@
 		* Count server-side aggregate throughput y including normal reqs, evictions, and notifications (ycsb_server.c)
 			- For SCAN: we count # of received sub-requests for aggregate throughput
 		* TODO: Test max aggregate thpt of servers (m) -> set max sending rate for rate limit
+			- Run baseline (e.g., tofino-xindex-dpdk-lsm-varkv) to tranmist packets between client and server (max threads)
 	+ Count load balance
 		* Count per-server received number of requests (ycsb_server.c)
 			- For SCAN: count # of sub-requests for load balance metric

@@ -547,7 +547,6 @@ void *run_listener(void *param) {
 
 	while (running) {
 		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, nullptr, nullptr);
-		//double t0 = CUR_TIME();
 		if (recv_size == -1) {
 			if (errno == EWOULDBLOCK || errno == EINTR) {
 				continue; // timeout or interrupted system call
@@ -576,9 +575,6 @@ void *run_listener(void *param) {
 			delete old_listener_data;
 			old_listener_data = nullptr;
 		}
-
-		//double t1 = CUR_TIME();
-		//COUT_THIS("Update KV: " << (t1 - t0) << "us")
 	}
 	pthread_exit(nullptr);
 }
@@ -653,11 +649,6 @@ static int run_sfg(void * param) {
   while (!running) {
   }
 
-	// DEBUG
-	//double prevt0 = 0;
-	//double t0 = CUR_TIME();
-	//uint32_t debug_idx = 0;
-
   while (running) {
 	/*recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 	if (recv_size == -1) {
@@ -697,7 +688,6 @@ static int run_sfg(void * param) {
 		}*/
 
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
-		//double tmpt0 = CUR_TIME();
 		switch (pkt_type) {
 			case packet_type_t::GET_REQ: 
 				{
@@ -758,9 +748,7 @@ static int run_sfg(void * param) {
 					scan_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;
-					//double t00 = CUR_TIME();
 					size_t tmp_num = table->scan(req.key(), req.num(), results, req.thread_id());
-					//double t11 = CUR_TIME();
 					//COUT_THIS("Index SCAN: " << (t11 - t00) << "us")
 					//COUT_THIS("[server] num = " << tmp_num)
 					/*for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
@@ -773,7 +761,6 @@ static int run_sfg(void * param) {
 					//while (listener_version == old_version) {}
 
 					// Merge results with backup data
-					//double t0 = CUR_TIME();
 					std::vector<std::pair<index_key_t, val_t>> merge_results;
 					//std::map<index_key_t, val_t> *kvdata = listener_data;
 					std::map<index_key_t, val_t> *kvdata = backup_data; // uncomment it for thpt
@@ -813,8 +800,6 @@ static int run_sfg(void * param) {
 							}
 						}
 					}
-					//double t1 = CUR_TIME();
-					//COUT_THIS("Merge: "<< (t1-t0) <<"us")
 
 					scan_response_t *rsp = nullptr;
 					if (kvdata != nullptr) {
@@ -862,10 +847,6 @@ static int run_sfg(void * param) {
 			res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
 			INVARIANT(res == 0);
 		}
-
-		//debug_idx++;
-		//double tmpt1 = CUR_TIME();
-		//t0 += (tmpt1 - tmpt0);
 	}
   }
   

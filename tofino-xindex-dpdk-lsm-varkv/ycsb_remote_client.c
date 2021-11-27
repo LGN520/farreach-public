@@ -13,6 +13,7 @@
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // inetaddr conversion
+#include <unistd.h>
 //#include <sys/time.h> // struct timeval
 
 #include "helper.h"
@@ -25,6 +26,10 @@
 #include "crc32.h"
 
 #define MQ_SIZE 256
+
+const double dpdk_polling_time = 21.82; // Test by enabling TEST_DPDK_POLLING, and only transmit packets between client and switch
+const size_t max_sending_rate = size_t(1.0 * 1024 * 1024); // 1 MQPS; limit sending rate to x (e.g., the aggregate rate of servers)
+const size_t rate_limit_period = 10 * 1000; // 10 * 1000us
 
 struct alignas(CACHELINE_SIZE) FGParam;
 
@@ -68,6 +73,7 @@ size_t fg_n; // client num
 short dst_port;
 const char *workload_name;
 char output_dir[256];
+size_t per_client_per_period_max_sending_rate;
 
 // SCAN split
 size_t server_num;
@@ -99,9 +105,16 @@ std::atomic<size_t> ready_threads(0);
 std::atomic<size_t> finish_threads(0);
 
 struct alignas(CACHELINE_SIZE) FGParam {
-	uint64_t throughput;
 	uint8_t thread_id;
+	std::vector<double> latency_list;
+#ifdef TEST_DPDK_POLLING
+	std::vector<double> wait_list; // TMPTMP: To count dpdk polling time
+#endif
+	double sum_latency;
 };
+#ifdef TEST_DPDK_POLLING
+double receiver_sum_latency = 0.0; // TMPTMP
+#endif
 
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
@@ -141,6 +154,7 @@ inline void parse_ini(const char* config_file) {
 	RUN_SPLIT_DIR(output_dir, workload_name, fg_n);
 	server_num = ini.get_server_num();
 	per_server_range = std::numeric_limits<size_t>::max() / server_num;
+	per_client_per_period_max_sending_rate = max_sending_rate / fg_n / (1 * 1000 * 1000 / rate_limit_period);
 
 	printf("src_macaddr: ");
 	for (size_t i = 0; i < 6; i++) {
@@ -241,7 +255,11 @@ void run_benchmark() {
 	// Launch workers
 	for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
 		fg_params[worker_i].thread_id = worker_i;
-		fg_params[worker_i].throughput = 0;
+		fg_params[worker_i].latency_list.clear();
+#ifdef TEST_DPDK_POLLING
+		fg_params[worker_i].wait_list.clear();
+#endif
+		fg_params[worker_i].sum_latency = 0.0;
 		/*int ret = pthread_create(&threads[worker_i], nullptr, run_fg,
 														 (void *)&fg_params[worker_i]);*/
 	ret = rte_eal_remote_launch(run_fg, (void *)&fg_params[worker_i], lcoreid);
@@ -262,11 +280,54 @@ void run_benchmark() {
 	while (finish_threads < fg_n) sleep(1);
 	COUT_THIS("[client] all workers finish!");
 
-	// TODO: process statistics
-	
-	// TODO: uncomment it after processing statistics
-	// running = false;
+	/* Process statistics */
+	COUT_THIS("[client] processing statistics");
 
+	// Dump latency statistics
+	std::vector<double> latency_list;
+#ifdef TEST_DPDK_POLLING
+	std::vector<double> wait_list; // TMPTMP
+#endif
+	double sum_latency;
+	for (size_t i = 0; i < fg_n; i++) {
+		latency_list.insert(latency_list.end(), fg_params[i].latency_list.begin(), fg_params[i].latency_list.end());
+#ifdef TEST_DPDK_POLLING
+		wait_list.insert(wait_list.end(), fg_params[i].wait_list.begin(), fg_params[i].wait_list.end()); // TMPTMP
+#endif
+		sum_latency += fg_params[i].sum_latency;
+	}
+	double min_latency, max_latency, avg_latency, tail90_latency, tail99_latency, median_latency;
+	std::sort(latency_list.begin(), latency_list.end());
+	min_latency = latency_list[0];
+	max_latency = latency_list[latency_list.size()-1];
+	tail90_latency = latency_list[latency_list.size()*0.9];
+	tail99_latency = latency_list[latency_list.size()*0.99];
+	median_latency = latency_list[latency_list.size()/2];
+	avg_latency = sum_latency / double(latency_list.size());
+	COUT_THIS("[Latency Statistics]")
+	COUT_THIS("| min | max | avg | 90th | 99th | median | sum |");
+	COUT_THIS("| " << min_latency << " | " << max_latency << " | " << avg_latency << " | " << tail90_latency \
+			<< " | " << tail99_latency << " | " << median_latency << " | " << sum_latency << " |");
+#ifdef TEST_DPDK_POLLING
+	// TMPTMP
+	double avg_receiver_latency = receiver_sum_latency / double(wait_list.size());
+	double median_wait, min_wait; // min_wait can be treated as the cost of dpdk itself without scheduling for PMD
+	std::sort(wait_list.begin(), wait_list.end());
+	min_wait = wait_list[0];
+	median_wait = wait_list[wait_list.size()/2];
+	// wait_time: in-switch queuing + server-side latency + dpdk overhead + client-side packet dispatching (receiver) + schedule cost for PMD (unnecessary)
+	// When testing DPDK PMD scheduling cost, we only transmit packets between client and switch by 1 thread -> no in-switch ququing and server-side latency
+	// median_wait: dpdk overhead + client-side packet dispatching + schedule cost for PMD
+	// min_watt: dpdk overhead
+	// avg_receiver_latency: client-side packet dispatching
+	COUT_THIS("Ddpdk polling time: " << (median_wait - min_wait - avg_receiver_latency)); // schedule cost for PMD
+#endif
+	COUT_THIS("Client-side throughput: " << latency_list.size());
+
+
+
+	running = false; // After processing statistics
+	COUT_THIS("Finish dumping statistics!")
 	/*void *status;
 	for (size_t i = 0; i < fg_n; i++) {
 		int rc = pthread_join(threads[i], &status);
@@ -282,7 +343,13 @@ static int run_receiver(void *param) {
 		;
 
 	struct rte_mbuf *received_pkts[32];
+#ifdef TEST_DPDK_POLLING
+	struct timespec receiver_t1, receiver_t2, receiver_t3;
+#endif
 	while (running) {
+#ifdef TEST_DPDK_POLLING
+		CUR_TIME(receiver_t1);
+#endif
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
 		if (n_rx == 0) {
 			continue;
@@ -311,6 +378,11 @@ static int run_receiver(void *param) {
 					if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
 						pkts_list[idx][heads[idx]] = received_pkts[i];
 						heads[idx] = (heads[idx] + 1) % MQ_SIZE;
+#ifdef TEST_DPDK_POLLING
+						CUR_TIME(receiver_t2);
+						DELTA_TIME(receiver_t2, receiver_t1, receiver_t3);
+						receiver_sum_latency += GET_MICROSECOND(receiver_t3);
+#endif
 					}
 					else {
 						COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
@@ -363,6 +435,10 @@ static int run_fg(void *param) {
 	COUT_THIS("[client " << uint32_t(thread_id) << "] Ready.");
 	ready_threads++;
 
+	// For rate limit
+	double cur_sending_time = 0.0; // Set to 0 periodically
+	size_t cur_sending_rate = 0;
+
 	while (!running)
 		;
 
@@ -370,9 +446,12 @@ static int run_fg(void *param) {
 		sent_pkt = sent_pkts[sent_pkt_idx];
 
 		tmpkey = iter.key();
-		unsigned int unused_hash_value = crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8);
-		short unused_dst_port = dst_port + unused_hash_value % server_num;
+		struct timespec req_t1, req_t2, req_t3, rsp_t1, rsp_t2, rsp_t3, final_t3;
+		struct timespec wait_t1, wait_t2, wait_t3;
 		if (iter.type() == uint8_t(packet_type_t::GET_REQ)) { // get
+			CUR_TIME(req_t1);
+			unsigned int unused_hash_value = crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8);
+			short unused_dst_port = dst_port + unused_hash_value % server_num;
 			get_request_t req(thread_id, tmpkey);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -381,14 +460,20 @@ static int run_fg(void *param) {
 			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
+			CUR_TIME(req_t2);
+
 			/*while (!stats[thread_id])
 				;
 			stats[thread_id] = false;
 			recv_size = get_payload(pkts[thread_id], buf);
 			rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);*/
+			CUR_TIME(wait_t1);
 			while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+			CUR_TIME(wait_t2);
+
+			CUR_TIME(rsp_t1);
 			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
 			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
@@ -398,10 +483,14 @@ static int run_fg(void *param) {
 			INVARIANT(pkt_type == packet_type_t::GET_RES);
 			get_response_t rsp(buf, recv_size);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
+			CUR_TIME(rsp_t2);
 		}
 		else if (iter.type() == uint8_t(packet_type_t::PUT_REQ)) { // update or insert
 			tmpval = iter.val();
 
+			CUR_TIME(req_t1);
+			unsigned int unused_hash_value = crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8);
+			short unused_dst_port = dst_port + unused_hash_value % server_num;
 			put_request_t req(thread_id, tmpkey, tmpval);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -410,9 +499,15 @@ static int run_fg(void *param) {
 			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
+			CUR_TIME(req_t2);
+
+			CUR_TIME(wait_t1);
 			while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+			CUR_TIME(wait_t2);
+
+			CUR_TIME(rsp_t1);
 			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
 			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
@@ -422,8 +517,12 @@ static int run_fg(void *param) {
 			INVARIANT(pkt_type == packet_type_t::PUT_RES);
 			put_response_t rsp(buf, recv_size);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+			CUR_TIME(rsp_t2);
 		}
 		else if (iter.type() == uint8_t(packet_type_t::DEL_REQ)) {
+			CUR_TIME(req_t1);
+			unsigned int unused_hash_value = crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8);
+			short unused_dst_port = dst_port + unused_hash_value % server_num;
 			del_request_t req(thread_id, tmpkey);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -432,9 +531,15 @@ static int run_fg(void *param) {
 			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
+			CUR_TIME(req_t2);
+
+			CUR_TIME(wait_t1);
 			while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+			CUR_TIME(wait_t2);
+
+			CUR_TIME(rsp_t1);
 			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
 			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
@@ -444,6 +549,7 @@ static int run_fg(void *param) {
 			INVARIANT(pkt_type == packet_type_t::DEL_RES);
 			del_response_t rsp(buf, recv_size);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+			CUR_TIME(rsp_t2);
 		}
 		else if (iter.type() == uint8_t(packet_type_t::SCAN_REQ)) {
 			index_key_t endkey = generate_endkey(tmpkey);
@@ -451,6 +557,9 @@ static int run_fg(void *param) {
 			size_t last_server_idx = get_server_idx(endkey);
 			size_t split_num = last_server_idx - first_server_idx + 1;
 
+			CUR_TIME(req_t1);
+			unsigned int unused_hash_value = crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8);
+			short unused_dst_port = dst_port + unused_hash_value % server_num;
 			scan_request_t req(thread_id, tmpkey, endkey, range_num);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
 					<< "endkey = " << endkey.to_string() << " num = " << range_num);
@@ -458,11 +567,19 @@ static int run_fg(void *param) {
 			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
+			CUR_TIME(req_t2);
 
+			struct timespec scan_rsp_t1, scan_rsp_t2, scan_rsp_t3;
+			struct timespec scan_wait_t1, scan_wait_t2, scan_wait_t3;
+			double scan_rsp_latency = 0.0, scan_wait_latency = 0.0;
 			for (size_t tmpsplit = 0; tmpsplit < split_num; tmpsplit++) {
+				CUR_TIME(scan_wait_t1);
 				while (heads[thread_id] == tails[thread_id])
 					;
 				INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+				CUR_TIME(scan_wait_t2);
+
+				CUR_TIME(scan_rsp_t1);
 				recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
 				rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
 				tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
@@ -473,13 +590,55 @@ static int run_fg(void *param) {
 				scan_response_t rsp(buf, recv_size);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
 						<< "endkey = " << rsp.endkey().to_string() << " num = " << rsp.num());
+				CUR_TIME(scan_rsp_t2);
+
+				DELTA_TIME(scan_rsp_t2, scan_rsp_t1, scan_rsp_t3);
+				double tmp_scan_rsp_latency = GET_MICROSECOND(scan_rsp_t3);
+				if (tmpsplit == 0 || tmp_scan_rsp_latency < scan_rsp_latency) {
+					scan_rsp_latency = tmp_scan_rsp_latency;
+					rsp_t1 = scan_rsp_t1;
+					rsp_t2 = scan_rsp_t2;
+				}
+				DELTA_TIME(scan_wait_t2, scan_wait_t1, scan_wait_t3);
+				double tmp_scan_wait_latency = GET_MICROSECOND(scan_wait_t3);
+				if (tmpsplit == 0 || tmp_scan_wait_latency < scan_wait_latency) {
+					scan_wait_latency = tmp_scan_wait_latency;
+					wait_t1 = scan_wait_t1;
+					wait_t2 = scan_wait_t2;
+				}
 			}
 		}
 		else {
 			printf("Invalid request type: %u\n", uint32_t(iter.type()));
 			exit(-1);
 		}
-		thread_param.throughput++;
+		DELTA_TIME(req_t2, req_t1, req_t3);
+		DELTA_TIME(rsp_t2, rsp_t1, rsp_t3);
+		DELTA_TIME(wait_t2, wait_t1, wait_t3);
+		SUM_TIME(req_t3, rsp_t3, final_t3); // time of sending req and receiving rsp
+		double wait_time = GET_MICROSECOND(wait_t3);
+		double final_time = GET_MICROSECOND(final_t3);
+		if (wait_time > dpdk_polling_time) {
+			// wait_time: in-switch queuing + server-side latency + dpdk overhead + client-side packet dispatching (receiver) + schedule cost for PMD (unnecessary)
+			final_time += (wait_time - dpdk_polling_time); // time of in-switch queuing and server-side latency
+		}
+
+		thread_param.sum_latency += final_time;
+		thread_param.latency_list.push_back(final_time);
+#ifdef TEST_DPDK_POLLING
+		thread_param.wait_list.push_back(wait_time); // TMPTMP
+#endif
+
+		// Rate limit (within each rate_limit_period, we can send at most per_client_per_period_max_sending_rate reqs)
+		cur_sending_rate++;
+		cur_sending_time += final_time;
+		if (cur_sending_rate >= per_client_per_period_max_sending_rate) {
+			if (cur_sending_time < rate_limit_period) {
+				usleep(rate_limit_period - cur_sending_time);
+			}
+			cur_sending_rate = 0;
+			cur_sending_time = 0.0;
+		}
 
 		sent_pkt_idx++;
 		if (sent_pkt_idx >= burst_size) {

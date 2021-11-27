@@ -114,6 +114,10 @@
 #define TEST_DPDK_POLLING
 #endif
 
+#if 1
+#define TEST_AGG_THPT
+#endif
+
 #if defined(NDEBUGGING)
 #define DEBUG_THIS(this)
 #else

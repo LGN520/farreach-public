@@ -322,7 +322,7 @@ void run_benchmark() {
 	COUT_THIS("Ddpdk polling time: " << (median_wait - min_wait - avg_receiver_latency)); // schedule cost for PMD
 #endif
 	COUT_THIS("Client-side throughput: " << latency_list.size());
-	
+
 
 
 	running = false; // After processing statistics
