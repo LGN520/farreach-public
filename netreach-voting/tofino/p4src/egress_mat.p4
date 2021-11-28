@@ -1,3 +1,12 @@
+
+table eg_calculate_hash_tbl {
+	actions {
+		calculate_hash;
+	}
+	default_action: calculate_hash();
+	size: 1;
+}
+
 // NOTE: due to the hardware limitation of Tofino, we can transfer at most 32 bytes to cloned packet.
 // So we cannot use the straightforward solution for GETRES_S, i.e., convert it to GETRES and clone a pkt
 // for PUTREQ_GS. Instead, we convert GETRES_S to PUTREQ_GS to ensure that server has the correct data, and
@@ -73,6 +82,43 @@ table sendback_cloned_putres_tbl {
 	}
 	default_action: sendback_cloned_putres();
 	size: 1;
+}
+
+action update_dstport(port) {
+	modify_field(udp_hdr.dstPort, port);
+}
+
+action update_dstport_reverse(port) {
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	modify_field(udp_hdr.dstPort, port);
+}
+
+table hash_partition_tbl {
+	reads {
+		udp_hdr.dstPort: exact;
+		eg_intr_md.egress_port: exact;
+		meta.hashidx: range;
+	}
+	actions {
+		update_dstport;
+		nop;
+	}
+	default_action: nop();
+	size: 128;
+}
+
+table hash_partition_reverse_tbl {
+	reads {
+		udp_hdr.srcPort: exact;
+		eg_intr_md.egress_port: exact;
+		meta.hashidx: range;
+	}
+	actions {
+		update_dstport_reverse;
+		nop;
+	}
+	default_action: nop();
+	size: 128;
 }
 
 action update_macaddr_s2c(tmp_srcmac, tmp_dstmac) {

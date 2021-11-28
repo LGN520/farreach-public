@@ -196,7 +196,7 @@
 - Try default action with hashidx by removing condition for hash calculation
 	+ Fail! Even if the hash calculation must be performed.
 + Support scan (range query)
-	- Change scan from key+num to start_key+end_key (TODO: apply all the followings to baseline)
+	- Change scan from key+num to start_key+end_key (apply all the followings to baseline: tofino-xindex-dpdk-lsm-varkv)
 		+ Optional: use num to restrict # of per-subrequest kv pairs
 		+ Change volatile rte_mbuf * to rte_mbuf * volatile (client.c, server.c, ycsb_remote_client.c, ycsb_server.c)
 		+ Add endkey into ScanRequest and ScanResponse (packet_format.h, packet_format_impl.h, client.c, server.,c ycsb_remote_cliet.c, ycsb_server.c)
@@ -229,7 +229,7 @@
 		* Solution: use recirculation (we must enable and add port for recir/cpu/pktgen in ptf before usage)
 	+ Fix a bug of # of MAT entries; fix a bug of making snapshot when init/open
 	+ Fix a bug of DELREQ_CASE1: add header of seq_hdr for DELREQ_CASE1; read val, vallen, and dirty for DELREQ
-- Performance test (apply to baseline)
+- Performance test (apply to baseline: tofino-xindex-dpdk-lsm-varkv)
 	+ NOTE: use high precision time by clock_gettime (helper.h)
 		* clock(): millisecond
 		* gettimeofday() -> struct timeval: microsecond
@@ -253,8 +253,10 @@
 		* Count per-server received number of requests (ycsb_server.c)
 			- For SCAN: count # of sub-requests for load balance metric
 		* Normalize per-server thpt to average per-server thpt as per-server load balance ratio
-- TODO: Optimize for stage (at most 32B -> 48B; optional after we finish all implementation)
-	+ TODO: Combine access_lock_tbl into try_res_tbl
+- Optimize for stage
+	+ Combine access_lock_tbl into try_res_tbl
+		* Reduce unnecessary MAT entries in try_res_tbl
+	+ Move hash partition to egress pipeline
 
 ## Simple test
 
@@ -383,3 +385,7 @@
 	+ END: `bash controller.sh cleanup`
 
 ## Fixed issues
+
+- Error: Not support branching from parser to egress pipeline
+	+ Solution: do not use a same MAT in both ingress and egress pipelines
+- NOTE: if MAT entries are too many, the MAT will be placed into multiple stages

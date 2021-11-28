@@ -42,7 +42,7 @@ action clear_lock() {
 	clear_lock_alu.execute_stateful_alu(meta.hashidx);
 }
 
-table access_lock_tbl {
+/*table access_lock_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.isevict: exact;
@@ -55,4 +55,4 @@ table access_lock_tbl {
 	}
 	default_action: nop();
 	size: 16;
-}
+}*/

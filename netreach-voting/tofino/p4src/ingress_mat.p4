@@ -86,7 +86,8 @@ table load_backup_flag_tbl {
 
 // Stage 3
 
-field_list origin_hash_fields {
+// Move to egress pipeline
+/*field_list origin_hash_fields {
 	meta.origin_keylololo;
 	meta.origin_keylolohi;
 	meta.origin_keylohilo;
@@ -115,7 +116,7 @@ table calculate_origin_hash_tbl {
 	}
 	default_action: calculate_origin_hash();
 	size: 1;
-}
+}*/
 
 // Stage 5 + n
 
@@ -494,6 +495,7 @@ table try_res_tbl {
 		meta.iscase1: exact;
 		meta.iscase2: exact;
 		meta.isdirty: exact;
+		meta.isevict: exact; // merge access_lock_tbl
 	}
 	actions {
 		update_getreq_to_getres;
@@ -503,10 +505,14 @@ table try_res_tbl {
 		update_delreq_to_case1;
 		update_getres_s_to_case2;
 		update_putreq_ru_to_case2;
+		// merge access_lock_tbl
+		try_lock;
+		clear_lock;
+		read_lock;
 		nop;
 	}
 	default_action: nop();
-	size: 8192;
+	size: 40960;
 }
 
 // Stage 5+n + 2
@@ -815,7 +821,7 @@ table port_forward_tbl {
 }
 
 
-action update_dstport(port) {
+/*action update_dstport(port) {
 	modify_field(udp_hdr.dstPort, port);
 }
 
@@ -864,7 +870,7 @@ table origin_hash_partition_reverse_tbl {
 	}
 	default_action: nop();
 	size: 128;
-}
+}*/
 
 
 // TMPDEBUG

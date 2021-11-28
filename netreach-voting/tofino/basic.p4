@@ -115,7 +115,7 @@ control ingress {
 
 	// Stage 3
 	// NOTE: we put valid_reg in stage 3 to support DEL operation
-	apply(calculate_origin_hash_tbl);
+	//apply(calculate_origin_hash_tbl); // Move hash partition to egress pipeline
 	apply(access_valid_tbl); 
 	apply(access_dirty_tbl); // we need dirty to decide whether to evict when cache update
 	apply(access_savedseq_tbl);
@@ -175,6 +175,9 @@ control ingress {
 	// into GETRES_S_CASE2/PUTREQ_RU_CASE2 (only used in switch), set original
 	// key and value to packet header, set hashidx in seq; if valid = 1 and dirty = 1,
 	// set is_assigned as 1, otherwise, set it as 0
+	// (4) For PUTREQ/GETREQ, if valid = 0 or key does not match, we try lock;
+	// Otherwise (and for DELREQ), we read lock; For GETRES_S/GETRES_NS/PUTREQ_RU,
+	// we reset lock (merge access_lock_tbl)
 	apply(try_res_tbl);
 
 	// NOTE: if packet arriving here is still GETREQ/PUTREQ/DELREQ,
@@ -182,8 +185,8 @@ control ingress {
 	// So we do not need to compare whether key matches for the following
 	// tables.
 
-	// Stage 5+n + 1
-	apply(access_lock_tbl); // rely on vote
+	// Merged into try_res_tbl to reduce stages
+	//apply(access_lock_tbl); // rely on vote
 
 	// Stage 5+n + 2 (trigger cache update)
 	// Access case3_reg; convert GETREQ -> GETREQ_S; PUTREQ -> PUTREQ_U
@@ -216,7 +219,8 @@ control ingress {
 	apply(port_forward_tbl);
 
 	// Range-based key matching
-	if (op_hdr.optype == PUTREQ_GS_TYPE) {
+	// Move to egress pipeline
+	/*if (op_hdr.optype == PUTREQ_GS_TYPE) {
 		apply(origin_hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
 	}
 	else if (op_hdr.optype == PUTREQ_GS_CASE2_TYPE) {
@@ -230,7 +234,7 @@ control ingress {
 	}
 	else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
 		apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
-	}
+	}*/
 }
 
 /* Egress Processing */
@@ -246,6 +250,19 @@ control egress {
 		}
 		else if (meta.is_clone == CLONE_FOR_PUTRES) {
 			apply(sendback_cloned_putres_tbl); // input is PUTREQ (original pkt becomes PUTREQ_PS/PUTREQ_CASE1/PUTREQ_PS_CASE2) (we need to swap port, ip, and mac)
+		}
+	}
+	else {
+		// NOTE: for packets requring origin_hash, the key and value in packet header have already been set as origin_key/val
+		apply(eg_calculate_hash_tbl);
+		if (op_hdr.optype == PUTREQ_GS_TYPE) {
+			apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
+		}
+		else if (op_hdr.optype == PUTREQ_GS_CASE2_TYPE) {
+			apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
+		}
+		else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
+			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 		}
 	}
 	apply(update_macaddr_tbl); // Update mac addr for responses and PUTREQ_GS/GS_CASE2

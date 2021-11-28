@@ -22,6 +22,30 @@
 		+ Process sub-requests by different server threads (thpt: count in client side since all requests are handled by server; latency: count in 
 		the granularity of sub-requests, split latency should not be counted which is happened in switch)
 		+ Implement range scan of kv-store (xindex_root_impl.h, xindex_group.h, xindex_group_impl.h)
+- Performance test (applied from netreach-voting)
+	+ NOTE: use high precision time by clock_gettime (helper.h)
+		* clock(): millisecond
+		* gettimeofday() -> struct timeval: microsecond
+		* clock_gettime() -> struct timespec: nanosecond
+	+ Count latency in client side (ycsb_remote_client.c)
+		* Time of sending req, waiting for rsp (queuing and server-side processing without dpdk polling), and receiving rsp
+			- For SCAN: do not count split latency and use minimum sub-request for SCAN
+		* Test avg RTT between client and sw for recirculation time -> set dpdk_polling_time
+			- Run netreach-voting to transmit packets betwen client and switch (single thread)
+	+ Count throughput
+		* Suppose that max thpt of switch is n, max aggregate thpt of servers is m, real client-side thpt (system throughput) is x, 
+		real server-side aggregate thpt is y
+			- Normalized thpt relative to m: min{x/y, n/m} (minimum value is 1 if without SCAN, smaller than 1 if with SCAN)
+		* Rate limit client-side throughput (MQPS) and count client-side throughput x (ycsb_remote_clent.c)
+		* Count server-side aggregate throughput y including normal reqs, evictions, and notifications (ycsb_server.c)
+			- For SCAN: we count # of received sub-requests for aggregate throughput
+		* Test max aggregate thpt of servers (m) -> set max sending rate for rate limit
+			- Run baseline (e.g., tofino-xindex-dpdk-lsm-varkv) to tranmist packets between client and server (max threads)
+			- 4-thread: m=0.35 MQPS; 16-thread: m=0.99 MQPS; 32-thread: m=1.19 MQPS
+	+ Count load balance
+		* Count per-server received number of requests (ycsb_server.c)
+			- For SCAN: count # of sub-requests for load balance metric
+		* Normalize per-server thpt to average per-server thpt as per-server load balance ratio
 
 ## How to run
 

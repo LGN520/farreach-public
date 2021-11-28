@@ -93,7 +93,7 @@ header_type key_t {
 header_type metadata_t {
 	fields {
 		hashidx: 16;
-		origin_hashidx: 16;
+		//origin_hashidx: 16; // Move to egress pipeline
 		tmp_sport: 16;
 		tmp_dport: 16;
 		ismatch_keylololo: 4; // predicate 
