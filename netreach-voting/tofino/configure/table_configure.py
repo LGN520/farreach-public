@@ -1022,6 +1022,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_case2_tbl (default: nop; 4)
+            print "Configuring access_case2_tbl"
             for isbackup in backup_list:
                 for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
                     matchspec0 = netbuffer_access_case2_tbl_match_spec_t(\
@@ -1034,7 +1035,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.access_case2_tbl_table_add_with_read_case2(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: try_res_tbl (default: nop; 40960)
+            # Table: try_res_tbl (default: nop; 26624)
             print "Configuring try_res_tbl (merged with access_lock_tbl)"
             for ismatch_keylololo in predicate_list:
                 for ismatch_keylolohi in predicate_list:
@@ -1050,169 +1051,173 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         for iscase2 in case2_list:
                                                             for isdirty in dirty_list:
                                                                 for isevict in predicate_list:
-                                                                    matchspec0 = netbuffer_try_res_tbl_match_spec_t(\
-                                                                            op_hdr_optype=GETREQ_TYPE,
-                                                                            meta_isvalid=isvalid,
-                                                                            meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                            meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                            meta_ismatch_keylohihi=ismatch_keylohihi,
-                                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo, 
-                                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi,
-                                                                            meta_isbackup = isbackup,
-                                                                            meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
-                                                                            meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
-                                                                            meta_isdirty = isdirty,
-                                                                            meta_isevict = isevict)
-                                                                    if isvalid == 1 and ismatch_keylololo == 2 and ismatch_keylolohi == 2\
-                                                                            and ismatch_keylohilo == 2 and ismatch_keylohihi == 2\
-                                                                            and ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2\
-                                                                            and ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2:
-                                                                        self.client.try_res_tbl_table_add_with_update_getreq_to_getres(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    else:
-                                                                        if isevict == 2:
-                                                                            self.client.try_res_tbl_table_add_with_try_lock(\
+                                                                    if iscase1 == 0 and iscase2 == 0:
+                                                                        matchspec0 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                                op_hdr_optype=GETREQ_TYPE,
+                                                                                meta_isvalid=isvalid,
+                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
+                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keyhilolo=ismatch_keyhilolo, 
+                                                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                                                meta_ismatch_keyhihihi=ismatch_keyhihihi,
+                                                                                meta_isbackup = isbackup,
+                                                                                meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
+                                                                                meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
+                                                                                meta_isdirty = isdirty,
+                                                                                meta_isevict = isevict)
+                                                                        if isvalid == 1 and ismatch_keylololo == 2 and ismatch_keylolohi == 2\
+                                                                                and ismatch_keylohilo == 2 and ismatch_keylohihi == 2\
+                                                                                and ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2\
+                                                                                and ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2:
+                                                                            self.client.try_res_tbl_table_add_with_update_getreq_to_getres(\
                                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                                         else:
+                                                                            if isevict == 2:
+                                                                                self.client.try_res_tbl_table_add_with_try_lock(\
+                                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                                            else:
+                                                                                self.client.try_res_tbl_table_add_with_read_lock(\
+                                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                                    if iscase2 == 0 and isevict == 0:
+                                                                        matchspec2 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                                op_hdr_optype=DELREQ_TYPE,
+                                                                                meta_isvalid=isvalid,
+                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
+                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keyhilolo=ismatch_keyhilolo, 
+                                                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                                                meta_ismatch_keyhihihi=ismatch_keyhihihi,
+                                                                                meta_isbackup = isbackup,
+                                                                                meta_iscase1 = iscase1,
+                                                                                meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
+                                                                                meta_isdirty = isdirty,
+                                                                                meta_isevict = 0) # DELREQ can only reset_vote which does not change isevict
+                                                                        if isvalid == 1 and ismatch_keylololo == 2 and ismatch_keylolohi == 2\
+                                                                                and ismatch_keylohilo == 2 and ismatch_keylohihi == 2\
+                                                                                and ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2\
+                                                                                and ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2:
+                                                                            if isbackup == 1 and iscase1 == 0:
+                                                                                self.client.try_res_tbl_table_add_with_update_delreq_to_case1(\
+                                                                                        self.sess_hdl, self.dev_tgt, matchspec2)
+                                                                            else:
+                                                                                actnspec2 = netbuffer_update_delreq_to_s_and_clone_action_spec_t(sids[0]) # Clone for DELRES to client
+                                                                                self.client.try_res_tbl_table_add_with_update_delreq_to_s_and_clone(\
+                                                                                        self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
+                                                                        else:
                                                                             self.client.try_res_tbl_table_add_with_read_lock(\
-                                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    matchspec2 = netbuffer_try_res_tbl_match_spec_t(\
-                                                                            op_hdr_optype=DELREQ_TYPE,
-                                                                            meta_isvalid=isvalid,
-                                                                            meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                            meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                            meta_ismatch_keylohihi=ismatch_keylohihi,
-                                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo, 
-                                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi,
-                                                                            meta_isbackup = isbackup,
-                                                                            meta_iscase1 = iscase1,
-                                                                            meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
-                                                                            meta_isdirty = isdirty,
-                                                                            meta_isevict = isevict)
-                                                                    if isvalid == 1 and ismatch_keylololo == 2 and ismatch_keylolohi == 2\
-                                                                            and ismatch_keylohilo == 2 and ismatch_keylohihi == 2\
-                                                                            and ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2\
-                                                                            and ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2:
-                                                                        if isbackup == 1 and iscase1 == 0:
-                                                                            self.client.try_res_tbl_table_add_with_update_delreq_to_case1(\
                                                                                     self.sess_hdl, self.dev_tgt, matchspec2)
+                                                                    if iscase2 == 0:
+                                                                        matchspec1 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                                op_hdr_optype=PUTREQ_TYPE,
+                                                                                meta_isvalid=isvalid,
+                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
+                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keyhilolo=ismatch_keyhilolo, 
+                                                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                                                meta_ismatch_keyhihihi=ismatch_keyhihihi,
+                                                                                meta_isbackup = isbackup,
+                                                                                meta_iscase1 = iscase1,
+                                                                                meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
+                                                                                meta_isdirty = isdirty,
+                                                                                meta_isevict = isevict)
+                                                                        if isvalid == 1 and ismatch_keylololo == 2 and ismatch_keylolohi == 2\
+                                                                                and ismatch_keylohilo == 2 and ismatch_keylohihi == 2\
+                                                                                and ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2\
+                                                                                and ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2:
+                                                                            if isbackup == 1 and iscase1 == 0:
+                                                                                self.client.try_res_tbl_table_add_with_update_putreq_to_case1(\
+                                                                                        self.sess_hdl, self.dev_tgt, matchspec1)
+                                                                            else:
+                                                                                self.client.try_res_tbl_table_add_with_update_putreq_to_putres(\
+                                                                                        self.sess_hdl, self.dev_tgt, matchspec1)
                                                                         else:
-                                                                            actnspec2 = netbuffer_update_delreq_to_s_and_clone_action_spec_t(sids[0]) # Clone for DELRES to client
-                                                                            self.client.try_res_tbl_table_add_with_update_delreq_to_s_and_clone(\
-                                                                                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
-                                                                    else:
-                                                                        self.client.try_res_tbl_table_add_with_read_lock(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec2)
-                                                                    matchspec1 = netbuffer_try_res_tbl_match_spec_t(\
-                                                                            op_hdr_optype=PUTREQ_TYPE,
-                                                                            meta_isvalid=isvalid,
-                                                                            meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                            meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                            meta_ismatch_keylohihi=ismatch_keylohihi,
-                                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo, 
-                                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi,
-                                                                            meta_isbackup = isbackup,
-                                                                            meta_iscase1 = iscase1,
-                                                                            meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
-                                                                            meta_isdirty = isdirty,
-                                                                            meta_isevict = isevict)
-                                                                    if isvalid == 1 and ismatch_keylololo == 2 and ismatch_keylolohi == 2\
-                                                                            and ismatch_keylohilo == 2 and ismatch_keylohihi == 2\
-                                                                            and ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2\
-                                                                            and ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2:
-                                                                        if isbackup == 1 and iscase1 == 0:
-                                                                            self.client.try_res_tbl_table_add_with_update_putreq_to_case1(\
-                                                                                    self.sess_hdl, self.dev_tgt, matchspec1)
+                                                                            if isevict == 2:
+                                                                                self.client.try_res_tbl_table_add_with_try_lock(\
+                                                                                        self.sess_hdl, self.dev_tgt, matchspec1)
+                                                                            else:
+                                                                                self.client.try_res_tbl_table_add_with_read_lock(\
+                                                                                        self.sess_hdl, self.dev_tgt, matchspec1)
+                                                                    if iscase1 == 0 and isevict == 0:
+                                                                        matchspec3 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                                op_hdr_optype=GETRES_S_TYPE,
+                                                                                meta_isvalid=isvalid,
+                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
+                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keyhilolo=ismatch_keyhilolo, 
+                                                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                                                meta_ismatch_keyhihihi=ismatch_keyhihihi,
+                                                                                meta_isbackup = isbackup,
+                                                                                meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
+                                                                                meta_iscase2 = iscase2,
+                                                                                meta_isdirty = isdirty,
+                                                                                meta_isevict = 0) # GETRES_S only init_vote which does not change isevict
+                                                                        if isbackup == 1 and iscase2 == 0:
+                                                                            if isvalid == 1 and isdirty == 1:
+                                                                                actnspec3 = netbuffer_update_getres_s_to_case2_clear_lock_action_spec_t(1)
+                                                                            else:
+                                                                                actnspec3 = netbuffer_update_getres_s_to_case2_clear_lock_action_spec_t(0)
+                                                                            self.client.try_res_tbl_table_add_with_update_getres_s_to_case2_clear_lock(\
+                                                                                    self.sess_hdl, self.dev_tgt, matchspec3, actnspec3)
                                                                         else:
-                                                                            self.client.try_res_tbl_table_add_with_update_putreq_to_putres(\
-                                                                                    self.sess_hdl, self.dev_tgt, matchspec1)
-                                                                    else:
-                                                                        if isevict == 2:
-                                                                            self.client.try_res_tbl_table_add_with_try_lock(\
-                                                                                    self.sess_hdl, self.dev_tgt, matchspec1)
+                                                                            self.client.try_res_tbl_table_add_with_clear_lock(\
+                                                                                    self.sess_hdl, self.dev_tgt, matchspec3)
+                                                                        matchspec4 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                                op_hdr_optype=PUTREQ_RU_TYPE,
+                                                                                meta_isvalid=isvalid,
+                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
+                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keyhilolo=ismatch_keyhilolo, 
+                                                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                                                meta_ismatch_keyhihihi=ismatch_keyhihihi,
+                                                                                meta_isbackup = isbackup,
+                                                                                meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
+                                                                                meta_iscase2 = iscase2,
+                                                                                meta_isdirty = isdirty,
+                                                                                meta_isevict = 0) # PUTREQ_RU only init_vote which does not change isevict
+                                                                        if isbackup == 1 and iscase2 == 0:
+                                                                            if isvalid == 1 and isdirty == 1:
+                                                                                actnspec4 = netbuffer_update_putreq_ru_to_case2_clear_lock_action_spec_t(1)
+                                                                            else:
+                                                                                actnspec4 = netbuffer_update_putreq_ru_to_case2_clear_lock_action_spec_t(0)
+                                                                            self.client.try_res_tbl_table_add_with_update_putreq_ru_to_case2_clear_lock(\
+                                                                                    self.sess_hdl, self.dev_tgt, matchspec4, actnspec4)
                                                                         else:
-                                                                            self.client.try_res_tbl_table_add_with_read_lock(\
-                                                                                    self.sess_hdl, self.dev_tgt, matchspec1)
-                                                                    matchspec3 = netbuffer_try_res_tbl_match_spec_t(\
-                                                                            op_hdr_optype=GETRES_S_TYPE,
-                                                                            meta_isvalid=isvalid,
-                                                                            meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                            meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                            meta_ismatch_keylohihi=ismatch_keylohihi,
-                                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo, 
-                                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi,
-                                                                            meta_isbackup = isbackup,
-                                                                            meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
-                                                                            meta_iscase2 = iscase2,
-                                                                            meta_isdirty = isdirty,
-                                                                            meta_isevict = isevict)
-                                                                    if isbackup == 1 and iscase2 == 0:
-                                                                        if isvalid == 1 and isdirty == 1:
-                                                                            actnspec3 = netbuffer_update_getres_s_to_case2_clear_lock_action_spec_t(1)
-                                                                        else:
-                                                                            actnspec3 = netbuffer_update_getres_s_to_case2_clear_lock_action_spec_t(0)
-                                                                        self.client.try_res_tbl_table_add_with_update_getres_s_to_case2_clear_lock(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec3, actnspec3)
-                                                                    else:
+                                                                            self.client.try_res_tbl_table_add_with_clear_lock(\
+                                                                                    self.sess_hdl, self.dev_tgt, matchspec4)
+                                                                    if iscase1 == 0 and iscase2 == 0 and isevict == 0:
+                                                                        matchspec5 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                                op_hdr_optype=GETRES_NS_TYPE,
+                                                                                meta_isvalid=isvalid,
+                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
+                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
+                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
+                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keyhilolo=ismatch_keyhilolo, 
+                                                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                                                meta_ismatch_keyhihihi=ismatch_keyhihihi,
+                                                                                meta_isbackup = isbackup,
+                                                                                meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
+                                                                                meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
+                                                                                meta_isdirty = isdirty,
+                                                                                meta_isevict = 0) # GETRES_NS does not touch vote_reg
                                                                         self.client.try_res_tbl_table_add_with_clear_lock(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec3)
-                                                                    matchspec4 = netbuffer_try_res_tbl_match_spec_t(\
-                                                                            op_hdr_optype=PUTREQ_RU_TYPE,
-                                                                            meta_isvalid=isvalid,
-                                                                            meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                            meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                            meta_ismatch_keylohihi=ismatch_keylohihi,
-                                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo, 
-                                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi,
-                                                                            meta_isbackup = isbackup,
-                                                                            meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
-                                                                            meta_iscase2 = iscase2,
-                                                                            meta_isdirty = isdirty,
-                                                                            meta_isevict = isevict)
-                                                                    if isbackup == 1 and iscase2 == 0:
-                                                                        if isvalid == 1 and isdirty == 1:
-                                                                            actnspec4 = netbuffer_update_putreq_ru_to_case2_clear_lock_action_spec_t(1)
-                                                                        else:
-                                                                            actnspec4 = netbuffer_update_putreq_ru_to_case2_clear_lock_action_spec_t(0)
-                                                                        self.client.try_res_tbl_table_add_with_update_putreq_ru_to_case2_clear_lock(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec4, actnspec4)
-                                                                    else:
-                                                                        self.client.try_res_tbl_table_add_with_clear_lock(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec4)
-                                                                    matchspec5 = netbuffer_try_res_tbl_match_spec_t(\
-                                                                            op_hdr_optype=GETRES_NS_TYPE,
-                                                                            meta_isvalid=isvalid,
-                                                                            meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                            meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                            meta_ismatch_keylohihi=ismatch_keylohihi,
-                                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo, 
-                                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi,
-                                                                            meta_isbackup = isbackup,
-                                                                            meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
-                                                                            meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
-                                                                            meta_iscase2 = iscase2,
-                                                                            meta_isdirty = isdirty,
-                                                                            meta_isevict = isevict)
-                                                                    self.client.try_res_tbl_table_add_with_clear_lock(\
-                                                                            self.sess_hdl, self.dev_tgt, matchspec5)
+                                                                                self.sess_hdl, self.dev_tgt, matchspec5)
 
             # Table: access_lock_tbl (default: nop; 12)
             #print "Configuring access_lock_tbl"
@@ -1579,7 +1584,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     hash_end = hash_start + hash_range_per_server
                 matchspec0 = netbuffer_hash_partition_tbl_match_spec_t(\
                         udp_hdr_dstPort=server_port, \
-                        ig_intr_md_egress_port=self.devPorts[1], \
+                        eg_intr_md_egress_port=self.devPorts[1], \
                         meta_hashidx_start = hash_start, \
                         meta_hashidx_end = hash_end)
                 actnspec0 = netbuffer_update_dstport_action_spec_t(\
