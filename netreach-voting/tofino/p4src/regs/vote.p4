@@ -11,7 +11,7 @@ blackbox stateful_alu increase_vote_alu {
 
 action increase_vote() {
 	increase_vote_alu.execute_stateful_alu(meta.hashidx);
-	modify_field(meta.isevict, 0);
+	modify_field(meta.isevict, 1);
 }
 
 blackbox stateful_alu decrease_vote_alu {

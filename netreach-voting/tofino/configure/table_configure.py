@@ -1081,7 +1081,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                             else:
                                                                                 self.client.try_res_tbl_table_add_with_read_lock(\
                                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    if iscase2 == 0 and isevict == 0:
+                                                                    if iscase2 == 0 and isevict == 1:
                                                                         matchspec2 = netbuffer_try_res_tbl_match_spec_t(\
                                                                                 op_hdr_optype=DELREQ_TYPE,
                                                                                 meta_isvalid=isvalid,
@@ -1097,7 +1097,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 meta_iscase1 = iscase1,
                                                                                 meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
                                                                                 meta_isdirty = isdirty,
-                                                                                meta_isevict = 0) # DELREQ can only reset_vote which does not change isevict
+                                                                                meta_isevict = 1) # DELREQ can only reset_vote which does not change isevict
                                                                         if isvalid == 1 and ismatch_keylololo == 2 and ismatch_keylolohi == 2\
                                                                                 and ismatch_keylohilo == 2 and ismatch_keylohihi == 2\
                                                                                 and ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2\
@@ -1146,7 +1146,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                             else:
                                                                                 self.client.try_res_tbl_table_add_with_read_lock(\
                                                                                         self.sess_hdl, self.dev_tgt, matchspec1)
-                                                                    if iscase1 == 0 and isevict == 0:
+                                                                    if iscase1 == 0 and isevict == 1:
                                                                         matchspec3 = netbuffer_try_res_tbl_match_spec_t(\
                                                                                 op_hdr_optype=GETRES_S_TYPE,
                                                                                 meta_isvalid=isvalid,
@@ -1162,7 +1162,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
                                                                                 meta_iscase2 = iscase2,
                                                                                 meta_isdirty = isdirty,
-                                                                                meta_isevict = 0) # GETRES_S only init_vote which does not change isevict
+                                                                                meta_isevict = 1) # GETRES_S only init_vote which does not change isevict
                                                                         if isbackup == 1 and iscase2 == 0:
                                                                             if isvalid == 1 and isdirty == 1:
                                                                                 actnspec3 = netbuffer_update_getres_s_to_case2_clear_lock_action_spec_t(1)
@@ -1188,7 +1188,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
                                                                                 meta_iscase2 = iscase2,
                                                                                 meta_isdirty = isdirty,
-                                                                                meta_isevict = 0) # PUTREQ_RU only init_vote which does not change isevict
+                                                                                meta_isevict = 1) # PUTREQ_RU only init_vote which does not change isevict
                                                                         if isbackup == 1 and iscase2 == 0:
                                                                             if isvalid == 1 and isdirty == 1:
                                                                                 actnspec4 = netbuffer_update_putreq_ru_to_case2_clear_lock_action_spec_t(1)
@@ -1199,7 +1199,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                         else:
                                                                             self.client.try_res_tbl_table_add_with_clear_lock(\
                                                                                     self.sess_hdl, self.dev_tgt, matchspec4)
-                                                                    if iscase1 == 0 and iscase2 == 0 and isevict == 0:
+                                                                    if iscase1 == 0 and iscase2 == 0 and isevict == 1:
                                                                         matchspec5 = netbuffer_try_res_tbl_match_spec_t(\
                                                                                 op_hdr_optype=GETRES_NS_TYPE,
                                                                                 meta_isvalid=isvalid,
@@ -1215,7 +1215,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
                                                                                 meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
                                                                                 meta_isdirty = isdirty,
-                                                                                meta_isevict = 0) # GETRES_NS does not touch vote_reg
+                                                                                meta_isevict = 1) # GETRES_NS does not touch vote_reg
                                                                         self.client.try_res_tbl_table_add_with_clear_lock(\
                                                                                 self.sess_hdl, self.dev_tgt, matchspec5)
 
