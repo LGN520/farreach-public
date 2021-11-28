@@ -309,6 +309,7 @@
 		of k1 does not have value and triggers a GETRES_NS
 		* In-switch result: non-zero key, vallen, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 0, dirty = 0, vote = 0
 - Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
+	+ NOTE: remember to set config.ini, otherwise the hashidx will be incorrect sent by phase2 ptf
 	+ Phase1: reset regs and set flag as 1
 	+ Case 1-1: undirty + PUT case1
 		* Get <k1, v1> -> Run phase1 -> PUT <k1, v2> -> Run phase2

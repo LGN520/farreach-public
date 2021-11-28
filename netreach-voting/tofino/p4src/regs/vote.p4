@@ -25,7 +25,7 @@ blackbox stateful_alu decrease_vote_alu {
 	update_lo_2_value: register_lo - 1; // not need eviction
 
 	output_value: predicate;
-	output_dst: meta.isevict; // 2 for eviction; 0 for no eviction
+	output_dst: meta.isevict; // 2 for eviction; 1 for no eviction
 }
 
 action decrease_vote() {
