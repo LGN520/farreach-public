@@ -49,8 +49,8 @@
 // (fields in the same ALU msut be in the same PHV group)
 // -> (64-1)/2=31 -> 31*4=124B val -> 15*8=120B val
 // 32K * (4*2B keylo + 4*2B keyhi + 96B val + 1bit valid)
-//#define KV_BUCKET_COUNT 32768
-#define KV_BUCKET_COUNT 1
+#define KV_BUCKET_COUNT 32768
+//#define KV_BUCKET_COUNT 1
 
 // NOTE: you should change the two macros according to maximum val length
 // VAL_PKTLEN: sizeof(vallen) + sizeof(val) + sizeof(seq) + sizeof(is_assigned)
@@ -113,7 +113,7 @@ control ingress {
 	apply(access_keyhihilo_tbl);
 	apply(access_keyhihihi_tbl);
 
-	// Stage 3
+	// Stage 3 (after keys)
 	// NOTE: we put valid_reg in stage 3 to support DEL operation
 	//apply(calculate_origin_hash_tbl); // Move hash partition to egress pipeline
 	apply(access_valid_tbl); 
@@ -126,7 +126,7 @@ control ingress {
 	apply(update_vallen_tbl);
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
-	/*apply(update_vallo2_tbl);
+	apply(update_vallo2_tbl);
 	apply(update_valhi2_tbl);
 	apply(update_vallo3_tbl);
 	apply(update_valhi3_tbl);
@@ -140,7 +140,7 @@ control ingress {
 	apply(update_valhi7_tbl);
 	apply(update_vallo8_tbl);
 	apply(update_valhi8_tbl);
-	apply(update_vallo9_tbl);
+	/*apply(update_vallo9_tbl);
 	apply(update_valhi9_tbl);
 	apply(update_vallo10_tbl);
 	apply(update_valhi10_tbl);
@@ -157,12 +157,12 @@ control ingress {
 	apply(update_vallo16_tbl);
 	apply(update_valhi16_tbl);*/
 
-	// Stage 4 + n (after keys and valid)
+	// Stage 8 (after keys and valid)
 	apply(access_vote_tbl);
 	apply(access_case1_tbl); // Case 1 of backup: first matched PUT/DEL of this bucket
 	apply(access_case2_tbl); // Case 2 of backup: first eviction of this bucket
 
-	// Stage 5 + n, where n is the number of stages for values
+	// Stage 9, where n is the number of stages for values
 	// (1) NOTE: it will change op_type from GETREQ/PUTREQ/DELREQ to
 	// GETRES/PUTRES/DELREQ_S(cloned DELRES) only if valid = 1 and
 	// key matches, which will not perform diff calculation, lock 
@@ -188,10 +188,11 @@ control ingress {
 	// Merged into try_res_tbl to reduce stages
 	//apply(access_lock_tbl); // rely on vote
 
-	// Stage 5+n + 2 (trigger cache update)
+	// Stage 10 (trigger cache update)
 	// Access case3_reg; convert GETREQ -> GETREQ_S; PUTREQ -> PUTREQ_U
 	apply(trigger_cache_update_tbl); // rely on lock (default: read_case3)
 
+	// Stage 11
 	// (1) For GETRES_S, only if valid = 1 and dirty = 1. we convert it as PUTREQ_GS and forward to 
 	// server, ans also clone a packet for GETRES to client; otherwise, we convert it as GETRES and
 	// forward it as usual
@@ -210,31 +211,31 @@ control ingress {
 	// (8) For PUTREQ/DELREQ, if backup = 1, lock = 0, (evict must be 1 for PUTREQ, otherwise it beclomse
 	// PUTREQ_U), iscase3 = 0, convert it to PUTREQ_CASE3/DELREQ_CASE3 and forward to server
 	// (9) For other packets, we set egress_port as usual
-	/*if (ig_intr_md.resubmit_flag != 0) {
-		apply(forward_to_server_tbl); // TMPDEBUG
-	}
-	else {
-		apply(port_forward_tbl);
-	}*/
+	//if (ig_intr_md.resubmit_flag != 0) {
+	//	apply(forward_to_server_tbl); // TMPDEBUG
+	//}
+	//else {
+	//	apply(port_forward_tbl);
+	//}*/
 	apply(port_forward_tbl);
 
 	// Range-based key matching
 	// Move to egress pipeline
-	/*if (op_hdr.optype == PUTREQ_GS_TYPE) {
-		apply(origin_hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
-	}
-	else if (op_hdr.optype == PUTREQ_GS_CASE2_TYPE) {
-		apply(origin_hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
-	}
-	else if (op_hdr.optype == PUTREQ_PS_TYPE) {
-		apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
-	}
-	else if (op_hdr.optype == PUTREQ_PS_CASE2_TYPE) {
-		apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
-	}
-	else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
-		apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
-	}*/
+	//if (op_hdr.optype == PUTREQ_GS_TYPE) {
+	//	apply(origin_hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
+	//}
+	//else if (op_hdr.optype == PUTREQ_GS_CASE2_TYPE) {
+	//	apply(origin_hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
+	//}
+	//else if (op_hdr.optype == PUTREQ_PS_TYPE) {
+	//	apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
+	//}
+	//else if (op_hdr.optype == PUTREQ_PS_CASE2_TYPE) {
+	//	apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
+	//}
+	//else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
+	//	apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
+	//}
 }
 
 /* Egress Processing */

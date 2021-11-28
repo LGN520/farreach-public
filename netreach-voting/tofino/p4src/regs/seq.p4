@@ -22,6 +22,7 @@ action assign_seq() {
 	modify_field(seq_hdr.is_assigned, 1);
 }
 
+@pragma stage 0
 table assign_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -71,6 +72,7 @@ action reset_savedseq() {
 	reset_savedseq_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 3
 table access_savedseq_tbl {
 	reads {
 		op_hdr.optype: exact;

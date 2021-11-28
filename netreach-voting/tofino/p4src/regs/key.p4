@@ -38,6 +38,7 @@ action modify_keylololo() {
 	modify_keylololo_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 1
 table access_keylololo_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -89,6 +90,7 @@ action modify_keylolohi() {
 	modify_keylolohi_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 1
 table access_keylolohi_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -140,6 +142,7 @@ action modify_keylohilo() {
 	modify_keylohilo_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 1
 table access_keylohilo_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -191,6 +194,7 @@ action modify_keylohihi() {
 	modify_keylohihi_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 1
 table access_keylohihi_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -242,6 +246,7 @@ action modify_keyhilolo() {
 	modify_keyhilolo_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 2
 table access_keyhilolo_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -293,6 +298,7 @@ action modify_keyhilohi() {
 	modify_keyhilohi_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 2
 table access_keyhilohi_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -344,6 +350,7 @@ action modify_keyhihilo() {
 	modify_keyhihilo_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 2
 table access_keyhihilo_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -395,6 +402,7 @@ action modify_keyhihihi() {
 	modify_keyhihihi_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 2
 table access_keyhihihi_tbl {
 	reads {
 		op_hdr.optype: exact;

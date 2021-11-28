@@ -42,7 +42,6 @@ action save_info() {
 	modify_field(meta.tmp_dport, udp_hdr.dstPort);
 }
 
-//@pragma stage 0
 table save_info_tbl {
 	actions {
 		save_info;
@@ -134,7 +133,7 @@ action update_getreq_to_getres() {
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
 	modify_field(val1_hdr.valhi, meta.origin_valhi1);
 	add_header(val1_hdr);
-	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
+	modify_field(val2_hdr.vallo, meta.origin_vallo2);
 	modify_field(val2_hdr.valhi, meta.origin_valhi2);
 	add_header(val2_hdr);
 	modify_field(val3_hdr.vallo, meta.origin_vallo3);
@@ -155,7 +154,7 @@ action update_getreq_to_getres() {
 	modify_field(val8_hdr.vallo, meta.origin_vallo8);
 	modify_field(val8_hdr.valhi, meta.origin_valhi8);
 	add_header(val8_hdr);
-	modify_field(val9_hdr.vallo, meta.origin_vallo9);
+	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
 	modify_field(val9_hdr.valhi, meta.origin_valhi9);
 	add_header(val9_hdr);
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
@@ -189,14 +188,14 @@ action update_putreq_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	/*remove_header(val2_hdr);
+	remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
 	remove_header(val6_hdr);
 	remove_header(val7_hdr);
 	remove_header(val8_hdr);
-	remove_header(val9_hdr);
+	/*remove_header(val9_hdr);
 	remove_header(val10_hdr);
 	remove_header(val11_hdr);
 	remove_header(val12_hdr);
@@ -234,7 +233,7 @@ action update_putreq_to_case1() {
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
 	modify_field(val1_hdr.valhi, meta.origin_valhi1);
 	add_header(val1_hdr);
-	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
+	modify_field(val2_hdr.vallo, meta.origin_vallo2);
 	modify_field(val2_hdr.valhi, meta.origin_valhi2);
 	add_header(val2_hdr);
 	modify_field(val3_hdr.vallo, meta.origin_vallo3);
@@ -255,7 +254,7 @@ action update_putreq_to_case1() {
 	modify_field(val8_hdr.vallo, meta.origin_vallo8);
 	modify_field(val8_hdr.valhi, meta.origin_valhi8);
 	add_header(val8_hdr);
-	modify_field(val9_hdr.vallo, meta.origin_vallo9);
+	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
 	modify_field(val9_hdr.valhi, meta.origin_valhi9);
 	add_header(val9_hdr);
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
@@ -294,7 +293,7 @@ action update_delreq_to_case1() {
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
 	modify_field(val1_hdr.valhi, meta.origin_valhi1);
 	add_header(val1_hdr);
-	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
+	modify_field(val2_hdr.vallo, meta.origin_vallo2);
 	modify_field(val2_hdr.valhi, meta.origin_valhi2);
 	add_header(val2_hdr);
 	modify_field(val3_hdr.vallo, meta.origin_vallo3);
@@ -315,7 +314,7 @@ action update_delreq_to_case1() {
 	modify_field(val8_hdr.vallo, meta.origin_vallo8);
 	modify_field(val8_hdr.valhi, meta.origin_valhi8);
 	add_header(val8_hdr);
-	modify_field(val9_hdr.vallo, meta.origin_vallo9);
+	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
 	modify_field(val9_hdr.valhi, meta.origin_valhi9);
 	add_header(val9_hdr);
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
@@ -361,7 +360,7 @@ action update_getres_s_to_case2(remember_bit) {
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
 	modify_field(val1_hdr.valhi, meta.origin_valhi1);
 	add_header(val1_hdr);
-	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
+	modify_field(val2_hdr.vallo, meta.origin_vallo2);
 	modify_field(val2_hdr.valhi, meta.origin_valhi2);
 	add_header(val2_hdr);
 	modify_field(val3_hdr.vallo, meta.origin_vallo3);
@@ -382,7 +381,7 @@ action update_getres_s_to_case2(remember_bit) {
 	modify_field(val8_hdr.vallo, meta.origin_vallo8);
 	modify_field(val8_hdr.valhi, meta.origin_valhi8);
 	add_header(val8_hdr);
-	modify_field(val9_hdr.vallo, meta.origin_vallo9);
+	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
 	modify_field(val9_hdr.valhi, meta.origin_valhi9);
 	add_header(val9_hdr);
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
@@ -428,7 +427,7 @@ action update_putreq_ru_to_case2(remember_bit) {
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
 	modify_field(val1_hdr.valhi, meta.origin_valhi1);
 	add_header(val1_hdr);
-	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
+	modify_field(val2_hdr.vallo, meta.origin_vallo2);
 	modify_field(val2_hdr.valhi, meta.origin_valhi2);
 	add_header(val2_hdr);
 	modify_field(val3_hdr.vallo, meta.origin_vallo3);
@@ -449,7 +448,7 @@ action update_putreq_ru_to_case2(remember_bit) {
 	modify_field(val8_hdr.vallo, meta.origin_vallo8);
 	modify_field(val8_hdr.valhi, meta.origin_valhi8);
 	add_header(val8_hdr);
-	modify_field(val9_hdr.vallo, meta.origin_vallo9);
+	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
 	modify_field(val9_hdr.valhi, meta.origin_valhi9);
 	add_header(val9_hdr);
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
@@ -495,7 +494,7 @@ action update_getres_s_to_case2_clear_lock(remember_bit) {
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
 	modify_field(val1_hdr.valhi, meta.origin_valhi1);
 	add_header(val1_hdr);
-	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
+	modify_field(val2_hdr.vallo, meta.origin_vallo2);
 	modify_field(val2_hdr.valhi, meta.origin_valhi2);
 	add_header(val2_hdr);
 	modify_field(val3_hdr.vallo, meta.origin_vallo3);
@@ -516,7 +515,7 @@ action update_getres_s_to_case2_clear_lock(remember_bit) {
 	modify_field(val8_hdr.vallo, meta.origin_vallo8);
 	modify_field(val8_hdr.valhi, meta.origin_valhi8);
 	add_header(val8_hdr);
-	modify_field(val9_hdr.vallo, meta.origin_vallo9);
+	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
 	modify_field(val9_hdr.valhi, meta.origin_valhi9);
 	add_header(val9_hdr);
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
@@ -564,7 +563,7 @@ action update_putreq_ru_to_case2_clear_lock(remember_bit) {
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
 	modify_field(val1_hdr.valhi, meta.origin_valhi1);
 	add_header(val1_hdr);
-	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
+	modify_field(val2_hdr.vallo, meta.origin_vallo2);
 	modify_field(val2_hdr.valhi, meta.origin_valhi2);
 	add_header(val2_hdr);
 	modify_field(val3_hdr.vallo, meta.origin_vallo3);
@@ -585,7 +584,7 @@ action update_putreq_ru_to_case2_clear_lock(remember_bit) {
 	modify_field(val8_hdr.vallo, meta.origin_vallo8);
 	modify_field(val8_hdr.valhi, meta.origin_valhi8);
 	add_header(val8_hdr);
-	modify_field(val9_hdr.vallo, meta.origin_vallo9);
+	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
 	modify_field(val9_hdr.valhi, meta.origin_valhi9);
 	add_header(val9_hdr);
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
@@ -617,6 +616,7 @@ action update_putreq_ru_to_case2_clear_lock(remember_bit) {
 	clear_lock_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 9
 table try_res_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -652,7 +652,7 @@ table try_res_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 40960;
+	size: 30720;
 }
 
 // Stage 5+n + 2
@@ -673,6 +673,7 @@ action read_case3() {
 	read_case3_alu.execute_stateful_alu(0);
 }
 
+@pragma stage 10
 table trigger_cache_update_tbl {
 	reads {
 		meta.islock: exact;
@@ -718,7 +719,7 @@ action update_getres_s_to_putreq_gs_and_clone(sid, port) {
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
 	modify_field(val1_hdr.valhi, meta.origin_valhi1);
 	add_header(val1_hdr);
-	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
+	modify_field(val2_hdr.vallo, meta.origin_vallo2);
 	modify_field(val2_hdr.valhi, meta.origin_valhi2);
 	add_header(val2_hdr);
 	modify_field(val3_hdr.vallo, meta.origin_vallo3);
@@ -739,7 +740,7 @@ action update_getres_s_to_putreq_gs_and_clone(sid, port) {
 	modify_field(val8_hdr.vallo, meta.origin_vallo8);
 	modify_field(val8_hdr.valhi, meta.origin_valhi8);
 	add_header(val8_hdr);
-	modify_field(val9_hdr.vallo, meta.origin_vallo9);
+	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
 	modify_field(val9_hdr.valhi, meta.origin_valhi9);
 	add_header(val9_hdr);
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
@@ -791,7 +792,7 @@ action update_putreq_ru_to_ps_and_clone(sid, port) {
 	modify_field(vallen_hdr.vallen, meta.origin_vallen);
 	modify_field(val1_hdr.vallo, meta.origin_vallo1);
 	modify_field(val1_hdr.valhi, meta.origin_valhi1);
-	/*modify_field(val2_hdr.vallo, meta.origin_vallo2);
+	modify_field(val2_hdr.vallo, meta.origin_vallo2);
 	modify_field(val2_hdr.valhi, meta.origin_valhi2);
 	modify_field(val3_hdr.vallo, meta.origin_vallo3);
 	modify_field(val3_hdr.valhi, meta.origin_valhi3);
@@ -805,7 +806,7 @@ action update_putreq_ru_to_ps_and_clone(sid, port) {
 	modify_field(val7_hdr.valhi, meta.origin_valhi7);
 	modify_field(val8_hdr.vallo, meta.origin_vallo8);
 	modify_field(val8_hdr.valhi, meta.origin_valhi8);
-	modify_field(val9_hdr.vallo, meta.origin_vallo9);
+	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
 	modify_field(val9_hdr.valhi, meta.origin_valhi9);
 	modify_field(val10_hdr.vallo, meta.origin_vallo10);
 	modify_field(val10_hdr.valhi, meta.origin_valhi10);
@@ -838,14 +839,14 @@ action update_putreq_ru_to_putres(port) {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	/*remove_header(val2_hdr);
+	remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
 	remove_header(val6_hdr);
 	remove_header(val7_hdr);
 	remove_header(val8_hdr);
-	remove_header(val9_hdr);
+	/*remove_header(val9_hdr);
 	remove_header(val10_hdr);
 	remove_header(val11_hdr);
 	remove_header(val12_hdr);
@@ -930,6 +931,7 @@ action update_delreq_to_case3(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
+@pragma stage 11
 table port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;

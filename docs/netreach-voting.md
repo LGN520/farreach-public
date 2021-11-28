@@ -257,6 +257,7 @@
 	+ Combine access_lock_tbl into try_res_tbl
 		* Reduce unnecessary MAT entries in try_res_tbl
 	+ Move hash partition to egress pipeline
+- Support as long value as we can (basic.p4, header.p4, parser.p4, ingress.p4, val.p4)
 
 ## Simple test
 

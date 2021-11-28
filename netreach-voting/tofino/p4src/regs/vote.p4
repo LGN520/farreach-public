@@ -52,6 +52,7 @@ action init_vote() {
 	init_vote_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 8
 table access_vote_tbl {
 	reads {
 		meta.isvalid: exact;

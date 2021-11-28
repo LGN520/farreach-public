@@ -41,6 +41,8 @@ blackbox stateful_alu clear_dirty_alu {
 action clear_dirty() {
 	clear_dirty_alu.execute_stateful_alu(meta.hashidx);
 }
+
+@pragma stage 3
 table access_dirty_tbl {
 	reads {
 		op_hdr.optype: exact;

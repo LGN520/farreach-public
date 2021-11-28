@@ -29,6 +29,7 @@ action try_case2() {
 	try_case2_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 8
 table access_case2_tbl {
 	reads {
 		op_hdr.optype: exact;

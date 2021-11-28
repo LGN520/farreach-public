@@ -44,6 +44,7 @@ action clear_valid() {
 	clear_valid_alu.execute_stateful_alu(meta.hashidx);
 }
 
+@pragma stage 3
 table access_valid_tbl {
 	reads {
 		op_hdr.optype: exact;
