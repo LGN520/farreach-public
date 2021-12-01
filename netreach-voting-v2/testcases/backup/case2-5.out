@@ -1,0 +1,3 @@
+READ usertable user1699583181824442426 [ <all fields>]
+UPDATE usertable user5228908089637460490 [ field0=11111111 ]
+UPDATE usertable user3584813500638707425 [ field0=22222222 ]

@@ -1,0 +1,4 @@
+DELETE usertable user1699583181824442426 [ <all fields>]
+UPDATE usertable user1699583181824442426 [ field0=22222222 ]
+UPDATE usertable user1699583181824442426 [ field0=33333333 ]
+SCAN usertable user1699583181824442426 [ <all fields>]
