@@ -3,13 +3,13 @@
 // Packet
 template<class key_t>
 Packet<key_t>::Packet() 
-	: _type(static_cast<uint8_t>(0)), _thread_id(0), _key(key_t::min())
+	: _type(static_cast<uint8_t>(0)), _hashidx(0), _key(key_t::min())
 {
 }
 
 template<class key_t>
-Packet<key_t>::Packet(packet_type_t type, uint8_t thread_id, key_t key)
-	: _type(static_cast<uint8_t>(type)), _thread_id(thread_id), _key(key)
+Packet<key_t>::Packet(packet_type_t type, uint16_t hashidx, key_t key)
+	: _type(static_cast<uint8_t>(type)), _hashidx(hashidx), _key(key)
 {
 }
 
@@ -19,8 +19,8 @@ packet_type_t Packet<key_t>::type() const {
 }
 
 template<class key_t>
-uint8_t Packet<key_t>::thread_id() const {
-	return _thread_id;
+uint16_t Packet<key_t>::hashidx() const {
+	return _hashidx;
 }
 
 template<class key_t>
@@ -38,8 +38,8 @@ GetRequest<key_t>::GetRequest()
 }
 
 template<class key_t>
-GetRequest<key_t>::GetRequest(uint8_t thread_id, key_t key)
-	: Packet<key_t>(packet_type_t::GET_REQ, thread_id, key)
+GetRequest<key_t>::GetRequest(uint16_t hashidx, key_t key)
+	: Packet<key_t>(packet_type_t::GET_REQ, hashidx, key)
 {
 }
 
@@ -51,7 +51,7 @@ GetRequest<key_t>::GetRequest(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 uint32_t GetRequest<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t);
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t);
 }
 
 template<class key_t>
@@ -61,8 +61,8 @@ uint32_t GetRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_thread_id, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	return my_size;
 }
@@ -74,8 +74,8 @@ void GetRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 }
 
@@ -83,13 +83,13 @@ void GetRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 template<class key_t, class val_t>
 PutRequest<key_t, val_t>::PutRequest()
-	: Packet<key_t>(), _val(), _seq(0), _is_assigned(0)
+	: Packet<key_t>(), _val()
 {
 }
 
 template<class key_t, class val_t>
-PutRequest<key_t, val_t>::PutRequest(uint8_t thread_id, key_t key, val_t val) 
-	: Packet<key_t>(PacketType::PUT_REQ, thread_id, key), _val(val), _seq(0), _is_assigned(0)
+PutRequest<key_t, val_t>::PutRequest(uint16_t hashidx, key_t key, val_t val) 
+	: Packet<key_t>(PacketType::PUT_REQ, hashidx, key), _val(val)
 {	
 }
 
@@ -105,18 +105,8 @@ val_t PutRequest<key_t, val_t>::val() const {
 }
 
 template<class key_t, class val_t>
-uint32_t PutRequest<key_t, val_t>::seq() const {
-	return _seq;
-}
-
-template<class key_t, class val_t>
-uint8_t PutRequest<key_t, val_t>::is_assigned() const {
-	return _is_assigned;
-}
-
-template<class key_t, class val_t>
 uint32_t PutRequest<key_t, val_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
 }
 
 template<class key_t, class val_t>
@@ -126,16 +116,12 @@ uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_thread_id, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
 	uint32_t tmpsize = this->_val.serialize(begin);
-	begin += tmpsize;
-	memcpy(begin, (void *)&this->_seq, sizeof(uint32_t));
-	begin += sizeof(uint32_t);
-	memcpy(begin, (void *)&this->_is_assigned, sizeof(uint8_t));
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + tmpsize + sizeof(uint32_t) + sizeof(uint8_t);
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + tmpsize;
 }
 
 template<class key_t, class val_t>
@@ -145,15 +131,11 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
+	memcpy((void *)&this->_hashidx, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
 	uint32_t tmpsize = this->_val.deserialize(begin);
-	begin += tmpsize;
-	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
-	begin += sizeof(uint32_t);
-	memcpy((void *)&this->_is_assigned, begin, sizeof(uint8_t));
 }
 
 // DelRequest
@@ -165,8 +147,8 @@ DelRequest<key_t>::DelRequest()
 }
 
 template<class key_t>
-DelRequest<key_t>::DelRequest(uint8_t thread_id, key_t key)
-	: Packet<key_t>(packet_type_t::DEL_REQ, thread_id, key)
+DelRequest<key_t>::DelRequest(uint16_t hashidx, key_t key)
+	: Packet<key_t>(packet_type_t::DEL_REQ, hashidx, key)
 {
 }
 
@@ -178,7 +160,7 @@ DelRequest<key_t>::DelRequest(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 uint32_t DelRequest<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t);
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t);
 }
 
 template<class key_t>
@@ -188,8 +170,8 @@ uint32_t DelRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_thread_id, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	return my_size;
 }
@@ -201,15 +183,15 @@ void DelRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 }
 
 // ScanRequest
 template<class key_t>
-ScanRequest<key_t>::ScanRequest(uint8_t thread_id, key_t key, key_t endkey, uint32_t num)
-	: Packet<key_t>(packet_type_t::SCAN_REQ, thread_id, key), _endkey(endkey), _num(num)
+ScanRequest<key_t>::ScanRequest(uint16_t hashidx, key_t key, key_t endkey, uint32_t num)
+	: Packet<key_t>(packet_type_t::SCAN_REQ, hashidx, key), _endkey(endkey), _num(num)
 {
 }
 
@@ -231,7 +213,7 @@ uint32_t ScanRequest<key_t>::num() const {
 
 template<class key_t>
 uint32_t ScanRequest<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint32_t);
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -241,8 +223,8 @@ uint32_t ScanRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_thread_id, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy(begin, (void *)&this->_endkey, sizeof(key_t));
@@ -258,8 +240,8 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy((void *)&this->_endkey, begin, sizeof(key_t));
@@ -272,13 +254,13 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse()
-	: Packet<key_t>(), _val(), _seq(0), _is_assigned(0)
+	: Packet<key_t>(), _val()
 {
 }
 
 template<class key_t, class val_t>
-GetResponse<key_t, val_t>::GetResponse(uint8_t thread_id, key_t key, val_t val) 
-	: Packet<key_t>(PacketType::GET_RES, thread_id, key), _val(val), _seq(0), _is_assigned(0)
+GetResponse<key_t, val_t>::GetResponse(uint16_t hashidx, key_t key, val_t val) 
+	: Packet<key_t>(PacketType::GET_RES, hashidx, key), _val(val)
 {	
 }
 
@@ -295,7 +277,7 @@ val_t GetResponse<key_t, val_t>::val() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
 }
 
 template<class key_t, class val_t>
@@ -305,16 +287,12 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_thread_id, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
 	uint32_t tmpsize = this->_val.serialize(begin);
-	begin += tmpsize;
-	memcpy(begin, (void *)&this->_seq, sizeof(uint32_t));
-	begin += sizeof(uint32_t);
-	memcpy(begin, (void *)&this->_is_assigned, sizeof(uint8_t));
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + tmpsize + sizeof(uint32_t) + sizeof(uint8_t);
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + tmpsize;
 }
 
 template<class key_t, class val_t>
@@ -324,22 +302,18 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
 	uint32_t tmpsize = this->_val.deserialize(begin);
-	begin += tmpsize;
-	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
-	begin += sizeof(uint32_t);
-	memcpy((void *)&this->_is_assigned, begin, sizeof(uint8_t));
 }
 
 // PutResponse
 
 template<class key_t>
-PutResponse<key_t>::PutResponse(uint8_t thread_id, key_t key, bool stat) 
-	: Packet<key_t>(PacketType::PUT_RES, thread_id, key), _stat(stat)
+PutResponse<key_t>::PutResponse(uint16_t hashidx, key_t key, bool stat) 
+	: Packet<key_t>(PacketType::PUT_RES, hashidx, key), _stat(stat)
 {	
 }
 
@@ -356,7 +330,7 @@ bool PutResponse<key_t>::stat() const {
 
 template<class key_t>
 uint32_t PutResponse<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(bool);
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(bool);
 }
 
 template<class key_t>
@@ -366,8 +340,8 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_thread_id, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
@@ -381,8 +355,8 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
@@ -391,8 +365,8 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 // DelResponse
 
 template<class key_t>
-DelResponse<key_t>::DelResponse(uint8_t thread_id, key_t key, bool stat) 
-	: Packet<key_t>(PacketType::DEL_RES, thread_id, key), _stat(stat)
+DelResponse<key_t>::DelResponse(uint16_t hashidx, key_t key, bool stat) 
+	: Packet<key_t>(PacketType::DEL_RES, hashidx, key), _stat(stat)
 {	
 }
 
@@ -409,7 +383,7 @@ bool DelResponse<key_t>::stat() const {
 
 template<class key_t>
 uint32_t DelResponse<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(bool);
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(bool);
 }
 
 template<class key_t>
@@ -419,8 +393,8 @@ uint32_t DelResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_thread_id, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
@@ -434,8 +408,8 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
@@ -444,8 +418,8 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 // ScanResponse
 
 template<class key_t, class val_t>
-ScanResponse<key_t, val_t>::ScanResponse(uint8_t thread_id, key_t key, key_t endkey, uint32_t num, std::vector<std::pair<key_t, val_t>> pairs) 
-	: Packet<key_t>(PacketType::SCAN_RES, thread_id, key), _endkey(endkey), _num(num)
+ScanResponse<key_t, val_t>::ScanResponse(uint16_t hashidx, key_t key, key_t endkey, uint32_t num, std::vector<std::pair<key_t, val_t>> pairs) 
+	: Packet<key_t>(PacketType::SCAN_RES, hashidx, key), _endkey(endkey), _num(num)
 {	
 	INVARIANT(pairs.size() == num);
 	this->_pairs.assign(pairs.begin(), pairs.end());
@@ -479,7 +453,7 @@ uint32_t ScanResponse<key_t, val_t>::size() {
 	// However, SCANRES does't need alignment
 	//return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + 
 	//	this->_num*(sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
-	return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint32_t);
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint32_t);
 }
 
 template<class key_t, class val_t>
@@ -489,8 +463,8 @@ uint32_t ScanResponse<key_t, val_t>::serialize(char * const data, uint32_t max_s
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_thread_id, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy(begin, (void *)&this->_endkey, sizeof(key_t));
@@ -518,8 +492,8 @@ void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_thread_id, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
 	memcpy((void *)&this->_endkey, begin, sizeof(key_t));
@@ -547,8 +521,8 @@ void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 // GetRequestS
 
 template<class key_t>
-GetRequestS<key_t>::GetRequestS(uint8_t thread_id, key_t key)
-	: GetRequest<key_t>::GetRequest(thread_id, key)
+GetRequestS<key_t>::GetRequestS(uint16_t hashidx, key_t key)
+	: GetRequest<key_t>::GetRequest(hashidx, key)
 {
 	this->_type = static_cast<uint8_t>(PacketType::GET_REQ_S);
 }
@@ -564,224 +538,6 @@ template<class key_t>
 uint32_t GetRequestS<key_t>::serialize(char * const data, uint32_t max_size)
 {
 	COUT_N_EXIT("Invalid invoke of serialize for GetReqestS");
-}
-
-// DelRequestS
-
-template<class key_t>
-DelRequestS<key_t>::DelRequestS(uint8_t thread_id, key_t key) 
-	: DelRequest<key_t>::DelRequest(thread_id, key)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::DEL_REQ_S);
-}
-
-template<class key_t>
-DelRequestS<key_t>::DelRequestS(const char * data, uint32_t recv_size) {
-	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DEL_REQ_S);
-}
-
-template<class key_t>
-uint32_t DelRequestS<key_t>::serialize(char * const data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of serialize for DelReqestS");
-}
-
-// GetResponseS
-
-template<class key_t, class val_t>
-GetResponseS<key_t, val_t>::GetResponseS(uint8_t thread_id, key_t key, val_t val)
-	: GetResponse<key_t, val_t>(thread_id, key, val)
-{
-	this->_type = static_cast<uint8_t>(PacketType::GET_RES_S);
-}
-
-template<class key_t, class val_t>
-GetResponseS<key_t, val_t>::GetResponseS(const char *data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of GetResponseS(char * const data, uint32_t max_size)");
-}
-
-template<class key_t, class val_t>
-void GetResponseS<key_t, val_t>::deserialize(const char *data, uint32_t recv_size) {
-	COUT_N_EXIT("Invalid invoke of deserialize of GetResponseS");
-}
-
-// GetResponseNS
-
-template<class key_t, class val_t>
-GetResponseNS<key_t, val_t>::GetResponseNS(uint8_t thread_id, key_t key, val_t val)
-	: GetResponse<key_t, val_t>(thread_id, key, val)
-{
-	this->_type = static_cast<uint8_t>(PacketType::GET_RES_NS);
-}
-
-template<class key_t, class val_t>
-GetResponseNS<key_t, val_t>::GetResponseNS(const char * data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of GetResponseNS(char * const data, uint32_t max_size)");
-}
-
-template<class key_t, class val_t>
-void GetResponseNS<key_t, val_t>::deserialize(const char *data, uint32_t recv_size) {
-	COUT_N_EXIT("Invalid invoke of deserialize of GetResponseNS");
-}
-
-// PutRequestGS
-
-template<class key_t, class val_t>
-PutRequestGS<key_t, val_t>::PutRequestGS(uint8_t thread_id, key_t key, val_t val) 
-	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_GS);
-}
-
-template<class key_t, class val_t>
-PutRequestGS<key_t, val_t>::PutRequestGS(const char * data, uint32_t recv_size) {
-	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_GS);
-}
-
-template<class key_t, class val_t>
-uint32_t PutRequestGS<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of serialize for PutReqestGS");
-}
-
-// PutRequestPS
-
-template<class key_t, class val_t>
-PutRequestPS<key_t, val_t>::PutRequestPS(uint8_t thread_id, key_t key, val_t val) 
-	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_PS);
-}
-
-template<class key_t, class val_t>
-PutRequestPS<key_t, val_t>::PutRequestPS(const char * data, uint32_t recv_size) {
-	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_PS);
-}
-
-template<class key_t, class val_t>
-uint32_t PutRequestPS<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of serialize for PutReqestPS");
-}
-
-// PutRequestCase1
-
-template<class key_t, class val_t>
-PutRequestCase1<key_t, val_t>::PutRequestCase1(uint8_t thread_id, key_t key, val_t val) 
-	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_CASE1);
-}
-
-template<class key_t, class val_t>
-PutRequestCase1<key_t, val_t>::PutRequestCase1(const char * data, uint32_t recv_size) {
-	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_CASE1);
-}
-
-template<class key_t, class val_t>
-uint32_t PutRequestCase1<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of serialize for PutReqestCase1");
-}
-
-// DelRequestCase1
-
-template<class key_t, class val_t>
-DelRequestCase1<key_t, val_t>::DelRequestCase1(uint8_t thread_id, key_t key, val_t val) 
-	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::DEL_REQ_CASE1);
-}
-
-template<class key_t, class val_t>
-DelRequestCase1<key_t, val_t>::DelRequestCase1(const char * data, uint32_t recv_size) {
-	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DEL_REQ_CASE1);
-}
-
-template<class key_t, class val_t>
-uint32_t DelRequestCase1<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of serialize for DelRequestCase1");
-}
-
-// PutRequestGSCase2
-
-template<class key_t, class val_t>
-PutRequestGSCase2<key_t, val_t>::PutRequestGSCase2(uint8_t thread_id, key_t key, val_t val) 
-	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_GS_CASE2);
-}
-
-template<class key_t, class val_t>
-PutRequestGSCase2<key_t, val_t>::PutRequestGSCase2(const char * data, uint32_t recv_size) {
-	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_GS_CASE2);
-}
-
-template<class key_t, class val_t>
-uint32_t PutRequestGSCase2<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of serialize for PutRequestGSCase2");
-}
-
-// PutRequestPSCase2
-
-template<class key_t, class val_t>
-PutRequestPSCase2<key_t, val_t>::PutRequestPSCase2(uint8_t thread_id, key_t key, val_t val) 
-	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_PS_CASE2);
-}
-
-template<class key_t, class val_t>
-PutRequestPSCase2<key_t, val_t>::PutRequestPSCase2(const char * data, uint32_t recv_size) {
-	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_PS_CASE2);
-}
-
-template<class key_t, class val_t>
-uint32_t PutRequestPSCase2<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPSCase2");
-}
-
-// PutRequestCase3
-
-template<class key_t, class val_t>
-PutRequestCase3<key_t, val_t>::PutRequestCase3(uint8_t thread_id, key_t key, val_t val) 
-	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_CASE3);
-}
-
-template<class key_t, class val_t>
-PutRequestCase3<key_t, val_t>::PutRequestCase3(const char * data, uint32_t recv_size) {
-	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_CASE3);
-}
-
-template<class key_t, class val_t>
-uint32_t PutRequestCase3<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of serialize for PutRequestCase3");
-}
-
-// DelRequestCase3
-
-template<class key_t>
-DelRequestCase3<key_t>::DelRequestCase3(uint8_t thread_id, key_t key) 
-	: DelRequest<key_t>::DelRequest(thread_id, key)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::DEL_REQ_CASE3);
-}
-
-template<class key_t>
-DelRequestCase3<key_t>::DelRequestCase3(const char * data, uint32_t recv_size) {
-	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DEL_REQ_CASE3);
-}
-
-template<class key_t>
-uint32_t DelRequestCase3<key_t>::serialize(char * const data, uint32_t max_size) {
-	COUT_N_EXIT("Invalid invoke of serialize for DelRequestCase3");
 }
 
 // APIs

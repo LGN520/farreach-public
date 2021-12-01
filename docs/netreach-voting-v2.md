@@ -7,18 +7,14 @@
 	+ GETREQ: optype, hashidx, key
 	+ PUTREQ: optype, hashidx, key, vallen, value
 	+ DELREQ: optype, hashidx, key
-- For eviction of invalid entry
-	+ TODO: server sends an eviction packet (k, v, hashidx) to controller
-	+ TODO: server adds an entry in cache_lookup_tbl (check if key is cached)
 - In-switch processing
-	+ TODO: Use client-side consistent hashing
 	+ Overview	
 		* Stage 0: valid, cache_lookup_tbl (get iscached), being_evicted (for inconsistency of evicted data)
 		* Stage 1: vote, latest (for inconsistency of populated data), case1, case2
 		* Stage 2: lock, vallen, vallo1, valhi1
 			- Case 1: PUT/DELREQ on switch for backup
 			- Case 3: First PUTREQ on server for backup
-			- Case 2: First eviction on switch for backup (since each eviction is forwarded to server now, do not need case 2)
+			- Case 2: First eviction on switch for backup (since eviction is based on control plane now, controller can handle it)
 		* Stage 3-10: val2-val17
 		* Stage 11: port_forward_tbl
 	+ GETREQ: 
@@ -36,11 +32,14 @@
 		if isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger eviction; 
 		otherwise, forward to server)
 			- NOTE: if being_evicted=1, islock may be 0 (set as 0 at phase 2); if iszerovote=2, iscached must be 0
+- Client-side processsing
+	+ TODO: Use client-side consistent hashing
 - Server-side processing
 	+ TODO: GETREQ: sendback GETRES
-	+ TODO: GETREQ_S: (1) parse optype in receiver; (2) sendback GETRES; (3) trigger cache update to controller
+	+ TODO: GETREQ_S: (1) parse optype in receiver; (2) sendback GETRES; (3) trigger eviction (k, v, hashidx) to controller 
 - Controller-side processing
-	+ TODO: two-phase eviction
+	+ TODO: If no cached key in the slot, controller adds an entry in cache_lookup_tbl
+	+ TODO: Otherwise, two-phase eviction
 		* Phase 1
 			* Set MATh with being_evicted as 1 (cannot use valid bit directly: if read valid=1 then set valid=0, there might be DELREQ between read and set)
 				- If being_evicted = 1, cannot modify any field in switch
@@ -50,6 +49,11 @@
 			* Then set MAT with being_evicted of 1
 
 ## Implementation log
+
+- Support GETREQ in switch (tofino/\**.p4)
+- Support GETREQ in client (packet_format.h, packet_format_impl,h, TODO: ycsb_remote_client.c)
+- TODO: Support GETREQ in server (TODO: ycsb_server.c)
+- TODO: Support GETREQ in controller (TODO: update cached_lookup_tbl, two-phase eviction)
 
 ## TODO: Simple test
 
