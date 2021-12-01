@@ -4,41 +4,6 @@
 
 action nop() {}
 
-field_list hash_fields {
-	op_hdr.keylololo;
-	op_hdr.keylolohi;
-	op_hdr.keylohilo;
-	op_hdr.keylohihi;
-	op_hdr.keyhilolo;
-	op_hdr.keyhilohi;
-	op_hdr.keyhihilo;
-	op_hdr.keyhihihi;
-}
-
-field_list_calculation hash_field_calc {
-	input {
-		hash_fields;
-	}
-	algorithm: crc32;
-	output_width: 16;
-}
-
-action calculate_hash() {
-	modify_field_with_hash_based_offset(op_hdr.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT);
-}
-
-table calculate_hash_tbl {
-	reads {
-		op_hdr.optye: exact;
-	}
-	actions {
-		calculate_hash;
-		nop;
-	}
-	default_action: nop();
-	size: 1;
-}
-
 action save_info() {
 	modify_field(meta.tmp_sport, udp_hdr.srcPort);
 	modify_field(meta.tmp_dport, udp_hdr.dstPort);

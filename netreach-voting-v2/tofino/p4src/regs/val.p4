@@ -31,6 +31,7 @@ table update_vallen_tbl {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
 		meta.isvalid: exact;
+		meta.being_evicted: exact;
 	}
 	actions {
 		get_vallen;
@@ -74,6 +75,7 @@ table update_vallo1_tbl {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
 		meta.isvalid: exact;
+		meta.being_evicted: exact;
 	}
 	actions {
 		get_vallo1;
@@ -115,15 +117,9 @@ action put_valhi1() {
 table update_valhi1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iscached: exact;
+		meta.isvalid: exact;
+		meta.being_evicted: exact;
 	}
 	actions {
 		get_valhi1;

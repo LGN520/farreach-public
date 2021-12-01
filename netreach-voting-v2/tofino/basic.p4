@@ -58,25 +58,25 @@
 
 control ingress {
 	// Stage 0
-	apply(calculate_hash_tbl);
+	apply(access_valid_tbl); 
+	apply(access_being_evicted_tbl);
 	apply(cache_lookup_tbl);
 	apply(save_info_tbl);
 	apply(initialize_tbl);
 	apply(load_backup_flag_tbl);
 
-	// Stage 1 (rely on hashidx)
-	apply(access_valid_tbl); 
-	//apply(access_dirty_tbl);
+	// Stage 1 (rely on iscached and being_evicted)
 	apply(access_vote_tbl);
-	apply(access_being_evicted_tbl);
+	apply(access_latest_tbl);
+	//apply(access_case1_tbl); // Case 1 of backup: first matched PUT/DEL of this bucket
+	//apply(access_case3_tbl); // Case 3 of backup: first PUT/DEL touching server 
+	//apply(access_dirty_tbl);
 
-	// Stage 2 (rely on valid and vote)
+	// Stage 2 (rely on valid, vote, and being_evicted)
 	apply(access_lock_tbl);
 	apply(update_vallen_tbl);
-	//apply(access_case_tbl); // Case 1/3 for backup
-	apply(access_latest_tbl);
 
-	// Start from stage 4 (after keys and savedseq)
+	// Start from stage 2 (after keys and savedseq)
 	// NOTE: we just get/put val directly; we decide whether to put the original val in getres or 
 	// putreq in control flow
 	apply(update_vallo1_tbl);

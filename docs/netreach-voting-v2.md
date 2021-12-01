@@ -11,24 +11,31 @@
 	+ TODO: server sends an eviction packet (k, v, hashidx) to controller
 	+ TODO: server adds an entry in cache_lookup_tbl (check if key is cached)
 - In-switch processing
+	+ TODO: Use client-side consistent hashing
 	+ Overview	
-		* Stage 0: calculate_hashidx_tbl, cache_lookup_tbl
-		* Stage 1: valid, vote, being_evicted (for inconsistency of evicted data)
-		* Stage 2: lock, vallen, case (case=1 -> case1; case=2 -> case3; case=3 -> case1&3), latest (for inconsistency of populated data)
+		* Stage 0: valid, cache_lookup_tbl (get iscached), being_evicted (for inconsistency of evicted data)
+		* Stage 1: vote, latest (for inconsistency of populated data), case1, case2
+		* Stage 2: lock, vallen, vallo1, valhi1
 			- Case 1: PUT/DELREQ on switch for backup
 			- Case 3: First PUTREQ on server for backup
 			- Case 2: First eviction on switch for backup (since each eviction is forwarded to server now, do not need case 2)
-		* Stage 3-10: val1-val16
+		* Stage 3-10: val2-val17
 		* Stage 11: port_forward_tbl
 	+ GETREQ: 
-		* Stage 0: calculate hashidx (save into other_hdr.hashidx); access cache_lookup_tbl (get iscached and being_evicted)
-		* Stage 1: access valid (get_valid) and vote (increase_vote if iscached=1 and being_evicted=0; decrease_vote if iscached=0 and being_evicted=0)
-		* Stage 2: access lock (if isvalid=0 and being_evicted=0, or iszerovote=2 and being_evcited=0, try_lock; otherwise, read_lock); 
-		access_latest (read_latest)
-		* Stage 2-10: Read vallen and values
-		* Stage 11: access port_forward_tbl (if iscached=1 and isvalid=1 and islatest=1 and being_evicted=0 -> return GETRES; if isvalid=0 and islock=0, or 
-		iszerovote=2 and islock=0 and being_evicted=0 -> trigger eviction; otherwise, forward to server)
-			- NOTE: if being_evicted=1, islock may be 0 (set at phase 2); if iszerovote=2, iscached must be 0
+		* Stage 0
+			- Access cache_lookup_tbl (get iscached)
+			- Access valid (get_valid)
+			- Access being_evicted (get being_evicted)
+		* Stage 1
+			- Access vote (increase_vote if iscached=1 and being_evicted=0; decrease_vote if iscached=0 and being_evicted=0)
+			- Access_latest (read_latest)
+		* Stage 2:
+			- Access lock (if isvalid=0 and being_evicted=0, or iszerovote=2 and being_evcited=0, try_lock; otherwise, read_lock); 
+		* Stage 1-10: Read vallen and values
+		* Stage 11: access port_forward_tbl (if iscached=1 and isvalid=1 and islatest=1 and being_evicted=0 -> return GETRES; 
+		if isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger eviction; 
+		otherwise, forward to server)
+			- NOTE: if being_evicted=1, islock may be 0 (set as 0 at phase 2); if iszerovote=2, iscached must be 0
 - Server-side processing
 	+ TODO: GETREQ: sendback GETRES
 	+ TODO: GETREQ_S: (1) parse optype in receiver; (2) sendback GETRES; (3) trigger cache update to controller

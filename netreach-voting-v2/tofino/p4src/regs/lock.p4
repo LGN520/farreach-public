@@ -47,6 +47,7 @@ table access_lock_tbl {
 		op_hdr.optype: exact;
 		meta.isvalid: exact;
 		meta.iszerovote: exact;
+		meta.being_evicted: exact;
 	}
 	actions {
 		try_lock;
