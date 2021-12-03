@@ -98,6 +98,9 @@ CLEAN += key.o val.o
 DEPS += ycsb/parser.d
 CLEAN += ycsb/parser.o
 
+DEPS += crc32.d
+CLEAN += crc32.o
+
 DEPS += backup_data.d special_case.d
 CLEAN += backup_data.d backup_data.o special_case.d special_case.o
 BACKUP_OBJECTS := backup_data.o special_case.o
@@ -111,17 +114,17 @@ prepare: prepare.o key.o val.o
 DEPS += prepare.d
 CLEAN += prepare.o prepare
 
-client: client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS)
-	echo $(LDFLAGS)
-	echo $(LDLIBS)
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-DEPS += client.d
-CLEAN += client.o client
+#client: client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS)
+#	echo $(LDFLAGS)
+#	echo $(LDLIBS)
+#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+#DEPS += client.d
+#CLEAN += client.o client
 
-server: server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS)
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-DEPS += server.d
-CLEAN += server.o server
+#server: server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS)
+#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+#DEPS += server.d
+#CLEAN += server.o server
 
 localtest: localtest.o key.o val.o $(INIPARSER_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
@@ -138,7 +141,7 @@ ycsb_local_client: ycsb_local_client.o key.o val.o ycsb/parser.o $(INIPARSER_OBJ
 DEPS += ycsb_local_client.d
 CLEAN += ycsb_local_client.o ycsb_local_client
 
-ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
+ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += ycsb_remote_client.d
 CLEAN += ycsb_remote_client.o ycsb_remote_client
