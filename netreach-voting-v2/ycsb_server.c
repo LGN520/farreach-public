@@ -29,6 +29,7 @@
 #include "iniparser/iniparser_wrapper.h"
 #include "backup_data.h"
 #include "special_case.h"
+#include "cached_val.h"
 
 #define MQ_SIZE 256
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
@@ -40,6 +41,7 @@ typedef BackupData backup_data_t;
 typedef SpecialCase special_case_t;
 typedef Key index_key_t;
 typedef Val val_t;
+typedef CachedVal cached_val_t;
 typedef SFGParam sfg_param_t;
 //typedef ReceiverParam receiver_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
@@ -51,8 +53,8 @@ typedef GetResponse<index_key_t, val_t> get_response_t;
 typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
-//typedef PutRequestS<index_key_t, val_t> put_request_s_t;
-typedef GetRequestS<index_key_t> get_request_s_t;
+typedef GetRequestPOP<index_key_t> get_request_pop_t;
+typedef GetResponseNPOP<index_key_t> get_response_npop_t;
 typedef PutRequestGS<index_key_t, val_t> put_request_gs_t;
 typedef PutRequestPS<index_key_t, val_t> put_request_ps_t;
 typedef DelRequestS<index_key_t> del_request_s_t;
@@ -105,6 +107,10 @@ short dst_port_start;
 const char *workload_name = nullptr;
 uint32_t kv_bucket_num;
 
+// KVS for cached key
+std:;atomic<bool> * volatile ckvs_inuse_list = nullptr; // atomic between worker thread and populator
+std::map<index_key_t, cached_val_t> * volatile ckvs_list = nullptr;
+
 size_t per_server_range;
 size_t get_server_idx(index_key_t key) {
 	size_t server_idx = key.keylo / per_server_range;
@@ -140,6 +146,14 @@ int main(int argc, char **argv) {
   special_cases_list = new std::map<unsigned short, special_case_t> *[fg_n];
   for (size_t i = 0; i < fg_n; i++) {
 	special_cases_list[i] = new std::map<unsigned short, special_case_t>;
+  }
+
+  // Prepare per-thread ckvs
+  ckvs_inuse_list = new std::atomic<bool>[fg_n];
+  ckvs_list = new std::map<index_key_t, val_t>[fg_n];
+  for (size_t i = 0; i < fg_n; i++) {
+	ckvs_inuse_list[i] = false;
+	ckvs_list[i].clear();
   }
 
   // Prepare DPDK EAL param
@@ -917,26 +931,35 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::GET_REQ_S: 
+			case packet_type_t::GET_REQ_POP: 
 				{
-					get_request_s_t req(buf, recv_size);
+					get_request_pop_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
-					if (tmp_val.val_length > 0) {
-						get_response_s_t rsp(req.hashidx(), req.key(), tmp_val);
+					if (tmp_val.val_length > 0) { // exist
+						get_response_t rsp(req.hashidx(), req.key(), tmp_val);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+
+						while (ckvs_inuse_list[thread_id].exchange(true) == true);
+						// NOTE: the key cannot exist in CKVS; if it exists, it must be deleted before, then value cannot exist
+						ckvs_list[thread_id].insert(std::pair<index_key_t, cached_val_t>(\
+									req.key(), cached_val_t(false, tmp_val, 1)));
+						ckvs_inuse_list[thread_id] = false;
+
+						// TODO: send <k, v, hashidx> to controller for cache population
 					}
-					else {
-						get_response_ns_t rsp(req.hashidx(), req.key(), tmp_val);
+					else { // not exist
+						get_response_npop_t rsp(req.hashidx(), req.key(), tmp_val);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					}
 					
-					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
-					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
 				}

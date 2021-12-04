@@ -97,8 +97,13 @@ action update_getreq_to_getres() {
 	add_header(val16_hdr);*/
 }
 
-action update_getreq_to_getres(port) {
-	modify_field(op_hdr.optype, GETREQ_S_TYPE); // Trigger eviction
+action update_getreq_to_getreq_pop(port) {
+	modify_field(op_hdr.optype, GETREQ_POP_TYPE); // Trigger eviction
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
+action update_getres_npop_to_getres(port) {
+	modify_field(op_hdr.optype, GETRES_TYPE); // Not exist
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
@@ -118,8 +123,9 @@ table port_forward_tbl {
 	}
 	actions {
 		update_getreq_to_getres;
-		update_getreq_to_s; // trigger eviction
-		port_forward
+		update_getreq_to_getreq_pop; // trigger eviction
+		update_getres_npop_to_getres;
+		port_forward;
 		nop;
 	}
 	default_action: nop();

@@ -518,26 +518,48 @@ void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	}
 }
 
-// GetRequestS
+// GetRequestPOP
 
 template<class key_t>
-GetRequestS<key_t>::GetRequestS(uint16_t hashidx, key_t key)
+GetRequestPOP<key_t>::GetRequestPOP(uint16_t hashidx, key_t key)
 	: GetRequest<key_t>::GetRequest(hashidx, key)
 {
 	this->_type = static_cast<uint8_t>(PacketType::GET_REQ_S);
 }
 
 template<class key_t>
-GetRequestS<key_t>::GetRequestS(const char *data, uint32_t recv_size)
+GetRequestPOP<key_t>::GetRequestPOP(const char *data, uint32_t recv_size)
 {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_REQ_S);
 }
 
 template<class key_t>
-uint32_t GetRequestS<key_t>::serialize(char * const data, uint32_t max_size)
+uint32_t GetRequestPOP<key_t>::serialize(char * const data, uint32_t max_size)
 {
-	COUT_N_EXIT("Invalid invoke of serialize for GetReqestS");
+	COUT_N_EXIT("Invalid invoke of serialize for GetRequestPOP");
+}
+
+// GetResponseNPOP
+
+template<class key_t, class val_t>
+GetResponseNPOP<key_t, val_t>::GetResponseNPOP(uint16_t hashidx, key_t key, val_t val)
+	: GetResponse<key_t, val_t>::GetResponse(hashidx, key, val)
+{
+	this->_type = static_cast<uint8_t>(PacketType::GET_RES_NPOP);
+}
+
+template<class key_t, class val_t>
+GetResponseNPOP<key_t, val_t>::GetResponseNPOP(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES_NPOP);
+}
+
+template<class key_t, class val_t>
+uint32_t GetResponseNPOP<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for GetResponseNPOP");
 }
 
 // APIs

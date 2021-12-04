@@ -2,13 +2,14 @@ import time
 import signal, os
 
 running = True
-phase1_cmd = "$SDE/run_p4_tests.sh -p netbuffer -t /home/ssy/NetBuffer/netreach-voting/tofino/phase1/ --target hw --setup"
-phase2_cmd = "$SDE/run_p4_tests.sh -p netbuffer -t /home/ssy/NetBuffer/netreach-voting/tofino/phase2/ --target hw --setup"
+phase1_cmd = "$SDE/run_p4_tests.sh -p netbuffer -t /home/ssy/NetBuffer/netreach-voting-v2/tofino/phase1/ --target hw --setup"
+phase2_cmd = "$SDE/run_p4_tests.sh -p netbuffer -t /home/ssy/NetBuffer/netreach-voting-v2/tofino/phase2/ --target hw --setup"
 
 def handler(signum, frame):
     global running
     print("Receive signal {}".format(signum))
     running = False
+signal.signal(signal.SIGTERM, handler)
 
 
 backup_interupt = 5 # 5s

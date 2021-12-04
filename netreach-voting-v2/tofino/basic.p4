@@ -18,7 +18,8 @@
 #define PUTRES_TYPE 0x05
 #define DELRES_TYPE 0x06
 #define SCANRES_TYPE 0x07
-#define GETREQ_S_TYPE 0x08
+#define GETREQ_POP_TYPE 0x08
+#define GETRES_NPOP_TYPE 0x09
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)

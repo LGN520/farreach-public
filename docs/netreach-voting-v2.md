@@ -34,32 +34,41 @@
 		if iscached=1 and isvalid=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST (not latest, first GETs after population); 
 		otherwise, forward GETREQ to server)
 			- NOTE: if being_evicted=1, islock may be 0 (set as 0 at phase 2); if iszerovote=2, iscached must be 0
-	+ GETRES_NPOP
-		* TODO: if iscached=1 and being_evicted=0, set lock=0
+	+ GETRES
+		* Sendback to client
+	+ GETRES_NPOP (no population)
+		* If being_evicted=0, set lock=0; sendback to client as GETRES
 		* NOTE: lock must be 1 and being_evicted must be 0
-	+ GETRES_NEXT 
+	+ TODO: GETRES_NEXIST (not exist)
 		* TODO: if iscached=1 and latest=0 and being_evicted=0, set valid=0
 		* NOTE: if being_evicted = 1, GETREQ carry val due to valid = 1; if server does not have the key in cached list, reply GETRES without data
-	+ PUTREQ:
+	+ TODO: PUTREQ:
 		* TODO: if iscached = 1 and performed in switch, increase seq
 		* TODO: if iscached = 1 and forwarded to server (being_evicted/being_deleted), pass seq+1 along with PUTs/DELs
 - Client-side processsing
 	+ Use client-side consistent hashing for hashidx (baseline also needs it for routing)
 - Server-side processing
-	+ TODO: GETREQ_POP (population): (1) get value from KVS (2) if value exists, sendback GETRES, add key in CKVS (KVS for cached keys) 
-	with seq=1, and trigger population (k, v, hashidx) to controller; (3) if value does not exist, sendback GETRES_NPOP (no population) 
+	+ Receiver for normal packets; backuper for periodic backup; workers for server simulation; TODO: populator for cache population
+	+ GETREQ_POP (population): (1) get value from KVS (2) if value exists, sendback GETRES, add key in CKVS (KVS for cached keys) 
+	with seq=1, and TODO: trigger population (k, v, hashidx) to controller; (3) if value does not exist, sendback GETRES_NPOP (no population) 
 	to unlock the entry
+		* NOTE: If key already exists in CKVS, the status must be deleted. So the value must be not exist, then GETRES_NPOP is sent back
 	+ TODO: GETREQ_NLATEST: sendback GETRES_LATEST (if with value in CKVS) / GETRES_NEXT (if no value in CKVS)
-	+ TODO: GETREQ: sendback GETRES
+	+ GETREQ: sendback GETRES
+	+ TODO: PUTREQ_POP (population)
+		* TODO: If key already exists in CKVS, the status must be deleted. In this case, we can use PUTRES_POP to validate the entry
 - Controller-side processing
+	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population
 	+ TODO: if cache is full, eviction is required; performing eviction in data plane for atomicity is resouce-consuming (proportional to value length) 
 	-> control-plane-based atomic population
 		* Set being_evicted bit as 1
 		* Load valid bit
-		* If valid = 0, remove cached key, reset registers (vote=1, latest=0, case1=0, case2=0, lock=0, seq=0), set vallen and val, 
-		add cached key, set valid=1
+		* If valid = 0
+			- If there exists cached key, notify server to remove the cached key from CKVS (populator atomically updates ckvs)
+			- Remove cached key, reset registers (vote=1, latest=0, case1=0, case2=0, lock=0, seq=0), set vallen and val, 
+			add cached key, set valid=1
 			- NOTE: Before being_evicted bit is set as 0, all GETs and PUTs of the populated key are forwarded to server -> out-of-date value in switch
-			- Forward the first GETs to server if latest = 0 (for read-after-write consistency of populated data)
+			- NOTE: Forward the first GETs to server if latest = 0 (for read-after-write consistency of populated data)
 		* If valid = 1
 			- Load valen and val, send evicted key and value to server, wait for ACK (for read-after-write consistency of evicted data)
 			- Remove cached key, reset registers (vote=1, latest=0, case1=0, case2=0, lock=0), set vallen and val, add cached key, set valid=1
@@ -69,10 +78,18 @@
 
 ## Implementation log
 
-- Support GETREQ in switch (tofino/\**.p4)
-- Support GETREQ in client (packet_format.h, packet_format_impl,h, ycsb_remote_client.c)
-- TODO: Support GETREQ in server (TODO: ycsb_server.c)
-- TODO: Support cache update in controller (TODO: non-blocking population, atomic eviction)
+- Switch side: tofino/\*.p4
+	- Support GETREQ, GETRES, GETREQ_POP, GETRES_NPOP
+- Client side: ycsb_remote_client.c
+	- Support GETREQ, GETRES
+- Server side: ycsb_server.c, cache_val.h, cache_val.c
+	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP
+- Utils: packet_format.h, packet_format_impl,h, cache_val.h, cache_val.c
+	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP
+	- Support CacheVal including val, deleted bool, and key
+- TODO: GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST
+- TODO: PUTREQ, PUTRES
+- TODO: Support cache update in controller (TODO: non-blocking population)
 - TODO: apply to baseline
 	+ TODO: replace thread_id with hashidx (packet_format.h, packet_foramt_impl.h, ycsb_remove_client.c)
 

@@ -78,7 +78,8 @@ GETRES_TYPE = 0x04
 PUTRES_TYPE = 0x05
 DELRES_TYPE = 0x06
 SCANRES_TYPE = 0x07
-GETREQ_S_TYPE = 0x08
+GETREQ_POP_TYPE = 0x08
+GETRES_NPOP_TYPE = 0x09
 
 cached_list = [0, 1]
 valid_list = [0, 1]
@@ -299,6 +300,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         else:
                             slef.client.access_lock_tbl_table_add_with_read_lock(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
+                        matchspec0 = netbufferv2_access_lock_tbl_match_spec_t(\
+                                op_hdr_optype = GETRES_NPOP_TYPE,
+                                meta_isvalid = isvalid,
+                                meta_iszerovote = iszerovote,
+                                meta_being_evicted = being_evicted)
+                        if being_evicted == 0:
+                            slef.client.access_lock_tbl_table_add_with_clear_lock(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: update_vallen_tbl (default: nop; ?)
             print "Configuring update_vallen_tbl"
@@ -342,20 +351,44 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             meta_islock = islock,
                                             meta_being_evicted = being_evicted)
                                     if iscached == 1 and isvalid == 1 and islatest == 1 and being_evicted == 0:
-                                        self.client.port_forward_tbl_table_add_with_update_putreq_to_putres(\
-                                            self.sess_hdl, self.dev_tgt, matchspec0) # Sendback GETRES
+                                        self.client.port_forward_tbl_table_add_with_update_getreq_to_getres(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0) # Change GETREQ to GETRES -> client
                                     else:
                                         if (isvalid == 0 and islock == 0 and being_evicted == 0) or \
                                                 (iszerovote == 2 and islock == 0 and being_evicted == 0):
-                                            actnspec0 = netbufferv2_update_putreq_to_s_action_spec_t(\
-                                                    self.devPorts[1]) # Forward GETREQ_S to server
-                                            self.client.port_forward_tbl_table_add_with_update_putreq_to_s(\
+                                            actnspec0 = netbufferv2_update_getreq_to_getreq_pop_action_spec_t(\
+                                                    self.devPorts[1]) # Forward GETREQ_POP to server
+                                            self.client.port_forward_tbl_table_add_with_update_getreq_to_getreq_pop(\
                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         else:
                                             actnspec0 = netbufferv2_port_forward_action_spec_t(\
                                                     self.devPorts[1]) # Forward GETREQ to server
                                             self.client.port_forward_tbl_table_add_with_port_forward(\
                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                    matchspec0 = netbufferv2_port_forward_tbl_match_spec_t(\
+                                            op_hdr_optype = GETRES_TYPE,
+                                            meta_iscached = iscached,
+                                            meta_isvalid = isvalid,
+                                            meta_islatest = islatest,
+                                            meta_iszerovote = iszerovote,
+                                            meta_islock = islock,
+                                            meta_being_evicted = being_evicted)
+                                    actnspec0 = netbufferv2_port_forward_action_spec_t(\
+                                            self.devPorts[0]) # Forward GETRES to client
+                                    self.client.port_forward_tbl_table_add_with_port_forward(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                    matchspec0 = netbufferv2_port_forward_tbl_match_spec_t(\
+                                            op_hdr_optype = GETRES_NPOP_TYPE,
+                                            meta_iscached = iscached,
+                                            meta_isvalid = isvalid,
+                                            meta_islatest = islatest,
+                                            meta_iszerovote = iszerovote,
+                                            meta_islock = islock,
+                                            meta_being_evicted = being_evicted)
+                                    actnspec0 = netbufferv2_update_getres_npop_to_getres_action_spec_t(\
+                                            self.devPorts[0]) # Change GETRES_NPOP to GETRES -> client
+                                    self.client.port_forward_tbl_table_add_with_getres_npop_to_getres(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             ### Egress ###
 
