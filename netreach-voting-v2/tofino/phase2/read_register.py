@@ -156,9 +156,9 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 hashidx = (hashidx - bucket_count)
             buf = buf + struct.pack("=H2QB", hashidx, tmpkeylo, tmpkeyhi, tmpvallen)
             #print("i: {} keylo: {:016x} keyhi: {:016x} vallen: {:02x}".format(hashidx, tmpkeylo, tmpkeyhi, tmpvallen))
-            for val_idx in range(tmpvallen):
-                tmpvallo = RegisterUpdate.get_reg32(vallo_list_list[val_idx], i)
-                tmpvalhi = RegisterUpdate.get_reg32(valhi_list_list[val_idx], i)
+            for val_idx in range(tmpvallen): # valn, val(n-1), ..., val2, val1
+                tmpvallo = RegisterUpdate.get_reg32(vallo_list_list[tmpvallen - val_idx], i)
+                tmpvalhi = RegisterUpdate.get_reg32(valhi_list_list[tmpvallen - val_idx], i)
                 tmpval = (tmpvalhi << 32) + tmpvallo
                 buf = buf + struct.pack("Q", tmpval)
             count += 1

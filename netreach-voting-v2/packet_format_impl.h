@@ -521,13 +521,6 @@ void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 // GetRequestPOP
 
 template<class key_t>
-GetRequestPOP<key_t>::GetRequestPOP(uint16_t hashidx, key_t key)
-	: GetRequest<key_t>::GetRequest(hashidx, key)
-{
-	this->_type = static_cast<uint8_t>(PacketType::GET_REQ_S);
-}
-
-template<class key_t>
 GetRequestPOP<key_t>::GetRequestPOP(const char *data, uint32_t recv_size)
 {
 	this->deserialize(data, recv_size);
@@ -550,17 +543,52 @@ GetResponseNPOP<key_t, val_t>::GetResponseNPOP(uint16_t hashidx, key_t key, val_
 }
 
 template<class key_t, class val_t>
-GetResponseNPOP<key_t, val_t>::GetResponseNPOP(const char *data, uint32_t recv_size)
+void GetResponseNPOP<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 {
-	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES_NPOP);
+	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseNPOP");
+}
+
+// GetResponsePOP
+
+/*template<class key_t, class val_t>
+GetResponsePOP<key_t, val_t>::GetResponsePOP(uint16_t hashidx, key_t key, val_t val, int32_t seq)
+	: GetResponse<key_t, val_t>::GetResponse(hashidx, key, val), _seq(seq)
+{
+	this->_type = static_cast<uint8_t>(PacketType::GET_RES_POP);
 }
 
 template<class key_t, class val_t>
-uint32_t GetResponseNPOP<key_t, val_t>::serialize(char * const data, uint32_t max_size)
-{
-	COUT_N_EXIT("Invalid invoke of serialize for GetResponseNPOP");
+int32_t GetResponsePOP<key_t, val_t>::seq() const {
+	return this->_seq;
 }
+
+template<class key_t, class val_t>
+uint32_t GetResponsePOP<key_t, val_t>::size() {
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum() + sizeof(int32_t);
+}
+
+template<class key_t, class val_t>
+uint32_t GetResponsePOP<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	//uint32_t my_size = this->size();
+	//INVARIANT(max_size >= my_size);
+	char *begin = data;
+	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
+	begin += sizeof(uint8_t);
+	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
+	memcpy(begin, (void *)&this->_key, sizeof(key_t));
+	begin += sizeof(key_t);
+	uint32_t tmpsize = this->_val.serialize(begin);
+	begin += tmpsize;
+	memcpy(begin, (void *)&this->_seq, sizeof(int32_t));
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + tmpsize + sizeof(int32_t);
+}
+
+template<class key_t, class val_t>
+void GetResponsePOP<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
+{
+	COUT_N_EXIT("Invalid invoke of deserialize for GetResponsePOP");
+}*/
 
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size) {

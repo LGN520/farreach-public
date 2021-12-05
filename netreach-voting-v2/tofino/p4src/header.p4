@@ -64,6 +64,12 @@ header_type val_t {
 	}
 }
 
+header_type seq_t {
+	fields {
+		seq: 32;
+	}
+}
+
 header_type res_t {
 	fields {
 		stat: 8;
@@ -107,5 +113,6 @@ header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
 header val_t val16_hdr;*/
+header seq_t seq_hdr;
 header res_t res_hdr;
 metadata metadata_t meta;

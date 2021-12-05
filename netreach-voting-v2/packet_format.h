@@ -9,7 +9,7 @@
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, 
 	GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
-	GET_REQ_POP, GET_RES_NPOP}
+	GET_REQ_POP, GET_RES_NPOP, GET_RES_POP}
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -164,7 +164,6 @@ class ScanResponse : public Packet<key_t> {
 template<class key_t>
 class GetRequestPOP : public GetRequest<key_t> {
 	public: 
-		GetRequestPOP(uint16_t hashidx, key_t key);
 		GetRequestPOP(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -174,10 +173,25 @@ template<class key_t, class val_t>
 class GetResponseNPOP : public GetResponse<key_t, val_t> {
 	public: 
 		GetResponseNPOP(uint16_t hashidx, key_t key, val_t val);
-		GetResponseNPOP(const char * data, uint32_t recv_size);
+
+	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+/*template<class key_t, class val_t>
+class GetResponsePOP : public GetResponse<key_t, val_t> {
+	public: 
+		GetResponsePOP(uint16_t hashidx, key_t key, val_t val, int32_t seq);
+
+		int32_t seq() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+	private:
+		int32_t _seq;
+};*/
 
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size);

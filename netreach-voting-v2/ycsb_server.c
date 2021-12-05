@@ -933,33 +933,39 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::GET_REQ_POP: 
 				{
+					// NOTE: The key cannot exist in CKVS -> only need to check KVS
+					// (1) Cache population will notify the server to remove the key from CKVS before evciction 
+					// -> as long as CKVS has the key, the key must be cached in switch.
+					// (2) If the key of GETREQ_POP is a cached key, since any matched GET/PUT will increase the vote 
+					// -> GETREQ_POP must be triggerred by invalid entry.
+					// -> However, GET/PUT/DEL will not invaldate in-switch entry!
+					
 					get_request_pop_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
-					if (tmp_val.val_length > 0) { // exist
+					if (tmp_val.val_length > 0) { // Found in KVS
 						get_response_t rsp(req.hashidx(), req.key(), tmp_val);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 
-						while (ckvs_inuse_list[thread_id].exchange(true) == true);
-						// NOTE: the key cannot exist in CKVS; if it exists, it must be deleted before, then value cannot exist
+						while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
 						ckvs_list[thread_id].insert(std::pair<index_key_t, cached_val_t>(\
 									req.key(), cached_val_t(false, tmp_val, 1)));
 						ckvs_inuse_list[thread_id] = false;
 
-						// TODO: send <k, v, hashidx> to controller for cache population
+						// TODO: send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
 					}
-					else { // not exist
+					else { // Not found in KVS
 						get_response_npop_t rsp(req.hashidx(), req.key(), tmp_val);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					}
-					
+
 					sent_pkt_idx++;
 					break;
 				}
