@@ -1,5 +1,21 @@
 # Tofino-based NetREACH (voting-based) + DPDK-based XIndex with persistence + variable-length key-value pair (netreach-voting-v2)
 
+## Workflow (NOT Completed)
+
+- client: GETREQ -> switch (if invalid): change GETREQ to GETREQ_POP -> server: sendback GETRES/GETRES_NPOP, and trigger popultation to controller
+- client: GETREQ -> switch (valid yet not latest): change GETREQ to GETREQ_LATEST -> server: sendback: GETRES/GETRES_NEXIST
+- client: GETREQ -> switch (valid or deleted): change GETREQ to GETRES and sendback to client
+- client: PUTREQ -> switch (if invalid): change PUTREQ to PUTREQ_POP -> server: sendback PUTRES, and trigger population to controller
+- client: PUTREQ -> switch (valid): put value, set latest=1, change PUTREQ to PUTRES and sendback to client
+- client: DELREQ -> switch (valid): set latest=2 (deleted), change DELREQ to DELREQ and sendback to client
+- other packets or being evicted: forward to client
+- Design features
+	+ Parameter-free decision
+	+ Data-plane-based value update
+	+ Control-plane-based non-blocking cache population (conservative query and version-aware query for read-after-write consistency)
+	+ Crash-consistent backup
+	+ Others: CBF-based fast path, range query support, distributed extension
+
 ## Important changes
 
 - Use control-plane-assisted evition to reduce hardware resource usage
