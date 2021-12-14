@@ -20,6 +20,7 @@
 #define SCANRES_TYPE 0x07
 #define GETREQ_POP_TYPE 0x08
 #define GETRES_NPOP_TYPE 0x09
+#define GETREQ_NLATEST_TYPE 0x0a
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -114,8 +115,13 @@ control ingress {
 	apply(update_valhi16_tbl);*/
 
 	// Stage 11
-	// GETREQ: if iscached=1 and isvalid=1, sendback GETRES; if isvalid=0 and islock=0, 
-	// or iszerovote=2 and islock=0, send GETREQ_S for eviction; otherwise, forward GETREQ to server
+	// (1) GETREQ:
+	// If iscached=1 and isvalid=1 and islatest=1 and being_evicted=0 -> return GETRES; 
+	// If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
+	// If iscached=1 and isvalid=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST (not latest, first GETs after population); 
+	// Otherwise, forward GETREQ to server
+	// (2) GETRES: sendback to client
+	// (3) GETRES_NPOP: if being_evicted=0, set lock=0; always sendback to client as GETRES
 	apply(port_forward_tbl);
 }
 

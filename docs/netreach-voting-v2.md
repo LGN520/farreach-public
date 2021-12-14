@@ -14,7 +14,7 @@
 	+ Data-plane-based value update
 	+ Control-plane-based non-blocking cache population (conservative query and version-aware query for read-after-write consistency)
 	+ Crash-consistent backup
-	+ Others: CBF-based fast path, range query support, distributed extension
+	+ Others: switch-driven consistent hashing, CBF-based fast path, range query support, distributed extension
 
 ## Important changes
 
@@ -38,7 +38,7 @@
 				+ Deleted value (i.e., NONE) can be either up-to-date or out-of-date
 			- latest=0: in-switch value may not be up-to-date (serve PUT, conservative GET)
 				+ latest=1: in-switch value must be up-to-date (serve GET/PUT); 
-				+ latest=3: value has been deleted (also up-to-date) (serve GET/PUT, GET directly returns NONE value)
+				+ latest=2: value has been deleted (also up-to-date) (serve GET/PUT, GET directly returns NONE value)
 			- being_evicted=1: in-switch value may not be up-to-date (serve nothing, all GET/PUT are forwarded to server)
 				+ Data plane cannot modify any field of in-switch cache
 	+ GETREQ: 
@@ -52,19 +52,20 @@
 		* Stage 2:
 			- Access lock (if isvalid=0 and being_evicted=0, or iszerovote=2 and being_evcited=0, try_lock; otherwise, read_lock); 
 		* Stage 2-10: Read vallen and values
-		* Stage 11: access port_forward_tbl (if iscached=1 and isvalid=1 and islatest=1 and being_evicted=0 -> return GETRES; 
-		if isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
-		if iscached=1 and isvalid=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST (not latest, first GETs after population); 
-		otherwise, forward GETREQ to server)
+		* Stage 11: access port_forward_tbl
+			- If iscached=1 and isvalid=1 and islatest=1 and being_evicted=0 -> return GETRES; 
+			- If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
+			- If iscached=1 and isvalid=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST (not latest, first GETs after population); 
+			- Otherwise, forward GETREQ to server
 			- NOTE: if being_evicted=1, islock may be 0 (set as 0 at phase 2); if iszerovote=2, iscached must be 0
 	+ GETRES
 		* Sendback to client
 	+ GETRES_NPOP (no population)
 		* If being_evicted=0, set lock=0; sendback to client as GETRES
 		* NOTE: lock must be 1 and being_evicted must be 0
-	+ TODO: GETRES_NEXIST (not exist)
-		* TODO: if iscached=1 and latest=0 and being_evicted=0, set valid=0
-		* NOTE: if being_evicted = 1, GETREQ carry val due to valid = 1; if server does not have the key in cached list, reply GETRES without data
+	+ TODO: GETRES_LATEST (exist for GETREQ_NLATEST)
+	+ TODO: GETRES_NEXIST (not exist for GETREQ_NLATEST)
+		* TODO: if iscached=1 and latest=0 and being_evicted=0, set latest=2 (being deleted)
 	+ TODO: PUTREQ:
 		* TODO: if iscached = 1 and performed in switch, increase seq
 		* TODO: if iscached = 1 and forwarded to server (being_evicted), pass seq+1 along with PUTs/DELs
@@ -76,7 +77,7 @@
 		* If value exists in KVS, sendback GETRES, add key in CKVS with seq = 1, and [TODO] trigger population (k, v, hashidx) to controller
 		* Otherwise, sendback GETRES_NPOP (no population) to unlock the entry
 		* NOTE: key cannot exist in CKVS (key is cached so vote cannot be zero; DEL cannot invalidate the entry, which only sets a special status of value)
-	+ TODO: GETREQ_NLATEST: sendback GETRES_LATEST (if with value in CKVS) / GETRES_NEXT (if no value in CKVS)
+	+ TODO: GETREQ_NLATEST: sendback GETRES_LATEST (if with value in CKVS) / GETRES_NEXIST (if no value in CKVS)
 	+ GETREQ: sendback GETRES
 	+ TODO: PUTREQ_POP (population)
 		* TODO: If key already exists in CKVS, the status must be deleted. In this case, we can use PUTRES_POP to validate the entry
@@ -100,7 +101,7 @@
 ## Implementation log
 
 - Switch side: tofino/\*.p4
-	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP
+	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP, GETREQ_NLATEST
 - Client side: ycsb_remote_client.c
 	- Support GETREQ, GETRES
 - Server side: ycsb_server.c, cache_val.h, cache_val.c

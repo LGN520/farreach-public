@@ -11,8 +11,13 @@ def handler(signum, frame):
     running = False
 signal.signal(signal.SIGTERM, handler)
 
-
-backup_interupt = 5 # 5s
+# Get parameters
+this_dir = os.path.dirname(os.path.abspath(__file__))
+import ConfigParser
+config = ConfigParser.ConfigParser()
+with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
+    config.readfp(f)
+backup_interupt = int(config.get("controller", "backup_interupt"))
 
 while running:
     time.sleep(backup_interupt)

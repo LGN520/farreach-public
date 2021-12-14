@@ -353,18 +353,22 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     if iscached == 1 and isvalid == 1 and islatest == 1 and being_evicted == 0:
                                         self.client.port_forward_tbl_table_add_with_update_getreq_to_getres(\
                                             self.sess_hdl, self.dev_tgt, matchspec0) # Change GETREQ to GETRES -> client
+                                    if iscached == 1 and isvalid == 1 and islatest == 0 and being_evicted == 0:
+                                        actnspec0 = netbufferv2_update_getreq_to_getreq_nlatest_action_spec_t(\
+                                                self.devPorts[1]) # Forward GETREQ_NLATEST to server
+                                        self.client.port_forward_tbl_table_add_with_update_getreq_to_getreq_nlatest(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0) 
+                                    else if (isvalid == 0 and islock == 0 and being_evicted == 0) or \
+                                            (iszerovote == 2 and islock == 0 and being_evicted == 0):
+                                        actnspec0 = netbufferv2_update_getreq_to_getreq_pop_action_spec_t(\
+                                                self.devPorts[1]) # Forward GETREQ_POP to server
+                                        self.client.port_forward_tbl_table_add_with_update_getreq_to_getreq_pop(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                     else:
-                                        if (isvalid == 0 and islock == 0 and being_evicted == 0) or \
-                                                (iszerovote == 2 and islock == 0 and being_evicted == 0):
-                                            actnspec0 = netbufferv2_update_getreq_to_getreq_pop_action_spec_t(\
-                                                    self.devPorts[1]) # Forward GETREQ_POP to server
-                                            self.client.port_forward_tbl_table_add_with_update_getreq_to_getreq_pop(\
-                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                        else:
-                                            actnspec0 = netbufferv2_port_forward_action_spec_t(\
-                                                    self.devPorts[1]) # Forward GETREQ to server
-                                            self.client.port_forward_tbl_table_add_with_port_forward(\
-                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        actnspec0 = netbufferv2_port_forward_action_spec_t(\
+                                                self.devPorts[1]) # Forward GETREQ to server
+                                        self.client.port_forward_tbl_table_add_with_port_forward(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                     matchspec0 = netbufferv2_port_forward_tbl_match_spec_t(\
                                             op_hdr_optype = GETRES_TYPE,
                                             meta_iscached = iscached,
