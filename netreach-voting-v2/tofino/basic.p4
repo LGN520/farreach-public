@@ -34,10 +34,12 @@
 // NOTE: you should change the two macros according to maximum val length
 // VAL_PKTLEN: sizeof(vallen) + sizeof(val)
 // VAL_PKTLEN_MINUS_ONE: sizeof(vallen) + sizeof(val) - sizeof(stat)
-//#define VAL_PKTLEN 97
-//#define VAL_PKTLEN_MINUS_ONE 96
+// VAL_DELETED_PKTLEN: sizeof(vallen)
+#define VAL_DELETED_PKTLEN 1
 #define VAL_PKTLEN 9
 #define VAL_PKTLEN_MINUS_ONE 8
+//#define VAL_PKTLEN 97
+//#define VAL_PKTLEN_MINUS_ONE 96
 
 //#define CPU_PORT 192
 

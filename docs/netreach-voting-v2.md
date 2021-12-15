@@ -15,6 +15,12 @@
 	+ Control-plane-based non-blocking cache population (conservative query and version-aware query for read-after-write consistency)
 	+ Crash-consistent backup
 	+ Others: switch-driven consistent hashing, CBF-based fast path, range query support, distributed extension
+- NOTES
+	+ We can use seq=0 to mark not latest in server, why not we use seq=0 to mark not latest in switch?
+		* If we use seq reg to mark islatest, use deleted reg to mark isdeleted, then they have data dependency for GETRES_NEXIST, which 
+		can only mark the slot is deleted if not latest
+		* Therefore, we use latest reg to identify both islatest and isdeleted to reduce stage cost
+		* NOTE: we use status=0/1/2 in CKVS of server for consistent semantics
 
 ## Important changes
 
@@ -26,7 +32,7 @@
 - In-switch processing
 	+ Overview	
 		* Stage 0: valid, cache_lookup_tbl (get iscached), being_evicted (for inconsistency of evicted data), load_backup_tbl
-		* Stage 1: vote, latest (for inconsistency of populated/deleted data), seq (for packet loss of PUT), case 1, case 2 
+		* Stage 1: vote, latest (for inconsistency of populated/deleted data), seq (for version-aware/conservative query), case 1, case 2 
 		* Stage 2: lock, vallen
 			- Case 1: PUT/DELREQ on switch for backup
 			- Case 3: First PUTREQ on server for backup
@@ -48,14 +54,15 @@
 			- Access being_evicted (get being_evicted)
 		* Stage 1
 			- Access vote (increase_vote if iscached=1 and being_evicted=0; decrease_vote if iscached=0 and being_evicted=0)
-			- Access_latest (read_latest)
+			- Access latest (read latest)
 		* Stage 2:
 			- Access lock (if isvalid=0 and being_evicted=0, or iszerovote=2 and being_evcited=0, try_lock; otherwise, read_lock); 
 		* Stage 2-10: Read vallen and values
 		* Stage 11: access port_forward_tbl
 			- If iscached=1 and isvalid=1 and islatest=1 and being_evicted=0 -> return GETRES; 
+			- If iscached=1 and isvalid=1 and islatest=2 and being_evicted=0 -> return GETRES (vallen=0 and not value headers);
 			- If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
-			- If iscached=1 and isvalid=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST (not latest, first GETs after population); 
+			- If iscached=1 and isvalid=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST for conservative query (not latest, first GETs after population); 
 			- Otherwise, forward GETREQ to server
 			- NOTE: if being_evicted=1, islock may be 0 (set as 0 at phase 2); if iszerovote=2, iscached must be 0
 	+ GETRES
@@ -64,6 +71,7 @@
 		* If being_evicted=0, set lock=0; sendback to client as GETRES
 		* NOTE: lock must be 1 and being_evicted must be 0
 	+ TODO: GETRES_LATEST (exist for GETREQ_NLATEST)
+		* TODO: if iscached=1 and latest=0 and being_evicted=0, set latest=1, vallen, and value
 	+ TODO: GETRES_NEXIST (not exist for GETREQ_NLATEST)
 		* TODO: if iscached=1 and latest=0 and being_evicted=0, set latest=2 (being deleted)
 	+ TODO: PUTREQ:
@@ -74,10 +82,17 @@
 - Server-side processing
 	+ Receiver for normal packets; backuper for periodic backup; workers for server simulation; TODO: populator for cache population
 	+ GETREQ_POP (population): 
-		* If value exists in KVS, sendback GETRES, add key in CKVS with seq = 1, and [TODO] trigger population (k, v, hashidx) to controller
+		* If value exists in KVS, sendback GETRES, add key in CKVS with seq = 0, and [TODO] trigger population (k, v, hashidx) to controller
 		* Otherwise, sendback GETRES_NPOP (no population) to unlock the entry
 		* NOTE: key cannot exist in CKVS (key is cached so vote cannot be zero; DEL cannot invalidate the entry, which only sets a special status of value)
-	+ TODO: GETREQ_NLATEST: sendback GETRES_LATEST (if with value in CKVS) / GETRES_NEXIST (if no value in CKVS)
+	+ GETREQ_NLATEST: 
+		* If status == 0 in CKVS -> not latest 
+			+ If found in KVS, update CKVS, and sendback GETRES_LATEST
+			+ If not found in KVS, update CKVS, and sendback GETRES_NEXIST
+		* If status == 1 in CKVS -> latest
+			+ Sendback GETRES_LATEST
+		* If status == 2 in CKVS -> latest yet deleted
+			- Sendback GETRES_NEXIST
 	+ GETREQ: sendback GETRES
 	+ TODO: PUTREQ_POP (population)
 		* TODO: If key already exists in CKVS, the status must be deleted. In this case, we can use PUTRES_POP to validate the entry
@@ -101,15 +116,18 @@
 ## Implementation log
 
 - Switch side: tofino/\*.p4
-	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP, GETREQ_NLATEST
+	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP
+	- Support GETREQ_NLATEST
 - Client side: ycsb_remote_client.c
 	- Support GETREQ, GETRES
 - Server side: ycsb_server.c, cache_val.h, cache_val.c
 	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP
+	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST
 - Utils: packet_format.h, packet_format_impl,h, cache_val.h, cache_val.c
 	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP
+	- Suppose GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST
 	- Support CacheVal including val, deleted bool, and key
-- TODO: GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST
+- TODO: switch-side GETRES_LATEST, GETRES_NEXIST
 - TODO: PUTREQ, PUTRES
 - TODO: Support cache update in controller (TODO: non-blocking population)
 - TODO: apply to baseline

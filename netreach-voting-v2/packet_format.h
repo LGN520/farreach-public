@@ -7,9 +7,8 @@
 
 #include "helper.h"
 
-enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, 
-	GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
-	GET_REQ_POP, GET_RES_NPOP, GET_RES_POP}
+enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
+	GET_REQ_POP, GET_RES_NPOP, GET_REQ_NLATEST, GET_RES_LATEST, GET_RES_NEXIST}
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -173,6 +172,32 @@ template<class key_t, class val_t>
 class GetResponseNPOP : public GetResponse<key_t, val_t> {
 	public: 
 		GetResponseNPOP(uint16_t hashidx, key_t key, val_t val);
+
+	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t>
+class GetRequestNLATEST : public GetRequest<key_t> {
+	public: 
+		GetRequestNLATEST(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class GetResponseLATEST : public GetResponse<key_t, val_t> {
+	public: 
+		GetResponseLATEST(uint16_t hashidx, key_t key, val_t val);
+
+	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t, class val_t>
+class GetResponseNEXIST : public GetResponse<key_t, val_t> {
+	public: 
+		GetResponseNEXIST(uint16_t hashidx, key_t key, val_t val);
 
 	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);

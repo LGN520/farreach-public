@@ -54,18 +54,10 @@ typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
 typedef GetRequestPOP<index_key_t> get_request_pop_t;
-typedef GetResponseNPOP<index_key_t> get_response_npop_t;
-typedef PutRequestGS<index_key_t, val_t> put_request_gs_t;
-typedef PutRequestPS<index_key_t, val_t> put_request_ps_t;
-typedef DelRequestS<index_key_t> del_request_s_t;
-typedef GetResponseS<index_key_t, val_t> get_response_s_t;
-typedef GetResponseNS<index_key_t, val_t> get_response_ns_t;
-typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
-typedef DelRequestCase1<index_key_t, val_t> del_request_case1_t;
-typedef PutRequestGSCase2<index_key_t, val_t> put_request_gs_case2_t;
-typedef PutRequestPSCase2<index_key_t, val_t> put_request_ps_case2_t;
-typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
-typedef DelRequestCase3<index_key_t> del_request_case3_t;
+typedef GetResponseNPOP<index_key_t, val_t> get_response_npop_t;
+typedef GetRequestNLATEST<index_key_t> get_request_nlatest_t;
+typedef GetResponseLATEST<index_key_t, val_t> get_response_latest_t;
+typedef GetResponseNEXIST<index_key_t, val_t> get_response_nexist_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -953,8 +945,9 @@ static int run_sfg(void * param) {
 						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 
 						while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
+						// status=0 means CKVS may not be latest (similar as conservative query between CKVS and KVS)
 						ckvs_list[thread_id].insert(std::pair<index_key_t, cached_val_t>(\
-									req.key(), cached_val_t(false, tmp_val, 1)));
+									req.key(), cached_val_t(0, tmp_val, 1))); 
 						ckvs_inuse_list[thread_id] = false;
 
 						// TODO: send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
@@ -969,13 +962,41 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::PUT_REQ_GS:
+			case packet_type_t::GET_REQ_NLATEST:
 				{
-					// Put evicted data into key-value store
-					put_request_gs_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
-					//COUT_THIS("[server] stat = " << tmp_stat)
+					// Conservative query
+					get_request_nlatest_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					val_t tmp_val;
+					
+					while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
+					cached_val_t &tmp_cached_val = ckvs_list[thread_id][req.key()];
+					if (tmp_cached_val._status == 0) { // Not latest in CKVS
+						bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
+						if (tmp_val.val_length > 0) { // Found in KVS
+							tmp_cached_val._status = 1;
+							tmp_cached_val._val = tmp_val;
+							get_response_latest_t rsp(req.hashidx(), req.key(), tmp_val);
+							//COUT_THIS("[server] val = " << tmp_val.to_string())
+						}
+						else { // Not found in KVS
+							tmp_cached_val._status = 2;
+							get_response_nexist_t rsp(req.hashidx(), req.key(), tmp_val);
+						}
+					}
+					else if (tmp_cached_val._status == 1) { // Latest in CKVS
+						get_response_latest_t rsp(req.hashidx(), req.key(), tmp_cached_val._val);
+						//COUT_THIS("[server] val = " << tmp_cached_val._val.to_string())
+					}
+					else { // Latest yet deleted in CKVS
+						get_response_nexist_t rsp(req.hashidx(), req.key(), tmp_val);
+					}
+					ckvs_inuse_list[thread_id] = false;
+					
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
 					break;
 				}
 			case packet_type_t::PUT_REQ_PS:

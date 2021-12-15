@@ -84,7 +84,7 @@ GETRES_NPOP_TYPE = 0x09
 cached_list = [0, 1]
 valid_list = [0, 1]
 lock_list = [0, 1]
-latest_list = [0, 1]
+latest_list = [0, 1, 2]
 being_evicted_list = [0, 1]
 predicate_list = [1, 2]
 backup_list = [0, 1]
@@ -353,7 +353,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     if iscached == 1 and isvalid == 1 and islatest == 1 and being_evicted == 0:
                                         self.client.port_forward_tbl_table_add_with_update_getreq_to_getres(\
                                             self.sess_hdl, self.dev_tgt, matchspec0) # Change GETREQ to GETRES -> client
-                                    if iscached == 1 and isvalid == 1 and islatest == 0 and being_evicted == 0:
+                                    else if iscached == 1 and isvalid == 1 and islatest == 2 and being_evicted == 0:
+                                        self.client.port_forward_tbl_table_add_with_update_getreq_to_getres_deleted(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0) # Change GETREQ to GETRES (deleted) -> client
+                                    else if iscached == 1 and isvalid == 1 and islatest == 0 and being_evicted == 0:
                                         actnspec0 = netbufferv2_update_getreq_to_getreq_nlatest_action_spec_t(\
                                                 self.devPorts[1]) # Forward GETREQ_NLATEST to server
                                         self.client.port_forward_tbl_table_add_with_update_getreq_to_getreq_nlatest(\

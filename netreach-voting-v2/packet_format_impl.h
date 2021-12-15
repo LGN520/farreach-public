@@ -524,13 +524,28 @@ template<class key_t>
 GetRequestPOP<key_t>::GetRequestPOP(const char *data, uint32_t recv_size)
 {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_REQ_S);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_REQ_POP);
 }
 
 template<class key_t>
 uint32_t GetRequestPOP<key_t>::serialize(char * const data, uint32_t max_size)
 {
 	COUT_N_EXIT("Invalid invoke of serialize for GetRequestPOP");
+}
+
+// GetRequestNLATEST
+
+template<class key_t>
+GetRequestNLATEST<key_t>::GetRequestNLATEST(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_REQ_NLATEST);
+}
+
+template<class key_t>
+uint32_t GetRequestNLATEST<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for GetRequestNLATEST");
 }
 
 // GetResponseNPOP
@@ -546,6 +561,37 @@ template<class key_t, class val_t>
 void GetResponseNPOP<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 {
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseNPOP");
+}
+
+// GetResponseLATEST
+
+template<class key_t, class val_t>
+GetResponseLATEST<key_t, val_t>::GetResponseLATEST(uint16_t hashidx, key_t key, val_t val)
+	: GetResponse<key_t, val_t>::GetResponse(hashidx, key, val)
+{
+	this->_type = static_cast<uint8_t>(PacketType::GET_RES_LATEST);
+}
+
+template<class key_t, class val_t>
+void GetResponseLATEST<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
+{
+	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseLATEST");
+}
+
+// GetResponseNEXIST
+
+template<class key_t, class val_t>
+GetResponseNEXIST<key_t, val_t>::GetResponseNEXIST(uint16_t hashidx, key_t key, val_t val)
+	: GetResponse<key_t, val_t>::GetResponse(hashidx, key, val)
+{
+	INVARIANT(val.val_length == 0);
+	this->_type = static_cast<uint8_t>(PacketType::GET_RES_NEXIST);
+}
+
+template<class key_t, class val_t>
+void GetResponseNEXIST<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
+{
+	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseNEXIST");
 }
 
 // GetResponsePOP

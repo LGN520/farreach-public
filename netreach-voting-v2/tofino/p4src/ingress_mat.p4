@@ -69,6 +69,19 @@ table cache_lookup_tbl {
 
 // Stage 11
 
+action update_getreq_to_getres_deleted() {
+	// Swap udp port
+	modify_field(udp_hdr.dstPort, meta.tmp_sport);
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	add_to_field(udp_hdr.hdrlen, VAL_DELETED_PKTLEN);
+
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+
+	modify_field(op_hdr.optype, GETRES_TYPE);
+	add_header(vallen_hdr);
+	modify_field(vallen_hdr.vallen, 0); // valen=0 means deleted
+}
+
 action update_getreq_to_getres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
@@ -128,6 +141,7 @@ table port_forward_tbl {
 	}
 	actions {
 		update_getreq_to_getres;
+		update_getreq_to_getres_deleted;
 		update_getreq_to_getreq_pop; // trigger eviction
 		update_getreq_to_getreq_nlatest;
 		update_getres_npop_to_getres;

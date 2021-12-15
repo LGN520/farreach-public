@@ -7,9 +7,9 @@
 class CachedVal {
 	public:
 		CachedVal();
-		CachedVal(bool deleted, val_t val, uint32_t seq);
+		CachedVal(uint8_t _status, val_t val, uint32_t seq);
 
-		bool _deleted;
+		uint8_t _status; // 0: not latest; 1: latest; 2: latest yet deleted
 		val_t _val;
 		uint32_t _seq;
 } PACKED;

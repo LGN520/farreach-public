@@ -1,9 +1,9 @@
 #include "cached_val.h"
 
-CachedVal::CachedVal() : _deleted(false), _val(0), _seq(0) {}
+CachedVal::CachedVal() : _status(0), _val(0), _seq(0) {}
 
-CachedVal::CachedVal(bool deleted, val_t val, uint32_t seq) {
-	_deleted = deleted;
+CachedVal::CachedVal(uint8_t status, val_t val, uint32_t seq) {
+	_status = status;
 	_val = val;
 	_seq = seq;
 }
