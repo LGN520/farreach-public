@@ -53,10 +53,14 @@
 			- Access valid (get_valid)
 			- Access being_evicted (get being_evicted)
 		* Stage 1
-			- Access vote (increase_vote if iscached=1 and being_evicted=0; decrease_vote if iscached=0 and being_evicted=0)
-			- Access latest (read latest)
+			- Access vote
+				+ Increase_vote if iscached=1 and isvalid = 1 and being_evicted=0
+				+ Decrease_vote if iscached=0 and isvalid = 1 and being_evicted=0
+			- Read latest 
 		* Stage 2:
-			- Access lock (if isvalid=0 and being_evicted=0, or iszerovote=2 and being_evcited=0, try_lock; otherwise, read_lock); 
+			- Access lock
+				+ If isvalid=0 and being_evicted=0, or iszerovote=2 and being_evcited=0, try_lock
+				+ Otherwise, read_lock
 		* Stage 2-10: Read vallen and values
 		* Stage 11: access port_forward_tbl
 			- If iscached=1 and isvalid=1 and islatest=1 and being_evicted=0 -> return GETRES; 
@@ -70,10 +74,10 @@
 	+ GETRES_NPOP (no population)
 		* If being_evicted=0, set lock=0; sendback to client as GETRES
 		* NOTE: lock must be 1 and being_evicted must be 0
-	+ TODO: GETRES_LATEST (exist for GETREQ_NLATEST)
-		* TODO: if iscached=1 and latest=0 and being_evicted=0, set latest=1, vallen, and value
-	+ TODO: GETRES_NEXIST (not exist for GETREQ_NLATEST)
-		* TODO: if iscached=1 and latest=0 and being_evicted=0, set latest=2 (being deleted)
+	+ GETRES_LATEST (exist for GETREQ_NLATEST)
+		* If iscached=1 and isvalid = 1 and latest=0 and being_evicted=0, set latest=1, vallen, and value; sendback to client as GETRES
+	+ GETRES_NEXIST (not exist for GETREQ_NLATEST)
+		* If iscached=1 and isvalid = 1 and latest=0 and being_evicted=0, set latest=2 (being deleted); sendback to client as GETRES
 	+ TODO: PUTREQ:
 		* TODO: if iscached = 1 and performed in switch, increase seq
 		* TODO: if iscached = 1 and forwarded to server (being_evicted), pass seq+1 along with PUTs/DELs
@@ -115,19 +119,18 @@
 
 ## Implementation log
 
-- Switch side: tofino/\*.p4
-	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP
-	- Support GETREQ_NLATEST
 - Client side: ycsb_remote_client.c
 	- Support GETREQ, GETRES
+- Switch side: tofino/\*.p4
+	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
+	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
 - Server side: ycsb_server.c, cache_val.h, cache_val.c
-	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP
-	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST
+	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
+	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
 - Utils: packet_format.h, packet_format_impl,h, cache_val.h, cache_val.c
-	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP
-	- Suppose GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST
+	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
+	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
 	- Support CacheVal including val, deleted bool, and key
-- TODO: switch-side GETRES_LATEST, GETRES_NEXIST
 - TODO: PUTREQ, PUTRES
 - TODO: Support cache update in controller (TODO: non-blocking population)
 - TODO: apply to baseline

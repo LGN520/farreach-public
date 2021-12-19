@@ -31,6 +31,7 @@ table update_vallen_tbl {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
 		meta.isvalid: exact;
+		meta.islatest: exact;
 		meta.being_evicted: exact;
 	}
 	actions {
@@ -75,6 +76,7 @@ table update_vallo1_tbl {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
 		meta.isvalid: exact;
+		meta.islatest: exact;
 		meta.being_evicted: exact;
 	}
 	actions {
@@ -119,6 +121,7 @@ table update_valhi1_tbl {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
 		meta.isvalid: exact;
+		meta.islatest: exact;
 		meta.being_evicted: exact;
 	}
 	actions {

@@ -121,7 +121,17 @@ action update_getreq_to_getreq_nlatest(port) {
 }
 
 action update_getres_npop_to_getres(port) {
-	modify_field(op_hdr.optype, GETRES_TYPE); // Not exist
+	modify_field(op_hdr.optype, GETRES_TYPE); // Not exist (no population)
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
+action update_getres_latest_to_getres(port) {
+	modify_field(op_hdr.optype, GETRES_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
+action update_getres_nexist_to_getres(port) {
+	modify_field(op_hdr.optype, GETRES_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
@@ -145,6 +155,8 @@ table port_forward_tbl {
 		update_getreq_to_getreq_pop; // trigger eviction
 		update_getreq_to_getreq_nlatest;
 		update_getres_npop_to_getres;
+		update_getres_latest_to_getres;
+		update_getres_nexist_to_getres;
 		port_forward;
 		nop;
 	}

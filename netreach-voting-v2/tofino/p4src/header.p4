@@ -86,7 +86,7 @@ header_type metadata_t {
 		isdirty: 1;
 		iszerovote: 4;
 		islock: 1;
-		islatest: 1;
+		islatest: 8;
 	}
 }
 

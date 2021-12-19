@@ -80,6 +80,9 @@ DELRES_TYPE = 0x06
 SCANRES_TYPE = 0x07
 GETREQ_POP_TYPE = 0x08
 GETRES_NPOP_TYPE = 0x09
+GETREQ_NLATEST_TYPE = 0x0a
+GETRES_LATEST_TYPE = 0x0b
+GETRES_NEXIST_TYPE = 0x0c
 
 cached_list = [0, 1]
 valid_list = [0, 1]
@@ -146,14 +149,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
     def configure_update_val_tbl(self, valname):
         for iscached in cached_list:
             for isvalid in valid_list:
-                for being_evicted in being_evicted_list:
-                    matchspec0 = netbufferv2_update_vallen_tbl_match_spec_t(\
-                            op_hdr_optype = GETREQ_TYPE,
-                            meta_iscached = iscached,
-                            meta_isvalid = isvalid,
-                            meta_being_evicted = being_evicted)
-                    eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+                for islatest in latest_list:
+                    for being_evicted in being_evicted_list:
+                        matchspec0 = netbufferv2_update_vallen_tbl_match_spec_t(\
+                                op_hdr_optype = GETREQ_TYPE,
+                                meta_iscached = iscached,
+                                meta_isvalid = isvalid,
+                                meta_islatest = islatest,
+                                meta_being_evicted = being_evicted)
+                        eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+                        if iscached == 1 and isvalid == 1 and islatest == 0 and being_evicted == 0:
+                            matchspec0 = netbufferv2_update_vallen_tbl_match_spec_t(\
+                                    op_hdr_optype = GETRES_LATEST_TYPE,
+                                    meta_iscached = iscached,
+                                    meta_isvalid = isvalid,
+                                    meta_islatest = islatest,
+                                    meta_being_evicted = being_evicted)
+                            eval("self.client.update_val{}_tbl_table_add_with_set_val{}".format(valname, valname))(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
 
     def setUp(self):
         print '\nSetup'
@@ -265,22 +279,45 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec0 = netbufferv2_access_vote_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ_TYPE,
                     meta_iscached = 1,
+                    meta_isvalid = 1,
                     meta_being_evicted = 0)
             self.client.access_vote_tbl_table_add_with_increase_vote(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv2_access_vote_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ_TYPE,
                     meta_iscached = 0,
+                    meta_isvalid = 1,
                     meta_being_evicted = 0)
             self.client.access_vote_tbl_table_add_with_decrease_vote(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_latest_tbl (default: nop; ?)
             print "Configuring access_latest_tbl"
-            matchspec0 = netbufferv2_access_latest_tbl_match_spec_t(\
-                    op_hdr_optype = GETREQ_TYPE)
-            self.client.access_vote_tbl_table_add_with_read_latest(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            for iscached in cached_list:
+                for isvalid in valid_list:
+                    for being_evicted in being_evicted_list:
+                        matchspec0 = netbufferv2_access_latest_tbl_match_spec_t(\
+                                op_hdr_optype = GETREQ_TYPE,
+                                meta_iscached = iscached,
+                                meta_isvalid = isvalid,
+                                meta_being_evicted = being_evicted)
+                        self.client.access_latest_tbl_table_add_with_get_latest(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+                        if iscached == 1 and isvalid == 1 and being_evicted == 0:
+                            matchspec0 = netbufferv2_access_latest_tbl_match_spec_t(\
+                                    op_hdr_optype = GETRES_LATEST_TYPE,
+                                    meta_iscached = iscached,
+                                    meta_isvalid = isvalid,
+                                    meta_being_evicted = being_evicted)
+                            self.client.access_latest_tbl_table_add_with_try_set_latest(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                            matchspec0 = netbufferv2_access_latest_tbl_match_spec_t(\
+                                    op_hdr_optype = GETRES_NEXIST_TYPE,
+                                    meta_iscached = iscached,
+                                    meta_isvalid = isvalid,
+                                    meta_being_evicted = being_evicted)
+                            self.client.access_latest_tbl_table_add_with_try_clear_latest(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             ### Stage 2 ###
 
@@ -313,14 +350,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring update_vallen_tbl"
             for iscached in cached_list:
                 for isvalid in valid_list:
-                    for being_evicted in being_evicted_list:
-                        matchspec0 = netbufferv2_update_vallen_tbl_match_spec_t(\
-                                op_hdr_optype = GETREQ_TYPE,
-                                meta_iscached = iscached,
-                                meta_isvalid = isvalid.
-                                meta_being_evicted = being_evicted)
-                        self.client.update_vallen_tbl_table_add_with_get_vallen(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
+                    for islatest in latest_list:
+                        for being_evicted in being_evicted_list:
+                            matchspec0 = netbufferv2_update_vallen_tbl_match_spec_t(\
+                                    op_hdr_optype = GETREQ_TYPE,
+                                    meta_iscached = iscached,
+                                    meta_isvalid = isvalid,
+                                    meta_islatest = islatest,
+                                    meta_being_evicted = being_evicted)
+                            self.client.update_vallen_tbl_table_add_with_get_vallen(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                            if iscached == 1 and isvalid == 1 and islatest == 0 and being_evicted == 0:
+                                matchspec0 = netbufferv2_update_vallen_tbl_match_spec_t(\
+                                        op_hdr_optype = GETRES_LATEST_TYPE,
+                                        meta_iscached = iscached,
+                                        meta_isvalid = isvalid,
+                                        meta_islatest = islatest,
+                                        meta_being_evicted = being_evicted)
+                                self.client.update_vallen_tbl_table_add_with_set_vallen(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: update_vallo1_tbl (default: nop; ?)
             print "Configuring update_vallo1_tbl"
@@ -394,6 +442,30 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             meta_being_evicted = being_evicted)
                                     actnspec0 = netbufferv2_update_getres_npop_to_getres_action_spec_t(\
                                             self.devPorts[0]) # Change GETRES_NPOP to GETRES -> client
+                                    self.client.port_forward_tbl_table_add_with_getres_npop_to_getres(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                    matchspec0 = netbufferv2_port_forward_tbl_match_spec_t(\
+                                            op_hdr_optype = GETRES_LATEST_TYPE,
+                                            meta_iscached = iscached,
+                                            meta_isvalid = isvalid,
+                                            meta_islatest = islatest,
+                                            meta_iszerovote = iszerovote,
+                                            meta_islock = islock,
+                                            meta_being_evicted = being_evicted)
+                                    actnspec0 = netbufferv2_update_getres_latest_to_getres_action_spec_t(\
+                                            self.devPorts[0]) # Change GETRES_LATEST to GETRES -> client
+                                    self.client.port_forward_tbl_table_add_with_getres_npop_to_getres(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                    matchspec0 = netbufferv2_port_forward_tbl_match_spec_t(\
+                                            op_hdr_optype = GETRES_NEXIST_TYPE,
+                                            meta_iscached = iscached,
+                                            meta_isvalid = isvalid,
+                                            meta_islatest = islatest,
+                                            meta_iszerovote = iszerovote,
+                                            meta_islock = islock,
+                                            meta_being_evicted = being_evicted)
+                                    actnspec0 = netbufferv2_update_getres_nexist_to_getres_action_spec_t(\
+                                            self.devPorts[0]) # Change GETRES_NEXIST to GETRES -> client
                                     self.client.port_forward_tbl_table_add_with_getres_npop_to_getres(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 

@@ -57,6 +57,8 @@ parser parse_op_rsp {
 	return select(op_hdr.optype) {
 		GETRES_TYPE: parse_vallen;
 		GETRES_NPOP_TYPE: parse_vallen;
+		GETRES_LATEST_TYPE: parse_vallen;
+		GETRES_NEXIST_TYPE: parse_vallen;
 		//GETRES_S_CASE2_TYPE: parse_vallen;
 		PUTRES_TYPE: parse_res;
 		DELRES_TYPE: parse_res;
