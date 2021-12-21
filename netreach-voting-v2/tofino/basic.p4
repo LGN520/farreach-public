@@ -23,7 +23,9 @@
 #define GETREQ_NLATEST_TYPE 0x0a
 #define GETRES_LATEST_TYPE 0x0b
 #define GETRES_NEXIST_TYPE 0x0c
-#define PUTREQ_POP_TYPE 0x0d
+#define GETREQ_BE_TYPE 0x0d
+#define PUTREQ_POP_TYPE 0x0e
+#define PUTREQ_BE_TYPE 0x0f
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -36,11 +38,12 @@
 
 // NOTE: you should change the two macros according to maximum val length
 // VAL_PKTLEN: sizeof(vallen) + sizeof(val)
-// VAL_PKTLEN_MINUS_ONE: sizeof(vallen) + sizeof(val) - sizeof(stat)
-// VAL_DELETED_PKTLEN: sizeof(vallen)
+// VAL_PKTLEN_MINUS_STAT: sizeof(vallen) + sizeof(val) - sizeof(stat)
+// VAL_PKTLEN_PLUS_SEQ: sizeof(vallen) + sizeof(val) + sizeof(seq)
 #define VAL_DELETED_PKTLEN 1
 #define VAL_PKTLEN 9
-#define VAL_PKTLEN_MINUS_ONE 8
+#define VAL_PKTLEN_MINUS_STAT 8
+#define VAL_PKTLEN_PLUS_SEQ 13
 //#define VAL_PKTLEN 97
 //#define VAL_PKTLEN_MINUS_ONE 96
 

@@ -38,10 +38,10 @@ parser parse_udp_src {
 parser parse_op_req {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
+		GETREQ_BE_TYPE: parse_vallen;
 		PUTREQ_TYPE: parse_vallen;
-		PUTREQ_RU_TYPE: parse_vallen;
-		PUTREQ_PS_TYPE: parse_vallen;
-		PUTREQ_GS_TYPE: parse_vallen;
+		PUTREQ_POP_TYPE: parse_vallen;
+		PUTREQ_BE_TYPE: parse_vallen;
 		PUTREQ_CASE1_TYPE: parse_vallen;
 		DELREQ_CASE1_TYPE: parse_vallen;
 		//PUTREQ_RU_CASE2_TYPE: parse_vallen;
@@ -92,6 +92,8 @@ parser parse_vallen {
 parser parse_val_len1 {
 	extract(val1_hdr);
 	return select(op_hdr.optype) {
+		GETREQ_BE_TYPE: parse_seq;
+		PUTREQ_BE_TYPE: parse_seq;
 		default: ingress;
 	}
 }

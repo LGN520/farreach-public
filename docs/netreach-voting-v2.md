@@ -68,7 +68,7 @@
 			- If iscached=1 and isvalid=1 and islatest=2 and being_evicted=0 -> return GETRES (vallen=0 and not value headers);
 			- If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
 			- If iscached=1 and isvalid=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST for conservative query (not latest, first GETs after population); 
-			- TODO: If iscached=1 and isvalid=1 and being_evicted=1 -> forward GETREQ_BE for version-aware query;
+			- If iscached=1 and isvalid=1 and being_evicted=1 -> forward GETREQ_BE for version-aware query;
 			- Otherwise, forward GETREQ to server
 			- NOTE: if being_evicted=1, islock may be 0 (set as 0 at phase 2); if iszerovote=2, iscached must be 0
 	+ GETRES
@@ -111,11 +111,11 @@
 			+ Sendback GETRES_LATEST
 		* If status == 2 in CKVS -> latest yet deleted
 			- Sendback GETRES_NEXIST
-	+ TODO: GETREQ_BE (being evicted)
-		* TODO: If seq (embedded in pkt) >= seq' (stored in CKVS), use val carried by requent packet
-		* TODO: Otherwise, sendback GETRES based on status in CKVS
-			- TODO: If status == 1 or status == 2, use val in CKVS to sendback GETRES
-			- TODO: Otherwise, use val in KVS to sendback GETRES, update CKVS
+	+ GETREQ_BE (being evicted)
+		* If seq (embedded in pkt) >= seq' (stored in CKVS), use val carried by request packet
+		* Otherwise, sendback GETRES based on status in CKVS
+			- If status == 1 or status == 2, use val in CKVS to sendback GETRES
+			- Otherwise, use val in KVS to sendback GETRES, update CKVS
 	+ GETREQ: sendback GETRES
 	+ PUTREQ_POP (population)
 		* Add kv in KVS, sendback PUTRES, add key in CKVS with status = 0 and seq = 1, trigger population (k, v, hashidx) 
@@ -145,20 +145,15 @@
 
 - Client side: ycsb_remote_client.c
 	- Support GETREQ, GETRES, PUTREQ, PUTRES
-- Switch side: tofino/\*.p4
+- Packet type support
+	- Switch side: tofino/\*.p4; Server side: ycsb_server.c; Utils: packet_format.h, packet_format_impl,h, cache_val.h, cache_val.c
 	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
 	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
 	- Support PUTREQ, PUTREQ_POP, PUTRES
-- Server side: ycsb_server.c, cache_val.h, cache_val.c
-	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
-	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
-- Utils: packet_format.h, packet_format_impl,h, cache_val.h, cache_val.c
-	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
-	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
-	- Support PUTREQ, PUTREQ_POP, PUTRES
+	- Support GETREQ_BE for version-aware query
 	- Support CacheVal including val, deleted bool, and key
-- TODO: GETREQ_BE, PUTREQ_BE
-- TODO: DEL
+- TODO: PUTREQ_BE
+- TODO: DEL, DELREQ_BE
 - TODO: Support cache update in controller (TODO: non-blocking population)
 - TODO: apply to baseline
 	+ TODO: replace thread_id with hashidx (packet_format.h, packet_foramt_impl.h, ycsb_remove_client.c)
