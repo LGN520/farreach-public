@@ -57,6 +57,7 @@
 #include "p4src/regs/lock.p4"
 #include "p4src/regs/latest.p4"
 #include "p4src/regs/val.p4"
+#include "p4src/regs/seq.p4"
 
 #include "p4src/ingress_mat.p4"
 #include "p4src/egress_mat.p4"
@@ -75,9 +76,9 @@ control ingress {
 	// Stage 1 (rely on iscached and being_evicted)
 	apply(access_vote_tbl);
 	apply(access_latest_tbl);
+	apply(access_seq_tbl);
 	//apply(access_case1_tbl); // Case 1 of backup: first matched PUT/DEL of this bucket
 	//apply(access_case3_tbl); // Case 3 of backup: first PUT/DEL touching server 
-	//apply(access_dirty_tbl);
 
 	// Stage 2 (rely on valid, vote, and being_evicted)
 	apply(access_lock_tbl);
@@ -127,6 +128,13 @@ control ingress {
 	// Otherwise, forward GETREQ to server
 	// (2) GETRES: sendback to client
 	// (3) GETRES_NPOP: if being_evicted=0, set lock=0; always sendback to client as GETRES
+	// (4) GETRES_LATEST: if iscached=1 and isvalid = 1 and latest=0 and being_evicted=0, set latest=1, vallen, and value; sendback to client as GETRES
+	// (5) GETRES_NEXIST: if iscached=1 and isvalid = 1 and latest=0 and being_evicted=0, set latest=2 (being deleted); sendback to client as GETRES
+	// (6) PUTREQ:
+	// If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (PUTREQ_POP)
+	// If iscached=1 and isvalid=1 and being_evicted=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
+	// If iscached = 1 and isvalid = 1 and being_evicted = 1, pass seq+1 along with PUTs/DELs to server (version-aware query)
+	// (7) PUTRES: sendback to client
 	apply(port_forward_tbl);
 }
 

@@ -594,6 +594,21 @@ void GetResponseNEXIST<key_t, val_t>::deserialize(const char * data, uint32_t re
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseNEXIST");
 }
 
+// PutRequestPOP
+
+template<class key_t, class val_t>
+PutRequestPOP<key_t, val_t>::PutRequestPOP(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_POP);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestPOP<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPOP");
+}
+
 // GetResponsePOP
 
 /*template<class key_t, class val_t>

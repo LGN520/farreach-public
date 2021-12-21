@@ -135,6 +135,36 @@ action update_getres_nexist_to_getres(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
+action update_putreq_to_putres() {
+	// Swap udp port
+	modify_field(udp_hdr.dstPort, meta.tmp_sport);
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_ONE);
+
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+
+	modify_field(op_hdr.optype, PUTRES_TYPE);
+	remove_header(vallen_hdr);
+	remove_header(val1_hdr);
+	/*remove_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);*/
+	add_header(res_hdr);
+	modify_field(res_hdr.stat, 1);
+}
+
 action update_putreq_to_putreq_pop(port) {
 	modify_field(op_hdr.optype, PUTREQ_POP_TYPE); // Trigger eviction
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
@@ -162,6 +192,7 @@ table port_forward_tbl {
 		update_getres_npop_to_getres;
 		update_getres_latest_to_getres;
 		update_getres_nexist_to_getres;
+		update_putreq_to_putres;
 		update_putreq_to_putreq_pop; // trigger eviction
 		port_forward;
 		nop;

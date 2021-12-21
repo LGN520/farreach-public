@@ -57,6 +57,7 @@
 				+ Increase_vote if iscached=1 and isvalid = 1 and being_evicted=0
 				+ Decrease_vote if iscached=0 and isvalid = 1 and being_evicted=0
 			- Read latest 
+			- Read seq
 		* Stage 2:
 			- Access lock
 				+ If isvalid=0 and being_evicted=0, or iszerovote=2 and being_evcited=0, try_lock
@@ -67,6 +68,7 @@
 			- If iscached=1 and isvalid=1 and islatest=2 and being_evicted=0 -> return GETRES (vallen=0 and not value headers);
 			- If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
 			- If iscached=1 and isvalid=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST for conservative query (not latest, first GETs after population); 
+			- TODO: If iscached=1 and isvalid=1 and being_evicted=1 -> forward GETREQ_BE for version-aware query;
 			- Otherwise, forward GETREQ to server
 			- NOTE: if being_evicted=1, islock may be 0 (set as 0 at phase 2); if iszerovote=2, iscached must be 0
 	+ GETRES
@@ -89,8 +91,10 @@
 			- Set vallen and values if iscached=1 and isvalid=1 and being_evicted=0
 		* Stage 11: access port_forward_tbl
 			- If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (PUTREQ_POP)
-			- TODO: If iscached=1 and isvalid=1 and being_evicted=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
-			- TODO: If iscached = 1 and isvalid = 1 and being_evicted = 1, pass seq+1 along with PUTs/DELs to server (version-aware query)
+			- If iscached=1 and isvalid=1 and being_evicted=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
+			- TODO: If iscached = 1 and isvalid = 1 and being_evicted = 1, embed seq, send PUTREQ_BE to server (being evicted)
+	+ PUTRES
+		* Sendback to client
 - Client-side processsing
 	+ Use client-side consistent hashing for hashidx (baseline also needs it for routing)
 - Server-side processing
@@ -107,10 +111,19 @@
 			+ Sendback GETRES_LATEST
 		* If status == 2 in CKVS -> latest yet deleted
 			- Sendback GETRES_NEXIST
+	+ TODO: GETREQ_BE (being evicted)
+		* TODO: If seq (embedded in pkt) >= seq' (stored in CKVS), use val carried by requent packet
+		* TODO: Otherwise, sendback GETRES based on status in CKVS
+			- TODO: If status == 1 or status == 2, use val in CKVS to sendback GETRES
+			- TODO: Otherwise, use val in KVS to sendback GETRES, update CKVS
 	+ GETREQ: sendback GETRES
-	+ TODO: PUTREQ_POP (population)
-		* TODO: Sendback PUTRES, add key in CKVS with status = 0 and seq = 1, trigger population (k, v, hashidx) 
+	+ PUTREQ_POP (population)
+		* Add kv in KVS, sendback PUTRES, add key in CKVS with status = 0 and seq = 1, trigger population (k, v, hashidx) 
 		* NOTE: key cannot exist in CKVS (key is cached so vote cannot be zero; DEL cannot invalidate the entry, which only sets a special status of value)
+	+ TODO: PUTREQ_BE (being evicted)
+		* TODO: If exist in CKVS, set val, status=1, and seq'=seq+1 (seq is that number embedded in the request packet), sendback PUTRES
+		* TODO: Otherwise, put into KVS, sendback PUTRES
+	+ PUTREQ: sendback PUTRES
 - Controller-side processing
 	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population
 	+ TODO: if cache is full, eviction is required; performing eviction in data plane for atomicity is resouce-consuming (proportional to value length) 
@@ -131,21 +144,21 @@
 ## Implementation log
 
 - Client side: ycsb_remote_client.c
-	- Support GETREQ, GETRES
+	- Support GETREQ, GETRES, PUTREQ, PUTRES
 - Switch side: tofino/\*.p4
 	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
 	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
+	- Support PUTREQ, PUTREQ_POP, PUTRES
 - Server side: ycsb_server.c, cache_val.h, cache_val.c
 	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
 	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
-	- Suppose PUTREQ_POP
 - Utils: packet_format.h, packet_format_impl,h, cache_val.h, cache_val.c
 	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
 	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
+	- Support PUTREQ, PUTREQ_POP, PUTRES
 	- Support CacheVal including val, deleted bool, and key
-- TODO: client-side PUTREQ, PUTRES
-- TODO: server-side PUTREQ, PUTREQ_POP, PUTRES
-- TODO: switch-side PUTREQ, PUTRES
+- TODO: GETREQ_BE, PUTREQ_BE
+- TODO: DEL
 - TODO: Support cache update in controller (TODO: non-blocking population)
 - TODO: apply to baseline
 	+ TODO: replace thread_id with hashidx (packet_format.h, packet_foramt_impl.h, ycsb_remove_client.c)

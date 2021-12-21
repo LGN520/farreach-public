@@ -58,6 +58,7 @@ typedef GetResponseNPOP<index_key_t, val_t> get_response_npop_t;
 typedef GetRequestNLATEST<index_key_t> get_request_nlatest_t;
 typedef GetResponseLATEST<index_key_t, val_t> get_response_latest_t;
 typedef GetResponseNEXIST<index_key_t, val_t> get_response_nexist_t;
+typedef PutRequestPOP<index_key_t, val_t> put_request_pop_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -999,13 +1000,29 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::PUT_REQ_PS:
+			case packet_type_t::PUT_REQ_POP:
 				{
-					// Put evicted data into key-value store
-					put_request_ps_t req(buf, recv_size);
+					// Put data into KVS 
+					put_request_pop_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string()
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
+					
+					// Sendback PUTRES
+					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
+					
+					// Put data into CKVS
+					while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
+					// status=0 means CKVS may not be latest (similar as conservative query between CKVS and KVS)
+					ckvs_list[thread_id].insert(std::pair<index_key_t, cached_val_t>(\
+								req.key(), cached_val_t(0, req.val(), 1))); 
+					ckvs_inuse_list[thread_id] = false;
+
+					// TODO: send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
 					break;
 				}
 			case packet_type_t::DEL_REQ_S:
