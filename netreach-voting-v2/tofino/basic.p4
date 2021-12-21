@@ -23,6 +23,7 @@
 #define GETREQ_NLATEST_TYPE 0x0a
 #define GETRES_LATEST_TYPE 0x0b
 #define GETRES_NEXIST_TYPE 0x0c
+#define PUTREQ_POP_TYPE 0x0d
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)

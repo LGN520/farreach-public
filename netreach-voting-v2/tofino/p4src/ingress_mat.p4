@@ -135,6 +135,11 @@ action update_getres_nexist_to_getres(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
+action update_putreq_to_putreq_pop(port) {
+	modify_field(op_hdr.optype, PUTREQ_POP_TYPE); // Trigger eviction
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
 action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -157,6 +162,7 @@ table port_forward_tbl {
 		update_getres_npop_to_getres;
 		update_getres_latest_to_getres;
 		update_getres_nexist_to_getres;
+		update_putreq_to_putreq_pop; // trigger eviction
 		port_forward;
 		nop;
 	}
