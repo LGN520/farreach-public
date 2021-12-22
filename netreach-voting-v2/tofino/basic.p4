@@ -37,15 +37,18 @@
 #define KV_BUCKET_COUNT 1
 
 // NOTE: you should change the two macros according to maximum val length
-// VAL_PKTLEN: sizeof(vallen) + sizeof(val)
-// VAL_PKTLEN_MINUS_STAT: sizeof(vallen) + sizeof(val) - sizeof(stat)
-// VAL_PKTLEN_PLUS_SEQ: sizeof(vallen) + sizeof(val) + sizeof(seq)
-#define VAL_DELETED_PKTLEN 1
+// VAL_PKTLEN: sizeof(vallen) + sizeof(val), e.g., GETREQ -> GETRES
+// VAL_PKTLEN_MINUS_STAT: sizeof(vallen) + sizeof(val) - sizeof(stat), e.g., PUTREQ -> PUTRES
+// VAL_PKTLEN_PLUS_SEQ: sizeof(vallen) + sizeof(val) + sizeof(seq), e.g., GETREQ -> GETREQ_BE
+// SEQ_PKTLEN: sizeof(seq), e.g., PUTREQ -> PUTREQ_BE
 #define VAL_PKTLEN 9
 #define VAL_PKTLEN_MINUS_STAT 8
 #define VAL_PKTLEN_PLUS_SEQ 13
+#define SEQ_PKTLEN 4
 //#define VAL_PKTLEN 97
 //#define VAL_PKTLEN_MINUS_ONE 96
+//#define VAL_PKTLEN_PLUS_SEQ 101
+//#define SEQ_PKTLEN 4
 
 //#define CPU_PORT 192
 

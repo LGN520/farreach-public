@@ -33,6 +33,7 @@
 	+ Overview	
 		* Stage 0: valid, cache_lookup_tbl (get iscached), being_evicted (for inconsistency of evicted data), load_backup_tbl
 		* Stage 1: vote, latest (for inconsistency of populated/deleted data), seq (for version-aware/conservative query), case 1, case 2 
+			- NOTE: seq is created by switch (big-endian), so we need to deserialize seq into little-endian in server for GET/PUTREQ_BE
 		* Stage 2: lock, vallen
 			- Case 1: PUT/DELREQ on switch for backup
 			- Case 3: First PUTREQ on server for backup
@@ -87,12 +88,15 @@
 				+ Increase_vote if iscached=1 and isvalid = 1 and being_evicted=0
 				+ Decrease_vote if iscached=0 and isvalid = 1 and being_evicted=0
 			- Set latest = 1 if iscached=1 and isvalid=1 and being_evicted=0
+			- Access seq
+				+ Increase seq if iscached=1 and isvalid=1 and being_evicted=0
+				+ Read seq otherwise 
 		* Stage 2-10
 			- Set vallen and values if iscached=1 and isvalid=1 and being_evicted=0
 		* Stage 11: access port_forward_tbl
 			- If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (PUTREQ_POP)
 			- If iscached=1 and isvalid=1 and being_evicted=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
-			- TODO: If iscached = 1 and isvalid = 1 and being_evicted = 1, embed seq, send PUTREQ_BE to server (being evicted)
+			- If iscached = 1 and isvalid = 1 and being_evicted = 1, embed seq, send PUTREQ_BE to server (being evicted)
 	+ PUTRES
 		* Sendback to client
 - Client-side processsing
@@ -111,18 +115,24 @@
 			+ Sendback GETRES_LATEST
 		* If status == 2 in CKVS -> latest yet deleted
 			- Sendback GETRES_NEXIST
+		* NOTE: key must exist in CKVS due to being_evicted = 0 for GETREQ_NLATEST
 	+ GETREQ_BE (being evicted)
-		* If seq (embedded in pkt) >= seq' (stored in CKVS), use val carried by request packet
-		* Otherwise, sendback GETRES based on status in CKVS
-			- If status == 1 or status == 2, use val in CKVS to sendback GETRES
-			- Otherwise, use val in KVS to sendback GETRES, update CKVS
+		* If key in CKVS
+			* If seq (embedded in pkt) >= seq' (stored in CKVS), use val carried by request packet
+			* Otherwise, sendback GETRES based on status in CKVS
+				- If status == 1 or status == 2, use val in CKVS to sendback GETRES
+				- Otherwise, use val in KVS to sendback GETRES, update CKVS
+		* Otherwise
+			* Get value from KVS and sendback GETRES
+		* NOTE: key may not exist in CKVS since controller may remove the key before GETREQ_BE
 	+ GETREQ: sendback GETRES
 	+ PUTREQ_POP (population)
 		* Add kv in KVS, sendback PUTRES, add key in CKVS with status = 0 and seq = 1, trigger population (k, v, hashidx) 
 		* NOTE: key cannot exist in CKVS (key is cached so vote cannot be zero; DEL cannot invalidate the entry, which only sets a special status of value)
-	+ TODO: PUTREQ_BE (being evicted)
-		* TODO: If exist in CKVS, set val, status=1, and seq'=seq+1 (seq is that number embedded in the request packet), sendback PUTRES
-		* TODO: Otherwise, put into KVS, sendback PUTRES
+	+ PUTREQ_BE (being evicted)
+		* If exist in CKVS, set val, status=1, and seq'=seq+1 (seq is that number embedded in the request packet), sendback PUTRES
+		* Otherwise, put into KVS, sendback PUTRES
+		* NOTE: key may not exist in CKVS since controller may remove the key before PUTREQ_BE
 	+ PUTREQ: sendback PUTRES
 - Controller-side processing
 	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population
@@ -150,9 +160,8 @@
 	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
 	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
 	- Support PUTREQ, PUTREQ_POP, PUTRES
-	- Support GETREQ_BE for version-aware query
+	- Support GETREQ_BE and PUTREQ_BE for version-aware query
 	- Support CacheVal including val, deleted bool, and key
-- TODO: PUTREQ_BE
 - TODO: DEL, DELREQ_BE
 - TODO: Support cache update in controller (TODO: non-blocking population)
 - TODO: apply to baseline

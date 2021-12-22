@@ -643,7 +643,50 @@ void GetRequestBE<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	begin += sizeof(key_t);
 	uint32_t tmpsize = this->_val.deserialize(begin);
 	begin += tmpsize;
-	memcpy((void *)&this->_seq, begin, sizeof(int));
+	// NOTE: big-endian or small-endian is only related with byte order instead of signed/unsigned
+	uint32_t tmpseq;
+	memcpy((void *)&tmpseq, begin, sizeof(uint32_t)); // Big-endian
+	this->_seq = int(ntohl(tmpseq)); // Little-endian
+}
+
+// PutRequestBE
+
+template<class key_t, class val_t>
+PutRequestBE<key_t, val_t>::PutRequestBE(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_BE);
+}
+
+template<class key_t, class val_t>
+int PutRequestBE<key_t, val_t>::seq() const
+{
+	return _seq;
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestBE<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestBE");
+}
+
+template<class key_t, class val_t>
+void PutRequestBE<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	//uint32_t my_size = this->size();
+	//INVARIANT(my_size == recv_size);
+	const char *begin = data;
+	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
+	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_hashidx, begin, sizeof(uint8_t));
+	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_key, begin, sizeof(key_t));
+	begin += sizeof(key_t);
+	uint32_t tmpsize = this->_val.deserialize(begin);
+	begin += tmpsize;
+	// NOTE: big-endian or small-endian is only related with byte order instead of signed/unsigned
+	uint32_t tmpseq;
+	memcpy((void *)&tmpseq, begin, sizeof(uint32_t)); // Big-endian
+	this->_seq = int(ntohl(tmpseq)); // Little-endian
 }
 
 // GetResponsePOP

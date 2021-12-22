@@ -226,6 +226,20 @@ class GetRequestBE : public PutRequest<key_t, val_t> {
 		int _seq;
 };
 
+template<class key_t, class val_t>
+class PutRequestBE : public PutRequest<key_t, val_t> {
+	public: 
+		PutRequestBE(const char * data, uint32_t recv_size);
+
+		int seq() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size);
+
+		int _seq;
+};
+
 /*template<class key_t, class val_t>
 class GetResponsePOP : public GetResponse<key_t, val_t> {
 	public: 

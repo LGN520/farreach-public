@@ -364,13 +364,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_being_evicted = being_evicted)
                         self.client.access_seq_tbl_table_add_with_read_seq(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
+                        matchspec0 = netbufferv2_access_latest_tbl_match_spec_t(\
+                                op_hdr_optype = PUTREQ_TYPE,
+                                meta_iscached = iscached,
+                                meta_isvalid = isvalid,
+                                meta_being_evicted = being_evicted)
                         if iscached == 1 and isvalid == 1 and being_evicted == 0:
-                            matchspec0 = netbufferv2_access_latest_tbl_match_spec_t(\
-                                    op_hdr_optype = PUTREQ_TYPE,
-                                    meta_iscached = iscached,
-                                    meta_isvalid = isvalid,
-                                    meta_being_evicted = being_evicted)
                             self.client.access_seq_tbl_table_add_with_increase_seq(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                        else:
+                            self.client.access_seq_tbl_table_add_with_read_seq(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             ### Stage 2 ###
@@ -553,6 +556,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     else if iscached == 1 and isvalid == 1 and being_evicted == 0:
                                         self.client.port_forward_tbl_table_add_with_update_putreq_to_putres(\
                                                 self.sess_hdl, self.dev_tgt, matchspec0) # Change PUTREQ to PUTRES -> client
+                                    else if iscached == 1 and isvalid == 1 and being_evicted == 1:
+                                        actnspec0 = netbufferv2_update_putreq_to_putreq_be_action_spec_t(\
+                                                self.devPorts[1]) # Forward PUTREQ_BE to server
+                                        self.client.port_forward_tbl_table_add_with_update_putreq_to_putreq_be(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                     matchspec0 = netbufferv2_port_forward_tbl_match_spec_t(\
                                             op_hdr_optype = PUTRES_TYPE,
                                             meta_iscached = iscached,

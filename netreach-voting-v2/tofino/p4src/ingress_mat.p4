@@ -194,6 +194,13 @@ action update_putreq_to_putreq_pop(port) {
 	modify_field(op_hdr.optype, PUTREQ_POP_TYPE); // Trigger eviction
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
+action update_putreq_to_putreq_be(port) {
+	add_to_field(udp_hdr.hdrlen, SEQLEN);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+
+	modify_field(op_hdr.optype, PUTREQ_BE_TYPE);
+	add_header(seq_hdr);
+}
 
 action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
@@ -220,6 +227,7 @@ table port_forward_tbl {
 		update_getreq_to_getreq_be; // being evicted
 		update_putreq_to_putres;
 		update_putreq_to_putreq_pop; // trigger eviction
+		update_putreq_to_putreq_be; // being evicted
 		port_forward;
 		nop;
 	}

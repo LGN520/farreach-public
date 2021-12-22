@@ -60,6 +60,7 @@ typedef GetResponseLATEST<index_key_t, val_t> get_response_latest_t;
 typedef GetResponseNEXIST<index_key_t, val_t> get_response_nexist_t;
 typedef GetRequestBE<index_key_t, val_t> get_request_be_t;
 typedef PutRequestPOP<index_key_t, val_t> put_request_pop_t;
+typedef PutRequestBE<index_key_t, val_t> put_request_be_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -1015,45 +1016,60 @@ static int run_sfg(void * param) {
 					get_request_be_t req(buf, recv_size);
 
 					while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
-					cached_val_t &tmp_cached_val = ckvs_list[thread_id][req.key()];
-					val_t tmp_val;
-					if (req.seq() >= tmp_cached_val._seq) { // use value embedded in request to send GETRES
-						get_response_t rsp(req.hashidx(), req.key(), req.val());
+					std::map<index_key_t, cached_val_t>::iterator iter = ckvs_list[thread_id].find(req.key());
+					if (iter != ckvs_list[thread_id].end()) { // Exist in CKVS
+						cached_val_t &tmp_cached_val = iter->second;
+						val_t tmp_val;
+						if (req.seq() >= tmp_cached_val._seq) { // use value embedded in request to send GETRES
+							get_response_t rsp(req.hashidx(), req.key(), req.val());
+							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+							encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+							res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+						}
+						else {
+							if (tmp_cached_val._status == 1) { // Latest in CKVS
+								get_response_t rsp(req.hashidx(), req.key(), tmp_cached_val->_val);
+								rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+								encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+								res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+							}
+							else if (tmp_cached_val._status == 2) { // Deleted in CKVS
+								get_response_t rsp(req.hashidx(), req.key(), tmp_val);
+								rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+								encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+								res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+							}
+							else { // Not latest in CKVS
+								bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
+								if (tmp_val.val_length > 0) { // Found in KVS
+									tmp_cached_val._status = 1;
+									tmp_cached_val._val = tmp_val;
+								}
+								else { // Not found in KVS
+									tmp_cached_val._status = 2;
+								}
+								get_response_t rsp(req.hashidx(), req.key(), tmp_val);
+								//COUT_THIS("[server] val = " << tmp_val.to_string())
+								rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+								encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+								res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+							}
+						}
+						ckvs_inuse_list[thread_id] = false;
+					}
+					else { // Not exist in CKVS
+						ckvs_inuse_list[thread_id] = false;
+						val_t tmp_val;
+						bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
+
+						get_response_t rsp(req.hashidx(), req.key(), tmp_val);
+						//COUT_THIS("[server] val = " << tmp_val.to_string())
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					}
-					else {
-						if (tmp_cached_val._status == 1) { // Latest in CKVS
-							get_response_t rsp(req.hashidx(), req.key(), tmp_cached_val->_val);
-							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-							encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
-							res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
-						}
-						else if (tmp_cached_val._status == 2) { // Deleted in CKVS
-							get_response_t rsp(req.hashidx(), req.key(), tmp_val);
-							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-							encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
-							res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
-						}
-						else { // Not latest in CKVS
-							bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
-							if (tmp_val.val_length > 0) { // Found in KVS
-								tmp_cached_val._status = 1;
-								tmp_cached_val._val = tmp_val;
-							}
-							else { // Not found in KVS
-								tmp_cached_val._status = 2;
-							}
-							get_response_t rsp(req.hashidx(), req.key(), tmp_val);
-							//COUT_THIS("[server] val = " << tmp_val.to_string())
-							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-							encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
-							res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
-						}
-					}
-					ckvs_inuse_list[thread_id] = false;
 
+					sent_pkt_idx++;
 					break;
 				}
 			case packet_type_t::PUT_REQ_POP:
@@ -1069,7 +1085,6 @@ static int run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
-					sent_pkt_idx++;
 					
 					// Put data into CKVS
 					while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
@@ -1079,6 +1094,39 @@ static int run_sfg(void * param) {
 					ckvs_inuse_list[thread_id] = false;
 
 					// TODO: send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::PUT_REQ_BE:
+				{
+					put_request_be_t req(buf, recv_size);
+
+					while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
+					std::map<index_key_t, cached_val_t>::iterator iter = ckvs_list[thread_id].find(req.key());
+					if (iter != ckvs_list[thread_id].end()) { // Exist in CKVS
+						cached_val_t &tmp_cached_val = iter->second;
+						tmp_cached_val._status = 1;
+						tmp_cached_val._val = req.val();
+						tmp_cached_val._seq = req.seq() + 1;
+
+						// Sendback PUTRES
+						put_response_t rsp(req.hashidx(), req.key(), true);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					}
+					else { // Not exist in CKVS
+						bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+
+						// Sendback PUTRES
+						put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					}
+					ckvs_inuse_list[thread_id] = false;
+
+					sent_pkt_idx++;
 					break;
 				}
 			case packet_type_t::DEL_REQ_S:
