@@ -61,6 +61,7 @@ typedef GetResponseNEXIST<index_key_t, val_t> get_response_nexist_t;
 typedef GetRequestBE<index_key_t, val_t> get_request_be_t;
 typedef PutRequestPOP<index_key_t, val_t> put_request_pop_t;
 typedef PutRequestBE<index_key_t, val_t> put_request_be_t;
+typedef DelRequest<index_key_t> del_request_be_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -1120,6 +1121,37 @@ static int run_sfg(void * param) {
 
 						// Sendback PUTRES
 						put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					}
+					ckvs_inuse_list[thread_id] = false;
+
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::DEL_REQ_BE:
+				{
+					del_request_be_t req(buf, recv_size);
+
+					while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
+					std::map<index_key_t, cached_val_t>::iterator iter = ckvs_list[thread_id].find(req.key());
+					if (iter != ckvs_list[thread_id].end()) { // Exist in CKVS
+						cached_val_t &tmp_cached_val = iter->second;
+						tmp_cached_val._status = 2;
+						tmp_cached_val._seq = req.seq() + 1;
+
+						// Sendback DELRES
+						del_response_t rsp(req.hashidx(), req.key(), true);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					}
+					else { // Not exist in CKVS
+						bool tmp_stat = table->remove(req.key(), thread_id);
+
+						// Sendback DELRES
+						del_response_t rsp(req.hashidx(), req.key(), tmp_stat);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);

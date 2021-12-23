@@ -12,9 +12,14 @@
 - Design features
 	+ Parameter-free decision
 	+ Data-plane-based value update
-	+ Control-plane-based non-blocking cache population (conservative query and version-aware query for read-after-write consistency)
-	+ Crash-consistent backup
-	+ Others: switch-driven consistent hashing, CBF-based fast path, range query support, distributed extension
+	+ TODO: Control-plane-based non-blocking cache population (conservative query and version-aware query for read-after-write consistency)
+	+ TODO: Crash-consistent backup
+	+ Others
+		* TODO: switch-driven consistent hashing
+		* CBF-based fast path
+		* TODO: Range query support
+		* TODO: Variable-length key-value
+		* TODO: Distributed extension
 - NOTES
 	+ We can use seq=0 to mark not latest in server, why not we use seq=0 to mark not latest in switch?
 		* If we use seq reg to mark islatest, use deleted reg to mark isdeleted, then they have data dependency for GETRES_NEXIST, which 
@@ -81,7 +86,7 @@
 		* If iscached=1 and isvalid = 1 and latest=0 and being_evicted=0, set latest=1, vallen, and value; sendback to client as GETRES
 	+ GETRES_NEXIST (not exist for GETREQ_NLATEST)
 		* If iscached=1 and isvalid = 1 and latest=0 and being_evicted=0, set latest=2 (being deleted); sendback to client as GETRES
-	+ TODO: PUTREQ:
+	+ PUTREQ:
 		* NOTE: other stages are the same as GETREQ
 		* Stage 1
 			- Access vote
@@ -96,7 +101,20 @@
 		* Stage 11: access port_forward_tbl
 			- If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (PUTREQ_POP)
 			- If iscached=1 and isvalid=1 and being_evicted=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
-			- If iscached = 1 and isvalid = 1 and being_evicted = 1, embed seq, send PUTREQ_BE to server (being evicted)
+			- If iscached=1 and isvalid=1 and being_evicted=1, embed seq, send PUTREQ_BE to server (being evicted)
+	+ DELREQ:
+		* NOTE: other stages are the same as PUTREQ
+		* Stage 1
+			- Not touch vote
+			- Set latest = 2 if iscached=1 and isvalid=1 and being_evicted=0
+			- Access seq
+				+ Increase seq if iscached=1 and isvalid=1 and being_evicted=0
+				+ Read seq otherwise 
+		* Stage 2-10
+			- Not touch vallen and value 
+		* Stage 11: access port_forward_tbl
+			- If iscached=1 and isvalid=1 and being_evicted=0, increase seq, set latest=2, sendback DELRES to client
+			- If iscached=1 and isvalid=1 and being_evicted=1, embed seq, send DELREQ_BE to server (being evicted)
 	+ PUTRES
 		* Sendback to client
 - Client-side processsing
@@ -134,6 +152,11 @@
 		* Otherwise, put into KVS, sendback PUTRES
 		* NOTE: key may not exist in CKVS since controller may remove the key before PUTREQ_BE
 	+ PUTREQ: sendback PUTRES
+	+ DELREQ: sendback DELRES
+	+ DELREQ_BE
+		* If exist in CKVS, set status=2, and seq'=seq+1 (seq is that number embedded in the request packet), sendback DELRES
+		* Otherwise, delete from KVS, sendback DELRES
+		* NOTE: key may not exist in CKVS since controller may remove the key before DELREQ_BE
 - Controller-side processing
 	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population
 	+ TODO: if cache is full, eviction is required; performing eviction in data plane for atomicity is resouce-consuming (proportional to value length) 
@@ -157,12 +180,12 @@
 	- Support GETREQ, GETRES, PUTREQ, PUTRES
 - Packet type support
 	- Switch side: tofino/\*.p4; Server side: ycsb_server.c; Utils: packet_format.h, packet_format_impl,h, cache_val.h, cache_val.c
-	- Support GETREQ, GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
+	- Support GETREQ, PUTREQ, and DELREQ for normal packets
+	- Support GETREQ_POP, GETRES, GETRES_NPOP for get-triggerred eviction
 	- Support GETREQ_NLATEST, GETRES_LATEST, GETRES_NEXIST for conservative query
-	- Support PUTREQ, PUTREQ_POP, PUTRES
-	- Support GETREQ_BE and PUTREQ_BE for version-aware query
+	- Support PUTREQ_POP, PUTRES for put-triggerred eviction
+	- Support GETREQ_BE and PUTREQ_BE and DELREQ_BE for version-aware query
 	- Support CacheVal including val, deleted bool, and key
-- TODO: DEL, DELREQ_BE
 - TODO: Support cache update in controller (TODO: non-blocking population)
 - TODO: apply to baseline
 	+ TODO: replace thread_id with hashidx (packet_format.h, packet_foramt_impl.h, ycsb_remove_client.c)

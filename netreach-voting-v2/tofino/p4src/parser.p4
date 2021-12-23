@@ -42,12 +42,7 @@ parser parse_op_req {
 		PUTREQ_TYPE: parse_vallen;
 		PUTREQ_POP_TYPE: parse_vallen;
 		PUTREQ_BE_TYPE: parse_vallen;
-		PUTREQ_CASE1_TYPE: parse_vallen;
-		DELREQ_CASE1_TYPE: parse_vallen;
-		//PUTREQ_RU_CASE2_TYPE: parse_vallen;
-		PUTREQ_PS_CASE2_TYPE: parse_vallen;
-		PUTREQ_GS_CASE2_TYPE: parse_vallen;
-		PUTREQ_CASE3_TYPE: parse_vallen;
+		DELREQ_BE_TYPE: parse_seq;
 		default: ingress;
 	}
 }
@@ -59,7 +54,6 @@ parser parse_op_rsp {
 		GETRES_NPOP_TYPE: parse_vallen;
 		GETRES_LATEST_TYPE: parse_vallen;
 		GETRES_NEXIST_TYPE: parse_vallen;
-		//GETRES_S_CASE2_TYPE: parse_vallen;
 		PUTRES_TYPE: parse_res;
 		DELRES_TYPE: parse_res;
 		default: ingress;

@@ -9,7 +9,7 @@
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
 	GET_REQ_POP, GET_RES_NPOP, GET_REQ_NLATEST, GET_RES_LATEST, GET_RES_NEXIST, GET_REQ_BE,
-	PUT_REQ_POP, PUT_REQ_BE}
+	PUT_REQ_POP, PUT_REQ_BE, DEL_REQ_BE}
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -235,6 +235,21 @@ class PutRequestBE : public PutRequest<key_t, val_t> {
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size);
+
+		int _seq;
+};
+
+template<class key_t>
+class DelRequestBE : public DelRequest<key_t> {
+	public: 
+		DelRequestBE(const char * data, uint32_t recv_size);
+
+		int seq() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 
 		int _seq;
