@@ -47,6 +47,8 @@ class Key {
 
   std::string to_string() const; // For print
 
+  uint32_t serialize(char *buf); // Serialize for cache population
+
   friend bool operator<(const Key &l, const Key &r);
   friend bool operator>(const Key &l, const Key &r);
   friend bool operator>=(const Key &l, const Key &r);

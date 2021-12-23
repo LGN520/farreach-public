@@ -102,6 +102,9 @@ size_t bg_n;
 short dst_port_start;
 const char *workload_name = nullptr;
 uint32_t kv_bucket_num;
+// For cache population
+const char *controller_ip;
+short controller_port;
 
 // KVS for cached key
 std:;atomic<bool> * volatile ckvs_inuse_list = nullptr; // atomic between worker thread and populator
@@ -196,6 +199,8 @@ inline void parse_ini(const char* config_file) {
 	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
 	backup_port = ini.get_server_backup_port();
 	per_server_range = std::numeric_limits<size_t>::max() / fg_n;
+	controller_ip = ini.get_controller_ip();
+	controller_port = ini.get_controller_port();
 
 	COUT_VAR(fg_n);
 	COUT_VAR(dst_port_start);
@@ -204,6 +209,8 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(val_t::MAX_VAL_LENGTH);
 	COUT_VAR(backup_port);
 	COUT_VAR(per_server_range);
+	printf("controller_ip: %s\n", controller_ip);
+	COUT_VAR(controller_port);
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -523,6 +530,7 @@ static int run_receiver(void *param) {
 void *run_backuper(void *param) {
 	xindex_t *table = (xindex_t*)param;
 
+	// Use TCP for backup transmission for reliability and large size of backup data
 	int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	INVARIANT(sock_fd >= 0);
 	// Disable udp/tcp check
@@ -555,7 +563,8 @@ void *run_backuper(void *param) {
 	pthread_t latest_thread;
 	while (running) {
 		struct sockaddr_in controller_addr;
-		unsigned int controller_addr_len;
+		memset(&controller_addr, 0, sizeof(struct sockaddr_in));
+		unsigned int controller_addr_len = sizeof(struct sockaddr_in);
 		int connfd = accept(sock_fd, (struct sockaddr *)&controller_addr, &controller_addr_len);
 		if (connfd == -1) {
 			if (errno == EWOULDBLOCK || errno == EINTR) {
@@ -759,7 +768,7 @@ static int run_sfg(void * param) {
 
   int res = 0;
 
-  // DPDK
+  // DPDK for data-plane packet transfer
   //struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
   //struct rte_mbuf *sent_pkt_wrapper[1] = {sent_pkt};
   // Optimize mbuf allocation
@@ -769,30 +778,6 @@ static int run_sfg(void * param) {
   struct rte_mbuf *sent_pkt = NULL;
   res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
   INVARIANT(res == 0);
-
-  // prepare socket
-  /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  INVARIANT(sockfd >= 0);
-  int disable = 1;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-	perror("Disable udp checksum failed");
-  }
-  short dst_port = dst_port_start + thread_id;
-  struct sockaddr_in server_sockaddr;
-  memset(&server_sockaddr, 0, sizeof(struct sockaddr_in));
-  server_sockaddr.sin_family = AF_INET;
-  server_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  server_sockaddr.sin_port = htons(dst_port);
-  res = bind(sockfd, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
-  INVARIANT(res != -1);
-  uint32_t sockaddr_len = sizeof(struct sockaddr);
-
-  // Set timeout
-  struct timeval tv;
-  tv.tv_sec = 1;
-  tv.tv_usec =  0;
-  res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-  INVARIANT(res >= 0);*/
 
   char buf[MAX_BUFSIZE];
   int recv_size = 0;
@@ -805,6 +790,22 @@ static int run_sfg(void * param) {
   char dstip[16];
   uint16_t srcport;
   uint16_t unused_dstport; // we use dst_port_start instead of received dstport to hide server-side partition for client
+
+  // UDP socket for control-plane cache population
+  int pop_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  INVARIANT(pop_sockfd >= 0);
+  int disable = 1; // Disable UDP check
+  if (setsockopt(pop_sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+	perror("Disable udp checksum failed");
+  }
+  // Destination: controller
+  struct sockaddr_in controller_sockaddr;
+  memset(&controller_sockaddr, 0, sizeof(struct sockaddr_in));
+  controller_sockaddr.sin_family = AF_INET;
+  controller_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  controller_sockaddr.sin_port = htons(controller_port);
+  char pop_buf[MAX_BUFSIZE];
+  memset(pop_buf, 0, MAX_BUFSIZE);
 
   ready_threads++;
 
@@ -954,7 +955,13 @@ static int run_sfg(void * param) {
 									req.key(), cached_val_t(0, tmp_val, 1))); 
 						ckvs_inuse_list[thread_id] = false;
 
-						// TODO: send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
+						// Send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
+						uint32_t pop_reqsize = req.key().serialize(pop_buf); // sizeof(key)
+						pop_reqsize += tmp_val.serialize(pop_buf + pop_reqsize); // sizeof(key) + sizeof(val) (vallen and value)
+						memcpy(pop_buf + pop_reqsize, (void *)&req.hashidx(), sizeof(uint16_t));
+						pop_reqsize += sizeof(uint16_t); // sizeof(key) + sizeof(val) (vallen and value) + sizeof(hashidx)
+						res = sendto(pop_sockfd, pop_buf, pop_reqsize, 0, (struct sockaddr *)&controller_sockaddr, sizeof(struct sockaddr));
+						INVARIANT(res >= 0);
 					}
 					else { // Not found in KVS
 						get_response_npop_t rsp(req.hashidx(), req.key(), tmp_val);
@@ -1094,7 +1101,14 @@ static int run_sfg(void * param) {
 								req.key(), cached_val_t(0, req.val(), 1))); 
 					ckvs_inuse_list[thread_id] = false;
 
-					// TODO: send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
+					// Send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
+					uint32_t pop_reqsize = req.key().serialize(pop_buf); // sizeof(key)
+					pop_reqsize += req.val().serialize(pop_buf + pop_reqsize); // sizeof(key) + sizeof(val) (vallen and value)
+					memcpy(pop_buf + pop_reqsize, (void *)&req.hashidx(), sizeof(uint16_t));
+					pop_reqsize += sizeof(uint16_t); // sizeof(key) + sizeof(val) (vallen and value) + sizeof(hashidx)
+					res = sendto(pop_sockfd, pop_buf, pop_reqsize, 0, (struct sockaddr *)&controller_sockaddr, sizeof(struct sockaddr));
+					INVARIANT(res >= 0);
+
 					sent_pkt_idx++;
 					break;
 				}

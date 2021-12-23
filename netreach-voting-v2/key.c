@@ -111,6 +111,22 @@ std::string Key::to_string() const {
 	return ss.str();
 }
 
+uint32_t Key::serialize(char *buf) {
+	if (buf != nullptr) {
+#ifdef LARGE_KEY
+		memcpy(buf, (void *)&keylo, sizeof(uint64_t));
+		memcpy(buf + sizeof(uint64_t), (void *)&keyhi, sizeof(uint64_t));
+		return 2*sizeof(uint64_t);
+#else
+		memcpy(buf, (void *)&key, sizeof(uint64_t));
+		return sizeof(uint64_t);
+#endif
+	}
+	else {
+		return 0;
+	}
+}
+
 bool operator<(const Key &l, const Key &r) { 
 #ifdef LARGE_KEY
 	return (l.keyhi < r.keyhi) || ((l.keyhi == r.keyhi) && (l.keylo < r.keylo));

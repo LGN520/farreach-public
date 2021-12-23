@@ -27,6 +27,9 @@ class IniparserWrapper {
 
 		uint32_t get_bucket_num();
 
+		const char* get_controller_ip();
+		short get_controller_port();
+
 		size_t get_split_num();
 
 	private:

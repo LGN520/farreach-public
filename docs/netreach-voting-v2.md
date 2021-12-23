@@ -157,8 +157,11 @@
 		* If exist in CKVS, set status=2, and seq'=seq+1 (seq is that number embedded in the request packet), sendback DELRES
 		* Otherwise, delete from KVS, sendback DELRES
 		* NOTE: key may not exist in CKVS since controller may remove the key before DELREQ_BE
+	+ TODO: cache population
+		* Send <k, v, hashidx> to controller for GETREQ_POP and PUTREQ_POP
+		* TODO: Populator: listen on a port to wait for controller's notification to remove key-value pair from CKVS
 - Controller-side processing
-	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population
+	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population; controller/controller.py for combination of the two functionalities
 	+ TODO: if cache is full, eviction is required; performing eviction in data plane for atomicity is resouce-consuming (proportional to value length) 
 	-> control-plane-based atomic population
 		* Set being_evicted bit as 1

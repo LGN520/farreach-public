@@ -130,6 +130,24 @@ uint32_t IniparserWrapper::get_bucket_num() {
 	return uint32_t(tmp);
 }
 
+const char* IniparserWrapper::get_controller_ip() {
+	const char *controller_ip = iniparser_getstring(ini, "controller:controller_ip", nullptr);
+	if (controller_ip == nullptr) {
+		printf("Invalid entry of [controller:controller_ip]\n");
+		exit(-1);
+	}
+	return controller_ip;
+}
+
+short IniparserWrapper::get_controller_port() {
+	int tmp = iniparser_getint(ini, "controller:controller_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [controller:controller_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 size_t IniparserWrapper::get_split_num() {
 	int tmp = iniparser_getint(ini, "other:split_num", -1);
 	if (tmp == -1) {
