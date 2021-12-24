@@ -28,7 +28,7 @@ table access_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
-		meta.isvalid: exact;
+		//meta.isvalid: exact;
 		meta.being_evicted: exact;
 	}
 	actions {

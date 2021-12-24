@@ -82,7 +82,7 @@ header_type metadata_t {
 		being_evicted: 1;
 		tmp_sport: 16;
 		tmp_dport: 16;
-		isvalid: 1;
+		//isvalid: 1;
 		isdirty: 1;
 		iszerovote: 4;
 		islock: 1;

@@ -2,12 +2,12 @@
 
 ## Workflow (NOT Completed)
 
-- client: GETREQ -> switch (if invalid or zerovote): change GETREQ to GETREQ_POP -> server: sendback GETRES/GETRES_NPOP, and trigger popultation to controller
-- client: GETREQ -> switch (valid yet not latest): change GETREQ to GETREQ_NLATEST -> server: sendback: GETRES_LATEST/GETRES_NEXIST
-- client: GETREQ -> switch (valid or deleted): change GETREQ to GETRES and sendback to client
-- client: PUTREQ -> switch (if invalid or zerovote): change PUTREQ to PUTREQ_POP -> server: sendback PUTRES, and trigger population to controller
-- client: PUTREQ -> switch (valid): put value, set latest=1, change PUTREQ to PUTRES and sendback to client
-- client: DELREQ -> switch (valid): set latest=2 (deleted), change DELREQ to DELREQ and sendback to client
+- client: GETREQ -> switch (if zerovote): change GETREQ to GETREQ_POP -> server: sendback GETRES/GETRES_NPOP, and trigger popultation to controller
+- client: GETREQ -> switch (cached yet not latest): change GETREQ to GETREQ_NLATEST -> server: sendback: GETRES_LATEST/GETRES_NEXIST
+- client: GETREQ -> switch (cached or deleted): change GETREQ to GETRES and sendback to client
+- client: PUTREQ -> switch (if zerovote): change PUTREQ to PUTREQ_POP -> server: sendback PUTRES, and trigger population to controller
+- client: PUTREQ -> switch (cached): put value, set latest=1, change PUTREQ to PUTRES and sendback to client
+- client: DELREQ -> switch (cached): set latest=2 (deleted), change DELREQ to DELREQ and sendback to client
 - other packets or being evicted: forward to client
 - Design features
 	+ Parameter-free decision
@@ -55,8 +55,6 @@
 		* Stage 3-10: val1-val16
 		* Stage 11: port_forward_tbl
 		* Logical meaning
-			- valid=1: valid value of cached key (up-to-date or out-of-date); valid=0: invalid value (default value of register)
-				+ Deleted value (i.e., NONE) can be either up-to-date or out-of-date
 			- latest=0: in-switch value may not be up-to-date (serve PUT, conservative GET)
 				+ latest=1: in-switch value must be up-to-date (serve GET/PUT); 
 				+ latest=2: value has been deleted (also up-to-date) (serve GET/PUT, GET directly returns NONE value)
@@ -65,25 +63,24 @@
 	+ GETREQ: 
 		* Stage 0
 			- Access cache_lookup_tbl (get iscached)
-			- Access valid (get_valid)
 			- Access being_evicted (get being_evicted)
 		* Stage 1
 			- Access vote
-				+ Increase_vote if iscached=1 and isvalid = 1 and being_evicted=0
-				+ Decrease_vote if iscached=0 and isvalid = 1 and being_evicted=0
+				+ Increase_vote if iscached=1 and being_evicted=0
+				+ Decrease_vote if iscached=0 and and being_evicted=0
 			- Read latest 
 			- Read seq
 		* Stage 2:
 			- Access lock
-				+ If isvalid=0 and being_evicted=0, or iszerovote=2 and being_evcited=0, try_lock
+				+ If iszerovote=2 and being_evcited=0, try_lock
 				+ Otherwise, read_lock
 		* Stage 2-10: Read vallen and values
 		* Stage 11: access port_forward_tbl
-			- If iscached=1 and isvalid=1 and islatest=1 and being_evicted=0 -> return GETRES; 
-			- If iscached=1 and isvalid=1 and islatest=2 and being_evicted=0 -> return GETRES (vallen=0 and not value headers);
-			- If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
-			- If iscached=1 and isvalid=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST for conservative query (not latest, first GETs after population); 
-			- If iscached=1 and isvalid=1 and being_evicted=1 -> forward GETREQ_BE for version-aware query;
+			- If iscached=1 and islatest=1 and being_evicted=0 -> return GETRES; 
+			- If iscached=1 and islatest=2 and being_evicted=0 -> return GETRES (vallen=0 and not value headers);
+			- If iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
+			- If iscached=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST for conservative query (not latest, first GETs after population); 
+			- If iscached=1 and being_evicted=1 -> forward GETREQ_BE for version-aware query;
 			- Otherwise, forward GETREQ to server
 			- NOTE: if being_evicted=1, islock may be 0 (set as 0 at phase 2); if iszerovote=2, iscached must be 0
 	+ GETRES
@@ -92,38 +89,38 @@
 		* If being_evicted=0, set lock=0; sendback to client as GETRES
 		* NOTE: lock must be 1 and being_evicted must be 0
 	+ GETRES_LATEST (exist for GETREQ_NLATEST)
-		* If iscached=1 and isvalid = 1 and latest=0 and being_evicted=0, set latest=1, vallen, and value; sendback to client as GETRES
+		* If iscached=1 and latest=0 and being_evicted=0, set latest=1, vallen, and value; sendback to client as GETRES
 	+ GETRES_NEXIST (not exist for GETREQ_NLATEST)
-		* If iscached=1 and isvalid = 1 and latest=0 and being_evicted=0, set latest=2 (being deleted); sendback to client as GETRES
+		* If iscached=1 and latest=0 and being_evicted=0, set latest=2 (being deleted); sendback to client as GETRES
 	+ PUTREQ:
 		* NOTE: other stages are the same as GETREQ
 		* Stage 1
 			- Access vote
-				+ Increase_vote if iscached=1 and isvalid = 1 and being_evicted=0
-				+ Decrease_vote if iscached=0 and isvalid = 1 and being_evicted=0
-			- Set latest = 1 if iscached=1 and isvalid=1 and being_evicted=0
+				+ Increase_vote if iscached=1 and being_evicted=0
+				+ Decrease_vote if iscached=0 and being_evicted=0
+			- Set latest = 1 if iscached=1 and being_evicted=0
 			- Access seq
-				+ Increase seq if iscached=1 and isvalid=1 and being_evicted=0
+				+ Increase seq if iscached=1 and being_evicted=0
 				+ Read seq otherwise 
 		* Stage 2-10
-			- Set vallen and values if iscached=1 and isvalid=1 and being_evicted=0
+			- Set vallen and values if iscached=1 and being_evicted=0
 		* Stage 11: access port_forward_tbl
-			- If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (PUTREQ_POP)
-			- If iscached=1 and isvalid=1 and being_evicted=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
-			- If iscached=1 and isvalid=1 and being_evicted=1, embed seq, send PUTREQ_BE to server (being evicted)
+			- If iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (PUTREQ_POP)
+			- If iscached=1 and being_evicted=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
+			- If iscached=1 and being_evicted=1, embed seq, send PUTREQ_BE to server (being evicted)
 	+ DELREQ:
 		* NOTE: other stages are the same as PUTREQ
 		* Stage 1
 			- Not touch vote
-			- Set latest = 2 if iscached=1 and isvalid=1 and being_evicted=0
+			- Set latest = 2 if iscached=1 and being_evicted=0
 			- Access seq
-				+ Increase seq if iscached=1 and isvalid=1 and being_evicted=0
+				+ Increase seq if iscached=1 and being_evicted=0
 				+ Read seq otherwise 
 		* Stage 2-10
 			- Not touch vallen and value 
 		* Stage 11: access port_forward_tbl
-			- If iscached=1 and isvalid=1 and being_evicted=0, increase seq, set latest=2, sendback DELRES to client
-			- If iscached=1 and isvalid=1 and being_evicted=1, embed seq, send DELREQ_BE to server (being evicted)
+			- If iscached=1 and being_evicted=0, increase seq, set latest=2, sendback DELRES to client
+			- If iscached=1 and being_evicted=1, embed seq, send DELREQ_BE to server (being evicted)
 	+ PUTRES
 		* Sendback to client
 - Client-side processsing

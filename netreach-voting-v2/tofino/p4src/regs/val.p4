@@ -30,7 +30,7 @@ table update_vallen_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
-		meta.isvalid: exact;
+		//meta.isvalid: exact;
 		meta.islatest: exact;
 		meta.being_evicted: exact;
 	}
@@ -75,7 +75,7 @@ table update_vallo1_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
-		meta.isvalid: exact;
+		//meta.isvalid: exact;
 		meta.islatest: exact;
 		meta.being_evicted: exact;
 	}
@@ -120,7 +120,7 @@ table update_valhi1_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
-		meta.isvalid: exact;
+		//meta.isvalid: exact;
 		meta.islatest: exact;
 		meta.being_evicted: exact;
 	}

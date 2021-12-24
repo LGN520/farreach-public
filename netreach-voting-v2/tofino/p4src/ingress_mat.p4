@@ -231,7 +231,7 @@ table port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
-		meta.isvalid: exact;
+		//meta.isvalid: exact;
 		meta.islatest: exact;
 		meta.iszerovote: exact;
 		meta.islock: exact;

@@ -62,7 +62,7 @@
 // parsers
 #include "p4src/parser.p4"
 
-#include "p4src/regs/valid.p4"
+//#include "p4src/regs/valid.p4"
 #include "p4src/regs/vote.p4"
 #include "p4src/regs/lock.p4"
 #include "p4src/regs/latest.p4"
@@ -76,7 +76,7 @@
 
 control ingress {
 	// Stage 0
-	apply(access_valid_tbl); 
+	//apply(access_valid_tbl); 
 	apply(access_being_evicted_tbl);
 	apply(cache_lookup_tbl);
 	apply(save_info_tbl);
