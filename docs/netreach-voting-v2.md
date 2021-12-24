@@ -26,6 +26,13 @@
 		can only mark the slot is deleted if not latest
 		* Therefore, we use latest reg to identify both islatest and isdeleted to reduce stage cost
 		* NOTE: we use status=0/1/2 in CKVS of server for consistent semantics
+	+ Ptf/cli will make conversion between big-endian and small-endian automatically as signed int
+		* For vote, we write small-endian value in ptf, then data plane will save the big-endian format for calculation
+		* For optype and vallen, since they only have 1 byte, they do not care about endianess
+		* For value, we want data plane directly stores small-endian format
+			- When reading value (phase2), since ptf falsely converts the value from small-endian into big-endian, we need to convert it back again
+			- When writing value (cache_update), since ptf make conversion automatically, we write the big-endian format such that reg will store small-endian
+		* TODO: For key, not sure whether ptf converts for MAT
 
 ## Important changes
 
@@ -36,7 +43,9 @@
 	+ DELREQ: optype, hashidx, key
 - In-switch processing
 	+ Overview	
-		* Stage 0: valid, cache_lookup_tbl (get iscached), being_evicted (for inconsistency of evicted data), load_backup_tbl
+		* Stage 0: cache_lookup_tbl (get iscached), being_evicted (for inconsistency of evicted data), load_backup_tbl
+			- NOTE: we do not need valid bit, switch OS maitains a global KVS to record hashidx-cachedkey mapping, which can be used
+			to identify either cache population or eviction, and get previously cached key
 		* Stage 1: vote, latest (for inconsistency of populated/deleted data), seq (for version-aware/conservative query), case 1, case 2 
 			- NOTE: seq is created by switch (big-endian), so we need to deserialize seq into little-endian in server for GET/PUTREQ_BE
 		* Stage 2: lock, vallen
@@ -159,23 +168,49 @@
 		* NOTE: key may not exist in CKVS since controller may remove the key before DELREQ_BE
 	+ TODO: cache population
 		* Send <k, v, hashidx> to controller for GETREQ_POP and PUTREQ_POP
-		* TODO: Populator: listen on a port to wait for controller's notification to remove key-value pair from CKVS
+		* TODO: Populator: listen on a port to wait for controller's notification
+			- TODO: If latest=0
+				+ Put entry from CKVS into KVS if status = 1, or delete it in KVS if status = 2, or nothing if status = 0
+			- TODO: If latest=1
+				+ If seq>=seq', put entry from notification into KVS
+				+ If seq<seq', put entry from CKVS into KVS if status = 1, or delete it in KVS if status = 2, or nothing if status = 0
+			- TODO: If latest=2
+				+ If seq>=seq', delete in KVS 
+				+ If seq<seq', put entry from CKVS into KVS if status = 1, or delete it in KVS if status = 2, or nothing if status = 0
+			+ TODO: Remove it from CKVS
+			+ TODO: Send ACK
 - Controller-side processing
 	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population; controller/controller.py for combination of the two functionalities
-	+ TODO: if cache is full, eviction is required; performing eviction in data plane for atomicity is resouce-consuming (proportional to value length) 
-	-> control-plane-based atomic population
-		* Set being_evicted bit as 1
-		* Load valid bit
-		* If valid = 0
-			- Reset registers (vote=1, latest=0, case1=0, case2=0, lock=0, seq=0), set vallen and val, add cached key, set valid=1
-			- NOTE: Before being_evicted bit is set as 0, all GETs and PUTs of the populated key are forwarded to server -> out-of-date value in switch
-			- NOTE: Forward the first GETs to server if latest = 0 (for read-after-write consistency of populated data)
-		* If valid = 1
-			- Load seq, latest, valen and val, send evicted key, value, and seq to server, wait for ACK (for read-after-write consistency of evicted data)
-				+ If latest=2, tell server to delete it if in-switch seq >= server-side seq' 
-			- Remove cached key, reset registers (vote=1, latest=0, case1=0, case2=0, lock=0), set vallen and val, add cached key, set valid=1
-		* Set being_evcited bit as 0
+	+ Cache population (controller/cache_update.py)
+		+ NOTE: if cache is full, eviction is required; performing eviction in data plane for atomicity is resouce-consuming (PHV is proportional to value length) 
+		+ Control-plane-based atomic population
+			* Wait for population request from server (k, v, hashidx)
+			* Set being_evicted bit at hashidx slot as 1
+			* Check redis to see if there exists cached key in the slot
+			* If not exist
+				- Reset registers (vote=1, latest=0, lock=0, seq=0), set vallen and val, add cached key in redis and MAT
+				- NOTE: Before being_evicted bit is set as 0, if new key is not added, all GETs and PUTs of the populated key are forwarded to server;
+				if new key is added, all GETs/PUTs touch CKVS in server as GET_BE/PUT_BE -> out-of-date value in switch;
+				- NOTE: Forward the first GETs to server if latest = 0 (for read-after-write consistency of populated data)
+			* If exist
+				- Load evicted key from redis, latest
+					+ If latest=0
+						- Send evicted key
+					+ If latest=1
+						- Load seq, vallen, and val
+						- Send evicted key, seq, vallen, and val
+						- Server removes it from CKVS, updates KVS with the lastest version (seq/seq'), and ACKs
+					+ If latest=2
+						- Load seq
+						- Send evicted key, seq
+						- Server removes it from CKVS, deletes it from KVS if in-switch seq >= server-side seq' or updates KVS as CKVS, and ACKs
+				- Wait for ACK (for read-after-write consistency of evicted data)
+				- Remove evicted key from redis
+				- Reset registers (vote=1, latest=0, lock=0, seq=0), set vallen and val, add cached key in redis and MAT
+			* Set being_evcited bit as 0
+		+ TODO: check big-endian and small-endian
 	+ TODO: periodically check lock bit, if it is 1 for the same key across two adjacent periods, unlock it (for packet loss of GETRES_NS)
+	+ TODO: Periodic backup (controller/periodic_backup.py)
 
 ## Implementation log
 
@@ -189,7 +224,7 @@
 	- Support PUTREQ_POP, PUTRES for put-triggerred eviction
 	- Support GETREQ_BE and PUTREQ_BE and DELREQ_BE for version-aware query
 	- Support CacheVal including val, deleted bool, and key
-- TODO: Support cache update in controller (TODO: non-blocking population)
+- TODO: Support cache population in controller (non-blocking population)
 - TODO: apply to baseline
 	+ TODO: replace thread_id with hashidx (packet_format.h, packet_foramt_impl.h, ycsb_remove_client.c)
 

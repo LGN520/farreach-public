@@ -10,13 +10,13 @@
 - Client <-> server
 	+ Client starts from 8888
 	+ Server starts from 1111 (1024 ~ 1279 in basic.p4)
-- Controller (periodic_update) -> server (backuper)
+- Controller (periodic backup) -> server (backuper)
 	+ Server port: 3333
 	+ Server IP: 172.16.112.32 (dl32:eno3, connected with NetBuffer controller in the same LAN)
-- Controller (trigger_update) <-> server (listener)
+- Controller (cache population) <-> server (populator)
 	+ Switch OS port: 3334
 	+ Switch OS IP: 172.16.112.19
-	+ Server port: 3335
+	+ Server port: 3334
 	+ Server IP: 172.16.112.32 (dl32:eno3, connected with NetBuffer controller in the same LAN)
 
 ## Directory
@@ -162,6 +162,13 @@
 	+ `curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz`
 	+ `tar xfvz ycsb-0.17.0.tar.gz`
 	+ `cd ycsb-0.17.0`
+- Install redis
+	+ `sudo apt install redis-server`
+	+ `sudo vim /etc/redis/redis.conf` (we use localhost:6379)
+	+ `sudo service redis restart`
+	+ `sudo systemctl status redis`
+	+ `pip install redis==3.5.3` for python2.7
 - After restart
 	+ Re-configure dpdk
 	+ Run `~/bf-sde-8.9.1/install/bin/bf_kdrv_mod_load $SDE_INSTALL` and `~/bf-sde-8.9.1/install/bin/bf_knet_mod_load $SDE_INSTALL` in Tofino
+	+ `sudo service redis restart` to restart redis

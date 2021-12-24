@@ -58,7 +58,7 @@ bucket_count = int(config.get("switch", "bucket_num"))
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
-        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbuffer"])
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv2"])
 
     def setUp(self):
         print '\nSetup'

@@ -63,7 +63,7 @@ fp_ports = ["2/0", "3/0"]
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
-        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbuffer"])
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv2"])
 
     def setUp(self):
         print '\nSetup'
@@ -82,25 +82,26 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     @staticmethod
     def get_reg16(reglist, idx):
-        tmpreg = reglist[idx] # Big-endian
-        tmpreg = (((tmpreg & 0xFF00) >> 8) & 0x00FF) | ((tmpreg & 0x00FF) << 8) # Small-endian
-        if (tmpreg < 0):
-            tmpreg += pow(2, 16)
+        tmpreg = reglist[idx] # Big-endian int
+        tmpreg = (((tmpreg & 0xFF00) >> 8) & 0x00FF) | ((tmpreg & 0x00FF) << 8) # Small-endian int
+        if tmpreg < 0:
+            tmpreg += pow(2, 16) # int -> uint
         return tmpreg
 
     @staticmethod
     def get_reg32(reglist, idx):
-        tmpreg = reglist[idx] # Big-endian
+        tmpreg = reglist[idx] # Big-endian int
         tmphihi = ((tmpreg & 0xFF000000) >> 24) & 0x000000FF
         tmphilo = ((tmpreg & 0x00FF0000) >> 16) & 0x000000FF
         tmplohi = ((tmpreg & 0x0000FF00) >> 8) & 0x000000FF
         tmplolo = tmpreg & 0x000000FF
-        tmpreg = (tmplolo << 24) | (tmplohi << 16) | (tmphilo << 8) | tmphihi # Small-endian
-        if (tmpreg < 0):
-            tmpreg += pow(2, 32)
+        tmpreg = (tmplolo << 24) | (tmplohi << 16) | (tmphilo << 8) | tmphihi # Small-endian int
+        if tmpreg < 0:
+            tmpreg += pow(2, 32) # int -> uint
         return tmpreg
 
     def runTest(self):
+        # TODO: no need to load key; load value from val{vallen} to val1
         print "Reading reagisters"
         flags = netbuffer_register_flags_t(read_hw_sync=True)
         keylololo_list = self.client.register_range_read_keylololo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
@@ -182,16 +183,3 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 break
             else:
                 startidx = sentnum
-
-        #pktlen = 14 + 20 + 8 + 4 + 17 * bucket_count
-        #pkt = simple_udp_packet(pktlen, eth_dst=server_mac, eth_src=switch_mac, 
-        #        ip_src=switch_ip, ip_dst=server_ip, ip_ttl=64, 
-        #        udp_sport=switch_port, udp_dport=server_port,
-        #        udp_payload=buf)
-        #print(type(pkt))
-        #print(len(pkt))
-        #print(pkt)
-        #print("send packet from {}".format(self.devPorts[0]))
-        #sent = send_packet(self, (0, self.devPorts[0]), str(pkt))
-        #print("sent: {}".format(sent))
-        #verify_packets(self, pkt, [self.devPorts[1]])

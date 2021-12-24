@@ -17,6 +17,13 @@ with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini")
     config.readfp(f)
 controller_ip = str(config.get("controller", "controller_ip"))
 controller_port = int(config.get("controller", "controller_port"))
+redis_ip = str(config.get("controller", "redis_ip"))
+redis_port = int(config.get("controller", "redis_port"))
+
+r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
+for key in r.scan_iter("prefix:*"):
+   r.delete(key)
+
 
 def handler(signum, frame):
     global running
