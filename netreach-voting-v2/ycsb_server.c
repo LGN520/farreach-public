@@ -102,9 +102,12 @@ size_t bg_n;
 short dst_port_start;
 const char *workload_name = nullptr;
 uint32_t kv_bucket_num;
+
 // For cache population
 const char *controller_ip;
 short controller_port;
+short populator_port;
+void *run_populator(void *param); // populator
 
 // KVS for cached key
 std:;atomic<bool> * volatile ckvs_inuse_list = nullptr; // atomic between worker thread and populator
@@ -351,6 +354,13 @@ void run_server(xindex_t *table) {
 		COUT_N_EXIT("Error: unable to create backuper " << ret);
 	}
 
+	// Launch populator
+	pthread_t populator_thread;
+	ret = pthread_create(&populator_thread, nullptr, run_populator, (void *)table);
+	if (ret) {
+		COUT_N_EXIT("Error: unable to create populator " << ret);
+	}
+
 	// Prepare fg params
 	//pthread_t threads[fg_n];
 	sfg_param_t sfg_params[fg_n];
@@ -426,6 +436,10 @@ void run_server(xindex_t *table) {
 	}*/
 	void * status;
 	int rc = pthread_join(backuper_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join " << rc);
+	}
+	int rc = pthread_join(populator_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join " << rc);
 	}
@@ -759,6 +773,110 @@ void try_kvsnapshot(xindex_t *table) {
 	}
 }
 
+void *run_populator(void *param) {
+	xindex_t *table = (xindex_t*)param;
+
+	int sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	INVARIANT(sock_fd >= 0);
+	// Diskable udp check
+	int disable = 1;
+	if (setsockopt(sock_fd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+		COUT_N_EXIT("Disable udp checksum failed");
+	}
+	// Set timeout
+	struct timeval tv;
+	tv.tv_sec = 1;
+	tv.tv_usec =  0;
+	int res = setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	INVARIANT(res >= 0);
+	// Set listen addr
+	struct sockaddr_in populator_server_addr;
+	memset(&populator_server_addr, 0, sizeof(sockaddr_in));
+	populator_server_addr.sin_family = AF_INET;
+	populator_server_addr.sin_port = htons(populator_port);
+	populator_server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	res = bind(sock_fd, (struct sockaddr *)&populator_server_addr, sizeof(populator_server_addr));
+	INVARIANT(res >= 0);
+	// Set client addr for controller
+	struct sockaddr_in controller_addr;
+	memset(&controller_addr, 0, sizeof(struct sockaddr_in));
+	uint32_t sockaddr_len = sizeof(struct sockaddr_in);
+	
+	int recv_size = 0;
+	char recv_buf[MAX_BUFSIZE];
+	memset(recv_buf, 0, sizeof(recv_buf));
+	char ack_buf[1];
+	memset(ack_buf, 1, 1);
+
+	while (!running)
+		;
+
+	while (running) {
+		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, &controller_addr, &sockaddr_len);
+		if (recv_size == -1) {
+			if (errno == EWOULDBLOCK || errno == EINTR) {
+				continue; // timeout or interrupted system call
+			}
+			else {
+				COUT_N_EXIT("[server] Error of recvfrom: errno = " << errno);
+			}
+		}
+
+		// Parse eviction notification (latest, thread_id, keylo, keyhi, seq, vallen, value)
+		char *curpos = recv_buf;
+		uint8_t latest = *((uint8_t *)curpos);
+		curpos += sizeof(uint8_t);
+		uint8_t thread_id = *((uint8_t *)curpos);
+		curpos += sizeof(uint8_t);
+		index_key_t curkey;
+		curpos += curkey.deserialize(curpos);
+		while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
+		cached_val_t &tmp_cached_val = ckvs_list[thread_id][curkey];
+		bool process_ckvs = false;
+		if (latest == 0) {
+			process_ckvs = true;
+		}
+		else if (latest == 1) {
+			uint32_t curseq = *((uint32_t *)curpos);
+			curpos += sizeof(uint32_t);
+			val_t curval;
+			curpos += curval.deserialize(curpos);
+			if (curseq >= tmp_cached_val._seq) {
+				bool tmp_stat = table->put(curkey, curval, thread_id);
+			}
+			else {
+				process_ckvs = true;
+			}
+		}
+		else if (latest == 2) {
+			uint32_t curseq = *((uint32_t *)curpos);
+			curpos += sizeof(uint32_t);
+			if (curseq >= tmp_cached_val._seq) {
+				bool tmp_stat = table->remove(curkey, thread_id);
+			}
+			else {
+				process_ckvs = true;
+			}
+		}
+		if (process_ckvs) {
+			if (tmp_cached_val._status == 1) {
+				bool tmp_stat = table->put(curkey, tmp_cached_val._val, thread_id);
+			}
+			else if (tmp_cached_val._status == 2) {
+				bool tmp_stat = table->remove(curkey, thread_id);
+			}
+
+		}
+		ckvs_list[thread_id].erase(curkey); // Remove from CKVS
+		ckvs_inuse_list[thread_id] = false;
+
+		// Sendback ACK to controller
+		int res = sendto(sock_fd, ack_buf, 1, 0, (struct sockaddr *)&controller_addr, sizeof(struct sockaddr));
+		INVARIANT(res != -1);
+	}
+	pthread_exit(nullptr);
+}
+
 static int run_sfg(void * param) {
 //void *run_sfg(void * param) {
   // Parse param
@@ -955,11 +1073,13 @@ static int run_sfg(void * param) {
 									req.key(), cached_val_t(0, tmp_val, 1))); 
 						ckvs_inuse_list[thread_id] = false;
 
-						// Send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
+						// Send <k, v, hashidx, thread_id> to controller for cache population (retransmission-after-timeout for packet loss)
 						uint32_t pop_reqsize = req.key().serialize(pop_buf); // sizeof(key)
 						pop_reqsize += tmp_val.serialize(pop_buf + pop_reqsize); // sizeof(key) + sizeof(val) (vallen and value)
 						memcpy(pop_buf + pop_reqsize, (void *)&req.hashidx(), sizeof(uint16_t));
 						pop_reqsize += sizeof(uint16_t); // sizeof(key) + sizeof(val) (vallen and value) + sizeof(hashidx)
+						memcpy(pop_buf + pop_reqsize, (void *)&thread_id, sizeof(uint8_t));
+						pop_reqsize += sizeof(uint8_t); // sizeof(key) + sizeof(val) (vallen and value) + sizeof(hashidx) + sizeof(thread_id)
 						res = sendto(pop_sockfd, pop_buf, pop_reqsize, 0, (struct sockaddr *)&controller_sockaddr, sizeof(struct sockaddr));
 						INVARIANT(res >= 0);
 					}

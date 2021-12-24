@@ -166,19 +166,20 @@
 		* If exist in CKVS, set status=2, and seq'=seq+1 (seq is that number embedded in the request packet), sendback DELRES
 		* Otherwise, delete from KVS, sendback DELRES
 		* NOTE: key may not exist in CKVS since controller may remove the key before DELREQ_BE
-	+ TODO: cache population
-		* Send <k, v, hashidx> to controller for GETREQ_POP and PUTREQ_POP
-		* TODO: Populator: listen on a port to wait for controller's notification
-			- TODO: If latest=0
+	+ Cache population
+		* Send <k, v, hashidx, threadid> to controller for GETREQ_POP and PUTREQ_POP
+		* Populator: listen on a port to wait for controller's notification
+			- Load latest, threadid, and evicted key
+			- If latest=0
 				+ Put entry from CKVS into KVS if status = 1, or delete it in KVS if status = 2, or nothing if status = 0
-			- TODO: If latest=1
+			- If latest=1
 				+ If seq>=seq', put entry from notification into KVS
 				+ If seq<seq', put entry from CKVS into KVS if status = 1, or delete it in KVS if status = 2, or nothing if status = 0
-			- TODO: If latest=2
+			- If latest=2
 				+ If seq>=seq', delete in KVS 
 				+ If seq<seq', put entry from CKVS into KVS if status = 1, or delete it in KVS if status = 2, or nothing if status = 0
-			+ TODO: Remove it from CKVS
-			+ TODO: Send ACK
+			+ Remove it from CKVS
+			+ Send ACK to controller
 - Controller-side processing
 	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population; controller/controller.py for combination of the two functionalities
 	+ Cache population (controller/cache_update.py)
@@ -193,7 +194,7 @@
 				if new key is added, all GETs/PUTs touch CKVS in server as GET_BE/PUT_BE -> out-of-date value in switch;
 				- NOTE: Forward the first GETs to server if latest = 0 (for read-after-write consistency of populated data)
 			* If exist
-				- Load evicted key from redis, latest
+				- Load evicted key and thread id from redis, latest
 					+ If latest=0
 						- Send evicted key
 					+ If latest=1
@@ -224,7 +225,9 @@
 	- Support PUTREQ_POP, PUTRES for put-triggerred eviction
 	- Support GETREQ_BE and PUTREQ_BE and DELREQ_BE for version-aware query
 	- Support CacheVal including val, deleted bool, and key
-- TODO: Support cache population in controller (non-blocking population)
+- Support non-blocking cache population
+	- Controller part (controller/cache_update.py, cache_update/register_update.py)
+	- Server part (ycsb_server.c)
 - TODO: apply to baseline
 	+ TODO: replace thread_id with hashidx (packet_format.h, packet_foramt_impl.h, ycsb_remove_client.c)
 

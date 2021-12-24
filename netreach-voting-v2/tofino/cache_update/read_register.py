@@ -113,7 +113,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         return tmpreg
 
     def runTest(self):
-        # Parse key, value, hashidx
+        # Parse key, value, hashidx, thread_id
         data = sys.argv[sys.argv.index("--data") + 1]
         remainlen = len(data)
         remainlen -= 17 # Minus key and vallen
@@ -123,7 +123,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             remainlen -= 8
             tmpval, data = struct.unpack("=Q{}s".format(remainlen), data)
             value_list.append(tmpval)
-        hashidx = struct.unpack("=H", data)
+        hashidx, thread_id = struct.unpack("=HB", data)
 
         # Set corresponding being_evicted bit as 1
         self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
@@ -137,7 +137,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         isexist = r.exists(hashidx)
 
         if isexist == 1: # cache eviction
-            prev_keylo, prev_keyhi = r.get(hashidx).split(" ")
+            prev_keylo, prev_keyhi, prev_thread_id = r.get(hashidx).split(" ")
             prev_keylo = int(prev_keylo)
             prev_keyhi = int(prev_keyhi)
             latest_list = self.client.register_read_latest_reg(self.sess_hdl, self.dev_tgt, hashidx, flags) # Ptf converts big-endian int8 to small-endian int8
@@ -146,8 +146,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             buf = bytearray()
 
             if (latest_list[0] == 0 and latest_list[1] == 0): # 2 pipelines
-                # Send <latest, evicted keylo, evicted keyhi> to server
-                buf = struct.pack("=BQQ", 0, prev_keylo, prev_keyhi)
+                # Send <latest, thread_id, evicted keylo, evicted keyhi> to server
+                buf = struct.pack("=BBQQ", 0, prev_thread_id, prev_keylo, prev_keyhi)
                 s.sendto(buf, server_addr)
 
                 _, _ = s.recvfrom(1024) # Wait for ACK
@@ -174,8 +174,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                     tmp_prev_valhi= RegisterUpdate.get_reg32(tmp_prev_valhi)
                     prev_value_list.append((tmp_prev_valhi << 32) | tmp_prev_vallo)
 
-                # Send <latest, evicted keylo, evicted keyhi, seq, vallen, val>
-                buf = struct.pack("=BQQIB", 1, prev_keylo, prev_keyhi, prev_seq, prev_vallen)
+                # Send <latest, thread_id, evicted keylo, evicted keyhi, seq, vallen, val>
+                buf = struct.pack("=BBQQIB", 1, prev_thread_id, prev_keylo, prev_keyhi, prev_seq, prev_vallen)
                 for i in range(prev_vallen):
                     buf = buf + struct.pack("=Q", prev_value_list[i])
 
@@ -192,8 +192,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 if prev_seq < 0:
                     prev_seq += pow(2, 32) # int32 -> uint32
 
-                # Send <latest, evicted keylo, evicted keyhi, seq>
-                buf = struct.pack("=BQQB", 1, prev_keylo, prev_keyhi, prev_seq)
+                # Send <latest, thread_id, evicted keylo, evicted keyhi, seq>
+                buf = struct.pack("=BBQQB", 1, prev_thread_id, prev_keylo, prev_keyhi, prev_seq)
 
                 _, _ = s.recvfrom(1024) # Wait for ACK
                 r.delete(hashidx) # Remove evicted key from redis
@@ -220,7 +220,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, RegisterUpdate.set_reg32((value_list[i] >> 32) & 0xFFFFFFFF)) # Ptf converts big-endian int32 to small-endian int32 in reg
 
         # Add new key into redis
-        r.set(hashidx, "{} {}".format(keylo, keyhi))
+        r.set(hashidx, "{} {} {}".format(keylo, keyhi, thread_id))
 
         # Add new key into MAT (TODO: use small-endian uint16)
         matchspec0 = netbufferv2_cache_lookup_tbl_match_spec_t(\

@@ -127,6 +127,22 @@ uint32_t Key::serialize(char *buf) {
 	}
 }
 
+uint32_t Key::deserialize(const char *buf) {
+	if (buf != nullptr) {
+#ifdef LARGE_KEY
+		memcpy((void *)&keylo, buf, sizeof(uint64_t));
+		memcpy((void *)&keyhi, buf + sizeof(uint64_t), sizeof(uint64_t));
+		return 2*sizeof(uint64_t);
+#else
+		memcpy((void *)&key, buf, sizeof(uint64_t));
+		return sizeof(uint64_t);
+#endif
+	}
+	else {
+		return 0;
+	}
+}
+
 bool operator<(const Key &l, const Key &r) { 
 #ifdef LARGE_KEY
 	return (l.keyhi < r.keyhi) || ((l.keyhi == r.keyhi) && (l.keylo < r.keylo));
