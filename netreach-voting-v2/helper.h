@@ -43,13 +43,13 @@
 	sprintf(buf, "%s-run.out", workload)
 
 #define LOAD_SPLIT_DIR(buf, workload, threadnum) \
-	sprintf(buf, "%s-load-%d", workload, threadnum)
+	sprintf(buf, "%s-load-%d", workload, int(threadnum))
 
 #define RUN_SPLIT_DIR(buf, workload, threadnum) \
-	sprintf(buf, "%s-run-%d", workload, threadnum)
+	sprintf(buf, "%s-run-%d", workload, int(threadnum))
 
 #define GET_SPLIT_WORKLOAD(buf, dir, threadid) \
-	sprintf(buf, "%s/%u.out", dir, threadid);
+	sprintf(buf, "%s/%u.out", dir, uint32_t(threadid));
 
 #define GET_DATAPATH(buf, workload_name, group_idx) \
 	sprintf(buf, "/tmp/netbuffer/%s/group%d.db", workload_name, group_idx)

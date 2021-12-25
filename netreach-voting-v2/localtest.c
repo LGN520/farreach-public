@@ -235,7 +235,6 @@ void load() {
 }
 
 void run_server(xindex_t *table, size_t sec) {
-	int ret = 0;
 	unsigned lcoreid = 1;
 
 	running = false;
@@ -324,7 +323,6 @@ void *run_sfg(void * param) {
                    non_exist_keys.begin() + non_exist_key_end);
   }
 
-  int res = 0;
   uint64_t dummy_value_data[2] = {1234, 5678};
   val_t dummy_value = val_t(dummy_value_data, 2);
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;

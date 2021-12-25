@@ -9,7 +9,7 @@
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
 	GET_REQ_POP, GET_RES_NPOP, GET_REQ_NLATEST, GET_RES_LATEST, GET_RES_NEXIST, GET_REQ_BE,
-	PUT_REQ_POP, PUT_REQ_BE, DEL_REQ_BE}
+	PUT_REQ_POP, PUT_REQ_BE, DEL_REQ_BE};
 typedef PacketType packet_type_t;
 
 template<class key_t>

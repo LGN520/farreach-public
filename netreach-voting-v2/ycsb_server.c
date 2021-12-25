@@ -61,7 +61,7 @@ typedef GetResponseNEXIST<index_key_t, val_t> get_response_nexist_t;
 typedef GetRequestBE<index_key_t, val_t> get_request_be_t;
 typedef PutRequestPOP<index_key_t, val_t> put_request_pop_t;
 typedef PutRequestBE<index_key_t, val_t> put_request_be_t;
-typedef DelRequest<index_key_t> del_request_be_t;
+typedef DelRequestBE<index_key_t> del_request_be_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -110,7 +110,7 @@ short populator_port;
 void *run_populator(void *param); // populator
 
 // KVS for cached key
-std:;atomic<bool> * volatile ckvs_inuse_list = nullptr; // atomic between worker thread and populator
+std::atomic<bool> * volatile ckvs_inuse_list = nullptr; // atomic between worker thread and populator
 std::map<index_key_t, cached_val_t> * volatile ckvs_list = nullptr;
 
 size_t per_server_range;
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
 
   // Prepare per-thread ckvs
   ckvs_inuse_list = new std::atomic<bool>[fg_n];
-  ckvs_list = new std::map<index_key_t, val_t>[fg_n];
+  ckvs_list = new std::map<index_key_t, cached_val_t>[fg_n];
   for (size_t i = 0; i < fg_n; i++) {
 	ckvs_inuse_list[i] = false;
 	ckvs_list[i].clear();
@@ -439,7 +439,7 @@ void run_server(xindex_t *table) {
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join " << rc);
 	}
-	int rc = pthread_join(populator_thread, &status);
+	rc = pthread_join(populator_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join " << rc);
 	}
@@ -812,7 +812,7 @@ void *run_populator(void *param) {
 		;
 
 	while (running) {
-		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, &controller_addr, &sockaddr_len);
+		recv_size = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, (struct sockaddr *)&controller_addr, &sockaddr_len);
 		if (recv_size == -1) {
 			if (errno == EWOULDBLOCK || errno == EINTR) {
 				continue; // timeout or interrupted system call
@@ -1076,7 +1076,8 @@ static int run_sfg(void * param) {
 						// Send <k, v, hashidx, thread_id> to controller for cache population (retransmission-after-timeout for packet loss)
 						uint32_t pop_reqsize = req.key().serialize(pop_buf); // sizeof(key)
 						pop_reqsize += tmp_val.serialize(pop_buf + pop_reqsize); // sizeof(key) + sizeof(val) (vallen and value)
-						memcpy(pop_buf + pop_reqsize, (void *)&req.hashidx(), sizeof(uint16_t));
+						uint16_t hashidx = req.hashidx();
+						memcpy(pop_buf + pop_reqsize, (void *)&hashidx, sizeof(uint16_t));
 						pop_reqsize += sizeof(uint16_t); // sizeof(key) + sizeof(val) (vallen and value) + sizeof(hashidx)
 						memcpy(pop_buf + pop_reqsize, (void *)&thread_id, sizeof(uint8_t));
 						pop_reqsize += sizeof(uint8_t); // sizeof(key) + sizeof(val) (vallen and value) + sizeof(hashidx) + sizeof(thread_id)
@@ -1156,7 +1157,7 @@ static int run_sfg(void * param) {
 						}
 						else {
 							if (tmp_cached_val._status == 1) { // Latest in CKVS
-								get_response_t rsp(req.hashidx(), req.key(), tmp_cached_val->_val);
+								get_response_t rsp(req.hashidx(), req.key(), tmp_cached_val._val);
 								rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 								encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 								res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
@@ -1224,7 +1225,8 @@ static int run_sfg(void * param) {
 					// Send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
 					uint32_t pop_reqsize = req.key().serialize(pop_buf); // sizeof(key)
 					pop_reqsize += req.val().serialize(pop_buf + pop_reqsize); // sizeof(key) + sizeof(val) (vallen and value)
-					memcpy(pop_buf + pop_reqsize, (void *)&req.hashidx(), sizeof(uint16_t));
+					uint16_t hashidx = req.hashidx();
+					memcpy(pop_buf + pop_reqsize, (void *)&hashidx, sizeof(uint16_t));
 					pop_reqsize += sizeof(uint16_t); // sizeof(key) + sizeof(val) (vallen and value) + sizeof(hashidx)
 					res = sendto(pop_sockfd, pop_buf, pop_reqsize, 0, (struct sockaddr *)&controller_sockaddr, sizeof(struct sockaddr));
 					INVARIANT(res >= 0);
@@ -1295,16 +1297,7 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::DEL_REQ_S:
-				{
-					// Delete data from key-value storen
-					del_request_s_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string())
-					bool tmp_stat = table->remove(req.key(), thread_id);
-					//COUT_THIS("[server] stat = " << tmp_stat)
-					break;
-				}
-			case packet_type_t::PUT_REQ_CASE1:
+			/*case packet_type_t::PUT_REQ_CASE1:
 				{
 					COUT_THIS("PUT_REQ_CASE1")
 					if (!isbackup) {
@@ -1416,7 +1409,7 @@ static int run_sfg(void * param) {
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
-				}
+				}*/
 			default:
 				{
 					COUT_THIS("[server] Invalid packet type: " << int(pkt_type))

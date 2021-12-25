@@ -4,6 +4,8 @@
 #include "helper.h"
 #include "val.h"
 
+typedef Val val_t;
+
 class CachedVal {
 	public:
 		CachedVal();

@@ -1,4 +1,5 @@
 #include "packet_format.h"
+#include <arpa/inet.h> // ntohl
 
 // Packet
 template<class key_t>
@@ -691,32 +692,32 @@ void PutRequestBE<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 
 // DelRequestBE
 
-template<class key_t, class val_t>
-DelRequestBE<key_t, val_t>::DelRequestBE(const char *data, uint32_t recv_size)
+template<class key_t>
+DelRequestBE<key_t>::DelRequestBE(const char *data, uint32_t recv_size)
 {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DEL_REQ_BE);
 }
 
-template<class key_t, class val_t>
-int DelRequestBE<key_t, val_t>::seq() const
+template<class key_t>
+int DelRequestBE<key_t>::seq() const
 {
 	return _seq;
 }
 
-template<class key_t, class val_t>
-uint32_t DelRequestBE<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+template<class key_t>
+uint32_t DelRequestBE<key_t>::serialize(char * const data, uint32_t max_size)
 {
 	COUT_N_EXIT("Invalid invoke of serialize for DelRequestBE");
 }
 
 template<class key_t>
-uint32_t DelRequest<key_t>::size() {
+uint32_t DelRequestBE<key_t>::size() {
 	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(int);
 }
 
-template<class key_t, class val_t>
-void DelRequestBE<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+template<class key_t>
+void DelRequestBE<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size == recv_size);
 	const char *begin = data;

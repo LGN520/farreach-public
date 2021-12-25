@@ -78,7 +78,7 @@ LDLIBS += $(MKL_LDLIBS)
 
 CPPFLAGS += $(INCDIR)
 CPPFLAGS += $(EXTRA_CPPFLAGS)
-LDFLAGS += -pthread -g $(LDDIR)
+LDFLAGS += -no-pie -pthread -g $(LDDIR)
 LDFLAGS += $(EXTRA_LDFLAGS)
 
 ##############################################################################
@@ -87,13 +87,16 @@ include mk/recipes.mk
 
 DEPS :=
 CLEAN :=
-TARGETS := client server prepare localtest split_workload ycsb_local_client ycsb_remote_client ycsb_server
+TARGETS := prepare localtest split_workload ycsb_local_client ycsb_remote_client ycsb_server
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
 
 DEPS += key.d val.d
 CLEAN += key.o val.o
+
+DEPS += cached_val.d
+CLEAN += cached_val.o
 
 DEPS += ycsb/parser.d
 CLEAN += ycsb/parser.o
@@ -146,7 +149,7 @@ ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o
 DEPS += ycsb_remote_client.d
 CLEAN += ycsb_remote_client.o ycsb_remote_client
 
-ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) $(BACKUP_OBJECTS)
+ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o cached_val.o $(INIPARSER_OBJECTS) $(BACKUP_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += ycsb_server.d
 CLEAN += ycsb_server.o ycsb_server
