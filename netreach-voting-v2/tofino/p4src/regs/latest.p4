@@ -1,3 +1,4 @@
+// NOTE: at most 4 interfaces can be added to register array
 register latest_reg {
 	width: 8;
 	instance_count: KV_BUCKET_COUNT;
@@ -17,18 +18,23 @@ action get_latest() {
 	get_latest_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-// For PUT
-blackbox stateful_alu set_latest_alu {
+// For PUTREQ/DELREQ
+blackbox stateful_alu set_or_clear_latest_alu {
 	reg: latest_reg;
 
+	condition_lo: op_hdr.optype == PUTREQ_TYPE;
+
+	update_lo_1_predicate: condition_lo; // PUTREQ
 	update_lo_1_value: 1;
+	update_lo_2_predicate: not condition_lo; // DELREQ
+	update_lo_2_value: 2;
 
 	output_value: register_lo;
 	output_dst: meta.islatest;
 }
 
-action set_latest() {
-	set_latest_alu.execute_stateful_alu(op_hdr.hashidx);
+action set_or_clear_latest() {
+	set_or_clear_latest_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 // For GETRES_LATEST
@@ -48,20 +54,6 @@ blackbox stateful_alu try_set_latest_alu {
 
 action try_set_latest() {
 	try_set_latest_alu.execute_stateful_alu(op_hdr.hashidx);
-}
-
-// For DEL
-blackbox stateful_alu clear_latest_alu {
-	reg: latest_reg;
-
-	update_lo_1_value: 2;
-
-	output_value: register_lo;
-	output_dst: meta.islatest;
-}
-
-action clear_latest() {
-	clear_latest_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 // For GETRES_NEXIST
@@ -92,8 +84,7 @@ table access_latest_tbl {
 	}
 	actions {
 		get_latest;
-		set_latest;
-		clear_latest;
+		set_or_clear_latest;
 		try_set_latest;
 		try_clear_latest;
 		nop;

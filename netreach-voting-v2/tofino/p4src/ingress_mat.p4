@@ -73,7 +73,7 @@ action update_getreq_to_getres_deleted() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
-	add_to_field(udp_hdr.hdrlen, VAL_DELETED_PKTLEN);
+	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 
@@ -196,7 +196,7 @@ action update_putreq_to_putreq_pop(port) {
 }
 
 action update_putreq_to_putreq_be(port) {
-	add_to_field(udp_hdr.hdrlen, SEQLEN);
+	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 
 	modify_field(op_hdr.optype, PUTREQ_BE_TYPE);
@@ -216,7 +216,7 @@ action update_delreq_to_delres() {
 	modify_field(res_hdr.stat, 1);
 }
 action update_delreq_to_delreq_be(port) {
-	add_to_field(udp_hdr.hdrlen, SEQLEN);
+	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 
 	modify_field(op_hdr.optype, DELREQ_BE_TYPE);

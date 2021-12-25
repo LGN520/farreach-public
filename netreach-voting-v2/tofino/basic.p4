@@ -9,6 +9,8 @@
 #define PROTOTYPE_UDP 0x11
 //#define PROTOTYPE_NETBUFFER 0x90
 
+#define OP_PORT 1111 // 0x0457
+
 // NOTE: convert type into Big Endian (not use threadid by now; big endian of key does not make sense)
 #define GETREQ_TYPE 0x00
 #define PUTREQ_TYPE 0x01
@@ -68,6 +70,7 @@
 #include "p4src/regs/latest.p4"
 #include "p4src/regs/val.p4"
 #include "p4src/regs/seq.p4"
+#include "p4src/regs/being_evicted.p4"
 
 #include "p4src/ingress_mat.p4"
 #include "p4src/egress_mat.p4"
@@ -151,30 +154,6 @@ control ingress {
 /* Egress Processing */
 
 control egress {
-	// NOTE: make sure that normal packet will not apply these tables
-	if (pkt_is_i2e_mirrored) {
-		if (meta.is_clone == CLONE_FOR_GETRES) {
-			apply(sendback_cloned_getres_tbl); // input is GETRES_S (original pkt becomes PUTREQ_GS/PUTREQ_GS_CASE2) (we do not need swap port, ip, and mac)
-		}
-		else if (meta.is_clone == CLONE_FOR_DELRES) {
-			apply(sendback_cloned_delres_tbl); // input is DELREQ (original pkt becomes DELREQ_S/DELREQ_CASE1) (we need swap port, ip, and mac)
-		}
-		else if (meta.is_clone == CLONE_FOR_PUTRES) {
-			apply(sendback_cloned_putres_tbl); // input is PUTREQ (original pkt becomes PUTREQ_PS/PUTREQ_CASE1/PUTREQ_PS_CASE2) (we need to swap port, ip, and mac)
-		}
-	}
-	else {
-		// NOTE: for packets requring origin_hash, the key and value in packet header have already been set as origin_key/val
-		apply(eg_calculate_hash_tbl);
-		if (op_hdr.optype == PUTREQ_GS_TYPE) {
-			apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
-		}
-		else if (op_hdr.optype == PUTREQ_GS_CASE2_TYPE) {
-			apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
-		}
-		else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
-			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
-		}
-	}
+	apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 	apply(update_macaddr_tbl); // Update mac addr for responses and PUTREQ_GS/GS_CASE2
 }

@@ -62,7 +62,7 @@ uint32_t GetRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	memcpy(begin, (void *)&htons(this->_hashidx), sizeof(uint16_t)); // Small-endian to big-endian
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	return my_size;
@@ -75,7 +75,7 @@ void GetRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t)); // Big-endian to small-endian
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 }
@@ -117,7 +117,7 @@ uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	memcpy(begin, (void *)&htons(this->_hashidx), sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -132,7 +132,7 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint8_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t));
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -171,7 +171,7 @@ uint32_t DelRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	memcpy(begin, (void *)&htons(this->_hashidx), sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	return my_size;
@@ -184,7 +184,7 @@ void DelRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 }
@@ -224,7 +224,7 @@ uint32_t ScanRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	memcpy(begin, (void *)&htons(this->_hashidx), sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -241,7 +241,7 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -288,7 +288,7 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	memcpy(begin, (void *)&htons(this->_hashidx), sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -303,7 +303,7 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -341,7 +341,7 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	memcpy(begin, (void *)&htons(this->_hashidx), sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -356,7 +356,7 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -394,7 +394,7 @@ uint32_t DelResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	memcpy(begin, (void *)&htons(this->_hashidx), sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -409,7 +409,7 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -464,7 +464,7 @@ uint32_t ScanResponse<key_t, val_t>::serialize(char * const data, uint32_t max_s
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	memcpy(begin, (void *)&htons(this->_hashidx), sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -493,7 +493,7 @@ void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -638,7 +638,7 @@ void GetRequestBE<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint8_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t));
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -647,7 +647,7 @@ void GetRequestBE<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	// NOTE: big-endian or small-endian is only related with byte order instead of signed/unsigned
 	uint32_t tmpseq;
 	memcpy((void *)&tmpseq, begin, sizeof(uint32_t)); // Big-endian
-	this->_seq = int(ntohl(tmpseq)); // Little-endian
+	this->_seq = int(ntohl(tmpseq)); // Big-endian to little-endian
 }
 
 // PutRequestBE
@@ -678,7 +678,7 @@ void PutRequestBE<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint8_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t));
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -687,7 +687,7 @@ void PutRequestBE<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 	// NOTE: big-endian or small-endian is only related with byte order instead of signed/unsigned
 	uint32_t tmpseq;
 	memcpy((void *)&tmpseq, begin, sizeof(uint32_t)); // Big-endian
-	this->_seq = int(ntohl(tmpseq)); // Little-endian
+	this->_seq = int(ntohl(tmpseq)); // Big-endian to little-endian
 }
 
 // DelRequestBE
@@ -723,7 +723,7 @@ void DelRequestBE<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	memcpy((void *)&ntohs(this->_hashidx), begin, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
@@ -759,7 +759,7 @@ uint32_t GetResponsePOP<key_t, val_t>::serialize(char * const data, uint32_t max
 	char *begin = data;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
-	memcpy(begin, (void *)&this->_hashidx, sizeof(uint16_t));
+	memcpy(begin, (void *)&htons(this->_hashidx), sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);

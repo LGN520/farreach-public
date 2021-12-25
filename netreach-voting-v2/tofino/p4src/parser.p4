@@ -15,27 +15,17 @@ parser parse_ethernet {
 parser parse_ipv4 {
 	extract(ipv4_hdr);
 	return select(ipv4_hdr.protocol) {
-		PROTOTYPE_UDP: parse_udp_dst;
+		PROTOTYPE_UDP: parse_udp;
 		default: ingress;
 	}
 }
 
-parser parse_udp_dst {
+parser parse_udp {
 	extract(udp_hdr);
-	return select(udp_hdr.dstPort) {
-		OP_PORT: parse_op_req;
-		default: parse_udp_src;
-	}
+	return parse_op;
 }
 
-parser parse_udp_src {
-	return select(udp_hdr.srcPort) {
-		OP_PORT: parse_op_rsp;
-		default: ingress;
-	}
-}
-
-parser parse_op_req {
+parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
 		GETREQ_BE_TYPE: parse_vallen;
@@ -43,13 +33,6 @@ parser parse_op_req {
 		PUTREQ_POP_TYPE: parse_vallen;
 		PUTREQ_BE_TYPE: parse_vallen;
 		DELREQ_BE_TYPE: parse_seq;
-		default: ingress;
-	}
-}
-
-parser parse_op_rsp {
-	extract(op_hdr);
-	return select(op_hdr.optype) {
 		GETRES_TYPE: parse_vallen;
 		GETRES_NPOP_TYPE: parse_vallen;
 		GETRES_LATEST_TYPE: parse_vallen;

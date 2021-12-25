@@ -354,14 +354,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     meta_iscached = iscached,
                                     #meta_isvalid = isvalid,
                                     meta_being_evicted = being_evicted)
-                            self.client.access_latest_tbl_table_add_with_set_latest(\
+                            self.client.access_latest_tbl_table_add_with_set_or_clear_latest(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
                             matchspec0 = netbufferv2_access_latest_tbl_match_spec_t(\
                                     op_hdr_optype = DELREQ_TYPE,
                                     meta_iscached = iscached,
                                     #meta_isvalid = isvalid,
                                     meta_being_evicted = being_evicted)
-                            self.client.access_latest_tbl_table_add_with_clear_latest(\
+                            self.client.access_latest_tbl_table_add_with_set_or_clear_latest(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             #Table: access_seq_tbl (default: nop; ?)
@@ -369,14 +369,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             for iscached in cached_list:
                 for isvalid in valid_list:
                     for being_evicted in being_evicted_list:
-                        matchspec0 = netbufferv2_access_latest_tbl_match_spec_t(\
+                        matchspec0 = netbufferv2_access_seq_tbl_match_spec_t(\
                                 op_hdr_optype = GETREQ_TYPE,
                                 meta_iscached = iscached,
                                 #meta_isvalid = isvalid,
                                 meta_being_evicted = being_evicted)
                         self.client.access_seq_tbl_table_add_with_read_seq(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
-                        matchspec0 = netbufferv2_access_latest_tbl_match_spec_t(\
+                        matchspec0 = netbufferv2_access_seq_tbl_match_spec_t(\
                                 op_hdr_optype = PUTREQ_TYPE,
                                 meta_iscached = iscached,
                                 #meta_isvalid = isvalid,
@@ -388,7 +388,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         else:
                             self.client.access_seq_tbl_table_add_with_read_seq(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                        matchspec0 = netbufferv2_access_latest_tbl_match_spec_t(\
+                        matchspec0 = netbufferv2_access_seq_tbl_match_spec_t(\
                                 op_hdr_optype = DELREQ_TYPE,
                                 meta_iscached = iscached,
                                 #meta_isvalid = isvalid,
@@ -647,48 +647,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                 hash_start = hash_end
 
-            # Table: hash_partition_reverse_tbl (default: nop; server_num <= 128)
-            print "Configuring hash_partition_reverse_tbl"
-            hash_start = 0
-            hash_range_per_server = bucket_num / server_num
-            for i in range(server_num):
-                if i == server_num - 1:
-                    hash_end = bucket_num - 1 # if end is not included, then it is just processed by port 1111
-                else:
-                    hash_end = hash_start + hash_range_per_server
-                matchspec0 = netbufferv2_hash_partition_reverse_tbl_match_spec_t(\
-                        udp_hdr_srcPort=server_port, \
-                        eg_intr_md_egress_port=self.devPorts[1], \
-                        meta_hashidx_start = hash_start, \
-                        meta_hashidx_end = hash_end)
-                actnspec0 = netbufferv2_update_dstport_reverse_action_spec_t(\
-                        server_port + i)
-                self.client.hash_partition_reverse_tbl_table_add_with_update_dstport_reverse(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-                hash_start = hash_end
-
-            # Table: drop_put_tbl (if key coherence is unnecessary)
-            #print "Configuring drop_put_tbl"
-            #matchspec0 = netbuffer_drop_put_tbl_match_spec_t(
-            #        op_hdr_optype = PUTREQ_TYPE)
-            #self.client.drop_put_tbl_table_add_with_ig_drop_unicast(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # TMPDEBUG
-            #print "Configuring forward_to_server_tbl"
-            #matchspec0 = netbuffer_forward_to_server_tbl_match_spec_t(\
-            #        op_hdr_optype=PUTREQ_TYPE,
-            #        meta_islock=1)
-            #matchspec1 = netbuffer_forward_to_server_tbl_match_spec_t(\
-            #        op_hdr_optype=GETREQ_TYPE,
-            #        meta_islock=1)
-            #actnspec0 = netbuffer_forward_to_server_action_spec_t(\
-            #        self.devPorts[1])
-            #self.client.forward_to_server_tbl_table_add_with_forward_to_server(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            #self.client.forward_to_server_tbl_table_add_with_forward_to_server(\
-            #        self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
-
             # Table: update_macaddr_tbl (default: nop; 5)
             print "Configuring update_macaddr_tbl"
             actnspec0 = netbufferv2_update_macaddr_s2c_action_spec_t(\
@@ -706,12 +664,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
                     self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
-            matchspec3 = netbufferv2_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTREQ_GS_TYPE)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
-                    self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
-            matchspec4 = netbufferv2_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTREQ_GS_CASE2_TYPE)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
-                    self.sess_hdl, self.dev_tgt, matchspec4, actnspec1)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
             self.conn_mgr.client_cleanup(self.sess_hdl)

@@ -6,11 +6,11 @@ register seq_reg {
 blackbox stateful_alu increase_seq_alu {
 	reg: seq_reg;
 
-	update_lo_1_predicate: register_lo + 1;
+	update_lo_1_value: register_lo + 1;
 }
 
 action increase_seq() {
-	increase_seq_alu.execute_stateful_alu(meta.hashidx);
+	increase_seq_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu read_seq_alu {
@@ -21,7 +21,7 @@ blackbox stateful_alu read_seq_alu {
 }
 
 action read_seq() {
-	read_seq_alu.execute_stateful_alu(meta.hashidx);
+	read_seq_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 table access_seq_tbl {

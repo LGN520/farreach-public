@@ -83,10 +83,10 @@ header_type metadata_t {
 		tmp_sport: 16;
 		tmp_dport: 16;
 		//isvalid: 1;
-		isdirty: 1;
 		iszerovote: 4;
 		islock: 1;
 		islatest: 8;
+		isbackup: 1;
 	}
 }
 

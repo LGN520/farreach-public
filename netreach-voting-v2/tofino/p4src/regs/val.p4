@@ -9,7 +9,7 @@ blackbox stateful_alu get_vallen_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: vallen_hdr.origin_vallen;
+	output_dst: vallen_hdr.vallen;
 }
 
 action get_vallen() {
