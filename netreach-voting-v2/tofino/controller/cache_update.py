@@ -1,7 +1,6 @@
 import time
 import signal, os
 import socket
-import redis
 
 running = True
 cmd = "$SDE/run_p4_tests.sh -p netbuffer -t /home/ssy/NetBuffer/netreach-voting-v2/tofino/cache_update/ --target hw --setup"
@@ -16,10 +15,6 @@ controller_ip = str(config.get("controller", "controller_ip"))
 controller_port = int(config.get("controller", "controller_port"))
 redis_ip = str(config.get("controller", "redis_ip"))
 redis_port = int(config.get("controller", "redis_port"))
-
-r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
-for key in r.scan_iter("prefix:*"):
-   r.delete(key)
 
 def handler(signum, frame):
     global running

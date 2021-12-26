@@ -2,6 +2,7 @@ import time
 import signal, os
 import socket
 from threading import Thread, Lock
+import redis
 
 mutex = Lock()
 running = True
@@ -21,9 +22,8 @@ redis_ip = str(config.get("controller", "redis_ip"))
 redis_port = int(config.get("controller", "redis_port"))
 
 r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
-for key in r.scan_iter("prefix:*"):
+for key in r.scan_iter("*"):
    r.delete(key)
-
 
 def handler(signum, frame):
     global running

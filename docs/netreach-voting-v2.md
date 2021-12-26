@@ -12,7 +12,7 @@
 - Design features
 	+ Parameter-free decision
 	+ Data-plane-based value update
-	+ TODO: Control-plane-based non-blocking cache population (conservative query and version-aware query for read-after-write consistency)
+	+ Control-plane-based non-blocking cache population (conservative query and version-aware query for read-after-write consistency)
 	+ TODO: Crash-consistent backup
 	+ Others
 		* TODO: switch-driven consistent hashing
@@ -123,6 +123,8 @@
 			- If iscached=1 and being_evicted=1, embed seq, send DELREQ_BE to server (being evicted)
 	+ PUTRES
 		* Sendback to client
+	+ Crash-consistent backup
+		* TODO: Mark case1 and send to server
 - Client-side processsing
 	+ Use client-side consistent hashing for hashidx (baseline also needs it for routing)
 - Server-side processing
@@ -166,7 +168,9 @@
 	+ Cache population
 		* Send <k, v, hashidx, threadid> to controller for GETREQ_POP and PUTREQ_POP
 		* Populator: listen on a port to wait for controller's notification
-			- Load latest, threadid, and evicted key
+			- Load latest, threadid, and evicted key with prefix of "hashidx:"
+			+ TODO: If backup and cache population run in parallel (case2, not yet now)
+				* TODO: Cache population: if isbackup = 1, save old value in redis with specific prefix
 			- If latest=0
 				+ Put entry from CKVS into KVS if status = 1, or delete it in KVS if status = 2, or nothing if status = 0
 			- If latest=1
@@ -175,13 +179,15 @@
 			- If latest=2
 				+ If seq>=seq', delete in KVS 
 				+ If seq<seq', put entry from CKVS into KVS if status = 1, or delete it in KVS if status = 2, or nothing if status = 0
-			+ Remove it from CKVS
+			+ Remove it from CKVS with prefix of "hashidx:"
 			+ Send ACK to controller
+	+ Crash-consistent backup
+		* TODO: rollback case1
 - Controller-side processing
 	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population; controller/controller.py for combination of the two functionalities
 	+ Cache population (controller/cache_update.py)
 		+ NOTE: if cache is full, eviction is required; performing eviction in data plane for atomicity is resouce-consuming (PHV is proportional to value length) 
-		+ Control-plane-based atomic population
+		+ Control-plane-based non-blocking population
 			* Wait for population request from server (k, v, hashidx)
 			* Set being_evicted bit at hashidx slot as 1
 			* Check redis to see if there exists cached key in the slot
@@ -207,8 +213,20 @@
 				- Reset registers (vote=1, latest=0, lock=0, seq=0), set vallen and val, add cached key in redis and MAT
 			* Set being_evcited bit as 0
 		+ TODO: check big-endian and small-endian
+	+ Crash-consistent backup
+		* Phase 1
+			+ Clean up case1 and case3
+			+ TODO: If backup and cache population run in parallel (case2, not yet now)
+				* TODO: Clean up old values in redis with specific prefix
+			+ Mark isbackup = 1
+		* Phase 2
+			+ Load all key-value pairs
+			+ Reset isbackup = 0
+			+ Filter key-value pairs with latest=1/2
+			+ TODO: If backup and cache population run in parallel (case2, not yet now)
+				* TODO: Load old values from redis with specific prefixes to rollback backup data
+			+ Send backup data to server
 	+ TODO: periodically check lock bit, if it is 1 for the same key across two adjacent periods, unlock it (for packet loss of GETRES_NS)
-	+ TODO: Periodic backup (controller/periodic_backup.py)
 
 ## Implementation log
 
@@ -225,6 +243,10 @@
 - Support non-blocking cache population
 	- Controller part (controller/cache_update.py, cache_update/register_update.py)
 	- Server part (ycsb_server.c)
+- Support crash-consistent backup
+	- Controller part (controller/periodic_backup.py, phase2/read_register.py)
+	- TODO: Switch part (port_forward_tbl in ingress.p4)
+	- TODO: Server part (ycsb_server.c)
 - TODO: apply to baseline
 	+ TODO: replace thread_id with hashidx (packet_format.h, packet_foramt_impl.h, ycsb_remove_client.c)
 

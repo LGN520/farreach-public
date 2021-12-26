@@ -38,7 +38,6 @@ from res_pd_rpc.ttypes import *
 
 import socket
 import struct
-import redis
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -102,16 +101,25 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         return tmpreg
 
     def runTest(self):
-        # TODO:load value from val{vallen} to val1
+        # TODO: no need to load key; load value from val{vallen} to val1
         print "Reading reagisters"
         flags = netbuffer_register_flags_t(read_hw_sync=True)
+        keylololo_list = self.client.register_range_read_keylololo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylolohi_list = self.client.register_range_read_keylolohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylohilo_list = self.client.register_range_read_keylohilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylohihi_list = self.client.register_range_read_keylohihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keyhilolo_list = self.client.register_range_read_keyhilolo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keyhilohi_list = self.client.register_range_read_keyhilohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keyhihilo_list = self.client.register_range_read_keyhihilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keyhihihi_list = self.client.register_range_read_keyhihihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         vallo_list_list = []
         valhi_list_list = []
         for i in range(max_val_len):
             vallo_list_list.append(eval("self.client.register_range_read_vallo{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
             valhi_list_list.append(eval("self.client.register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
         vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        latest_list = self.client.register_range_read_latest_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        valid_list = self.client.register_range_read_valid_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        dirty_list = self.client.register_range_read_dirty_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
 
         print "Reset flag"
         actnspec0 = netbuffer_load_backup_flag_action_spec_t(0)
@@ -123,42 +131,38 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Filtering data"
         count = 0
         buf = bytearray()
-        pipeidx = None
-        r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
-        for hashidx_key in r.scan_iter("hashidx:*"):
-            hashidx = int(hashidx_key[8:]) # Get string after "hashidx:"
-            if pipeidx is None:
-                latests = [] # Two pipelines
-                latests.append(latest_list[hashidx])
-                latests.append(latest_list[hashidx + bucket_count])
-                if latests[0] == 0 and lastest[1] == 0: # Empty entry
-                    continue
-                else: # Set pipeidx
-                    if lastest[0] != 0:
-                        pipeidx = 0
-                    else:
-                        pipeidx = 1
-            lastest = latests[pipeidx]
-            keylo, keyhi, thread_id = r.get(hashidx_key).split(" ")
-            if latest == 1:
-                vallen = vallen_list[hashidx + pipeidx*bucket_count]
-                buf = buf + struct.pack("=BH2QB", latest, hashidx, keylo, keyhi, vallen)
-                for i in range(vallen):
-                    validx = vallen - i
-                    # Ptf converts small-endian int32 to big-endian int32
-                    tmp_vallo = vallo_list_list[validx][hashidx + pipeidx*bucket_count]
-                    tmp_valhi = valhi_list_list[validx][hashidx + pipeidx*bucket_count]
-                    # Convert big-endian int32 to small-endian uint32
-                    tmp_vallo = RegisterUpdate.get_reg32(tmp_vallo)
-                    tmp_valhi = RegisterUpdate.get_reg32(tmp_valhi)
-                    tmpval = ((tmp_valhi << 32) | tmp_vallo)
-                    buf = buf + struct.pack("Q", tmpval)
-                count += 1
-            else if latest == 2:
-                buf = buf + struct.pack("=BH2Q", latest, hashidx, keylo, keyhi)
-                count += 1
-            else:
-                print("[ERROR] Invalid latest: {}".format(latest))
+        for i in range(2*bucket_count): # Two pipelines
+            tmpvalid = valid_list[i]
+            if tmpvalid <= 0:
+                continue
+            tmpdirty = dirty_list[i]
+            if tmpdirty <= 0:
+                continue
+            tmpvallen = vallen_list[i]
+            if tmpvallen <= 0:
+                continue
+            # each tmpkeyxxxxxx is 2B
+            tmpkeylololo = RegisterUpdate.get_reg16(keylololo_list, i)
+            tmpkeylolohi = RegisterUpdate.get_reg16(keylolohi_list, i)
+            tmpkeylohilo = RegisterUpdate.get_reg16(keylohilo_list, i)
+            tmpkeylohihi = RegisterUpdate.get_reg16(keylohihi_list, i)
+            tmpkeyhilolo = RegisterUpdate.get_reg16(keyhilolo_list, i)
+            tmpkeyhilohi = RegisterUpdate.get_reg16(keyhilohi_list, i)
+            tmpkeyhihilo = RegisterUpdate.get_reg16(keyhihilo_list, i)
+            tmpkeyhihihi = RegisterUpdate.get_reg16(keyhihihi_list, i)
+            tmpkeylo = (((tmpkeylohihi << 16) + tmpkeylohilo) << 32) + ((tmpkeylolohi << 16) + tmpkeylololo)
+            tmpkeyhi = (((tmpkeyhihihi << 16) + tmpkeyhihilo) << 32) + ((tmpkeyhilohi << 16) + tmpkeyhilolo)
+            hashidx = i
+            if hashidx >= bucket_count:
+                hashidx = (hashidx - bucket_count)
+            buf = buf + struct.pack("=H2QB", hashidx, tmpkeylo, tmpkeyhi, tmpvallen)
+            #print("i: {} keylo: {:016x} keyhi: {:016x} vallen: {:02x}".format(hashidx, tmpkeylo, tmpkeyhi, tmpvallen))
+            for val_idx in range(tmpvallen): # valn, val(n-1), ..., val2, val1
+                tmpvallo = RegisterUpdate.get_reg32(vallo_list_list[tmpvallen - val_idx], i)
+                tmpvalhi = RegisterUpdate.get_reg32(valhi_list_list[tmpvallen - val_idx], i)
+                tmpval = (tmpvalhi << 32) + tmpvallo
+                buf = buf + struct.pack("Q", tmpval)
+            count += 1
         bufsize = len(buf) + 4 + 4
         buf = struct.pack("=I", bufsize) + struct.pack("=I", count) + buf
 

@@ -78,8 +78,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print "Reset case1_reg"
         self.client.register_reset_all_case1_reg(self.sess_hdl, self.dev_tgt)
-        print "Reset case2_reg"
-        self.client.register_reset_all_case2_reg(self.sess_hdl, self.dev_tgt)
+        #print "Reset case2_reg"
+        #self.client.register_reset_all_case2_reg(self.sess_hdl, self.dev_tgt)
         print "Reset case3_reg"
         self.client.register_reset_all_case3_reg(self.sess_hdl, self.dev_tgt)
 
