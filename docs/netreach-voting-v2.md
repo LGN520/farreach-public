@@ -14,6 +14,7 @@
 	+ Data-plane-based value update
 	+ Control-plane-based non-blocking cache population (conservative query and version-aware query for read-after-write consistency)
 	+ TODO: Crash-consistent backup
+		* Case 1: change on in-switch cache value; case 2: change on in-switch cache key-value pair; case 3: change on server KVS/CKVS
 	+ Others
 		* TODO: switch-driven consistent hashing
 		* CBF-based fast path
@@ -46,8 +47,9 @@
 		* Stage 0: cache_lookup_tbl (get iscached), being_evicted (for inconsistency of evicted data), load_backup_tbl
 			- NOTE: we do not need valid bit, switch OS maitains a global KVS to record hashidx-cachedkey mapping, which can be used
 			to identify either cache population or eviction, and get previously cached key
-		* Stage 1: vote, latest (for inconsistency of populated/deleted data), seq (for version-aware/conservative query), case 1, case 2 
+		* Stage 1: vote, latest (for inconsistency of populated/deleted data), seq (for version-aware/conservative query), case 1, case 3 
 			- NOTE: seq is created by switch (big-endian), so we need to deserialize seq into little-endian in server for GET/PUTREQ_BE
+			- NOTE: case 1 represent both case 1 (value update of cached key) and case 2 (cache population)
 		* Stage 2: lock, vallen
 			- Case 1: PUT/DELREQ on switch for backup
 			- Case 3: First PUTREQ on server for backup
@@ -102,11 +104,14 @@
 			- Access seq
 				+ Increase seq if iscached=1 and being_evicted=0
 				+ Read seq otherwise 
+			- Access case1
+				+ If iscached=1 and being_evicted=0 and isbackup=1, try_case1
 		* Stage 2-10
 			- Set vallen and values if iscached=1 and being_evicted=0
 		* Stage 11: access port_forward_tbl
 			- If iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (PUTREQ_POP)
 			- If iscached=1 and being_evicted=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
+				+ If iscached=1 and being_evicted=0 and isbackup=1 and iscase1=0, update PUTREQ as PUTREQ_CASE1 and sendback PUTRES
 			- If iscached=1 and being_evicted=1, embed seq, send PUTREQ_BE to server (being evicted)
 	+ DELREQ:
 		* NOTE: other stages are the same as PUTREQ
@@ -116,19 +121,29 @@
 			- Access seq
 				+ Increase seq if iscached=1 and being_evicted=0
 				+ Read seq otherwise 
+			- Access case1
+				+ If iscached=1 and being_evicted=0 and isbackup=1, try_case1
 		* Stage 2-10
 			- Not touch vallen and value 
 		* Stage 11: access port_forward_tbl
 			- If iscached=1 and being_evicted=0, increase seq, set latest=2, sendback DELRES to client
+				+ If iscached=1 and being_evicted=0 and isbackup=1 and iscase1=0, update DELREQ as DELREQ_CASE1 and sendback DELRES
 			- If iscached=1 and being_evicted=1, embed seq, send DELREQ_BE to server (being evicted)
 	+ PUTRES
 		* Sendback to client
 	+ Crash-consistent backup
-		* TODO: Mark case1 and send to server
+		* NOTE: iscase1 represent both case 1 and case 2 (only the earliest one can trigger rollback once)
+		* Case 1: PUTREQ / DELREQ
+			- If iscached=1 and being_evicted=0 and isbackup=1 and iscase1=0, set iscase1=1, notify switch OS (server) with old value by PUTREQ_CASE1 / DELREQ_CASE1
+			- NOTE: if being_evicted=1, we do not allow any change of the slot in data plane -> value update will not occur to change
+			in-switch cache, which is forwarded to server
+		+ TODO: If backup and cache population run in parallel (case 2, not yet now)
+			* TODO: During cache population, if isbackup=1 and iscase1=0, save old value / empty value in redis with specific prefix,
+			and set iscase1=1 before setting being_evicted=0
 - Client-side processsing
 	+ Use client-side consistent hashing for hashidx (baseline also needs it for routing)
 - Server-side processing
-	+ Receiver for normal packets; backuper for periodic backup; workers for server simulation; TODO: populator for cache population
+	+ Receiver for normal packets; backuper for periodic backup; workers for server simulation; populator for cache population
 	+ GETREQ_POP (population): 
 		* If value exists in KVS, sendback GETRES, add key in CKVS with status = 0 and seq = 1, and [TODO] trigger population (k, v, hashidx) to controller
 		* Otherwise, sendback GETRES_NPOP (no population) to unlock the entry
@@ -169,8 +184,6 @@
 		* Send <k, v, hashidx, threadid> to controller for GETREQ_POP and PUTREQ_POP
 		* Populator: listen on a port to wait for controller's notification
 			- Load latest, threadid, and evicted key with prefix of "hashidx:"
-			+ TODO: If backup and cache population run in parallel (case2, not yet now)
-				* TODO: Cache population: if isbackup = 1, save old value in redis with specific prefix
 			- If latest=0
 				+ Put entry from CKVS into KVS if status = 1, or delete it in KVS if status = 2, or nothing if status = 0
 			- If latest=1
@@ -182,7 +195,8 @@
 			+ Remove it from CKVS with prefix of "hashidx:"
 			+ Send ACK to controller
 	+ Crash-consistent backup
-		* TODO: rollback case1
+		* TODO: Save PUTREQ_CASE1(_DELETED) and DELREQ_CASE1(_DELETED) as special cases
+		* TODO: Rollback special cases (happened in switch OS in design as case 2)
 - Controller-side processing
 	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population; controller/controller.py for combination of the two functionalities
 	+ Cache population (controller/cache_update.py)
@@ -217,14 +231,14 @@
 		* Phase 1
 			+ Clean up case1 and case3
 			+ TODO: If backup and cache population run in parallel (case2, not yet now)
-				* TODO: Clean up old values in redis with specific prefix
+				* TODO: Clean up old values / empty values in redis with specific prefix
 			+ Mark isbackup = 1
 		* Phase 2
 			+ Load all key-value pairs
 			+ Reset isbackup = 0
 			+ Filter key-value pairs with latest=1/2
 			+ TODO: If backup and cache population run in parallel (case2, not yet now)
-				* TODO: Load old values from redis with specific prefixes to rollback backup data
+				* TODO: Load old values / emtpy values from redis with specific prefixes to rollback backup data
 			+ Send backup data to server
 	+ TODO: periodically check lock bit, if it is 1 for the same key across two adjacent periods, unlock it (for packet loss of GETRES_NS)
 
@@ -245,8 +259,10 @@
 	- Server part (ycsb_server.c)
 - Support crash-consistent backup
 	- Controller part (controller/periodic_backup.py, phase2/read_register.py)
-	- TODO: Switch part (port_forward_tbl in ingress.p4)
-	- TODO: Server part (ycsb_server.c)
+	- Switch part (port_forward_tbl in ingress.p4)
+	- Server part (ycsb_server.c)
+	- Support case 1
+	- TODO: Support case 2 and case 3
 - TODO: apply to baseline
 	+ TODO: replace thread_id with hashidx (packet_format.h, packet_foramt_impl.h, ycsb_remove_client.c)
 

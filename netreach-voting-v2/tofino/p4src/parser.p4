@@ -33,6 +33,7 @@ parser parse_op {
 		PUTREQ_POP_TYPE: parse_vallen;
 		PUTREQ_BE_TYPE: parse_vallen;
 		DELREQ_BE_TYPE: parse_seq;
+		PUTREQ_CASE1_TYPE: parse_vallen;
 		GETRES_TYPE: parse_vallen;
 		GETRES_NPOP_TYPE: parse_vallen;
 		GETRES_LATEST_TYPE: parse_vallen;

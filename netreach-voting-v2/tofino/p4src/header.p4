@@ -87,6 +87,8 @@ header_type metadata_t {
 		islock: 1;
 		islatest: 8;
 		isbackup: 1;
+		iscase1: 1;
+		is_clone: 4;
 	}
 }
 

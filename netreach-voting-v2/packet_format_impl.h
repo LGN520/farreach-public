@@ -752,6 +752,36 @@ void DelRequestBE<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	this->_seq = int(ntohl(tmpseq)); // Little-endian
 }
 
+// PutRequestCase1
+
+template<class key_t, class val_t>
+PutRequestCase1<key_t, val_t>::PutRequestCase1(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_CASE1);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestCase1<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestCase1");
+}
+
+// DelRequestCase1
+
+template<class key_t>
+DelRequestCase1<key_t>::DelRequestCase1(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DEL_REQ_CASE1);
+}
+
+template<class key_t>
+uint32_t DelRequestCase1<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for DelRequestCase1");
+}
+
 // GetResponsePOP
 
 /*template<class key_t, class val_t>

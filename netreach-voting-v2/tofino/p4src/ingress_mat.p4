@@ -223,6 +223,33 @@ action update_delreq_to_delreq_be(port) {
 	add_header(seq_hdr);
 }
 
+// NOTE: clone field list cannot exceed 32 bytes
+field_list clone_field_list {
+	meta.is_clone;
+	meta.tmp_sport;
+	meta.tmp_dport;
+}
+
+update_putreq_to_putreq_case1(sid, port) {
+	// Forward PUTREQ_CASE1 to server (copy to switch OS in design)
+	modify_field(op_hdr.optype, PUTREQ_CASE1_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+
+	// Clone a packet for PUTRES to client
+	modify_field(meta.is_clone, CLONE_FOR_PUTRES);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+update_delreq_to_delreq_case1(sid, port) {
+	// Forward DELREQ_CASE1 to server (copy to switch OS in design)
+	modify_field(op_hdr.optype, DELREQ_CASE1_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+
+	// Clone a packet for DELRES to client
+	modify_field(meta.is_clone, CLONE_FOR_DELRES);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
 action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -236,6 +263,8 @@ table port_forward_tbl {
 		meta.iszerovote: exact;
 		meta.islock: exact;
 		meta.being_evicted: exact;
+		meta.isbackup: exact;
+		meta.iscase1: exact;
 	}
 	actions {
 		update_getreq_to_getres;
@@ -251,6 +280,8 @@ table port_forward_tbl {
 		update_putreq_to_putreq_be; // being evicted
 		update_delreq_to_delres;
 		update_delreq_to_delreq_be; // being evicted
+		update_putreq_to_putreq_case1;
+		update_delreq_to_delreq_case1;
 		port_forward;
 		nop;
 	}

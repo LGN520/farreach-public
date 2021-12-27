@@ -16,15 +16,20 @@ Val::~Val() {
 }
 
 Val::Val(const uint64_t* buf, uint8_t length) {
-	INVARIANT(buf != nullptr);
-	INVARIANT(length != 0 && length <= MAX_VAL_LENGTH);
+	if (length != 0) {
+		INVARIANT(length <= MAX_VAL_LENGTH && buf != nullptr);
 
-	// Deep copy
-	val_data = new uint64_t[length];
-	INVARIANT(val_data != nullptr);
-	memcpy((char *)val_data, buf, sizeof(uint64_t) * length);
+		// Deep copy
+		val_data = new uint64_t[length];
+		INVARIANT(val_data != nullptr);
+		memcpy((char *)val_data, buf, sizeof(uint64_t) * length);
 
-	val_length = length;
+		val_length = length;
+	}
+	else {
+		val_length = 0;
+		val_data = nullptr;
+	}
 }
 
 Val::Val(const Val &other) {

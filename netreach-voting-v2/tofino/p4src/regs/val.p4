@@ -20,6 +20,9 @@ blackbox stateful_alu put_vallen_alu {
 	reg: vallen_reg;
 
 	update_lo_1_value: vallen_hdr.vallen;
+
+	output_value: register_lo;
+	output_dst: vallen_hdr.vallen;
 }
 
 action put_vallen() {
@@ -65,6 +68,9 @@ blackbox stateful_alu put_vallo1_alu {
 	reg: vallo1_reg;
 
 	update_lo_1_value: val1_hdr.vallo;
+
+	output_value: register_lo;
+	output_dst: val1_hdr.vallo;
 }
 
 action put_vallo1() {
@@ -110,6 +116,9 @@ blackbox stateful_alu put_valhi1_alu {
 	reg: valhi1_reg;
 
 	update_lo_1_value: val1_hdr.valhi;
+
+	output_value: register_lo;
+	output_dst: val1_hdr.valhi;
 }
 
 action put_valhi1() {

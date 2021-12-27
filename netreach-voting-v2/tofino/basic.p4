@@ -29,6 +29,11 @@
 #define PUTREQ_POP_TYPE 0x0e
 #define PUTREQ_BE_TYPE 0x0f
 #define DELREQ_BE_TYPE 0x10
+#define PUTREQ_CASE1_TYPE 0x11
+#define DELREQ_CASE1_TYPE 0x12
+
+#define CLONE_FOR_PUTRES 1
+#define CLONE_FOR_DELRES 2
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -71,6 +76,7 @@
 #include "p4src/regs/val.p4"
 #include "p4src/regs/seq.p4"
 #include "p4src/regs/being_evicted.p4"
+#include "p4src/regs/case1.p4"
 
 #include "p4src/ingress_mat.p4"
 #include "p4src/egress_mat.p4"
@@ -90,7 +96,7 @@ control ingress {
 	apply(access_vote_tbl);
 	apply(access_latest_tbl);
 	apply(access_seq_tbl);
-	//apply(access_case1_tbl); // Case 1 of backup: first matched PUT/DEL of this bucket
+	apply(access_case1_tbl); // Represent both case 1 and case2 
 	//apply(access_case3_tbl); // Case 3 of backup: first PUT/DEL touching server 
 
 	// Stage 2 (rely on valid, vote, and being_evicted)
@@ -154,6 +160,16 @@ control ingress {
 /* Egress Processing */
 
 control egress {
-	apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
+	if (pkt_is_i2e_mirrored) {
+		if (meta.is_clone == CLONE_FOR_PUTRES) {
+			apply(sendback_cloned_putres_tbl); // input is PUTREQ (original pkt becomes PUTREQ_CASE1) (we need to swap port, ip, and mac)
+		}
+		else if (meta.is_clone == CLONE_FOR_DELRES) {
+			apply(sendback_cloned_delres_tbl); // input is DELREQ (original pkt becomes DELREQ_CASE1) (we need to swap port, ip, and mac)
+		}
+	}
+	else {
+		apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
+	}
 	apply(update_macaddr_tbl); // Update mac addr for responses and PUTREQ_GS/GS_CASE2
 }

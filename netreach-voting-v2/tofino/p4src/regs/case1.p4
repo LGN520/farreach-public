@@ -3,7 +3,7 @@ register case1_reg {
 	instance_count: KV_BUCKET_COUNT;
 }
 
-blackbox stateful_alu read_case1_alu {
+/*blackbox stateful_alu read_case1_alu {
 	reg: case1_reg;
 
 	update_lo_1_value: read_bit;
@@ -14,7 +14,7 @@ blackbox stateful_alu read_case1_alu {
 
 action read_case1() {
 	read_case1_alu.execute_stateful_alu(meta.hashidx);
-}
+}*/
 
 blackbox stateful_alu try_case1_alu {
 	reg: case1_reg;
@@ -29,24 +29,15 @@ action try_case1() {
 	try_case1_alu.execute_stateful_alu(meta.hashidx);
 }
 
-@pragma stage 8
 table access_case1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.isvalid: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iscached: exact;
+		meta.being_evicted: exact;
 		meta.isbackup: exact;
 	}
 	actions {
 		try_case1;
-		read_case1;
 		nop;
 	}
 	default_action: nop();

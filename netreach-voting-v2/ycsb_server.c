@@ -62,6 +62,8 @@ typedef GetRequestBE<index_key_t, val_t> get_request_be_t;
 typedef PutRequestPOP<index_key_t, val_t> put_request_pop_t;
 typedef PutRequestBE<index_key_t, val_t> put_request_be_t;
 typedef DelRequestBE<index_key_t> del_request_be_t;
+typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
+typedef DelRequestCase1<index_key_t> del_request_case1_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -109,7 +111,7 @@ short controller_port;
 short populator_port;
 void *run_populator(void *param); // populator
 
-// KVS for cached key
+// CKVS: KVS for cached keys
 std::atomic<bool> * volatile ckvs_inuse_list = nullptr; // atomic between worker thread and populator
 std::map<index_key_t, cached_val_t> * volatile ckvs_list = nullptr;
 
@@ -698,6 +700,8 @@ void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expecte
 	COUT_VAR(expected_count);
 	for (uint32_t i = 0; i < expected_count; i++) {
 		// Parse data
+		uint8_t curlatest = *((uint8_t *)cur);
+		cur += 1;
 		unsigned short curhashidx = *((unsigned short *)cur);
 		cur += 2;
 #ifdef LARGE_KEY
@@ -707,17 +711,24 @@ void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expecte
 		index_key_t curkey(*(uint64_t*)cur);
 		cur += 8;
 #endif
-		uint8_t curvallen = *(uint8_t*)cur;
-		cur += 1;
-		INVARIANT(curvallen > 0);
-		uint64_t curval_data[curvallen];
-		for (uint8_t val_idx = 0; val_idx < curvallen; val_idx++) {
-			curval_data[val_idx] = *(uint64_t*)cur;
-			cur += 8;
-		}
-		val_t curval(curval_data, curvallen);
+		COUT_VAR(curlatest);
 		COUT_VAR(curhashidx);
 		COUT_VAR(curkey.to_string());
+		uint8_t curvallen = 0;
+		uint64_t curval_data[curvallen];
+		if (curlatest == 1) {
+			curvallen = *(uint8_t*)cur;
+			cur += 1;
+			INVARIANT(curvallen > 0);
+			for (uint8_t val_idx = 0; val_idx < curvallen; val_idx++) {
+				curval_data[val_idx] = *(uint64_t*)cur;
+				cur += 8;
+			}
+		}
+		else {
+			INVARIANT(curlatest == 2);
+		}
+		val_t curval(curval_data, curvallen);
 		COUT_VAR(curvallen);
 		COUT_VAR(curval.to_string());
 
@@ -1297,16 +1308,17 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			/*case packet_type_t::PUT_REQ_CASE1:
+			case packet_type_t::PUT_REQ_CASE1:
 				{
 					COUT_THIS("PUT_REQ_CASE1")
 					if (!isbackup) {
 						put_request_case1_t req(buf, recv_size);
-						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
+						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
 								== special_cases_list[thread_id]->end()) { // No such hashidx
 							SpecialCase tmpcase;
 							tmpcase._key = req.key();
 							tmpcase._val = req.val();
+							// TODO: use PUT_REQ_CASE1 and PUT_REQ_CASE1_DELTED to identify the valid status
 							tmpcase._valid = (req.is_assigned() == 1);
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
 										(unsigned short)req.seq(), tmpcase));
@@ -1320,11 +1332,12 @@ static int run_sfg(void * param) {
 					COUT_THIS("DEL_REQ_CASE1")
 					del_request_case1_t req(buf, recv_size);
 					if (!isbackup) {
-						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
+						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
 								== special_cases_list[thread_id]->end()) { // No such hashidx
 							SpecialCase tmpcase;
 							tmpcase._key = req.key();
 							tmpcase._val = req.val();
+							// TODO: use DEL_REQ_CASE1 and DEL_REQ_CASE1_DELTED to identify the valid status
 							tmpcase._valid = (req.is_assigned() == 1);
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
 										(unsigned short)req.seq(), tmpcase));
@@ -1334,7 +1347,7 @@ static int run_sfg(void * param) {
 					bool tmp_stat = table->remove(req.key(), thread_id);
 					break;
 				}
-			case packet_type_t::PUT_REQ_GS_CASE2:
+			/*case packet_type_t::PUT_REQ_GS_CASE2:
 				{
 					COUT_THIS("PUT_REQ_GS_CASE2")
 					put_request_gs_case2_t req(buf, recv_size);
