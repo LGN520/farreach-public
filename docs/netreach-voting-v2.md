@@ -20,9 +20,15 @@
 	+ Others
 		* TODO: switch-driven consistent hashing
 		* CBF-based fast path
-		* TODO: Range query support
-		* TODO: Variable-length key-value
+		* Range query support
 		* TODO: Distributed extension
+		* TODO: Variable-length key-value
+- Baselines
+	+ TODO: XIndex
+		* TODO: Use XIndex as baseline and extend to variable length value
+		* TODO: Change rocksdb to XIndex for netreach
+	+ TODO: NetCache + XIndex
+	+ TODO: DistCache + XIndex
 - NOTES
 	+ We can use seq=0 to mark not latest in server, why not we use seq=0 to mark not latest in switch?
 		* If we use seq reg to mark islatest, use deleted reg to mark isdeleted, then they have data dependency for GETRES_NEXIST, which 
