@@ -215,6 +215,7 @@ action update_delreq_to_delres() {
 	add_header(res_hdr);
 	modify_field(res_hdr.stat, 1);
 }
+
 action update_delreq_to_delreq_be(port) {
 	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
@@ -258,6 +259,37 @@ update_delreq_to_delreq_case1(sid, port) {
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
+action update_putreq_to_putreq_case3(port) {
+	modify_field(op_hdr.optype, PUTREQ_CASE3_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
+action update_putreq_to_putreq_pop_case3(port) {
+	modify_field(op_hdr.optype, PUTREQ_POP_CASE3_TYPE); // Trigger eviction
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
+action update_putreq_to_putreq_be_case3(port) {
+	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+
+	modify_field(op_hdr.optype, PUTREQ_BE_CASE3_TYPE);
+	add_header(seq_hdr);
+}
+
+action update_delreq_to_delreq_case3(port) {
+	modify_field(op_hdr.optype, DELREQ_CASE3_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
+action update_delreq_to_delreq_be_case3(port) {
+	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+
+	modify_field(op_hdr.optype, DELREQ_BE_CASE3_TYPE);
+	add_header(seq_hdr);
+}
+
 action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -290,6 +322,11 @@ table port_forward_tbl {
 		update_delreq_to_delreq_be; // being evicted
 		update_putreq_to_putreq_case1;
 		update_delreq_to_delreq_case1;
+		update_putreq_to_putreq_case3;
+		update_putreq_to_putreq_pop_case3; // trigger eviction
+		update_putreq_to_putreq_be_case3; // being evicted
+		update_putreq_to_delreq_case3;
+		update_putreq_to_delreq_be_case3; // being evicted
 		port_forward;
 		nop;
 	}

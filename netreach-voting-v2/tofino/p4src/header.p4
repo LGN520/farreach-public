@@ -94,6 +94,7 @@ header_type metadata_t {
 		isbackup: 1;
 		iscase1: 1;
 		is_clone: 4;
+		iscase3: 1;
 	}
 }
 

@@ -64,6 +64,11 @@ typedef PutRequestBE<index_key_t, val_t> put_request_be_t;
 typedef DelRequestBE<index_key_t> del_request_be_t;
 typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
 typedef DelRequestCase1<index_key_t> del_request_case1_t;
+typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
+typedef PutRequestPOPCase3<index_key_t, val_t> put_request_pop_case3_t;
+typedef PutRequestBECase3<index_key_t, val_t> put_request_be_case3_t;
+typedef DelRequestCase3<index_key_t> del_request_case3_t;
+typedef DelRequestBECase3<index_key_t> del_request_be_case3_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -91,7 +96,7 @@ void *run_backuper(void *param); // backuper
 void *run_kvparser(void *param); // KV parser 
 void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expected_count, backup_data_t *new_backup_data); // Helper to process backup data
 void rollback(backup_data_t *new_backup_data);
-backup_data_t * volatile backup_data = nullptr;
+backup_data_t * volatile backup_data = nullptr; // Equivalent to sending the entire backup to each server
 uint32_t* volatile backup_rcu;
 std::map<unsigned short, special_case_t> **special_cases_list = nullptr; // per-thread special cases
 bool volatile isbackup = false;
@@ -489,7 +494,7 @@ static int run_receiver(void *param) {
 					uint64_t avg_range = (endkey.keylo - startkey.keylo) / split_num;
 					//uint32_t avg_num = num / split_num;
 					uint32_t avg_num = num;
-					tmpkey.keylo += avg_range;
+					tmpkey.keylo += avg_range; // TODO: we should set the endkey according to range partition boundary
 					for (size_t idx = first_server_idx; idx <= last_server_idx; idx++) {
 						struct rte_mbuf *cur_mbuf = sub_scan_reqs[idx - first_server_idx];
 						if (idx == last_server_idx) {
@@ -1031,7 +1036,7 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::SCAN_REQ:
 				{
-					// TODO: priority: backup > CKVS > KVS
+					// TODO: priority: backup > CKVS > KVS (leave it to client now)
 					scan_request_t req(buf, recv_size);
 					//COUT_THIS("[server] startkey = " << req.key().to_string() << 
 					//		<< "endkey = " << req.endkey().to_string() << " num = " << req.num())
@@ -1047,6 +1052,20 @@ static int run_sfg(void * param) {
 							results.push_back(*kviter);
 						}
 					}
+
+					// Add kv pairs of CKVS into results
+					while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
+					std::map<index_key_t, cached_val_t>::iterator ckvs_iter = ckvs_list[thread_id].lower_bound(req.key());
+					for (; ckvs_iter != ckvs_list[thread_id].end() && ckvs_iter->first < req.endkey(); ckvs_iter++) {
+						if (ckvs_iter->second._status == 1) {
+							results.push_back(std::pair<index_key_t, val_t>(ckvs_iter->first, ckvs_iter->second._val));
+						}
+						else if (ckvs_iter->second._status == 2) {
+							results.push_back(std::pair<index_key_t, val_t>(ckvs_iter->first, val_t()));
+						}
+					}
+					ckvs_inuse_list[thread_id] = false;
+					
 					//COUT_THIS("SCAN results size: " << results.size())
 
 					scan_response_t rsp(req.hashidx(), req.key(), req.endkey(), results.size(), results);
@@ -1364,6 +1383,145 @@ static int run_sfg(void * param) {
 					}
 					break;
 				}
+			// Processing logic of case3 is the same as normal case, except trying to get a snapshot of KVS/CKVS in server
+			case packet_type_t::PUT_REQ_CASE3:
+				{
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
+					put_request_case3_t req(buf, recv_size);
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::PUT_REQ_POP_CASE3:
+				{
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
+					// Put data into KVS 
+					put_request_pop_case3_t req(buf, recv_size);
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					
+					// Sendback PUTRES
+					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					
+					// Put data into CKVS
+					while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
+					// status=0 means CKVS may not be latest (similar as conservative query between CKVS and KVS)
+					ckvs_list[thread_id].insert(std::pair<index_key_t, cached_val_t>(\
+								req.key(), cached_val_t(0, req.val(), 1))); 
+					ckvs_inuse_list[thread_id] = false;
+
+					// Send <k, v, hashidx> to controller for cache population (retransmission-after-timeout for packet loss)
+					uint32_t pop_reqsize = req.key().serialize(pop_buf); // sizeof(key)
+					pop_reqsize += req.val().serialize(pop_buf + pop_reqsize); // sizeof(key) + sizeof(val) (vallen and value)
+					uint16_t hashidx = req.hashidx();
+					memcpy(pop_buf + pop_reqsize, (void *)&hashidx, sizeof(uint16_t));
+					pop_reqsize += sizeof(uint16_t); // sizeof(key) + sizeof(val) (vallen and value) + sizeof(hashidx)
+					res = sendto(pop_sockfd, pop_buf, pop_reqsize, 0, (struct sockaddr *)&controller_sockaddr, sizeof(struct sockaddr));
+					INVARIANT(res >= 0);
+
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::PUT_REQ_BE_CASE3:
+				{
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
+					put_request_be_case3_t req(buf, recv_size);
+					while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
+					std::map<index_key_t, cached_val_t>::iterator iter = ckvs_list[thread_id].find(req.key());
+					if (iter != ckvs_list[thread_id].end()) { // Exist in CKVS
+						cached_val_t &tmp_cached_val = iter->second;
+						tmp_cached_val._status = 1;
+						tmp_cached_val._val = req.val();
+						tmp_cached_val._seq = req.seq() + 1;
+
+						// Sendback PUTRES
+						put_response_t rsp(req.hashidx(), req.key(), true);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					}
+					else { // Not exist in CKVS
+						bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+
+						// Sendback PUTRES
+						put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					}
+					ckvs_inuse_list[thread_id] = false;
+
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::DEL_REQ_CASE3:
+				{
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
+					del_request_case3_t req(buf, recv_size);
+					bool tmp_stat = table->remove(req.key(), thread_id);
+					del_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::DEL_REQ_BE_CASE3:
+				{
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
+					del_request_be_case3_t req(buf, recv_size);
+					while (ckvs_inuse_list[thread_id].exchange(true) == true) {}
+					std::map<index_key_t, cached_val_t>::iterator iter = ckvs_list[thread_id].find(req.key());
+					if (iter != ckvs_list[thread_id].end()) { // Exist in CKVS
+						cached_val_t &tmp_cached_val = iter->second;
+						tmp_cached_val._status = 2;
+						tmp_cached_val._seq = req.seq() + 1;
+
+						// Sendback DELRES
+						del_response_t rsp(req.hashidx(), req.key(), true);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					}
+					else { // Not exist in CKVS
+						bool tmp_stat = table->remove(req.key(), thread_id);
+
+						// Sendback DELRES
+						del_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+						res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					}
+					ckvs_inuse_list[thread_id] = false;
+
+					sent_pkt_idx++;
+					break;
+				}
 			/*case packet_type_t::PUT_REQ_GS_CASE2:
 				{
 					COUT_THIS("PUT_REQ_GS_CASE2")
@@ -1400,44 +1558,6 @@ static int run_sfg(void * param) {
 						try_kvsnapshot(table);
 					}
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
-					break;
-				}
-			case packet_type_t::PUT_REQ_CASE3:
-				{
-					COUT_THIS("PUT_REQ_CASE3")
-					put_request_case3_t req(buf, recv_size);
-
-					if (!isbackup) {
-						try_kvsnapshot(table);
-					}
-
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
-					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
-					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					
-					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
-					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
-					sent_pkt_idx++;
-					break;
-				}
-			case packet_type_t::DEL_REQ_CASE3:
-				{
-					COUT_THIS("DEL_REQ_CASE3")
-					del_request_case3_t req(buf, recv_size);
-
-					if (!isbackup) {
-						try_kvsnapshot(table);
-					}
-
-					bool tmp_stat = table->remove(req.key(), thread_id);
-					del_response_t rsp(req.hashidx(), req.key(), tmp_stat);
-					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					
-					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
-					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
-					sent_pkt_idx++;
 					break;
 				}*/
 			default:

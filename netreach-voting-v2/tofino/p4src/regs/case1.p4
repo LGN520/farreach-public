@@ -13,7 +13,7 @@ register case1_reg {
 }
 
 action read_case1() {
-	read_case1_alu.execute_stateful_alu(meta.hashidx);
+	read_case1_alu.execute_stateful_alu(op_hdr.hashidx);
 }*/
 
 blackbox stateful_alu try_case1_alu {
@@ -26,7 +26,7 @@ blackbox stateful_alu try_case1_alu {
 }
 
 action try_case1() {
-	try_case1_alu.execute_stateful_alu(meta.hashidx);
+	try_case1_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 table access_case1_tbl {

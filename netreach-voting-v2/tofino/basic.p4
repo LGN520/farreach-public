@@ -31,6 +31,11 @@
 #define DELREQ_BE_TYPE 0x10
 #define PUTREQ_CASE1_TYPE 0x11
 #define DELREQ_CASE1_TYPE 0x12
+#define PUTREQ_CASE3_TYPE 0x13
+#define PUTREQ_POP_CASE3_TYPE 0x14
+#define PUTREQ_BE_CASE3_TYPE 0x15
+#define DELREQ_CASE3_TYPE 0x16
+#define DELREQ_BE_CASE3_TYPE 0x17
 
 #define CLONE_FOR_PUTRES 1
 #define CLONE_FOR_DELRES 2
@@ -80,6 +85,7 @@
 #include "p4src/regs/seq.p4"
 #include "p4src/regs/being_evicted.p4"
 #include "p4src/regs/case1.p4"
+#include "p4src/regs/case3.p4"
 
 #include "p4src/ingress_mat.p4"
 #include "p4src/egress_mat.p4"
@@ -100,7 +106,7 @@ control ingress {
 	apply(access_latest_tbl);
 	apply(access_seq_tbl);
 	apply(access_case1_tbl); // Represent both case 1 and case2 
-	//apply(access_case3_tbl); // Case 3 of backup: first PUT/DEL touching server 
+	apply(access_case3_tbl); // Case 3 of backup: first PUT/DEL touching server 
 
 	// Stage 2 (rely on valid, vote, and being_evicted)
 	apply(access_lock_tbl);

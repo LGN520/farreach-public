@@ -9,7 +9,8 @@
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
 	GET_REQ_POP, GET_RES_NPOP, GET_REQ_NLATEST, GET_RES_LATEST, GET_RES_NEXIST, GET_REQ_BE,
-	PUT_REQ_POP, PUT_REQ_BE, DEL_REQ_BE, PUT_REQ_CASE1, DEL_REQ_CASE1};
+	PUT_REQ_POP, PUT_REQ_BE, DEL_REQ_BE, PUT_REQ_CASE1, DEL_REQ_CASE1,
+	PUT_REQ_CASE3, PUT_REQ_POP_CASE3, PUT_REQ_BE_CASE3, DEL_REQ_CASE3, DEL_REQ_BE_CASE3};
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -283,6 +284,46 @@ class DelRequestCase1 : public DelRequest<key_t> {
 		virtual void deserialize(const char * data, uint32_t recv_size);
 
 		uint8_t _latest;
+};
+
+template<class key_t, class val_t>
+class PutRequestCase3 : public PutRequest<key_t, val_t> {
+	public: 
+		PutRequestCase3(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestPOPCase3 : public PutRequest<key_t, val_t> {
+	public: 
+		PutRequestPOPCase3(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestBECase3 : public PutRequestBE<key_t, val_t> {
+	public: 
+		PutRequestBECase3(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t>
+class DelRequestCase3 : public DelRequest<key_t> {
+	public: 
+		DelRequestCase3(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t>
+class DelRequestBECase3 : public DelRequestBE<key_t> {
+	public: 
+		DelRequestBECase3(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
 /*template<class key_t, class val_t>

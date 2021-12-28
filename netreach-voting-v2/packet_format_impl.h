@@ -834,6 +834,81 @@ void DelRequestCase1<key_t>::deserialize(const char * data, uint32_t recv_size) 
 	memcpy((void *)&this->_latest, begin, sizeof(uint8_t));
 }
 
+// PutRequestCase3
+
+template<class key_t, class val_t>
+PutRequestCase3<key_t, val_t>::PutRequestCase3(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_CASE3);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestCase3<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestCase3");
+}
+
+// PutRequestPOPCase3
+
+template<class key_t, class val_t>
+PutRequestPOPCase3<key_t, val_t>::PutRequestPOPCase3(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_POP_CASE3);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestPOPCase3<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPOPCase3");
+}
+
+// PutRequestBECase3
+
+template<class key_t, class val_t>
+PutRequestBECase3<key_t, val_t>::PutRequestBECase3(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_BE_CASE3);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestBECase3<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestBECase3");
+}
+
+// DelRequestCase3
+
+template<class key_t>
+DelRequestCase3<key_t>::DelRequestCase3(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DEL_REQ_CASE3);
+}
+
+template<class key_t>
+uint32_t DelRequestCase3<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for DelRequestCase3");
+}
+
+// DelRequestBECase3
+
+template<class key_t>
+DelRequestBECase3<key_t>::DelRequestBECase3(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DEL_REQ_BE_CASE3);
+}
+
+template<class key_t>
+uint32_t DelRequestBECase3<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for DelRequestBECase3");
+}
+
 // GetResponsePOP
 
 /*template<class key_t, class val_t>

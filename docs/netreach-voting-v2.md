@@ -13,8 +13,10 @@
 	+ Parameter-free decision
 	+ Data-plane-based value update
 	+ Control-plane-based non-blocking cache population (conservative query and version-aware query for read-after-write consistency)
-	+ TODO: Crash-consistent backup
-		* Case 1: change on in-switch cache value; case 2: change on in-switch cache key-value pair; case 3: change on server KVS/CKVS
+	+ Crash-consistent backup
+		* Case 1: change on in-switch cache value;
+		* TODO: Case 2: change on in-switch cache key-value pair;
+		* Case 3: change on server KVS/CKVS for range query;
 	+ Others
 		* TODO: switch-driven consistent hashing
 		* CBF-based fast path
@@ -47,7 +49,7 @@
 		* Stage 0: cache_lookup_tbl (get iscached), being_evicted (for inconsistency of evicted data), load_backup_tbl
 			- NOTE: we do not need valid bit, switch OS maitains a global KVS to record hashidx-cachedkey mapping, which can be used
 			to identify either cache population or eviction, and get previously cached key
-		* Stage 1: vote, latest (for inconsistency of populated/deleted data), seq (for version-aware/conservative query), case 1, case 3 
+		* Stage 1: vote, latest (for inconsistency of populated/deleted data), seq (for version-aware/conservative query), case 1, case3
 			- NOTE: seq is created by switch (big-endian), so we need to deserialize seq into little-endian in server for GET/PUTREQ_BE
 			- NOTE: case 1 represent both case 1 (value update of cached key) and case 2 (cache population)
 		* Stage 2: lock, vallen
@@ -106,13 +108,23 @@
 				+ Read seq otherwise 
 			- Access case1
 				+ If iscached=1 and being_evicted=0 and isbackup=1, try_case1
+			- Access case3
+				+ If iscached=0 and isbackup=1, or being_evicted=1 and isbackup=1, try_case3
 		* Stage 2-10
 			- Set vallen and values if iscached=1 and being_evicted=0
 		* Stage 11: access port_forward_tbl
-			- If iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (PUTREQ_POP)
-			- If iscached=1 and being_evicted=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
-				+ If iscached=1 and being_evicted=0 and isbackup=1 and iscase1=0, update PUTREQ as PUTREQ_CASE1 and sendback PUTRES
-			- If iscached=1 and being_evicted=1, embed seq, send PUTREQ_BE to server (being evicted)
+			- If iszerovote=2 and islock=0 and being_evicted=0
+				+ If isbackup=1 and iscase3=0 -> trigger population and server-side snapshot (PUTREQ_POP_CASE3)
+   				+ If isbackup=0 or iscase3=1 -> trigger population (PUTREQ_POP)
+			- If iscached=1 and being_evicted=0 
+				+ If isbackup=0 or iscase1=1, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
+				+ If isbackup=1 and iscase1=0, set latest=1, update vallen and value, update PUTREQ as PUTREQ_CASE1 and sendback PUTRES
+			- If iscached=1 and being_evicted=1
+				+ If isbackup=0 or iscase3=1, embed seq, send PUTREQ_BE to server (being evicted)
+				+ If isbackup=1 and iscase3=0, embed seq, send PUTREQ_BE_CASE3 to server (being evicted) and server-side snapshot
+			- Otherwise
+				+ If isbackup=0 or iscase3=1, forward PUTREQ to server
+				+ If isbackup=1 and iscase3=0, forward PUTREQ_CASE3 to server
 	+ DELREQ:
 		* NOTE: other stages are the same as PUTREQ
 		* Stage 1
@@ -123,12 +135,20 @@
 				+ Read seq otherwise 
 			- Access case1
 				+ If iscached=1 and being_evicted=0 and isbackup=1, try_case1
+			- Access case3
+				+ If iscached=0 and isbackup=1, or being_evicted=1 and isbackup=1, try_case3
 		* Stage 2-10
 			- Not touch vallen and value 
 		* Stage 11: access port_forward_tbl
-			- If iscached=1 and being_evicted=0, increase seq, set latest=2, sendback DELRES to client
-				+ If iscached=1 and being_evicted=0 and isbackup=1 and iscase1=0, update DELREQ as DELREQ_CASE1 and sendback DELRES
-			- If iscached=1 and being_evicted=1, embed seq, send DELREQ_BE to server (being evicted)
+			- If iscached=1 and being_evicted=0
+				+ If isbackup=0 or iscase1=1, increase seq, set latest=2, sendback DELRES to client
+				+ If isbackup=1 and iscase1=0, increase seq, set latest=2, update DELREQ as DELREQ_CASE1 and sendback DELRES
+			- If iscached=1 and being_evicted=1
+				+ If isbackup=0 or iscase3=1, embed seq, send DELREQ_BE to server (being evicted)
+				+ If isbackup=1 and iscase3=0, embed seq, send DELREQ_BE_CASE3 to server (being evicted) and server-side snapshot
+			- Otherwise
+				+ If isbackup=0 or iscase3=1, forward DELREQ to server
+				+ If isbackup=1 and iscase3=0, forward DELREQ_CASE3 to server
 	+ PUTRES
 		* Sendback to client
 	+ Crash-consistent backup
@@ -261,8 +281,10 @@
 	- Controller part (controller/periodic_backup.py, phase2/read_register.py)
 	- Switch part (port_forward_tbl in ingress.p4)
 	- Server part (ycsb_server.c)
-	- Support case 1
-	- TODO: Support case 2 and case 3
+	- Support case 1, and case 3
+	- TODO: Support case 2
+- Support range query
+- TODO: Change persistent KVS to in-memory KVS; Update try_kvsnapshot for both KVS and CKVS
 - TODO: apply to baseline
 	+ TODO: replace thread_id with hashidx (packet_format.h, packet_foramt_impl.h, ycsb_remove_client.c)
 
