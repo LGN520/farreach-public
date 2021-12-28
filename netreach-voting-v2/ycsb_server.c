@@ -1031,6 +1031,7 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::SCAN_REQ:
 				{
+					// TODO: priority: backup > CKVS > KVS
 					scan_request_t req(buf, recv_size);
 					//COUT_THIS("[server] startkey = " << req.key().to_string() << 
 					//		<< "endkey = " << req.endkey().to_string() << " num = " << req.num())
@@ -1317,11 +1318,20 @@ static int run_sfg(void * param) {
 								== special_cases_list[thread_id]->end()) { // No such hashidx
 							SpecialCase tmpcase;
 							tmpcase._key = req.key();
-							tmpcase._val = req.val();
-							// TODO: use PUT_REQ_CASE1 and PUT_REQ_CASE1_DELTED to identify the valid status
-							tmpcase._valid = (req.is_assigned() == 1);
+							uint8_t latest = req.latest();
+							if (latest == 0) {
+								tmpcase._valid = false;
+							}
+							else if (latest == 1) {
+								tmpcase._val = req.val();
+								tmpcase._valid = true;
+							}
+							else (latest == 2) {
+								// The vallen of tmpcase._val is 0 by default which means being deleted
+								tmpcase._valid = true;
+							}
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.seq(), tmpcase));
+										(unsigned short)req.hashidx(), tmpcase));
 						}
 						try_kvsnapshot(table);
 					}
@@ -1335,16 +1345,23 @@ static int run_sfg(void * param) {
 						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
 								== special_cases_list[thread_id]->end()) { // No such hashidx
 							SpecialCase tmpcase;
-							tmpcase._key = req.key();
-							tmpcase._val = req.val();
-							// TODO: use DEL_REQ_CASE1 and DEL_REQ_CASE1_DELTED to identify the valid status
-							tmpcase._valid = (req.is_assigned() == 1);
+							uint8_t latest = req.latest();
+							if (latest == 0) {
+								tmpcase._valid = false;
+							}
+							else if (latest == 1) {
+								tmpcase._val = req.val();
+								tmpcase._valid = true;
+							}
+							else (latest == 2) {
+								// The vallen of tmpcase._val is 0 by default which means being deleted
+								tmpcase._valid = true;
+							}
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.seq(), tmpcase));
+										(unsigned short)req.hashidx(), tmpcase));
 						}
 						try_kvsnapshot(table);
 					}
-					bool tmp_stat = table->remove(req.key(), thread_id);
 					break;
 				}
 			/*case packet_type_t::PUT_REQ_GS_CASE2:

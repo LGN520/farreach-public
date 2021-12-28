@@ -235,6 +235,10 @@ update_putreq_to_putreq_case1(sid, port) {
 	modify_field(op_hdr.optype, PUTREQ_CASE1_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 
+	// Add latest header
+	add_to_field(udp_hdr.hdrlen, LATEST_PKTLEN);
+	add_header(latest_hdr);
+
 	// Clone a packet for PUTRES to client
 	modify_field(meta.is_clone, CLONE_FOR_PUTRES);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
@@ -244,6 +248,10 @@ update_delreq_to_delreq_case1(sid, port) {
 	// Forward DELREQ_CASE1 to server (copy to switch OS in design)
 	modify_field(op_hdr.optype, DELREQ_CASE1_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+
+	// Add latest header
+	add_to_field(udp_hdr.hdrlen, LATEST_PKTLEN);
+	add_header(latest_hdr);
 
 	// Clone a packet for DELRES to client
 	modify_field(meta.is_clone, CLONE_FOR_DELRES);
@@ -259,7 +267,7 @@ table port_forward_tbl {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
 		//meta.isvalid: exact;
-		meta.islatest: exact;
+		latest_hdr.latest: exact;
 		meta.iszerovote: exact;
 		meta.islock: exact;
 		meta.being_evicted: exact;

@@ -260,15 +260,29 @@ class PutRequestCase1 : public PutRequest<key_t, val_t> {
 	public: 
 		PutRequestCase1(const char * data, uint32_t recv_size);
 
+		uint8_t latest() const;
+
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+
+		uint8_t _latest;
 };
 
-template<class key_t, class val_t>
-class DelRequestCase1 : public DelRequest<key_t, val_t> {
+template<class key_t>
+class DelRequestCase1 : public DelRequest<key_t> {
 	public: 
 		DelRequestCase1(const char * data, uint32_t recv_size);
 
+		uint8_t latest() const;
+
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+
+		uint8_t _latest;
 };
 
 /*template<class key_t, class val_t>

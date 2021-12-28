@@ -34,6 +34,7 @@ parser parse_op {
 		PUTREQ_BE_TYPE: parse_vallen;
 		DELREQ_BE_TYPE: parse_seq;
 		PUTREQ_CASE1_TYPE: parse_vallen;
+		DELREQ_CASE1_TYPE: parse_latest;
 		GETRES_TYPE: parse_vallen;
 		GETRES_NPOP_TYPE: parse_vallen;
 		GETRES_LATEST_TYPE: parse_vallen;
@@ -72,6 +73,7 @@ parser parse_val_len1 {
 	return select(op_hdr.optype) {
 		GETREQ_BE_TYPE: parse_seq;
 		PUTREQ_BE_TYPE: parse_seq;
+		PUTREQ_CASE1_TYPE: parse_latest;
 		default: ingress;
 	}
 }
@@ -153,6 +155,11 @@ parser parse_val_len16 {
 
 parser parse_seq {
 	extract(seq_hdr);
+	return ingress;
+}
+
+parser parse_latest {
+	extract(latest_hdr);
 	return ingress;
 }
 

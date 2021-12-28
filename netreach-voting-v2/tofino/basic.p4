@@ -49,17 +49,20 @@
 // VAL_PKTLEN_MINUS_STAT: sizeof(vallen) + sizeof(val) - sizeof(stat), e.g., PUTREQ -> PUTRES
 // VAL_PKTLEN_PLUS_SEQ: sizeof(vallen) + sizeof(val) + sizeof(seq), e.g., GETREQ -> GETREQ_BE
 // SEQ_PKTLEN: sizeof(seq), e.g., PUTREQ -> PUTREQ_BE
-// STAT_PKELTN: sizeof(stat), e.g., DELREQ -> DELRES
+// STAT_PKTLEN: sizeof(stat), e.g., DELREQ -> DELRES
+// LATEST_PKTLEN: sizeof(latest), e.g., PUTREQ -> PUTREQ_CASE1, DELREQ -> DELREQ_CASE1
 #define VAL_PKTLEN 9
 #define VAL_PKTLEN_MINUS_STAT 8
 #define VAL_PKTLEN_PLUS_SEQ 13
 #define SEQ_PKTLEN 4
 #define STAT_PKTLEN 1
+#define LATEST_PKTLEN 1
 //#define VAL_PKTLEN 97
 //#define VAL_PKTLEN_MINUS_ONE 96
 //#define VAL_PKTLEN_PLUS_SEQ 101
 //#define SEQ_PKTLEN 4
-#define STAT_PKTLEN 1
+//#define STAT_PKTLEN 1
+//#define LATEST_PKTLEN 1
 
 //#define CPU_PORT 192
 
@@ -141,19 +144,24 @@ control ingress {
 
 	// Stage 11
 	// (1) GETREQ:
-	// If iscached=1 and isvalid=1 and islatest=1 and being_evicted=0 -> return GETRES; 
-	// If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
-	// If iscached=1 and isvalid=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST (not latest, first GETs after population); 
+	// If iscached=1 and latest=1/2 and being_evicted=0 -> return GETRES; 
+	// If islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
+	// If iscached=1 and being_evicted=0 and latest=0 -> forward GETREQ_NLATEST (conservative query); 
 	// Otherwise, forward GETREQ to server
 	// (2) GETRES: sendback to client
 	// (3) GETRES_NPOP: if being_evicted=0, set lock=0; always sendback to client as GETRES
-	// (4) GETRES_LATEST: if iscached=1 and isvalid = 1 and latest=0 and being_evicted=0, set latest=1, vallen, and value; sendback to client as GETRES
-	// (5) GETRES_NEXIST: if iscached=1 and isvalid = 1 and latest=0 and being_evicted=0, set latest=2 (being deleted); sendback to client as GETRES
+	// (4) GETRES_LATEST: if iscached=1 and latest=0 and being_evicted=0, set latest=1, vallen, and value; sendback to client as GETRES
+	// (5) GETRES_NEXIST: if iscached=1 and latest=0 and being_evicted=0, set latest=2 (being deleted); sendback to client as GETRES
 	// (6) PUTREQ:
-	// If isvalid=0 and islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (PUTREQ_POP)
-	// If iscached=1 and isvalid=1 and being_evicted=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
-	// If iscached = 1 and isvalid = 1 and being_evicted = 1, pass seq+1 along with PUTs/DELs to server (version-aware query)
+	// If islock=0 and being_evicted=0, or iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (PUTREQ_POP)
+	// If iscached=1 and being_evicted=0 and isbackup=0, increase seq, set latest=1, update vallen and value, sendback PUTRES to client
+	// If iscached=1 and being_evicted=0 and isbackup=1, increase seq, set latest=1, update vallen and value, send PUTREQ_CASE1 to server, clone PUTRES to client
+	// If iscached = 1 and isvalid = 1 and being_evicted = 1, pass seq along with PUTREQ_BE to server (version-aware query)
 	// (7) PUTRES: sendback to client
+	// (8) DELREQ:
+	// If iscached=1 and being_evicted=0 and isbackup=0, increase seq, set latest=2, sendback DELRES to client
+	// If iscached=1 and being_evicted=0 and isbackup=1, increase seq, set latest=2, send DELREQ_CASE1 to server, clone DELRES to client
+	// If iscached=1 and being_evicted=1, pass seq along with DELREQ_BE to server (version-aware query)
 	apply(port_forward_tbl);
 }
 

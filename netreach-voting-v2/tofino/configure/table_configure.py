@@ -157,23 +157,23 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
     def configure_update_val_tbl(self, valname):
         for iscached in cached_list:
             for isvalid in valid_list:
-                for islatest in latest_list:
+                for latest in latest_list:
                     for being_evicted in being_evicted_list:
                         matchspec0 = eval("netbufferv2_update_val{}_tbl_match_spec_t".format(valname))(\
                                 op_hdr_optype = GETREQ_TYPE,
                                 meta_iscached = iscached,
                                 #meta_isvalid = isvalid,
-                                meta_islatest = islatest,
+                                latest_hdr_latest = latest,
                                 meta_being_evicted = being_evicted)
                         eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
-                        #if iscached == 1 and isvalid == 1 and islatest == 0 and being_evicted == 0:
-                        if iscached == 1 and islatest == 0 and being_evicted == 0:
+                        #if iscached == 1 and isvalid == 1 and latest == 0 and being_evicted == 0:
+                        if iscached == 1 and latest == 0 and being_evicted == 0:
                             matchspec0 = eval("netbufferv2_update_val{}_tbl_match_spec_t".format(valname))(\
                                     op_hdr_optype = GETRES_LATEST_TYPE,
                                     meta_iscached = iscached,
                                     #meta_isvalid = isvalid,
-                                    meta_islatest = islatest,
+                                    latest_hdr_latest = latest,
                                     meta_being_evicted = being_evicted)
                             eval("self.client.update_val{}_tbl_table_add_with_set_val{}".format(valname, valname))(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -183,7 +183,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     op_hdr_optype = PUTREQ_TYPE,
                                     meta_iscached = iscached,
                                     #meta_isvalid = isvalid,
-                                    meta_islatest = islatest,
+                                    latest_hdr_latest = latest,
                                     meta_being_evicted = being_evicted)
                             eval("self.client.update_val{}_tbl_table_add_with_set_val{}".format(valname, valname))(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -452,23 +452,23 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring update_vallen_tbl"
             for iscached in cached_list:
                 for isvalid in valid_list:
-                    for islatest in latest_list:
+                    for latest in latest_list:
                         for being_evicted in being_evicted_list:
                             matchspec0 = netbufferv2_update_vallen_tbl_match_spec_t(\
                                     op_hdr_optype = GETREQ_TYPE,
                                     meta_iscached = iscached,
                                     #meta_isvalid = isvalid,
-                                    meta_islatest = islatest,
+                                    latest_hdr_latest = latest,
                                     meta_being_evicted = being_evicted)
                             self.client.update_vallen_tbl_table_add_with_get_vallen(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                            #if iscached == 1 and isvalid == 1 and islatest == 0 and being_evicted == 0:
-                            if iscached ==1 and islatest == 0 and being_evicted == 0:
+                            #if iscached == 1 and isvalid == 1 and latest == 0 and being_evicted == 0:
+                            if iscached ==1 and latest == 0 and being_evicted == 0:
                                 matchspec0 = netbufferv2_update_vallen_tbl_match_spec_t(\
                                         op_hdr_optype = GETRES_LATEST_TYPE,
                                         meta_iscached = iscached,
                                         #meta_isvalid = isvalid,
-                                        meta_islatest = islatest,
+                                        latest_hdr_latest = latest,
                                         meta_being_evicted = being_evicted)
                                 self.client.update_vallen_tbl_table_add_with_set_vallen(\
                                         self.sess_hdl, self.dev_tgt, matchspec0)
@@ -478,7 +478,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         op_hdr_optype = PUTREQ_TYPE,
                                         meta_iscached = iscached,
                                         #meta_isvalid = isvalid,
-                                        meta_islatest = islatest,
+                                        latest_hdr_latest = latest,
                                         meta_being_evicted = being_evicted)
                                 self.client.update_vallen_tbl_table_add_with_set_vallen(\
                                         self.sess_hdl, self.dev_tgt, matchspec0)
@@ -497,7 +497,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring port_forward_tbl"
             for iscached in cached_list:
                 for isvalid in  valid_list:
-                    for islatest in latest_list:
+                    for latest in latest_list:
                         for iszerovote in predicate_list:
                             for islock in lock_list:
                                 for being_evicted in being_evicted_list:
@@ -507,22 +507,22 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 						    op_hdr_optype = GETREQ_TYPE,
 						    meta_iscached = iscached,
 						    #meta_isvalid = isvalid,
-						    meta_islatest = islatest,
+						    latest_hdr_latest = latest,
 						    meta_iszerovote = iszerovote,
 						    meta_islock = islock,
 						    meta_being_evicted = being_evicted,
 						    meta_isbackup = isbackup,
 						    meta_iscase1 = iscase1)
-					    #if iscached == 1 and isvalid == 1 and islatest == 1 and being_evicted == 0:
-					    if iscached == 1 and islatest == 1 and being_evicted == 0:
+					    #if iscached == 1 and isvalid == 1 and latest == 1 and being_evicted == 0:
+					    if iscached == 1 and latest == 1 and being_evicted == 0:
 						self.client.port_forward_tbl_table_add_with_update_getreq_to_getres(\
 						    self.sess_hdl, self.dev_tgt, matchspec0) # Change GETREQ to GETRES -> client
-					    #else if iscached == 1 and isvalid == 1 and islatest == 2 and being_evicted == 0:
-					    else if iscached == 1 and islatest == 2 and being_evicted == 0:
+					    #else if iscached == 1 and isvalid == 1 and latest == 2 and being_evicted == 0:
+					    else if iscached == 1 and latest == 2 and being_evicted == 0:
 						self.client.port_forward_tbl_table_add_with_update_getreq_to_getres_deleted(\
 						    self.sess_hdl, self.dev_tgt, matchspec0) # Change GETREQ to GETRES (deleted) -> client
-					    #else if iscached == 1 and isvalid == 1 and islatest == 0 and being_evicted == 0:
-					    else if iscached == 1 and islatest == 0 and being_evicted == 0:
+					    #else if iscached == 1 and isvalid == 1 and latest == 0 and being_evicted == 0:
+					    else if iscached == 1 and latest == 0 and being_evicted == 0:
 						actnspec0 = netbufferv2_update_getreq_to_getreq_nlatest_action_spec_t(\
 							self.devPorts[1]) # Forward GETREQ_NLATEST to server
 						self.client.port_forward_tbl_table_add_with_update_getreq_to_getreq_nlatest(\
@@ -549,7 +549,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 						    op_hdr_optype = GETRES_TYPE,
 						    meta_iscached = iscached,
 						    #meta_isvalid = isvalid,
-						    meta_islatest = islatest,
+						    latest_hdr_latest = latest,
 						    meta_iszerovote = iszerovote,
 						    meta_islock = islock,
 						    meta_being_evicted = being_evicted,
@@ -563,7 +563,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 						    op_hdr_optype = GETRES_NPOP_TYPE,
 						    meta_iscached = iscached,
 						    #meta_isvalid = isvalid,
-						    meta_islatest = islatest,
+						    latest_hdr_latest = latest,
 						    meta_iszerovote = iszerovote,
 						    meta_islock = islock,
 						    meta_being_evicted = being_evicted,
@@ -577,7 +577,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 						    op_hdr_optype = GETRES_LATEST_TYPE,
 						    meta_iscached = iscached,
 						    #meta_isvalid = isvalid,
-						    meta_islatest = islatest,
+						    latest_hdr_latest = latest,
 						    meta_iszerovote = iszerovote,
 						    meta_islock = islock,
 						    meta_being_evicted = being_evicted,
@@ -591,7 +591,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 						    op_hdr_optype = GETRES_NEXIST_TYPE,
 						    meta_iscached = iscached,
 						    #meta_isvalid = isvalid,
-						    meta_islatest = islatest,
+						    latest_hdr_latest = latest,
 						    meta_iszerovote = iszerovote,
 						    meta_islock = islock,
 						    meta_being_evicted = being_evicted,
@@ -605,7 +605,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 						    op_hdr_optype = PUTREQ_TYPE,
 						    meta_iscached = iscached,
 						    #meta_isvalid = isvalid,
-						    meta_islatest = islatest,
+						    latest_hdr_latest = latest,
 						    meta_iszerovote = iszerovote,
 						    meta_islock = islock,
 						    meta_being_evicted = being_evicted,
@@ -638,7 +638,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 						    op_hdr_optype = PUTRES_TYPE,
 						    meta_iscached = iscached,
 						    #meta_isvalid = isvalid,
-						    meta_islatest = islatest,
+						    latest_hdr_latest = latest,
 						    meta_iszerovote = iszerovote,
 						    meta_islock = islock,
 						    meta_being_evicted = being_evicted,
@@ -650,7 +650,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 						    op_hdr_optype = DELREQ_TYPE,
 						    meta_iscached = iscached,
 						    #meta_isvalid = isvalid,
-						    meta_islatest = islatest,
+						    latest_hdr_latest = latest,
 						    meta_iszerovote = iszerovote,
 						    meta_islock = islock,
 						    meta_being_evicted = being_evicted,

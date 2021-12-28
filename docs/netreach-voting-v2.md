@@ -78,10 +78,10 @@
 				+ Otherwise, read_lock
 		* Stage 2-10: Read vallen and values
 		* Stage 11: access port_forward_tbl
-			- If iscached=1 and islatest=1 and being_evicted=0 -> return GETRES; 
-			- If iscached=1 and islatest=2 and being_evicted=0 -> return GETRES (vallen=0 and not value headers);
+			- If iscached=1 and latest=1 and being_evicted=0 -> return GETRES; 
+			- If iscached=1 and latest=2 and being_evicted=0 -> return GETRES (vallen=0 and not value headers);
 			- If iszerovote=2 and islock=0 and being_evicted=0 -> trigger population (GETREQ_POP); 
-			- If iscached=1 and being_evicted=0 and islatest=0 -> forward GETREQ_NLATEST for conservative query (not latest, first GETs after population); 
+			- If iscached=1 and being_evicted=0 and latest=0 -> forward GETREQ_NLATEST for conservative query (not latest, first GETs after population); 
 			- If iscached=1 and being_evicted=1 -> forward GETREQ_BE for version-aware query;
 			- Otherwise, forward GETREQ to server
 			- NOTE: if being_evicted=1, islock may be 0 (set as 0 at phase 2); if iszerovote=2, iscached must be 0
@@ -134,7 +134,7 @@
 	+ Crash-consistent backup
 		* NOTE: iscase1 represent both case 1 and case 2 (only the earliest one can trigger rollback once)
 		* Case 1: PUTREQ / DELREQ
-			- If iscached=1 and being_evicted=0 and isbackup=1 and iscase1=0, set iscase1=1, notify switch OS (server) with old value by PUTREQ_CASE1 / DELREQ_CASE1
+			- If iscached=1 and being_evicted=0 and isbackup=1 and iscase1=0, set iscase1=1, notify switch OS (server) with old value with PUTREQ_CASE1 / DELREQ_CASE1 with latest embedded into packet
 			- NOTE: if being_evicted=1, we do not allow any change of the slot in data plane -> value update will not occur to change
 			in-switch cache, which is forwarded to server
 		+ TODO: If backup and cache population run in parallel (case 2, not yet now)
@@ -145,7 +145,7 @@
 - Server-side processing
 	+ Receiver for normal packets; backuper for periodic backup; workers for server simulation; populator for cache population
 	+ GETREQ_POP (population): 
-		* If value exists in KVS, sendback GETRES, add key in CKVS with status = 0 and seq = 1, and [TODO] trigger population (k, v, hashidx) to controller
+		* If value exists in KVS, sendback GETRES, add key in CKVS with status = 0 and seq = 1, and trigger population (k, v, hashidx) to controller
 		* Otherwise, sendback GETRES_NPOP (no population) to unlock the entry
 		* NOTE: key cannot exist in CKVS (key is cached so vote cannot be zero; DEL cannot invalidate the entry, which only sets a special status of value)
 	+ GETREQ_NLATEST: 
@@ -195,8 +195,8 @@
 			+ Remove it from CKVS with prefix of "hashidx:"
 			+ Send ACK to controller
 	+ Crash-consistent backup
-		* TODO: Save PUTREQ_CASE1(_DELETED) and DELREQ_CASE1(_DELETED) as special cases
-		* TODO: Rollback special cases (happened in switch OS in design as case 2)
+		* Save PUTREQ_CASE1 and DELREQ_CASE1 as special cases
+		* Rollback special cases (happened in switch OS in design as case 2)
 - Controller-side processing
 	+ controller/periodic_backup.py for periodic backup; controller/cache_update.py for cache population; controller/controller.py for combination of the two functionalities
 	+ Cache population (controller/cache_update.py)

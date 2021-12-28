@@ -70,6 +70,12 @@ header_type seq_t {
 	}
 }
 
+header_type latest_t {
+	fields {
+		latest: 8;
+	}
+}
+
 header_type res_t {
 	fields {
 		stat: 8;
@@ -85,7 +91,6 @@ header_type metadata_t {
 		//isvalid: 1;
 		iszerovote: 4;
 		islock: 1;
-		islatest: 8;
 		isbackup: 1;
 		iscase1: 1;
 		is_clone: 4;
@@ -116,5 +121,6 @@ header val_t val14_hdr;
 header val_t val15_hdr;
 header val_t val16_hdr;*/
 header seq_t seq_hdr;
+header latest_t latest_hdr;
 header res_t res_hdr;
 metadata metadata_t meta;

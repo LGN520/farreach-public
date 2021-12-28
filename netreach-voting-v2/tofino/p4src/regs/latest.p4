@@ -11,7 +11,7 @@ blackbox stateful_alu get_latest_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.islatest;
+	output_dst: latest_hdr.latest;
 }
 
 action get_latest() {
@@ -30,7 +30,7 @@ blackbox stateful_alu set_or_clear_latest_alu {
 	update_lo_2_value: 2;
 
 	output_value: register_lo;
-	output_dst: meta.islatest;
+	output_dst: latest_hdr.latest;
 }
 
 action set_or_clear_latest() {
@@ -49,7 +49,7 @@ blackbox stateful_alu try_set_latest_alu {
 	update_lo_2_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.islatest;
+	output_dst: latest_hdr.latest;
 }
 
 action try_set_latest() {
@@ -68,7 +68,7 @@ blackbox stateful_alu try_clear_latest_alu {
 	update_lo_2_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.islatest;
+	output_dst: latest_hdr.latest;
 }
 
 action try_clear_latest() {
