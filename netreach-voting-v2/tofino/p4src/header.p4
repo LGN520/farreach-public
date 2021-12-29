@@ -72,7 +72,7 @@ header_type seq_t {
 
 header_type latest_t {
 	fields {
-		latest: 8;
+		latestv: 8;
 	}
 }
 

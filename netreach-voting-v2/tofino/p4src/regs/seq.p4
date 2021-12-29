@@ -37,5 +37,5 @@ table access_seq_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 128;
+	size: 16;
 }

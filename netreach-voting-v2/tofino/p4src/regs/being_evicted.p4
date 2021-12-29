@@ -25,5 +25,5 @@ table access_being_evicted_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 128;
+	size: 16;
 }

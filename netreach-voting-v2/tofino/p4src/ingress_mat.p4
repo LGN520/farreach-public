@@ -231,7 +231,7 @@ field_list clone_field_list {
 	meta.tmp_dport;
 }
 
-update_putreq_to_putreq_case1(sid, port) {
+action update_putreq_to_putreq_case1(sid, port) {
 	// Forward PUTREQ_CASE1 to server (copy to switch OS in design)
 	modify_field(op_hdr.optype, PUTREQ_CASE1_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
@@ -245,7 +245,7 @@ update_putreq_to_putreq_case1(sid, port) {
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
-update_delreq_to_delreq_case1(sid, port) {
+action update_delreq_to_delreq_case1(sid, port) {
 	// Forward DELREQ_CASE1 to server (copy to switch OS in design)
 	modify_field(op_hdr.optype, DELREQ_CASE1_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
@@ -316,7 +316,7 @@ table port_forward_tbl {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
 		//meta.isvalid: exact;
-		latest_hdr.latest: exact;
+		latest_hdr.latestv: exact;
 		meta.iszerovote: exact;
 		meta.islock: exact;
 		meta.being_evicted: exact;
@@ -342,11 +342,11 @@ table port_forward_tbl {
 		update_putreq_to_putreq_case3;
 		update_putreq_to_putreq_pop_case3; // trigger eviction
 		update_putreq_to_putreq_be_case3; // being evicted
-		update_putreq_to_delreq_case3;
-		update_putreq_to_delreq_be_case3; // being evicted
+		update_delreq_to_delreq_case3;
+		update_delreq_to_delreq_be_case3; // being evicted
 		port_forward;
 		nop;
 	}
 	default_action: nop();
-	size: 1024;  
+	size: 4096;  
 }

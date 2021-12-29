@@ -34,7 +34,7 @@ table update_vallen_tbl {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
 		//meta.isvalid: exact;
-		latest_hdr.latest: exact;
+		latest_hdr.latestv: exact;
 		meta.being_evicted: exact;
 	}
 	actions {
@@ -43,7 +43,7 @@ table update_vallen_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 128;
+	size: 32;
 }
 
 register vallo1_reg {
@@ -82,7 +82,7 @@ table update_vallo1_tbl {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
 		//meta.isvalid: exact;
-		latest_hdr.latest: exact;
+		latest_hdr.latestv: exact;
 		meta.being_evicted: exact;
 	}
 	actions {
@@ -91,7 +91,7 @@ table update_vallo1_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 128;
+	size: 32;
 }
 
 register valhi1_reg {
@@ -130,7 +130,7 @@ table update_valhi1_tbl {
 		op_hdr.optype: exact;
 		meta.iscached: exact;
 		//meta.isvalid: exact;
-		latest_hdr.latest: exact;
+		latest_hdr.latestv: exact;
 		meta.being_evicted: exact;
 	}
 	actions {
@@ -139,7 +139,7 @@ table update_valhi1_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 32;
 }
 
 /*register vallo2_reg {

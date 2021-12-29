@@ -21,7 +21,7 @@ table sendback_cloned_delres_tbl {
 action sendback_cloned_putres() {
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
-	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_ONE);
+	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_STAT);
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
@@ -95,5 +95,5 @@ table update_macaddr_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 4;
 }
