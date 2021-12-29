@@ -936,7 +936,7 @@ static int run_sfg(void * param) {
   struct sockaddr_in controller_sockaddr;
   memset(&controller_sockaddr, 0, sizeof(struct sockaddr_in));
   controller_sockaddr.sin_family = AF_INET;
-  controller_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  INVARIANT(inet_pton(AF_INET, controller_ip, &controller_sockaddr.sin_addr) > 0);
   controller_sockaddr.sin_port = htons(controller_port);
   char pop_buf[MAX_BUFSIZE];
   memset(pop_buf, 0, MAX_BUFSIZE);

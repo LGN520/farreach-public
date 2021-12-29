@@ -20,6 +20,7 @@ controller_ip = str(config.get("controller", "controller_ip"))
 controller_port = int(config.get("controller", "controller_port"))
 redis_ip = str(config.get("controller", "redis_ip"))
 redis_port = int(config.get("controller", "redis_port"))
+backup_interupt = int(config.get("controller", "backup_interupt"))
 
 r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
 for key in r.scan_iter("*"):
@@ -31,23 +32,27 @@ def handler(signum, frame):
     running = False
 signal.signal(signal.SIGTERM, handler)
 
-#s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#s.bind((controller_ip, controller_port))
-#s.setblocking(0)
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind((controller_ip, controller_port))
+s.setblocking(0)
 
 def cache_update():
     # Polling
     global running, mutex
     while running:
-        #data, addr = s.recvfrom(1024)
-        mutex.acquire()
-        data = b"\x01\x02\x03"
-        if len(data) > 0:
-            rval = os.system("{} --data {}".format(cmd, data.decode("utf-8")))
+        try:
+            data, addr = s.recvfrom(1024)
+            mutex.acquire()
+            if len(data) > 0:
+                rval = os.system("{} --data {}".format(cmd, data.decode("utf-8")))
             mutex.release()
-            break; #TMP
-        else:
-            mutex.release()
+        except IOError as e:
+            if e.errno == errno.EWOULDBLOCK:
+                mutex.release()
+                continue
+            else:
+                print(e)
+                exit()
 
 def periodic_backup():
     global running, mutex
@@ -62,7 +67,7 @@ if __name__ == "__main__":
     cache_update_thread = Thread(target = cache_update)
     cache_update_thread.start()
     periodic_backup_thread = Thread(target = periodic_backup)
-    periodic_backup.start()
+    periodic_backup_thread.start()
 
     cache_update_thread.join()
     periodic_backup_thread.join()

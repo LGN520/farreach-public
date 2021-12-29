@@ -59,6 +59,8 @@ server_pop_ip = str(config.get("server", "server_backup_ip")) # Same IP
 server_pop_port = int(config.get("server", "server_populator_port"))
 redis_ip = str(config.get("controller", "redis_ip"))
 redis_port = int(config.get("controller", "redis_port"))
+hashidx_prefix = str(config.get("other", "hashidx_prefix"))
+pop_prefix = str(config.get("other", "pop_prefix"))
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -112,19 +114,18 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmpreg -= pow(2, 32) # uint -> int
         return tmpreg
 
+
     def runTest(self):
-        # Parse key, value, hashidx, thread_id
-        data = sys.argv[sys.argv.index("--data") + 1]
-        remainlen = len(data)
-        remainlen -= 17 # Minus key and vallen
-        keylo, keyhi, vallen, data = struct.unpack("=QQ{}s".format(remainlen), data)
+        # Decode key, vallen, value, hashidx, thread_id
+        r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
+        data = r.get(pop_prefix)
+        items = data.split("-")
+        keylo, keyhi, vallen = int(items[0]), int(items[1]), int(items[2])
         value_list = []
         for i in range(vallen):
-            remainlen -= 8
-            tmpval, data = struct.unpack("=Q{}s".format(remainlen), data)
-            value_list.append(tmpval)
-        hashidx, thread_id = struct.unpack("=HB", data)
-        hashidx_key = "hashidx:{}",format(hashidx)
+            value_list.append(int(items[3+i]))
+        hashidx, thread_id = int(items[-2]), int(items[-1])
+        hashidx_key = "{}{}".format(hashidx_prefix, hashidx)
 
         # Set corresponding being_evicted bit as 1
         self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
@@ -134,7 +135,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #valid_list = self.client.register_read_valid_reg(self.sess_hdl, self.dev_tgt, hashidx, flags)
 
         # Check redis
-        r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
         isexist = r.exists(hashidx_key)
 
         if isexist == 1: # cache eviction
@@ -153,7 +153,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
                 _, _ = s.recvfrom(1024) # Wait for ACK
                 r.delete(hashidx_key) # Remove evicted key from redis
-            else if (latest_list[0] == 1 or latest_list[1] == 1):
+            elif (latest_list[0] == 1 or latest_list[1] == 1):
                 if latest_list[0] == 1:
                     pipeidx = 0
                 else:
@@ -182,7 +182,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
                 _, _ = s.recvfrom(1024) # Wait for ACK
                 r.delete(hashidx_key) # Remove evicted key from redis
-            else if (latest_list[0] == 2 or latest_list[1] == 2):
+            elif (latest_list[0] == 2 or latest_list[1] == 2):
                 if latest_list[0] == 2:
                     pipeidx = 0
                 else:
@@ -232,9 +232,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 op_hdr_keyhilolo = keyhi & 0xFFFF,
                 op_hdr_keyhilohi = (keyhi >> 16) & 0xFFFF,
                 op_hdr_keyhihilo = (keyhi >> 32) & 0xFFFF,
-                op_hdr_keyhihihi = (keyhi >> 48) & 0xFFFF,
+                op_hdr_keyhihihi = (keyhi >> 48) & 0xFFFF)
         self.client.cache_lookup_tbl_table_add_with_cache_lookup(\
                 self.sess_hdl, self.dev_tgt, matchspec0)
 
         # Set corresponding being_evicted bit as 0
         self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 0)
+
+        r.delete(pop_prefix)

@@ -385,8 +385,8 @@ int get_dstport(struct rte_mbuf *volatile mbuf) {
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
-	//printf("pktsize: %d\n", mbuf->pkt_len);
-	//dump_buf(data, mbuf->pkt_len);
+	printf("pktsize: %d\n", mbuf->pkt_len);
+	dump_buf(data, mbuf->pkt_len);
 
 	/*ethhdr = (struct ether_hdr *)data;
 	if (ethhdr->ether_type != 0x0008) {

@@ -58,6 +58,7 @@ server_backup_ip = str(config.get("server", "server_backup_ip"))
 server_backup_port = int(config.get("server", "server_backup_port"))
 bucket_count = int(config.get("switch", "bucket_num"))
 max_val_len = int(config.get("global", "max_val_length"))
+hashidx_prefix = str(config.get("other", "hashidx_prefix"))
 
 fp_ports = ["2/0", "3/0"]
 
@@ -125,7 +126,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         buf = bytearray()
         pipeidx = None
         r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
-        for hashidx_key in r.scan_iter("hashidx:*"):
+        for hashidx_key in r.scan_iter("{}*".format(hashidx_prefix):
             hashidx = int(hashidx_key[8:]) # Get string after "hashidx:"
             if pipeidx is None:
                 latests = [] # Two pipelines
