@@ -322,6 +322,7 @@ table port_forward_tbl {
 		meta.being_evicted: exact;
 		meta.isbackup: exact;
 		meta.iscase1: exact;
+		meta.iscase3: exact;
 	}
 	actions {
 		update_getreq_to_getres;
