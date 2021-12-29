@@ -252,7 +252,7 @@
 				- Remove evicted key from redis
 				- Reset registers (vote=1, latest=0, lock=0, seq=0), set vallen and val, add cached key in redis and MAT
 			* Set being_evcited bit as 0
-		+ TODO: check big-endian and small-endian
+		+ NOTE: ptf will automatically convert small-endian to big-endian for both register array and MAT
 	+ Crash-consistent backup
 		* Phase 1
 			+ Clean up case1 and case3

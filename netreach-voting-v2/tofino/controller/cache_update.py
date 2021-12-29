@@ -48,7 +48,10 @@ signal.signal(signal.SIGTERM, handler)
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind((controller_ip, controller_port))
 s.setblocking(0)
+
 r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
+for key in r.scan_iter("*"):
+   r.delete(key)
 
 # Polling
 while running:

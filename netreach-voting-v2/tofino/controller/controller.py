@@ -21,10 +21,26 @@ controller_port = int(config.get("controller", "controller_port"))
 redis_ip = str(config.get("controller", "redis_ip"))
 redis_port = int(config.get("controller", "redis_port"))
 backup_interupt = int(config.get("controller", "backup_interupt"))
+pop_prefix = str(config.get("other", "pop_prefix"))
 
-r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
-for key in r.scan_iter("*"):
-   r.delete(key)
+def encode_popreq(data):
+    # Parse key, vallen, value, hashidx, thread_id
+    remainlen = len(data)
+    remainlen -= 17 # Minus key and vallen
+    keylo, keyhi, vallen, data = struct.unpack("=QQB{}s".format(remainlen), data)
+    value_list = []
+    for i in range(vallen):
+        remainlen -= 8
+        tmpval, data = struct.unpack("=Q{}s".format(remainlen), data)
+        value_list.append(tmpval)
+    hashidx, thread_id = struct.unpack("=HB", data)
+
+    # Encode into a string
+    res = "{}-{}-{}".format(keylo, keyhi, vallen)
+    for i in range(vallen):
+        res += "-{}".format(value_list[i])
+    res += "-{}-{}".format(hashidx, thread_id)
+    return res
 
 def handler(signum, frame):
     global running
@@ -36,15 +52,20 @@ s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind((controller_ip, controller_port))
 s.setblocking(0)
 
+r = redis.Redis(host=redis_ip, port=redis_port, decode_responses=True)
+for key in r.scan_iter("*"):
+   r.delete(key)
+
 def cache_update():
     # Polling
     global running, mutex
     while running:
         try:
             data, addr = s.recvfrom(1024)
+            r.set(pop_prefix, encode_popreq(data))
             mutex.acquire()
             if len(data) > 0:
-                rval = os.system("{} --data {}".format(cmd, data.decode("utf-8")))
+                rval = os.system(cmd)
             mutex.release()
         except IOError as e:
             if e.errno == errno.EWOULDBLOCK:

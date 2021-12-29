@@ -30,7 +30,7 @@ import unittest
 import struct
 import redis
 
-from netbuffer.p4_pd_rpc.ttypes import *
+from netbufferv2.p4_pd_rpc.ttypes import *
 from pltfm_pm_rpc.ttypes import *
 from pal_rpc.ttypes import *
 from ptf import config
@@ -114,6 +114,15 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmpreg -= pow(2, 32) # uint -> int
         return tmpreg
 
+    @staticmethod
+    def set_reg16(value):
+        tmphi = ((value & 0xFF00) >> 8) & 0x00FF
+        tmplo = value & 0x00FF
+        value = (tmplo << 8) | tmphi
+        if value >= pow(2, 15):
+            value -= pow(2, 16) # uint -> int
+        return value
+
 
     def runTest(self):
         # Decode key, vallen, value, hashidx, thread_id
@@ -121,17 +130,20 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         data = r.get(pop_prefix)
         items = data.split("-")
         keylo, keyhi, vallen = int(items[0]), int(items[1]), int(items[2])
+        
         value_list = []
         for i in range(vallen):
             value_list.append(int(items[3+i]))
         hashidx, thread_id = int(items[-2]), int(items[-1])
         hashidx_key = "{}{}".format(hashidx_prefix, hashidx)
 
+        """
         # Set corresponding being_evicted bit as 1
         self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
 
+        flags = netbufferv2_register_flags_t(read_hw_sync=True)
+
         # Deprecated: Load corresponding valid bit
-        #flags = netbuffer_register_flags_t(read_hw_sync=True)
         #valid_list = self.client.register_read_valid_reg(self.sess_hdl, self.dev_tgt, hashidx, flags)
 
         # Check redis
@@ -204,9 +216,9 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
         # Reset registers
         self.client.register_write_vote_reg(self.sess_hdl, self.dev_tgt, hashidx, 1) # vote=1 (ptf converts it into big-endian in reg)
-        self.client.register_reset_lastest_reg(self.sess_hdl, self.dev_tgt, hashidx) # latest=0
-        self.client.register_reset_lock_reg(self.sess_hdl, self.dev_tgt, hashidx) # lock=0
-        self.client.register_reset_seq_reg(self.sess_hdl, self.dev_tgt, hashidx) # seq=0
+        self.client.register_write_latest_reg(self.sess_hdl, self.dev_tgt, hashidx, 0) # latest=0
+        self.client.register_write_lock_reg(self.sess_hdl, self.dev_tgt, hashidx, 0) # lock=0
+        self.client.register_write_seq_reg(self.sess_hdl, self.dev_tgt, hashidx, 0) # seq=0
 
         # Set vallen
         self.client.register_write_vallen_reg(self.sess_hdl, self.dev_tgt, hashidx, vallen) # 8-bit vallen 
@@ -216,27 +228,37 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         for i in range(vallen):
             validx = vallen - i
             eval("self.client.register_write_vallo{}_reg".format(validx))(\
-                    self.sess_hdl, self.dev_tgt, RegisterUpdate.set_reg32(value_list[i] & 0xFFFFFFFF)) # Ptf converts big-endian int32 to small-endian int32 in reg
+                    self.sess_hdl, self.dev_tgt, hashidx, RegisterUpdate.set_reg32(value_list[i] & 0xFFFFFFFF)) # Ptf converts big-endian int32 to small-endian int32 in reg
             eval("self.client.register_write_valhi{}_reg".format(validx))(\
-                    self.sess_hdl, self.dev_tgt, RegisterUpdate.set_reg32((value_list[i] >> 32) & 0xFFFFFFFF)) # Ptf converts big-endian int32 to small-endian int32 in reg
+                    self.sess_hdl, self.dev_tgt, hashidx, RegisterUpdate.set_reg32((value_list[i] >> 32) & 0xFFFFFFFF)) # Ptf converts big-endian int32 to small-endian int32 in reg
 
         # Add new key into redis
         r.set(hashidx_key, "{} {} {}".format(keylo, keyhi, thread_id))
+        """
 
-        # Add new key into MAT (TODO: use small-endian uint16)
+        # Add new key into MAT (TODO: use small-endian int16)
         matchspec0 = netbufferv2_cache_lookup_tbl_match_spec_t(\
-                op_hdr_keylololo = keylo & 0xFFFF,
-                op_hdr_keylolohi = (keylo >> 16) & 0xFFFF,
-                op_hdr_keylohilo = (keylo >> 32) & 0xFFFF,
-                op_hdr_keylohihi = (keylo >> 48) & 0xFFFF,
-                op_hdr_keyhilolo = keyhi & 0xFFFF,
-                op_hdr_keyhilohi = (keyhi >> 16) & 0xFFFF,
-                op_hdr_keyhihilo = (keyhi >> 32) & 0xFFFF,
-                op_hdr_keyhihihi = (keyhi >> 48) & 0xFFFF)
+                op_hdr_keylololo = RegisterUpdate.set_reg16(keylo & 0xFFFF),
+                op_hdr_keylolohi = RegisterUpdate.set_reg16((keylo >> 16) & 0xFFFF),
+                op_hdr_keylohilo = RegisterUpdate.set_reg16((keylo >> 32) & 0xFFFF),
+                op_hdr_keylohihi = RegisterUpdate.set_reg16((keylo >> 48) & 0xFFFF),
+                op_hdr_keyhilolo = RegisterUpdate.set_reg16(keyhi & 0xFFFF),
+                op_hdr_keyhilohi = RegisterUpdate.set_reg16((keyhi >> 16) & 0xFFFF),
+                op_hdr_keyhihilo = RegisterUpdate.set_reg16((keyhi >> 32) & 0xFFFF),
+                op_hdr_keyhihihi = RegisterUpdate.set_reg16((keyhi >> 48) & 0xFFFF))
         self.client.cache_lookup_tbl_table_add_with_cache_lookup(\
                 self.sess_hdl, self.dev_tgt, matchspec0)
 
         # Set corresponding being_evicted bit as 0
+        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 0)
+        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
+        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 2)
+        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 3)
+        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 2)
+        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
+        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 0)
+        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
+        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
         self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 0)
 
         r.delete(pop_prefix)

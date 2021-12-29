@@ -28,7 +28,7 @@ import sys
 import time
 import unittest
 
-from netbuffer.p4_pd_rpc.ttypes import *
+from netbufferv2.p4_pd_rpc.ttypes import *
 from pltfm_pm_rpc.ttypes import *
 from pal_rpc.ttypes import *
 from ptf import config
