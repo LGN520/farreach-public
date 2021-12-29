@@ -250,8 +250,25 @@ update_delreq_to_delreq_case1(sid, port) {
 	modify_field(op_hdr.optype, DELREQ_CASE1_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 
-	// Add latest header
-	add_to_field(udp_hdr.hdrlen, LATEST_PKTLEN);
+	// Add vallen, value, and latest header
+	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN_PLUS_LATEST);
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	/*add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	add_header(val16_hdr);*/
 	add_header(latest_hdr);
 
 	// Clone a packet for DELRES to client

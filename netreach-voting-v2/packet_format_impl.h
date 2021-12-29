@@ -670,6 +670,12 @@ void GetRequestBE<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 // PutRequestBE
 
 template<class key_t, class val_t>
+PutRequestBE<key_t, val_t>::PutRequestBE()
+	: PutRequest<key_t, val_t>(), _seq(0)
+{
+}
+
+template<class key_t, class val_t>
 PutRequestBE<key_t, val_t>::PutRequestBE(const char *data, uint32_t recv_size)
 {
 	this->deserialize(data, recv_size);
@@ -709,6 +715,12 @@ void PutRequestBE<key_t, val_t>::deserialize(const char * data, uint32_t recv_si
 }
 
 // DelRequestBE
+
+template<class key_t>
+DelRequestBE<key_t>::DelRequestBE()
+	: DelRequest<key_t>(), _seq(0)
+{
+}
 
 template<class key_t>
 DelRequestBE<key_t>::DelRequestBE(const char *data, uint32_t recv_size)
@@ -796,42 +808,44 @@ void PutRequestCase1<key_t, val_t>::deserialize(const char * data, uint32_t recv
 
 // DelRequestCase1
 
-template<class key_t>
-DelRequestCase1<key_t>::DelRequestCase1(const char *data, uint32_t recv_size)
+template<class key_t, class val_t>
+DelRequestCase1<key_t, val_t>::DelRequestCase1(const char *data, uint32_t recv_size)
 {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DEL_REQ_CASE1);
 }
 
-template<class key_t>
-uint8_t DelRequestCase1<key_t>::latest() const {
+template<class key_t, class val_t>
+uint8_t DelRequestCase1<key_t, val_t>::latest() const {
 	return this->_latest;
 }
 
-template<class key_t>
-uint32_t DelRequestCase1<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint8_t);
+template<class key_t, class val_t>
+uint32_t DelRequestCase1<key_t, val_t>::size() {
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum() + sizeof(uint8_t);
 }
 
-template<class key_t>
-uint32_t DelRequestCase1<key_t>::serialize(char * const data, uint32_t max_size)
+template<class key_t, class val_t>
+uint32_t DelRequestCase1<key_t, val_t>::serialize(char * const data, uint32_t max_size)
 {
 	COUT_N_EXIT("Invalid invoke of serialize for DelRequestCase1");
 }
 
-template<class key_t>
-void DelRequestCase1<key_t>::deserialize(const char * data, uint32_t recv_size) {
-	uint32_t my_size = this->size();
-	INVARIANT(my_size == recv_size);
+template<class key_t, class val_t>
+void DelRequestCase1<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	//uint32_t my_size = this->size();
+	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
 	this->_hashidx = ntohs(this->_hashidx); // Big-endian to small-endian
-	begin += sizeof(uint16_t);
+	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
-	memcpy((void *)&this->_latest, begin, sizeof(uint8_t));
+	uint32_t tmpsize = this->_val.deserialize(begin);
+	begin += tmpsize;
+	memcpy((void *)&this->_latest, begin, sizeof(uint8_t)); // 8-bit does not care endianess
 }
 
 // PutRequestCase3

@@ -63,7 +63,7 @@ typedef PutRequestPOP<index_key_t, val_t> put_request_pop_t;
 typedef PutRequestBE<index_key_t, val_t> put_request_be_t;
 typedef DelRequestBE<index_key_t> del_request_be_t;
 typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
-typedef DelRequestCase1<index_key_t> del_request_case1_t;
+typedef DelRequestCase1<index_key_t, val_t> del_request_case1_t;
 typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
 typedef PutRequestPOPCase3<index_key_t, val_t> put_request_pop_case3_t;
 typedef PutRequestBECase3<index_key_t, val_t> put_request_be_case3_t;
@@ -1345,7 +1345,7 @@ static int run_sfg(void * param) {
 								tmpcase._val = req.val();
 								tmpcase._valid = true;
 							}
-							else (latest == 2) {
+							else if (latest == 2) {
 								// The vallen of tmpcase._val is 0 by default which means being deleted
 								tmpcase._valid = true;
 							}
@@ -1372,7 +1372,7 @@ static int run_sfg(void * param) {
 								tmpcase._val = req.val();
 								tmpcase._valid = true;
 							}
-							else (latest == 2) {
+							else if (latest == 2) {
 								// The vallen of tmpcase._val is 0 by default which means being deleted
 								tmpcase._valid = true;
 							}

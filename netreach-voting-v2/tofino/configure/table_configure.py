@@ -168,6 +168,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_being_evicted = being_evicted)
                         eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
+                        matchspec0 = eval("netbufferv2_update_val{}_tbl_match_spec_t".format(valname))(\
+                                op_hdr_optype = DELREQ_TYPE,
+                                meta_iscached = iscached,
+                                #meta_isvalid = isvalid,
+                                latest_hdr_latest = latest,
+                                meta_being_evicted = being_evicted)
+                        eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
                         #if iscached == 1 and isvalid == 1 and latest == 0 and being_evicted == 0:
                         if iscached == 1 and latest == 0 and being_evicted == 0:
                             matchspec0 = eval("netbufferv2_update_val{}_tbl_match_spec_t".format(valname))(\
@@ -472,6 +480,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         for being_evicted in being_evicted_list:
                             matchspec0 = netbufferv2_update_vallen_tbl_match_spec_t(\
                                     op_hdr_optype = GETREQ_TYPE,
+                                    meta_iscached = iscached,
+                                    #meta_isvalid = isvalid,
+                                    latest_hdr_latest = latest,
+                                    meta_being_evicted = being_evicted)
+                            self.client.update_vallen_tbl_table_add_with_get_vallen(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                            matchspec0 = netbufferv2_update_vallen_tbl_match_spec_t(\
+                                    op_hdr_optype = DELREQ_TYPE,
                                     meta_iscached = iscached,
                                     #meta_isvalid = isvalid,
                                     latest_hdr_latest = latest,

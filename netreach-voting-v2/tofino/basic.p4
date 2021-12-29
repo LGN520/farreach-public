@@ -53,12 +53,14 @@
 // VAL_PKTLEN: sizeof(vallen) + sizeof(val), e.g., GETREQ -> GETRES
 // VAL_PKTLEN_MINUS_STAT: sizeof(vallen) + sizeof(val) - sizeof(stat), e.g., PUTREQ -> PUTRES
 // VAL_PKTLEN_PLUS_SEQ: sizeof(vallen) + sizeof(val) + sizeof(seq), e.g., GETREQ -> GETREQ_BE
+// VAL_PKTLEN_PLUS_LATEST: sizeof(vallen) + sizeof(val) + sizeof(latest), e.g., DELREQ -> DELREQ_CASE1
 // SEQ_PKTLEN: sizeof(seq), e.g., PUTREQ -> PUTREQ_BE
 // STAT_PKTLEN: sizeof(stat), e.g., DELREQ -> DELRES
-// LATEST_PKTLEN: sizeof(latest), e.g., PUTREQ -> PUTREQ_CASE1, DELREQ -> DELREQ_CASE1
+// LATEST_PKTLEN: sizeof(latest), e.g., PUTREQ -> PUTREQ_CASE1
 #define VAL_PKTLEN 9
 #define VAL_PKTLEN_MINUS_STAT 8
 #define VAL_PKTLEN_PLUS_SEQ 13
+#define VAL_PKTLEN_PLUS_LATEST 10
 #define SEQ_PKTLEN 4
 #define STAT_PKTLEN 1
 #define LATEST_PKTLEN 1

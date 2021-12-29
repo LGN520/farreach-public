@@ -230,6 +230,7 @@ class GetRequestBE : public PutRequest<key_t, val_t> {
 template<class key_t, class val_t>
 class PutRequestBE : public PutRequest<key_t, val_t> {
 	public: 
+		PutRequestBE();
 		PutRequestBE(const char * data, uint32_t recv_size);
 
 		int seq() const;
@@ -244,6 +245,7 @@ class PutRequestBE : public PutRequest<key_t, val_t> {
 template<class key_t>
 class DelRequestBE : public DelRequest<key_t> {
 	public: 
+		DelRequestBE();
 		DelRequestBE(const char * data, uint32_t recv_size);
 
 		int seq() const;
@@ -271,8 +273,8 @@ class PutRequestCase1 : public PutRequest<key_t, val_t> {
 		uint8_t _latest;
 };
 
-template<class key_t>
-class DelRequestCase1 : public DelRequest<key_t> {
+template<class key_t, class val_t>
+class DelRequestCase1 : public PutRequest<key_t, val_t> {
 	public: 
 		DelRequestCase1(const char * data, uint32_t recv_size);
 

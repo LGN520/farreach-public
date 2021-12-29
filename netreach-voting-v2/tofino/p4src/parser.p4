@@ -34,7 +34,7 @@ parser parse_op {
 		PUTREQ_BE_TYPE: parse_vallen;
 		DELREQ_BE_TYPE: parse_seq;
 		PUTREQ_CASE1_TYPE: parse_vallen;
-		DELREQ_CASE1_TYPE: parse_latest;
+		DELREQ_CASE1_TYPE: parse_vallen;
 		GETRES_TYPE: parse_vallen;
 		GETRES_NPOP_TYPE: parse_vallen;
 		GETRES_LATEST_TYPE: parse_vallen;
@@ -74,6 +74,7 @@ parser parse_val_len1 {
 		GETREQ_BE_TYPE: parse_seq;
 		PUTREQ_BE_TYPE: parse_seq;
 		PUTREQ_CASE1_TYPE: parse_latest;
+		DELREQ_CASE1_TYPE: parse_latest;
 		default: ingress;
 	}
 }
