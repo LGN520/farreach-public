@@ -137,7 +137,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         hashidx, thread_id = int(items[-2]), int(items[-1])
         hashidx_key = "{}{}".format(hashidx_prefix, hashidx)
 
-        """
         # Set corresponding being_evicted bit as 1
         self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
 
@@ -234,7 +233,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
         # Add new key into redis
         r.set(hashidx_key, "{} {} {}".format(keylo, keyhi, thread_id))
-        """
 
         # Add new key into MAT (TODO: use small-endian int16)
         matchspec0 = netbufferv2_cache_lookup_tbl_match_spec_t(\
@@ -250,15 +248,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 self.sess_hdl, self.dev_tgt, matchspec0)
 
         # Set corresponding being_evicted bit as 0
-        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 0)
-        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
-        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 2)
-        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 3)
-        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 2)
-        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
-        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 0)
-        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
-        self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 1)
         self.client.register_write_being_evicted_reg(self.sess_hdl, self.dev_tgt, hashidx, 0)
 
         r.delete(pop_prefix)

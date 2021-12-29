@@ -84,6 +84,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         self.client.register_reset_all_case3_reg(self.sess_hdl, self.dev_tgt)
 
         print "Set flag"
-        actnspec0 = netbuffer_load_backup_flag_action_spec_t(1)
+        actnspec0 = netbufferv2_load_backup_flag_action_spec_t(1)
         self.client.load_backup_flag_tbl_set_default_action_load_backup_flag(\
                 self.sess_hdl, self.dev_tgt, actnspec0)
