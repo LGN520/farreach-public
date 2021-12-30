@@ -13,7 +13,7 @@ blackbox stateful_alu read_lock_alu {
 }
 
 action read_lock() {
-	read_lock_alu.execute_stateful_alu(meta.hashidx);
+	read_lock_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu try_lock_alu {
@@ -26,7 +26,7 @@ blackbox stateful_alu try_lock_alu {
 }
 
 action try_lock() {
-	try_lock_alu.execute_stateful_alu(meta.hashidx);
+	try_lock_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu clear_lock_alu {
@@ -39,13 +39,14 @@ blackbox stateful_alu clear_lock_alu {
 }
 
 action clear_lock() {
-	clear_lock_alu.execute_stateful_alu(meta.hashidx);
+	clear_lock_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-/*table access_lock_tbl {
+table access_lock_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.isevict: exact;
+		meta.isvalid: exact;
+		meta.zerovote: exact;
 	}
 	actions {
 		try_lock;
@@ -55,4 +56,4 @@ action clear_lock() {
 	}
 	default_action: nop();
 	size: 16;
-}*/
+}

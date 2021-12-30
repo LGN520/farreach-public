@@ -28,7 +28,7 @@ import sys
 import time
 import unittest
 
-from netbuffer.p4_pd_rpc.ttypes import *
+from netbufferv3.p4_pd_rpc.ttypes import *
 from pltfm_pm_rpc.ttypes import *
 from pal_rpc.ttypes import *
 from ptf import config
@@ -63,7 +63,7 @@ fp_ports = ["2/0", "3/0"]
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
-        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbuffer"])
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv3"])
 
     def setUp(self):
         print '\nSetup'
@@ -102,7 +102,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def runTest(self):
         print "Reading reagisters"
-        flags = netbuffer_register_flags_t(read_hw_sync=True)
+        flags = netbufferv3_register_flags_t(read_hw_sync=True)
         keylololo_list = self.client.register_range_read_keylololo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         keylolohi_list = self.client.register_range_read_keylolohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         keylohilo_list = self.client.register_range_read_keylohilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
@@ -121,7 +121,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         dirty_list = self.client.register_range_read_dirty_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
 
         print "Reset flag"
-        actnspec0 = netbuffer_load_backup_flag_action_spec_t(0)
+        actnspec0 = netbufferv3_load_backup_flag_action_spec_t(0)
         self.client.load_backup_flag_tbl_set_default_action_load_backup_flag(\
                 self.sess_hdl, self.dev_tgt, actnspec0)
 

@@ -28,7 +28,7 @@ import sys
 import time
 import unittest
 
-from netbuffer.p4_pd_rpc.ttypes import *
+from netbufferv3.p4_pd_rpc.ttypes import *
 from pltfm_pm_rpc.ttypes import *
 from pal_rpc.ttypes import *
 from ptf import config
@@ -58,7 +58,7 @@ bucket_count = int(config.get("switch", "bucket_num"))
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
-        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbuffer"])
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv3"])
 
     def setUp(self):
         print '\nSetup'
@@ -84,6 +84,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         self.client.register_reset_all_case3_reg(self.sess_hdl, self.dev_tgt)
 
         print "Set flag"
-        actnspec0 = netbuffer_load_backup_flag_action_spec_t(1)
+        actnspec0 = netbufferv3_load_backup_flag_action_spec_t(1)
         self.client.load_backup_flag_tbl_set_default_action_load_backup_flag(\
                 self.sess_hdl, self.dev_tgt, actnspec0)

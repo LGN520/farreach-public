@@ -1,4 +1,25 @@
 
+field_list hash_fields {
+	op_hdr.keylolo;
+	op_hdr.keylohi;
+	op_hdr.keyhilo;
+	op_hdr.keyhihi;
+}
+
+field_list_calculation hash_field_calc {
+	input {
+		hash_fields;
+	}
+	algorithm: crc32;
+	output_width: 16;
+}
+
+action calculate_hash() {
+	modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT);
+	// NOTE: we cannot use dynamic hash
+	// modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT - ipv4_hdr.totalLen);
+}
+
 table eg_calculate_hash_tbl {
 	actions {
 		calculate_hash;

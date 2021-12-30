@@ -9,7 +9,7 @@ blackbox stateful_alu get_vallen_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallen;
+	output_dst: vallen_hdr.vallen;
 }
 
 action get_vallen() {
@@ -22,7 +22,7 @@ blackbox stateful_alu put_vallen_alu {
 	update_lo_1_value: vallen_hdr.vallen;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallen;
+	output_dst: vallen_hdr.vallen;
 }
 
 action put_vallen() {
@@ -33,14 +33,7 @@ table update_vallen_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallen;
@@ -62,7 +55,7 @@ blackbox stateful_alu get_vallo1_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo1;
+	output_dst: val1_hdr.vallo;
 }
 
 action get_vallo1() {
@@ -75,7 +68,7 @@ blackbox stateful_alu put_vallo1_alu {
 	update_lo_1_value: val1_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo1;
+	output_dst: val1_hdr.vallo;
 }
 
 action put_vallo1() {
@@ -86,14 +79,7 @@ table update_vallo1_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo1;
@@ -115,7 +101,7 @@ blackbox stateful_alu get_valhi1_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi1;
+	output_dst: val1_hdr.valhi;
 }
 
 action get_valhi1() {
@@ -128,7 +114,7 @@ blackbox stateful_alu put_valhi1_alu {
 	update_lo_1_value: val1_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi1;
+	output_dst: val1_hdr.valhi;
 }
 
 action put_valhi1() {
@@ -139,14 +125,7 @@ table update_valhi1_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi1;
@@ -157,7 +136,7 @@ table update_valhi1_tbl {
 	size: 1152;
 }
 
-register vallo2_reg {
+/*register vallo2_reg {
 	width: 32;
 	instance_count: KV_BUCKET_COUNT;
 }
@@ -192,10 +171,10 @@ table update_vallo2_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -245,10 +224,10 @@ table update_valhi2_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -298,10 +277,10 @@ table update_vallo3_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -351,10 +330,10 @@ table update_valhi3_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -404,10 +383,10 @@ table update_vallo4_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -457,10 +436,10 @@ table update_valhi4_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -510,10 +489,10 @@ table update_vallo5_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -562,10 +541,10 @@ action put_valhi5() {
 table update_valhi5_tbl {
 	reads {
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -616,10 +595,10 @@ table update_vallo6_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -669,10 +648,10 @@ table update_valhi6_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -722,10 +701,10 @@ table update_vallo7_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -775,10 +754,10 @@ table update_valhi7_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -828,10 +807,10 @@ table update_vallo8_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -881,10 +860,10 @@ table update_valhi8_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -934,10 +913,10 @@ table update_vallo9_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -987,10 +966,10 @@ table update_valhi9_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1040,10 +1019,10 @@ table update_vallo10_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1093,10 +1072,10 @@ table update_valhi10_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1146,10 +1125,10 @@ table update_vallo11_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1199,10 +1178,10 @@ table update_valhi11_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1252,10 +1231,10 @@ table update_vallo12_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1305,10 +1284,10 @@ table update_valhi12_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1358,10 +1337,10 @@ table update_vallo13_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1411,10 +1390,10 @@ table update_valhi13_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1464,10 +1443,10 @@ table update_vallo14_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1517,10 +1496,10 @@ table update_valhi14_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1570,10 +1549,10 @@ table update_vallo15_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1623,10 +1602,10 @@ table update_valhi15_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1676,10 +1655,10 @@ table update_vallo16_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 		meta.ismatch_keyhilolo: exact;
 		meta.ismatch_keyhilohi: exact;
 		meta.ismatch_keyhihilo: exact;
@@ -1729,14 +1708,10 @@ table update_valhi16_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 	}
 	actions {
 		get_valhi16;

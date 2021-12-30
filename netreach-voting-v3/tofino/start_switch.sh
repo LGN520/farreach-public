@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 cd $SDE
-./run_switchd.sh -p netbuffer
+./run_switchd.sh -p netbufferv3

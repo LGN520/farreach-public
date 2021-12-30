@@ -38,15 +38,11 @@ header_type udp_t {
 header_type op_t {
 	fields {
 		optype: 8;
-		threadid: 8;
-		keylololo: 16;
-		keylolohi: 16;
-		keylohilo: 16;
-		keylohihi: 16;
-		keyhilolo: 16;
-		keyhilohi: 16;
-		keyhihilo: 16;
-		keyhihihi: 16;
+		hashidx: 16;
+		keylolo: 32;
+		keylohi: 32;
+		keyhilo: 32;
+		keyhihi: 32;
 	}
 }
 
@@ -77,93 +73,22 @@ header_type res_t {
 	}
 }
 
-header_type key_t {
-	fields {
-		keylololo: 16;
-		keylolohi: 16;
-		keylohilo: 16;
-		keylohihi: 16;
-		keyhilolo: 16;
-		keyhilohi: 16;
-		keyhihilo: 16;
-		keyhihihi: 16;			  
-	}
-}
-
 header_type metadata_t {
 	fields {
-		hashidx: 16;
-		//origin_hashidx: 16; // Move to egress pipeline
 		tmp_sport: 16;
 		tmp_dport: 16;
-		ismatch_keylololo: 4; // predicate 
-		ismatch_keylolohi: 4; // predicate 
-		ismatch_keylohilo: 4; // predicate 
-		ismatch_keylohihi: 4; // predicate 
-		ismatch_keyhilolo: 4; // predicate
-		ismatch_keyhilohi: 4; // predicate
-		ismatch_keyhihilo: 4; // predicate
-		ismatch_keyhihihi: 4; // predicate
-		origin_keylololo: 16;
-		origin_keylolohi: 16;
-		origin_keylohilo: 16;
-		origin_keylohihi: 16;
-		origin_keyhilolo: 16;
-		origin_keyhilohi: 16;
-		origin_keyhihilo: 16;
-		origin_keyhihihi: 16;
+		ismatch_keylolo: 4; // predicate 
+		ismatch_keylohi: 4; // predicate 
+		ismatch_keyhilo: 4; // predicate 
+		ismatch_keyhihi: 4; // predicate 
 		isvalid: 1; // if the entry is valid
-		isdirty: 1; // if the entry is dirty
+		iskeymatch: 1; // reduce MAT entries for ismatch_keyxxxx
 		canput: 4; // predicate for seq (update vallen and val only if with valid seq)
-		origin_vallen: 8;
-		origin_vallo1: 32;
-		origin_valhi1: 32;
-		origin_vallo2: 32;
-		origin_valhi2: 32;
-		origin_vallo3: 32;
-		origin_valhi3: 32;
-		origin_vallo4: 32;
-		origin_valhi4: 32;
-		origin_vallo5: 32;
-		origin_valhi5: 32;
-		origin_vallo6: 32;
-		origin_valhi6: 32;
-		origin_vallo7: 32;
-		origin_valhi7: 32;
-		origin_vallo8: 32;
-		origin_valhi8: 32;
-		/*origin_vallo9: 32;
-		origin_valhi9: 32;
-		origin_vallo10: 32;
-		origin_valhi10: 32;
-		origin_vallo11: 32;
-		origin_valhi11: 32;
-		origin_vallo12: 32;
-		origin_valhi12: 32;
-		origin_vallo13: 32;
-		origin_valhi13: 32;
-		origin_vallo14: 32;
-		origin_valhi14: 32;
-		origin_vallo15: 32;
-		origin_valhi15: 32;
-		origin_vallo16: 32;
-		origin_valhi16: 32;*/
-		isevict: 4; // predicate (if we need to trigger cache update)
+		zerovote: 4; // predicate (if we need to trigger cache update)
 		islock: 1; // if the entry is locked before
-		/*isfuture_valid: 1;
-		ismatch_future_keylololo: 4; // predicate 
-		ismatch_future_keylolohi: 4; // predicate 
-		ismatch_future_keylohilo: 4; // predicate 
-		ismatch_future_keylohihi: 4; // predicate 
-		ismatch_future_keyhilolo: 4; // predicate
-		ismatch_future_keyhilohi: 4; // predicate
-		ismatch_future_keyhihilo: 4; // predicate
-		ismatch_future_keyhihihi: 4; // predicate*/
-		is_clone: 2;
+		isclone: 2;
 		isbackup: 1; // backup flag
-		iscase1: 1; // case 1 of backup
-		iscase2: 1; // case 2 of backup
-		iscase3: 1; // case 3 of backup
+		iscase12: 1; // case 1/2 of backup
 	}
 }
 
@@ -175,14 +100,14 @@ header udp_t udp_hdr;
 header op_t op_hdr;
 header vallen_t vallen_hdr;
 header val_t val1_hdr;
-header val_t val2_hdr;
+/*header val_t val2_hdr;
 header val_t val3_hdr;
 header val_t val4_hdr;
 header val_t val5_hdr;
 header val_t val6_hdr;
 header val_t val7_hdr;
 header val_t val8_hdr;
-/*header val_t val9_hdr;
+header val_t val9_hdr;
 header val_t val10_hdr;
 header val_t val11_hdr;
 header val_t val12_hdr;

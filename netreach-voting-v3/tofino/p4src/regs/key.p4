@@ -1,803 +1,203 @@
-// Put the 8 registers in stage 1 & 2 after hash in stage 0
-
-register keylololo_reg {
-	width: 16;
+register keylolo_reg {
+	width: 32;
 	instance_count: KV_BUCKET_COUNT;
 }
 
-blackbox stateful_alu match_keylololo_alu {
+blackbox stateful_alu match_keylolo_alu {
 	reg: keylololo_reg;
 
-	condition_lo: register_lo == op_hdr.keylololo;
+	condition_lo: register_lo == op_hdr.keylolo;
 
 	update_lo_1_value: register_lo;
 	
 	output_value: predicate;
-	output_dst: meta.ismatch_keylololo;
+	output_dst: meta.ismatch_keylolo;
 }
 
-action match_keylololo() {
-	match_keylololo_alu.execute_stateful_alu(meta.hashidx);
+action match_keylolo() {
+	match_keylolo_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-blackbox stateful_alu modify_keylololo_alu {
-	reg: keylololo_reg;
+blackbox stateful_alu modify_keylolo_alu {
+	reg: keylolo_reg;
 
-	condition_lo: register_lo == op_hdr.keylololo;
+	condition_lo: register_lo == op_hdr.keylolo;
 
 	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: register_lo;
 	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keylololo;
+	update_lo_2_value: op_hdr.keylolo;
 	
 	output_value: register_lo;
-	output_dst: meta.origin_keylololo;
+	output_dst: op_hdr.keylolo;
 }
 
-action modify_keylololo() {
-	modify_keylololo_alu.execute_stateful_alu(meta.hashidx);
+action modify_keylolo() {
+	modify_keylolo_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-@pragma stage 1
-table access_keylololo_tbl {
+table access_keylolo_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		match_keylololo;
-		modify_keylololo;
+		match_keylolo;
+		modify_keylolo;
 		nop;
 	}
 	default_action: nop();
 	size: 8;
 }
 
-register keylolohi_reg {
-	width: 16;
+register keylohi_reg {
+	width: 32;
 	instance_count: KV_BUCKET_COUNT;
 }
 
-blackbox stateful_alu match_keylolohi_alu {
-	reg: keylolohi_reg;
-
-	condition_lo: register_lo == op_hdr.keylolohi;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_keylolohi;
-}
-
-action match_keylolohi() {
-	match_keylolohi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_keylolohi_alu {
-	reg: keylolohi_reg;
-
-	condition_lo: register_lo == op_hdr.keylolohi;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keylolohi;
-	
-	output_value: register_lo;
-	output_dst: meta.origin_keylolohi;
-}
-
-action modify_keylolohi() {
-	modify_keylolohi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-@pragma stage 1
-table access_keylolohi_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_keylolohi;
-		modify_keylolohi;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-register keylohilo_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_keylohilo_alu {
+blackbox stateful_alu match_keylohi_alu {
 	reg: keylohilo_reg;
 
-	condition_lo: register_lo == op_hdr.keylohilo;
+	condition_lo: register_lo == op_hdr.keylohi;
 
 	update_lo_1_value: register_lo;
 	
 	output_value: predicate;
-	output_dst: meta.ismatch_keylohilo;
+	output_dst: meta.ismatch_keylohi;
 }
 
-action match_keylohilo() {
-	match_keylohilo_alu.execute_stateful_alu(meta.hashidx);
+action match_keylohi() {
+	match_keylohi_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-blackbox stateful_alu modify_keylohilo_alu {
-	reg: keylohilo_reg;
+blackbox stateful_alu modify_keylohi_alu {
+	reg: keylohi_reg;
 
-	condition_lo: register_lo == op_hdr.keylohilo;
+	condition_lo: register_lo == op_hdr.keylohi;
 
 	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: register_lo;
 	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keylohilo;
+	update_lo_2_value: op_hdr.keylohi;
 	
 	output_value: register_lo;
-	output_dst: meta.origin_keylohilo;
+	output_dst: op_hdr.keylohi;
 }
 
-action modify_keylohilo() {
-	modify_keylohilo_alu.execute_stateful_alu(meta.hashidx);
+action modify_keylohi() {
+	modify_keylohi_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-@pragma stage 1
-table access_keylohilo_tbl {
+table access_keylohi_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		match_keylohilo;
-		modify_keylohilo;
+		match_keylohi;
+		modify_keylohi;
 		nop;
 	}
 	default_action: nop();
 	size: 8;
 }
 
-register keylohihi_reg {
-	width: 16;
+register keyhilo_reg {
+	width: 32;
 	instance_count: KV_BUCKET_COUNT;
 }
 
-blackbox stateful_alu match_keylohihi_alu {
-	reg: keylohihi_reg;
-
-	condition_lo: register_lo == op_hdr.keylohihi;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_keylohihi;
-}
-
-action match_keylohihi() {
-	match_keylohihi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_keylohihi_alu {
-	reg: keylohihi_reg;
-
-	condition_lo: register_lo == op_hdr.keylohihi;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keylohihi;
-	
-	output_value: register_lo;
-	output_dst: meta.origin_keylohihi;
-}
-
-action modify_keylohihi() {
-	modify_keylohihi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-@pragma stage 1
-table access_keylohihi_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_keylohihi;
-		modify_keylohihi;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-register keyhilolo_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_keyhilolo_alu {
+blackbox stateful_alu match_keyhilo_alu {
 	reg: keyhilolo_reg;
 
-	condition_lo: register_lo == op_hdr.keyhilolo;
+	condition_lo: register_lo == op_hdr.keyhilo;
 
 	update_lo_1_value: register_lo;
 	
 	output_value: predicate;
-	output_dst: meta.ismatch_keyhilolo;
+	output_dst: meta.ismatch_keyhilo;
 }
 
-action match_keyhilolo() {
-	match_keyhilolo_alu.execute_stateful_alu(meta.hashidx);
+action match_keyhilo() {
+	match_keyhilo_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-blackbox stateful_alu modify_keyhilolo_alu {
-	reg: keyhilolo_reg;
+blackbox stateful_alu modify_keyhilo_alu {
+	reg: keyhilo_reg;
 
-	condition_lo: register_lo == op_hdr.keyhilolo;
+	condition_lo: register_lo == op_hdr.keyhilo;
 
 	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: register_lo;
 	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keyhilolo;
+	update_lo_2_value: op_hdr.keyhilo;
 	
 	output_value: register_lo;
-	output_dst: meta.origin_keyhilolo;
+	output_dst: op_hdr.keyhilo;
 }
 
-action modify_keyhilolo() {
-	modify_keyhilolo_alu.execute_stateful_alu(meta.hashidx);
+action modify_keyhilo() {
+	modify_keyhilo_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-@pragma stage 2
-table access_keyhilolo_tbl {
+table access_keyhilo_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		match_keyhilolo;
-		modify_keyhilolo;
+		match_keyhilo;
+		modify_keyhilo;
 		nop;
 	}
 	default_action: nop();
 	size: 8;
 }
 
-register keyhilohi_reg {
-	width: 16;
+register keyhihi_reg {
+	width: 32;
 	instance_count: KV_BUCKET_COUNT;
 }
 
-blackbox stateful_alu match_keyhilohi_alu {
-	reg: keyhilohi_reg;
-
-	condition_lo: register_lo == op_hdr.keyhilohi;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_keyhilohi;
-}
-
-action match_keyhilohi() {
-	match_keyhilohi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_keyhilohi_alu {
-	reg: keyhilohi_reg;
-
-	condition_lo: register_lo == op_hdr.keyhilohi;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keyhilohi;
-	
-	output_value: register_lo;
-	output_dst: meta.origin_keyhilohi;
-}
-
-action modify_keyhilohi() {
-	modify_keyhilohi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-@pragma stage 2
-table access_keyhilohi_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_keyhilohi;
-		modify_keyhilohi;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-register keyhihilo_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_keyhihilo_alu {
+blackbox stateful_alu match_keyhihi_alu {
 	reg: keyhihilo_reg;
 
-	condition_lo: register_lo == op_hdr.keyhihilo;
+	condition_lo: register_lo == op_hdr.keyhihi;
 
 	update_lo_1_value: register_lo;
 	
 	output_value: predicate;
-	output_dst: meta.ismatch_keyhihilo;
+	output_dst: meta.ismatch_keyhihi;
 }
 
-action match_keyhihilo() {
-	match_keyhihilo_alu.execute_stateful_alu(meta.hashidx);
+action match_keyhihi() {
+	match_keyhihi_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-blackbox stateful_alu modify_keyhihilo_alu {
-	reg: keyhihilo_reg;
+blackbox stateful_alu modify_keyhihi_alu {
+	reg: keyhihi_reg;
 
-	condition_lo: register_lo == op_hdr.keyhihilo;
+	condition_lo: register_lo == op_hdr.keyhihi;
 
 	update_lo_1_predicate: condition_lo;
 	update_lo_1_value: register_lo;
 	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keyhihilo;
+	update_lo_2_value: op_hdr.keyhihi;
 	
 	output_value: register_lo;
-	output_dst: meta.origin_keyhihilo;
+	output_dst: op_hdr.keyhihi;
 }
 
-action modify_keyhihilo() {
-	modify_keyhihilo_alu.execute_stateful_alu(meta.hashidx);
+action modify_keyhihi() {
+	modify_keyhihi_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-@pragma stage 2
-table access_keyhihilo_tbl {
+table access_keyhihi_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		match_keyhihilo;
-		modify_keyhihilo;
+		match_keyhihi;
+		modify_keyhihi;
 		nop;
 	}
 	default_action: nop();
 	size: 8;
 }
-
-register keyhihihi_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_keyhihihi_alu {
-	reg: keyhihihi_reg;
-
-	condition_lo: register_lo == op_hdr.keyhihihi;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_keyhihihi;
-}
-
-action match_keyhihihi() {
-	match_keyhihihi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_keyhihihi_alu {
-	reg: keyhihihi_reg;
-
-	condition_lo: register_lo == op_hdr.keyhihihi;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keyhihihi;
-	
-	output_value: register_lo;
-	output_dst: meta.origin_keyhihihi;
-}
-
-action modify_keyhihihi() {
-	modify_keyhihihi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-@pragma stage 2
-table access_keyhihihi_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_keyhihihi;
-		modify_keyhihihi;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-// Optimization for unnecessary recirculation
-
-/*register future_keylololo_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_future_keylololo_alu {
-	reg: future_keylololo_reg;
-
-	condition_lo: register_lo == op_hdr.keylololo;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_future_keylololo;
-}
-
-action match_future_keylololo() {
-	match_future_keylololo_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_future_keylololo_alu {
-	reg: future_keylololo_reg;
-
-	condition_lo: register_lo == op_hdr.keylololo;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keylololo;
-}
-
-action modify_future_keylololo() {
-	modify_future_keylololo_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table access_future_keylololo_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_future_keylololo;
-		modify_future_keylololo;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-register future_keylolohi_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_future_keylolohi_alu {
-	reg: future_keylolohi_reg;
-
-	condition_lo: register_lo == op_hdr.keylolohi;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_future_keylolohi;
-}
-
-action match_future_keylolohi() {
-	match_future_keylolohi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_future_keylolohi_alu {
-	reg: future_keylolohi_reg;
-
-	condition_lo: register_lo == op_hdr.keylolohi;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.future_keylolohi;
-}
-
-action modify_future_keylolohi() {
-	modify_future_keylolohi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table access_future_keylolohi_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_future_keylolohi;
-		modify_future_keylolohi;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-register future_keylohilo_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_future_keylohilo_alu {
-	reg: future_keylohilo_reg;
-
-	condition_lo: register_lo == op_hdr.keylohilo;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_future_keylohilo;
-}
-
-action match_future_keylohilo() {
-	match_future_keylohilo_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_future_keylohilo_alu {
-	reg: future_keylohilo_reg;
-
-	condition_lo: register_lo == op_hdr.keylohilo;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keylohilo;
-}
-
-action modify_future_keylohilo() {
-	modify_future_keylohilo_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table access_future_keylohilo_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_future_keylohilo;
-		modify_future_keylohilo;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-register future_keylohihi_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_future_keylohihi_alu {
-	reg: future_keylohihi_reg;
-
-	condition_lo: register_lo == op_hdr.keylohihi;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_future_keylohihi;
-}
-
-action match_future_keylohihi() {
-	match_future_keylohihi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_future_keylohihi_alu {
-	reg: future_keylohihi_reg;
-
-	condition_lo: register_lo == op_hdr.keylohihi;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keylohihi;
-}
-
-action modify_future_keylohihi() {
-	modify_future_keylohihi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table access_future_keylohihi_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_future_keylohihi;
-		modify_future_keylohihi;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-register future_keyhilolo_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_future_keyhilolo_alu {
-	reg: future_keyhilolo_reg;
-
-	condition_lo: register_lo == op_hdr.keyhilolo;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_future_keyhilolo;
-}
-
-action match_future_keyhilolo() {
-	match_future_keyhilolo_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_future_keyhilolo_alu {
-	reg: future_keyhilolo_reg;
-
-	condition_lo: register_lo == op_hdr.keyhilolo;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keyhilolo;
-}
-
-action modify_future_keyhilolo() {
-	modify_future_keyhilolo_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table access_future_keyhilolo_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_future_keyhilolo;
-		modify_future_keyhilolo;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-register future_keyhilohi_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_future_keyhilohi_alu {
-	reg: future_keyhilohi_reg;
-
-	condition_lo: register_lo == op_hdr.keyhilohi;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_future_keyhilohi;
-}
-
-action match_future_keyhilohi() {
-	match_future_keyhilohi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_future_keyhilohi_alu {
-	reg: future_keyhilohi_reg;
-
-	condition_lo: register_lo == op_hdr.keyhilohi;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keyhilohi;
-}
-
-action modify_future_keyhilohi() {
-	modify_future_keyhilohi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table access_future_keyhilohi_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_future_keyhilohi;
-		modify_future_keyhilohi;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-register future_keyhihilo_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_future_keyhihilo_alu {
-	reg: future_keyhihilo_reg;
-
-	condition_lo: register_lo == op_hdr.keyhihilo;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_future_keyhihilo;
-}
-
-action match_future_keyhihilo() {
-	match_future_keyhihilo_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_future_keyhihilo_alu {
-	reg: future_keyhihilo_reg;
-
-	condition_lo: register_lo == op_hdr.keyhihilo;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keyhihilo;
-}
-
-action modify_future_keyhihilo() {
-	modify_future_keyhihilo_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table access_future_keyhihilo_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_future_keyhihilo;
-		modify_future_keyhihilo;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-register future_keyhihihi_reg {
-	width: 16;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu match_future_keyhihihi_alu {
-	reg: future_keyhihihi_reg;
-
-	condition_lo: register_lo == op_hdr.keyhihihi;
-
-	update_lo_1_value: register_lo;
-	
-	output_value: predicate;
-	output_dst: meta.ismatch_future_keyhihihi;
-}
-
-action match_future_keyhihihi() {
-	match_future_keyhihihi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu modify_future_keyhihihi_alu {
-	reg: future_keyhihihi_reg;
-
-	condition_lo: register_lo == op_hdr.keyhihihi;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keyhihihi;
-}
-
-action modify_future_keyhihihi() {
-	modify_future_keyhihihi_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table access_future_keyhihihi_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		match_future_keyhihihi;
-		modify_future_keyhihihi;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}*/

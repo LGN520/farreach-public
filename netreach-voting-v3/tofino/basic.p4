@@ -21,23 +21,7 @@
 #define PUTRES_TYPE 0x05
 #define DELRES_TYPE 0x06
 #define SCANRES_TYPE 0x07
-#define GETREQ_S_TYPE 0x08
-#define PUTREQ_GS_TYPE 0x09
-#define PUTREQ_PS_TYPE 0x0a
-#define DELREQ_S_TYPE 0x0b
-#define GETRES_S_TYPE 0x0c
-#define GETRES_NS_TYPE 0x0d
-#define PUTREQ_CASE1_TYPE 0x0e
-#define DELREQ_CASE1_TYPE 0x0f
-#define PUTREQ_GS_CASE2_TYPE 0x10
-#define PUTREQ_PS_CASE2_TYPE 0x11
-#define PUTREQ_CASE3_TYPE 0x12
-#define DELREQ_CASE3_TYPE 0x13
-// Only used in switch
-#define PUTREQ_U_TYPE 0x20
-#define PUTREQ_RU_TYPE 0x21
-#define GETRES_S_CASE2_TYPE 0x22
-#define PUTREQ_RU_CASE2_TYPE 0x23
+#define GETREQ_POP_TYPE 0x08
 
 #define CLONE_FOR_GETRES 1
 #define CLONE_FOR_DELRES 2
@@ -53,12 +37,12 @@
 //#define KV_BUCKET_COUNT 1
 
 // NOTE: you should change the two macros according to maximum val length
-// VAL_PKTLEN: sizeof(vallen) + sizeof(val) + sizeof(seq) + sizeof(is_assigned)
-// VAL_PKTLEN_MINUS_ONE: sizeof(vallen) + sizeof(val) - sizeof(stat) + sizeof(seq) + sizeof(is_assigned)
-//#define VAL_PKTLEN 102
-//#define VAL_PKTLEN_MINUS_ONE 101
-#define VAL_PKTLEN 14
-#define VAL_PKTLEN_MINUS_ONE 13
+// VAL_PKTLEN: sizeof(vallen) + sizeof(val)
+// VAL_PKTLEN_MINUS_ONE: sizeof(vallen) + sizeof(val) - sizeof(stat)
+//#define VAL_PKTLEN 129
+//#define VAL_PKTLEN_MINUS_ONE 128
+#define VAL_PKTLEN 9
+#define VAL_PKTLEN_MINUS_ONE 8
 
 //#define CPU_PORT 192
 
@@ -95,30 +79,25 @@
 /* Ingress Processing */
 
 control ingress {
-	// Stage 0
-	apply(calculate_hash_tbl);
+
+	// Stage 0 
+	apply(access_keylolo_tbl);
+	apply(access_keylohi_tbl);
+	apply(access_keyhilo_tbl);
+	apply(access_keyhihi_tbl);
 	apply(save_info_tbl);
 	apply(initialize_tbl);
-	apply(assign_seq_tbl);
 	apply(load_backup_flag_tbl);
 
-	// Stage 1 and 2
-	// Different MAT entries for getreq/putreq
-	apply(access_keylololo_tbl);
-	apply(access_keylolohi_tbl);
-	apply(access_keylohilo_tbl);
-	apply(access_keylohihi_tbl);
-	apply(access_keyhilolo_tbl);
-	apply(access_keyhilohi_tbl);
-	apply(access_keyhihilo_tbl);
-	apply(access_keyhihihi_tbl);
-
-	// Stage 3 (after keys)
-	// NOTE: we put valid_reg in stage 3 to support DEL operation
-	//apply(calculate_origin_hash_tbl); // Move hash partition to egress pipeline
+	// Stage 1
 	apply(access_valid_tbl); 
-	apply(access_dirty_tbl); // we need dirty to decide whether to evict when cache update
+	apply(access_vote_tbl);
+	apply(assign_seq_tbl);
+	apply(update_iskeymatch_tbl);
+
+	// Stage 2
 	apply(access_savedseq_tbl);
+	apply(access_lock_tbl);
 
 	// Start from stage 4 (after keys and savedseq)
 	// NOTE: we just get/put val directly; we decide whether to put the original val in getres or 
@@ -158,7 +137,6 @@ control ingress {
 	apply(update_valhi16_tbl);*/
 
 	// Stage 8 (after keys and valid)
-	apply(access_vote_tbl);
 	apply(access_case1_tbl); // Case 1 of backup: first matched PUT/DEL of this bucket
 	apply(access_case2_tbl); // Case 2 of backup: first eviction of this bucket
 
@@ -184,9 +162,6 @@ control ingress {
 	// it means that valid is 0, or valid is 1 yet key does not match.
 	// So we do not need to compare whether key matches for the following
 	// tables.
-
-	// Merged into try_res_tbl to reduce stages
-	//apply(access_lock_tbl); // rely on vote
 
 	// Stage 10 (trigger cache update)
 	// Access case3_reg; convert GETREQ -> GETREQ_S; PUTREQ -> PUTREQ_U

@@ -1,5 +1,5 @@
 register vote_reg {
-	width: 16;
+	width: 32;
 	instance_count: KV_BUCKET_COUNT;
 }
 
@@ -10,8 +10,7 @@ blackbox stateful_alu increase_vote_alu {
 }
 
 action increase_vote() {
-	increase_vote_alu.execute_stateful_alu(meta.hashidx);
-	modify_field(meta.isevict, 1);
+	increase_vote_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu decrease_vote_alu {
@@ -25,11 +24,11 @@ blackbox stateful_alu decrease_vote_alu {
 	update_lo_2_value: register_lo - 1; // not need eviction
 
 	output_value: predicate;
-	output_dst: meta.isevict; // 2 for eviction; 1 for no eviction
+	output_dst: meta.zerovote; // 2 for eviction; 1 for no eviction
 }
 
 action decrease_vote() {
-	decrease_vote_alu.execute_stateful_alu(meta.hashidx);
+	decrease_vote_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu reset_vote_alu {
@@ -39,7 +38,7 @@ blackbox stateful_alu reset_vote_alu {
 }
 
 action reset_vote() {
-	reset_vote_alu.execute_stateful_alu(meta.hashidx);
+	reset_vote_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu init_vote_alu {
@@ -49,22 +48,16 @@ blackbox stateful_alu init_vote_alu {
 }
 
 action init_vote() {
-	init_vote_alu.execute_stateful_alu(meta.hashidx);
+	init_vote_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-@pragma stage 8
 table access_vote_tbl {
 	reads {
-		meta.isvalid: exact;
 		op_hdr.optype: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 	}
 	actions {
 		increase_vote;

@@ -28,7 +28,7 @@ import sys
 import time
 import unittest
 
-from netbuffer.p4_pd_rpc.ttypes import *
+from netbufferv3.p4_pd_rpc.ttypes import *
 from pltfm_pm_rpc.ttypes import *
 from mirror_pd_rpc.ttypes import *
 from pal_rpc.ttypes import *
@@ -95,7 +95,7 @@ GETRES_S_CASE2_TYPE = 0x22
 PUTREQ_RU_CASE2_TYPE = 0x23
 
 valid_list = [0, 1]
-dirty_list = [0, 1]
+keymatch_list = [0, 1]
 lock_list = [0, 1]
 predicate_list = [1, 2]
 backup_list = [0, 1]
@@ -155,55 +155,45 @@ def mirror_session(mir_type, mir_dir, sid, egr_port=0, egr_port_v=False,
 class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
-        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbuffer"])
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv3"])
 
     def configure_update_val_tbl(self, valname):
         # 1028
         for canput in predicate_list:
-            for tmpoptype in [GETREQ_TYPE, DELREQ_TYPE]:
-                matchspec0 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(
-                        op_hdr_optype=tmpoptype, 
-                        meta_canput=canput,
-                        meta_ismatch_keylololo=2, 
-                        meta_ismatch_keylolohi=2,
-                        meta_ismatch_keylohilo=2, 
-                        meta_ismatch_keylohihi=2,
-                        meta_ismatch_keyhilolo=2, 
-                        meta_ismatch_keyhilohi=2,
-                        meta_ismatch_keyhihilo=2,
-                        meta_ismatch_keyhihihi=2)
+            matchspec0 = eval("netbufferv3_update_val{}_tbl_match_spec_t".format(valname))(
+                    op_hdr_optype=GETREQ_TYPE,
+                    meta_canput=canput,
+                    meta_iskeymatch=1)
+            eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+        for tmpoptype in [PUTREQ_TYPE, DELREQ_TYPE]:
+            matchspec1 = eval("netbufferv3_update_val{}_tbl_match_spec_t".format(valname))(
+                    op_hdr_optype=tmpoptype, 
+                    meta_canput=2,
+                    meta_iskeymatch=1)
+            if tmpoptype == PUTREQ_TYPE:
+                eval("self.client.update_val{}_tbl_table_add_with_put_val{}".format(valname, valname))(\
+                        self.sess_hdl, self.dev_tgt, matchspec1)
+            else: # DELREQ gets value for CASE1
                 eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-        matchspec1 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(
-                op_hdr_optype=PUTREQ_TYPE, 
-                meta_canput=2,
-                meta_ismatch_keylololo=2, 
-                meta_ismatch_keylolohi=2,
-                meta_ismatch_keylohilo=2, 
-                meta_ismatch_keylohihi=2,
-                meta_ismatch_keyhilolo=2, 
-                meta_ismatch_keyhilohi=2,
-                meta_ismatch_keyhihilo=2,
-                meta_ismatch_keyhihihi=2)
-        eval("self.client.update_val{}_tbl_table_add_with_put_val{}".format(valname, valname))(\
-                self.sess_hdl, self.dev_tgt, matchspec1)
-        for ismatch_keylololo in predicate_list:
-            for ismatch_keylolohi in predicate_list:
-                for ismatch_keylohilo in predicate_list:
-                    for ismatch_keylohihi in predicate_list:
+                        self.sess_hdl, self.dev_tgt, matchspec1)
+        for ismatch_keylolo in predicate_list:
+            for ismatch_keylohi in predicate_list:
+                for ismatch_keyhilo in predicate_list:
+                    for ismatch_keyhihi in predicate_list:
                         for ismatch_keyhilolo in predicate_list:
                             for ismatch_keyhilohi in predicate_list:
                                 for ismatch_keyhihilo in predicate_list:
                                     for ismatch_keyhihihi in predicate_list:
                                         for canput in predicate_list:
                                             for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
-                                                matchspec0 = eval("netbuffer_update_val{}_tbl_match_spec_t".format(valname))(\
+                                                matchspec0 = eval("netbufferv3_update_val{}_tbl_match_spec_t".format(valname))(\
                                                         op_hdr_optype= tmpoptype,
                                                         meta_canput=canput,
-                                                        meta_ismatch_keylololo=ismatch_keylololo, 
-                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                        meta_ismatch_keylolo=ismatch_keylolo, 
+                                                        meta_ismatch_keylohi=ismatch_keylohi, 
+                                                        meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                        meta_ismatch_keyhihi=ismatch_keyhihi, 
                                                         meta_ismatch_keyhilolo=ismatch_keyhilolo,
                                                         meta_ismatch_keyhilohi=ismatch_keyhilohi,
                                                         meta_ismatch_keyhihilo=ismatch_keyhihilo,
@@ -213,11 +203,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
     def configure_access_key_tbl(self, keyname):
         # 5
-        matchspec0 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(\
+        matchspec0 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
                 op_hdr_optype=GETREQ_TYPE)
-        matchspec1 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(\
+        matchspec1 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
                 op_hdr_optype=PUTREQ_TYPE)
-        matchspec2 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(\
+        matchspec2 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
                 op_hdr_optype=DELREQ_TYPE)
         eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
                 self.sess_hdl, self.dev_tgt, matchspec0)
@@ -225,11 +215,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.sess_hdl, self.dev_tgt, matchspec1)
         eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
                 self.sess_hdl, self.dev_tgt, matchspec2)
-        matchspec0 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(\
+        matchspec0 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
                 op_hdr_optype=GETRES_S_TYPE)
         eval("self.client.access_key{}_tbl_table_add_with_modify_key{}".format(keyname, keyname))(\
                 self.sess_hdl, self.dev_tgt, matchspec0)
-        matchspec1 = eval("netbuffer_access_key{}_tbl_match_spec_t".format(keyname))(\
+        matchspec1 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
                 op_hdr_optype=PUTREQ_RU_TYPE)
         eval("self.client.access_key{}_tbl_table_add_with_modify_key{}".format(keyname, keyname))(\
                 self.sess_hdl, self.dev_tgt, matchspec1)
@@ -319,201 +309,231 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #                      True)
             self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
+            # Stage 0
+
+            # Table: access_keylolo_tbl (default: nop; 5)
+            print "Configuring match_keylolo_tbl"
+            self.configure_access_key_tbl("lolo")
+
+            # Table: access_keylohi_tbl (default: nop; 5)
+            print "Configuring match_keylohi_tbl"
+            self.configure_access_key_tbl("lohi")
+
+            # Table: access_keyhilo_tbl (default: nop; 5)
+            print "Configuring match_keyhilo_tbl"
+            self.configure_access_key_tbl("hilo")
+
+            # Table: access_keyhihi_tbl (default: nop; 5)
+            print "Configuring match_keyhihi_tbl"
+            self.configure_access_key_tbl("hihi")
+
+            # Stage 1
+
+            # Table: access_valid_tbl (default: nop; 1280)
+            print "Configuring access_valid_tbl"
+            for ismatch_keylolo in predicate_list:
+                for ismatch_keylohi in predicate_list:
+                    for ismatch_keyhilo in predicate_list:
+                        for ismatch_keyhihi in predicate_list:
+                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
+                                matchspec0 = netbufferv3_access_valid_tbl_match_spec_t(
+                                        op_hdr_optype=tmpoptype, 
+                                        meta_ismatch_keylolo=ismatch_keylolo, 
+                                        meta_ismatch_keylohi=ismatch_keylohi, 
+                                        meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                        meta_ismatch_keyhihi=ismatch_keyhihi)
+                                if (tmpoptype == DELREQ_TYPE and \
+                                ismatch_keylolo == 2 and ismatch_keylohi == 2 and \
+                                ismatch_keyhilo == 2 and ismatch_keyhihi == 2)
+                                    self.client.access_valid_tbl_table_add_with_clear_valid(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                else: 
+                                    self.client.access_valid_tbl_table_add_with_get_valid(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                            # NOTE: GETRES_S/PUTREQ_U_S triggers modify_key which does not set ismatch_key but set origin_key
+                            for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
+                                matchspec0 = netbufferv3_access_valid_tbl_match_spec_t(
+                                        op_hdr_optype=tmpoptype, 
+                                        meta_ismatch_keylolo=ismatch_keylolo, 
+                                        meta_ismatch_keylohi=ismatch_keylohi, 
+                                        meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                        meta_ismatch_keyhihi=ismatch_keyhihi, 
+                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                self.client.access_valid_tbl_table_add_with_set_valid(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: access_vote_tbl (default: nop; 2049)
+            print "Configuring access_vote_tbl"
+            # GETREQ and PUTREQ
+            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
+                matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
+                        meta_isvalid=1,
+                        op_hdr_optype=tmpoptype, 
+                        meta_ismatch_keylolo=2, 
+                        meta_ismatch_keylohi=2, 
+                        meta_ismatch_keyhilo=2, 
+                        meta_ismatch_keyhihi=2)
+                self.client.access_vote_tbl_table_add_with_increase_vote(
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+            for ismatch_keylolo in predicate_list:
+                for ismatch_keylohi in predicate_list:
+                    for ismatch_keyhilo in predicate_list:
+                        for ismatch_keyhihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+                                            if (ismatch_keylolo == 2 and ismatch_keylohi == 2 and \
+                                            ismatch_keyhilo == 2 and ismatch_keyhihi == 2 and \
+                                            ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
+                                            ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
+                                                continue
+                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
+                                                matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
+                                                        meta_isvalid=1,
+                                                        op_hdr_optype=tmpoptype, 
+                                                        meta_ismatch_keylolo=ismatch_keylolo, 
+                                                        meta_ismatch_keylohi=ismatch_keylohi, 
+                                                        meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                        meta_ismatch_keyhihi=ismatch_keyhihi, 
+                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                                self.client.access_vote_tbl_table_add_with_decrease_vote(
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+            for ismatch_keylolo in predicate_list:
+                for ismatch_keylohi in predicate_list:
+                    for ismatch_keyhilo in predicate_list:
+                        for ismatch_keyhihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
+                                                matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
+                                                        meta_isvalid=0,
+                                                        op_hdr_optype=tmpoptype, 
+                                                        meta_ismatch_keylolo=ismatch_keylolo, 
+                                                        meta_ismatch_keylohi=ismatch_keylohi, 
+                                                        meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                        meta_ismatch_keyhihi=ismatch_keyhihi, 
+                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                                self.client.access_vote_tbl_table_add_with_decrease_vote(
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+            # DELREQ (set vote as 0)
+            matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
+                    meta_isvalid=1,
+                    op_hdr_optype=DELREQ_TYPE, 
+                    meta_ismatch_keylolo=2, 
+                    meta_ismatch_keylohi=2, 
+                    meta_ismatch_keyhilo=2, 
+                    meta_ismatch_keyhihi=2, 
+                    meta_ismatch_keyhilolo=2,
+                    meta_ismatch_keyhilohi=2,
+                    meta_ismatch_keyhihilo=2,
+                    meta_ismatch_keyhihihi=2)
+            self.client.access_vote_tbl_table_add_with_reset_vote(
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            # Cache update: GETRES_S and PUTREQ_RU (set vote as 1) (GETRES_NS: keep original vote)
+            for ismatch_keylolo in predicate_list:
+                for ismatch_keylohi in predicate_list:
+                    for ismatch_keyhilo in predicate_list:
+                        for ismatch_keyhihi in predicate_list:
+                            for ismatch_keyhilolo in predicate_list:
+                                for ismatch_keyhilohi in predicate_list:
+                                    for ismatch_keyhihilo in predicate_list:
+                                        for ismatch_keyhihihi in predicate_list:
+                                            for isvalid in valid_list:
+                                                for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
+                                                    matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
+                                                            meta_isvalid=isvalid,
+                                                            op_hdr_optype=tmpoptype, 
+                                                            meta_ismatch_keylolo=ismatch_keylolo, 
+                                                            meta_ismatch_keylohi=ismatch_keylohi, 
+                                                            meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                            meta_ismatch_keyhihi=ismatch_keyhihi, 
+                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                                                    self.client.access_vote_tbl_table_add_with_init_vote(
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+
+
             # Table assign_seq_tbl (default: nop; 1)
             print "Configuring assign_seq_tbl"
-            matchspec0 = netbuffer_assign_seq_tbl_match_spec_t(\
+            matchspec0 = netbufferv3_assign_seq_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_TYPE, 
                     seq_hdr_is_assigned = 0,
                     ig_intr_md_resubmit_flag = 0)
             self.client.assign_seq_tbl_table_add_with_assign_seq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_keylololo_tbl (default: nop; 5)
-            print "Configuring match_keylololo_tbl"
-            self.configure_access_key_tbl("lololo")
+            # Table update_iskeymatch_tbl (default: update_iskeymatch(0); 1)
+            print "Configuring update_iskeymatch_tbl"
+            matchspec0 = netbufferv3_update_iskeymatch_tbl_match_spec_t(\
+                    meta_ismatch_keylolo=2,
+                    meta_ismatch_keylohi=2,
+                    meta_ismatch_keyhilo=2,
+                    meta_ismatch_keyhihi=2)
+            actnspec0 = netbufferv3_update_iskeymatch_action_spec_t(1)
+            self.client.update_iskeymatch_tbl_table_add_with_update_iskeymatch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-            # Table: access_keylolohi_tbl (default: nop)
-            print "Configuring match_keylolohi_tbl"
-            self.configure_access_key_tbl("lolohi")
-
-            # Table: access_keylohilo_tbl (default: nop)
-            print "Configuring match_keylohilo_tbl"
-            self.configure_access_key_tbl("lohilo")
-
-            # Table: access_keylohihi_tbl (default: nop)
-            print "Configuring match_keylohihi_tbl"
-            self.configure_access_key_tbl("lohihi")
-
-            # Table: access_keyhilolo_tbl (default: nop)
-            print "Configuring match_keyhilolo_tbl"
-            self.configure_access_key_tbl("hilolo")
-
-            # Table: access_keyhilohi_tbl (default: nop)
-            print "Configuring match_keyhilohi_tbl"
-            self.configure_access_key_tbl("hilohi")
-
-            # Table: access_keyhihilo_tbl (default: nop)
-            print "Configuring match_keyhihilo_tbl"
-            self.configure_access_key_tbl("hihilo")
-
-            # Table: access_keyhihihi_tbl (default: nop)
-            print "Configuring match_keyhihihi_tbl"
-            self.configure_access_key_tbl("hihihi")
-
-            # Table: access_valid_tbl (default: nop; 1280)
-            print "Configuring access_valid_tbl"
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
-                                                matchspec0 = netbuffer_access_valid_tbl_match_spec_t(
-                                                        op_hdr_optype=tmpoptype, 
-                                                        meta_ismatch_keylololo=ismatch_keylololo, 
-                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                if (tmpoptype == DELREQ_TYPE and \
-                                                ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
-                                                ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
-                                                ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
-                                                ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
-                                                    self.client.access_valid_tbl_table_add_with_clear_valid(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                else: 
-                                                    self.client.access_valid_tbl_table_add_with_get_valid(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
-                                            # NOTE: GETRES_S/PUTREQ_U_S triggers modify_key which does not set ismatch_key but set origin_key
-                                            for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
-                                                matchspec0 = netbuffer_access_valid_tbl_match_spec_t(
-                                                        op_hdr_optype=tmpoptype, 
-                                                        meta_ismatch_keylololo=ismatch_keylololo, 
-                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                self.client.access_valid_tbl_table_add_with_set_valid(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: access_dirty_tbl (default: nop; 1280)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(\
-                                                    op_hdr_optype=GETRES_S_TYPE,
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_dirty_tbl_table_add_with_clear_dirty(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                                            matchspec1 = netbuffer_access_dirty_tbl_match_spec_t(\
-                                                    op_hdr_optype=PUTREQ_RU_TYPE,
-                                                    meta_ismatch_keylololo=ismatch_keylololo, 
-                                                    meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                    meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                    meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                    meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                    meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                    meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                    meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                            self.client.access_dirty_tbl_table_add_with_set_dirty(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec1)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]: # DELREQ reads dirty for DELREQ_CASE1
-                                                matchspec0 = netbuffer_access_dirty_tbl_match_spec_t(\
-                                                        op_hdr_optype=tmpoptype,
-                                                        meta_ismatch_keylololo=ismatch_keylololo, 
-                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                if (tmpoptype == PUTREQ_TYPE and \
-                                                ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
-                                                ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
-                                                ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
-                                                ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
-                                                    self.client.access_dirty_tbl_table_add_with_set_dirty(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                else:
-                                                    self.client.access_dirty_tbl_table_add_with_get_dirty(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+            # Stage 2
 
             # Table: access_savedseq_tbl (default: nop; 1026)
             print "Configuring access_savedseq_tbl"
-            matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
+            matchspec0 = netbufferv3_access_savedseq_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_TYPE,
                     seq_hdr_is_assigned = 1,
-		    meta_ismatch_keylololo=2, 
-		    meta_ismatch_keylolohi=2, 
-		    meta_ismatch_keylohilo=2, 
-		    meta_ismatch_keylohihi=2, 
+		    meta_ismatch_keylolo=2, 
+		    meta_ismatch_keylohi=2, 
+		    meta_ismatch_keyhilo=2, 
+		    meta_ismatch_keyhihi=2, 
 		    meta_ismatch_keyhilolo=2,
 		    meta_ismatch_keyhilohi=2,
 		    meta_ismatch_keyhihilo=2,
 		    meta_ismatch_keyhihihi=2)
             self.client.access_savedseq_tbl_table_add_with_try_update_savedseq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
+            matchspec0 = netbufferv3_access_savedseq_tbl_match_spec_t(\
                     op_hdr_optype = DELREQ_TYPE,
                     seq_hdr_is_assigned = 0,
-		    meta_ismatch_keylololo=2, 
-		    meta_ismatch_keylolohi=2, 
-		    meta_ismatch_keylohilo=2, 
-		    meta_ismatch_keylohihi=2, 
+		    meta_ismatch_keylolo=2, 
+		    meta_ismatch_keylohi=2, 
+		    meta_ismatch_keyhilo=2, 
+		    meta_ismatch_keyhihi=2, 
 		    meta_ismatch_keyhilolo=2,
 		    meta_ismatch_keyhilohi=2,
 		    meta_ismatch_keyhihilo=2,
 		    meta_ismatch_keyhihihi=2)
             self.client.access_savedseq_tbl_table_add_with_reset_savedseq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
+            for ismatch_keylolo in predicate_list:
+                for ismatch_keylohi in predicate_list:
+                    for ismatch_keyhilo in predicate_list:
+                        for ismatch_keyhihi in predicate_list:
                             for ismatch_keyhilolo in predicate_list:
                                 for ismatch_keyhilohi in predicate_list:
                                     for ismatch_keyhihilo in predicate_list:
                                         for ismatch_keyhihihi in predicate_list:
                                             for isassigned in [0, 1]:
                                                 for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
-                                                    matchspec0 = netbuffer_access_savedseq_tbl_match_spec_t(\
+                                                    matchspec0 = netbufferv3_access_savedseq_tbl_match_spec_t(\
                                                             op_hdr_optype = tmpoptype,
                                                             seq_hdr_is_assigned = isassigned,
-                                                            meta_ismatch_keylololo=ismatch_keylololo, 
-                                                            meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                            meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                            meta_ismatch_keylolo=ismatch_keylolo, 
+                                                            meta_ismatch_keylohi=ismatch_keylohi, 
+                                                            meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                            meta_ismatch_keyhihi=ismatch_keyhihi, 
                                                             meta_ismatch_keyhilolo=ismatch_keyhilolo,
                                                             meta_ismatch_keyhilohi=ismatch_keyhilohi,
                                                             meta_ismatch_keyhihilo=ismatch_keyhihilo,
@@ -521,205 +541,222 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.access_savedseq_tbl_table_add_with_reset_savedseq(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Start from stage 4 (after keys and savedseq)
+            # Table: access_lock_tbl (default: nop; 12)
+            print "Configuring access_lock_tbl"
+            for isvalid in valid_list:
+                for zerovote in predicate_list:
+                    for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
+                        matchspec0 = netbufferv3_access_lock_tbl_match_spec_t(
+                                op_hdr_optype=tmpoptype,
+                                meta_isvalid=isvalid,
+                                meta_zerovote=zerovote)
+                        if isvalid == 0 or zerovote == 2:
+                            self.client.access_lock_tbl_table_add_with_try_lock(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                        else:
+                            self.client.access_lock_tbl_table_add_with_read_lock(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                    matchspec0 = netbufferv3_access_lock_tbl_match_spec_t(
+                            op_hdr_optype=DELREQ_TYPE,
+                            meta_zerovote=zerovote)
+                    self.client.access_lock_tbl_table_add_with_read_lock(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+            for zerovote in predicate_list:
+                for tmpoptype in [GETRES_S_TYPE, GETRES_NS_TYPE, PUTREQ_RU_TYPE]:
+                    matchspec1 = netbufferv3_access_lock_tbl_match_spec_t(
+                            op_hdr_optype=tmpoptype,
+                            meta_zerovote=zerovote)
+                    self.client.access_lock_tbl_table_add_with_clear_lock(\
+                            self.sess_hdl, self.dev_tgt, matchspec1)
+
+            # Start from stage 3
 
             # Table: update_vallen_tbl (default: nop; 2560)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for canput in predicate_list:
-                                                for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]: # DELREQ reads vallen for CASE1
-                                                    matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
-                                                            op_hdr_optype=tmpoptype, 
-                                                            meta_canput=canput,
-                                                            meta_ismatch_keylololo=ismatch_keylololo, 
-                                                            meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                            meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                    if (tmpoptype == PUTREQ_TYPE and canput == 2 and \
-                                                    ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
-                                                    ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
-                                                    ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
-                                                    ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
-                                                        self.client.update_vallen_tbl_table_add_with_put_vallen(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                    else:
-                                                        self.client.update_vallen_tbl_table_add_with_get_vallen(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
-                                                    matchspec0 = netbuffer_update_vallen_tbl_match_spec_t(\
-                                                            op_hdr_optype=tmpoptype, 
-                                                            meta_canput=canput,
-                                                            meta_ismatch_keylololo=ismatch_keylololo, 
-                                                            meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                            meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                    self.client.update_vallen_tbl_table_add_with_put_vallen(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+            for canput in predicate_list:
+                matchspec0 = netbufferv3_update_vallen_tbl_match_spec_t(\
+                        op_hdr_optype=GETREQ_TYPE,
+                        meta_canput=canput,
+                        meta_iskeymatch=1)
+                self.client.update_vallen_tbl_table_add_with_get_vallen(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+            for tmpoptype in [PUTREQ_TYPE, DELREQ_TYPE]:
+                matchspec0 = netbufferv3_update_vallen_tbl_match_spec_t(\
+                        op_hdr_optype=tmpoptype, 
+                        meta_canput=2, # canput means valid=1, iskeymatch=1, and seq>savedseq
+                        meta_iskeymatch=1)
+                if (tmpoptype == PUTREQ_TYPE):
+                    self.client.update_vallen_tbl_table_add_with_put_vallen(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+                else: # DELREQ reads vallen for CASE1
+                    self.client.update_vallen_tbl_table_add_with_get_vallen(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+            for iskeymatch in keymatch_list:
+                for canput in predicate_list:
+                    for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
+                        matchspec0 = netbufferv3_update_vallen_tbl_match_spec_t(\
+                                op_hdr_optype=tmpoptype, 
+                                meta_canput=canput,
+                                meta_ismatch_keylolo=ismatch_keylolo, 
+                                meta_ismatch_keylohi=ismatch_keylohi, 
+                                meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                meta_ismatch_keyhihi=ismatch_keyhihi, 
+                                meta_ismatch_keyhilolo=ismatch_keyhilolo,
+                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
+                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
+                                meta_ismatch_keyhihihi=ismatch_keyhihihi)
+                        self.client.update_vallen_tbl_table_add_with_put_vallen(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: update_vallo1_tbl (default: nop; 1028)
             print "Configuring update_vallo1_tbl"
             self.configure_update_val_tbl("lo1")
 
             #print "Configuring update_vallo2_tbl"
-            #matchspec0 = netbuffer_update_vallo2_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo2_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo2_tbl_table_add_with_put_vallo2(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo2_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo2_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo2_tbl_table_add_with_get_vallo2(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo3_tbl"
-            #matchspec0 = netbuffer_update_vallo3_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo3_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo3_tbl_table_add_with_put_vallo3(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo3_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo3_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo3_tbl_table_add_with_get_vallo3(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo4_tbl"
-            #matchspec0 = netbuffer_update_vallo4_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo4_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo4_tbl_table_add_with_put_vallo4(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo4_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo4_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo4_tbl_table_add_with_get_vallo4(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo5_tbl"
-            #matchspec0 = netbuffer_update_vallo5_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo5_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo5_tbl_table_add_with_put_vallo5(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo5_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo5_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo5_tbl_table_add_with_get_vallo5(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo6_tbl"
-            #matchspec0 = netbuffer_update_vallo6_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo6_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo6_tbl_table_add_with_put_vallo6(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo6_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo6_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo6_tbl_table_add_with_get_vallo6(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo7_tbl"
-            #matchspec0 = netbuffer_update_vallo7_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo7_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo7_tbl_table_add_with_put_vallo7(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo7_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo7_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo7_tbl_table_add_with_get_vallo7(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo8_tbl"
-            #matchspec0 = netbuffer_update_vallo8_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo8_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo8_tbl_table_add_with_put_vallo8(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo8_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo8_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo8_tbl_table_add_with_get_vallo8(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo9_tbl"
-            #matchspec0 = netbuffer_update_vallo9_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo9_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo9_tbl_table_add_with_put_vallo9(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo9_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo9_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo9_tbl_table_add_with_get_vallo9(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo10_tbl"
-            #matchspec0 = netbuffer_update_vallo10_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo10_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo10_tbl_table_add_with_put_vallo10(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo10_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo10_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo10_tbl_table_add_with_get_vallo10(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo11_tbl"
-            #matchspec0 = netbuffer_update_vallo11_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo11_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo11_tbl_table_add_with_put_vallo11(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo11_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo11_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo11_tbl_table_add_with_get_vallo11(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo12_tbl"
-            #matchspec0 = netbuffer_update_vallo12_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo12_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo12_tbl_table_add_with_put_vallo12(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo12_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo12_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo12_tbl_table_add_with_get_vallo12(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo13_tbl"
-            #matchspec0 = netbuffer_update_vallo13_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo13_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo13_tbl_table_add_with_put_vallo13(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo13_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo13_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo13_tbl_table_add_with_get_vallo13(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo14_tbl"
-            #matchspec0 = netbuffer_update_vallo14_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo14_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo14_tbl_table_add_with_put_vallo14(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo14_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo14_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo14_tbl_table_add_with_get_vallo14(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo15_tbl"
-            #matchspec0 = netbuffer_update_vallo15_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo15_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo15_tbl_table_add_with_put_vallo15(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo15_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo15_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo15_tbl_table_add_with_get_vallo15(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_vallo16_tbl"
-            #matchspec0 = netbuffer_update_vallo16_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_vallo16_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_vallo16_tbl_table_add_with_put_vallo8(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_vallo16_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_vallo16_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_vallo16_tbl_table_add_with_get_vallo8(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
@@ -729,268 +766,163 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("hi1")
 
             #print "Configuring update_valhi2_tbl"
-            #matchspec0 = netbuffer_update_valhi2_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi2_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi2_tbl_table_add_with_put_valhi2(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi2_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi2_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi2_tbl_table_add_with_get_valhi2(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi3_tbl"
-            #matchspec0 = netbuffer_update_valhi3_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi3_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi3_tbl_table_add_with_put_valhi3(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi3_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi3_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi3_tbl_table_add_with_get_valhi3(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi4_tbl"
-            #matchspec0 = netbuffer_update_valhi4_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi4_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi4_tbl_table_add_with_put_valhi4(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi4_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi4_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi4_tbl_table_add_with_get_valhi4(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi5_tbl"
-            #matchspec0 = netbuffer_update_valhi5_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi5_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi5_tbl_table_add_with_put_valhi5(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi5_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi5_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi5_tbl_table_add_with_get_valhi5(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi6_tbl"
-            #matchspec0 = netbuffer_update_valhi6_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi6_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi6_tbl_table_add_with_put_valhi6(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi6_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi6_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi6_tbl_table_add_with_get_valhi6(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi7_tbl"
-            #matchspec0 = netbuffer_update_valhi7_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi7_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi7_tbl_table_add_with_put_valhi7(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi7_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi7_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi7_tbl_table_add_with_get_valhi7(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi8_tbl"
-            #matchspec0 = netbuffer_update_valhi8_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi8_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi8_tbl_table_add_with_put_valhi8(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi8_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi8_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi8_tbl_table_add_with_get_valhi8(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi9_tbl"
-            #matchspec0 = netbuffer_update_valhi9_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi9_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi9_tbl_table_add_with_put_valhi9(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi9_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi9_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi9_tbl_table_add_with_get_valhi9(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi10_tbl"
-            #matchspec0 = netbuffer_update_valhi10_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi10_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi10_tbl_table_add_with_put_valhi10(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi10_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi10_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi10_tbl_table_add_with_get_valhi10(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi11_tbl"
-            #matchspec0 = netbuffer_update_valhi11_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi11_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi11_tbl_table_add_with_put_valhi11(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi11_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi11_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi11_tbl_table_add_with_get_valhi11(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi12_tbl"
-            #matchspec0 = netbuffer_update_valhi12_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi12_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi12_tbl_table_add_with_put_valhi12(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi12_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi12_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi12_tbl_table_add_with_get_valhi12(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi13_tbl"
-            #matchspec0 = netbuffer_update_valhi13_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi13_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi13_tbl_table_add_with_put_valhi13(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi13_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi13_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi13_tbl_table_add_with_get_valhi13(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi14_tbl"
-            #matchspec0 = netbuffer_update_valhi14_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi14_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi14_tbl_table_add_with_put_valhi14(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi14_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi14_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi14_tbl_table_add_with_get_valhi14(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi15_tbl"
-            #matchspec0 = netbuffer_update_valhi15_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi15_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi15_tbl_table_add_with_put_valhi15(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi15_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi15_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi15_tbl_table_add_with_get_valhi15(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             #print "Configuring update_valhi16_tbl"
-            #matchspec0 = netbuffer_update_valhi16_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_update_valhi16_tbl_match_spec_t(
             #        op_hdr_optype=PUTREQ_TYPE)
             #self.client.update_valhi16_tbl_table_add_with_put_valhi8(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
-            #matchspec1 = netbuffer_update_valhi16_tbl_match_spec_t(
+            #matchspec1 = netbufferv3_update_valhi16_tbl_match_spec_t(
             #        op_hdr_optype=GETREQ_TYPE)
             #self.client.update_valhi16_tbl_table_add_with_get_valhi8(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
             # Stage 4 + n
 
-            # Table: access_vote_tbl (default: nop; 2049)
-            print "Configuring access_vote_tbl"
-            # GETREQ and PUTREQ
-            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
-                matchspec0 = netbuffer_access_vote_tbl_match_spec_t(
-                        meta_isvalid=1,
-                        op_hdr_optype=tmpoptype, 
-                        meta_ismatch_keylololo=2, 
-                        meta_ismatch_keylolohi=2, 
-                        meta_ismatch_keylohilo=2, 
-                        meta_ismatch_keylohihi=2, 
-                        meta_ismatch_keyhilolo=2,
-                        meta_ismatch_keyhilohi=2,
-                        meta_ismatch_keyhihilo=2,
-                        meta_ismatch_keyhihihi=2)
-                self.client.access_vote_tbl_table_add_with_increase_vote(
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
-                                            ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
-                                            ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
-                                            ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2):
-                                                continue
-                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
-                                                matchspec0 = netbuffer_access_vote_tbl_match_spec_t(
-                                                        meta_isvalid=1,
-                                                        op_hdr_optype=tmpoptype, 
-                                                        meta_ismatch_keylololo=ismatch_keylololo, 
-                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                self.client.access_vote_tbl_table_add_with_decrease_vote(
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
-                                                matchspec0 = netbuffer_access_vote_tbl_match_spec_t(
-                                                        meta_isvalid=0,
-                                                        op_hdr_optype=tmpoptype, 
-                                                        meta_ismatch_keylololo=ismatch_keylololo, 
-                                                        meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                        meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                        meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                        meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                        meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                        meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                        meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                self.client.access_vote_tbl_table_add_with_decrease_vote(
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-            # DELREQ (set vote as 0)
-            matchspec0 = netbuffer_access_vote_tbl_match_spec_t(
-                    meta_isvalid=1,
-                    op_hdr_optype=DELREQ_TYPE, 
-                    meta_ismatch_keylololo=2, 
-                    meta_ismatch_keylolohi=2, 
-                    meta_ismatch_keylohilo=2, 
-                    meta_ismatch_keylohihi=2, 
-                    meta_ismatch_keyhilolo=2,
-                    meta_ismatch_keyhilohi=2,
-                    meta_ismatch_keyhihilo=2,
-                    meta_ismatch_keyhihihi=2)
-            self.client.access_vote_tbl_table_add_with_reset_vote(
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            # Cache update: GETRES_S and PUTREQ_RU (set vote as 1) (GETRES_NS: keep original vote)
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for isvalid in valid_list:
-                                                for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
-                                                    matchspec0 = netbuffer_access_vote_tbl_match_spec_t(
-                                                            meta_isvalid=isvalid,
-                                                            op_hdr_optype=tmpoptype, 
-                                                            meta_ismatch_keylololo=ismatch_keylololo, 
-                                                            meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                            meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                            meta_ismatch_keylohihi=ismatch_keylohihi, 
-                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                    self.client.access_vote_tbl_table_add_with_init_vote(
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
-
             # Table: access_case1_tbl (default: nop; 2048)
             print "Configuring access_case1_tbl"
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
+            for ismatch_keylolo in predicate_list:
+                for ismatch_keylohi in predicate_list:
+                    for ismatch_keyhilo in predicate_list:
+                        for ismatch_keyhihi in predicate_list:
                             for ismatch_keyhilolo in predicate_list:
                                 for ismatch_keyhilohi in predicate_list:
                                     for ismatch_keyhihilo in predicate_list:
@@ -998,20 +930,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             for isvalid in valid_list:
                                                 for isbackup in backup_list:
                                                     for tmpoptype in [PUTREQ_TYPE, DELREQ_TYPE]:
-                                                        matchspec0 = netbuffer_access_case1_tbl_match_spec_t(
+                                                        matchspec0 = netbufferv3_access_case1_tbl_match_spec_t(
                                                                 op_hdr_optype=tmpoptype, 
                                                                 meta_isvalid = isvalid,
-                                                                meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                meta_ismatch_keylolohi=ismatch_keylolohi, 
-                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                meta_ismatch_keylohihi=ismatch_keylohihi, 
+                                                                meta_ismatch_keylolo=ismatch_keylolo, 
+                                                                meta_ismatch_keylohi=ismatch_keylohi, 
+                                                                meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                                meta_ismatch_keyhihi=ismatch_keyhihi, 
                                                                 meta_ismatch_keyhilolo=ismatch_keyhilolo,
                                                                 meta_ismatch_keyhilohi=ismatch_keyhilohi,
                                                                 meta_ismatch_keyhihilo=ismatch_keyhihilo,
                                                                 meta_ismatch_keyhihihi=ismatch_keyhihihi,
                                                                 meta_isbackup=isbackup)
-                                                        if (ismatch_keylololo == 2 and ismatch_keylolohi == 2 and \
-                                                        ismatch_keylohilo == 2 and ismatch_keylohihi == 2 and \
+                                                        if (ismatch_keylolo == 2 and ismatch_keylohi == 2 and \
+                                                        ismatch_keyhilo == 2 and ismatch_keyhihi == 2 and \
                                                         ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
                                                         ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2 and \
                                                         isvalid == 1 and isbackup == 1):
@@ -1025,7 +957,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring access_case2_tbl"
             for isbackup in backup_list:
                 for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
-                    matchspec0 = netbuffer_access_case2_tbl_match_spec_t(\
+                    matchspec0 = netbufferv3_access_case2_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
                             meta_isbackup=isbackup)
                     if isbackup == 1:
@@ -1037,10 +969,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: try_res_tbl (default: nop; 26624)
             print "Configuring try_res_tbl (merged with access_lock_tbl)"
-            for ismatch_keylololo in predicate_list:
-                for ismatch_keylolohi in predicate_list:
-                    for ismatch_keylohilo in predicate_list:
-                        for ismatch_keylohihi in predicate_list:
+            for ismatch_keylolo in predicate_list:
+                for ismatch_keylohi in predicate_list:
+                    for ismatch_keyhilo in predicate_list:
+                        for ismatch_keyhihi in predicate_list:
                             for ismatch_keyhilolo in predicate_list:
                                 for ismatch_keyhilohi in predicate_list:
                                     for ismatch_keyhihilo in predicate_list:
@@ -1050,15 +982,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     for iscase1 in case1_list:
                                                         for iscase2 in case2_list:
                                                             for isdirty in dirty_list:
-                                                                for isevict in predicate_list:
+                                                                for zerovote in predicate_list:
                                                                     if iscase1 == 0 and iscase2 == 0:
-                                                                        matchspec0 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                        matchspec0 = netbufferv3_try_res_tbl_match_spec_t(\
                                                                                 op_hdr_optype=GETREQ_TYPE,
                                                                                 meta_isvalid=isvalid,
-                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keylolo=ismatch_keylolo, 
+                                                                                meta_ismatch_keylohi=ismatch_keylohi,
+                                                                                meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                                                meta_ismatch_keyhihi=ismatch_keyhihi,
                                                                                 meta_ismatch_keyhilolo=ismatch_keyhilolo, 
                                                                                 meta_ismatch_keyhilohi=ismatch_keyhilohi,
                                                                                 meta_ismatch_keyhihilo=ismatch_keyhihilo,
@@ -1067,28 +999,28 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
                                                                                 meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
                                                                                 meta_isdirty = isdirty,
-                                                                                meta_isevict = isevict)
-                                                                        if isvalid == 1 and ismatch_keylololo == 2 and ismatch_keylolohi == 2\
-                                                                                and ismatch_keylohilo == 2 and ismatch_keylohihi == 2\
+                                                                                meta_zerovote = zerovote)
+                                                                        if isvalid == 1 and ismatch_keylolo == 2 and ismatch_keylohi == 2\
+                                                                                and ismatch_keyhilo == 2 and ismatch_keyhihi == 2\
                                                                                 and ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2\
                                                                                 and ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2:
                                                                             self.client.try_res_tbl_table_add_with_update_getreq_to_getres(\
                                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                                         else:
-                                                                            if isevict == 2:
+                                                                            if zerovote == 2:
                                                                                 self.client.try_res_tbl_table_add_with_try_lock(\
                                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                                                             else:
                                                                                 self.client.try_res_tbl_table_add_with_read_lock(\
                                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    if iscase2 == 0 and isevict == 1:
-                                                                        matchspec2 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                    if iscase2 == 0 and zerovote == 1:
+                                                                        matchspec2 = netbufferv3_try_res_tbl_match_spec_t(\
                                                                                 op_hdr_optype=DELREQ_TYPE,
                                                                                 meta_isvalid=isvalid,
-                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keylolo=ismatch_keylolo, 
+                                                                                meta_ismatch_keylohi=ismatch_keylohi,
+                                                                                meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                                                meta_ismatch_keyhihi=ismatch_keyhihi,
                                                                                 meta_ismatch_keyhilolo=ismatch_keyhilolo, 
                                                                                 meta_ismatch_keyhilohi=ismatch_keyhilohi,
                                                                                 meta_ismatch_keyhihilo=ismatch_keyhihilo,
@@ -1097,29 +1029,29 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 meta_iscase1 = iscase1,
                                                                                 meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
                                                                                 meta_isdirty = isdirty,
-                                                                                meta_isevict = 1) # DELREQ can only reset_vote which does not change isevict
-                                                                        if isvalid == 1 and ismatch_keylololo == 2 and ismatch_keylolohi == 2\
-                                                                                and ismatch_keylohilo == 2 and ismatch_keylohihi == 2\
+                                                                                meta_zerovote = 1) # DELREQ can only reset_vote which does not change zerovote
+                                                                        if isvalid == 1 and ismatch_keylolo == 2 and ismatch_keylohi == 2\
+                                                                                and ismatch_keyhilo == 2 and ismatch_keyhihi == 2\
                                                                                 and ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2\
                                                                                 and ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2:
                                                                             if isbackup == 1 and iscase1 == 0:
                                                                                 self.client.try_res_tbl_table_add_with_update_delreq_to_case1(\
                                                                                         self.sess_hdl, self.dev_tgt, matchspec2)
                                                                             else:
-                                                                                actnspec2 = netbuffer_update_delreq_to_s_and_clone_action_spec_t(sids[0]) # Clone for DELRES to client
+                                                                                actnspec2 = netbufferv3_update_delreq_to_s_and_clone_action_spec_t(sids[0]) # Clone for DELRES to client
                                                                                 self.client.try_res_tbl_table_add_with_update_delreq_to_s_and_clone(\
                                                                                         self.sess_hdl, self.dev_tgt, matchspec2, actnspec2)
                                                                         else:
                                                                             self.client.try_res_tbl_table_add_with_read_lock(\
                                                                                     self.sess_hdl, self.dev_tgt, matchspec2)
                                                                     if iscase2 == 0:
-                                                                        matchspec1 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                        matchspec1 = netbufferv3_try_res_tbl_match_spec_t(\
                                                                                 op_hdr_optype=PUTREQ_TYPE,
                                                                                 meta_isvalid=isvalid,
-                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keylolo=ismatch_keylolo, 
+                                                                                meta_ismatch_keylohi=ismatch_keylohi,
+                                                                                meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                                                meta_ismatch_keyhihi=ismatch_keyhihi,
                                                                                 meta_ismatch_keyhilolo=ismatch_keyhilolo, 
                                                                                 meta_ismatch_keyhilohi=ismatch_keyhilohi,
                                                                                 meta_ismatch_keyhihilo=ismatch_keyhihilo,
@@ -1128,9 +1060,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 meta_iscase1 = iscase1,
                                                                                 meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
                                                                                 meta_isdirty = isdirty,
-                                                                                meta_isevict = isevict)
-                                                                        if isvalid == 1 and ismatch_keylololo == 2 and ismatch_keylolohi == 2\
-                                                                                and ismatch_keylohilo == 2 and ismatch_keylohihi == 2\
+                                                                                meta_zerovote = zerovote)
+                                                                        if isvalid == 1 and ismatch_keylolo == 2 and ismatch_keylohi == 2\
+                                                                                and ismatch_keyhilo == 2 and ismatch_keyhihi == 2\
                                                                                 and ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2\
                                                                                 and ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2:
                                                                             if isbackup == 1 and iscase1 == 0:
@@ -1140,20 +1072,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 self.client.try_res_tbl_table_add_with_update_putreq_to_putres(\
                                                                                         self.sess_hdl, self.dev_tgt, matchspec1)
                                                                         else:
-                                                                            if isevict == 2:
+                                                                            if zerovote == 2:
                                                                                 self.client.try_res_tbl_table_add_with_try_lock(\
                                                                                         self.sess_hdl, self.dev_tgt, matchspec1)
                                                                             else:
                                                                                 self.client.try_res_tbl_table_add_with_read_lock(\
                                                                                         self.sess_hdl, self.dev_tgt, matchspec1)
-                                                                    if iscase1 == 0 and isevict == 1:
-                                                                        matchspec3 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                    if iscase1 == 0 and zerovote == 1:
+                                                                        matchspec3 = netbufferv3_try_res_tbl_match_spec_t(\
                                                                                 op_hdr_optype=GETRES_S_TYPE,
                                                                                 meta_isvalid=isvalid,
-                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keylolo=ismatch_keylolo, 
+                                                                                meta_ismatch_keylohi=ismatch_keylohi,
+                                                                                meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                                                meta_ismatch_keyhihi=ismatch_keyhihi,
                                                                                 meta_ismatch_keyhilolo=ismatch_keyhilolo, 
                                                                                 meta_ismatch_keyhilohi=ismatch_keyhilohi,
                                                                                 meta_ismatch_keyhihilo=ismatch_keyhihilo,
@@ -1162,24 +1094,24 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
                                                                                 meta_iscase2 = iscase2,
                                                                                 meta_isdirty = isdirty,
-                                                                                meta_isevict = 1) # GETRES_S only init_vote which does not change isevict
+                                                                                meta_zerovote = 1) # GETRES_S only init_vote which does not change zerovote
                                                                         if isbackup == 1 and iscase2 == 0:
                                                                             if isvalid == 1 and isdirty == 1:
-                                                                                actnspec3 = netbuffer_update_getres_s_to_case2_clear_lock_action_spec_t(1)
+                                                                                actnspec3 = netbufferv3_update_getres_s_to_case2_clear_lock_action_spec_t(1)
                                                                             else:
-                                                                                actnspec3 = netbuffer_update_getres_s_to_case2_clear_lock_action_spec_t(0)
+                                                                                actnspec3 = netbufferv3_update_getres_s_to_case2_clear_lock_action_spec_t(0)
                                                                             self.client.try_res_tbl_table_add_with_update_getres_s_to_case2_clear_lock(\
                                                                                     self.sess_hdl, self.dev_tgt, matchspec3, actnspec3)
                                                                         else:
                                                                             self.client.try_res_tbl_table_add_with_clear_lock(\
                                                                                     self.sess_hdl, self.dev_tgt, matchspec3)
-                                                                        matchspec4 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                        matchspec4 = netbufferv3_try_res_tbl_match_spec_t(\
                                                                                 op_hdr_optype=PUTREQ_RU_TYPE,
                                                                                 meta_isvalid=isvalid,
-                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keylolo=ismatch_keylolo, 
+                                                                                meta_ismatch_keylohi=ismatch_keylohi,
+                                                                                meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                                                meta_ismatch_keyhihi=ismatch_keyhihi,
                                                                                 meta_ismatch_keyhilolo=ismatch_keyhilolo, 
                                                                                 meta_ismatch_keyhilohi=ismatch_keyhilohi,
                                                                                 meta_ismatch_keyhihilo=ismatch_keyhihilo,
@@ -1188,25 +1120,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
                                                                                 meta_iscase2 = iscase2,
                                                                                 meta_isdirty = isdirty,
-                                                                                meta_isevict = 1) # PUTREQ_RU only init_vote which does not change isevict
+                                                                                meta_zerovote = 1) # PUTREQ_RU only init_vote which does not change zerovote
                                                                         if isbackup == 1 and iscase2 == 0:
                                                                             if isvalid == 1 and isdirty == 1:
-                                                                                actnspec4 = netbuffer_update_putreq_ru_to_case2_clear_lock_action_spec_t(1)
+                                                                                actnspec4 = netbufferv3_update_putreq_ru_to_case2_clear_lock_action_spec_t(1)
                                                                             else:
-                                                                                actnspec4 = netbuffer_update_putreq_ru_to_case2_clear_lock_action_spec_t(0)
+                                                                                actnspec4 = netbufferv3_update_putreq_ru_to_case2_clear_lock_action_spec_t(0)
                                                                             self.client.try_res_tbl_table_add_with_update_putreq_ru_to_case2_clear_lock(\
                                                                                     self.sess_hdl, self.dev_tgt, matchspec4, actnspec4)
                                                                         else:
                                                                             self.client.try_res_tbl_table_add_with_clear_lock(\
                                                                                     self.sess_hdl, self.dev_tgt, matchspec4)
-                                                                    if iscase1 == 0 and iscase2 == 0 and isevict == 1:
-                                                                        matchspec5 = netbuffer_try_res_tbl_match_spec_t(\
+                                                                    if iscase1 == 0 and iscase2 == 0 and zerovote == 1:
+                                                                        matchspec5 = netbufferv3_try_res_tbl_match_spec_t(\
                                                                                 op_hdr_optype=GETRES_NS_TYPE,
                                                                                 meta_isvalid=isvalid,
-                                                                                meta_ismatch_keylololo=ismatch_keylololo, 
-                                                                                meta_ismatch_keylolohi=ismatch_keylolohi,
-                                                                                meta_ismatch_keylohilo=ismatch_keylohilo, 
-                                                                                meta_ismatch_keylohihi=ismatch_keylohihi,
+                                                                                meta_ismatch_keylolo=ismatch_keylolo, 
+                                                                                meta_ismatch_keylohi=ismatch_keylohi,
+                                                                                meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                                                                meta_ismatch_keyhihi=ismatch_keyhihi,
                                                                                 meta_ismatch_keyhilolo=ismatch_keyhilolo, 
                                                                                 meta_ismatch_keyhilohi=ismatch_keyhilohi,
                                                                                 meta_ismatch_keyhihilo=ismatch_keyhihilo,
@@ -1215,113 +1147,82 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                                 meta_iscase1 = 0, # Only PUTREQ and DELREQ will read case1
                                                                                 meta_iscase2 = 0, # Only GETRES_S and PUTREQ_RU will read case2
                                                                                 meta_isdirty = isdirty,
-                                                                                meta_isevict = 1) # GETRES_NS does not touch vote_reg
+                                                                                meta_zerovote = 1) # GETRES_NS does not touch vote_reg
                                                                         self.client.try_res_tbl_table_add_with_clear_lock(\
                                                                                 self.sess_hdl, self.dev_tgt, matchspec5)
 
-            # Table: access_lock_tbl (default: nop; 12)
-            #print "Configuring access_lock_tbl"
-            #for isevict in predicate_list:
-            #    for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
-            #        matchspec0 = netbuffer_access_lock_tbl_match_spec_t(
-            #                op_hdr_optype=tmpoptype,
-            #                meta_isevict=isevict)
-            #        if isevict == 2:
-            #            self.client.access_lock_tbl_table_add_with_try_lock(\
-            #                    self.sess_hdl, self.dev_tgt, matchspec0)
-            #        else:
-            #            self.client.access_lock_tbl_table_add_with_read_lock(\
-            #                    self.sess_hdl, self.dev_tgt, matchspec0)
-            #    matchspec0 = netbuffer_access_lock_tbl_match_spec_t(
-            #            op_hdr_optype=DELREQ_TYPE,
-            #            meta_isevict=isevict)
-            #    self.client.access_lock_tbl_table_add_with_read_lock(\
-            #            self.sess_hdl, self.dev_tgt, matchspec0)
-            #for isevict in predicate_list:
-            #    for tmpoptype in [GETRES_S_TYPE, GETRES_NS_TYPE, PUTREQ_RU_TYPE]:
-            #        matchspec1 = netbuffer_access_lock_tbl_match_spec_t(
-            #                op_hdr_optype=tmpoptype,
-            #                meta_isevict=isevict)
-            #        self.client.access_lock_tbl_table_add_with_clear_lock(\
-            #                self.sess_hdl, self.dev_tgt, matchspec1)
-
-            # Table: trigger_cache_update_tbl (default: read_case3; 26)
-            print "Configuring trigger_cache_update_tbl"
-            for isbackup in backup_list:
-                matchspec0 = netbuffer_trigger_cache_update_tbl_match_spec_t(\
-                        meta_islock=0,
-                        op_hdr_optype=GETREQ_TYPE,
-                        meta_isevict=2,
-                        meta_isbackup=isbackup)
-                self.client.trigger_cache_update_tbl_table_add_with_update_getreq(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-            for isbackup in backup_list:
-                for isevict in predicate_list:
-                    for islock in lock_list:
-                        matchspec1 = netbuffer_trigger_cache_update_tbl_match_spec_t(\
-                                meta_islock=islock,
-                                op_hdr_optype=PUTREQ_TYPE,
-                                meta_isevict=isevict,
-                                meta_isbackup=isbackup)
-                        if islock == 0 and isevict == 2:
-                            self.client.trigger_cache_update_tbl_table_add_with_update_putreq(\
-                                    self.sess_hdl, self.dev_tgt, matchspec1)
-                        elif islock == 0 and isevict == 1 and isbackup == 1:
-                            self.client.trigger_cache_update_tbl_table_add_with_try_case3(\
-                                    self.sess_hdl, self.dev_tgt, matchspec1)
-                        matchspec2 = netbuffer_trigger_cache_update_tbl_match_spec_t(\
-                                meta_islock=islock,
-                                op_hdr_optype=DELREQ_TYPE,
-                                meta_isevict=isevict,
-                                meta_isbackup=isbackup)
-                        if isbackup == 1 and islock == 0:
-                            self.client.trigger_cache_update_tbl_table_add_with_try_case3(\
-                                    self.sess_hdl, self.dev_tgt, matchspec2)
+            # Stage 11
 
             # Table: port_forward_tbl (default: nop; 544)
             print "Configuring port_forward_tbl"
             for isvalid in valid_list:
-                for isdirty in dirty_list:
-                    for islock in lock_list:
-                        for isbackup in backup_list:
-                            for iscase3 in case3_list:
-                                if isvalid == 1 and isdirty == 1:
-                                    matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
-                                            op_hdr_optype = GETRES_S_TYPE,
-                                            meta_isvalid = 1,
-                                            meta_isdirty = 1,
-                                            meta_islock = islock,
-                                            meta_isbackup=isbackup,
-                                            meta_iscase3=iscase3)
-                                    actnspec0 = netbuffer_update_getres_s_to_putreq_gs_and_clone_action_spec_t(\
-                                            sids[0], self.devPorts[1]) # Clone to client port, output to server port
-                                    self.client.port_forward_tbl_table_add_with_update_getres_s_to_putreq_gs_and_clone(\
-                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                else:
-                                    matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
-                                            op_hdr_optype = GETRES_S_TYPE,
-                                            meta_isvalid = isvalid,
-                                            meta_isdirty = isdirty,
-                                            meta_islock = islock,
-                                            meta_isbackup = isbackup,
-                                            meta_iscase3 = iscase3)
-                                    actnspec0 = netbuffer_update_getres_s_to_getres_action_spec_t(\
-                                            self.devPorts[0]) # Output to client port
-                                    self.client.port_forward_tbl_table_add_with_update_getres_s_to_getres(\
-                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                for zerovote in predicate_list:
+                    for iskeymatch in keymatch_list:
+                        for islock in lock_list:
+                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = GETREQ_TYPE,
+                                    meta_isvalid = isvalid,
+                                    meta_zerovote = zerovote,
+                                    meta_iskeymatch = iskeymatch,
+                                    meta_islock = islock)
+                            if islock == 0 and (isvalid == 0 or zerovote == 2):
+                                # Update GETREQ as GETREQ_POP to server 
+                                actnspec0 = netbufferv3_update_getreq_to_getreq_pop_action_spec_t(self.devPorts[1])
+                                self.client.port_forward_tbl_table_add_with_update_getreq_to_getreq_pop(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                            else if isvalid == 1 and iskeymatch == 1:
+                                # Sendback GETRES to client
+                                self.client.port_forward_tbl_table_add_with_update_getreq_to_getres(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            else if islock == 1 and (isvalid == 0 or iskeymatch == 0):
+                                # Use recirculate port 64 + pipe ID of ingress port
+                                actnspec0 = netbufferv3_recirculate_getreq_action_spec_t(self.recirPorts[0]) 
+                                self.client.port_forward_tbl_table_add_with_recirculate_putreq_u(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                            else if islock == 0 and (isvalid == 0 or iskeymatch == 0):
+                                # Forwrad GETREQ to server 
+                                actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
+                                self.client.port_forward_tbl_table_add_with_port_forward(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
+                            # Deprecated
+                            if isvalid == 1 and isdirty == 1:
+                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                        op_hdr_optype = GETRES_S_TYPE,
+                                        meta_isvalid = 1,
+                                        meta_isdirty = 1,
+                                        meta_islock = islock,
+                                        meta_isbackup=isbackup,
+                                        meta_iscase3=iscase3)
+                                actnspec0 = netbufferv3_update_getres_s_to_putreq_gs_and_clone_action_spec_t(\
+                                        sids[0], self.devPorts[1]) # Clone to client port, output to server port
+                                self.client.port_forward_tbl_table_add_with_update_getres_s_to_putreq_gs_and_clone(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                            else:
+                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                        op_hdr_optype = GETRES_S_TYPE,
+                                        meta_isvalid = isvalid,
+                                        meta_isdirty = isdirty,
+                                        meta_islock = islock,
+                                        meta_isbackup = isbackup,
+                                        meta_iscase3 = iscase3)
+                                actnspec0 = netbufferv3_update_getres_s_to_getres_action_spec_t(\
+                                        self.devPorts[0]) # Output to client port
+                                self.client.port_forward_tbl_table_add_with_update_getres_s_to_getres(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for isvalid in valid_list:
                 for isdirty in dirty_list:
                     for islock in lock_list:
                         for isbackup in backup_list:
                             for iscase3 in case3_list:
-                                matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                         op_hdr_optype = GETRES_NS_TYPE,
                                         meta_isvalid = isvalid,
                                         meta_isdirty = isdirty,
                                         meta_islock = islock,
                                         meta_isbackup = isbackup,
                                         meta_iscase3 = iscase3)
-                                actnspec0 = netbuffer_update_getres_ns_to_getres_action_spec_t(\
+                                actnspec0 = netbufferv3_update_getres_ns_to_getres_action_spec_t(\
                                         self.devPorts[0]) # Output to client port
                                 self.client.port_forward_tbl_table_add_with_update_getres_ns_to_getres(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1330,14 +1231,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     for islock in lock_list:
                         for isbackup in backup_list:
                             for iscase3 in case3_list:
-                                matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                         op_hdr_optype = PUTREQ_U_TYPE,
                                         meta_isvalid = isvalid,
                                         meta_isdirty = isdirty,
                                         meta_islock = islock,
                                         meta_isbackup = isbackup,
                                         meta_iscase3 = iscase3)
-                                actnspec0 = netbuffer_recirculate_putreq_u_action_spec_t(\
+                                actnspec0 = netbufferv3_recirculate_putreq_u_action_spec_t(\
                                         self.recirPorts[0]) # Use recirculate port 64 + pipe ID of ingress port
                                 self.client.port_forward_tbl_table_add_with_recirculate_putreq_u(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1347,26 +1248,26 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         for isbackup in backup_list:
                             for iscase3 in case3_list:
                                 if isvalid == 1 and isdirty == 1:
-                                    matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                    matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                             op_hdr_optype = PUTREQ_RU_TYPE,
                                             meta_isvalid = 1,
                                             meta_isdirty = 1,
                                             meta_islock = islock,
                                             meta_isbackup = isbackup,
                                             meta_iscase3 = iscase3)
-                                    actnspec0 = netbuffer_update_putreq_ru_to_ps_and_clone_action_spec_t(\
+                                    actnspec0 = netbufferv3_update_putreq_ru_to_ps_and_clone_action_spec_t(\
                                             sids[0], self.devPorts[1]) # Clone to client, forward to server
                                     self.client.port_forward_tbl_table_add_with_update_putreq_ru_to_ps_and_clone(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                 else:
-                                    matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                    matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                             op_hdr_optype = PUTREQ_RU_TYPE,
                                             meta_isvalid = isvalid,
                                             meta_isdirty = isdirty,
                                             meta_islock = islock,
                                             meta_isbackup = isbackup,
                                             meta_iscase3 = iscase3)
-                                    actnspec0 = netbuffer_update_putreq_ru_to_putres_action_spec_t(\
+                                    actnspec0 = netbufferv3_update_putreq_ru_to_putres_action_spec_t(\
                                             self.devPorts[0]) # Forward to client
                                     self.client.port_forward_tbl_table_add_with_update_putreq_ru_to_putres(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1375,14 +1276,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     for isbackup in backup_list:
                         for iscase3 in case3_list:
                             for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
-                                matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                         op_hdr_optype = tmpoptype,
                                         meta_isvalid = isvalid,
                                         meta_isdirty = isdirty,
                                         meta_islock = 1,
                                         meta_isbackup = isbackup,
                                         meta_iscase3 = iscase3)
-                                actnspec0 = netbuffer_recirculate_pkt_action_spec_t(\
+                                actnspec0 = netbufferv3_recirculate_pkt_action_spec_t(\
                                         self.recirPorts[0]) # Server port should have less load?
                                 self.client.port_forward_tbl_table_add_with_recirculate_pkt(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1391,7 +1292,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     for isbackup in backup_list:
                         for iscase3 in case3_list:
                             for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
-                                matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                         op_hdr_optype = tmpoptype,
                                         meta_isvalid = isvalid,
                                         meta_isdirty = isdirty,
@@ -1399,17 +1300,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         meta_isbackup = isbackup,
                                         meta_iscase3 = iscase3)
                                 if tmpoptype == PUTREQ_TYPE and isbackup == 1 and iscase3 == 0:
-                                    actnspec0 = netbuffer_update_putreq_to_case3_action_spec_t(\
+                                    actnspec0 = netbufferv3_update_putreq_to_case3_action_spec_t(\
                                             self.devPorts[1]) # Output to server
                                     self.client.port_forward_tbl_table_add_with_update_putreq_to_case3(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                 elif tmpoptype == DELREQ_TYPE and isbackup == 1 and iscase3 == 0:
-                                    actnspec0 = netbuffer_update_delreq_to_case3_action_spec_t(\
+                                    actnspec0 = netbufferv3_update_delreq_to_case3_action_spec_t(\
                                             self.devPorts[1]) # Output to server
                                     self.client.port_forward_tbl_table_add_with_update_delreq_to_case3(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                 else:
-                                    actnspec0 = netbuffer_port_forward_action_spec_t(\
+                                    actnspec0 = netbufferv3_port_forward_action_spec_t(\
                                             self.devPorts[1]) # Output to server
                                     self.client.port_forward_tbl_table_add_with_port_forward(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1419,14 +1320,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         for isbackup in backup_list:
                             for iscase3 in case3_list:
                                 for tmpoptype in [SCANREQ_TYPE, GETREQ_S_TYPE, DELREQ_S_TYPE]:
-                                    matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                    matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                             op_hdr_optype = tmpoptype,
                                             meta_isvalid = isvalid,
                                             meta_isdirty = isdirty,
                                             meta_islock = islock,
                                             meta_isbackup = isbackup,
                                             meta_iscase3 = iscase3)
-                                    actnspec0 = netbuffer_port_forward_action_spec_t(\
+                                    actnspec0 = netbufferv3_port_forward_action_spec_t(\
                                             self.devPorts[1]) # Output to server
                                     self.client.port_forward_tbl_table_add_with_port_forward(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1436,14 +1337,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         for isbackup in backup_list:
                             for iscase3 in case3_list:
                                 for tmpoptype in [GETRES_TYPE, PUTRES_TYPE, DELRES_TYPE, SCANRES_TYPE]:
-                                    matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                    matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                             op_hdr_optype = tmpoptype,
                                             meta_isvalid = isvalid,
                                             meta_isdirty = isdirty,
                                             meta_islock = islock,
                                             meta_isbackup = isbackup,
                                             meta_iscase3 = iscase3)
-                                    actnspec0 = netbuffer_port_forward_action_spec_t(\
+                                    actnspec0 = netbufferv3_port_forward_action_spec_t(\
                                             self.devPorts[0]) # Output to client
                                     self.client.port_forward_tbl_table_add_with_port_forward(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1451,25 +1352,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 for islock in lock_list:
                     for isbackup in backup_list:
                         for iscase3 in case3_list:
-                            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                     op_hdr_optype = PUTREQ_CASE1_TYPE,
                                     meta_isvalid = 1,
                                     meta_isdirty = isdirty,
                                     meta_islock = islock,
                                     meta_isbackup = isbackup,
                                     meta_iscase3 = iscase3)
-                            actnspec0 = netbuffer_forward_putreq_case1_and_clone_action_spec_t(\
+                            actnspec0 = netbufferv3_forward_putreq_case1_and_clone_action_spec_t(\
                                     sids[0], self.devPorts[1]) # Clone to client, forward to server
                             self.client.port_forward_tbl_table_add_with_forward_putreq_case1_and_clone(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                     op_hdr_optype = DELREQ_CASE1_TYPE,
                                     meta_isvalid = 1,
                                     meta_isdirty = isdirty,
                                     meta_islock = islock,
                                     meta_isbackup = isbackup,
                                     meta_iscase3 = iscase3)
-                            actnspec0 = netbuffer_forward_delreq_case1_and_clone_action_spec_t(\
+                            actnspec0 = netbufferv3_forward_delreq_case1_and_clone_action_spec_t(\
                                     sids[0], self.devPorts[1]) # Clone to client, forward to server
                             self.client.port_forward_tbl_table_add_with_forward_delreq_case1_and_clone(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1478,14 +1379,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     for islock in lock_list:
                         for isbackup in backup_list:
                             for iscase3 in case3_list:
-                                matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                         op_hdr_optype = GETRES_S_CASE2_TYPE,
                                         meta_isvalid = isvalid,
                                         meta_isdirty = isdirty,
                                         meta_islock = islock,
                                         meta_isbackup = isbackup,
                                         meta_iscase3 = iscase3)
-                                actnspec0 = netbuffer_update_getres_s_case2_to_putreq_gs_case2_and_clone_action_spec_t(\
+                                actnspec0 = netbufferv3_update_getres_s_case2_to_putreq_gs_case2_and_clone_action_spec_t(\
                                         sids[0], self.devPorts[1]) # Clone to client port, output to server port
                                 self.client.port_forward_tbl_table_add_with_update_getres_s_case2_to_putreq_gs_case2_and_clone(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1494,14 +1395,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     for islock in lock_list:
                         for isbackup in backup_list:
                             for iscase3 in case3_list:
-                                matchspec0 = netbuffer_port_forward_tbl_match_spec_t(\
+                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                         op_hdr_optype = PUTREQ_RU_CASE2_TYPE,
                                         meta_isvalid = isvalid,
                                         meta_isdirty = isdirty,
                                         meta_islock = islock,
                                         meta_isbackup = isbackup,
                                         meta_iscase3 = iscase3)
-                                actnspec0 = netbuffer_update_putreq_ru_case2_to_putreq_ps_case2_and_clone_action_spec_t(\
+                                actnspec0 = netbufferv3_update_putreq_ru_case2_to_putreq_ps_case2_and_clone_action_spec_t(\
                                         sids[0], self.devPorts[1]) # Clone to client port, output to server port
                                 self.client.port_forward_tbl_table_add_with_update_putreq_ru_case2_to_putreq_ps_case2_and_clone(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1518,12 +1419,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #        hash_end = bucket_num - 1 # if end is not included, then it is just processed by port 1111
             #    else:
             #        hash_end = hash_start + hash_range_per_server
-            #    matchspec0 = netbuffer_hash_partition_tbl_match_spec_t(\
+            #    matchspec0 = netbufferv3_hash_partition_tbl_match_spec_t(\
             #            udp_hdr_dstPort=server_port, \
             #            ig_intr_md_for_tm_ucast_egress_port=self.devPorts[1], \
             #            meta_hashidx_start = hash_start, \
             #            meta_hashidx_end = hash_end)
-            #    actnspec0 = netbuffer_update_dstport_action_spec_t(\
+            #    actnspec0 = netbufferv3_update_dstport_action_spec_t(\
             #            server_port + i)
             #    self.client.hash_partition_tbl_table_add_with_update_dstport(\
             #            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
@@ -1539,12 +1440,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #        hash_end = bucket_num - 1 # if end is not included, then it is just processed by port 1111
             #    else:
             #        hash_end = hash_start + hash_range_per_server
-            #    matchspec0 = netbuffer_origin_hash_partition_tbl_match_spec_t(\
+            #    matchspec0 = netbufferv3_origin_hash_partition_tbl_match_spec_t(\
             #            udp_hdr_dstPort=server_port, \
             #            ig_intr_md_for_tm_ucast_egress_port=self.devPorts[1], \
             #            meta_origin_hashidx_start = hash_start, \
             #            meta_origin_hashidx_end = hash_end)
-            #    actnspec0 = netbuffer_update_dstport_action_spec_t(\
+            #    actnspec0 = netbufferv3_update_dstport_action_spec_t(\
             #            server_port + i)
             #    self.client.origin_hash_partition_tbl_table_add_with_update_dstport(\
             #            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
@@ -1560,12 +1461,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #        hash_end = bucket_num - 1 # if end is not included, then it is just processed by port 1111
             #    else:
             #        hash_end = hash_start + hash_range_per_server
-            #    matchspec0 = netbuffer_origin_hash_partition_reverse_tbl_match_spec_t(\
+            #    matchspec0 = netbufferv3_origin_hash_partition_reverse_tbl_match_spec_t(\
             #            udp_hdr_srcPort=server_port, \
             #            ig_intr_md_for_tm_ucast_egress_port=self.devPorts[1], \
             #            meta_origin_hashidx_start = hash_start, \
             #            meta_origin_hashidx_end = hash_end)
-            #    actnspec0 = netbuffer_update_dstport_reverse_action_spec_t(\
+            #    actnspec0 = netbufferv3_update_dstport_reverse_action_spec_t(\
             #            server_port + i)
             #    self.client.origin_hash_partition_reverse_tbl_table_add_with_update_dstport_reverse(\
             #            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
@@ -1582,12 +1483,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     hash_end = bucket_num - 1 # if end is not included, then it is just processed by port 1111
                 else:
                     hash_end = hash_start + hash_range_per_server
-                matchspec0 = netbuffer_hash_partition_tbl_match_spec_t(\
+                matchspec0 = netbufferv3_hash_partition_tbl_match_spec_t(\
                         udp_hdr_dstPort=server_port, \
                         eg_intr_md_egress_port=self.devPorts[1], \
                         meta_hashidx_start = hash_start, \
                         meta_hashidx_end = hash_end)
-                actnspec0 = netbuffer_update_dstport_action_spec_t(\
+                actnspec0 = netbufferv3_update_dstport_action_spec_t(\
                         server_port + i)
                 self.client.hash_partition_tbl_table_add_with_update_dstport(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
@@ -1602,12 +1503,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     hash_end = bucket_num - 1 # if end is not included, then it is just processed by port 1111
                 else:
                     hash_end = hash_start + hash_range_per_server
-                matchspec0 = netbuffer_hash_partition_reverse_tbl_match_spec_t(\
+                matchspec0 = netbufferv3_hash_partition_reverse_tbl_match_spec_t(\
                         udp_hdr_srcPort=server_port, \
                         eg_intr_md_egress_port=self.devPorts[1], \
                         meta_hashidx_start = hash_start, \
                         meta_hashidx_end = hash_end)
-                actnspec0 = netbuffer_update_dstport_reverse_action_spec_t(\
+                actnspec0 = netbufferv3_update_dstport_reverse_action_spec_t(\
                         server_port + i)
                 self.client.hash_partition_reverse_tbl_table_add_with_update_dstport_reverse(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
@@ -1615,20 +1516,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: drop_put_tbl (if key coherence is unnecessary)
             #print "Configuring drop_put_tbl"
-            #matchspec0 = netbuffer_drop_put_tbl_match_spec_t(
+            #matchspec0 = netbufferv3_drop_put_tbl_match_spec_t(
             #        op_hdr_optype = PUTREQ_TYPE)
             #self.client.drop_put_tbl_table_add_with_ig_drop_unicast(\
             #        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # TMPDEBUG
             #print "Configuring forward_to_server_tbl"
-            #matchspec0 = netbuffer_forward_to_server_tbl_match_spec_t(\
+            #matchspec0 = netbufferv3_forward_to_server_tbl_match_spec_t(\
             #        op_hdr_optype=PUTREQ_TYPE,
             #        meta_islock=1)
-            #matchspec1 = netbuffer_forward_to_server_tbl_match_spec_t(\
+            #matchspec1 = netbufferv3_forward_to_server_tbl_match_spec_t(\
             #        op_hdr_optype=GETREQ_TYPE,
             #        meta_islock=1)
-            #actnspec0 = netbuffer_forward_to_server_action_spec_t(\
+            #actnspec0 = netbufferv3_forward_to_server_action_spec_t(\
             #        self.devPorts[1])
             #self.client.forward_to_server_tbl_table_add_with_forward_to_server(\
             #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1637,25 +1538,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: update_macaddr_tbl (default: nop; 5)
             print "Configuring update_macaddr_tbl"
-            actnspec0 = netbuffer_update_macaddr_s2c_action_spec_t(\
+            actnspec0 = netbufferv3_update_macaddr_s2c_action_spec_t(\
                     macAddr_to_string(src_mac), \
                     macAddr_to_string(dst_mac))
-            actnspec1 = netbuffer_update_macaddr_c2s_action_spec_t(\
+            actnspec1 = netbufferv3_update_macaddr_c2s_action_spec_t(\
                     macAddr_to_string(src_mac), \
                     macAddr_to_string(dst_mac))
-            matchspec0 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_TYPE)
-            matchspec1 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES_TYPE)
-            matchspec2 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES_TYPE)
+            matchspec0 = netbufferv3_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_TYPE)
+            matchspec1 = netbufferv3_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES_TYPE)
+            matchspec2 = netbufferv3_update_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES_TYPE)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
                     self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
-            matchspec3 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTREQ_GS_TYPE)
+            matchspec3 = netbufferv3_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTREQ_GS_TYPE)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
                     self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
-            matchspec4 = netbuffer_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTREQ_GS_CASE2_TYPE)
+            matchspec4 = netbufferv3_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTREQ_GS_CASE2_TYPE)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
                     self.sess_hdl, self.dev_tgt, matchspec4, actnspec1)
 

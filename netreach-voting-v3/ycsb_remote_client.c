@@ -23,6 +23,7 @@
 #include "val.h"
 #include "ycsb/parser.h"
 #include "iniparser/iniparser_wrapper.h"
+#include "crc32.h"
 
 #define MQ_SIZE 256
 
@@ -73,6 +74,7 @@ short dst_port;
 const char *workload_name;
 char output_dir[256];
 size_t per_client_per_period_max_sending_rate;
+uint32_t kv_bucket_num;
 
 // SCAN split
 size_t server_num;
@@ -154,6 +156,8 @@ inline void parse_ini(const char* config_file) {
 	server_num = ini.get_server_num();
 	per_server_range = std::numeric_limits<size_t>::max() / server_num;
 	per_client_per_period_max_sending_rate = max_sending_rate / fg_n / (1 * 1000 * 1000 / rate_limit_period);
+	kv_bucket_num = ini.get_bucket_num();
+	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
 
 	printf("src_macaddr: ");
 	for (size_t i = 0; i < 6; i++) {
@@ -176,6 +180,8 @@ inline void parse_ini(const char* config_file) {
 	printf("output_dir: %s\n", output_dir);
 	COUT_VAR(server_num);
 	COUT_VAR(per_server_range);
+	COUT_VAR(kv_bucket_num);
+	COUT_VAR(val_t::MAX_VAL_LENGTH);
 }
 
 void prepare_dpdk() {
@@ -449,7 +455,8 @@ static int run_fg(void *param) {
 		struct timespec wait_t1, wait_t2, wait_t3;
 		if (iter.type() == uint8_t(packet_type_t::GET_REQ)) { // get
 			CUR_TIME(req_t1);
-			get_request_t req(thread_id, tmpkey);
+			uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			get_request_t req(hashidx, tmpkey);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
@@ -486,7 +493,8 @@ static int run_fg(void *param) {
 			tmpval = iter.val();
 
 			CUR_TIME(req_t1);
-			put_request_t req(thread_id, tmpkey, tmpval);
+			uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			put_request_t req(hashidx, tmpkey, tmpval);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
@@ -516,7 +524,8 @@ static int run_fg(void *param) {
 		}
 		else if (iter.type() == uint8_t(packet_type_t::DEL_REQ)) {
 			CUR_TIME(req_t1);
-			del_request_t req(thread_id, tmpkey);
+			uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			del_request_t req(hashidx, tmpkey);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
@@ -551,7 +560,8 @@ static int run_fg(void *param) {
 			size_t split_num = last_server_idx - first_server_idx + 1;
 
 			CUR_TIME(req_t1);
-			scan_request_t req(thread_id, tmpkey, endkey, range_num);
+			uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			scan_request_t req(hashidx, tmpkey, endkey, range_num);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
 					<< "endkey = " << endkey.to_string() << " num = " << range_num);
 			req_size = req.serialize(buf, MAX_BUFSIZE);

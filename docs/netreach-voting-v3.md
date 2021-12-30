@@ -43,42 +43,35 @@
 - In-switch processing
 	+ Overview
 		* Stage 0: keylolo, keylohi, keyhilo, keyhihi, load_backup_tbl
-		* Stage 1: valid, vote (modify meta.iskeymatch), seq
+		* Stage 1: valid, vote, seq (assign only if key matches for PUT/DELREQ), update_iskeymatch_tbl
 		* Stage 2: savedseq, lock, 
-		* Stage 3: vallen, vallo1, valhi1, case3
+		* Stage 3: vallen, vallo1, valhi1, case12
 		* Stage 4-10: from val2 to val15
-		* Stage 11: vallo16, valhi16, case1, case2, port_forward_tbl
-		* NOTE: In port_forward_tbl, we embed other_hdr (valid, case1, case2, case3) at the end of following packets
-			- For case1, if backup=1 and valid=1 and iskeymatch=1
-				+ PUTREQ with old value -> PUTREQ_CASEV
-				+ DELREQ with old value -> DELREQ_CASEV
-			- For case2, if backup=1
-				+ GETRES_POP with old value -> GETRES_POP_CASEV
-					* Clone_i2e (GETRES_POP with new value)
-				+ PUTREQ_POP with old value -> PUTREQ_POP_CASEV
-			- FOr case3, if backup=1
-				+ PUTREQ with new value -> PUTREQ_CASEV
-				+ DELREQ without value -> DELREQ_CASENV
+		* Stage 11: vallo16, valhi16, case3, port_forward_tbl
+			- For case1, if backup=1 and valid=1 and iskeymatch=1 (key is the same) and iscase12=0
+				+ Update PUT/DELREQ with old value as PUT/DELREQ_CASE1 to server, clone_i2e for PUT/DELRES
+			- For case2, if backup=1 and iscase12=0
+				+ Update GETRES_POP with old key-value as GETRES_POP_CASE2 to server, clone_i2e for GETRES with new key-value
+				+ Update PUTREQ_POP with old key-value as PUTREQ_POP_CASE2 to server, clone_i2e for PUTRES with new key
+			- For case3, if backup=1
+				+ Embed other_hdr (valid, case3) at the end of PUT/DELREQ
+					+ Update PUTREQ with new key-value as PUTREQ_CASEV
+					+ Update DELREQ without key-value as DELREQ_CASENV
 		* Egress pipeline
-			- If case1
-				+ Update PUT/DELREQ_CASEV -> PUT/DELREQ_CASE1 to server
-					+ Clone_e2e
-			- If case2
-				+ Update GETRES_POP_CASEV -> GETRES_POP_CASE2 to server
-					* No cloned packet
-				+ Update PUTREQ_POP_CASEV -> PUTREQ_POP_CASE2 to server
-					* Clone_e2e
-			- If case3
-				+ Update PUTREQ_CASEV/DELREQ_CASENV -> PUT/DELREQ_CASE3 to server
+			- For PUTREQ_CASEV/DELREQ_CASENV
+				+ If case3=0, update it as PUT/DELREQ_CASE3 to server
+				+ Otherwise, update it as PUT/DELREQ to server
 			- For cloned packet
-				+ If GETRES_POP (with new value), update it as GETRES to client
-				+ If PUT/DELREQ_CASE1/PUTREQ_POP_CASE2, update as PUT/DELRES/PUTRES to client
+				+ If GETRES_POP (with new key-value), update it as GETRES to client
+				+ If PUTREQ_POP (with new key-value), update it as PUTRES to client
+				+ If PUT/DELREQ, update as PUT/DELRES to client
 			- Hash parition for normal REQ pacekts
 	+ GETREQ
-		* Stage 0: access key 
+		* Stage 0: Get key 
 		* Stage 1
-			- Access valid
-			- Update vote: if key matches, increase vote and set iskeymatch=1; otherwise, decrease_vote and set iskeymatch=0
+			- Get valid
+			- Update vote: if key matches, increase vote; otherwise, decrease vote
+			- Update iskeymatch
 		* Stage 2
 			- Access lock: if valid=0 or zerovote=2, try_lock; otherwise, read_lock
 		* Stage 3-11: read vallen and value
@@ -93,6 +86,9 @@
 ## Implementation log
 
 - Copy netreach-voting to netreach-voting-v3
+- Embed hashidx into packet op_hdr at client side (ycsb_remote_client.c, config.ini, packet_format.h, packet_format_impl,h, ycsb_server.c)
+- Support GETREQ
+- TODO: support PUTREQ, DELREQ
 
 ## How to run
 

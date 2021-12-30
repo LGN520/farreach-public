@@ -850,7 +850,7 @@ static int run_sfg(void * param) {
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
-					get_response_t rsp(req.thread_id(), req.key(), tmp_val);
+					get_response_t rsp(req.hashidx(), req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
@@ -865,7 +865,7 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
-					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
+					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
@@ -880,7 +880,7 @@ static int run_sfg(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
-					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
+					del_response_t rsp(req.hashidx(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
@@ -908,7 +908,7 @@ static int run_sfg(void * param) {
 					}
 					//COUT_THIS("SCAN results size: " << results.size())
 
-					scan_response_t rsp(req.thread_id(), req.key(), req.endkey(), results.size(), results);
+					scan_response_t rsp(req.hashidx(), req.key(), req.endkey(), results.size(), results);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
