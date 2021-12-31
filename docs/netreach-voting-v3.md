@@ -8,10 +8,12 @@
 ## Overview
 
 - Design features
-	+ TODO: Parameter-free decision
+	+ Parameter-free decision
 		* Existing: large parameter -> miss hot keys; small parameter -> too many hot keys -> insufficient cache capacity and switch OS bottleneck
 		* Challenge: Slow warmup with incast populations -> data-plane-based cache population
-	+ TODO: Data-plane-based cache update
+			- NOTE: Mirroring GETRES_POP_EVICT/PUTREQ_POP_EVICT does not incur switch OS bottleneck since we do not need send old key-value pair
+			to server if the entry is invalid during warmup phase
+	+ Data-plane-based cache update
 		* Data-plane-based value update
 		* Data-plane-based cache population
 			- GETREQ: response-based cache population
@@ -75,7 +77,7 @@
 			- For cloned packet
 				+ If GETRES_POP (with new key-value), update it as GETRES to client
 				+ If PUTREQ_POP (with new key-value), update it as PUTRES to client
-				+ If PUT/DELREQ/PUTREQ_RECIR, update as PUT/DELRES/PUTRES to client
+				+ If PUT/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, update as PUT/DELRES/PUTRES to client
 			- Hash parition for normal REQ pacekts
 	+ GETREQ
 		* Stage 0: match key 
@@ -154,19 +156,51 @@
 				- NOTE: current PUTREQ_RECIR has old key-value pair instead of new one, we must send original packet to egress pipeline
 			- If (valid=0 or iskeymatch=0) and lock=1, recirculate PUTREQ_RECIR
 			- Otherwise, update PUTREQ_RECIR as PUTREQ to server -> hash_partition_tbl
-	+ TODO: DELREQ (as a speical PUTREQ)
-		* Do not clear valid
-		* If valid=0 and iskeymatch=1, try_update_savedseq -> If canput=2, set vallen=0
-		* Set vote=0?
+	+ DELREQ (as a speical PUTREQ)
+		* Stage 0: match key
+		* Stage 1
+			- Get valid (treat DELREQ as a special PUTREQ which does not need to reset valid bit)
+			- Not update vote now (TODO: maybe set vote=0 is better if popularity in the slot changes after DEL)
+			- Assign seq for each slot (no matter key matches or not)
+			- Update iskeymatch
+		* Stage 2
+			- If valid=1 and iskeymatch=1, try to update savedseq to update meta.canput
+			- Not access lock (DEL will not trigger eviction)
+		* Stage 3-11: reset_and_get vallen, and get value if valid=1 and canput=2 (valid=1, iskeymatch=1, and seq>savedseq)
+		* Stage 11: port_forward
+			- If valid=1 and iskeymatch=1 and (isbackup=0 or iscase12=1), update DELREQ to DELRES
+			- TODO: If valid=1 and iskeymatch=1 and isbackup=1 and iscase12=0, update DELREQ as DELREQ_CASE1 to server, clone_i2e for DELRES to client
+				- NOTE: current DELREQ has old key-value pair instead of new one, we must send original packet to egress pipeline
+			- If (valid=0 or iskeymatch=0) and lock=1, update DELREQ as DELREQ_RECIR (with seq_hdr, not need to assign seq again) and recirculate
+			- Otherwise, forward DELREQ to server -> hash_partition_tbl
+	+ DELREQ_RECIR
+		* Stage 0: match key
+		* Stage 1
+			- Get valid (treat DELREQ_RECIR as a special PUTREQ which does not need to reset valid bit)
+			- Not update vote now (TODO: maybe set vote=0 is better if popularity in the slot changes after DEL)
+			- NOTE: do not assign seq 
+			- Update iskeymatch
+		* Stage 2
+			- If valid=1 and iskeymatch=1, try to update savedseq to update meta.canput
+			- Not access lock (DEL will not trigger eviction)
+		* Stage 3-11: reset_and_get vallen, and get value if valid=1 and canput=2 (valid=1, iskeymatch=1, and seq>savedseq)
+		* Stage 11: port_forward
+			- If valid=1 and iskeymatch=1 and (isbackup=0 or iscase12=1), update DELREQ_RECIR to DELRES
+			- TODO: If valid=1 and iskeymatch=1 and isbackup=1 and iscase12=0, update DELREQ_RECIR as DELREQ_CASE1 to server, clone_i2e for DELRES to client
+				- NOTE: current DELREQ_RECIR has old key-value pair instead of new one, we must send original packet to egress pipeline
+			- If (valid=0 or iskeymatch=0) and lock=1, recirculate DELREQ_RECIR
+			- Otherwise, update DELREQ_RECIR as DELREQ to server -> hash_partition_tbl
 - Server-side processsing
 	+ GETREQ: sendback GETRES
 	+ GETREQ_POP:
 		* If key exists in KVS, sendback GETRES_POP
 		* Otherwise, sendback GETRES_NPOP
 	+ GETRES_POP_EVICT:
-		* Put evicted key-value pair into KVS without response
+		* If vallen > 0, put evicted key-value pair into KVS without response
+		* Otherwise, delete evicted key from KVS without response
 	+ PUTREQ_POP_EVICT:
-		* Put evicted key-value pair into KVS without response
+		* If vallen > 0, put evicted key-value pair into KVS without response
+		* Otherwise, delete evicted key from KVS without response
 
 ## Implementation log
 
@@ -177,7 +211,7 @@
 	+ Server-side: packet_format.h, packet_format_impl,h, ycsb_server.c
 	+ Support GETREQ, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_EVICT
 	+ Support PUTREQ, PUTREQ_POP, PUTREQ_RECIR, PUTREQ_POP_EVICT
-- TODO: DELREQ
+	+ Support DELREQ, DELREQ_RECIR
 - TODO: GETRES_POP_CASE2
 
 ## How to run

@@ -234,6 +234,55 @@ action recirculate_putreq_recir(port) {
 action update_putreq_recir_to_putreq(port) {
 	modify_field(op_hdr.optype, PUTREQ_TYPE);
 	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	remove_header(seq_hdr);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
+action update_delreq_to_delres() {
+	// Swap udp port
+	modify_field(udp_hdr.dstPort, meta.tmp_sport);
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	add_to_field(udp_hdr.hdrlen, STAT_PKTLEN);
+
+	modify_field(op_hdr.optype, DELRES_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+
+	modify_field(res_hdr.stat, 1);
+	add_header(res_hdr);
+}
+
+action update_delreq_to_delreq_recir(port) {
+	modify_field(op_hdr.optype, DELREQ_RECIR_TYPE);
+	add_fo_field(udp_hdr,hdrlen, SEQ_PKTLEN);
+	add_header(seq_hdr);
+
+	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
+	recirculate(port);
+}
+
+action update_delreq_recir_to_delres() {
+	// Swap udp port
+	modify_field(udp_hdr.dstPort, meta.tmp_sport);
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN_MINUS_STAT);
+
+	modify_field(op_hdr.optype, DELRES_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+
+	remove_header(seq_hdr);
+	modify_field(res_hdr.stat, 1);
+	add_header(res_hdr);
+}
+
+action recirculate_delreq_recir(port) {
+	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
+	recirculate(port);
+}
+
+action update_delreq_recir_to_delreq(port) {
+	modify_field(op_hdr.optype, DELREQ_TYPE);
+	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	remove_header(seq_hdr);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
@@ -266,6 +315,11 @@ table port_forward_tbl {
 		update_putreq_recir_to_putres;
 		recirculate_putreq_recir;
 		update_putreq_recir_to_putreq;
+		update_delreq_to_delres;
+		update_delreq_to_delreq_recir;
+		update_delreq_recir_to_delres;
+		recirculate_delreq_recir;
+		update_delreq_recir_to_delreq;
 		//update_getres_pop_to_case2_clone_for_getres;
 		//update_putreq_pop_to_case2_clone_for_putres;
 		port_forward;
@@ -276,15 +330,6 @@ table port_forward_tbl {
 }
 
 // Deprecated 
-
-action update_delreq_to_s_and_clone(sid) {
-	// Update transferred packet as delreq_s
-	modify_field(op_hdr.optype, DELREQ_S_TYPE);
-
-	// Clone a packet for delres 
-	modify_field(meta.is_clone, CLONE_FOR_DELRES);
-	clone_ingress_pkt_to_egress(sid, clone_field_list);
-}
 
 action update_putreq_to_case1() {
 	modify_field(op_hdr.optype, PUTREQ_CASE1_TYPE);

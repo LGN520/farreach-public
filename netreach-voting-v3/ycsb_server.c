@@ -946,8 +946,12 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					get_response_pop_evict_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
-					//COUT_THIS("[server] stat = " << tmp_stat)
+					if (req.val() > 0) {
+						table->put(req.key(), req.val(), thread_id);
+					}
+					else {
+						table->remove(req.key(), thread_id);
+					}
 					break;
 				}
 			case packet_type_t::PUT_REQ_POP_EVICT:
@@ -955,8 +959,12 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					put_request_pop_evict_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
-					//COUT_THIS("[server] stat = " << tmp_stat)
+					if (req.val() > 0) {
+						table->put(req.key(), req.val(), thread_id);
+					}
+					else {
+						table->remove(req.key(), thread_id);
+					}
 					break;
 				}
 

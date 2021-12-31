@@ -28,6 +28,7 @@
 #define PUTREQ_POP_TYPE 0x0c
 #define PUTREQ_RECIR_TYPE 0x0d
 #define PUTREQ_POP_EVICT_TYPE 0x0e
+#define DELREQ_RECIR_TYPE 0x0f
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -43,12 +44,17 @@
 // VAL_PKTLEN_MINUS_STAT: sizeof(vallen) + sizeof(val) - sizeof(stat), e.g., PUTREQ -> PUTRES
 // SEQ_PKTLEN: sizeof(seq_hdr), e.g., PUTREQ -> PUTREQ_RECIR, PUTREQ_RECIR -> PUTREQ_POP/PUTREQ
 // VAL_PKTLEN_MINUS_STAT_PLUS_SEQ: sizeof(vallen) + sizeof(val) - sizeof(stat) + sizeof(seq), e.g., PUTREQ_RECIR -> PUTRES
+// STAT_PKTLEN: sizeof(stat), e.g., DELREQ -> DELRES
+// SEQ_PKTLEN_MINUS_STAT: sizeof(seq) - sizeof(stat), e.g., DELREQ_RECIR -> DELRES
 //#define VAL_PKTLEN 129
 //#define VAL_PKTLEN_MINUS_STAT 128
+//#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 132
 #define VAL_PKTLEN 9
 #define VAL_PKTLEN_MINUS_STAT 8
 #define SEQ_PKTLEN 4
 #define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 12
+#define STAT_PKTLEN 1
+#define SEQ_PKTLEN_MINUS_STAT 3
 
 //#define CPU_PORT 192
 

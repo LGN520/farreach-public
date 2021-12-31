@@ -29,6 +29,19 @@ action set_and_get_vallen() {
 	set_and_get_vallen_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
+blackbox stateful_alu reset_and_get_vallen_alu {
+	reg: vallen_reg;
+
+	update_lo_1_value: 0;
+
+	outset_and_get_value: register_lo;
+	output_dst: vallen_hdr.vallen;
+}
+
+action reset_and_get_vallen() {
+	reset_and_get_vallen_alu.execute_stateful_alu(op_hdr.hashidx);
+}
+
 table update_vallen_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -38,6 +51,7 @@ table update_vallen_tbl {
 	actions {
 		get_vallen;
 		set_and_get_vallen;
+		reset_and_get_vallen;
 		nop;
 	}
 	default_action: nop();

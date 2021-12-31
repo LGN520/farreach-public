@@ -48,10 +48,10 @@ action reset_valid() {
 table access_valid_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
+		//meta.ismatch_keylolo: exact;
+		//meta.ismatch_keylohi: exact;
+		//meta.ismatch_keyhilo: exact;
+		//meta.ismatch_keyhihi: exact;
 	}
 	actions {
 		get_valid;
