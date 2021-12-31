@@ -31,7 +31,7 @@ action set_valid() {
 	set_valid_alu.execute_stateful_alu(meta.hashidx);
 }
 
-blackbox stateful_alu clear_valid_alu {
+blackbox stateful_alu reset_valid_alu {
 	reg: valid_reg;
 
 	update_lo_1_value: clr_bit;
@@ -40,88 +40,25 @@ blackbox stateful_alu clear_valid_alu {
 	output_dst: meta.isvalid;
 }
 
-action clear_valid() {
-	clear_valid_alu.execute_stateful_alu(meta.hashidx);
+action reset_valid() {
+	reset_valid_alu.execute_stateful_alu(meta.hashidx);
 }
 
 @pragma stage 3
 table access_valid_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.ismatch_keylolo: exact;
+		meta.ismatch_keylohi: exact;
+		meta.ismatch_keyhilo: exact;
+		meta.ismatch_keyhihi: exact;
 	}
 	actions {
 		get_valid;
 		set_valid;
-		clear_valid;
+		reset_valid;
 		nop;
 	}
 	default_action: nop();
 	size: 1280;
 }
-
-// Optimization for recirculation
-
-/*register future_valid_reg {
-	width: 1;
-	instance_count: KV_BUCKET_COUNT;
-}
-
-blackbox stateful_alu get_future_valid_alu {
-	reg: future_valid_reg;
-
-	update_lo_1_value: read_bit;
-
-	output_value: alu_lo;
-	output_dst: meta.isfuture_valid;
-}
-
-action get_future_valid() {
-	get_future_valid_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu set_future_valid_alu {
-	reg: future_valid_reg;
-
-	update_lo_1_value: set_bit;
-
-	output_value: alu_lo;
-	output_dst: meta.isfuture_valid;
-}
-
-action set_future_valid() {
-	set_future_valid_alu.execute_stateful_alu(meta.hashidx);
-}
-
-blackbox stateful_alu clear_future_valid_alu {
-	reg: future_valid_reg;
-
-	update_lo_1_value: clr_bit;
-
-	output_value: alu_lo;
-	output_dst: meta.isfuture_valid;
-}
-
-action clear_future_valid() {
-	clear_future_valid_alu.execute_stateful_alu(meta.hashidx);
-}
-
-table access_future_valid_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		get_future_valid;
-		set_future_valid;
-		clear_future_valid;
-	}
-	default_action: get_future_valid();
-	size: 4;
-}*/

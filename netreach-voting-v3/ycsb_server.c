@@ -51,13 +51,13 @@ typedef GetResponse<index_key_t, val_t> get_response_t;
 typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
-//typedef PutRequestS<index_key_t, val_t> put_request_s_t;
-typedef GetRequestS<index_key_t> get_request_s_t;
-typedef PutRequestGS<index_key_t, val_t> put_request_gs_t;
+typedef GetRequestPOP<index_key_t> get_request_pop_t;
+typedef GetResponsePOP<index_key_t, val_t> get_response_pop_t;
+typedef GetResponseNPOP<index_key_t, val_t> get_response_npop_t;
+typedef GetResponsePOPEvict<index_key_t, val_t> get_response_pop_evict_t;
+
 typedef PutRequestPS<index_key_t, val_t> put_request_ps_t;
 typedef DelRequestS<index_key_t> del_request_s_t;
-typedef GetResponseS<index_key_t, val_t> get_response_s_t;
-typedef GetResponseNS<index_key_t, val_t> get_response_ns_t;
 typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
 typedef DelRequestCase1<index_key_t, val_t> del_request_case1_t;
 typedef PutRequestGSCase2<index_key_t, val_t> put_request_gs_case2_t;
@@ -917,20 +917,20 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::GET_REQ_S: 
+			case packet_type_t::GET_REQ_POP: 
 				{
-					get_request_s_t req(buf, recv_size);
+					get_request_pop_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
 					if (tmp_val.val_length > 0) {
-						get_response_s_t rsp(req.thread_id(), req.key(), tmp_val);
+						get_response_pop_t rsp(req.hashidx(), req.key(), tmp_val);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
 					else {
-						get_response_ns_t rsp(req.thread_id(), req.key(), tmp_val);
+						get_response_npop_t rsp(req.hashidx(), req.key(), tmp_val);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
 					
@@ -940,15 +940,17 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::PUT_REQ_GS:
+			case packet_type_t::GET_RES_POP_EVICT:
 				{
 					// Put evicted data into key-value store
-					put_request_gs_t req(buf, recv_size);
+					get_response_pop_evict_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					break;
 				}
+
+			// Deprecated
 			case packet_type_t::PUT_REQ_PS:
 				{
 					// Put evicted data into key-value store
@@ -1052,7 +1054,7 @@ static int run_sfg(void * param) {
 					}
 
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
-					put_response_t rsp(req.thread_id(), req.key(), tmp_stat);
+					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
@@ -1071,7 +1073,7 @@ static int run_sfg(void * param) {
 					}
 
 					bool tmp_stat = table->remove(req.key(), thread_id);
-					del_response_t rsp(req.thread_id(), req.key(), tmp_stat);
+					del_response_t rsp(req.hashidx(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK

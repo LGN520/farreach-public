@@ -106,6 +106,29 @@ action recirculate_getreq(port) {
 	recirculate(port);
 }
 
+// NOTE: clone field list cannot exceed 32 bytes
+field_list clone_field_list {
+	meta.is_clone;
+	meta.tmp_sport;
+	meta.tmp_dport;
+}
+
+action drop_getres_pop_clone_for_getres(sid) {
+	modify_field(ig_intr_md_for_tm.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+action update_getres_pop_to_evict_clone_for_getres(sid) {
+	modify_field(op_hdr.optype, GETRES_POP_EVICT);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+action update_getres_npop_to_getres(port) {
+	modify_field(op_hdr.optype, GETRES_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
 action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -123,6 +146,10 @@ table port_forward_tbl {
 		update_getreq_to_getreq_pop;
 		update_getreq_to_getres;
 		recirculate_getreq;
+		drop_getres_pop_clone_for_getres;
+		update_getres_pop_to_evict_clone_for_getres;
+		update_getres_npop_to_getres;
+		//update_getres_pop_to_case2_clone_for_getres;
 		port_forward;
 		nop;
 	}
@@ -158,13 +185,6 @@ action update_putreq_to_putres() {
 	modify_field(op_hdr.optype, PUTRES_TYPE);
 	modify_field(res_hdr.stat, 1);
 	add_header(res_hdr);
-}
-
-// NOTE: clone field list cannot exceed 32 bytes
-field_list clone_field_list {
-	meta.is_clone;
-	meta.tmp_sport;
-	meta.tmp_dport;
 }
 
 action update_delreq_to_s_and_clone(sid) {
@@ -569,86 +589,6 @@ action update_putreq_ru_to_case2_clear_lock(remember_bit) {
 }
 
 // Last Stage of ingress pipeline
-
-action update_getres_s_to_getres(port) {
-	modify_field(op_hdr.optype, GETRES_TYPE);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-}
-
-action update_getres_ns_to_getres(port) {
-	modify_field(op_hdr.optype, GETRES_TYPE);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-}
-
-action update_getres_s_to_putreq_gs_and_clone(sid, port) {
-	modify_field(op_hdr.optype, PUTREQ_GS_TYPE);
-
-	modify_field(op_hdr.keylololo, meta.origin_keylololo);
-	modify_field(op_hdr.keylolohi, meta.origin_keylolohi);
-	modify_field(op_hdr.keylohilo, meta.origin_keylohilo);
-	modify_field(op_hdr.keylohihi, meta.origin_keylohihi);
-	modify_field(op_hdr.keyhilolo, meta.origin_keyhilolo);
-	modify_field(op_hdr.keyhilohi, meta.origin_keyhilohi);
-	modify_field(op_hdr.keyhihilo, meta.origin_keyhihilo);
-	modify_field(op_hdr.keyhihihi, meta.origin_keyhihihi);
-	modify_field(vallen_hdr.vallen, meta.origin_vallen);
-	add_header(vallen_hdr);
-	modify_field(val1_hdr.vallo, meta.origin_vallo1);
-	modify_field(val1_hdr.valhi, meta.origin_valhi1);
-	add_header(val1_hdr);
-	modify_field(val2_hdr.vallo, meta.origin_vallo2);
-	modify_field(val2_hdr.valhi, meta.origin_valhi2);
-	add_header(val2_hdr);
-	modify_field(val3_hdr.vallo, meta.origin_vallo3);
-	modify_field(val3_hdr.valhi, meta.origin_valhi3);
-	add_header(val3_hdr);
-	modify_field(val4_hdr.vallo, meta.origin_vallo4);
-	modify_field(val4_hdr.valhi, meta.origin_valhi4);
-	add_header(val4_hdr);
-	modify_field(val5_hdr.vallo, meta.origin_vallo5);
-	modify_field(val5_hdr.valhi, meta.origin_valhi5);
-	add_header(val5_hdr);
-	modify_field(val6_hdr.vallo, meta.origin_vallo6);
-	modify_field(val6_hdr.valhi, meta.origin_valhi6);
-	add_header(val6_hdr);
-	modify_field(val7_hdr.vallo, meta.origin_vallo7);
-	modify_field(val7_hdr.valhi, meta.origin_valhi7);
-	add_header(val7_hdr);
-	modify_field(val8_hdr.vallo, meta.origin_vallo8);
-	modify_field(val8_hdr.valhi, meta.origin_valhi8);
-	add_header(val8_hdr);
-	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
-	modify_field(val9_hdr.valhi, meta.origin_valhi9);
-	add_header(val9_hdr);
-	modify_field(val10_hdr.vallo, meta.origin_vallo10);
-	modify_field(val10_hdr.valhi, meta.origin_valhi10);
-	add_header(val10_hdr);
-	modify_field(val11_hdr.vallo, meta.origin_vallo11);
-	modify_field(val11_hdr.valhi, meta.origin_valhi11);
-	add_header(val11_hdr);
-	modify_field(val12_hdr.vallo, meta.origin_vallo12);
-	modify_field(val12_hdr.valhi, meta.origin_valhi12);
-	add_header(val12_hdr);
-	modify_field(val13_hdr.vallo, meta.origin_vallo13);
-	modify_field(val13_hdr.valhi, meta.origin_valhi13);
-	add_header(val13_hdr);
-	modify_field(val14_hdr.vallo, meta.origin_vallo14);
-	modify_field(val14_hdr.valhi, meta.origin_valhi14);
-	add_header(val14_hdr);
-	modify_field(val15_hdr.vallo, meta.origin_vallo15);
-	modify_field(val15_hdr.valhi, meta.origin_valhi15);
-	add_header(val15_hdr);
-	modify_field(val16_hdr.vallo, meta.origin_vallo16);
-	modify_field(val16_hdr.valhi, meta.origin_valhi16);
-	add_header(val16_hdr);*/
-
-	// Forward PUTREQ_GS to server
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-
-	// Clone a packet for GETRES 
-	modify_field(meta.is_clone, CLONE_FOR_GETRES);
-	clone_ingress_pkt_to_egress(sid, clone_field_list);
-}
 
 action update_putreq_ru_to_ps_and_clone(sid, port) {
 	modify_field(op_hdr.optype, PUTREQ_PS_TYPE);

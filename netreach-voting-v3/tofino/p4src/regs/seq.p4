@@ -77,14 +77,7 @@ table access_savedseq_tbl {
 	reads {
 		op_hdr.optype: exact;
 		seq_hdr.is_assigned: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		try_update_savedseq;

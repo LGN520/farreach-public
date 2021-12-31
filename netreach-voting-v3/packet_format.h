@@ -7,13 +7,8 @@
 
 #include "helper.h"
 
-enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, 
-	GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
-	GET_REQ_S, PUT_REQ_GS, PUT_REQ_PS, 
-	DEL_REQ_S, GET_RES_S, GET_RES_NS,
-	PUT_REQ_CASE1, DEL_REQ_CASE1,
-	PUT_REQ_GS_CASE2, PUT_REQ_PS_CASE2,
-	PUT_REQ_CASE3, DEL_REQ_CASE3};
+enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
+	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_EVICT};
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -58,17 +53,11 @@ class PutRequest : public Packet<key_t> {
 
 		val_t val() const;
 
-		uint32_t seq() const;
-		uint8_t is_assigned() const;
-
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
-		// Unused in server
-		uint32_t _seq;
-		uint8_t _is_assigned;
 };
 
 template<class key_t>
@@ -117,9 +106,6 @@ class GetResponse : public Packet<key_t> {
 		virtual void deserialize(const char * data, uint32_t recv_size);
 	private:
 		val_t _val;
-		// Unused in server
-		uint32_t _seq;
-		uint8_t _is_assigned;
 };
 
 template<class key_t>
@@ -175,50 +161,40 @@ class ScanResponse : public Packet<key_t> {
 };
 
 template<class key_t>
-class GetRequestS : public GetRequest<key_t> {
+class GetRequestPOP : public GetRequest<key_t> {
 	public: 
-		GetRequestS(uint8_t thread_id, key_t key);
-		GetRequestS(const char * data, uint32_t recv_size);
+		GetRequestPOP(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
-// For hash-table-based eviction
-/*template<class key_t, class val_t>
-class PutRequestS : public PutRequest<key_t, val_t> {
-	public:
-		PutRequestS(uint8_t thread_id, key_t key, val_t val);
-		PutRequestS(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};*/
-
 template<class key_t, class val_t>
-class GetResponseS : public GetResponse<key_t, val_t> {
-	public:
-		GetResponseS(uint8_t thread_id, key_t key, val_t val);
-		GetResponseS(const char * data, uint32_t recv_size);
+class GetResponsePOP : public GetResponse<key_t, val_t> {
+	public: 
+		GetResponsePOP(uint16_t hashidx, key_t key, val_t val);
 
+	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);
 };
 
 template<class key_t, class val_t>
-class GetResponseNS : public GetResponse<key_t, val_t> {
-	public:
-		GetResponseNS(uint8_t thread_id, key_t key, val_t val);
-		GetResponseNS(const char * data, uint32_t recv_size);
+class GetResponseNPOP : public GetResponse<key_t, val_t> {
+	public: 
+		GetResponseNPOP(uint16_t hashidx, key_t key, val_t val);
 
+	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);
 };
 
 template<class key_t, class val_t>
-class PutRequestGS : public PutRequest<key_t, val_t> {
+class GetResponsePOPEvict : public PutRequest<key_t, val_t> {
 	public:
-		PutRequestGS(uint8_t thread_id, key_t key, val_t val);
 		PutRequestGS(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
+
+// Deprecated
 
 template<class key_t, class val_t>
 class PutRequestPS : public PutRequest<key_t, val_t> {

@@ -22,10 +22,9 @@
 #define DELRES_TYPE 0x06
 #define SCANRES_TYPE 0x07
 #define GETREQ_POP_TYPE 0x08
-
-#define CLONE_FOR_GETRES 1
-#define CLONE_FOR_DELRES 2
-#define CLONE_FOR_PUTRES 3
+#define GETRES_POP_TYPE 0x09
+#define GETRES_NPOP_TYPE 0x0a
+#define GETRES_POP_EVICT_TYPE 0x0b
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -231,10 +230,10 @@ control egress {
 	else {
 		// NOTE: for packets requring origin_hash, the key and value in packet header have already been set as origin_key/val
 		apply(eg_calculate_hash_tbl);
-		if (op_hdr.optype == PUTREQ_GS_TYPE) {
+		if (op_hdr.optype == GETRES_POP_EVICT_TYPE) {
 			apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
 		}
-		else if (op_hdr.optype == PUTREQ_GS_CASE2_TYPE) {
+		else if (op_hdr.optype == GETRES_POP_CASE2_TYPE) {
 			apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
 		}
 		else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)

@@ -18,22 +18,17 @@ action match_keylolo() {
 	match_keylolo_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-blackbox stateful_alu modify_keylolo_alu {
+blackbox stateful_alu set_and_get_keylolo_alu {
 	reg: keylolo_reg;
 
-	condition_lo: register_lo == op_hdr.keylolo;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keylolo;
+	update_lo_1_value: op_hdr.keylolo; 
 	
 	output_value: register_lo;
 	output_dst: op_hdr.keylolo;
 }
 
-action modify_keylolo() {
-	modify_keylolo_alu.execute_stateful_alu(op_hdr.hashidx);
+action set_and_get_keylolo() {
+	set_and_get_keylolo_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 table access_keylolo_tbl {
@@ -42,7 +37,7 @@ table access_keylolo_tbl {
 	}
 	actions {
 		match_keylolo;
-		modify_keylolo;
+		set_and_get_keylolo;
 		nop;
 	}
 	default_action: nop();
@@ -69,22 +64,17 @@ action match_keylohi() {
 	match_keylohi_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-blackbox stateful_alu modify_keylohi_alu {
+blackbox stateful_alu set_and_get_keylohi_alu {
 	reg: keylohi_reg;
 
-	condition_lo: register_lo == op_hdr.keylohi;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keylohi;
+	update_lo_1_value: op_hdr.keylohi; 
 	
 	output_value: register_lo;
 	output_dst: op_hdr.keylohi;
 }
 
-action modify_keylohi() {
-	modify_keylohi_alu.execute_stateful_alu(op_hdr.hashidx);
+action set_and_get_keylohi() {
+	set_and_get_keylohi_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 table access_keylohi_tbl {
@@ -93,7 +83,7 @@ table access_keylohi_tbl {
 	}
 	actions {
 		match_keylohi;
-		modify_keylohi;
+		set_and_get_keylohi;
 		nop;
 	}
 	default_action: nop();
@@ -120,22 +110,17 @@ action match_keyhilo() {
 	match_keyhilo_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-blackbox stateful_alu modify_keyhilo_alu {
+blackbox stateful_alu set_and_get_keyhilo_alu {
 	reg: keyhilo_reg;
 
-	condition_lo: register_lo == op_hdr.keyhilo;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keyhilo;
+	update_lo_1_value: op_hdr.keyhilo; 
 	
 	output_value: register_lo;
 	output_dst: op_hdr.keyhilo;
 }
 
-action modify_keyhilo() {
-	modify_keyhilo_alu.execute_stateful_alu(op_hdr.hashidx);
+action set_and_get_keyhilo() {
+	set_and_get_keyhilo_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 table access_keyhilo_tbl {
@@ -144,7 +129,7 @@ table access_keyhilo_tbl {
 	}
 	actions {
 		match_keyhilo;
-		modify_keyhilo;
+		set_and_get_keyhilo;
 		nop;
 	}
 	default_action: nop();
@@ -171,22 +156,17 @@ action match_keyhihi() {
 	match_keyhihi_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-blackbox stateful_alu modify_keyhihi_alu {
+blackbox stateful_alu set_and_get_keyhihi_alu {
 	reg: keyhihi_reg;
 
-	condition_lo: register_lo == op_hdr.keyhihi;
-
-	update_lo_1_predicate: condition_lo;
-	update_lo_1_value: register_lo;
-	update_lo_2_predicate: not condition_lo;
-	update_lo_2_value: op_hdr.keyhihi;
+	update_lo_1_value: op_hdr.keyhihi; 
 	
 	output_value: register_lo;
 	output_dst: op_hdr.keyhihi;
 }
 
-action modify_keyhihi() {
-	modify_keyhihi_alu.execute_stateful_alu(op_hdr.hashidx);
+action set_and_get_keyhihi() {
+	set_and_get_keyhihi_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 table access_keyhihi_tbl {
@@ -195,7 +175,7 @@ table access_keyhihi_tbl {
 	}
 	actions {
 		match_keyhihi;
-		modify_keyhihi;
+		set_and_get_keyhihi;
 		nop;
 	}
 	default_action: nop();

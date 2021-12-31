@@ -33,7 +33,13 @@
 		* Range query support
 		* Distributed extension
 		* Variable-length key-value
-- Workflow
+- Term routine
+	+ Match: just compare without changing packet header field
+	+ Get: load to change packet header field (or metadata field)
+	+ Set: store new value without changing packet header field
+	+ Set_and_get: store new value and change packet header field with old value
+	+ Reset: reset value as 0
+	+ Init: initialize value as 1
 - Baselines
 - NOTES
 
@@ -43,9 +49,11 @@
 - In-switch processing
 	+ Overview
 		* Stage 0: keylolo, keylohi, keyhilo, keyhihi, load_backup_tbl
+			- For key, we provide two operations: match, set_and_get
 		* Stage 1: valid, vote, seq (assign only if key matches for PUT/DELREQ), update_iskeymatch_tbl
 		* Stage 2: savedseq, lock, 
 		* Stage 3: vallen, vallo1, valhi1, case12
+			- For vallen and val, we provide two operations: get, set_and_get
 		* Stage 4-10: from val2 to val15
 		* Stage 11: vallo16, valhi16, case3, port_forward_tbl
 			- For case1, if backup=1 and valid=1 and iskeymatch=1 (key is the same) and iscase12=0
@@ -67,28 +75,68 @@
 				+ If PUT/DELREQ, update as PUT/DELRES to client
 			- Hash parition for normal REQ pacekts
 	+ GETREQ
-		* Stage 0: Get key 
+		* Stage 0: match key 
 		* Stage 1
 			- Get valid
 			- Update vote: if key matches, increase vote; otherwise, decrease vote
 			- Update iskeymatch
 		* Stage 2
 			- Access lock: if valid=0 or zerovote=2, try_lock; otherwise, read_lock
-		* Stage 3-11: read vallen and value
+		* Stage 3-11: get vallen and value
 		* Stage 11: port_forward
-			- If (valid=0 or zerovote=2) and lock=0, update GETREQ to GETREQ_POP
+			- If (valid=0 or zerovote=2) and lock=0, update GETREQ to GETREQ_POP -> hash_partition_tbl
 			- If valid=1 and iskeymatch=1, update GETREQ to GETRES
 			- If (valid=0 or iskeymatch=0) and lock=1, recirculate GETREQ
-			- If (valid=0 or iskeymatch=0) and lock=0, forward GETREQ to server
-- Client-side processsing
+			- If (valid=0 or iskeymatch=0) and lock=0, forward GETREQ to server -> hash_partition_tbl
+	+ GETRES_POP
+		* Stage 0: set_and_get key
+		* Stage 1: set valid=1, vote=1
+		* Stage 2: set savedseq=0, lock=0
+		* Stage 3-11: set_and_get vallen and value
+		* Stage 11: port_forward
+			- NOTE: current GETRES_POP has old key-value pair instead of new one, we must send original packet to egress pipeline
+			- TODO: If isbackup=1 and iscase12=0, update GETRES_POP as GETRES_POP_CASE2 to server, clone_i2e for GETRES to client
+				+ TODO: GETRES_POP_CASE2 -> hash_partition_reverse_tbl, update_macaddr_c2s
+			- If (isbackup=0 or iscase12=1) and valid=0, drop original packet, clone_i2e for GETRES to client
+			- If (isbackup=0 or iscase12=1) and valid=1, update GETRES_POP as GETRES_POP_EVICT to server, clone_i2e for GETRES to client
+				+ GETRES_POP_EVICT -> hash_partition_reverse_tbl, update_macaddr_c2s
+	+ GETRES_NPOP
+		* Stage 2: set lock=0
+		* Stage 11: port_forward -> update GETRES_NPOP as GETRES to client
+	+ PUTREQ
+		* Stage 0: match key
+		* Stage 1
+			- CUR: Get valid
+			- Update vote: if key matches, increase vote; otherwise, decrease vote
+			- Update iskeymatch
+		* Stage 2
+			- Access lock: if valid=0 or zerovote=2, try_lock; otherwise, read_lock
+		* Stage 3-11: set_and_get vallen and value if valid=1 and iskeymatch=1
+		* Stage 11: port_forward
+			- If (valid=0 or zerovote=2) and lock=0, update PUTREQ to PUTREQ_POP -> hash_partition_tbl
+			- If valid=1 and iskeymatch=1 and (isbackup=0 or iscase12=1), update PUTREQ to PUTRES
+			- TODO: If valid=1 and iskeymatch=1 and isbackup=1 and iscase12=0, update PUTREQ as PUTREQ_CASE1 to server, clone_i2e for PUTRES to client
+				- NOTE: current PUTREQ has old key-value pair instead of new one, we must send original packet to egress pipeline
+			- If (valid=0 or iskeymatch=0) and lock=1, recirculate PUTREQ
+			- If (valid=0 or iskeymatch=0) and lock=0, forward PUTREQ to server -> hash_partition_tbl
 - Server-side processsing
+	+ GETREQ: sendback GETRES
+	+ GETREQ_POP:
+		* If key exists in KVS, sendback GETRES_POP
+		* Otherwise, sendback GETRES_NPOP
+	+ GETRES_POP_EVICT:
+		* Put evicted key-value pair into KVS without response
 
 ## Implementation log
 
 - Copy netreach-voting to netreach-voting-v3
 - Embed hashidx into packet op_hdr at client side (ycsb_remote_client.c, config.ini, packet_format.h, packet_format_impl,h, ycsb_server.c)
-- Support GETREQ
-- TODO: support PUTREQ, DELREQ
+- Packet support
+	+ Switch-side: tofino/\*.p4
+	+ Server-side: packet_format.h, packet_format_impl,h, ycsb_server.c
+	+ Support GETREQ, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_EVICT
+- TODO: PUTREQ, DELREQ
+- TODO: GETRES_POP_CASE2
 
 ## How to run
 

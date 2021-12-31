@@ -86,7 +86,6 @@ header_type metadata_t {
 		canput: 4; // predicate for seq (update vallen and val only if with valid seq)
 		zerovote: 4; // predicate (if we need to trigger cache update)
 		islock: 1; // if the entry is locked before
-		isclone: 2;
 		isbackup: 1; // backup flag
 		iscase12: 1; // case 1/2 of backup
 	}

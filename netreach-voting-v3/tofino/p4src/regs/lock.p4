@@ -29,7 +29,7 @@ action try_lock() {
 	try_lock_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-blackbox stateful_alu clear_lock_alu {
+blackbox stateful_alu reset_lock_alu {
 	reg: lock_reg;
 
 	update_lo_1_value: clr_bit;
@@ -38,8 +38,8 @@ blackbox stateful_alu clear_lock_alu {
 	output_dst: meta.islock;
 }
 
-action clear_lock() {
-	clear_lock_alu.execute_stateful_alu(op_hdr.hashidx);
+action reset_lock() {
+	reset_lock_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 table access_lock_tbl {
@@ -50,7 +50,7 @@ table access_lock_tbl {
 	}
 	actions {
 		try_lock;
-		clear_lock;
+		reset_lock;
 		read_lock;
 		nop;
 	}
