@@ -15,7 +15,7 @@ blackbox stateful_alu get_valid_alu {
 }
 
 action get_valid() {
-	get_valid_alu.execute_stateful_alu(meta.hashidx);
+	get_valid_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu set_valid_alu {
@@ -28,7 +28,7 @@ blackbox stateful_alu set_valid_alu {
 }
 
 action set_valid() {
-	set_valid_alu.execute_stateful_alu(meta.hashidx);
+	set_valid_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu reset_valid_alu {
@@ -41,7 +41,7 @@ blackbox stateful_alu reset_valid_alu {
 }
 
 action reset_valid() {
-	reset_valid_alu.execute_stateful_alu(meta.hashidx);
+	reset_valid_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 @pragma stage 3

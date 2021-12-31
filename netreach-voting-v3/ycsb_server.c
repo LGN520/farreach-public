@@ -55,6 +55,7 @@ typedef GetRequestPOP<index_key_t> get_request_pop_t;
 typedef GetResponsePOP<index_key_t, val_t> get_response_pop_t;
 typedef GetResponseNPOP<index_key_t, val_t> get_response_npop_t;
 typedef GetResponsePOPEvict<index_key_t, val_t> get_response_pop_evict_t;
+typedef PutRequestPOPEvict<index_key_t, val_t> put_request_pop_evict_t;
 
 typedef PutRequestPS<index_key_t, val_t> put_request_ps_t;
 typedef DelRequestS<index_key_t> del_request_s_t;
@@ -944,6 +945,15 @@ static int run_sfg(void * param) {
 				{
 					// Put evicted data into key-value store
 					get_response_pop_evict_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					break;
+				}
+			case packet_type_t::PUT_REQ_POP_EVICT:
+				{
+					// Put evicted data into key-value store
+					put_request_pop_evict_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)

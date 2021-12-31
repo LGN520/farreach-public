@@ -63,7 +63,6 @@ header_type val_t {
 header_type seq_t {
 	fields {
 		seq: 32;
-		is_assigned: 8;
 	}
 }
 
@@ -88,6 +87,7 @@ header_type metadata_t {
 		islock: 1; // if the entry is locked before
 		isbackup: 1; // backup flag
 		iscase12: 1; // case 1/2 of backup
+		hashidx: 16; // for hash partition in egress pipeline
 	}
 }
 

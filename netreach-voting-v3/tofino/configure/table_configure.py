@@ -82,6 +82,9 @@ GETREQ_POP_TYPE = 0x08
 GETRES_POP_TYPE = 0x09
 GETRES_NPOP_TYPE = 0x0a
 GETRES_POP_EVICT_TYPE = 0x0b
+PUTREQ_POP_TYPE = 0x0c
+PUTREQ_RECIR_TYPE = 0x0d
+PUTREQ_POP_EVICT_TYPE = 0x0e
 
 valid_list = [0, 1]
 keymatch_list = [0, 1]
@@ -147,6 +150,33 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         # initialize the thrift data plane
         pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv3"])
 
+    def configure_access_key_tbl(self, keyname):
+        # 5
+        matchspec0 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
+                op_hdr_optype=GETREQ_TYPE)
+        matchspec1 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
+                op_hdr_optype=PUTREQ_TYPE)
+        matchspec2 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
+                op_hdr_optype=DELREQ_TYPE)
+        matchspec3 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
+                op_hdr_optype=PUTREQ_RECIR_TYPE)
+        eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
+                self.sess_hdl, self.dev_tgt, matchspec0)
+        eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
+                self.sess_hdl, self.dev_tgt, matchspec1)
+        eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
+                self.sess_hdl, self.dev_tgt, matchspec2)
+        eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
+                self.sess_hdl, self.dev_tgt, matchspec3)
+        matchspec0 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
+                op_hdr_optype=GETRES_POP_TYPE)
+        eval("self.client.access_key{}_tbl_table_add_with_set_and_get_key{}".format(keyname, keyname))(\
+                self.sess_hdl, self.dev_tgt, matchspec0)
+        matchspec1 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
+                op_hdr_optype=PUTREQ_POP_TYPE)
+        eval("self.client.access_key{}_tbl_table_add_with_set_and_get_key{}".format(keyname, keyname))(\
+                self.sess_hdl, self.dev_tgt, matchspec1)
+
     def configure_update_val_tbl(self, valname):
         # 1028
         for canput in predicate_list:
@@ -156,12 +186,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_iskeymatch=1)
             eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-        for tmpoptype in [PUTREQ_TYPE, DELREQ_TYPE]:
+        for tmpoptype in [PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE]:
             matchspec1 = eval("netbufferv3_update_val{}_tbl_match_spec_t".format(valname))(
                     op_hdr_optype=tmpoptype, 
                     meta_canput=2,
                     meta_iskeymatch=1)
-            if tmpoptype == PUTREQ_TYPE:
+            if tmpoptype == PUTREQ_TYPE or tmpoptype == PUTREQ_RECIR_TYPE:
                 eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
                         self.sess_hdl, self.dev_tgt, matchspec1)
             else: # DELREQ gets value for CASE1
@@ -169,36 +199,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec1)
         for iskeymatch in keymatch_list:
             for canput in predicate_list:
-                for tmpoptype in [GETRES_POP_TYPE, PUTREQ_RU_TYPE]:
+                for tmpoptype in [GETRES_POP_TYPE, PUTREQ_POP_TYPE]:
                     matchspec0 = eval("netbufferv3_update_val{}_tbl_match_spec_t".format(valname))(\
                             op_hdr_optype= tmpoptype,
                             meta_canput=canput,
                             meta_iskeymatch=iskeymatch)
                     eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
-
-    def configure_access_key_tbl(self, keyname):
-        # 5
-        matchspec0 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
-                op_hdr_optype=GETREQ_TYPE)
-        matchspec1 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
-                op_hdr_optype=PUTREQ_TYPE)
-        matchspec2 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
-                op_hdr_optype=DELREQ_TYPE)
-        eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
-                self.sess_hdl, self.dev_tgt, matchspec0)
-        eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
-                self.sess_hdl, self.dev_tgt, matchspec1)
-        eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
-                self.sess_hdl, self.dev_tgt, matchspec2)
-        matchspec0 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
-                op_hdr_optype=GETRES_POP_TYPE)
-        eval("self.client.access_key{}_tbl_table_add_with_set_and_get_key{}".format(keyname, keyname))(\
-                self.sess_hdl, self.dev_tgt, matchspec0)
-        matchspec1 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
-                op_hdr_optype=PUTREQ_RU_TYPE)
-        eval("self.client.access_key{}_tbl_table_add_with_modify_key{}".format(keyname, keyname))(\
-                self.sess_hdl, self.dev_tgt, matchspec1)
 
     def setUp(self):
         print '\nSetup'
@@ -311,7 +318,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 for ismatch_keylohi in predicate_list:
                     for ismatch_keyhilo in predicate_list:
                         for ismatch_keyhihi in predicate_list:
-                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
+                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE]:
                                 matchspec0 = netbufferv3_access_valid_tbl_match_spec_t(
                                         op_hdr_optype=tmpoptype, 
                                         meta_ismatch_keylolo=ismatch_keylolo, 
@@ -328,7 +335,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             self.sess_hdl, self.dev_tgt, matchspec0)
                             # NOTE: GETRES_POP/PUTREQ_U_S triggers set_and_get_key in access_key_tbl which does not 
                             # set ismatch_key but set op_hdr.key 
-                            for tmpoptype in [GETRES_POP_TYPE, PUTREQ_RU_TYPE]:
+                            for tmpoptype in [GETRES_POP_TYPE, PUTREQ_POP_TYPE]:
                                 matchspec0 = netbufferv3_access_valid_tbl_match_spec_t(
                                         op_hdr_optype=tmpoptype, 
                                         meta_ismatch_keylolo=ismatch_keylolo, 
@@ -344,7 +351,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 for ismatch_keylohi in predicate_list:
                     for ismatch_keyhilo in predicate_list:
                         for ismatch_keyhihi in predicate_list:
-                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
+                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, PUTREQ_RECIR_TYPE]:
                                 matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
                                         op_hdr_optype=tmpoptype, 
                                         meta_ismatch_keylolo=ismatch_keylolo, 
@@ -358,14 +365,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 else:
                                     self.client.access_vote_tbl_table_add_with_decrease_vote(
                                             self.sess_hdl, self.dev_tgt, matchspec0)
-                            matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
-                                    op_hdr_optype=GETRES_POP_TYPE, 
-                                    meta_ismatch_keylolo=ismatch_keylolo, 
-                                    meta_ismatch_keylohi=ismatch_keylohi, 
-                                    meta_ismatch_keyhilo=ismatch_keyhilo, 
-                                    meta_ismatch_keyhihi=ismatch_keyhihi)
-                            self.client.access_vote_tbl_table_add_with_init_vote(
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                            for tmpoptype in [GETRES_POP_TYPE, PUTREQ_POP_TYPE]:
+                                matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
+                                        op_hdr_optype=tmpoptype,
+                                        meta_ismatch_keylolo=ismatch_keylolo, 
+                                        meta_ismatch_keylohi=ismatch_keylohi, 
+                                        meta_ismatch_keyhilo=ismatch_keyhilo, 
+                                        meta_ismatch_keyhihi=ismatch_keyhihi)
+                                self.client.access_vote_tbl_table_add_with_init_vote(
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
             # DELREQ (set vote as 0)
             matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
                     meta_isvalid=1,
@@ -380,38 +388,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_ismatch_keyhihihi=2)
             self.client.access_vote_tbl_table_add_with_reset_vote(
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            # Cache update: GETRES_S and PUTREQ_RU (set vote as 1) (GETRES_NS: keep original vote)
-            for ismatch_keylolo in predicate_list:
-                for ismatch_keylohi in predicate_list:
-                    for ismatch_keyhilo in predicate_list:
-                        for ismatch_keyhihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for isvalid in valid_list:
-                                                for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
-                                                    matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
-                                                            meta_isvalid=isvalid,
-                                                            op_hdr_optype=tmpoptype, 
-                                                            meta_ismatch_keylolo=ismatch_keylolo, 
-                                                            meta_ismatch_keylohi=ismatch_keylohi, 
-                                                            meta_ismatch_keyhilo=ismatch_keyhilo, 
-                                                            meta_ismatch_keyhihi=ismatch_keyhihi, 
-                                                            meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                            meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                            meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                            meta_ismatch_keyhihihi=ismatch_keyhihihi)
-                                                    self.client.access_vote_tbl_table_add_with_init_vote(
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
-
 
             # Table assign_seq_tbl (default: nop; 1)
+            # NOTE: PUTREQ_RECIR does not need to assign seq
             print "Configuring assign_seq_tbl"
             matchspec0 = netbufferv3_assign_seq_tbl_match_spec_t(\
-                    op_hdr_optype = PUTREQ_TYPE, 
-                    seq_hdr_is_assigned = 0,
-                    ig_intr_md_resubmit_flag = 0)
+                    op_hdr_optype = PUTREQ_TYPE)
             self.client.assign_seq_tbl_table_add_with_assign_seq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -430,19 +412,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_savedseq_tbl (default: nop; 1026)
             print "Configuring access_savedseq_tbl"
-            matchspec0 = netbufferv3_access_savedseq_tbl_match_spec_t(\
-                    op_hdr_optype = PUTREQ_TYPE,
-                    seq_hdr_is_assigned = 1,
-		    meta_ismatch_keylolo=2, 
-		    meta_ismatch_keylohi=2, 
-		    meta_ismatch_keyhilo=2, 
-		    meta_ismatch_keyhihi=2, 
-		    meta_ismatch_keyhilolo=2,
-		    meta_ismatch_keyhilohi=2,
-		    meta_ismatch_keyhihilo=2,
-		    meta_ismatch_keyhihihi=2)
-            self.client.access_savedseq_tbl_table_add_with_try_update_savedseq(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            for tmpoptype in [PUTREQ_TYPE, PUTREQ_RECIR_TYPE]:
+                matchspec0 = netbufferv3_access_savedseq_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        meta_isvalid = 1,
+                        meta_iskeymatch = 1)
+                self.client.access_savedseq_tbl_table_add_with_try_update_savedseq(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv3_access_savedseq_tbl_match_spec_t(\
                     op_hdr_optype = DELREQ_TYPE,
                     seq_hdr_is_assigned = 0,
@@ -456,12 +432,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 		    meta_ismatch_keyhihihi=2)
             self.client.access_savedseq_tbl_table_add_with_reset_savedseq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            for isassigned in assigned_list:
+            for isvalid in valid_list:
                 for iskeymatch in  keymatch_list:
-                    for tmpoptype in [GETRES_POP_TYPE, PUTREQ_RU_TYPE]:
+                    for tmpoptype in [GETRES_POP_TYPE, PUTREQ_POP_TYPE]:
                         matchspec0 = netbufferv3_access_savedseq_tbl_match_spec_t(\
                                 op_hdr_optype = tmpoptype,
-                                seq_hdr_is_assigned = isassigned,
+                                meta_isvalid = isvalid,
                                 meta_iskeymatch = iskeymatch)
                         self.client.access_savedseq_tbl_table_add_with_reset_savedseq(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
@@ -470,7 +446,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring access_lock_tbl"
             for isvalid in valid_list:
                 for zerovote in predicate_list:
-                    for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE]:
+                    for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, PUTREQ_RECIR_TYPE]:
                         matchspec0 = netbufferv3_access_lock_tbl_match_spec_t(
                                 op_hdr_optype=tmpoptype,
                                 meta_isvalid=isvalid,
@@ -488,7 +464,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0)
             for isvalid in valid_list:
                 for zerovote in predicate_list:
-                    for tmpoptype in [GETRES_POP_TYPE, GETRES_NPOP_TYPE, PUTREQ_RU_TYPE]:
+                    for tmpoptype in [GETRES_POP_TYPE, GETRES_NPOP_TYPE, PUTREQ_POP_TYPE]:
                         matchspec0 = netbufferv3_access_lock_tbl_match_spec_t(
                                 op_hdr_optype=tmpoptype,
                                 meta_isvalid=isvalid,
@@ -506,20 +482,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         meta_iskeymatch=1)
                 self.client.update_vallen_tbl_table_add_with_get_vallen(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
-            for tmpoptype in [PUTREQ_TYPE, DELREQ_TYPE]:
+            for tmpoptype in [PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE]:
                 matchspec0 = netbufferv3_update_vallen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype, 
                         meta_canput=2, # canput means valid=1, iskeymatch=1, and seq>savedseq
                         meta_iskeymatch=1)
-                if (tmpoptype == PUTREQ_TYPE):
+                if (tmpoptype == PUTREQ_TYPE or tmpoptype == PUTREQ_RECIR_TYPE):
                     self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
-                else: # DELREQ reads vallen for CASE1
+                else: # DELREQ resets and gets vallen for CASE1
                     self.client.update_vallen_tbl_table_add_with_get_vallen(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
             for iskeymatch in keymatch_list:
                 for canput in predicate_list:
-                    for tmpoptype in [GETRES_POP_TYPE, PUTREQ_RU_TYPE]:
+                    for tmpoptype in [GETRES_POP_TYPE, PUTREQ_POP_TYPE]:
                         matchspec0 = netbufferv3_update_vallen_tbl_match_spec_t(\
                                 op_hdr_optype=tmpoptype, 
                                 meta_canput=canput,
@@ -913,9 +889,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             elif islock == 1 and (isvalid == 0 or iskeymatch == 0):
                                 # Use recirculate port 64 + pipe ID of ingress port
                                 actnspec0 = netbufferv3_recirculate_getreq_action_spec_t(self.recirPorts[0]) 
-                                self.client.port_forward_tbl_table_add_with_recirculate_putreq_u(\
+                                self.client.port_forward_tbl_table_add_with_recirculate_getreq(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            elif islock == 0 and (isvalid == 0 or iskeymatch == 0):
+                            else:
                                 # Forwrad GETREQ to server 
                                 actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
                                 self.client.port_forward_tbl_table_add_with_port_forward(\
@@ -935,7 +911,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             elif isvalid == 1:
                                 # Update GETRES_POP as GETRES_POP_EVICT to server, clone original pkt with new kv to client port for GETRES to client
                                 actnspec0 = netbufferv3_update_getres_pop_to_evict_clone_for_getres_action_spec_t(\
-                                        sids[0], self.devPorts[1])
+                                        sids[0])
                                 self.client.port_forward_tbl_table_add_with_update_getres_pop_to_evict_clone_for_getres(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                             # Update GETRES_NPOP as GETRES to client
@@ -949,32 +925,77 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.devPorts[0])
                             self.client.port_forward_tbl_table_add_with_update_getres_npop_to_getres(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-
-                            # Deprecated
-                            if isvalid == 1 and isdirty == 1:
-                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                        op_hdr_optype = GETRES_S_TYPE,
-                                        meta_isvalid = 1,
-                                        meta_isdirty = 1,
-                                        meta_islock = islock,
-                                        meta_isbackup=isbackup,
-                                        meta_iscase3=iscase3)
-                                actnspec0 = netbufferv3_update_getres_s_to_putreq_gs_and_clone_action_spec_t(\
-                                        sids[0], self.devPorts[1]) # Clone to client port, output to server port
-                                self.client.port_forward_tbl_table_add_with_update_getres_s_to_putreq_gs_and_clone(\
+                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = PUTREQ_TYPE,
+                                    meta_isvalid = isvalid,
+                                    meta_zerovote = zerovote,
+                                    meta_iskeymatch = iskeymatch,
+                                    meta_islock = islock)
+                            if islock == 0 and (isvalid == 0 or zerovote == 0):
+                                # Use recirculate port 64 + pipe ID of ingress port
+                                actnspec0 = netbufferv3_update_putreq_to_putreq_pop_action_spec_t(self.recirPorts[0]) 
+                                self.client.port_forward_tbl_table_add_with_update_putreq_to_putreq_pop(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                            elif isvalid == 1 and iskeymatch == 1:
+                                # Sendback PUTRES to client
+                                self.client.port_forward_tbl_table_add_with_update_putreq_to_putres(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
+                                # Use recirculate port 64 + pipe ID of ingress port
+                                actnspec0 = netbufferv3_update_putreq_to_putreq_recir_action_spec_t(self.recirPorts[0]) 
+                                self.client.port_forward_tbl_table_add_with_update_putreq_to_putreq_recir(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                             else:
-                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                        op_hdr_optype = GETRES_S_TYPE,
-                                        meta_isvalid = isvalid,
-                                        meta_isdirty = isdirty,
-                                        meta_islock = islock,
-                                        meta_isbackup = isbackup,
-                                        meta_iscase3 = iscase3)
-                                actnspec0 = netbufferv3_update_getres_s_to_getres_action_spec_t(\
-                                        self.devPorts[0]) # Output to client port
-                                self.client.port_forward_tbl_table_add_with_update_getres_s_to_getres(\
+                                # Forwrad PUTREQ to server 
+                                actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
+                                self.client.port_forward_tbl_table_add_with_port_forward(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = PUTREQ_POP_TYPE,
+                                    meta_isvalid = isvalid,
+                                    meta_zerovote = zerovote,
+                                    meta_iskeymatch = iskeymatch,
+                                    meta_islock = islock)
+                            if isvalid == 0: 
+                                # Drop PUTREQ_POP with old kv, clone original pkt with new kv to client port for PUTRES to client
+                                actnspec0 = netbufferv3_drop_putreq_pop_clone_for_putres_action_spec_t(\
+                                        sids[0])
+                                self.client.port_forward_tbl_table_add_with_drop_putreq_pop_clone_for_putres(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                            elif isvalid == 1:
+                                # Update PUTREQ_POP as PUTREQ_POP_EVICT to server, clone original pkt with new kv to client port for PUTRES to client
+                                actnspec0 = netbufferv3_update_putreq_pop_to_evict_clone_for_putres_action_spec_t(\
+                                        sids[0], self.devPorts[1])
+                                self.client.port_forward_tbl_table_add_with_update_putreq_pop_to_evict_clone_for_putres(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = PUTREQ_RECIR_TYPE,
+                                    meta_isvalid = isvalid,
+                                    meta_zerovote = zerovote,
+                                    meta_iskeymatch = iskeymatch,
+                                    meta_islock = islock)
+                            if islock == 0 and (isvalid == 0 or zerovote == 0):
+                                # Use recirculate port 64 + pipe ID of ingress port
+                                actnspec0 = netbufferv3_update_putreq_recir_to_putreq_pop_action_spec_t(self.recirPorts[0])     
+                                self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putreq_pop(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                            elif isvalid == 1 and iskeymatch == 1:
+                                # Sendback PUTRES to client
+                                self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putres(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
+                                # Use recirculate port 64 + pipe ID of ingress port
+                                actnspec0 = netbufferv3_recirculate_putreq_recir_action_spec_t(self.recirPorts[0]) 
+                                self.client.port_forward_tbl_table_add_with_recirculate_putreq_recir(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                            else:
+                                # Forwrad PUTREQ to server 
+                                actnspec0 = netbufferv3_update_putreq_recir_to_putreq_action_spec_t(self.devPorts[1]) 
+                                self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putreq(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
+
+                            # Deprecated
             for isvalid in valid_list:
                 for isdirty in dirty_list:
                     for islock in lock_list:

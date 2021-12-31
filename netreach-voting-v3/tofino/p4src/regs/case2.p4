@@ -13,7 +13,7 @@ blackbox stateful_alu read_case2_alu {
 }
 
 action read_case2() {
-	read_case2_alu.execute_stateful_alu(meta.hashidx);
+	read_case2_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu try_case2_alu {
@@ -26,7 +26,7 @@ blackbox stateful_alu try_case2_alu {
 }
 
 action try_case2() {
-	try_case2_alu.execute_stateful_alu(meta.hashidx);
+	try_case2_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 @pragma stage 8

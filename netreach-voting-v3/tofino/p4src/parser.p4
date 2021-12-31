@@ -73,8 +73,7 @@ parser parse_vallen {
 parser parse_val_len1 {
 	extract(val1_hdr);
 	return select(op_hdr.optype) {
-		GETREQ_BE_TYPE: parse_seq;
-		PUTREQ_BE_TYPE: parse_seq;
+		PUTREQ_RECIR_TYPE: parse_seq;
 		default: ingress;
 	}
 }
@@ -155,7 +154,7 @@ parser parse_val_len16 {
 }*/
 
 parser parse_seq {
-	extract(seq_hdr);
+	extrack(seq_hdr);
 	return ingress;
 }
 

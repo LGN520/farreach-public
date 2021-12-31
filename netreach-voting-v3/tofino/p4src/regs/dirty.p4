@@ -13,7 +13,7 @@ blackbox stateful_alu get_dirty_alu {
 }
 
 action get_dirty() {
-	get_dirty_alu.execute_stateful_alu(meta.hashidx);
+	get_dirty_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu set_dirty_alu {
@@ -26,7 +26,7 @@ blackbox stateful_alu set_dirty_alu {
 }
 
 action set_dirty() {
-	set_dirty_alu.execute_stateful_alu(meta.hashidx);
+	set_dirty_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu clear_dirty_alu {
@@ -39,7 +39,7 @@ blackbox stateful_alu clear_dirty_alu {
 }
 
 action clear_dirty() {
-	clear_dirty_alu.execute_stateful_alu(meta.hashidx);
+	clear_dirty_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 @pragma stage 3

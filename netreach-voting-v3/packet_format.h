@@ -8,7 +8,8 @@
 #include "helper.h"
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
-	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_EVICT};
+	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_EVICT,
+	PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT};
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -190,6 +191,14 @@ template<class key_t, class val_t>
 class GetResponsePOPEvict : public PutRequest<key_t, val_t> {
 	public:
 		PutRequestGS(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestPOPEvict : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestPOPEvict(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };

@@ -592,6 +592,19 @@ uint32_t GetResponsePOPEvict<key_t, val_t>::serialize(char * const data, uint32_
 	COUT_N_EXIT("Invalid invoke of serialize for GetResponsePOPEvict");
 }
 
+// PutRequestPOPEvict
+
+template<class key_t, class val_t>
+PutRequestPOPEvict<key_t, val_t>::PutRequestPOPEvict(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_POP_EVICT);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestPOPEvict<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPOPEvict");
+}
+
 // Deprecated
 
 // DelRequestS

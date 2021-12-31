@@ -24,8 +24,8 @@ action initialize() {
 	modify_field(meta.ismatch_keylohi, 1);
 	modify_field(meta.ismatch_keyhilo, 1);
 	modify_field(meta.ismatch_keyhihi, 1);
-	modify_field(meta.canput, 1);
 	modify_field(meta.zerovote, 1);
+	modify_field(meta.canput, 1);
 }
 
 table initialize_tbl {
@@ -129,6 +129,114 @@ action update_getres_npop_to_getres(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
+action update_putreq_to_putreq_pop(port) {
+	modify_field(op_hdr.optype, PUTREQ_POP_TYPE);
+
+	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
+	recirculate(port);
+}
+
+action update_putreq_to_putres() {
+	// Swap udp port
+	modify_field(udp_hdr.dstPort, meta.tmp_sport);
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_STAT);
+
+	modify_field(op_hdr.optype, PUTRES_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+
+	remove_header(vallen_hdr);
+	remove_header(val1_hdr);
+	remove_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	/*remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);*/
+	modify_field(res_hdr.stat, 1);
+	add_header(res_hdr);
+}
+
+action update_putreq_to_putreq_recir(port) {
+	modify_field(op_hdr.optype, PUTREQ_RECIR_TYPE);
+	add_fo_field(udp_hdr,hdrlen, SEQ_PKTLEN);
+	add_header(seq_hdr);
+
+	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
+	recirculate(port);
+}
+
+action drop_putreq_pop_clone_for_putres(sid) {
+	modify_field(ig_intr_md_for_tm.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+action update_putreq_pop_to_evict_clone_for_getres(sid, port) {
+	modify_field(op_hdr.optype, PUTREQ_POP_EVICT);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+action update_putreq_recir_to_putreq_pop(port) {
+	modify_field(op_hdr.optype, PUTREQ_POP_TYPE);
+	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	remove_header(seq_hdr);
+
+	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
+	recirculate(port);
+}
+
+action update_putreq_recir_to_putres() {
+	// Swap udp port
+	modify_field(udp_hdr.dstPort, meta.tmp_sport);
+	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_STAT_PLUS_SEQ);
+
+	modify_field(op_hdr.optype, PUTRES_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+
+	remove_header(vallen_hdr);
+	remove_header(val1_hdr);
+	remove_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	/*remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);*/
+	remove_header(seq_hdr);
+	modify_field(res_hdr.stat, 1);
+	add_header(res_hdr);
+}
+
+action recirculate_putreq_recir(port) {
+	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
+	recirculate(port);
+}
+
+action update_putreq_recir_to_putreq(port) {
+	modify_field(op_hdr.optype, PUTREQ_TYPE);
+	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
 action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -149,7 +257,17 @@ table port_forward_tbl {
 		drop_getres_pop_clone_for_getres;
 		update_getres_pop_to_evict_clone_for_getres;
 		update_getres_npop_to_getres;
+		update_putreq_to_putreq_pop;
+		update_putreq_to_putres;
+		update_putreq_to_putreq_recir;
+		drop_putreq_pop_clone_for_putres;
+		update_putreq_pop_to_evict_clone_for_putres;
+		update_putreq_recir_to_putreq_pop;
+		update_putreq_recir_to_putres;
+		recirculate_putreq_recir;
+		update_putreq_recir_to_putreq;
 		//update_getres_pop_to_case2_clone_for_getres;
+		//update_putreq_pop_to_case2_clone_for_putres;
 		port_forward;
 		nop;
 	}
@@ -158,34 +276,6 @@ table port_forward_tbl {
 }
 
 // Deprecated 
-
-action update_putreq_to_putres() {
-	// Swap udp port
-	modify_field(udp_hdr.dstPort, meta.tmp_sport);
-	modify_field(udp_hdr.srcPort, meta.tmp_dport);
-	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_ONE);
-
-	remove_header(vallen_hdr);
-	remove_header(val1_hdr);
-	remove_header(val2_hdr);
-	remove_header(val3_hdr);
-	remove_header(val4_hdr);
-	remove_header(val5_hdr);
-	remove_header(val6_hdr);
-	remove_header(val7_hdr);
-	remove_header(val8_hdr);
-	/*remove_header(val9_hdr);
-	remove_header(val10_hdr);
-	remove_header(val11_hdr);
-	remove_header(val12_hdr);
-	remove_header(val13_hdr);
-	remove_header(val14_hdr);
-	remove_header(val15_hdr);
-	remove_header(val16_hdr);*/
-	modify_field(op_hdr.optype, PUTRES_TYPE);
-	modify_field(res_hdr.stat, 1);
-	add_header(res_hdr);
-}
 
 action update_delreq_to_s_and_clone(sid) {
 	// Update transferred packet as delreq_s

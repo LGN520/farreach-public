@@ -25,6 +25,9 @@
 #define GETRES_POP_TYPE 0x09
 #define GETRES_NPOP_TYPE 0x0a
 #define GETRES_POP_EVICT_TYPE 0x0b
+#define PUTREQ_POP_TYPE 0x0c
+#define PUTREQ_RECIR_TYPE 0x0d
+#define PUTREQ_POP_EVICT_TYPE 0x0e
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -36,12 +39,16 @@
 //#define KV_BUCKET_COUNT 1
 
 // NOTE: you should change the two macros according to maximum val length
-// VAL_PKTLEN: sizeof(vallen) + sizeof(val)
-// VAL_PKTLEN_MINUS_ONE: sizeof(vallen) + sizeof(val) - sizeof(stat)
+// VAL_PKTLEN: sizeof(vallen) + sizeof(val), e.g., GETREQ -> GETRES
+// VAL_PKTLEN_MINUS_STAT: sizeof(vallen) + sizeof(val) - sizeof(stat), e.g., PUTREQ -> PUTRES
+// SEQ_PKTLEN: sizeof(seq_hdr), e.g., PUTREQ -> PUTREQ_RECIR, PUTREQ_RECIR -> PUTREQ_POP/PUTREQ
+// VAL_PKTLEN_MINUS_STAT_PLUS_SEQ: sizeof(vallen) + sizeof(val) - sizeof(stat) + sizeof(seq), e.g., PUTREQ_RECIR -> PUTRES
 //#define VAL_PKTLEN 129
-//#define VAL_PKTLEN_MINUS_ONE 128
+//#define VAL_PKTLEN_MINUS_STAT 128
 #define VAL_PKTLEN 9
-#define VAL_PKTLEN_MINUS_ONE 8
+#define VAL_PKTLEN_MINUS_STAT 8
+#define SEQ_PKTLEN 4
+#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 12
 
 //#define CPU_PORT 192
 

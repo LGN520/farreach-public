@@ -1,6 +1,6 @@
 register seq_reg {
 	width: 32;
-	instance_count: 1;
+	instance_count: KV_BUCKET_COUNT;
 }
 
 blackbox stateful_alu assign_seq_alu {
@@ -18,16 +18,12 @@ blackbox stateful_alu assign_seq_alu {
 }
 
 action assign_seq() {
-	assign_seq_alu.execute_stateful_alu(0);
-	modify_field(seq_hdr.is_assigned, 1);
+	assign_seq_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-@pragma stage 0
 table assign_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
-		seq_hdr.is_assigned: exact;
-		ig_intr_md.resubmit_flag: exact;
 	}
 	actions {
 		assign_seq;
@@ -59,7 +55,7 @@ blackbox stateful_alu try_update_savedseq_alu {
 }
 
 action try_update_savedseq() {
-	try_update_savedseq_alu.execute_stateful_alu(meta.hashidx);
+	try_update_savedseq_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 blackbox stateful_alu reset_savedseq_alu {
@@ -69,14 +65,13 @@ blackbox stateful_alu reset_savedseq_alu {
 }
 
 action reset_savedseq() {
-	reset_savedseq_alu.execute_stateful_alu(meta.hashidx);
+	reset_savedseq_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-@pragma stage 3
 table access_savedseq_tbl {
 	reads {
 		op_hdr.optype: exact;
-		seq_hdr.is_assigned: exact;
+		meta.isvalid: exact;
 		meta.iskeymatch: exact;
 	}
 	actions {
