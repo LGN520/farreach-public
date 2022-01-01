@@ -56,13 +56,11 @@ typedef GetResponsePOP<index_key_t, val_t> get_response_pop_t;
 typedef GetResponseNPOP<index_key_t, val_t> get_response_npop_t;
 typedef GetResponsePOPEvict<index_key_t, val_t> get_response_pop_evict_t;
 typedef PutRequestPOPEvict<index_key_t, val_t> put_request_pop_evict_t;
-
-typedef PutRequestPS<index_key_t, val_t> put_request_ps_t;
-typedef DelRequestS<index_key_t> del_request_s_t;
 typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
 typedef DelRequestCase1<index_key_t, val_t> del_request_case1_t;
-typedef PutRequestGSCase2<index_key_t, val_t> put_request_gs_case2_t;
-typedef PutRequestPSCase2<index_key_t, val_t> put_request_ps_case2_t;
+typedef GetResponsePOPEvictCase2<index_key_t, val_t> get_response_pop_evict_case2_t;
+typedef PutRequestPOPEvictCase2<index_key_t, val_t> put_request_pop_evict_case2_t;
+
 typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
 typedef DelRequestCase3<index_key_t> del_request_case3_t;
 
@@ -967,39 +965,19 @@ static int run_sfg(void * param) {
 					}
 					break;
 				}
-
-			// Deprecated
-			case packet_type_t::PUT_REQ_PS:
-				{
-					// Put evicted data into key-value store
-					put_request_ps_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string()
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
-					//COUT_THIS("[server] stat = " << tmp_stat)
-					break;
-				}
-			case packet_type_t::DEL_REQ_S:
-				{
-					// Delete data from key-value storen
-					del_request_s_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string())
-					bool tmp_stat = table->remove(req.key(), thread_id);
-					//COUT_THIS("[server] stat = " << tmp_stat)
-					break;
-				}
 			case packet_type_t::PUT_REQ_CASE1:
 				{
 					COUT_THIS("PUT_REQ_CASE1")
 					if (!isbackup) {
 						put_request_case1_t req(buf, recv_size);
-						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
+						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
 								== special_cases_list[thread_id]->end()) { // No such hashidx
 							SpecialCase tmpcase;
 							tmpcase._key = req.key();
 							tmpcase._val = req.val();
-							tmpcase._valid = (req.is_assigned() == 1);
+							tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.seq(), tmpcase));
+										(unsigned short)req.hashidx(), tmpcase));
 						}
 						try_kvsnapshot(table);
 					}
@@ -1010,58 +988,71 @@ static int run_sfg(void * param) {
 					COUT_THIS("DEL_REQ_CASE1")
 					del_request_case1_t req(buf, recv_size);
 					if (!isbackup) {
-						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
+						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
 								== special_cases_list[thread_id]->end()) { // No such hashidx
 							SpecialCase tmpcase;
 							tmpcase._key = req.key();
 							tmpcase._val = req.val();
-							tmpcase._valid = (req.is_assigned() == 1);
+							tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.seq(), tmpcase));
+										(unsigned short)req.hashidx(), tmpcase));
 						}
 						try_kvsnapshot(table);
 					}
-					bool tmp_stat = table->remove(req.key(), thread_id);
+					// Leave it to SCANREQ to cope with multiple versions 
+					//bool tmp_stat = table->remove(req.key(), thread_id);
 					break;
 				}
-			case packet_type_t::PUT_REQ_GS_CASE2:
+			case packet_type_t::GET_RES_POP_EVICT_CASE2:
 				{
-					COUT_THIS("PUT_REQ_GS_CASE2")
-					put_request_gs_case2_t req(buf, recv_size);
+					COUT_THIS("GET_RES_POP_EVICT_CASE2")
+					get_response_pop_evict_case2_t req(buf, recv_size);
 					if (!isbackup) {
-						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
+						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
 								== special_cases_list[thread_id]->end()) { // No such hashidx
 							SpecialCase tmpcase;
 							tmpcase._key = req.key();
 							tmpcase._val = req.val();
-							tmpcase._valid = (req.is_assigned() == 1);
+							tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.seq(), tmpcase));
+										(unsigned short)req.hashidx(), tmpcase));
 						}
 						try_kvsnapshot(table);
 					}
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					if (req.val() > 0) {
+						table->put(req.key(), req.val(), thread_id);
+					}
+					else {
+						table->remove(req.key(), thread_id);
+					}
 					break;
 				}
-			case packet_type_t::PUT_REQ_PS_CASE2:
+			case packet_type_t::PUT_REQ_POP_EVICT_CASE2:
 				{
-					COUT_THIS("PUT_REQ_PS_CASE2")
-					put_request_ps_case2_t req(buf, recv_size);
+					COUT_THIS("PUT_REQ_POP_EVICT_CASE2")
+					put_request_pop_evict_case2_t req(buf, recv_size);
 					if (!isbackup) {
-						if (special_cases_list[thread_id]->find((unsigned short)req.seq()) 
+						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
 								== special_cases_list[thread_id]->end()) { // No such hashidx
 							SpecialCase tmpcase;
 							tmpcase._key = req.key();
 							tmpcase._val = req.val();
-							tmpcase._valid = (req.is_assigned() == 1);
+							tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
 							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.seq(), tmpcase));
+										(unsigned short)req.hashidx(), tmpcase));
 						}
 						try_kvsnapshot(table);
 					}
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					if (req.val() > 0) {
+						table->put(req.key(), req.val(), thread_id);
+					}
+					else {
+						table->remove(req.key(), thread_id);
+					}
 					break;
 				}
+
+			// Deprecated
 			case packet_type_t::PUT_REQ_CASE3:
 				{
 					COUT_THIS("PUT_REQ_CASE3")

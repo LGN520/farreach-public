@@ -180,7 +180,7 @@ action drop_putreq_pop_clone_for_putres(sid) {
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
-action update_putreq_pop_to_evict_clone_for_getres(sid, port) {
+action update_putreq_pop_to_evict_clone_for_putres(sid, port) {
 	modify_field(op_hdr.optype, PUTREQ_POP_EVICT);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
@@ -286,6 +286,86 @@ action update_delreq_recir_to_delreq(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
+action update_putreq_to_case1_clone_for_putres(sid, port) {
+	modify_field(op_hdr,optype, PUTREQ_CASE1_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+action update_putreq_recir_to_case1_clone_for_putres(sid, port) {
+	modify_field(op_hdr,optype, PUTREQ_CASE1_TYPE);
+	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	remove_header(seq_hdr);
+
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+action update_delreq_to_case1_clone_for_delres(sid, port) {
+	modify_field(op_hdr,optype, DELREQ_CASE1_TYPE);
+
+	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN);
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	*/add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	add_header(val16_hdr);*/
+
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+action update_delreq_recir_to_case1_clone_for_delres(sid, port) {
+	modify_field(op_hdr,optype, DELREQ_CASE1_TYPE);
+
+	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_SEQ);
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	*/add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	add_header(val16_hdr);*/
+	remove_header(seq_hdr);
+
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+action update_getres_pop_to_case2_clone_for_getres(sid) {
+	modify_field(op_hdr.optype, GETRES_POP_EVICT_CASE2);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
+action update_putreq_pop_to_case2_clone_for_putres(sid, port) {
+	modify_field(op_hdr.optype, PUTREQ_POP_EVICT_CASE2);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+	clone_ingress_pkt_to_egress(sid, clone_field_list);
+}
+
 action port_forward(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -298,6 +378,9 @@ table port_forward_tbl {
 		meta.zerovote: exact;
 		meta.iskeymatch: exact;
 		meta.islock: exact;
+		meta.canput: exact;
+		meta.isbackup: exact;
+		meta.iscase12: exact;
 	}
 	actions {
 		update_getreq_to_getreq_pop;
@@ -320,8 +403,12 @@ table port_forward_tbl {
 		update_delreq_recir_to_delres;
 		recirculate_delreq_recir;
 		update_delreq_recir_to_delreq;
-		//update_getres_pop_to_case2_clone_for_getres;
-		//update_putreq_pop_to_case2_clone_for_putres;
+		update_putreq_to_case1_clone_for_putres;
+		update_putreq_recir_to_case1_clone_for_putres;
+		update_delreq_to_case1_clone_for_delres;
+		update_delreq_recir_to_case1_clone_for_delres;
+		update_getres_pop_to_case2_clone_for_getres;
+		update_putreq_pop_to_case2_clone_for_putres;
 		port_forward;
 		nop;
 	}
@@ -330,126 +417,6 @@ table port_forward_tbl {
 }
 
 // Deprecated 
-
-action update_putreq_to_case1() {
-	modify_field(op_hdr.optype, PUTREQ_CASE1_TYPE);
-
-	// Set old value
-	modify_field(vallen_hdr.vallen, meta.origin_vallen);
-	add_header(vallen_hdr);
-	modify_field(val1_hdr.vallo, meta.origin_vallo1);
-	modify_field(val1_hdr.valhi, meta.origin_valhi1);
-	add_header(val1_hdr);
-	modify_field(val2_hdr.vallo, meta.origin_vallo2);
-	modify_field(val2_hdr.valhi, meta.origin_valhi2);
-	add_header(val2_hdr);
-	modify_field(val3_hdr.vallo, meta.origin_vallo3);
-	modify_field(val3_hdr.valhi, meta.origin_valhi3);
-	add_header(val3_hdr);
-	modify_field(val4_hdr.vallo, meta.origin_vallo4);
-	modify_field(val4_hdr.valhi, meta.origin_valhi4);
-	add_header(val4_hdr);
-	modify_field(val5_hdr.vallo, meta.origin_vallo5);
-	modify_field(val5_hdr.valhi, meta.origin_valhi5);
-	add_header(val5_hdr);
-	modify_field(val6_hdr.vallo, meta.origin_vallo6);
-	modify_field(val6_hdr.valhi, meta.origin_valhi6);
-	add_header(val6_hdr);
-	modify_field(val7_hdr.vallo, meta.origin_vallo7);
-	modify_field(val7_hdr.valhi, meta.origin_valhi7);
-	add_header(val7_hdr);
-	modify_field(val8_hdr.vallo, meta.origin_vallo8);
-	modify_field(val8_hdr.valhi, meta.origin_valhi8);
-	add_header(val8_hdr);
-	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
-	modify_field(val9_hdr.valhi, meta.origin_valhi9);
-	add_header(val9_hdr);
-	modify_field(val10_hdr.vallo, meta.origin_vallo10);
-	modify_field(val10_hdr.valhi, meta.origin_valhi10);
-	add_header(val10_hdr);
-	modify_field(val11_hdr.vallo, meta.origin_vallo11);
-	modify_field(val11_hdr.valhi, meta.origin_valhi11);
-	add_header(val11_hdr);
-	modify_field(val12_hdr.vallo, meta.origin_vallo12);
-	modify_field(val12_hdr.valhi, meta.origin_valhi12);
-	add_header(val12_hdr);
-	modify_field(val13_hdr.vallo, meta.origin_vallo13);
-	modify_field(val13_hdr.valhi, meta.origin_valhi13);
-	add_header(val13_hdr);
-	modify_field(val14_hdr.vallo, meta.origin_vallo14);
-	modify_field(val14_hdr.valhi, meta.origin_valhi14);
-	add_header(val14_hdr);
-	modify_field(val15_hdr.vallo, meta.origin_vallo15);
-	modify_field(val15_hdr.valhi, meta.origin_valhi15);
-	add_header(val15_hdr);
-	modify_field(val16_hdr.vallo, meta.origin_vallo16);
-	modify_field(val16_hdr.valhi, meta.origin_valhi16);
-	add_header(val16_hdr);*/
-
-	modify_field(seq_hdr.seq, meta.hashidx);
-	modify_field(seq_hdr.is_assigned, meta.isdirty);
-}
-
-action update_delreq_to_case1() {
-	modify_field(op_hdr.optype, DELREQ_CASE1_TYPE);
-	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN);
-
-	// Set old value
-	modify_field(vallen_hdr.vallen, meta.origin_vallen);
-	add_header(vallen_hdr);
-	modify_field(val1_hdr.vallo, meta.origin_vallo1);
-	modify_field(val1_hdr.valhi, meta.origin_valhi1);
-	add_header(val1_hdr);
-	modify_field(val2_hdr.vallo, meta.origin_vallo2);
-	modify_field(val2_hdr.valhi, meta.origin_valhi2);
-	add_header(val2_hdr);
-	modify_field(val3_hdr.vallo, meta.origin_vallo3);
-	modify_field(val3_hdr.valhi, meta.origin_valhi3);
-	add_header(val3_hdr);
-	modify_field(val4_hdr.vallo, meta.origin_vallo4);
-	modify_field(val4_hdr.valhi, meta.origin_valhi4);
-	add_header(val4_hdr);
-	modify_field(val5_hdr.vallo, meta.origin_vallo5);
-	modify_field(val5_hdr.valhi, meta.origin_valhi5);
-	add_header(val5_hdr);
-	modify_field(val6_hdr.vallo, meta.origin_vallo6);
-	modify_field(val6_hdr.valhi, meta.origin_valhi6);
-	add_header(val6_hdr);
-	modify_field(val7_hdr.vallo, meta.origin_vallo7);
-	modify_field(val7_hdr.valhi, meta.origin_valhi7);
-	add_header(val7_hdr);
-	modify_field(val8_hdr.vallo, meta.origin_vallo8);
-	modify_field(val8_hdr.valhi, meta.origin_valhi8);
-	add_header(val8_hdr);
-	/*modify_field(val9_hdr.vallo, meta.origin_vallo9);
-	modify_field(val9_hdr.valhi, meta.origin_valhi9);
-	add_header(val9_hdr);
-	modify_field(val10_hdr.vallo, meta.origin_vallo10);
-	modify_field(val10_hdr.valhi, meta.origin_valhi10);
-	add_header(val10_hdr);
-	modify_field(val11_hdr.vallo, meta.origin_vallo11);
-	modify_field(val11_hdr.valhi, meta.origin_valhi11);
-	add_header(val11_hdr);
-	modify_field(val12_hdr.vallo, meta.origin_vallo12);
-	modify_field(val12_hdr.valhi, meta.origin_valhi12);
-	add_header(val12_hdr);
-	modify_field(val13_hdr.vallo, meta.origin_vallo13);
-	modify_field(val13_hdr.valhi, meta.origin_valhi13);
-	add_header(val13_hdr);
-	modify_field(val14_hdr.vallo, meta.origin_vallo14);
-	modify_field(val14_hdr.valhi, meta.origin_valhi14);
-	add_header(val14_hdr);
-	modify_field(val15_hdr.vallo, meta.origin_vallo15);
-	modify_field(val15_hdr.valhi, meta.origin_valhi15);
-	add_header(val15_hdr);
-	modify_field(val16_hdr.vallo, meta.origin_vallo16);
-	modify_field(val16_hdr.valhi, meta.origin_valhi16);
-	add_header(val16_hdr);*/
-
-	modify_field(seq_hdr.seq, meta.hashidx);
-	modify_field(seq_hdr.is_assigned, meta.isdirty);
-	add_header(seq_hdr);
-}
 
 action update_getres_s_to_case2(remember_bit) {
 	modify_field(op_hdr.optype, GETRES_S_CASE2_TYPE);

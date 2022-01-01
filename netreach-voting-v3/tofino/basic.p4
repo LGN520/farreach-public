@@ -29,6 +29,10 @@
 #define PUTREQ_RECIR_TYPE 0x0d
 #define PUTREQ_POP_EVICT_TYPE 0x0e
 #define DELREQ_RECIR_TYPE 0x0f
+#define PUTREQ_CASE1_TYPE 0x10
+#define DELREQ_CASE1_TYPE 0x11
+#define GETRES_POP_EVICT_CASE2_TYPE 0x12
+#define PUTREQ_POP_EVICT_CASE2_TYPE 0x13
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -46,15 +50,18 @@
 // VAL_PKTLEN_MINUS_STAT_PLUS_SEQ: sizeof(vallen) + sizeof(val) - sizeof(stat) + sizeof(seq), e.g., PUTREQ_RECIR -> PUTRES
 // STAT_PKTLEN: sizeof(stat), e.g., DELREQ -> DELRES
 // SEQ_PKTLEN_MINUS_STAT: sizeof(seq) - sizeof(stat), e.g., DELREQ_RECIR -> DELRES
+// VAL_PKTLEN_MINUS_SEQ: sizeof(vallen) + sizeof(value) - sizeof(seq), e.g., DELREQ_RECIR -> DELREQ_CASE1
 //#define VAL_PKTLEN 129
 //#define VAL_PKTLEN_MINUS_STAT 128
 //#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 132
+//#define VAL_PKTLEN_MINUS_SEQ 125
 #define VAL_PKTLEN 9
 #define VAL_PKTLEN_MINUS_STAT 8
 #define SEQ_PKTLEN 4
 #define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 12
 #define STAT_PKTLEN 1
 #define SEQ_PKTLEN_MINUS_STAT 3
+#define VAL_PKTLEN_MINUS_SEQ 5
 
 //#define CPU_PORT 192
 
@@ -66,8 +73,7 @@
 
 #include "p4src/regs/seq.p4"
 #include "p4src/regs/lock.p4"
-#include "p4src/regs/case1.p4"
-#include "p4src/regs/case2.p4"
+#include "p4src/regs/case12.p4"
 #include "p4src/regs/case3.p4"
 
 // registers and MATs related with 16B key
@@ -81,9 +87,6 @@
 
 // registers and MATs related with votes
 #include "p4src/regs/vote.p4"
-
-// registers and MATs related with dirty
-#include "p4src/regs/dirty.p4"
 
 #include "p4src/ingress_mat.p4"
 #include "p4src/egress_mat.p4"
@@ -111,13 +114,16 @@ control ingress {
 	apply(access_savedseq_tbl);
 	apply(access_lock_tbl);
 
-	// Start from stage 4 (after keys and savedseq)
-	// NOTE: we just get/put val directly; we decide whether to put the original val in getres or 
-	// putreq in control flow
+	// Stage 3
+	// Case 1 of backup: first matched PUT/DEL of this bucket
+	// Case 2 of backup: cache population by GETRES_POP or PUTREQ_POP
+	apply(access_case12_tbl); 
+
+	// Start from stage 3
 	apply(update_vallen_tbl);
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
-	apply(update_vallo2_tbl);
+	/*apply(update_vallo2_tbl);
 	apply(update_valhi2_tbl);
 	apply(update_vallo3_tbl);
 	apply(update_valhi3_tbl);
@@ -131,7 +137,7 @@ control ingress {
 	apply(update_valhi7_tbl);
 	apply(update_vallo8_tbl);
 	apply(update_valhi8_tbl);
-	/*apply(update_vallo9_tbl);
+	apply(update_vallo9_tbl);
 	apply(update_valhi9_tbl);
 	apply(update_vallo10_tbl);
 	apply(update_valhi10_tbl);
@@ -148,81 +154,8 @@ control ingress {
 	apply(update_vallo16_tbl);
 	apply(update_valhi16_tbl);*/
 
-	// Stage 8 (after keys and valid)
-	apply(access_case1_tbl); // Case 1 of backup: first matched PUT/DEL of this bucket
-	apply(access_case2_tbl); // Case 2 of backup: first eviction of this bucket
-
-	// Stage 9, where n is the number of stages for values
-	// (1) NOTE: it will change op_type from GETREQ/PUTREQ/DELREQ to
-	// GETRES/PUTRES/DELREQ_S(cloned DELRES) only if valid = 1 and
-	// key matches, which will not perform diff calculation, lock 
-	// access, and cache update further. If optype is changed to RES,
-	// port_forward_tbl will forward it as usual.
-	// (2) For PUTREQ, if valid = 1, key matches, isbackup = 1, and iscase1 = 0, 
-	// convert it to PUTREQ_CASE1, and set original value to packet header (old 
-	// value of the key), set hashidx in seq, and set isdirty in is_assigned
-	// (3) For GETRES_S/PUTREQ_RU, if isbackup = 1 and iscase2 = 0, convert it
-	// into GETRES_S_CASE2/PUTREQ_RU_CASE2 (only used in switch), set original
-	// key and value to packet header, set hashidx in seq; if valid = 1 and dirty = 1,
-	// set is_assigned as 1, otherwise, set it as 0
-	// (4) For PUTREQ/GETREQ, if valid = 0 or key does not match, we try lock;
-	// Otherwise (and for DELREQ), we read lock; For GETRES_S/GETRES_NS/PUTREQ_RU,
-	// we reset lock (merge access_lock_tbl)
-	apply(try_res_tbl);
-
-	// NOTE: if packet arriving here is still GETREQ/PUTREQ/DELREQ,
-	// it means that valid is 0, or valid is 1 yet key does not match.
-	// So we do not need to compare whether key matches for the following
-	// tables.
-
-	// Stage 10 (trigger cache update)
-	// Access case3_reg; convert GETREQ -> GETREQ_S; PUTREQ -> PUTREQ_U
-	apply(trigger_cache_update_tbl); // rely on lock (default: read_case3)
-
 	// Stage 11
-	// (1) For GETRES_S, only if valid = 1 and dirty = 1. we convert it as PUTREQ_GS and forward to 
-	// server, ans also clone a packet for GETRES to client; otherwise, we convert it as GETRES and
-	// forward it as usual
-	// (2) For GETRES_NS, directly convert it as GETRES and forward it as usual
-	// (3) For PUTREQ_U, we set meta.is_putreq_ru as 1 and recirculate it (PUTREQ) to update cache
-	// (4) For PUTREQ with meta.is_putreq_ru of 1, we convert it as PUTRES, or convert it to PUTREQ_PS
-	// (only if valid = 1 and dirty = 1), forward to server, and clone a packet for PUTRES to client
-	// (5) For GETREQ, PUTREQ, and DELREQ, only if (lock = 1 and valid = 0) or (lock = 1 and valid = 1 
-	// yet key does not match), we recirculate it. But NOTE that if valid = 1 and key matches, optype has
-	// been set as RES by try_res_tbl. So if pkt arriving here is still REQ, it must satisfy (valid = 0)
-	// or (valid = 1 and key does not match) -> we only need to check whether lock is 1! (TODO: we need 
-	// local seq number here)
-	// (6) For PUTREQ_CASE1, forward it to server and clone a PUTRES to client
-	// (7) For GETRES_S_CASE2/PUTREQ_RU_CASE2, convert it as PUTREQ_GS_CASE2/PUTREQ_PS_CASE2 to server,
-	// and clone GETRES/PUTRES to client
-	// (8) For PUTREQ/DELREQ, if backup = 1, lock = 0, (evict must be 1 for PUTREQ, otherwise it beclomse
-	// PUTREQ_U), iscase3 = 0, convert it to PUTREQ_CASE3/DELREQ_CASE3 and forward to server
-	// (9) For other packets, we set egress_port as usual
-	//if (ig_intr_md.resubmit_flag != 0) {
-	//	apply(forward_to_server_tbl); // TMPDEBUG
-	//}
-	//else {
-	//	apply(port_forward_tbl);
-	//}*/
 	apply(port_forward_tbl);
-
-	// Range-based key matching
-	// Move to egress pipeline
-	//if (op_hdr.optype == PUTREQ_GS_TYPE) {
-	//	apply(origin_hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
-	//}
-	//else if (op_hdr.optype == PUTREQ_GS_CASE2_TYPE) {
-	//	apply(origin_hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
-	//}
-	//else if (op_hdr.optype == PUTREQ_PS_TYPE) {
-	//	apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
-	//}
-	//else if (op_hdr.optype == PUTREQ_PS_CASE2_TYPE) {
-	//	apply(origin_hash_partition_tbl); // update dst port of UDP according to hash value of origin key (evicted key)
-	//}
-	//else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
-	//	apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
-	//}
 }
 
 /* Egress Processing */
@@ -230,15 +163,7 @@ control ingress {
 control egress {
 	// NOTE: make sure that normal packet will not apply these tables
 	if (pkt_is_i2e_mirrored) {
-		if (meta.is_clone == CLONE_FOR_GETRES) {
-			apply(sendback_cloned_getres_tbl); // input is GETRES_S (original pkt becomes PUTREQ_GS/PUTREQ_GS_CASE2) (we do not need swap port, ip, and mac)
-		}
-		else if (meta.is_clone == CLONE_FOR_DELRES) {
-			apply(sendback_cloned_delres_tbl); // input is DELREQ (original pkt becomes DELREQ_S/DELREQ_CASE1) (we need swap port, ip, and mac)
-		}
-		else if (meta.is_clone == CLONE_FOR_PUTRES) {
-			apply(sendback_cloned_putres_tbl); // input is PUTREQ (original pkt becomes PUTREQ_PS/PUTREQ_CASE1/PUTREQ_PS_CASE2) (we need to swap port, ip, and mac)
-		}
+		apply(process_cloned_packet_tbl);
 	}
 	else {
 		// NOTE: for packets requring origin_hash, the key and value in packet header have already been set as origin_key/val
@@ -246,7 +171,7 @@ control egress {
 		if (op_hdr.optype == GETRES_POP_EVICT_TYPE) {
 			apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
 		}
-		else if (op_hdr.optype == GETRES_POP_CASE2_TYPE) {
+		else if (op_hdr.optype == GETRES_POP_EVICT_CASE2_TYPE) {
 			apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
 		}
 		else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)

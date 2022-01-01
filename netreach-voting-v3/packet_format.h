@@ -9,7 +9,8 @@
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
 	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_EVICT,
-	PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, DEL_REQ_RECIR};
+	PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, DEL_REQ_RECIR,
+	PUT_REQ_CASE1, DEL_REQ_CASE1, GET_RES_POP_EVICT_CASE2, PUT_REQ_POP_EVICT_CASE2};
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -203,30 +204,9 @@ class PutRequestPOPEvict : public PutRequest<key_t, val_t> {
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
-// Deprecated
-
-template<class key_t, class val_t>
-class PutRequestPS : public PutRequest<key_t, val_t> {
-	public:
-		PutRequestPS(uint8_t thread_id, key_t key, val_t val);
-		PutRequestPS(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t>
-class DelRequestS : public DelRequest<key_t> {
-	public:
-		DelRequestS(uint8_t thread_id, key_t key);
-		DelRequestS(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
 template<class key_t, class val_t>
 class PutRequestCase1 : public PutRequest<key_t, val_t> {
 	public:
-		PutRequestCase1(uint8_t thread_id, key_t key, val_t val);
 		PutRequestCase1(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -235,29 +215,29 @@ class PutRequestCase1 : public PutRequest<key_t, val_t> {
 template<class key_t, class val_t>
 class DelRequestCase1 : public PutRequest<key_t, val_t> {
 	public:
-		DelRequestCase1(uint8_t thread_id, key_t key, val_t val);
 		DelRequestCase1(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
 template<class key_t, class val_t>
-class PutRequestGSCase2 : public PutRequest<key_t, val_t> {
+class GetResponsePOPEvictCase2 : public PutRequest<key_t, val_t> {
 	public:
-		PutRequestGSCase2(uint8_t thread_id, key_t key, val_t val);
-		PutRequestGSCase2(const char * data, uint32_t recv_size);
+		GetResponsePOPEvictCase2(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
 template<class key_t, class val_t>
-class PutRequestPSCase2 : public PutRequest<key_t, val_t> {
+class PutRequestPOPEvictCase2 : public PutRequest<key_t, val_t> {
 	public:
-		PutRequestPSCase2(uint8_t thread_id, key_t key, val_t val);
-		PutRequestPSCase2(const char * data, uint32_t recv_size);
+		PutRequestPOPEvictCase2(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
+
+
+// Deprecated
 
 template<class key_t, class val_t>
 class PutRequestCase3 : public PutRequest<key_t, val_t> {

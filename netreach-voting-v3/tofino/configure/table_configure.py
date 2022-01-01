@@ -86,16 +86,18 @@ PUTREQ_POP_TYPE = 0x0c
 PUTREQ_RECIR_TYPE = 0x0d
 PUTREQ_POP_EVICT_TYPE = 0x0e
 DELREQ_RECIR_TYPE = 0x0f
+PUTREQ_CASE1_TYPE = 0x10
+DELREQ_CASE1_TYPE = 0x11
+GETRES_POP_EVICT_CASE2_TYPE = 0x12
+PUTREQ_POP_EVICT_CASE2_TYPE = 0x13
 
 valid_list = [0, 1]
 keymatch_list = [0, 1]
 lock_list = [0, 1]
 predicate_list = [1, 2]
 backup_list = [0, 1]
-case1_list = [0, 1]
-case2_list = [0, 1]
+case12_list = [0, 1]
 case3_list = [0, 1]
-assigned_list = [0, 1]
 
 if test_param_get("arch") == "tofino":
   MIR_SESS_COUNT = 1024
@@ -420,7 +422,41 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Start from stage 3
 
+            # Table: access_case12_tbl (default: nop; ?)
+            print "Configuring access_case12_tbl"
+            for isvalid in valid_list:
+                for iskeymatch in keymatch_list:
+                    for canput in predicate_list:
+                        for isbackup in backup_list:
+                            for tmpoptype in [PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE, DELREQ_RECIR_TYPE]:
+                                matchspec0 = netbufferv3_access_case12_tbl_match_spec_t(\
+                                        op_hdr_optype=tmpoptype,
+                                        meta_isvalid=isvalid,
+                                        meta_iskeymatch=iskeymatch,
+                                        meta_canput=canput,
+                                        meta_isbackup=isbackup)
+                                if isvalid == 1 and iskeymatch == 1 and canput == 2 and isbackup == 1:
+                                    self.client.access_case12_tbl_table_add_with_try_case12(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                else:
+                                    self.client.access_case12_tbl_table_add_with_read_case12(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                            for tmpoptype in [GETRES_POP_TYPE]:
+                                matchspec0 = netbufferv3_access_case12_tbl_match_spec_t(\
+                                        op_hdr_optype=tmpoptype,
+                                        meta_isvalid=isvalid,
+                                        meta_iskeymatch=iskeymatch,
+                                        meta_canput=canput,
+                                        meta_isbackup=isbackup)
+                                if isbackup == 1:
+                                    self.client.access_case12_tbl_table_add_with_try_case12(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                else:
+                                    self.client.access_case12_tbl_table_add_with_read_case12(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0)
+
             # Table: update_vallen_tbl (default: nop; 2560)
+            print "Configuring update_vallen_tbl"
             for canput in predicate_list:
                 matchspec0 = netbufferv3_update_vallen_tbl_match_spec_t(\
                         op_hdr_optype=GETREQ_TYPE,
@@ -757,58 +793,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #self.client.update_valhi16_tbl_table_add_with_get_valhi8(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            # Stage 4 + n
-
-            # Table: access_case1_tbl (default: nop; 2048)
-            print "Configuring access_case1_tbl"
-            for ismatch_keylolo in predicate_list:
-                for ismatch_keylohi in predicate_list:
-                    for ismatch_keyhilo in predicate_list:
-                        for ismatch_keyhihi in predicate_list:
-                            for ismatch_keyhilolo in predicate_list:
-                                for ismatch_keyhilohi in predicate_list:
-                                    for ismatch_keyhihilo in predicate_list:
-                                        for ismatch_keyhihihi in predicate_list:
-                                            for isvalid in valid_list:
-                                                for isbackup in backup_list:
-                                                    for tmpoptype in [PUTREQ_TYPE, DELREQ_TYPE]:
-                                                        matchspec0 = netbufferv3_access_case1_tbl_match_spec_t(
-                                                                op_hdr_optype=tmpoptype, 
-                                                                meta_isvalid = isvalid,
-                                                                meta_ismatch_keylolo=ismatch_keylolo, 
-                                                                meta_ismatch_keylohi=ismatch_keylohi, 
-                                                                meta_ismatch_keyhilo=ismatch_keyhilo, 
-                                                                meta_ismatch_keyhihi=ismatch_keyhihi, 
-                                                                meta_ismatch_keyhilolo=ismatch_keyhilolo,
-                                                                meta_ismatch_keyhilohi=ismatch_keyhilohi,
-                                                                meta_ismatch_keyhihilo=ismatch_keyhihilo,
-                                                                meta_ismatch_keyhihihi=ismatch_keyhihihi,
-                                                                meta_isbackup=isbackup)
-                                                        if (ismatch_keylolo == 2 and ismatch_keylohi == 2 and \
-                                                        ismatch_keyhilo == 2 and ismatch_keyhihi == 2 and \
-                                                        ismatch_keyhilolo == 2 and ismatch_keyhilohi == 2 and \
-                                                        ismatch_keyhihilo == 2 and ismatch_keyhihihi == 2 and \
-                                                        isvalid == 1 and isbackup == 1):
-                                                            self.client.access_case1_tbl_table_add_with_try_case1(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                                                        else:
-                                                            self.client.access_case1_tbl_table_add_with_read_case1(
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: access_case2_tbl (default: nop; 4)
-            print "Configuring access_case2_tbl"
-            for isbackup in backup_list:
-                for tmpoptype in [GETRES_S_TYPE, PUTREQ_RU_TYPE]:
-                    matchspec0 = netbufferv3_access_case2_tbl_match_spec_t(\
-                            op_hdr_optype=tmpoptype,
-                            meta_isbackup=isbackup)
-                    if isbackup == 1:
-                        self.client.access_case2_tbl_table_add_with_try_case2(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
-                    else:
-                        self.client.access_case2_tbl_table_add_with_read_case2(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
-
             # Stage 11
 
             # Table: port_forward_tbl (default: nop; 544)
@@ -817,198 +801,240 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 for zerovote in predicate_list:
                     for iskeymatch in keymatch_list:
                         for islock in lock_list:
-                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                    op_hdr_optype = GETREQ_TYPE,
-                                    meta_isvalid = isvalid,
-                                    meta_zerovote = zerovote,
-                                    meta_iskeymatch = iskeymatch,
-                                    meta_islock = islock)
-                            if islock == 0 and (isvalid == 0 or zerovote == 2):
-                                # Update GETREQ as GETREQ_POP to server 
-                                actnspec0 = netbufferv3_update_getreq_to_getreq_pop_action_spec_t(self.devPorts[1])
-                                self.client.port_forward_tbl_table_add_with_update_getreq_to_getreq_pop(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            elif isvalid == 1 and iskeymatch == 1:
-                                # Sendback GETRES to client
-                                self.client.port_forward_tbl_table_add_with_update_getreq_to_getres(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                            elif islock == 1 and (isvalid == 0 or iskeymatch == 0):
-                                # Use recirculate port 64 + pipe ID of ingress port
-                                actnspec0 = netbufferv3_recirculate_getreq_action_spec_t(self.recirPorts[0]) 
-                                self.client.port_forward_tbl_table_add_with_recirculate_getreq(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            else:
-                                # Forwrad GETREQ to server 
-                                actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
-                                self.client.port_forward_tbl_table_add_with_port_forward(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                    op_hdr_optype = GETRES_POP_TYPE,
-                                    meta_isvalid = isvalid,
-                                    meta_zerovote = zerovote,
-                                    meta_iskeymatch = iskeymatch,
-                                    meta_islock = islock)
-                            if isvalid == 0: 
-                                # Drop GETRES_POP with old kv, clone original pkt with new kv to client port for GETRES to client
-                                actnspec0 = netbufferv3_drop_getres_pop_clone_for_getres_action_spec_t(\
-                                        sids[0])
-                                self.client.port_forward_tbl_table_add_with_drop_getres_pop_clone_for_getres(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            elif isvalid == 1:
-                                # Update GETRES_POP as GETRES_POP_EVICT to server, clone original pkt with new kv to client port for GETRES to client
-                                actnspec0 = netbufferv3_update_getres_pop_to_evict_clone_for_getres_action_spec_t(\
-                                        sids[0])
-                                self.client.port_forward_tbl_table_add_with_update_getres_pop_to_evict_clone_for_getres(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            # Update GETRES_NPOP as GETRES to client
-                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                    op_hdr_optype = GETRES_NPOP_TYPE,
-                                    meta_isvalid = isvalid,
-                                    meta_zerovote = zerovote,
-                                    meta_iskeymatch = iskeymatch,
-                                    meta_islock = islock)
-                            actnspec0 = netbufferv3_update_getres_npop_to_getres_action_spec_t(\
-                                    self.devPorts[0])
-                            self.client.port_forward_tbl_table_add_with_update_getres_npop_to_getres(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                    op_hdr_optype = PUTREQ_TYPE,
-                                    meta_isvalid = isvalid,
-                                    meta_zerovote = zerovote,
-                                    meta_iskeymatch = iskeymatch,
-                                    meta_islock = islock)
-                            if islock == 0 and (isvalid == 0 or zerovote == 0):
-                                # Use recirculate port 64 + pipe ID of ingress port
-                                actnspec0 = netbufferv3_update_putreq_to_putreq_pop_action_spec_t(self.recirPorts[0]) 
-                                self.client.port_forward_tbl_table_add_with_update_putreq_to_putreq_pop(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            elif isvalid == 1 and iskeymatch == 1:
-                                # Sendback PUTRES to client
-                                self.client.port_forward_tbl_table_add_with_update_putreq_to_putres(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                            elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
-                                # Use recirculate port 64 + pipe ID of ingress port
-                                actnspec0 = netbufferv3_update_putreq_to_putreq_recir_action_spec_t(self.recirPorts[0]) 
-                                self.client.port_forward_tbl_table_add_with_update_putreq_to_putreq_recir(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            else:
-                                # Forwrad PUTREQ to server 
-                                actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
-                                self.client.port_forward_tbl_table_add_with_port_forward(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                    op_hdr_optype = PUTREQ_POP_TYPE,
-                                    meta_isvalid = isvalid,
-                                    meta_zerovote = zerovote,
-                                    meta_iskeymatch = iskeymatch,
-                                    meta_islock = islock)
-                            if isvalid == 0: 
-                                # Drop PUTREQ_POP with old kv, clone original pkt with new kv to client port for PUTRES to client
-                                actnspec0 = netbufferv3_drop_putreq_pop_clone_for_putres_action_spec_t(\
-                                        sids[0])
-                                self.client.port_forward_tbl_table_add_with_drop_putreq_pop_clone_for_putres(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            elif isvalid == 1:
-                                # Update PUTREQ_POP as PUTREQ_POP_EVICT to server, clone original pkt with new kv to client port for PUTRES to client
-                                actnspec0 = netbufferv3_update_putreq_pop_to_evict_clone_for_putres_action_spec_t(\
-                                        sids[0], self.devPorts[1])
-                                self.client.port_forward_tbl_table_add_with_update_putreq_pop_to_evict_clone_for_putres(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                    op_hdr_optype = PUTREQ_RECIR_TYPE,
-                                    meta_isvalid = isvalid,
-                                    meta_zerovote = zerovote,
-                                    meta_iskeymatch = iskeymatch,
-                                    meta_islock = islock)
-                            if islock == 0 and (isvalid == 0 or zerovote == 0):
-                                # Use recirculate port 64 + pipe ID of ingress port
-                                actnspec0 = netbufferv3_update_putreq_recir_to_putreq_pop_action_spec_t(self.recirPorts[0])     
-                                self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putreq_pop(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            elif isvalid == 1 and iskeymatch == 1:
-                                # Sendback PUTRES to client
-                                self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putres(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                            elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
-                                # Use recirculate port 64 + pipe ID of ingress port
-                                actnspec0 = netbufferv3_recirculate_putreq_recir_action_spec_t(self.recirPorts[0]) 
-                                self.client.port_forward_tbl_table_add_with_recirculate_putreq_recir(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            else:
-                                # Forwrad PUTREQ to server 
-                                actnspec0 = netbufferv3_update_putreq_recir_to_putreq_action_spec_t(self.devPorts[1]) 
-                                self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putreq(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                    op_hdr_optype = DELREQ_TYPE,
-                                    meta_isvalid = isvalid,
-                                    meta_zerovote = zerovote,
-                                    meta_iskeymatch = iskeymatch,
-                                    meta_islock = islock)
-                            if isvalid == 1 and iskeymatch == 1:
-                                # Sendback DELRES to client
-                                self.client.port_forward_tbl_table_add_with_update_delreq_to_delres(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                            elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
-                                # Use recirculate port 64 + pipe ID of ingress port
-                                actnspec0 = netbufferv3_update_delreq_to_delreq_recir_action_spec_t(self.recirPorts[0]) 
-                                self.client.port_forward_tbl_table_add_with_update_delreq_to_delreq_recir(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            else:
-                                # Forwrad DELREQ to server 
-                                actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
-                                self.client.port_forward_tbl_table_add_with_port_forward(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                    op_hdr_optype = DELREQ_RECIR_TYPE,
-                                    meta_isvalid = isvalid,
-                                    meta_zerovote = zerovote,
-                                    meta_iskeymatch = iskeymatch,
-                                    meta_islock = islock)
-                            if isvalid == 1 and iskeymatch == 1:
-                                # Sendback DELRES to client
-                                self.client.port_forward_tbl_table_add_with_update_delreq_recir_to_delres(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                            elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
-                                # Use recirculate port 64 + pipe ID of ingress port
-                                actnspec0 = netbufferv3_recirculate_delreq_recir_action_spec_t(self.recirPorts[0]) 
-                                self.client.port_forward_tbl_table_add_with_recirculate_delreq_recir(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            else:
-                                # Forwrad DELREQ to server 
-                                actnspec0 = netbufferv3_update_delreq_recir_to_delreq_action_spec_t(self.devPorts[1]) 
-                                self.client.port_forward_tbl_table_add_with_update_delreq_recir_to_delreq(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                            for canput in  predicate_list:
+                                for isbackup in backup_list:
+                                    for iscase12 in case12_list:
+                                        matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = GETREQ_TYPE,
+                                                meta_isvalid = isvalid,
+                                                meta_zerovote = zerovote,
+                                                meta_iskeymatch = iskeymatch,
+                                                meta_islock = islock,
+                                                meta_canput = canput,
+                                                meta_isbackup = isbackup,
+                                                meta_iscase12 = iscase12)
+                                        if islock == 0 and (isvalid == 0 or zerovote == 2):
+                                            # Update GETREQ as GETREQ_POP to server 
+                                            actnspec0 = netbufferv3_update_getreq_to_getreq_pop_action_spec_t(self.devPorts[1])
+                                            self.client.port_forward_tbl_table_add_with_update_getreq_to_getreq_pop(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        elif isvalid == 1 and iskeymatch == 1:
+                                            # Sendback GETRES to client
+                                            self.client.port_forward_tbl_table_add_with_update_getreq_to_getres(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                        elif islock == 1 and (isvalid == 0 or iskeymatch == 0):
+                                            # Use recirculate port 64 + pipe ID of ingress port
+                                            actnspec0 = netbufferv3_recirculate_getreq_action_spec_t(self.recirPorts[0]) 
+                                            self.client.port_forward_tbl_table_add_with_recirculate_getreq(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        else:
+                                            # Forwrad GETREQ to server 
+                                            actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
+                                            self.client.port_forward_tbl_table_add_with_port_forward(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = GETRES_POP_TYPE,
+                                                meta_isvalid = isvalid,
+                                                meta_zerovote = zerovote,
+                                                meta_iskeymatch = iskeymatch,
+                                                meta_islock = islock,
+                                                meta_canput = canput,
+                                                meta_isbackup = isbackup,
+                                                meta_iscase12 = iscase12)
+                                        if isbackup == 1 and iscase12 == 0:
+                                                # Update GETRES_POP as GETRES_POP_EVICT_CASE2 to server, clone original pkt with new kv to client port for GETRES to client
+                                                actnspec0 = netbufferv3_update_getres_pop_to_case2_clone_for_getres_action_spec_t(\
+                                                        sids[0])
+                                                self.client.port_forward_tbl_table_add_with_update_getres_pop_to_case2_clone_for_getres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        else:
+                                            if isvalid == 0: 
+                                                # Drop GETRES_POP with old kv, clone original pkt with new kv to client port for GETRES to client
+                                                actnspec0 = netbufferv3_drop_getres_pop_clone_for_getres_action_spec_t(\
+                                                        sids[0])
+                                                self.client.port_forward_tbl_table_add_with_drop_getres_pop_clone_for_getres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            elif isvalid == 1:
+                                                # Update GETRES_POP as GETRES_POP_EVICT to server, clone original pkt with new kv to client port for GETRES to client
+                                                actnspec0 = netbufferv3_update_getres_pop_to_evict_clone_for_getres_action_spec_t(\
+                                                        sids[0])
+                                                self.client.port_forward_tbl_table_add_with_update_getres_pop_to_evict_clone_for_getres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        # Update GETRES_NPOP as GETRES to client
+                                        matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = GETRES_NPOP_TYPE,
+                                                meta_isvalid = isvalid,
+                                                meta_zerovote = zerovote,
+                                                meta_iskeymatch = iskeymatch,
+                                                meta_islock = islock,
+                                                meta_canput = canput,
+                                                meta_isbackup = isbackup,
+                                                meta_iscase12 = iscase12)
+                                        actnspec0 = netbufferv3_update_getres_npop_to_getres_action_spec_t(\
+                                                self.devPorts[0])
+                                        self.client.port_forward_tbl_table_add_with_update_getres_npop_to_getres(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = PUTREQ_TYPE,
+                                                meta_isvalid = isvalid,
+                                                meta_zerovote = zerovote,
+                                                meta_iskeymatch = iskeymatch,
+                                                meta_islock = islock,
+                                                meta_canput = canput,
+                                                meta_isbackup = isbackup,
+                                                meta_iscase12 = iscase12)
+                                        if islock == 0 and (isvalid == 0 or zerovote == 0):
+                                            # Use recirculate port 64 + pipe ID of ingress port
+                                            actnspec0 = netbufferv3_update_putreq_to_putreq_pop_action_spec_t(self.recirPorts[0]) 
+                                            self.client.port_forward_tbl_table_add_with_update_putreq_to_putreq_pop(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        elif isvalid == 1 and iskeymatch == 1:
+                                            if canput == 2 and isbackup == 1 and iscase12 == 0:
+                                                # Update PUTREQ as PUTREQ_CASE1 to server, clone original packet as PUTRES to client
+                                                actnspec0 = netbufferv3_update_putreq_to_case1_clone_for_putres_action_spec_t(\
+                                                        sids[0], self.devPorts[1])
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_to_case1_clone_for_putres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            else:
+                                                # Sendback PUTRES to client
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_to_putres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                        elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
+                                            # Use recirculate port 64 + pipe ID of ingress port
+                                            actnspec0 = netbufferv3_update_putreq_to_putreq_recir_action_spec_t(self.recirPorts[0]) 
+                                            self.client.port_forward_tbl_table_add_with_update_putreq_to_putreq_recir(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        else:
+                                            # Forwrad PUTREQ to server 
+                                            actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
+                                            self.client.port_forward_tbl_table_add_with_port_forward(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = PUTREQ_POP_TYPE,
+                                                meta_isvalid = isvalid,
+                                                meta_zerovote = zerovote,
+                                                meta_iskeymatch = iskeymatch,
+                                                meta_islock = islock,
+                                                meta_canput = canput,
+                                                meta_isbackup = isbackup,
+                                                meta_iscase12 = iscase12)
+                                        if isbackup == 1 and iscase12 == 0:
+                                                # Update PUTREQ_POP as PUTREQ_POP_EVICT_CASE2 to server, clone original pkt with new kv to client port for PUTRES to client
+                                                actnspec0 = netbufferv3_update_putreq_pop_to_case2_clone_for_putres_action_spec_t(\
+                                                        sids[0], self.devPorts[1])
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_pop_to_case2_clone_for_putres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        else:
+                                            if isvalid == 0: 
+                                                # Drop PUTREQ_POP with old kv, clone original pkt with new kv to client port for PUTRES to client
+                                                actnspec0 = netbufferv3_drop_putreq_pop_clone_for_putres_action_spec_t(\
+                                                        sids[0])
+                                                self.client.port_forward_tbl_table_add_with_drop_putreq_pop_clone_for_putres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            elif isvalid == 1:
+                                                # Update PUTREQ_POP as PUTREQ_POP_EVICT to server, clone original pkt with new kv to client port for PUTRES to client
+                                                actnspec0 = netbufferv3_update_putreq_pop_to_evict_clone_for_putres_action_spec_t(\
+                                                        sids[0], self.devPorts[1])
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_pop_to_evict_clone_for_putres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = PUTREQ_RECIR_TYPE,
+                                                meta_isvalid = isvalid,
+                                                meta_zerovote = zerovote,
+                                                meta_iskeymatch = iskeymatch,
+                                                meta_islock = islock,
+                                                meta_canput = canput,
+                                                meta_isbackup = isbackup,
+                                                meta_iscase12 = iscase12)
+                                        if islock == 0 and (isvalid == 0 or zerovote == 0):
+                                            # Use recirculate port 64 + pipe ID of ingress port
+                                            actnspec0 = netbufferv3_update_putreq_recir_to_putreq_pop_action_spec_t(self.recirPorts[0])     
+                                            self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putreq_pop(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        elif isvalid == 1 and iskeymatch == 1:
+                                            if canput == 2 and isbackup == 1 and iscase12 == 0:
+                                                # Update PUTREQ_RECIR as PUTREQ_CASE1 to server, clone original packet as PUTRES to client
+                                                actnspec0 = netbufferv3_update_putreq_recir_to_case1_clone_for_putres_action_spec_t(\
+                                                        sids[0], self.devPorts[1])
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_case1_clone_for_putres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            else:
+                                                # Sendback PUTRES to client
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                        elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
+                                            # Use recirculate port 64 + pipe ID of ingress port
+                                            actnspec0 = netbufferv3_recirculate_putreq_recir_action_spec_t(self.recirPorts[0]) 
+                                            self.client.port_forward_tbl_table_add_with_recirculate_putreq_recir(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        else:
+                                            # Forwrad PUTREQ to server 
+                                            actnspec0 = netbufferv3_update_putreq_recir_to_putreq_action_spec_t(self.devPorts[1]) 
+                                            self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putreq(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = DELREQ_TYPE,
+                                                meta_isvalid = isvalid,
+                                                meta_zerovote = zerovote,
+                                                meta_iskeymatch = iskeymatch,
+                                                meta_islock = islock,
+                                                meta_canput = canput,
+                                                meta_isbackup = isbackup,
+                                                meta_iscase12 = iscase12)
+                                        if isvalid == 1 and iskeymatch == 1:
+                                            if canput == 2 and isbackup == 1 and iscase12 == 0:
+                                                # Update DELREQ as DELREQ_CASE1 to server, clone original packet as DELRES to client
+                                                actnspec0 = netbufferv3_update_delreq_to_case1_clone_for_delres_action_spec_t(\
+                                                        sids[0], self.devPorts[1])
+                                                self.client.port_forward_tbl_table_add_with_update_delreq_to_case1_clone_for_delres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            else:
+                                                # Sendback DELRES to client
+                                                self.client.port_forward_tbl_table_add_with_update_delreq_to_delres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                        elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
+                                            # Use recirculate port 64 + pipe ID of ingress port
+                                            actnspec0 = netbufferv3_update_delreq_to_delreq_recir_action_spec_t(self.recirPorts[0]) 
+                                            self.client.port_forward_tbl_table_add_with_update_delreq_to_delreq_recir(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        else:
+                                            # Forwrad DELREQ to server 
+                                            actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
+                                            self.client.port_forward_tbl_table_add_with_port_forward(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = DELREQ_RECIR_TYPE,
+                                                meta_isvalid = isvalid,
+                                                meta_zerovote = zerovote,
+                                                meta_iskeymatch = iskeymatch,
+                                                meta_islock = islock,
+                                                meta_canput = canput,
+                                                meta_isbackup = isbackup,
+                                                meta_iscase12 = iscase12)
+                                        if isvalid == 1 and iskeymatch == 1:
+                                            if canput == 2 and isbackup == 1 and iscase12 == 0:
+                                                # Update DELREQ_RECIR as DELREQ_CASE1 to server, clone original packet as DELRES to client
+                                                actnspec0 = netbufferv3_update_delreq_recir_to_case1_clone_for_delres_action_spec_t(\
+                                                        sids[0], self.devPorts[1])
+                                                self.client.port_forward_tbl_table_add_with_update_delreq_recir_to_case1_clone_for_delres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            else:
+                                                # Sendback DELRES to client
+                                                self.client.port_forward_tbl_table_add_with_update_delreq_recir_to_delres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                        elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
+                                            # Use recirculate port 64 + pipe ID of ingress port
+                                            actnspec0 = netbufferv3_recirculate_delreq_recir_action_spec_t(self.recirPorts[0]) 
+                                            self.client.port_forward_tbl_table_add_with_recirculate_delreq_recir(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        else:
+                                            # Forwrad DELREQ to server 
+                                            actnspec0 = netbufferv3_update_delreq_recir_to_delreq_action_spec_t(self.devPorts[1]) 
+                                            self.client.port_forward_tbl_table_add_with_update_delreq_recir_to_delreq(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
 
                             # Deprecated
-            for isvalid in valid_list:
-                for isdirty in dirty_list:
-                    for isbackup in backup_list:
-                        for iscase3 in case3_list:
-                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, DELREQ_TYPE]:
-                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                        op_hdr_optype = tmpoptype,
-                                        meta_isvalid = isvalid,
-                                        meta_isdirty = isdirty,
-                                        meta_islock = 0,
-                                        meta_isbackup = isbackup,
-                                        meta_iscase3 = iscase3)
-                                if tmpoptype == PUTREQ_TYPE and isbackup == 1 and iscase3 == 0:
-                                    actnspec0 = netbufferv3_update_putreq_to_case3_action_spec_t(\
-                                            self.devPorts[1]) # Output to server
-                                    self.client.port_forward_tbl_table_add_with_update_putreq_to_case3(\
-                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                elif tmpoptype == DELREQ_TYPE and isbackup == 1 and iscase3 == 0:
-                                    actnspec0 = netbufferv3_update_delreq_to_case3_action_spec_t(\
-                                            self.devPorts[1]) # Output to server
-                                    self.client.port_forward_tbl_table_add_with_update_delreq_to_case3(\
-                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                else:
-                                    actnspec0 = netbufferv3_port_forward_action_spec_t(\
-                                            self.devPorts[1]) # Output to server
-                                    self.client.port_forward_tbl_table_add_with_port_forward(\
-                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for isvalid in valid_list:
                 for isdirty in dirty_list:
                     for islock in lock_list:
@@ -1103,6 +1129,33 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             ### Egress ###
+
+            # Table: process_cloned_packet_tbl
+            print "Configuring process_cloned_packet_tbl"
+            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_TYPE)
+            self.client.process_cloned_packet_tbl_add_with_update_cloned_putreq_to_putres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_RECIR_TYPE)
+            self.client.process_cloned_packet_tbl_add_with_update_cloned_putreq_recir_to_putres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = DELREQ_TYPE)
+            self.client.process_cloned_packet_tbl_add_with_update_cloned_delreq_to_delres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = DELREQ_RECIR_TYPE)
+            self.client.process_cloned_packet_tbl_add_with_update_cloned_delreq_to_delres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = GETRES_POP_TYPE)
+            self.client.process_cloned_packet_tbl_add_with_update_cloned_getres_pop_to_getres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_POP_TYPE)
+            self.client.process_cloned_packet_tbl_add_with_update_cloned_putreq_pop_to_putres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: hash_partition_tbl (default: nop; server_num <= 128)
             print "Configuring hash_partition_tbl"
