@@ -657,16 +657,7 @@ uint32_t PutRequestPOPEvictCase2<key_t, val_t>::serialize(char * const data, uin
 	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPOPEvictCase2");
 }
 
-// Deprecated
-
 // PutRequestCase3
-
-template<class key_t, class val_t>
-PutRequestCase3<key_t, val_t>::PutRequestCase3(uint8_t thread_id, key_t key, val_t val) 
-	: PutRequest<key_t, val_t>::PutRequest(thread_id, key, val)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_CASE3);
-}
 
 template<class key_t, class val_t>
 PutRequestCase3<key_t, val_t>::PutRequestCase3(const char * data, uint32_t recv_size) {
@@ -680,13 +671,6 @@ uint32_t PutRequestCase3<key_t, val_t>::serialize(char * const data, uint32_t ma
 }
 
 // DelRequestCase3
-
-template<class key_t>
-DelRequestCase3<key_t>::DelRequestCase3(uint8_t thread_id, key_t key) 
-	: DelRequest<key_t>::DelRequest(thread_id, key)
-{	
-	this->_type = static_cast<uint8_t>(PacketType::DEL_REQ_CASE3);
-}
 
 template<class key_t>
 DelRequestCase3<key_t>::DelRequestCase3(const char * data, uint32_t recv_size) {

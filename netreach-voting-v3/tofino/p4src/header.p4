@@ -72,6 +72,13 @@ header_type res_t {
 	}
 }
 
+header_type other_t {
+	fields {
+		iscase3: 1;
+		padding: 7;
+	}
+}
+
 header_type metadata_t {
 	fields {
 		tmp_sport: 16;
@@ -116,4 +123,5 @@ header val_t val15_hdr;
 header val_t val16_hdr;*/
 header seq_t seq_hdr;
 header res_t res_hdr;
+header other_t other_hdr;
 metadata metadata_t meta;

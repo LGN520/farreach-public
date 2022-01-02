@@ -10,7 +10,8 @@
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
 	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_EVICT,
 	PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, DEL_REQ_RECIR,
-	PUT_REQ_CASE1, DEL_REQ_CASE1, GET_RES_POP_EVICT_CASE2, PUT_REQ_POP_EVICT_CASE2};
+	PUT_REQ_CASE1, DEL_REQ_CASE1, GET_RES_POP_EVICT_CASE2, PUT_REQ_POP_EVICT_CASE2, 
+	PUT_REQ_MAY_CASE3, PUT_REQ_CASE3, DEL_REQ_MAY_CASE3, DEL_REQ_CASE3};
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -236,13 +237,9 @@ class PutRequestPOPEvictCase2 : public PutRequest<key_t, val_t> {
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
-
-// Deprecated
-
 template<class key_t, class val_t>
 class PutRequestCase3 : public PutRequest<key_t, val_t> {
 	public:
-		PutRequestCase3(uint8_t thread_id, key_t key, val_t val);
 		PutRequestCase3(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -251,7 +248,6 @@ class PutRequestCase3 : public PutRequest<key_t, val_t> {
 template<class key_t>
 class DelRequestCase3 : public DelRequest<key_t> {
 	public:
-		DelRequestCase3(uint8_t thread_id, key_t key);
 		DelRequestCase3(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);

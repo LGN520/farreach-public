@@ -76,6 +76,8 @@ parser parse_val_len1 {
 	return select(op_hdr.optype) {
 		PUTREQ_RECIR_TYPE: parse_seq;
 		DELREQ_RECIR_TYPE: parse_seq;
+		PUTREQ_MAY_CASE3_TYPE: parse_other;
+		DELREQ_MAY_CASE3_TYPE: parse_other;
 		default: ingress;
 	}
 }
@@ -162,5 +164,10 @@ parser parse_seq {
 
 parser parse_res {
 	extract(res_hdr);
+	return ingress;
+}
+
+parser parse_other {
+	extract(other_hdr);
 	return ingress;
 }

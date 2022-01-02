@@ -31,7 +31,7 @@
 	+ Crash-consistent backup
 		* Case 1: change on in-switch cache value;
 		* Case 2: change on in-switch cache key-value pair;
-		* TODO: Case 3: change on server KVS for range query;
+		* Case 3: change on server KVS for range query;
 	+ TODO: Others
 		* CBF-based fast path
 		* Range query support
@@ -63,16 +63,9 @@
 			- For vallen and val, we provide two operations: get, set_and_get
 		* Stage 4-10: from val2 to val15
 		* Stage 11: vallo16, valhi16, case3, port_forward_tbl
-			- For case2, if backup=1 and iscase12=0
-				+ Update GETRES_POP with old key-value as GETRES_POP_EVICT_CASE2 to server, clone_i2e for GETRES with new key-value
-				+ Update PUTREQ_POP with old key-value as PUTREQ_POP_EVICT_CASE2 to server, clone_i2e for PUTRES with new key
-			- For case3, if backup=1
-				+ Embed other_hdr (valid, case3) at the end of PUT/DELREQ
-					+ Update PUTREQ with new key-value as PUTREQ_CASEV
-					+ Update DELREQ without key-value as DELREQ_CASENV
 		* Egress pipeline
-			- For PUTREQ_CASEV/DELREQ_CASENV
-				+ If case3=0, update it as PUT/DELREQ_CASE3 to server
+			- For PUTREQ_MAY_CASE3/DELREQ_MAY_CASE3
+				+ If iscase3=0, update it as PUT/DELREQ_CASE3 to server
 				+ Otherwise, update it as PUT/DELREQ to server
 			- For cloned packet
 				+ If PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, update as PUT/DELRES/PUTRES to client
@@ -102,7 +95,7 @@
 			- Try_case12 isbackup=1; otherwise, read_case12
 		* Stage 11: port_forward
 			- NOTE: current GETRES_POP has old key-value pair instead of new one, we must send original packet to egress pipeline
-			- TODO: If isbackup=1 and iscase12=0, update GETRES_POP as GETRES_POP_EVICT_CASE2 to server, clone_i2e for GETRES to client
+			- If isbackup=1 and iscase12=0, update GETRES_POP as GETRES_POP_EVICT_CASE2 to server, clone_i2e for GETRES to client
 				+ GETRES_POP_EVICT_CASE2 -> hash_partition_reverse_tbl, update_macaddr_c2s
 			- Otherwise
 				+ If valid=0, drop original packet, clone_i2e for GETRES to client
@@ -124,14 +117,18 @@
 		* Stage 3-11: 
 			- Set_and_get vallen and value if valid=1 and canput=2 (valid=1, iskeymatch=1, and seq>savedseq)
 			- Try_case12 if valid=1 and iskeymatch=1 and canput=2 and isbackup=1; otherwise, read_case12
-		* Stage 11: port_forward
-			- If (valid=0 or zerovote=2) and lock=0, update PUTREQ to PUTREQ_POP and recirculate
-			- If valid=1 and iskeymatch=1
-				+ If canput=2 and isbackup=1 and iscase12=0, update PUTREQ as PUTREQ_CASE1 to server, clone_i2e for PUTRES to client
-				+ Otherwise, update PUTREQ to PUTRES
-				- NOTE: current PUTREQ has old key-value pair instead of new one, we must send original packet to egress pipeline
-			- If (valid=0 or iskeymatch=0) and lock=1, update PUTREQ as PUTREQ_RECIR (with seq_hdr, not need to assign seq again) and recirculate
-			- Otherwise, forward PUTREQ to server -> hash_partition_tbl
+		* Stage 11: 
+			- Access port_forward_tbl
+				- If (valid=0 or zerovote=2) and lock=0, update PUTREQ to PUTREQ_POP and recirculate
+				- If valid=1 and iskeymatch=1
+					+ If canput=2 and isbackup=1 and iscase12=0, update PUTREQ as PUTREQ_CASE1 to server, clone_i2e for PUTRES to client
+					+ Otherwise, update PUTREQ to PUTRES
+					- NOTE: current PUTREQ has old key-value pair instead of new one, we must send original packet to egress pipeline
+				- If (valid=0 or iskeymatch=0) and lock=1, update PUTREQ as PUTREQ_RECIR (with seq_hdr, not need to assign seq again) and recirculate
+				- Otherwise
+					+ If isbackup=0, forward PUTREQ to server -> hash_partition_tbl
+					+ If isbackup=1, update PUTREQ as PUTREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
+			- If "otherwise" and isbackup=1, try_case3
 	+ PUTREQ_POP
 		* Stage 0: set_and_get key
 		* Stage 1: set valid=1, vote=1
@@ -141,7 +138,7 @@
 			- Try_case12 isbackup=1; otherwise, read_case12
 		* Stage 11: port_forward
 			- NOTE: current PUTREQ_POP has old key-value pair instead of new one, we must send original packet to egress pipeline
-			- TODO: If isbackup=1 and iscase12=0, update PUTREQ_POP as PUTREQ_POP_EVICT_CASE2 to server, clone_i2e for PUTRES to client
+			- If isbackup=1 and iscase12=0, update PUTREQ_POP as PUTREQ_POP_EVICT_CASE2 to server, clone_i2e for PUTRES to client
 				+ PUTREQ_POP_EVICT_CASE2 -> hash_partition_tbl
 			- If (isbackup=0 or iscase12=1) and valid=0, drop original packet, clone_i2e for PUTRES to client
 			- If (isbackup=0 or iscase12=1) and valid=1, update PUTREQ_POP as PUTREQ_POP_EVICT to server, clone_i2e for PUTRES to client
@@ -159,14 +156,18 @@
 		* Stage 3-11: 
 			- Set_and_get vallen and value if valid=1 and canput=2 (valid=1, iskeymatch=1, and seq>savedseq)
 			- Try_case12 if valid=1 and iskeymatch=1 and canput=2 and isbackup=1; otherwise, read_case12
-		* Stage 11: port_forward
-			- If (valid=0 or zerovote=2) and lock=0, update PUTREQ_RECIR to PUTREQ_POP and recirculate
-			- If valid=1 and iskeymatch=1
-				+ If canput=2 and isbackup=1 and iscase12=0, update PUTREQ as PUTREQ_CASE1 to server, clone_i2e for PUTRES to client
-				+ Otherwise, update PUTREQ to PUTRES
-				- NOTE: current PUTREQ_RECIR has old key-value pair instead of new one, we must send original packet to egress pipeline
-			- If (valid=0 or iskeymatch=0) and lock=1, recirculate PUTREQ_RECIR
-			- Otherwise, update PUTREQ_RECIR as PUTREQ to server -> hash_partition_tbl
+		* Stage 11: 
+			- Access port_forward_tbl
+				- If (valid=0 or zerovote=2) and lock=0, update PUTREQ_RECIR to PUTREQ_POP and recirculate
+				- If valid=1 and iskeymatch=1
+					+ If canput=2 and isbackup=1 and iscase12=0, update PUTREQ as PUTREQ_CASE1 to server, clone_i2e for PUTRES to client
+					+ Otherwise, update PUTREQ to PUTRES
+					- NOTE: current PUTREQ_RECIR has old key-value pair instead of new one, we must send original packet to egress pipeline
+				- If (valid=0 or iskeymatch=0) and lock=1, recirculate PUTREQ_RECIR
+				- Otherwise
+					+ If isbackup=0, update PUTREQ_RECIR as PUTREQ to server -> hash_partition_tbl
+					+ If isbackup=1, update PUTREQ_RECIR as PUTREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
+			- If "otherwise" and isbackup=1, try_case3
 	+ DELREQ (as a speical PUTREQ)
 		* Stage 0: match key
 		* Stage 1
@@ -180,13 +181,17 @@
 		* Stage 3-11:
 			- Reset_and_get vallen, and get value if valid=1 and canput=2 (valid=1, iskeymatch=1, and seq>savedseq)
 			- Try_case12 if valid=1 and iskeymatch=1 and canput=2 and isbackup=1; otherwise, read_case12
-		* Stage 11: port_forward
-			- If valid=1 and iskeymatch=1
-				+ If canput=2 and isbackup=1 and iscase12=0, update DELREQ as DELREQ_CASE1 to server, clone_i2e for DELRES to client
-				+ Otherwise, update DELREQ to DELRES
-				- NOTE: current DELREQ has old key-value pair instead of new one, we must send original packet to egress pipeline
-			- If (valid=0 or iskeymatch=0) and lock=1, update DELREQ as DELREQ_RECIR (with seq_hdr, not need to assign seq again) and recirculate
-			- Otherwise, forward DELREQ to server -> hash_partition_tbl
+		* Stage 11: 
+			- Access port_forward_tbl
+				- If valid=1 and iskeymatch=1
+					+ If canput=2 and isbackup=1 and iscase12=0, update DELREQ as DELREQ_CASE1 to server, clone_i2e for DELRES to client
+					+ Otherwise, update DELREQ to DELRES
+					- NOTE: current DELREQ has old key-value pair instead of new one, we must send original packet to egress pipeline
+				- If (valid=0 or iskeymatch=0) and lock=1, update DELREQ as DELREQ_RECIR (with seq_hdr, not need to assign seq again) and recirculate
+				- Otherwise
+					+ If isbackup=0, forward DELREQ to server -> hash_partition_tbl
+					+ If isbackup=1, update DELREQ as DELREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
+			- If "otherwise" and isbackup=1, try_case3
 	+ DELREQ_RECIR
 		* Stage 0: match key
 		* Stage 1
@@ -200,13 +205,17 @@
 		* Stage 3-11:
 			- Reset_and_get vallen, and get value if valid=1 and canput=2 (valid=1, iskeymatch=1, and seq>savedseq)
 			- Try_case12 if valid=1 and iskeymatch=1 and canput=2 and isbackup=1; otherwise, read_case12
-		* Stage 11: port_forward
-			- If valid=1 and iskeymatch=1
-				+ If canput=2 and isbackup=1 and iscase12=0, update DELREQ as DELREQ_CASE1 to server, clone_i2e for DELRES to client
-				+ Otherwise, update DELREQ to DELRES
-				- NOTE: current DELREQ_RECIR has old key-value pair instead of new one, we must send original packet to egress pipeline
-			- If (valid=0 or iskeymatch=0) and lock=1, recirculate DELREQ_RECIR
-			- Otherwise, update DELREQ_RECIR as DELREQ to server -> hash_partition_tbl
+		* Stage 11: 
+			- Access port_forward_tbl
+				- If valid=1 and iskeymatch=1
+					+ If canput=2 and isbackup=1 and iscase12=0, update DELREQ as DELREQ_CASE1 to server, clone_i2e for DELRES to client
+					+ Otherwise, update DELREQ to DELRES
+					- NOTE: current DELREQ_RECIR has old key-value pair instead of new one, we must send original packet to egress pipeline
+				- If (valid=0 or iskeymatch=0) and lock=1, recirculate DELREQ_RECIR
+				- Otherwise
+					+ If isbackup=0, update DELREQ_RECIR as DELREQ to server -> hash_partition_tbl
+					+ If isbackup=1, update DELREQ_RECIR as DELREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
+			- If "otherwise" and isbackup=1, try_case3
 	+ TODO: Cope with packet loss
 		* For GETRES_POP_EVICT/PUTREQ_POP_EVICT: send to server as well as mirroringing to switch OS for timeout and retransmission
 		* For case1/case2: send to server as well as mirroringing to switch OS for local rollback 
@@ -264,13 +273,16 @@
 	+ Support DELREQ, DELREQ_RECIR
 	+ Support PUTREQ_CASE1, DELREQ_CASE1
 	+ Support GETRES_POP_CASE2, PUTREQ_POP_CASE2
-- TODO: crash-consistent backup (value read pattern)
-- TODO: PUTREQ_CASE3, DELREQ_CASE3, range query
+	+ Support PUTREQ_MAY_CASE3, PUTREQ_CASE3, DELREQ_MAY_CASE3, DELREQ_CASE3
+- Support crash-consistent backup in switch OS
 - TODO: debug and test, try as long value as we can
 - TODO: extend xindex with variable-length value and snapshot
 - TODO: replace rocksdb with xindex
+- TODO: range query
+- TODO: NetCache
 - TODO: switch-driven consistent hashing
 - TODO: distributed extension
+- TODO: DistCache
 
 ## How to run
 

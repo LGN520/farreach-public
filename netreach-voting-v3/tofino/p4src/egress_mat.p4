@@ -1,31 +1,3 @@
-field_list hash_fields {
-	op_hdr.keylolo;
-	op_hdr.keylohi;
-	op_hdr.keyhilo;
-	op_hdr.keyhihi;
-}
-
-field_list_calculation hash_field_calc {
-	input {
-		hash_fields;
-	}
-	algorithm: crc32;
-	output_width: 16;
-}
-
-action calculate_hash() {
-	modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT);
-	// NOTE: we cannot use dynamic hash
-	// modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT - ipv4_hdr.totalLen);
-}
-
-table eg_calculate_hash_tbl {
-	actions {
-		calculate_hash;
-	}
-	default_action: calculate_hash();
-	size: 1;
-}
 
 action sendback_cloned_getres() {
 	modify_field(udp_hdr.srcPort, meta.tmp_sport);
@@ -163,6 +135,75 @@ table process_cloned_packet_tbl {
 	}
 	default_action: nop();
 	size: 128;
+}
+
+action update_putreq_may_case3_to_case3() {
+	modify_field(op_hdr.optype, PUTREQ_CASE3_TYPE);
+	subtract_from_field(udp_hdr, OTHER_PKTLEN);
+	remove_header(other_hdr);
+}
+
+action update_putreq_may_case3_to_putreq() {
+	modify_field(op_hdr.optype, PUTREQ_TYPE);
+	subtract_from_field(udp_hdr, OTHER_PKTLEN);
+	remove_header(other_hdr);
+}
+
+action update_delreq_may_case3_to_case3() {
+	modify_field(op_hdr.optype, DELREQ_CASE3_TYPE);
+	subtract_from_field(udp_hdr, OTHER_PKTLEN);
+	remove_header(other_hdr);
+}
+
+action update_delreq_may_case3_to_delreq() {
+	modify_field(op_hdr.optype, DELREQ_TYPE);
+	subtract_from_field(udp_hdr, OTHER_PKTLEN);
+	remove_header(other_hdr);
+}
+
+table process_may_case3_tbl {
+	reads {
+		op_hdr.optype: exact;
+		other_hdr.iscase3: exact;
+	}
+	actions {
+		update_putreq_may_case3_to_case3;
+		update_putreq_may_case3_to_putreq;
+		update_delreq_may_case3_to_case3;
+		update_delreq_may_case3_to_delreq;
+		nop;
+	}
+	default_action: nop();
+	size: 128;
+}
+
+field_list hash_fields {
+	op_hdr.keylolo;
+	op_hdr.keylohi;
+	op_hdr.keyhilo;
+	op_hdr.keyhihi;
+}
+
+field_list_calculation hash_field_calc {
+	input {
+		hash_fields;
+	}
+	algorithm: crc32;
+	output_width: 16;
+}
+
+action calculate_hash() {
+	modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT);
+	// NOTE: we cannot use dynamic hash
+	// modify_field_with_hash_based_offset(meta.hashidx, 0, hash_field_calc, KV_BUCKET_COUNT - ipv4_hdr.totalLen);
+}
+
+table eg_calculate_hash_tbl {
+	actions {
+		calculate_hash;
+	}
+	default_action: calculate_hash();
+	size: 1;
 }
 
 action update_dstport(port) {

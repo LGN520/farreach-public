@@ -60,7 +60,6 @@ typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
 typedef DelRequestCase1<index_key_t, val_t> del_request_case1_t;
 typedef GetResponsePOPEvictCase2<index_key_t, val_t> get_response_pop_evict_case2_t;
 typedef PutRequestPOPEvictCase2<index_key_t, val_t> put_request_pop_evict_case2_t;
-
 typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
 typedef DelRequestCase3<index_key_t> del_request_case3_t;
 
@@ -1051,8 +1050,6 @@ static int run_sfg(void * param) {
 					}
 					break;
 				}
-
-			// Deprecated
 			case packet_type_t::PUT_REQ_CASE3:
 				{
 					COUT_THIS("PUT_REQ_CASE3")
@@ -1097,15 +1094,6 @@ static int run_sfg(void * param) {
 					std::cout << std::flush;
 					exit(-1);
 				}
-			// For hash-table-based eviction
-			/*case packet_type_t::PUT_REQ_S:
-				{
-					put_request_s_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
-					//COUT_THIS("[server] stat = " << tmp_stat)
-					break;
-				}*/
 		}
 #ifdef TEST_AGG_THPT
 		CUR_TIME(t2);

@@ -33,6 +33,10 @@
 #define DELREQ_CASE1_TYPE 0x11
 #define GETRES_POP_EVICT_CASE2_TYPE 0x12
 #define PUTREQ_POP_EVICT_CASE2_TYPE 0x13
+#define PUTREQ_MAY_CASE3_TYPE 0x14
+#define PUTERQ_CASE3_TYPE 0x15
+#define DELREQ_MAY_CASE3_TYPE 0x16
+#define DELREQ_CASE3_TYPE 0x17
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -51,17 +55,21 @@
 // STAT_PKTLEN: sizeof(stat), e.g., DELREQ -> DELRES
 // SEQ_PKTLEN_MINUS_STAT: sizeof(seq) - sizeof(stat), e.g., DELREQ_RECIR -> DELRES
 // VAL_PKTLEN_MINUS_SEQ: sizeof(vallen) + sizeof(value) - sizeof(seq), e.g., DELREQ_RECIR -> DELREQ_CASE1
+// OTHER_PKTLEN: sizeof(other), e.g., PUTREQ -> PUTREQ_MAY_CASE3
+// SEQ_PKTLEN_MINUS_OTHER: sizeof(seq) - sizeof(other), e.g., PUTREQ_RECIR -> PUTREQ_MAY_CASE3
 //#define VAL_PKTLEN 129
 //#define VAL_PKTLEN_MINUS_STAT 128
 //#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 132
 //#define VAL_PKTLEN_MINUS_SEQ 125
 #define VAL_PKTLEN 9
 #define VAL_PKTLEN_MINUS_STAT 8
-#define SEQ_PKTLEN 4
 #define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 12
+#define VAL_PKTLEN_MINUS_SEQ 5
+#define SEQ_PKTLEN 4
 #define STAT_PKTLEN 1
 #define SEQ_PKTLEN_MINUS_STAT 3
-#define VAL_PKTLEN_MINUS_SEQ 5
+#define OTHER_PKTLEN 1
+#define SEQ_PKTLEN_MINUS_OTHER 3
 
 //#define CPU_PORT 192
 
@@ -166,6 +174,8 @@ control egress {
 		apply(process_cloned_packet_tbl);
 	}
 	else {
+		apply(process_may_case3_tbl);
+
 		// NOTE: for packets requring origin_hash, the key and value in packet header have already been set as origin_key/val
 		apply(eg_calculate_hash_tbl);
 		if (op_hdr.optype == GETRES_POP_EVICT_TYPE) {

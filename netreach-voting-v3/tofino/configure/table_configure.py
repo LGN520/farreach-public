@@ -90,6 +90,10 @@ PUTREQ_CASE1_TYPE = 0x10
 DELREQ_CASE1_TYPE = 0x11
 GETRES_POP_EVICT_CASE2_TYPE = 0x12
 PUTREQ_POP_EVICT_CASE2_TYPE = 0x13
+PUTREQ_MAY_CASE3_TYPE = 0x14
+PUTERQ_CASE3_TYPE = 0x15
+DELREQ_MAY_CASE3_TYPE = 0x16
+DELREQ_CASE3_TYPE = 0x17
 
 valid_list = [0, 1]
 keymatch_list = [0, 1]
@@ -795,6 +799,46 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 11
 
+            # Table access_case3_tbl (default: nop; ?)
+            print "Configuring access_case3_tbl"
+            for isvalid in valid_list:
+                for zerovote in predicate_list:
+                    for iskeymatch in keymatch_list:
+                        for islock in lock_list:
+                            for isbackup in backup_list:
+                                for tmpoptype in [PUTREQ_TYPE, PUTREQ_RECIR_TYPE]:
+                                    matchspec0 = netbufferv3_access_case3_tbl_match_spec_t(\
+                                            op_hdr_optype = tmpoptype,
+                                            meta_isvalid = isvalid,
+                                            meta_zerovote = zerovote,
+                                            meta_iskeymatch = iskeymatch,
+                                            meta_islock = islock,
+                                            meta_isbackup = isbackup)
+                                    if islock == 0 and (isvalid == 0 or zerovote == 0):
+                                        continue
+                                    elif isvalid == 1 and iskeymatch == 1:
+                                        continue
+                                    elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
+                                        continue
+                                    else:
+                                        if isbackup == 0:
+                                            continue
+                                        else:
+                                            self.client.access_case3_tbl_table_add_with_try_case3(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                for tmpoptype in [DELREQ_TYPE, DELREQ_RECIR_TYPE]:
+                                    if isvalid == 1 and iskeymatch == 1:
+                                        continue
+                                    elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
+                                        continue
+                                    else:
+                                        if isbackup == 0:
+                                            continue
+                                        else:
+                                            self.client.access_case3_tbl_table_add_with_try_case3(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+
             # Table: port_forward_tbl (default: nop; 544)
             print "Configuring port_forward_tbl"
             for isvalid in valid_list:
@@ -905,10 +949,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             self.client.port_forward_tbl_table_add_with_update_putreq_to_putreq_recir(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         else:
-                                            # Forwrad PUTREQ to server 
-                                            actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
-                                            self.client.port_forward_tbl_table_add_with_port_forward(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            if isbackup == 0:
+                                                # Forwrad PUTREQ to server 
+                                                actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
+                                                self.client.port_forward_tbl_table_add_with_port_forward(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            else:
+                                                # Update PUTREQ as PUTREQ_MAY_CASE3 to server
+                                                actnspec0 = netbufferv3_update_putreq_to_may_case3_action_spec_t(self.devPorts[1]) 
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_to_may_case3(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                                 op_hdr_optype = PUTREQ_POP_TYPE,
                                                 meta_isvalid = isvalid,
@@ -968,10 +1018,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             self.client.port_forward_tbl_table_add_with_recirculate_putreq_recir(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         else:
-                                            # Forwrad PUTREQ to server 
-                                            actnspec0 = netbufferv3_update_putreq_recir_to_putreq_action_spec_t(self.devPorts[1]) 
-                                            self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putreq(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            if isbackup == 0:
+                                                # Forwrad PUTREQ to server 
+                                                actnspec0 = netbufferv3_update_putreq_recir_to_putreq_action_spec_t(self.devPorts[1]) 
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putreq(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            else:
+                                                # Update PUTREQ_RECIR as PUTREQ_MAY_CASE3 to server
+                                                actnspec0 = netbufferv3_update_putreq_recir_to_may_case3_action_spec_t(self.devPorts[1]) 
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_may_case3(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                                 op_hdr_optype = DELREQ_TYPE,
                                                 meta_isvalid = isvalid,
@@ -998,10 +1054,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             self.client.port_forward_tbl_table_add_with_update_delreq_to_delreq_recir(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         else:
-                                            # Forwrad DELREQ to server 
-                                            actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
-                                            self.client.port_forward_tbl_table_add_with_port_forward(\
-                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            if isbackup == 0:
+                                                # Forwrad DELREQ to server 
+                                                actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
+                                                self.client.port_forward_tbl_table_add_with_port_forward(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            else:
+                                                # Update DELREQ as DELREQ_MAY_CASE3 to server 
+                                                actnspec0 = netbufferv3_update_delreq_to_may_case3_action_spec_t(self.devPorts[1]) 
+                                                self.client.port_forward_tbl_table_add_with_update_delreq_to_may_case3(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                                 op_hdr_optype = DELREQ_RECIR_TYPE,
                                                 meta_isvalid = isvalid,
@@ -1028,105 +1090,45 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             self.client.port_forward_tbl_table_add_with_recirculate_delreq_recir(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         else:
-                                            # Forwrad DELREQ to server 
-                                            actnspec0 = netbufferv3_update_delreq_recir_to_delreq_action_spec_t(self.devPorts[1]) 
-                                            self.client.port_forward_tbl_table_add_with_update_delreq_recir_to_delreq(\
+                                            if isbackup == 0:
+                                                # Forwrad DELREQ to server 
+                                                actnspec0 = netbufferv3_update_delreq_recir_to_delreq_action_spec_t(self.devPorts[1]) 
+                                                self.client.port_forward_tbl_table_add_with_update_delreq_recir_to_delreq(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            else:
+                                                # Update DELREQ_RECIR as DELREQ_MAY_CASE3 to server 
+                                                actnspec0 = netbufferv3_update_delreq_recir_to_may_case3_action_spec_t(self.devPorts[1]) 
+                                                self.client.port_forward_tbl_table_add_with_update_delreq_recir_to_may_case3(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        # Forward SCANREQ to server
+                                        matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = SCANREQ_TYPE,
+                                                meta_isvalid = isvalid,
+                                                meta_zerovote = zerovote,
+                                                meta_iskeymatch = iskeymatch,
+                                                meta_islock = islock,
+                                                meta_canput = canput,
+                                                meta_isbackup = isbackup,
+                                                meta_iscase12 = iscase12)
+                                        actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
+                                        self.client.port_forward_tbl_table_add_with_port_forward(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        # Forward RES to client
+                                        for tmpoptype in [GETRES_TYPE, PUTRES_TYPE, DELRES_TYPE, SCANRES_TYPE]:
+                                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = tmpoptype,
+                                                    meta_isvalid = isvalid,
+                                                    meta_zerovote = zerovote,
+                                                    meta_iskeymatch = iskeymatch,
+                                                    meta_islock = islock,
+                                                    meta_canput = canput,
+                                                    meta_isbackup = isbackup,
+                                                    meta_iscase12 = iscase12)
+                                            actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
+                                            self.client.port_forward_tbl_table_add_with_port_forward(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
 
-                            # Deprecated
-            for isvalid in valid_list:
-                for isdirty in dirty_list:
-                    for islock in lock_list:
-                        for isbackup in backup_list:
-                            for iscase3 in case3_list:
-                                for tmpoptype in [SCANREQ_TYPE, GETREQ_S_TYPE, DELREQ_S_TYPE]:
-                                    matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                            op_hdr_optype = tmpoptype,
-                                            meta_isvalid = isvalid,
-                                            meta_isdirty = isdirty,
-                                            meta_islock = islock,
-                                            meta_isbackup = isbackup,
-                                            meta_iscase3 = iscase3)
-                                    actnspec0 = netbufferv3_port_forward_action_spec_t(\
-                                            self.devPorts[1]) # Output to server
-                                    self.client.port_forward_tbl_table_add_with_port_forward(\
-                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            for isvalid in valid_list:
-                for isdirty in dirty_list:
-                    for islock in lock_list:
-                        for isbackup in backup_list:
-                            for iscase3 in case3_list:
-                                for tmpoptype in [GETRES_TYPE, PUTRES_TYPE, DELRES_TYPE, SCANRES_TYPE]:
-                                    matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                            op_hdr_optype = tmpoptype,
-                                            meta_isvalid = isvalid,
-                                            meta_isdirty = isdirty,
-                                            meta_islock = islock,
-                                            meta_isbackup = isbackup,
-                                            meta_iscase3 = iscase3)
-                                    actnspec0 = netbufferv3_port_forward_action_spec_t(\
-                                            self.devPorts[0]) # Output to client
-                                    self.client.port_forward_tbl_table_add_with_port_forward(\
-                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            for isdirty in dirty_list:
-                for islock in lock_list:
-                    for isbackup in backup_list:
-                        for iscase3 in case3_list:
-                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                    op_hdr_optype = PUTREQ_CASE1_TYPE,
-                                    meta_isvalid = 1,
-                                    meta_isdirty = isdirty,
-                                    meta_islock = islock,
-                                    meta_isbackup = isbackup,
-                                    meta_iscase3 = iscase3)
-                            actnspec0 = netbufferv3_forward_putreq_case1_and_clone_action_spec_t(\
-                                    sids[0], self.devPorts[1]) # Clone to client, forward to server
-                            self.client.port_forward_tbl_table_add_with_forward_putreq_case1_and_clone(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                            matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                    op_hdr_optype = DELREQ_CASE1_TYPE,
-                                    meta_isvalid = 1,
-                                    meta_isdirty = isdirty,
-                                    meta_islock = islock,
-                                    meta_isbackup = isbackup,
-                                    meta_iscase3 = iscase3)
-                            actnspec0 = netbufferv3_forward_delreq_case1_and_clone_action_spec_t(\
-                                    sids[0], self.devPorts[1]) # Clone to client, forward to server
-                            self.client.port_forward_tbl_table_add_with_forward_delreq_case1_and_clone(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            for isvalid in valid_list:
-                for isdirty in dirty_list:
-                    for islock in lock_list:
-                        for isbackup in backup_list:
-                            for iscase3 in case3_list:
-                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                        op_hdr_optype = GETRES_S_CASE2_TYPE,
-                                        meta_isvalid = isvalid,
-                                        meta_isdirty = isdirty,
-                                        meta_islock = islock,
-                                        meta_isbackup = isbackup,
-                                        meta_iscase3 = iscase3)
-                                actnspec0 = netbufferv3_update_getres_s_case2_to_putreq_gs_case2_and_clone_action_spec_t(\
-                                        sids[0], self.devPorts[1]) # Clone to client port, output to server port
-                                self.client.port_forward_tbl_table_add_with_update_getres_s_case2_to_putreq_gs_case2_and_clone(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            for isvalid in valid_list:
-                for isdirty in dirty_list:
-                    for islock in lock_list:
-                        for isbackup in backup_list:
-                            for iscase3 in case3_list:
-                                matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
-                                        op_hdr_optype = PUTREQ_RU_CASE2_TYPE,
-                                        meta_isvalid = isvalid,
-                                        meta_isdirty = isdirty,
-                                        meta_islock = islock,
-                                        meta_isbackup = isbackup,
-                                        meta_iscase3 = iscase3)
-                                actnspec0 = netbufferv3_update_putreq_ru_case2_to_putreq_ps_case2_and_clone_action_spec_t(\
-                                        sids[0], self.devPorts[1]) # Clone to client port, output to server port
-                                self.client.port_forward_tbl_table_add_with_update_putreq_ru_case2_to_putreq_ps_case2_and_clone(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             ### Egress ###
 
@@ -1155,6 +1157,29 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_POP_TYPE)
             self.client.process_cloned_packet_tbl_add_with_update_cloned_putreq_pop_to_putres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table process_may_case3_tbl (default: nop; ?)
+            print "Configuring process_may_case3_tbl"
+            matchspec0 = netbufferv3_process_may_case3_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_MAY_CASE3_TYPE,
+                    other_hdr_iscase3 = 0)
+            self.client.process_may_case3_tbl_table_add_with_update_putreq_may_case3_to_case3(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_may_case3_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_MAY_CASE3_TYPE,
+                    other_hdr_iscase3 = 1)
+            self.client.process_may_case3_tbl_table_add_with_update_putreq_may_case3_to_putreq(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_may_case3_tbl_match_spec_t(\
+                    op_hdr_optype = DELREQ_MAY_CASE3_TYPE,
+                    other_hdr_iscase3 = 0)
+            self.client.process_may_case3_tbl_table_add_with_update_delreq_may_case3_to_case3(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_may_case3_tbl_match_spec_t(\
+                    op_hdr_optype = DELREQ_MAY_CASE3_TYPE,
+                    other_hdr_iscase3 = 1)
+            self.client.process_may_case3_tbl_table_add_with_update_delreq_may_case3_to_delreq(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: hash_partition_tbl (default: nop; server_num <= 128)
