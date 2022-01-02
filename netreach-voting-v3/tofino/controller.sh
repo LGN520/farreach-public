@@ -1,8 +1,6 @@
 if [ $1 == "setup" ]
 then
 	python3 controller/periodic_update.py >/dev/null 2>&1 &
-	#python3 controller/trigger_update.py >/dev/null 2>&1 &
-	#python3 controller/trigger_update.py &
 elif [ $1 == "cleanup" ]
 then
 	pids=$(ps -aux | grep "periodic_update.py" | grep -v "grep" | awk '{print $2}')

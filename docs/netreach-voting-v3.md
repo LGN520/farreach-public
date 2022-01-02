@@ -28,10 +28,10 @@
 				+ Population time is limited: us-level for GET and ns-level for PUT
 				+ # of blocked packets is limited by # of clients (e.g., one thread in a host) due to one-by-one pattern of NetReach client library
 			- NOTE: recirculation-based blocking guarantees that version of switch >= server
-	+ TODO: Crash-consistent backup
+	+ Crash-consistent backup
 		* Case 1: change on in-switch cache value;
 		* Case 2: change on in-switch cache key-value pair;
-		* Case 3: change on server KVS for range query;
+		* TODO: Case 3: change on server KVS for range query;
 	+ TODO: Others
 		* CBF-based fast path
 		* Range query support
@@ -207,6 +207,10 @@
 				- NOTE: current DELREQ_RECIR has old key-value pair instead of new one, we must send original packet to egress pipeline
 			- If (valid=0 or iskeymatch=0) and lock=1, recirculate DELREQ_RECIR
 			- Otherwise, update DELREQ_RECIR as DELREQ to server -> hash_partition_tbl
+	+ TODO: Cope with packet loss
+		* For GETRES_POP_EVICT/PUTREQ_POP_EVICT: send to server as well as mirroringing to switch OS for timeout and retransmission
+		* For case1/case2: send to server as well as mirroringing to switch OS for local rollback 
+		* For case3: wait for ACK from client to set iscase3=0
 - Server-side processsing
 	+ GETREQ: sendback GETRES
 	+ GETREQ_POP:
@@ -223,8 +227,30 @@
 	+ GETRES_POP_EVICT_CASE2/PUTREQ_POP_EVICT_CASE2
 		* If vallen > 0, put evicted key-value pair into KVS without response, add into special case (valid)
 		* Otherwise, delete evicted key from KVS without response, add into special case (invalid)
-	+ When processing special case
-		* For case1: if vallen = 0 delete the entry from backup data; otherwise, overwrite the entry in backup data
+	+ TODO: snapshot for range query
+		* Make a snapshot when init or open
+		* Ensure that in each period of backup, kv snapshot can only be performance once
+			* Use std::atomic_flag: test_and_set & clear
+		* Steps of processing backup and making snapshot
+			* Set isbackup as true to disable server threads from touching per-thread special cases
+			* If is_kvsnapshot is false, mark it as true and make kv snapshot by RCU
+			* Use TCP to receive new backup data
+			* Rollback per-thread special cases (case1/case2) from new backup data
+				* If vallen = 0 delete the entry from backup data; otherwise, overwrite the entry in backup data
+			* Replace old backup data with new backup data
+			* RCU barrier (no other threads touching per-thread special cases and old backup data)
+			* Free old backup data and emptize per-thread special cases, set isbackup as false and is_kvsnapshot as false
+- Controller-side processsing
+	+ Crash-consistent backup (two-phase backup)
+		* Phase 1
+			* Reset registers: case12_reg, case3_reg
+			* Set flag
+		* Phase 2
+			* Read registers
+			* Reset flag -> no special optype from now on
+			* Send backup data by TCP
+			* Optional: reset registers: case1_reg, case2_reg, case3_reg
+
 
 ## Implementation log
 

@@ -85,7 +85,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         tmpreg = reglist[idx] # Big-endian
         tmpreg = (((tmpreg & 0xFF00) >> 8) & 0x00FF) | ((tmpreg & 0x00FF) << 8) # Small-endian
         if (tmpreg < 0):
-            tmpreg += pow(2, 16)
+            tmpreg += pow(2, 16) # int16 -> uint16
         return tmpreg
 
     @staticmethod
@@ -97,20 +97,16 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         tmplolo = tmpreg & 0x000000FF
         tmpreg = (tmplolo << 24) | (tmplohi << 16) | (tmphilo << 8) | tmphihi # Small-endian
         if (tmpreg < 0):
-            tmpreg += pow(2, 32)
+            tmpreg += pow(2, 32) # int32 -> uint32
         return tmpreg
 
     def runTest(self):
         print "Reading reagisters"
         flags = netbufferv3_register_flags_t(read_hw_sync=True)
-        keylololo_list = self.client.register_range_read_keylololo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keylolohi_list = self.client.register_range_read_keylolohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keylohilo_list = self.client.register_range_read_keylohilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keylohihi_list = self.client.register_range_read_keylohihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keyhilolo_list = self.client.register_range_read_keyhilolo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keyhilohi_list = self.client.register_range_read_keyhilohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keyhihilo_list = self.client.register_range_read_keyhihilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keyhihihi_list = self.client.register_range_read_keyhihihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylolo_list = self.client.register_range_read_keylolo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylolo_list = self.client.register_range_read_keylohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylohi_list = self.client.register_range_read_keyhilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylohi_list = self.client.register_range_read_keyhihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         vallo_list_list = []
         valhi_list_list = []
         for i in range(max_val_len):
@@ -118,7 +114,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             valhi_list_list.append(eval("self.client.register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
         vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         valid_list = self.client.register_range_read_valid_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        dirty_list = self.client.register_range_read_dirty_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
 
         print "Reset flag"
         actnspec0 = netbufferv3_load_backup_flag_action_spec_t(0)
@@ -130,35 +125,32 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Filtering data"
         count = 0
         buf = bytearray()
-        for i in range(2*bucket_count): # Two pipelines
-            tmpvalid = valid_list[i]
-            if tmpvalid <= 0:
-                continue
-            tmpdirty = dirty_list[i]
-            if tmpdirty <= 0:
-                continue
-            tmpvallen = vallen_list[i]
-            if tmpvallen <= 0:
-                continue
+        pipeidx = None
+        for i in range(bucket_count): # Two pipelines
+            if pipeidx is None:
+                tmpvalid0 = valid_list[i]
+                tmpvalid1 = valid_list[i+bucket_count]
+                if tmpvalid0 <= 0 and tmpvalid1 <= 0:
+                    continue
+                elif tmpvalid0 > 0:
+                    pipeidx = 0
+                else:
+                    pipeidx = 1
+            idx = i + pipeidx * bucket_count
+            tmpvalid = valid_list[idx]
             # each tmpkeyxxxxxx is 2B
-            tmpkeylololo = RegisterUpdate.get_reg16(keylololo_list, i)
-            tmpkeylolohi = RegisterUpdate.get_reg16(keylolohi_list, i)
-            tmpkeylohilo = RegisterUpdate.get_reg16(keylohilo_list, i)
-            tmpkeylohihi = RegisterUpdate.get_reg16(keylohihi_list, i)
-            tmpkeyhilolo = RegisterUpdate.get_reg16(keyhilolo_list, i)
-            tmpkeyhilohi = RegisterUpdate.get_reg16(keyhilohi_list, i)
-            tmpkeyhihilo = RegisterUpdate.get_reg16(keyhihilo_list, i)
-            tmpkeyhihihi = RegisterUpdate.get_reg16(keyhihihi_list, i)
-            tmpkeylo = (((tmpkeylohihi << 16) + tmpkeylohilo) << 32) + ((tmpkeylolohi << 16) + tmpkeylololo)
-            tmpkeyhi = (((tmpkeyhihihi << 16) + tmpkeyhihilo) << 32) + ((tmpkeyhilohi << 16) + tmpkeyhilolo)
-            hashidx = i
-            if hashidx >= bucket_count:
-                hashidx = (hashidx - bucket_count)
-            buf = buf + struct.pack("=H2QB", hashidx, tmpkeylo, tmpkeyhi, tmpvallen)
+            tmpkeylolo = RegisterUpdate.get_reg16(keylolo_list, idx)
+            tmpkeylohi = RegisterUpdate.get_reg16(keylohi_list, idx)
+            tmpkeyhilo = RegisterUpdate.get_reg16(keyhilo_list, idx)
+            tmpkeyhihi = RegisterUpdate.get_reg16(keyhihi_list, idx)
+            tmpkeylo = (tmpkeylohi << 32) + tmpkeylolo
+            tmpkeyhi = (tmpkeyhihi << 32) + tmpkeyhilo
+            buf = buf + struct.pack("=H2QB", i, tmpkeylo, tmpkeyhi, tmpvallen) # i is hashidx
             #print("i: {} keylo: {:016x} keyhi: {:016x} vallen: {:02x}".format(hashidx, tmpkeylo, tmpkeyhi, tmpvallen))
-            for val_idx in range(tmpvallen):
-                tmpvallo = RegisterUpdate.get_reg32(vallo_list_list[val_idx], i)
-                tmpvalhi = RegisterUpdate.get_reg32(valhi_list_list[val_idx], i)
+            for j in range(tmpvallen):
+                val_idx = vallen - j
+                tmpvallo = RegisterUpdate.get_reg32(vallo_list_list[val_idx], idx)
+                tmpvalhi = RegisterUpdate.get_reg32(valhi_list_list[val_idx], idx)
                 tmpval = (tmpvalhi << 32) + tmpvallo
                 buf = buf + struct.pack("Q", tmpval)
             count += 1
