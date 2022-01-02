@@ -943,7 +943,7 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					get_response_pop_evict_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					if (req.val() > 0) {
+					if (req.val().val_length > 0) {
 						table->put(req.key(), req.val(), thread_id);
 					}
 					else {
@@ -956,7 +956,7 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					put_request_pop_evict_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					if (req.val() > 0) {
+					if (req.val().val_length > 0) {
 						table->put(req.key(), req.val(), thread_id);
 					}
 					else {
@@ -1018,7 +1018,7 @@ static int run_sfg(void * param) {
 						}
 						try_kvsnapshot(table);
 					}
-					if (req.val() > 0) {
+					if (req.val().val_length > 0) {
 						table->put(req.key(), req.val(), thread_id);
 					}
 					else {
@@ -1042,7 +1042,7 @@ static int run_sfg(void * param) {
 						}
 						try_kvsnapshot(table);
 					}
-					if (req.val() > 0) {
+					if (req.val().val_length > 0) {
 						table->put(req.key(), req.val(), thread_id);
 					}
 					else {

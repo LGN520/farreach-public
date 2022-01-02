@@ -192,7 +192,7 @@ class GetResponseNPOP : public GetResponse<key_t, val_t> {
 template<class key_t, class val_t>
 class GetResponsePOPEvict : public PutRequest<key_t, val_t> {
 	public:
-		PutRequestGS(const char * data, uint32_t recv_size);
+		GetResponsePOPEvict(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
