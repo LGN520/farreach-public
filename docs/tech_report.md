@@ -39,6 +39,7 @@
 
 ## Global Configuration
 
+- We use gcc-7.5.0 and g++-7.5.0
 - Configuration of XIndex
 	+ See [README.md](../xindex/XIndex-R/READE.md)
 	+ For jemalloc, follow the next instructions to install libjemalloc-dev instead of libjemalloc1 as XIndex
