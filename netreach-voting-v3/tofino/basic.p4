@@ -34,7 +34,7 @@
 #define GETRES_POP_EVICT_CASE2_TYPE 0x12
 #define PUTREQ_POP_EVICT_CASE2_TYPE 0x13
 #define PUTREQ_MAY_CASE3_TYPE 0x14
-#define PUTERQ_CASE3_TYPE 0x15
+#define PUTREQ_CASE3_TYPE 0x15
 #define DELREQ_MAY_CASE3_TYPE 0x16
 #define DELREQ_CASE3_TYPE 0x17
 
@@ -44,8 +44,8 @@
 // (fields in the same ALU msut be in the same PHV group)
 // -> (64-1)/2=31 -> 31*4=124B val -> 15*8=120B val
 // 32K * (4*2B keylo + 4*2B keyhi + 96B val + 1bit valid)
-#define KV_BUCKET_COUNT 32768
-//#define KV_BUCKET_COUNT 1
+//#define KV_BUCKET_COUNT 32768
+#define KV_BUCKET_COUNT 1
 
 // NOTE: you should change the two macros according to maximum val length
 // VAL_PKTLEN: sizeof(vallen) + sizeof(val), e.g., GETREQ -> GETRES

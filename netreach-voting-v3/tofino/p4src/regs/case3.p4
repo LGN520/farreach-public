@@ -12,6 +12,10 @@ blackbox stateful_alu read_case3_alu {
 	output_dst: other_hdr.iscase3;
 }
 
+action read_case3() {
+	read_case3_alu.execute_stateful_alu(op_hdr.hashidx);
+}
+
 blackbox stateful_alu try_case3_alu {
 	reg: case3_reg;
 
@@ -19,6 +23,10 @@ blackbox stateful_alu try_case3_alu {
 
 	output_value: alu_lo;
 	output_dst: other_hdr.iscase3;
+}
+
+action try_case3() {
+	try_case3_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
 table access_case3_tbl {

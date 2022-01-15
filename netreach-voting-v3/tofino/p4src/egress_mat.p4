@@ -38,14 +38,14 @@ action update_cloned_putreq_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	remove_header(val2_hdr);
+	/*remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
 	remove_header(val6_hdr);
 	remove_header(val7_hdr);
 	remove_header(val8_hdr);
-	/*remove_header(val9_hdr);
+	remove_header(val9_hdr);
 	remove_header(val10_hdr);
 	remove_header(val11_hdr);
 	remove_header(val12_hdr);
@@ -67,14 +67,14 @@ action update_cloned_putreq_recir_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	remove_header(val2_hdr);
+	/*remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
 	remove_header(val6_hdr);
 	remove_header(val7_hdr);
 	remove_header(val8_hdr);
-	/*remove_header(val9_hdr);
+	remove_header(val9_hdr);
 	remove_header(val10_hdr);
 	remove_header(val11_hdr);
 	remove_header(val12_hdr);
@@ -91,7 +91,7 @@ action update_cloned_getres_pop_to_getres() {
 	modify_field(op_hdr.optype, GETRES_TYPE);
 }
 
-action update_putreq_pop_to_putres() {
+action update_cloned_putreq_pop_to_putres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
@@ -101,14 +101,14 @@ action update_putreq_pop_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	remove_header(val2_hdr);
+	/*remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
 	remove_header(val6_hdr);
 	remove_header(val7_hdr);
 	remove_header(val8_hdr);
-	/*remove_header(val9_hdr);
+	remove_header(val9_hdr);
 	remove_header(val10_hdr);
 	remove_header(val11_hdr);
 	remove_header(val12_hdr);
@@ -139,25 +139,25 @@ table process_cloned_packet_tbl {
 
 action update_putreq_may_case3_to_case3() {
 	modify_field(op_hdr.optype, PUTREQ_CASE3_TYPE);
-	subtract_from_field(udp_hdr, OTHER_PKTLEN);
+	subtract_from_field(udp_hdr.hdrlen, OTHER_PKTLEN);
 	remove_header(other_hdr);
 }
 
 action update_putreq_may_case3_to_putreq() {
 	modify_field(op_hdr.optype, PUTREQ_TYPE);
-	subtract_from_field(udp_hdr, OTHER_PKTLEN);
+	subtract_from_field(udp_hdr.hdrlen, OTHER_PKTLEN);
 	remove_header(other_hdr);
 }
 
 action update_delreq_may_case3_to_case3() {
 	modify_field(op_hdr.optype, DELREQ_CASE3_TYPE);
-	subtract_from_field(udp_hdr, OTHER_PKTLEN);
+	subtract_from_field(udp_hdr.hdrlen, OTHER_PKTLEN);
 	remove_header(other_hdr);
 }
 
 action update_delreq_may_case3_to_delreq() {
 	modify_field(op_hdr.optype, DELREQ_TYPE);
-	subtract_from_field(udp_hdr, OTHER_PKTLEN);
+	subtract_from_field(udp_hdr.hdrlen, OTHER_PKTLEN);
 	remove_header(other_hdr);
 }
 

@@ -8,7 +8,7 @@ blackbox stateful_alu get_vallen_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: vallen_hdr.vallen;
 }
 
@@ -21,7 +21,7 @@ blackbox stateful_alu set_and_get_vallen_alu {
 
 	update_lo_1_value: vallen_hdr.vallen;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: vallen_hdr.vallen;
 }
 
@@ -34,7 +34,7 @@ blackbox stateful_alu reset_and_get_vallen_alu {
 
 	update_lo_1_value: 0;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: vallen_hdr.vallen;
 }
 
@@ -68,7 +68,7 @@ blackbox stateful_alu get_vallo1_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: val1_hdr.vallo;
 }
 
@@ -81,7 +81,7 @@ blackbox stateful_alu set_and_get_vallo1_alu {
 
 	update_lo_1_value: val1_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: val1_hdr.vallo;
 }
 
@@ -114,7 +114,7 @@ blackbox stateful_alu get_valhi1_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: val1_hdr.valhi;
 }
 
@@ -127,7 +127,7 @@ blackbox stateful_alu set_and_get_valhi1_alu {
 
 	update_lo_1_value: val1_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: val1_hdr.valhi;
 }
 
@@ -160,7 +160,7 @@ blackbox stateful_alu get_vallo2_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo2;
 }
 
@@ -173,7 +173,7 @@ blackbox stateful_alu set_and_get_vallo2_alu {
 
 	update_lo_1_value: val2_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo2;
 }
 
@@ -213,7 +213,7 @@ blackbox stateful_alu get_valhi2_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi2;
 }
 
@@ -226,7 +226,7 @@ blackbox stateful_alu set_and_get_valhi2_alu {
 
 	update_lo_1_value: val2_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi2;
 }
 
@@ -266,7 +266,7 @@ blackbox stateful_alu get_vallo3_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo3;
 }
 
@@ -279,7 +279,7 @@ blackbox stateful_alu set_and_get_vallo3_alu {
 
 	update_lo_1_value: val3_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo3;
 }
 
@@ -319,7 +319,7 @@ blackbox stateful_alu get_valhi3_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi3;
 }
 
@@ -332,7 +332,7 @@ blackbox stateful_alu set_and_get_valhi3_alu {
 
 	update_lo_1_value: val3_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi3;
 }
 
@@ -372,7 +372,7 @@ blackbox stateful_alu get_vallo4_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo4;
 }
 
@@ -385,7 +385,7 @@ blackbox stateful_alu set_and_get_vallo4_alu {
 
 	update_lo_1_value: val4_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo4;
 }
 
@@ -425,7 +425,7 @@ blackbox stateful_alu get_valhi4_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi4;
 }
 
@@ -438,7 +438,7 @@ blackbox stateful_alu set_and_get_valhi4_alu {
 
 	update_lo_1_value: val4_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi4;
 }
 
@@ -478,7 +478,7 @@ blackbox stateful_alu get_vallo5_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo5;
 }
 
@@ -491,7 +491,7 @@ blackbox stateful_alu set_and_get_vallo5_alu {
 
 	update_lo_1_value: val5_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo5;
 }
 
@@ -531,7 +531,7 @@ blackbox stateful_alu get_valhi5_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi5;
 }
 
@@ -544,7 +544,7 @@ blackbox stateful_alu set_and_get_valhi5_alu {
 
 	update_lo_1_value: val5_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi5;
 }
 
@@ -584,7 +584,7 @@ blackbox stateful_alu get_vallo6_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo6;
 }
 
@@ -597,7 +597,7 @@ blackbox stateful_alu set_and_get_vallo6_alu {
 
 	update_lo_1_value: val6_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo6;
 }
 
@@ -637,7 +637,7 @@ blackbox stateful_alu get_valhi6_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi6;
 }
 
@@ -650,7 +650,7 @@ blackbox stateful_alu set_and_get_valhi6_alu {
 
 	update_lo_1_value: val6_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi6;
 }
 
@@ -690,7 +690,7 @@ blackbox stateful_alu get_vallo7_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo7;
 }
 
@@ -703,7 +703,7 @@ blackbox stateful_alu set_and_get_vallo7_alu {
 
 	update_lo_1_value: val7_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo7;
 }
 
@@ -743,7 +743,7 @@ blackbox stateful_alu get_valhi7_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi7;
 }
 
@@ -756,7 +756,7 @@ blackbox stateful_alu set_and_get_valhi7_alu {
 
 	update_lo_1_value: val7_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi7;
 }
 
@@ -796,7 +796,7 @@ blackbox stateful_alu get_vallo8_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo8;
 }
 
@@ -809,7 +809,7 @@ blackbox stateful_alu set_and_get_vallo8_alu {
 
 	update_lo_1_value: val8_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo8;
 }
 
@@ -849,7 +849,7 @@ blackbox stateful_alu get_valhi8_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi8;
 }
 
@@ -862,7 +862,7 @@ blackbox stateful_alu set_and_get_valhi8_alu {
 
 	update_lo_1_value: val8_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi8;
 }
 
@@ -902,7 +902,7 @@ blackbox stateful_alu get_vallo9_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo9;
 }
 
@@ -915,7 +915,7 @@ blackbox stateful_alu set_and_get_vallo9_alu {
 
 	update_lo_1_value: val9_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo9;
 }
 
@@ -955,7 +955,7 @@ blackbox stateful_alu get_valhi9_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi9;
 }
 
@@ -968,7 +968,7 @@ blackbox stateful_alu set_and_get_valhi9_alu {
 
 	update_lo_1_value: val9_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi9;
 }
 
@@ -1008,7 +1008,7 @@ blackbox stateful_alu get_vallo10_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo10;
 }
 
@@ -1021,7 +1021,7 @@ blackbox stateful_alu set_and_get_vallo10_alu {
 
 	update_lo_1_value: val10_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo10;
 }
 
@@ -1061,7 +1061,7 @@ blackbox stateful_alu get_valhi10_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi10;
 }
 
@@ -1074,7 +1074,7 @@ blackbox stateful_alu set_and_get_valhi10_alu {
 
 	update_lo_1_value: val10_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi10;
 }
 
@@ -1114,7 +1114,7 @@ blackbox stateful_alu get_vallo11_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo11;
 }
 
@@ -1127,7 +1127,7 @@ blackbox stateful_alu set_and_get_vallo11_alu {
 
 	update_lo_1_value: val11_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo11;
 }
 
@@ -1167,7 +1167,7 @@ blackbox stateful_alu get_valhi11_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi11;
 }
 
@@ -1180,7 +1180,7 @@ blackbox stateful_alu set_and_get_valhi11_alu {
 
 	update_lo_1_value: val11_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi11;
 }
 
@@ -1220,7 +1220,7 @@ blackbox stateful_alu get_vallo12_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo12;
 }
 
@@ -1233,7 +1233,7 @@ blackbox stateful_alu set_and_get_vallo12_alu {
 
 	update_lo_1_value: val12_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo12;
 }
 
@@ -1273,7 +1273,7 @@ blackbox stateful_alu get_valhi12_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi12;
 }
 
@@ -1286,7 +1286,7 @@ blackbox stateful_alu set_and_get_valhi12_alu {
 
 	update_lo_1_value: val12_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi12;
 }
 
@@ -1326,7 +1326,7 @@ blackbox stateful_alu get_vallo13_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo13;
 }
 
@@ -1339,7 +1339,7 @@ blackbox stateful_alu set_and_get_vallo13_alu {
 
 	update_lo_1_value: val13_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo13;
 }
 
@@ -1379,7 +1379,7 @@ blackbox stateful_alu get_valhi13_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi13;
 }
 
@@ -1392,7 +1392,7 @@ blackbox stateful_alu set_and_get_valhi13_alu {
 
 	update_lo_1_value: val13_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi13;
 }
 
@@ -1432,7 +1432,7 @@ blackbox stateful_alu get_vallo14_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo14;
 }
 
@@ -1445,7 +1445,7 @@ blackbox stateful_alu set_and_get_vallo14_alu {
 
 	update_lo_1_value: val14_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo14;
 }
 
@@ -1485,7 +1485,7 @@ blackbox stateful_alu get_valhi14_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi14;
 }
 
@@ -1498,7 +1498,7 @@ blackbox stateful_alu set_and_get_valhi14_alu {
 
 	update_lo_1_value: val14_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi14;
 }
 
@@ -1538,7 +1538,7 @@ blackbox stateful_alu get_vallo15_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo15;
 }
 
@@ -1551,7 +1551,7 @@ blackbox stateful_alu set_and_get_vallo15_alu {
 
 	update_lo_1_value: val15_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo15;
 }
 
@@ -1591,7 +1591,7 @@ blackbox stateful_alu get_valhi15_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi15;
 }
 
@@ -1604,7 +1604,7 @@ blackbox stateful_alu set_and_get_valhi15_alu {
 
 	update_lo_1_value: val15_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi15;
 }
 
@@ -1644,7 +1644,7 @@ blackbox stateful_alu get_vallo16_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo16;
 }
 
@@ -1657,7 +1657,7 @@ blackbox stateful_alu set_and_get_vallo16_alu {
 
 	update_lo_1_value: val16_hdr.vallo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_vallo16;
 }
 
@@ -1697,7 +1697,7 @@ blackbox stateful_alu get_valhi16_alu {
 	
 	update_lo_1_value: register_lo;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi16;
 }
 
@@ -1710,7 +1710,7 @@ blackbox stateful_alu set_and_get_valhi16_alu {
 
 	update_lo_1_value: val16_hdr.valhi;
 
-	outset_and_get_value: register_lo;
+	output_value: register_lo;
 	output_dst: meta.origin_valhi16;
 }
 

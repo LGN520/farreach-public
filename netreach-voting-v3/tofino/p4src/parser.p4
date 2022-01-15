@@ -158,7 +158,7 @@ parser parse_val_len16 {
 }*/
 
 parser parse_seq {
-	extrack(seq_hdr);
+	extract(seq_hdr);
 	return ingress;
 }
 

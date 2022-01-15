@@ -84,7 +84,7 @@ action update_getreq_to_getres() {
 	modify_field(op_hdr.optype, GETRES_TYPE);
 	add_header(vallen_hdr);
 	add_header(val1_hdr);
-	*/add_header(val2_hdr);
+	/*add_header(val2_hdr);
 	add_header(val3_hdr);
 	add_header(val4_hdr);
 	add_header(val5_hdr);
@@ -108,7 +108,6 @@ action recirculate_getreq(port) {
 
 // NOTE: clone field list cannot exceed 32 bytes
 field_list clone_field_list {
-	meta.is_clone;
 	meta.tmp_sport;
 	meta.tmp_dport;
 }
@@ -119,7 +118,7 @@ action drop_getres_pop_clone_for_getres(sid) {
 }
 
 action update_getres_pop_to_evict_clone_for_getres(sid) {
-	modify_field(op_hdr.optype, GETRES_POP_EVICT);
+	modify_field(op_hdr.optype, GETRES_POP_EVICT_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
@@ -147,14 +146,14 @@ action update_putreq_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	remove_header(val2_hdr);
+	/*remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
 	remove_header(val6_hdr);
 	remove_header(val7_hdr);
 	remove_header(val8_hdr);
-	/*remove_header(val9_hdr);
+	remove_header(val9_hdr);
 	remove_header(val10_hdr);
 	remove_header(val11_hdr);
 	remove_header(val12_hdr);
@@ -168,7 +167,7 @@ action update_putreq_to_putres() {
 
 action update_putreq_to_putreq_recir(port) {
 	modify_field(op_hdr.optype, PUTREQ_RECIR_TYPE);
-	add_fo_field(udp_hdr,hdrlen, SEQ_PKTLEN);
+	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
 	add_header(seq_hdr);
 
 	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
@@ -181,7 +180,7 @@ action drop_putreq_pop_clone_for_putres(sid) {
 }
 
 action update_putreq_pop_to_evict_clone_for_putres(sid, port) {
-	modify_field(op_hdr.optype, PUTREQ_POP_EVICT);
+	modify_field(op_hdr.optype, PUTREQ_POP_EVICT_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
@@ -206,14 +205,14 @@ action update_putreq_recir_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	remove_header(val2_hdr);
+	/*remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
 	remove_header(val6_hdr);
 	remove_header(val7_hdr);
 	remove_header(val8_hdr);
-	/*remove_header(val9_hdr);
+	remove_header(val9_hdr);
 	remove_header(val10_hdr);
 	remove_header(val11_hdr);
 	remove_header(val12_hdr);
@@ -253,7 +252,7 @@ action update_delreq_to_delres() {
 
 action update_delreq_to_delreq_recir(port) {
 	modify_field(op_hdr.optype, DELREQ_RECIR_TYPE);
-	add_fo_field(udp_hdr,hdrlen, SEQ_PKTLEN);
+	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
 	add_header(seq_hdr);
 
 	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
@@ -287,13 +286,13 @@ action update_delreq_recir_to_delreq(port) {
 }
 
 action update_putreq_to_case1_clone_for_putres(sid, port) {
-	modify_field(op_hdr,optype, PUTREQ_CASE1_TYPE);
+	modify_field(op_hdr.optype, PUTREQ_CASE1_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
 action update_putreq_recir_to_case1_clone_for_putres(sid, port) {
-	modify_field(op_hdr,optype, PUTREQ_CASE1_TYPE);
+	modify_field(op_hdr.optype, PUTREQ_CASE1_TYPE);
 	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
 	remove_header(seq_hdr);
 
@@ -302,12 +301,12 @@ action update_putreq_recir_to_case1_clone_for_putres(sid, port) {
 }
 
 action update_delreq_to_case1_clone_for_delres(sid, port) {
-	modify_field(op_hdr,optype, DELREQ_CASE1_TYPE);
+	modify_field(op_hdr.optype, DELREQ_CASE1_TYPE);
 
 	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN);
 	add_header(vallen_hdr);
 	add_header(val1_hdr);
-	*/add_header(val2_hdr);
+	/*add_header(val2_hdr);
 	add_header(val3_hdr);
 	add_header(val4_hdr);
 	add_header(val5_hdr);
@@ -328,12 +327,12 @@ action update_delreq_to_case1_clone_for_delres(sid, port) {
 }
 
 action update_delreq_recir_to_case1_clone_for_delres(sid, port) {
-	modify_field(op_hdr,optype, DELREQ_CASE1_TYPE);
+	modify_field(op_hdr.optype, DELREQ_CASE1_TYPE);
 
 	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_SEQ);
 	add_header(vallen_hdr);
 	add_header(val1_hdr);
-	*/add_header(val2_hdr);
+	/*add_header(val2_hdr);
 	add_header(val3_hdr);
 	add_header(val4_hdr);
 	add_header(val5_hdr);
@@ -355,13 +354,13 @@ action update_delreq_recir_to_case1_clone_for_delres(sid, port) {
 }
 
 action update_getres_pop_to_case2_clone_for_getres(sid) {
-	modify_field(op_hdr.optype, GETRES_POP_EVICT_CASE2);
+	modify_field(op_hdr.optype, GETRES_POP_EVICT_CASE2_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
 action update_putreq_pop_to_case2_clone_for_putres(sid, port) {
-	modify_field(op_hdr.optype, PUTREQ_POP_EVICT_CASE2);
+	modify_field(op_hdr.optype, PUTREQ_POP_EVICT_CASE2_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }

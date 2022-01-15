@@ -4,7 +4,7 @@ register keylolo_reg {
 }
 
 blackbox stateful_alu match_keylolo_alu {
-	reg: keylololo_reg;
+	reg: keylolo_reg;
 
 	condition_lo: register_lo == op_hdr.keylolo;
 
@@ -50,7 +50,7 @@ register keylohi_reg {
 }
 
 blackbox stateful_alu match_keylohi_alu {
-	reg: keylohilo_reg;
+	reg: keylohi_reg;
 
 	condition_lo: register_lo == op_hdr.keylohi;
 
@@ -96,7 +96,7 @@ register keyhilo_reg {
 }
 
 blackbox stateful_alu match_keyhilo_alu {
-	reg: keyhilolo_reg;
+	reg: keyhilo_reg;
 
 	condition_lo: register_lo == op_hdr.keyhilo;
 
@@ -142,7 +142,7 @@ register keyhihi_reg {
 }
 
 blackbox stateful_alu match_keyhihi_alu {
-	reg: keyhihilo_reg;
+	reg: keyhihi_reg;
 
 	condition_lo: register_lo == op_hdr.keyhihi;
 
