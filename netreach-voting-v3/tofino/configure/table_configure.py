@@ -64,11 +64,12 @@ dst_ip = str(config.get("server", "server_ip"))
 #
 #   ex: ["1/0", "1/1"]
 #
-fp_ports = ["2/0", "3/0"]
-#src_mac = "9c:69:b4:60:ef:a5"
-#dst_mac = "9c:69:b4:60:ef:8d"
-#src_ip = "10.0.0.31"
-#dst_ip = "10.0.0.32"
+fp_ports = []
+src_fpport = str(config.get("switch", "src_fpport"))
+fp_ports.append(src_fpport)
+dst_fpport = str(config.get("switch", "dst_fpport"))
+fp_ports.append(dst_fpp)
+#fp_ports = ["2/0", "3/0"]
 
 GETREQ_TYPE = 0x00
 PUTREQ_TYPE = 0x01
