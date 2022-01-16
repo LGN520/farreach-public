@@ -43,5 +43,5 @@ table access_case12_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2048;
+	size: 128;
 }

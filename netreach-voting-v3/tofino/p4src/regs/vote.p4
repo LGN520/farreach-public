@@ -67,5 +67,5 @@ table access_vote_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2176;
+	size: 128;
 }

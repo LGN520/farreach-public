@@ -30,7 +30,7 @@ table assign_seq_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1;
+	size: 4;
 }
 
 register savedseq_reg {
@@ -80,5 +80,5 @@ table access_savedseq_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }

@@ -44,7 +44,6 @@ action reset_valid() {
 	reset_valid_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-@pragma stage 3
 table access_valid_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -60,5 +59,5 @@ table access_valid_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1280;
+	size: 8;
 }

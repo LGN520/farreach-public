@@ -159,7 +159,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv3"])
 
     def configure_access_key_tbl(self, keyname):
-        # 5
+        # 7
         for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE, DELREQ_RECIR_TYPE]:
             matchspec0 = eval("netbufferv3_access_key{}_tbl_match_spec_t".format(keyname))(\
                     op_hdr_optype=tmpoptype)
@@ -175,7 +175,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_update_val_tbl(self, valname):
-        # 1028
+        # 14
         for canput in predicate_list:
             matchspec0 = eval("netbufferv3_update_val{}_tbl_match_spec_t".format(valname))(
                     op_hdr_optype=GETREQ_TYPE,
@@ -291,25 +291,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 0
 
-            # Table: access_keylolo_tbl (default: nop; 5)
+            # Table: access_keylolo_tbl (default: nop; 7)
             print "Configuring match_keylolo_tbl"
             self.configure_access_key_tbl("lolo")
 
-            # Table: access_keylohi_tbl (default: nop; 5)
+            # Table: access_keylohi_tbl (default: nop; 7)
             print "Configuring match_keylohi_tbl"
             self.configure_access_key_tbl("lohi")
 
-            # Table: access_keyhilo_tbl (default: nop; 5)
+            # Table: access_keyhilo_tbl (default: nop; 7)
             print "Configuring match_keyhilo_tbl"
             self.configure_access_key_tbl("hilo")
 
-            # Table: access_keyhihi_tbl (default: nop; 5)
+            # Table: access_keyhihi_tbl (default: nop; 7)
             print "Configuring match_keyhihi_tbl"
             self.configure_access_key_tbl("hihi")
 
             # Stage 1
 
-            # Table: access_valid_tbl (default: nop; 1280)
+            # Table: access_valid_tbl (default: nop; 7)
             print "Configuring access_valid_tbl"
             for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE, DELREQ_RECIR_TYPE]:
                 matchspec0 = netbufferv3_access_valid_tbl_match_spec_t(
@@ -324,7 +324,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.access_valid_tbl_table_add_with_set_valid(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_vote_tbl (default: nop; 2049)
+            # Table: access_vote_tbl (default: nop; 80)
             print "Configuring access_vote_tbl"
             for ismatch_keylolo in predicate_list:
                 for ismatch_keylohi in predicate_list:
@@ -338,7 +338,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         meta_ismatch_keyhilo=ismatch_keyhilo, 
                                         meta_ismatch_keyhihi=ismatch_keyhihi)
                                 if (ismatch_keylolo == 2 and ismatch_keylohi == 2 and \
-                                ismatch_keyhilo == 2 and ismatch_keyhihi == 2)
+                                        ismatch_keyhilo == 2 and ismatch_keyhihi == 2):
                                     self.client.access_vote_tbl_table_add_with_increase_vote(
                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                 else:
@@ -354,7 +354,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.client.access_vote_tbl_table_add_with_init_vote(
                                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table assign_seq_tbl (default: nop; 1)
+            # Table assign_seq_tbl (default: nop; 2)
             # NOTE: PUTREQ_RECIR does not need to assign seq
             print "Configuring assign_seq_tbl"
             for tmpoptype in [PUTREQ_TYPE, DELREQ_TYPE]:
@@ -376,7 +376,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 2
 
-            # Table: access_savedseq_tbl (default: nop; 1026)
+            # Table: access_savedseq_tbl (default: nop; 12)
             print "Configuring access_savedseq_tbl"
             for tmpoptype in [PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE, DELREQ_RECIR_TYPE]:
                 matchspec0 = netbufferv3_access_savedseq_tbl_match_spec_t(\
@@ -395,7 +395,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.access_savedseq_tbl_table_add_with_reset_savedseq(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_lock_tbl (default: nop; 12)
+            # Table: access_lock_tbl (default: nop; 28)
             print "Configuring access_lock_tbl"
             for isvalid in valid_list:
                 for zerovote in predicate_list:
@@ -427,7 +427,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Start from stage 3
 
-            # Table: access_case12_tbl (default: nop; ?)
+            # Table: access_case12_tbl (default: nop; 80)
             print "Configuring access_case12_tbl"
             for isvalid in valid_list:
                 for iskeymatch in keymatch_list:
@@ -460,7 +460,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.client.access_case12_tbl_table_add_with_read_case12(\
                                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: update_vallen_tbl (default: nop; 2560)
+            # Table: update_vallen_tbl (default: nop; 14)
             print "Configuring update_vallen_tbl"
             for canput in predicate_list:
                 matchspec0 = netbufferv3_update_vallen_tbl_match_spec_t(\
@@ -490,7 +490,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: update_vallo1_tbl (default: nop; 1028)
+            # Table: update_vallo1_tbl (default: nop; 14)
             print "Configuring update_vallo1_tbl"
             self.configure_update_val_tbl("lo1")
 
@@ -644,7 +644,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #self.client.update_vallo16_tbl_table_add_with_get_vallo8(\
             #        self.sess_hdl, self.dev_tgt, matchspec1)
 
-            # Table: update_valhi1_tbl (default: nop; 1028)
+            # Table: update_valhi1_tbl (default: nop; 14)
             print "Configuring update_valhi1_tbl"
             self.configure_update_val_tbl("hi1")
 
@@ -800,7 +800,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 11
 
-            # Table access_case3_tbl (default: nop; ?)
+            # Table access_case3_tbl (default: nop; 128)
             print "Configuring access_case3_tbl"
             for isvalid in valid_list:
                 for zerovote in predicate_list:
@@ -840,7 +840,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.sess_hdl, self.dev_tgt, matchspec0)
 
 
-            # Table: port_forward_tbl (default: nop; 544)
+            # Table: port_forward_tbl (default: nop; 1024)
             print "Configuring port_forward_tbl"
             for isvalid in valid_list:
                 for zerovote in predicate_list:

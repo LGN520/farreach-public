@@ -55,5 +55,5 @@ table access_lock_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 16;
+	size: 32;
 }

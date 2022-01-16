@@ -55,7 +55,7 @@ table update_vallen_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2560;
+	size: 16;
 }
 
 register vallo1_reg {
@@ -101,7 +101,7 @@ table update_vallo1_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi1_reg {
@@ -147,7 +147,7 @@ table update_valhi1_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 /*register vallo2_reg {

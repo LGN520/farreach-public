@@ -312,4 +312,98 @@
 	+ Database directory: e.g., /tmp/netbuffer/workloada/group0.db, /tmp/netbuffer/workloada/buffer0-0.db
 	+ RMI model at root node when init key-value store: workloada-root.out
 
+## Simple test
+
+- NOTE: update bucket_num in config.ini as 1 before test
+- Test cases of normal operations: See directory of "testcases/normal" (with only 1 bucket in sketch)
+	+ Case 1: single read (GET evicts invalid)
+		* Read the value of a given key
+		* It should read the value from the server and also store it in switch
+		* In-switch result: non-zero key, vallen, and val, seq = 0, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
+	+ Case 2: single write (PUT evicts invalid)
+		* Write new value for a given key
+		* It should write the value into switch by recirculation and sendback PUTRES (no PUTREQ_PS)
+		* In-switch result: non-zero key, vallen, and val, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 1
+	+ Case 3: read-after-write
+		* Write value of k1 and then read k1
+		* It should write the value in switch and read the value from switch (not touch server)
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 2
+	+ Case 4: read-after-two-writes
+		* Write value of k1 twice, and then read k1
+		* It should write the value in switch and read the value from switch (not touch server)
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 2, savedseq = 2, lock = 0, valid = 1, dirty = 1, vote = 3
+	+ Case 5: write-after-read1
+		* Read value of k1 and then write k1
+		* It reads the value of k1 from server and store it in switch, PUT increases vote, updates vallen & val, and does not touch server
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 1, lock = 0, valid = 1, dirty = 1, vote = 2
+	+ Case 6: write-after-read2
+		* Read value of k1 and then write k2
+		* It should read the value of k1 from server and store it in switch, k2 will decrease vote and be forwarded to server (no cache update)
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 0
+	+ Case 7: two-writes-after-read (PUT evicts GET)
+		* Read value of k1 and then write k2 twice
+		* It should read the value of k1 from server and store it in switch, k2 will replace k1 finally (PUTs touch server only once)
+		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 2, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 1
+	+ Case 8: read-after-two-writes-after-write (PUT evicts PUT)
+		* Write value of k1, write k2 twice, and then read k2
+		* PUT of k1 writes the value in switch and sendback PUTRES, 1st PUT of k2 is forwarded to server, 2nd PUT of k2 evicts k1, GET
+		is directly processed by switch
+		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 3, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 2
+	+ Case 9: two-reads-after-write (GET evicts PUT)
+		* Write value of k1, read k2 twice
+		* It writes value of k1 in switch, GETs of k2 evicted k1 (the evicted data touches server)
+		* In-switch result: non-zero key, vallen, and val of k2, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
+	+ Case 10: two-reads-after-read (GET evicts GET)
+		* Read value of k1, read k2 twice
+		* It first gets value of k1 from server and stores it in switch, the 2nd GET of k2 replaces k1 in switch
+		* In-switch result: non-zero key, vallen, and val of k2, seq = 0, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
+	+ Case 11: read-delete-read
+		* Read value of k1, delete k1, and then read k1 again
+		* It first gets value of k1 from server and stores it in switch, then it deletes k1 and sends DELREQ_S to server, the 2nd GET
+		of k1 does not have value and triggers a GETRES_NS
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 0, dirty = 0, vote = 0
+- Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
+	+ NOTE: remember to set config.ini, otherwise the hashidx will be incorrect sent by phase2 ptf
+	+ Phase1: reset regs and set flag as 1
+	+ Case 1-1: undirty + PUT case1
+		* Get <k1, v1> -> Run phase1 -> PUT <k1, v2> -> Run phase2
+		* Result: receive PUTREQ_CASE1 with <k1, v1> (undirty), receive backup with <k1, v2>, final backup after rollback without k1
+	+ Case 1-2: dirty + PUT case1
+		* PUT <k1, v1> -> Run phase1 -> PUT <k1, v2> -> Run phase2
+		* Result: receive PUTREQ_CASE1 with <k1, v1> (dirty), receive backup with <k1, v2>, final backup after rollback with <k1, v1>
+	+ Case 1-3: undirty + DEL case1
+		* Get <k1, v1> -> Run phase1 -> DEL k1 -> Run phase2
+		* Result: receive DELREQ_CASE1 with <k1, v1> (undirty), receive backup without k1, final backup after rollback without k1
+	+ Case 1-4: dirty + DEL case1
+		* PUT <k1, v1> -> Run phase1 -> DEL k1 -> Run phase2
+		* Result: receive DELREQ_CASE1 with <k1, v1> (dirty), receive backup without k1, final backup after rollback with <k1, v1>
+	+ Case 2-1: invalid + PUTGS case2
+		* Run phase1 -> GET <k1, v1> -> Run phase2
+		* Result: receive PUTREQ_GS_CASE2 with <0, 0>, receive backup without k1, final backup after rollback without k1
+		* NOTE: GETRES_NS will not trigger cache update and hence no special case
+	+ Case 2-2: undirty + PUTGS case2
+		* GET <k1, v1> -> Run phase1 -> GET <k2, v2> -> Get <k3, v3> -> Run phase2
+		* Result: receive PUTREQ_GS_CASE2 with <k1, v1> (undirty), receive backup without k3, final backup after rollback without k1
+	+ Case 2-3: dirty + PUTGS case2
+		* PUT <k1, v1> -> Run phase1 -> GET <k2, v2> -> GET <k3, v3> -> Run phase2
+		* Result: receive PUTREQ_GS_CASE2 with <k1, v1> (dirty), receive backup without k3, final backup after rollback with <k1, v1>
+	+ Case 2-4: invalid + PUTPS case2
+		* Run phase1 -> PUT <k1, v1> -> Run phase2
+		* Result: receive PUTREQ_PS_CASE2 with <0, 0>, receive backup with <k1, v1>, final backup after rollback without k1
+	+ Case 2-5: undirty + PUTPS case2 + PUTREQ case3
+		* GET <k1, v1> -> Run phase1 -> PUT <k2, v2> -> PUT <k3, v3> -> Run phase2
+		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_PS_CASE2 with <k1, v1> (undirty), receive backup with <k3, v3>, final 
+		backup after rollback without k1
+	+ Case 2-6: dirty + PUTPS case2 + PUTREQ case3
+		* PUT <k1, v1> -> Run phase1 -> PUT <k2, v2> -> PUT <k3, v3> -> Run phase2
+		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_PS_CASE2 with <k1, v1> (dirty), receive backup with <k3, v3>, final 
+		backup after rollback with <k1, v1>
+	+ Case 3-1: DELREQ case3
+		* PUT <k1, v1> -> Run phase1 -> DEL <k2, v2> -> Run phase2
+		* Result: receive DELREQ_CASE3 with k2, receive backup with <k1, v1>, final backup after rollback with <k1, v1>
+	+ Case 4-1: range query
+		* DEL <k1, v1> -> PUT <k1, v2> -> Run phase1 -> PUT <k1, v3> -> Run phase2 -> SCAN
+		* Result: receive PUTREQ_CASE1 with <k1, v2>, receive bakup with <k1, v3>, final backup after rollback with <k1, v2>, SCAN
+		result with <k1, v2>
+
 ## Fixed issues
