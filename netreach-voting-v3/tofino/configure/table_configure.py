@@ -68,7 +68,7 @@ fp_ports = []
 src_fpport = str(config.get("switch", "src_fpport"))
 fp_ports.append(src_fpport)
 dst_fpport = str(config.get("switch", "dst_fpport"))
-fp_ports.append(dst_fpp)
+fp_ports.append(dst_fpport)
 #fp_ports = ["2/0", "3/0"]
 
 GETREQ_TYPE = 0x00
@@ -100,6 +100,7 @@ valid_list = [0, 1]
 keymatch_list = [0, 1]
 lock_list = [0, 1]
 predicate_list = [1, 2]
+key_predicate_list = [0, 2]
 backup_list = [0, 1]
 case12_list = [0, 1]
 case3_list = [0, 1]
@@ -326,10 +327,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_vote_tbl (default: nop; 80)
             print "Configuring access_vote_tbl"
-            for ismatch_keylolo in predicate_list:
-                for ismatch_keylohi in predicate_list:
-                    for ismatch_keyhilo in predicate_list:
-                        for ismatch_keyhihi in predicate_list:
+            for ismatch_keylolo in key_predicate_list:
+                for ismatch_keylohi in key_predicate_list:
+                    for ismatch_keyhilo in key_predicate_list:
+                        for ismatch_keyhihi in key_predicate_list:
                             for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, PUTREQ_RECIR_TYPE]:
                                 matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
                                         op_hdr_optype=tmpoptype, 
@@ -412,6 +413,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.sess_hdl, self.dev_tgt, matchspec0)
                     matchspec0 = netbufferv3_access_lock_tbl_match_spec_t(
                             op_hdr_optype=DELREQ_TYPE,
+                            meta_isvalid=isvalid,
                             meta_zerovote=zerovote)
                     self.client.access_lock_tbl_table_add_with_read_lock(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
@@ -815,7 +817,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             meta_iskeymatch = iskeymatch,
                                             meta_islock = islock,
                                             meta_isbackup = isbackup)
-                                    if islock == 0 and (isvalid == 0 or zerovote == 0):
+                                    if islock == 0 and (isvalid == 0 or zerovote == 2):
                                         continue
                                     elif isvalid == 1 and iskeymatch == 1:
                                         continue
@@ -828,6 +830,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             self.client.access_case3_tbl_table_add_with_try_case3(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                 for tmpoptype in [DELREQ_TYPE, DELREQ_RECIR_TYPE]:
+                                    matchspec0 = netbufferv3_access_case3_tbl_match_spec_t(\
+                                            op_hdr_optype = tmpoptype,
+                                            meta_isvalid = isvalid,
+                                            meta_zerovote = zerovote,
+                                            meta_iskeymatch = iskeymatch,
+                                            meta_islock = islock,
+                                            meta_isbackup = isbackup)
                                     if isvalid == 1 and iskeymatch == 1:
                                         continue
                                     elif (isvalid == 0 or iskeymatch == 0) and islock == 1:
@@ -840,7 +849,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.sess_hdl, self.dev_tgt, matchspec0)
 
 
-            # Table: port_forward_tbl (default: nop; 1024)
+            # Table: port_forward_tbl (default: nop; 1664)
             print "Configuring port_forward_tbl"
             for isvalid in valid_list:
                 for zerovote in predicate_list:
@@ -928,7 +937,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 meta_canput = canput,
                                                 meta_isbackup = isbackup,
                                                 meta_iscase12 = iscase12)
-                                        if islock == 0 and (isvalid == 0 or zerovote == 0):
+                                        if islock == 0 and (isvalid == 0 or zerovote == 2):
                                             # Use recirculate port 64 + pipe ID of ingress port
                                             actnspec0 = netbufferv3_update_putreq_to_putreq_pop_action_spec_t(self.recirPorts[0]) 
                                             self.client.port_forward_tbl_table_add_with_update_putreq_to_putreq_pop(\
@@ -997,7 +1006,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 meta_canput = canput,
                                                 meta_isbackup = isbackup,
                                                 meta_iscase12 = iscase12)
-                                        if islock == 0 and (isvalid == 0 or zerovote == 0):
+                                        if islock == 0 and (isvalid == 0 or zerovote == 2):
                                             # Use recirculate port 64 + pipe ID of ingress port
                                             actnspec0 = netbufferv3_update_putreq_recir_to_putreq_pop_action_spec_t(self.recirPorts[0])     
                                             self.client.port_forward_tbl_table_add_with_update_putreq_recir_to_putreq_pop(\
@@ -1137,27 +1146,27 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring process_cloned_packet_tbl"
             matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_TYPE)
-            self.client.process_cloned_packet_tbl_add_with_update_cloned_putreq_to_putres(\
+            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_putreq_to_putres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_RECIR_TYPE)
-            self.client.process_cloned_packet_tbl_add_with_update_cloned_putreq_recir_to_putres(\
+            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_putreq_recir_to_putres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = DELREQ_TYPE)
-            self.client.process_cloned_packet_tbl_add_with_update_cloned_delreq_to_delres(\
+            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_delreq_to_delres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = DELREQ_RECIR_TYPE)
-            self.client.process_cloned_packet_tbl_add_with_update_cloned_delreq_to_delres(\
+            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_delreq_to_delres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = GETRES_POP_TYPE)
-            self.client.process_cloned_packet_tbl_add_with_update_cloned_getres_pop_to_getres(\
+            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_getres_pop_to_getres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_POP_TYPE)
-            self.client.process_cloned_packet_tbl_add_with_update_cloned_putreq_pop_to_putres(\
+            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_putreq_pop_to_putres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table process_may_case3_tbl (default: nop; ?)

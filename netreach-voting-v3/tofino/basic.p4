@@ -163,6 +163,7 @@ control ingress {
 	apply(update_valhi16_tbl);*/
 
 	// Stage 11
+	apply(access_case3_tbl);
 	apply(port_forward_tbl);
 }
 
