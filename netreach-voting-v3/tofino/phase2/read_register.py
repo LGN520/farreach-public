@@ -104,9 +104,9 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Reading reagisters"
         flags = netbufferv3_register_flags_t(read_hw_sync=True)
         keylolo_list = self.client.register_range_read_keylolo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keylolo_list = self.client.register_range_read_keylohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keylohi_list = self.client.register_range_read_keyhilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
-        keylohi_list = self.client.register_range_read_keyhihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keylohi_list = self.client.register_range_read_keylohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keyhilo_list = self.client.register_range_read_keyhilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        keyhihi_list = self.client.register_range_read_keyhihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         vallo_list_list = []
         valhi_list_list = []
         for i in range(max_val_len):
@@ -145,10 +145,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmpkeyhihi = RegisterUpdate.get_reg16(keyhihi_list, idx)
             tmpkeylo = (tmpkeylohi << 32) + tmpkeylolo
             tmpkeyhi = (tmpkeyhihi << 32) + tmpkeyhilo
+            tmpvallen = vallen_list[idx]
             buf = buf + struct.pack("=H2QB", i, tmpkeylo, tmpkeyhi, tmpvallen) # i is hashidx
             #print("i: {} keylo: {:016x} keyhi: {:016x} vallen: {:02x}".format(hashidx, tmpkeylo, tmpkeyhi, tmpvallen))
             for j in range(tmpvallen):
-                val_idx = vallen - j
+                val_idx = tmpvallen - 1 - j
                 tmpvallo = RegisterUpdate.get_reg32(vallo_list_list[val_idx], idx)
                 tmpvalhi = RegisterUpdate.get_reg32(valhi_list_list[val_idx], idx)
                 tmpval = (tmpvalhi << 32) + tmpvallo

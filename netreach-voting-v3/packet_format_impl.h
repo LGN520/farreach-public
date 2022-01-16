@@ -1,4 +1,4 @@
-#include "packet_format.h"
+ "packet_format.h"
 
 // Packet
 template<class key_t>
@@ -136,7 +136,7 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	begin += sizeof(uint8_t);
 	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
 	this->_hashidx = ntohs(this->_hashidx); // Big-endian to small-endian
-	begin += sizeof(uint8_t);
+	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
 	uint32_t tmpsize = this->_val.deserialize(begin);

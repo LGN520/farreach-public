@@ -277,7 +277,7 @@
 - Support crash-consistent backup in switch OS
 - Debug and test
 	+ Pass normal cases: case1 to case11
-	+ TODO: Pass concurrent case
+	+ Pass concurrent case
 	+ TODO: Pass backup cases: case1-1 to case4-1
 - TODO: try as long value as we can
 - TODO: extend xindex with variable-length value and snapshot
