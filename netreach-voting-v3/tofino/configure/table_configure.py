@@ -1248,10 +1248,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
                     self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
-            matchspec3 = netbufferv3_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_TYPE)
+            #matchspec3 = netbufferv3_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_TYPE)
+            #self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
+            #        self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
+            matchspec3 = netbufferv3_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_EVICT_TYPE)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
                     self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
-            matchspec4 = netbufferv3_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_EVICT_TYPE)
+            matchspec4 = netbufferv3_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_EVICT_CASE2_TYPE)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
                     self.sess_hdl, self.dev_tgt, matchspec4, actnspec1)
 
