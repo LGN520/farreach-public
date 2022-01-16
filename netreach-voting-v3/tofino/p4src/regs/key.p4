@@ -11,7 +11,7 @@ blackbox stateful_alu match_keylolo_alu {
 	update_lo_1_value: register_lo;
 	
 	output_value: predicate;
-	output_dst: meta.ismatch_keylolo;
+	output_dst: meta.ismatch_keylolo; // 1 or 2
 }
 
 action match_keylolo() {
@@ -29,6 +29,11 @@ blackbox stateful_alu set_and_get_keylolo_alu {
 
 action set_and_get_keylolo() {
 	set_and_get_keylolo_alu.execute_stateful_alu(op_hdr.hashidx);
+	modify_field(meta.ismatch_keylolo, 1); // 0 -> 1 to reduce MAT entries
+}
+
+action initialize_ismatch_keylolo() {
+	modify_field(meta.ismatch_keylolo, 1); // 0 -> 1 to reduce MAT entries
 }
 
 table access_keylolo_tbl {
@@ -38,9 +43,10 @@ table access_keylolo_tbl {
 	actions {
 		match_keylolo;
 		set_and_get_keylolo;
+		initialize_ismatch_keylolo;
 		nop;
 	}
-	default_action: nop();
+	default_action: initialize_ismatch_keylolo();
 	size: 8;
 }
 
@@ -57,7 +63,7 @@ blackbox stateful_alu match_keylohi_alu {
 	update_lo_1_value: register_lo;
 	
 	output_value: predicate;
-	output_dst: meta.ismatch_keylohi;
+	output_dst: meta.ismatch_keylohi; // 1 or 2
 }
 
 action match_keylohi() {
@@ -75,6 +81,11 @@ blackbox stateful_alu set_and_get_keylohi_alu {
 
 action set_and_get_keylohi() {
 	set_and_get_keylohi_alu.execute_stateful_alu(op_hdr.hashidx);
+	modify_field(meta.ismatch_keylohi, 1); // 0 -> 1 to reduce MAT entries
+}
+
+action initialize_ismatch_keylohi() {
+	modify_field(meta.ismatch_keylohi, 1); // 0 -> 1 to reduce MAT entries
 }
 
 table access_keylohi_tbl {
@@ -84,9 +95,10 @@ table access_keylohi_tbl {
 	actions {
 		match_keylohi;
 		set_and_get_keylohi;
+		initialize_ismatch_keylohi;
 		nop;
 	}
-	default_action: nop();
+	default_action: initialize_ismatch_keylohi();
 	size: 8;
 }
 
@@ -103,7 +115,7 @@ blackbox stateful_alu match_keyhilo_alu {
 	update_lo_1_value: register_lo;
 	
 	output_value: predicate;
-	output_dst: meta.ismatch_keyhilo;
+	output_dst: meta.ismatch_keyhilo; // 1 or 2
 }
 
 action match_keyhilo() {
@@ -121,6 +133,11 @@ blackbox stateful_alu set_and_get_keyhilo_alu {
 
 action set_and_get_keyhilo() {
 	set_and_get_keyhilo_alu.execute_stateful_alu(op_hdr.hashidx);
+	modify_field(meta.ismatch_keyhilo, 1); // 0 -> 1 to reduce MAT entries
+}
+
+action initialize_ismatch_keyhilo() {
+	modify_field(meta.ismatch_keyhilo, 1); // 0 -> 1 to reduce MAT entries
 }
 
 table access_keyhilo_tbl {
@@ -130,9 +147,10 @@ table access_keyhilo_tbl {
 	actions {
 		match_keyhilo;
 		set_and_get_keyhilo;
+		initialize_ismatch_keyhilo;
 		nop;
 	}
-	default_action: nop();
+	default_action: initialize_ismatch_keyhilo();
 	size: 8;
 }
 
@@ -149,7 +167,7 @@ blackbox stateful_alu match_keyhihi_alu {
 	update_lo_1_value: register_lo;
 	
 	output_value: predicate;
-	output_dst: meta.ismatch_keyhihi;
+	output_dst: meta.ismatch_keyhihi; // 1 or 2
 }
 
 action match_keyhihi() {
@@ -167,6 +185,11 @@ blackbox stateful_alu set_and_get_keyhihi_alu {
 
 action set_and_get_keyhihi() {
 	set_and_get_keyhihi_alu.execute_stateful_alu(op_hdr.hashidx);
+	modify_field(meta.ismatch_keyhihi, 1); // 0 -> 1 to reduce MAT entries
+}
+
+action initialize_ismatch_keyhihi() {
+	modify_field(meta.ismatch_keyhihi, 1); // 0 -> 1 to reduce MAT entries
 }
 
 table access_keyhihi_tbl {
@@ -176,8 +199,9 @@ table access_keyhihi_tbl {
 	actions {
 		match_keyhihi;
 		set_and_get_keyhihi;
+		initialize_ismatch_keyhihi;
 		nop;
 	}
-	default_action: nop();
+	default_action: initialize_ismatch_keyhihi();
 	size: 8;
 }

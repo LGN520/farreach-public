@@ -275,7 +275,11 @@
 	+ Support GETRES_POP_CASE2, PUTREQ_POP_CASE2
 	+ Support PUTREQ_MAY_CASE3, PUTREQ_CASE3, DELREQ_MAY_CASE3, DELREQ_CASE3
 - Support crash-consistent backup in switch OS
-- TODO: debug and test, try as long value as we can
+- Debug and test
+	+ Pass normal cases: case1 to case11
+	+ TODO: Pass concurrent case
+	+ TODO: Pass backup cases: case1-1 to case4-1
+- TODO: try as long value as we can
 - TODO: extend xindex with variable-length value and snapshot
 - TODO: replace rocksdb with xindex
 - TODO: range query
@@ -319,49 +323,49 @@
 	+ Case 1: single read (GET evicts invalid)
 		* Read the value of a given key
 		* It should read the value from the server and also store it in switch
-		* In-switch result: non-zero key, vallen, and val, seq = 0, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
+		* In-switch result: non-zero key, vallen, and val, seq = 0, savedseq = 0, lock = 0, valid = 1, vote = 1
 	+ Case 2: single write (PUT evicts invalid)
 		* Write new value for a given key
-		* It should write the value into switch by recirculation and sendback PUTRES (no PUTREQ_PS)
-		* In-switch result: non-zero key, vallen, and val, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 1
+		* It should write the value into switch by recirculation and sendback PUTRES (no PUTREQ_POP)
+		* In-switch result: non-zero key, vallen, and val, seq = 1, savedseq = 0, lock = 0, valid = 1, vote = 1
 	+ Case 3: read-after-write
 		* Write value of k1 and then read k1
 		* It should write the value in switch and read the value from switch (not touch server)
-		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 2
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, vote = 2
 	+ Case 4: read-after-two-writes
 		* Write value of k1 twice, and then read k1
 		* It should write the value in switch and read the value from switch (not touch server)
-		* In-switch result: non-zero key, vallen, and val of k1, seq = 2, savedseq = 2, lock = 0, valid = 1, dirty = 1, vote = 3
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 2, savedseq = 2, lock = 0, valid = 1, vote = 3
 	+ Case 5: write-after-read1
 		* Read value of k1 and then write k1
 		* It reads the value of k1 from server and store it in switch, PUT increases vote, updates vallen & val, and does not touch server
-		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 1, lock = 0, valid = 1, dirty = 1, vote = 2
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 1, lock = 0, valid = 1, vote = 2
 	+ Case 6: write-after-read2
 		* Read value of k1 and then write k2
 		* It should read the value of k1 from server and store it in switch, k2 will decrease vote and be forwarded to server (no cache update)
-		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 0
+		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, vote = 0
 	+ Case 7: two-writes-after-read (PUT evicts GET)
 		* Read value of k1 and then write k2 twice
 		* It should read the value of k1 from server and store it in switch, k2 will replace k1 finally (PUTs touch server only once)
-		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 2, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 1
+		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 2, savedseq = 0, lock = 0, valid = 1, vote = 1
 	+ Case 8: read-after-two-writes-after-write (PUT evicts PUT)
 		* Write value of k1, write k2 twice, and then read k2
 		* PUT of k1 writes the value in switch and sendback PUTRES, 1st PUT of k2 is forwarded to server, 2nd PUT of k2 evicts k1, GET
 		is directly processed by switch
-		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 3, savedseq = 0, lock = 0, valid = 1, dirty = 1, vote = 2
+		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 3, savedseq = 0, lock = 0, valid = 1, vote = 2
 	+ Case 9: two-reads-after-write (GET evicts PUT)
 		* Write value of k1, read k2 twice
 		* It writes value of k1 in switch, GETs of k2 evicted k1 (the evicted data touches server)
-		* In-switch result: non-zero key, vallen, and val of k2, seq = 1, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
+		* In-switch result: non-zero key, vallen, and val of k2, seq = 1, savedseq = 0, lock = 0, valid = 1, vote = 1
 	+ Case 10: two-reads-after-read (GET evicts GET)
 		* Read value of k1, read k2 twice
 		* It first gets value of k1 from server and stores it in switch, the 2nd GET of k2 replaces k1 in switch
-		* In-switch result: non-zero key, vallen, and val of k2, seq = 0, savedseq = 0, lock = 0, valid = 1, dirty = 0, vote = 1
+		* In-switch result: non-zero key, vallen, and val of k2, seq = 0, savedseq = 0, lock = 0, valid = 1, vote = 1
 	+ Case 11: read-delete-read
 		* Read value of k1, delete k1, and then read k1 again
-		* It first gets value of k1 from server and stores it in switch, then it deletes k1 and sends DELREQ_S to server, the 2nd GET
-		of k1 does not have value and triggers a GETRES_NS
-		* In-switch result: non-zero key, vallen, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 0, dirty = 0, vote = 0
+		* It first gets value of k1 from server and stores it in switch, then it deletes k1 (set vallen=0 without changing valid and vote), the 2nd GET
+		of k1 gets a value of size 0 
+		* In-switch result: non-zero key, vallen=0, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 1, vote = 2
 - Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
 	+ NOTE: remember to set config.ini, otherwise the hashidx will be incorrect sent by phase2 ptf
 	+ Phase1: reset regs and set flag as 1

@@ -20,10 +20,6 @@ table save_info_tbl {
 action initialize() {
 	// NOTE: condition_lo = false -> predicate = 1
 	// Make such an initialization to reduce MAT entries
-	//modify_field(meta.ismatch_keylolo, 1);
-	//modify_field(meta.ismatch_keylohi, 1);
-	//modify_field(meta.ismatch_keyhilo, 1);
-	//modify_field(meta.ismatch_keyhihi, 1);
 	modify_field(meta.zerovote, 1);
 	modify_field(meta.canput, 1);
 }

@@ -100,7 +100,6 @@ valid_list = [0, 1]
 keymatch_list = [0, 1]
 lock_list = [0, 1]
 predicate_list = [1, 2]
-key_predicate_list = [0, 2]
 backup_list = [0, 1]
 case12_list = [0, 1]
 case3_list = [0, 1]
@@ -292,19 +291,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 0
 
-            # Table: access_keylolo_tbl (default: nop; 7)
+            # Table: access_keylolo_tbl (default: initialize_ismatch_keylolo; 7)
             print "Configuring match_keylolo_tbl"
             self.configure_access_key_tbl("lolo")
 
-            # Table: access_keylohi_tbl (default: nop; 7)
+            # Table: access_keylohi_tbl (default: initialize_ismatch_keylohi; 7)
             print "Configuring match_keylohi_tbl"
             self.configure_access_key_tbl("lohi")
 
-            # Table: access_keyhilo_tbl (default: nop; 7)
+            # Table: access_keyhilo_tbl (default: initialize_ismatch_keyhilo; 7)
             print "Configuring match_keyhilo_tbl"
             self.configure_access_key_tbl("hilo")
 
-            # Table: access_keyhihi_tbl (default: nop; 7)
+            # Table: access_keyhihi_tbl (default: initialize_ismatch_keyhihi; 7)
             print "Configuring match_keyhihi_tbl"
             self.configure_access_key_tbl("hihi")
 
@@ -327,10 +326,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_vote_tbl (default: nop; 80)
             print "Configuring access_vote_tbl"
-            for ismatch_keylolo in key_predicate_list:
-                for ismatch_keylohi in key_predicate_list:
-                    for ismatch_keyhilo in key_predicate_list:
-                        for ismatch_keyhihi in key_predicate_list:
+            for ismatch_keylolo in predicate_list:
+                for ismatch_keylohi in predicate_list:
+                    for ismatch_keyhilo in predicate_list:
+                        for ismatch_keyhihi in predicate_list:
                             for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, PUTREQ_RECIR_TYPE]:
                                 matchspec0 = netbufferv3_access_vote_tbl_match_spec_t(
                                         op_hdr_optype=tmpoptype, 
@@ -1134,7 +1133,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_canput = canput,
                                                     meta_isbackup = isbackup,
                                                     meta_iscase12 = iscase12)
-                                            actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
+                                            actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[0]) 
                                             self.client.port_forward_tbl_table_add_with_port_forward(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
