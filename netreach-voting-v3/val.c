@@ -17,7 +17,7 @@ Val::~Val() {
 
 Val::Val(const uint64_t* buf, uint8_t length) {
 	INVARIANT(buf != nullptr);
-	INVARIANT(length != 0 && length <= MAX_VAL_LENGTH);
+	INVARIANT(length >= 0 && length <= MAX_VAL_LENGTH);
 
 	// Deep copy
 	val_data = new uint64_t[length];

@@ -367,40 +367,43 @@
 		of k1 gets a value of size 0 
 		* In-switch result: non-zero key, vallen=0, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 1, vote = 2
 - Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
-	+ NOTE: remember to set config.ini, otherwise the hashidx will be incorrect sent by phase2 ptf
+	+ NOTE: remember to set bucket_num in config.ini, otherwise the hashidx will be incorrect sent by phase2 ptf
+	+ NOTE: if data in backup is not dirty, it will incur duplicate results for range query -> we leave the deduplication in client-side
+		* If data in backup is dirty, it will incur inconsistent results (from KVS and backup) for range query -> we leave it in client-side, i.e., client treats data from backup with higher priority
+		* If data in backup with vallen of 0, it is deleted which should not be the result of range query -> we leave the removal of deleted data in client-side
 	+ Phase1: reset regs and set flag as 1
 	+ Case 1-1: undirty + PUT case1
 		* Get <k1, v1> -> Run phase1 -> PUT <k1, v2> -> Run phase2
-		* Result: receive PUTREQ_CASE1 with <k1, v1> (undirty), receive backup with <k1, v2>, final backup after rollback without k1
+		* Result: receive PUTREQ_CASE1 with <k1, v1>, receive backup with <k1, v2>, final backup after rollback with <k1, v1>
 	+ Case 1-2: dirty + PUT case1
 		* PUT <k1, v1> -> Run phase1 -> PUT <k1, v2> -> Run phase2
-		* Result: receive PUTREQ_CASE1 with <k1, v1> (dirty), receive backup with <k1, v2>, final backup after rollback with <k1, v1>
+		* Result: receive PUTREQ_CASE1 with <k1, v1>, receive backup with <k1, v2>, final backup after rollback with <k1, v1>
 	+ Case 1-3: undirty + DEL case1
 		* Get <k1, v1> -> Run phase1 -> DEL k1 -> Run phase2
-		* Result: receive DELREQ_CASE1 with <k1, v1> (undirty), receive backup without k1, final backup after rollback without k1
+		* Result: receive DELREQ_CASE1 with <k1, v1>, receive backup with <k1, vallen=0>, final backup after rollback with <k1, v1>
 	+ Case 1-4: dirty + DEL case1
 		* PUT <k1, v1> -> Run phase1 -> DEL k1 -> Run phase2
-		* Result: receive DELREQ_CASE1 with <k1, v1> (dirty), receive backup without k1, final backup after rollback with <k1, v1>
-	+ Case 2-1: invalid + PUTGS case2
+		* Result: receive DELREQ_CASE1 with <k1, v1>, receive backup with <k1, vallen=0>, final backup after rollback with <k1, v1>
+	+ Case 2-1: invalid + GETRES_POP case2
 		* Run phase1 -> GET <k1, v1> -> Run phase2
-		* Result: receive PUTREQ_GS_CASE2 with <0, 0>, receive backup without k1, final backup after rollback without k1
+		* Result: receive GETRES_POP_EVICT_CASE2 with <0, vallen=0>, receive backup with <k1, v1>, final backup after rollback without k1 
 		* NOTE: GETRES_NS will not trigger cache update and hence no special case
-	+ Case 2-2: undirty + PUTGS case2
+	+ Case 2-2: undirty + GETRES_POP case2
 		* GET <k1, v1> -> Run phase1 -> GET <k2, v2> -> Get <k3, v3> -> Run phase2
-		* Result: receive PUTREQ_GS_CASE2 with <k1, v1> (undirty), receive backup without k3, final backup after rollback without k1
-	+ Case 2-3: dirty + PUTGS case2
+		* Result: receive GETRES_POP_EVICT_CASE2 with <k1, v1>, receive backup with <k3, v3>, final backup after rollback with <k1, v1>
+	+ Case 2-3: dirty + GETRES_POP case2
 		* PUT <k1, v1> -> Run phase1 -> GET <k2, v2> -> GET <k3, v3> -> Run phase2
-		* Result: receive PUTREQ_GS_CASE2 with <k1, v1> (dirty), receive backup without k3, final backup after rollback with <k1, v1>
-	+ Case 2-4: invalid + PUTPS case2
+		* Result: receive GETRES_POP_EVICT_CASE2 with <k1, v1>, receive backup with <k3, v3>, final backup after rollback with <k1, v1>
+	+ Case 2-4: invalid + PUTREQ_POP case2
 		* Run phase1 -> PUT <k1, v1> -> Run phase2
-		* Result: receive PUTREQ_PS_CASE2 with <0, 0>, receive backup with <k1, v1>, final backup after rollback without k1
-	+ Case 2-5: undirty + PUTPS case2 + PUTREQ case3
+		* Result: receive PUTREQ_POP_EVICT_CASE2 with <0, vallen=0>, receive backup with <k1, v1>, final backup after rollback without k1
+	+ Case 2-5: undirty + PUTREQ_POP case2 + PUTREQ case3
 		* GET <k1, v1> -> Run phase1 -> PUT <k2, v2> -> PUT <k3, v3> -> Run phase2
-		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_PS_CASE2 with <k1, v1> (undirty), receive backup with <k3, v3>, final 
-		backup after rollback without k1
+		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_POP_EVICT_CASE2 with <k2, v2>, receive backup with <k3, v3>, final 
+		backup after rollback with <k1, v1>
 	+ Case 2-6: dirty + PUTPS case2 + PUTREQ case3
 		* PUT <k1, v1> -> Run phase1 -> PUT <k2, v2> -> PUT <k3, v3> -> Run phase2
-		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_PS_CASE2 with <k1, v1> (dirty), receive backup with <k3, v3>, final 
+		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_POP_EVICT_CASE2 with <k2, v2>, receive backup with <k3, v3>, final 
 		backup after rollback with <k1, v1>
 	+ Case 3-1: DELREQ case3
 		* PUT <k1, v1> -> Run phase1 -> DEL <k2, v2> -> Run phase2

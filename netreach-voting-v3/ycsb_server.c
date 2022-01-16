@@ -674,7 +674,7 @@ void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expecte
 #endif
 		uint8_t curvallen = *(uint8_t*)cur;
 		cur += 1;
-		INVARIANT(curvallen > 0);
+		INVARIANT(curvallen >= 0);
 		uint64_t curval_data[curvallen];
 		for (uint8_t val_idx = 0; val_idx < curvallen; val_idx++) {
 			curval_data[val_idx] = *(uint64_t*)cur;
