@@ -278,7 +278,7 @@
 - Debug and test
 	+ Pass normal cases: case1 to case11
 	+ Pass concurrent case
-	+ TODO: Pass backup cases: case1-1 to case4-1
+	+ Pass backup cases: case1-1 to case4-1
 - TODO: try as long value as we can
 - TODO: extend xindex with variable-length value and snapshot
 - TODO: replace rocksdb with xindex
