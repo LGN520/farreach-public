@@ -279,7 +279,7 @@
 	+ Pass normal cases: case1 to case11
 	+ Pass concurrent case
 	+ Pass backup cases: case1-1 to case4-1
-- TODO: try as long value as we can
+- Try as long value as we can (pass compilation by bfe 9.4.0; TODO: check in runtime)
 - TODO: extend xindex with variable-length value and snapshot
 - TODO: replace rocksdb with xindex
 - TODO: range query
