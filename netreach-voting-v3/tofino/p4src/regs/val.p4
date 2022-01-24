@@ -150,7 +150,7 @@ table update_valhi1_tbl {
 	size: 16;
 }
 
-/*register vallo2_reg {
+register vallo2_reg {
 	width: 32;
 	instance_count: KV_BUCKET_COUNT;
 }
@@ -161,7 +161,7 @@ blackbox stateful_alu get_vallo2_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo2;
+	output_dst: val2_hdr.vallo;
 }
 
 action get_vallo2() {
@@ -174,7 +174,7 @@ blackbox stateful_alu set_and_get_vallo2_alu {
 	update_lo_1_value: val2_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo2;
+	output_dst: val2_hdr.vallo;
 }
 
 action set_and_get_vallo2() {
@@ -185,14 +185,7 @@ table update_vallo2_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo2;
@@ -200,7 +193,7 @@ table update_vallo2_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi2_reg {
@@ -214,7 +207,7 @@ blackbox stateful_alu get_valhi2_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi2;
+	output_dst: val2_hdr.valhi;
 }
 
 action get_valhi2() {
@@ -227,7 +220,7 @@ blackbox stateful_alu set_and_get_valhi2_alu {
 	update_lo_1_value: val2_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi2;
+	output_dst: val2_hdr.valhi;
 }
 
 action set_and_get_valhi2() {
@@ -238,14 +231,7 @@ table update_valhi2_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi2;
@@ -253,7 +239,7 @@ table update_valhi2_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo3_reg {
@@ -267,7 +253,7 @@ blackbox stateful_alu get_vallo3_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo3;
+	output_dst: val3_hdr.vallo;
 }
 
 action get_vallo3() {
@@ -280,7 +266,7 @@ blackbox stateful_alu set_and_get_vallo3_alu {
 	update_lo_1_value: val3_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo3;
+	output_dst: val3_hdr.vallo;
 }
 
 action set_and_get_vallo3() {
@@ -291,14 +277,7 @@ table update_vallo3_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo3;
@@ -306,7 +285,7 @@ table update_vallo3_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi3_reg {
@@ -320,7 +299,7 @@ blackbox stateful_alu get_valhi3_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi3;
+	output_dst: val3_hdr.valhi;
 }
 
 action get_valhi3() {
@@ -333,7 +312,7 @@ blackbox stateful_alu set_and_get_valhi3_alu {
 	update_lo_1_value: val3_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi3;
+	output_dst: val3_hdr.valhi;
 }
 
 action set_and_get_valhi3() {
@@ -344,14 +323,7 @@ table update_valhi3_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi3;
@@ -359,7 +331,7 @@ table update_valhi3_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo4_reg {
@@ -373,7 +345,7 @@ blackbox stateful_alu get_vallo4_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo4;
+	output_dst: val4_hdr.vallo;
 }
 
 action get_vallo4() {
@@ -386,7 +358,7 @@ blackbox stateful_alu set_and_get_vallo4_alu {
 	update_lo_1_value: val4_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo4;
+	output_dst: val4_hdr.vallo;
 }
 
 action set_and_get_vallo4() {
@@ -397,14 +369,7 @@ table update_vallo4_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo4;
@@ -412,7 +377,7 @@ table update_vallo4_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi4_reg {
@@ -426,7 +391,7 @@ blackbox stateful_alu get_valhi4_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi4;
+	output_dst: val4_hdr.valhi;
 }
 
 action get_valhi4() {
@@ -439,7 +404,7 @@ blackbox stateful_alu set_and_get_valhi4_alu {
 	update_lo_1_value: val4_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi4;
+	output_dst: val4_hdr.valhi;
 }
 
 action set_and_get_valhi4() {
@@ -450,14 +415,7 @@ table update_valhi4_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi4;
@@ -465,7 +423,7 @@ table update_valhi4_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo5_reg {
@@ -479,7 +437,7 @@ blackbox stateful_alu get_vallo5_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo5;
+	output_dst: val5_hdr.vallo;
 }
 
 action get_vallo5() {
@@ -492,7 +450,7 @@ blackbox stateful_alu set_and_get_vallo5_alu {
 	update_lo_1_value: val5_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo5;
+	output_dst: val5_hdr.vallo;
 }
 
 action set_and_get_vallo5() {
@@ -503,14 +461,7 @@ table update_vallo5_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo5;
@@ -518,7 +469,7 @@ table update_vallo5_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi5_reg {
@@ -532,7 +483,7 @@ blackbox stateful_alu get_valhi5_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi5;
+	output_dst: val5_hdr.valhi;
 }
 
 action get_valhi5() {
@@ -545,7 +496,7 @@ blackbox stateful_alu set_and_get_valhi5_alu {
 	update_lo_1_value: val5_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi5;
+	output_dst: val5_hdr.valhi;
 }
 
 action set_and_get_valhi5() {
@@ -554,16 +505,9 @@ action set_and_get_valhi5() {
 
 table update_valhi5_tbl {
 	reads {
-		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
 		op_hdr.optype: exact;
+		meta.canput: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi5;
@@ -571,7 +515,7 @@ table update_valhi5_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo6_reg {
@@ -585,7 +529,7 @@ blackbox stateful_alu get_vallo6_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo6;
+	output_dst: val6_hdr.vallo;
 }
 
 action get_vallo6() {
@@ -598,7 +542,7 @@ blackbox stateful_alu set_and_get_vallo6_alu {
 	update_lo_1_value: val6_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo6;
+	output_dst: val6_hdr.vallo;
 }
 
 action set_and_get_vallo6() {
@@ -609,14 +553,7 @@ table update_vallo6_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo6;
@@ -624,7 +561,7 @@ table update_vallo6_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi6_reg {
@@ -638,7 +575,7 @@ blackbox stateful_alu get_valhi6_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi6;
+	output_dst: val6_hdr.valhi;
 }
 
 action get_valhi6() {
@@ -651,7 +588,7 @@ blackbox stateful_alu set_and_get_valhi6_alu {
 	update_lo_1_value: val6_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi6;
+	output_dst: val6_hdr.valhi;
 }
 
 action set_and_get_valhi6() {
@@ -662,14 +599,7 @@ table update_valhi6_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi6;
@@ -677,7 +607,7 @@ table update_valhi6_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo7_reg {
@@ -691,7 +621,7 @@ blackbox stateful_alu get_vallo7_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo7;
+	output_dst: val7_hdr.vallo;
 }
 
 action get_vallo7() {
@@ -704,7 +634,7 @@ blackbox stateful_alu set_and_get_vallo7_alu {
 	update_lo_1_value: val7_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo7;
+	output_dst: val7_hdr.vallo;
 }
 
 action set_and_get_vallo7() {
@@ -715,14 +645,7 @@ table update_vallo7_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo7;
@@ -730,7 +653,7 @@ table update_vallo7_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi7_reg {
@@ -744,7 +667,7 @@ blackbox stateful_alu get_valhi7_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi7;
+	output_dst: val7_hdr.valhi;
 }
 
 action get_valhi7() {
@@ -757,7 +680,7 @@ blackbox stateful_alu set_and_get_valhi7_alu {
 	update_lo_1_value: val7_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi7;
+	output_dst: val7_hdr.valhi;
 }
 
 action set_and_get_valhi7() {
@@ -768,14 +691,7 @@ table update_valhi7_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi7;
@@ -783,7 +699,7 @@ table update_valhi7_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo8_reg {
@@ -797,7 +713,7 @@ blackbox stateful_alu get_vallo8_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo8;
+	output_dst: val8_hdr.vallo;
 }
 
 action get_vallo8() {
@@ -810,7 +726,7 @@ blackbox stateful_alu set_and_get_vallo8_alu {
 	update_lo_1_value: val8_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo8;
+	output_dst: val8_hdr.vallo;
 }
 
 action set_and_get_vallo8() {
@@ -821,14 +737,7 @@ table update_vallo8_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo8;
@@ -836,7 +745,7 @@ table update_vallo8_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi8_reg {
@@ -850,7 +759,7 @@ blackbox stateful_alu get_valhi8_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi8;
+	output_dst: val8_hdr.valhi;
 }
 
 action get_valhi8() {
@@ -863,7 +772,7 @@ blackbox stateful_alu set_and_get_valhi8_alu {
 	update_lo_1_value: val8_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi8;
+	output_dst: val8_hdr.valhi;
 }
 
 action set_and_get_valhi8() {
@@ -874,14 +783,7 @@ table update_valhi8_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi8;
@@ -889,10 +791,10 @@ table update_valhi8_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
-/*register vallo9_reg {
+register vallo9_reg {
 	width: 32;
 	instance_count: KV_BUCKET_COUNT;
 }
@@ -903,7 +805,7 @@ blackbox stateful_alu get_vallo9_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo9;
+	output_dst: val9_hdr.vallo;
 }
 
 action get_vallo9() {
@@ -916,7 +818,7 @@ blackbox stateful_alu set_and_get_vallo9_alu {
 	update_lo_1_value: val9_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo9;
+	output_dst: val9_hdr.vallo;
 }
 
 action set_and_get_vallo9() {
@@ -927,14 +829,7 @@ table update_vallo9_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo9;
@@ -942,7 +837,7 @@ table update_vallo9_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi9_reg {
@@ -956,7 +851,7 @@ blackbox stateful_alu get_valhi9_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi9;
+	output_dst: val9_hdr.valhi;
 }
 
 action get_valhi9() {
@@ -969,7 +864,7 @@ blackbox stateful_alu set_and_get_valhi9_alu {
 	update_lo_1_value: val9_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi9;
+	output_dst: val9_hdr.valhi;
 }
 
 action set_and_get_valhi9() {
@@ -980,14 +875,7 @@ table update_valhi9_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi9;
@@ -995,7 +883,7 @@ table update_valhi9_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo10_reg {
@@ -1009,7 +897,7 @@ blackbox stateful_alu get_vallo10_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo10;
+	output_dst: val10_hdr.vallo;
 }
 
 action get_vallo10() {
@@ -1022,7 +910,7 @@ blackbox stateful_alu set_and_get_vallo10_alu {
 	update_lo_1_value: val10_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo10;
+	output_dst: val10_hdr.vallo;
 }
 
 action set_and_get_vallo10() {
@@ -1033,14 +921,7 @@ table update_vallo10_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo10;
@@ -1048,7 +929,7 @@ table update_vallo10_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi10_reg {
@@ -1062,7 +943,7 @@ blackbox stateful_alu get_valhi10_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi10;
+	output_dst: val10_hdr.valhi;
 }
 
 action get_valhi10() {
@@ -1075,7 +956,7 @@ blackbox stateful_alu set_and_get_valhi10_alu {
 	update_lo_1_value: val10_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi10;
+	output_dst: val10_hdr.valhi;
 }
 
 action set_and_get_valhi10() {
@@ -1086,14 +967,7 @@ table update_valhi10_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi10;
@@ -1101,7 +975,7 @@ table update_valhi10_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo11_reg {
@@ -1115,7 +989,7 @@ blackbox stateful_alu get_vallo11_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo11;
+	output_dst: val11_hdr.vallo;
 }
 
 action get_vallo11() {
@@ -1128,7 +1002,7 @@ blackbox stateful_alu set_and_get_vallo11_alu {
 	update_lo_1_value: val11_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo11;
+	output_dst: val11_hdr.vallo;
 }
 
 action set_and_get_vallo11() {
@@ -1139,14 +1013,7 @@ table update_vallo11_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo11;
@@ -1154,7 +1021,7 @@ table update_vallo11_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi11_reg {
@@ -1168,7 +1035,7 @@ blackbox stateful_alu get_valhi11_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi11;
+	output_dst: val11_hdr.valhi;
 }
 
 action get_valhi11() {
@@ -1181,7 +1048,7 @@ blackbox stateful_alu set_and_get_valhi11_alu {
 	update_lo_1_value: val11_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi11;
+	output_dst: val11_hdr.valhi;
 }
 
 action set_and_get_valhi11() {
@@ -1192,14 +1059,7 @@ table update_valhi11_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi11;
@@ -1207,7 +1067,7 @@ table update_valhi11_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo12_reg {
@@ -1221,7 +1081,7 @@ blackbox stateful_alu get_vallo12_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo12;
+	output_dst: val12_hdr.vallo;
 }
 
 action get_vallo12() {
@@ -1234,7 +1094,7 @@ blackbox stateful_alu set_and_get_vallo12_alu {
 	update_lo_1_value: val12_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo12;
+	output_dst: val12_hdr.vallo;
 }
 
 action set_and_get_vallo12() {
@@ -1245,14 +1105,7 @@ table update_vallo12_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo12;
@@ -1260,7 +1113,7 @@ table update_vallo12_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi12_reg {
@@ -1274,7 +1127,7 @@ blackbox stateful_alu get_valhi12_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi12;
+	output_dst: val12_hdr.valhi;
 }
 
 action get_valhi12() {
@@ -1287,7 +1140,7 @@ blackbox stateful_alu set_and_get_valhi12_alu {
 	update_lo_1_value: val12_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi12;
+	output_dst: val12_hdr.valhi;
 }
 
 action set_and_get_valhi12() {
@@ -1298,14 +1151,7 @@ table update_valhi12_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi12;
@@ -1313,7 +1159,7 @@ table update_valhi12_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo13_reg {
@@ -1327,7 +1173,7 @@ blackbox stateful_alu get_vallo13_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo13;
+	output_dst: val13_hdr.vallo;
 }
 
 action get_vallo13() {
@@ -1340,7 +1186,7 @@ blackbox stateful_alu set_and_get_vallo13_alu {
 	update_lo_1_value: val13_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo13;
+	output_dst: val13_hdr.vallo;
 }
 
 action set_and_get_vallo13() {
@@ -1351,14 +1197,7 @@ table update_vallo13_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo13;
@@ -1366,7 +1205,7 @@ table update_vallo13_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi13_reg {
@@ -1380,7 +1219,7 @@ blackbox stateful_alu get_valhi13_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi13;
+	output_dst: val13_hdr.valhi;
 }
 
 action get_valhi13() {
@@ -1393,7 +1232,7 @@ blackbox stateful_alu set_and_get_valhi13_alu {
 	update_lo_1_value: val13_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi13;
+	output_dst: val13_hdr.valhi;
 }
 
 action set_and_get_valhi13() {
@@ -1404,14 +1243,7 @@ table update_valhi13_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi13;
@@ -1419,7 +1251,7 @@ table update_valhi13_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo14_reg {
@@ -1433,7 +1265,7 @@ blackbox stateful_alu get_vallo14_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo14;
+	output_dst: val14_hdr.vallo;
 }
 
 action get_vallo14() {
@@ -1446,7 +1278,7 @@ blackbox stateful_alu set_and_get_vallo14_alu {
 	update_lo_1_value: val14_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo14;
+	output_dst: val14_hdr.vallo;
 }
 
 action set_and_get_vallo14() {
@@ -1457,14 +1289,7 @@ table update_vallo14_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo14;
@@ -1472,7 +1297,7 @@ table update_vallo14_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi14_reg {
@@ -1486,7 +1311,7 @@ blackbox stateful_alu get_valhi14_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi14;
+	output_dst: val14_hdr.valhi;
 }
 
 action get_valhi14() {
@@ -1499,7 +1324,7 @@ blackbox stateful_alu set_and_get_valhi14_alu {
 	update_lo_1_value: val14_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi14;
+	output_dst: val14_hdr.valhi;
 }
 
 action set_and_get_valhi14() {
@@ -1510,14 +1335,7 @@ table update_valhi14_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi14;
@@ -1525,7 +1343,7 @@ table update_valhi14_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo15_reg {
@@ -1539,7 +1357,7 @@ blackbox stateful_alu get_vallo15_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo15;
+	output_dst: val15_hdr.vallo;
 }
 
 action get_vallo15() {
@@ -1552,7 +1370,7 @@ blackbox stateful_alu set_and_get_vallo15_alu {
 	update_lo_1_value: val15_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo15;
+	output_dst: val15_hdr.vallo;
 }
 
 action set_and_get_vallo15() {
@@ -1563,14 +1381,7 @@ table update_vallo15_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo15;
@@ -1578,7 +1389,7 @@ table update_vallo15_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi15_reg {
@@ -1592,7 +1403,7 @@ blackbox stateful_alu get_valhi15_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi15;
+	output_dst: val15_hdr.valhi;
 }
 
 action get_valhi15() {
@@ -1605,7 +1416,7 @@ blackbox stateful_alu set_and_get_valhi15_alu {
 	update_lo_1_value: val15_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi15;
+	output_dst: val15_hdr.valhi;
 }
 
 action set_and_get_valhi15() {
@@ -1616,14 +1427,7 @@ table update_valhi15_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi15;
@@ -1631,7 +1435,7 @@ table update_valhi15_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register vallo16_reg {
@@ -1645,7 +1449,7 @@ blackbox stateful_alu get_vallo16_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo16;
+	output_dst: val16_hdr.vallo;
 }
 
 action get_vallo16() {
@@ -1658,7 +1462,7 @@ blackbox stateful_alu set_and_get_vallo16_alu {
 	update_lo_1_value: val16_hdr.vallo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_vallo16;
+	output_dst: val16_hdr.vallo;
 }
 
 action set_and_get_vallo16() {
@@ -1669,14 +1473,7 @@ table update_vallo16_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_vallo16;
@@ -1684,7 +1481,7 @@ table update_vallo16_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
+	size: 16;
 }
 
 register valhi16_reg {
@@ -1698,7 +1495,7 @@ blackbox stateful_alu get_valhi16_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi16;
+	output_dst: val16_hdr.valhi;
 }
 
 action get_valhi16() {
@@ -1711,7 +1508,7 @@ blackbox stateful_alu set_and_get_valhi16_alu {
 	update_lo_1_value: val16_hdr.valhi;
 
 	output_value: register_lo;
-	output_dst: meta.origin_valhi16;
+	output_dst: val16_hdr.valhi;
 }
 
 action set_and_get_valhi16() {
@@ -1722,10 +1519,7 @@ table update_valhi16_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.canput: exact;
-		meta.ismatch_keylolo: exact;
-		meta.ismatch_keylohi: exact;
-		meta.ismatch_keyhilo: exact;
-		meta.ismatch_keyhihi: exact;
+		meta.iskeymatch: exact;
 	}
 	actions {
 		get_valhi16;
@@ -1733,5 +1527,5 @@ table update_valhi16_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1152;
-}*/
+	size: 16;
+}

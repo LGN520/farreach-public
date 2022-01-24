@@ -29,6 +29,7 @@ table initialize_tbl {
 		initialize;
 	}
 	default_action: initialize();
+	size: 1;
 }
 
 action load_backup_flag(flag) {
@@ -40,6 +41,7 @@ table load_backup_flag_tbl {
 		load_backup_flag;
 	}
 	default_action: load_backup_flag(0);
+	size: 1;
 }
 
 // Stage 1
@@ -80,7 +82,7 @@ action update_getreq_to_getres() {
 	modify_field(op_hdr.optype, GETRES_TYPE);
 	add_header(vallen_hdr);
 	add_header(val1_hdr);
-	/*add_header(val2_hdr);
+	add_header(val2_hdr);
 	add_header(val3_hdr);
 	add_header(val4_hdr);
 	add_header(val5_hdr);
@@ -94,7 +96,7 @@ action update_getreq_to_getres() {
 	add_header(val13_hdr);
 	add_header(val14_hdr);
 	add_header(val15_hdr);
-	add_header(val16_hdr);*/
+	add_header(val16_hdr);
 }
 
 action recirculate_getreq(port) {
@@ -142,7 +144,7 @@ action update_putreq_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	/*remove_header(val2_hdr);
+	remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
@@ -156,7 +158,7 @@ action update_putreq_to_putres() {
 	remove_header(val13_hdr);
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
-	remove_header(val16_hdr);*/
+	remove_header(val16_hdr);
 	modify_field(res_hdr.stat, 1);
 	add_header(res_hdr);
 }
@@ -201,7 +203,7 @@ action update_putreq_recir_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	/*remove_header(val2_hdr);
+	remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
@@ -215,7 +217,7 @@ action update_putreq_recir_to_putres() {
 	remove_header(val13_hdr);
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
-	remove_header(val16_hdr);*/
+	remove_header(val16_hdr);
 	remove_header(seq_hdr);
 	modify_field(res_hdr.stat, 1);
 	add_header(res_hdr);
@@ -302,7 +304,7 @@ action update_delreq_to_case1_clone_for_delres(sid, port) {
 	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN);
 	add_header(vallen_hdr);
 	add_header(val1_hdr);
-	/*add_header(val2_hdr);
+	add_header(val2_hdr);
 	add_header(val3_hdr);
 	add_header(val4_hdr);
 	add_header(val5_hdr);
@@ -316,7 +318,7 @@ action update_delreq_to_case1_clone_for_delres(sid, port) {
 	add_header(val13_hdr);
 	add_header(val14_hdr);
 	add_header(val15_hdr);
-	add_header(val16_hdr);*/
+	add_header(val16_hdr);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
@@ -328,7 +330,7 @@ action update_delreq_recir_to_case1_clone_for_delres(sid, port) {
 	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_SEQ);
 	add_header(vallen_hdr);
 	add_header(val1_hdr);
-	/*add_header(val2_hdr);
+	add_header(val2_hdr);
 	add_header(val3_hdr);
 	add_header(val4_hdr);
 	add_header(val5_hdr);
@@ -342,7 +344,7 @@ action update_delreq_recir_to_case1_clone_for_delres(sid, port) {
 	add_header(val13_hdr);
 	add_header(val14_hdr);
 	add_header(val15_hdr);
-	add_header(val16_hdr);*/
+	add_header(val16_hdr);
 	remove_header(seq_hdr);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);

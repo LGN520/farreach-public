@@ -38,7 +38,7 @@ action update_cloned_putreq_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	/*remove_header(val2_hdr);
+	remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
@@ -52,7 +52,7 @@ action update_cloned_putreq_to_putres() {
 	remove_header(val13_hdr);
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
-	remove_header(val16_hdr);*/
+	remove_header(val16_hdr);
 	modify_field(res_hdr.stat, 1);
 	add_header(res_hdr);
 }
@@ -67,7 +67,7 @@ action update_cloned_putreq_recir_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	/*remove_header(val2_hdr);
+	remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
@@ -81,7 +81,7 @@ action update_cloned_putreq_recir_to_putres() {
 	remove_header(val13_hdr);
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
-	remove_header(val16_hdr);*/
+	remove_header(val16_hdr);
 	remove_header(seq_hdr);
 	modify_field(res_hdr.stat, 1);
 	add_header(res_hdr);
@@ -101,7 +101,7 @@ action update_cloned_putreq_pop_to_putres() {
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
-	/*remove_header(val2_hdr);
+	remove_header(val2_hdr);
 	remove_header(val3_hdr);
 	remove_header(val4_hdr);
 	remove_header(val5_hdr);
@@ -115,7 +115,7 @@ action update_cloned_putreq_pop_to_putres() {
 	remove_header(val13_hdr);
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
-	remove_header(val16_hdr);*/
+	remove_header(val16_hdr);
 	modify_field(res_hdr.stat, 1);
 	add_header(res_hdr);
 }

@@ -106,7 +106,7 @@ header udp_t udp_hdr;
 header op_t op_hdr;
 header vallen_t vallen_hdr;
 header val_t val1_hdr;
-/*header val_t val2_hdr;
+header val_t val2_hdr;
 header val_t val3_hdr;
 header val_t val4_hdr;
 header val_t val5_hdr;
@@ -120,7 +120,7 @@ header val_t val12_hdr;
 header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
-header val_t val16_hdr;*/
+header val_t val16_hdr;
 header seq_t seq_hdr;
 header res_t res_hdr;
 header other_t other_hdr;

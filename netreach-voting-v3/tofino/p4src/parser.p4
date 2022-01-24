@@ -52,7 +52,7 @@ parser parse_vallen {
 	extract(vallen_hdr);
 	return select(vallen_hdr.vallen) {
 		1: parse_val_len1;
-		/*2: parse_val_len2;
+		2: parse_val_len2;
 		3: parse_val_len3;
 		4: parse_val_len4;
 		5: parse_val_len5;
@@ -66,7 +66,7 @@ parser parse_vallen {
 		13: parse_val_len13;
 		14: parse_val_len14;
 		15: parse_val_len15;
-		16: parse_val_len16;*/
+		16: parse_val_len16;
 		default: ingress; // 0
 	}
 }
@@ -82,7 +82,7 @@ parser parse_val_len1 {
 	}
 }
 
-/*parser parse_val_len2 {
+parser parse_val_len2 {
 	extract(val2_hdr);
 	return parse_val_len1;
 }
@@ -155,7 +155,7 @@ parser parse_val_len15 {
 parser parse_val_len16 {
 	extract(val16_hdr);
 	return parse_val_len15;
-}*/
+}
 
 parser parse_seq {
 	extract(seq_hdr);

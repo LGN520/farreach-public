@@ -57,14 +57,14 @@
 // VAL_PKTLEN_MINUS_SEQ: sizeof(vallen) + sizeof(value) - sizeof(seq), e.g., DELREQ_RECIR -> DELREQ_CASE1
 // OTHER_PKTLEN: sizeof(other), e.g., PUTREQ -> PUTREQ_MAY_CASE3
 // SEQ_PKTLEN_MINUS_OTHER: sizeof(seq) - sizeof(other), e.g., PUTREQ_RECIR -> PUTREQ_MAY_CASE3
-//#define VAL_PKTLEN 129
-//#define VAL_PKTLEN_MINUS_STAT 128
-//#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 132
-//#define VAL_PKTLEN_MINUS_SEQ 125
-#define VAL_PKTLEN 9
-#define VAL_PKTLEN_MINUS_STAT 8
-#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 12
-#define VAL_PKTLEN_MINUS_SEQ 5
+#define VAL_PKTLEN 129
+#define VAL_PKTLEN_MINUS_STAT 128
+#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 132
+#define VAL_PKTLEN_MINUS_SEQ 125
+//#define VAL_PKTLEN 9
+//#define VAL_PKTLEN_MINUS_STAT 8
+//#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 12
+//#define VAL_PKTLEN_MINUS_SEQ 5
 #define SEQ_PKTLEN 4
 #define STAT_PKTLEN 1
 #define SEQ_PKTLEN_MINUS_STAT 3
@@ -131,7 +131,7 @@ control ingress {
 	apply(update_vallen_tbl);
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
-	/*apply(update_vallo2_tbl);
+	apply(update_vallo2_tbl);
 	apply(update_valhi2_tbl);
 	apply(update_vallo3_tbl);
 	apply(update_valhi3_tbl);
@@ -160,7 +160,7 @@ control ingress {
 	apply(update_vallo15_tbl);
 	apply(update_valhi15_tbl);
 	apply(update_vallo16_tbl);
-	apply(update_valhi16_tbl);*/
+	apply(update_valhi16_tbl);
 
 	// Stage 11
 	apply(access_case3_tbl);
