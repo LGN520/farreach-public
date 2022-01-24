@@ -117,7 +117,7 @@ parser parse_val_len8 {
 	return parse_val_len7;
 }
 
-/*parser parse_val_len9 {
+parser parse_val_len9 {
 	extract(val9_hdr);
 	return parse_val_len8;
 }
