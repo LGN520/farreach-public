@@ -37,13 +37,81 @@ Root<key_t, val_t, seq>::~Root() {
 
 template <class key_t, class val_t, bool seq>
 void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
-                                   const std::vector<val_t> &vals, std::string workload_name, uint32_t group_n) {
+                                   const std::vector<val_t> &vals) {
   INVARIANT(seq == false);
 
+  // try different initial # of groups
   size_t record_n = keys.size();
+  const size_t group_size_to_group_error_experience_ratio = 1000;
+  size_t group_n_trial =
+      record_n /
+      (group_size_to_group_error_experience_ratio * config.group_error_bound);
+
+  size_t max_trial_n = 40, trial_i = 0;
+  double actual_error_at_percentile = 0, max_group_error = 0,
+         avg_group_error = 0;
+
+  std::unordered_map<size_t, double> group_n_tried;
+
+  for (; trial_i < max_trial_n; trial_i++) {
+    group_n_trial = group_n_trial != 0 ? group_n_trial : 1;
+
+    calculate_err(keys, vals, group_n_trial, actual_error_at_percentile,
+                  max_group_error, avg_group_error);
+
+    // stop when we find ping-pong
+    if (group_n_tried.count(group_n_trial) > 0) {
+      size_t best_group_n = group_n_trial;
+      double min_error = actual_error_at_percentile;
+      for (auto iter = group_n_tried.begin(); iter != group_n_tried.end();
+           iter++) {
+        if (iter->second < min_error) {
+          best_group_n = iter->first;
+          min_error = iter->second;
+        }
+      }
+      group_n_trial = best_group_n;
+      actual_error_at_percentile = min_error;
+      DEBUG_THIS(
+          "--- [root] Ping-Pong while finding group_n. Stop at "
+          "group_n="
+          << group_n_trial
+          << ", error_at_percentile=" << actual_error_at_percentile);
+      break;
+    }
+    group_n_tried.emplace(group_n_trial, actual_error_at_percentile);
+
+    if (actual_error_at_percentile > config.group_error_bound) {
+      group_n_trial =
+          group_n_trial * actual_error_at_percentile / config.group_error_bound;
+    } else if (actual_error_at_percentile < config.group_error_bound / 2) {
+      if (group_n_trial == 1) {  // when group_n_trial can't go down anymore
+        break;
+      }
+      // embrace the group_n=0 case
+      if (actual_error_at_percentile == 0 && trial_i == max_trial_n - 1) {
+        break;
+      }
+      group_n_trial = group_n_trial * actual_error_at_percentile /
+                      (config.group_error_bound / 2);
+    } else {
+      break;
+    }
+  }
+
+  // max group_n is keys.size()
+  if (group_n_trial > keys.size()) group_n_trial = keys.size();
+  calculate_err(keys, vals, group_n_trial, actual_error_at_percentile,
+                max_group_error, avg_group_error);
+
+  DEBUG_THIS("--- [root] final group size: "
+             << group_n_trial << " (actual_error_at_percentile="
+             << actual_error_at_percentile << ", max_error=" << max_group_error
+             << ", avg_group_error=" << avg_group_error << ") after " << trial_i
+             << " trial(s)");
 
   // use the found group_n_trial to initialize groups
-  this->group_n = group_n;
+  group_n = group_n_trial;
   groups = std::make_unique<std::pair<key_t, group_t *volatile>[]>(group_n);
   size_t records_per_group = record_n / group_n;
   size_t trailing_record_n = record_n - records_per_group * group_n;
@@ -63,40 +131,12 @@ void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
     groups[group_i].first = keys[begin_i];
     groups[group_i].second = new group_t();
     groups[group_i].second->init(keys.begin() + begin_i, vals.begin() + begin_i,
-                                 end_i - begin_i, group_i, workload_name);
+                                 end_i - begin_i);
   }
-
-  // Disable OS-cache
-  //system("hdparm -W 0 /tmp/netbuffer");
 
   // then decide # of 2nd stage model of root RMI
   COUT_THIS("Training RMI model at root node...")
   adjust_rmi();
-
-  char root_filename[256];
-  GET_ROOT(root_filename, workload_name.c_str());
-  printf("Serializing root node to %s\n", root_filename);
-  serialize_root(root_filename);
-
-  DEBUG_THIS("--- [root] final XIndex Paramater: group_n = "
-             << group_n << ", rmi_2nd_stage_model_n=" << rmi_2nd_stage_model_n);
-}
-
-template <class key_t, class val_t, bool seq>
-void Root<key_t, val_t, seq>::open(std::string workload_name) {
-  INVARIANT(seq == false);
-
-  char root_filename[256];
-  GET_ROOT(root_filename, workload_name.c_str());
-  printf("Deserializing root node from %s\n", root_filename);
-  deserialize_root(root_filename);
-
-  for (size_t group_i = 0; group_i < group_n; group_i++) {
-	  groups[group_i].second->open(group_i, workload_name);
-  }
-
-  // Disable OS-cache
-  //system("hdparm -W 0 /tmp/netbuffer");
 
   DEBUG_THIS("--- [root] final XIndex Paramater: group_n = "
              << group_n << ", rmi_2nd_stage_model_n=" << rmi_2nd_stage_model_n);
@@ -160,13 +200,9 @@ inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val) {
  * Root::put
  */
 template <class key_t, class val_t, bool seq>
-inline result_t Root<key_t, val_t, seq>::put(const key_t &key, const val_t &val) {
-  return locate_group(key)->put(key, val);
-}
-
-template <class key_t, class val_t, bool seq>
-inline result_t Root<key_t, val_t, seq>::data_put(const key_t &key, const val_t &val) {
-  return locate_group(key)->data_put(key, val);
+inline result_t Root<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
+                                             const uint32_t worker_id) {
+  return locate_group(key)->put(key, val, worker_id);
 }
 
 /*
@@ -216,15 +252,15 @@ inline size_t Root<key_t, val_t, seq>::range_scan(
 
   bool done = false;
   int group_i;
+  int group_i_last;
   group_t *group = locate_group_pt2(begin, locate_group_pt1(begin, group_i));
-  while (group_i < (int)group_n) {
+  group_t *group_last = locate_group_pt2(end, locate_group_pt1(end, group_i_last));
+  while (group_i <= group_i_last && group_i_last < (int)group_n) {
     while (group && group->get_pivot() > latest_group_pivot) { // avoid re-entry
-      done = group->range_scan(begin, end, result);
-	  if (done) break;
+      group->range_scan(begin, end, result);
       latest_group_pivot = group->get_pivot();
       group = group->next;
     }
-	if (done) break;
     group_i++;
     group = groups[group_i].second;
   }
@@ -253,7 +289,7 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
                                : (bg_i + 1) * root.group_n / bg_num;
 
       // iterate through the array, and do maintenance
-      size_t compact = 0;
+      size_t m_split = 0, g_split = 0, m_merge = 0, g_merge = 0, compact = 0;
       size_t buf_size = 0, cnt = 0;
       for (size_t group_i = begin_group_i; group_i < end_group_i; group_i++) {
         if (group_i % 50000 == 0) {
@@ -262,21 +298,148 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
 
         group_t *volatile *group = &(root.groups[group_i].second);
         while (*group != nullptr) {
+          // check model split/merge
+          bool should_split_group = false;
+          bool might_merge_group = false;
+
+          // set this to avoid ping-pong effect
+          size_t max_trial_n = max_model_n;
+          for (size_t trial_i = 0; trial_i < max_trial_n; ++trial_i) {
+            group_t *old_group = (*group);
+
+            double mean_error;
+            if (seq) {
+              mean_error = old_group->mean_error_est();
+            } else {
+              mean_error = old_group->mean_error;
+            }
+
+            uint16_t model_n = old_group->model_n;
+            if (mean_error > config.group_error_bound) {
+              if (model_n != max_model_n) {
+                // DEBUG_THIS("------ [model split] err="
+                //  << mean_error << ", group_i=" << group_i);
+                *group = old_group->split_model();
+                memory_fence();
+                rcu_barrier();
+                if (seq) {
+                  (*group)->enable_seq_insert_opt();
+                }
+                m_split++;
+                delete old_group;
+              } else {
+                should_split_group = true;
+                break;
+              }
+            } else if (mean_error < config.group_error_bound /
+                                        config.group_error_tolerance) {
+              if (model_n != 1) {
+                // DEBUG_THIS("------ [model merge] err="
+                //            << mean_error << ", group_i=" << group_i);
+                *group = old_group->merge_model();
+                memory_fence();
+                rcu_barrier();
+                if (seq) {
+                  (*group)->enable_seq_insert_opt();
+                }
+                m_merge++;
+                delete old_group;
+              } else {
+                might_merge_group = true;
+                break;
+              }
+            } else {
+              break;
+            }
+          }
+
+          // prepare for group merge
+          group_t *volatile *next_group = nullptr;
+          if ((*group)->next) {
+            next_group = &((*group)->next);
+          } else if (group_i != end_group_i - 1 &&
+                     root.groups[group_i + 1].second) {
+            next_group = &(root.groups[group_i + 1].second);
+          }
+
           // check for group split/merge, if not, do compaction
-		  size_t buffer_size = (*group)->buffer_size;
+          size_t buffer_size = (*group)->buffer->size();
           buf_size += buffer_size;
           cnt++;
           group_t *old_group = (*group);
-          if (buffer_size > config.buffer_compact_threshold) {
+          if (should_split_group || buffer_size > config.buffer_size_bound) {
+            // DEBUG_THIS("------ [group split] buf_size="
+            //            << buffer_size << ", group_i=" << group_i);
+
+            group_t *intermediate = old_group->split_group_pt1();
+            *group = intermediate;  // create 2 new groups with freezed buffer
+            memory_fence();
+            rcu_barrier();  // make sure no one is inserting to buffer
+            group_t *new_group = intermediate->split_group_pt2();  // now merge
+            *group = new_group;
+            memory_fence();
+            rcu_barrier();  // make sure no one is using old/intermedia groups
+            g_split++;
+            new_group->compact_phase_2();
+            new_group->next->compact_phase_2();
+            memory_fence();
+            rcu_barrier();  // make sure no one is accessing the old data
+            old_group->free_data();  // intermidiates share the array and buffer
+            old_group->free_buffer();  // so no free_xxx is needed
+            delete old_group;
+            delete intermediate->next;  // but deleting the metadata is needed
+            delete intermediate;
+            should_update_array = true;
+
+            // skip next (the split new one), to avoid ping-pong split / merge
+            group = &((*group)->next);
+          } else if (might_merge_group &&
+                     buffer_size < config.buffer_size_bound /
+                                       config.buffer_size_tolerance &&
+                     next_group != nullptr) {
+            if (seq == true) {
+              COUT_VAR(group_i);
+              COUT_VAR(begin_group_i);
+              COUT_VAR(end_group_i);
+              COUT_VAR(old_group);
+              COUT_VAR(next_group);
+            }
+
+            // DEBUG_THIS("------ [group merge] buf_size="
+            //            << buffer_size << ", group_i=" << group_i);
+
+            group_t *old_next = (*next_group);
+            group_t *new_group = old_group->merge_group(*old_next);
+            *group = new_group;
+            *next_group = new_group;  // first set 2 ptrs to a valid one
+            memory_fence();  // make sure that no one is accessing old groups
+            rcu_barrier();   // before nullify the old next
+            *next_group = nullptr;  // then nullify the next
+            g_merge++;
+            new_group->compact_phase_2();
+            memory_fence();
+            rcu_barrier();  // make sure no one is accessing the old data
+            old_group->free_data();
+            old_group->free_buffer();
+            old_next->free_data();
+            old_next->free_buffer();
+            delete old_group;
+            delete old_next;
+            should_update_array = true;
+          } else if (buffer_size > config.buffer_compact_threshold) {
             // DEBUG_THIS("------ [compaction], buf_size="
             //            << buffer_size << ", group_i=" << group_i);
 
 			// Compact
-            group_t *new_group = old_group->compact_phase();
+            group_t *new_group = old_group->compact_phase_1();
             *group = new_group;
+            memory_fence();
+            rcu_barrier();
             compact++;
+            new_group->compact_phase_2();
             memory_fence();
             rcu_barrier();  // make sure no one is accessing the old data
+            old_group->free_data();
             old_group->free_buffer();
             delete old_group;
           }
@@ -287,6 +450,10 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
       }
 
       finished = true;
+      DEBUG_THIS("------ [structure update] m_split_n: " << m_split);
+      DEBUG_THIS("------ [structure update] g_split_n: " << g_split);
+      DEBUG_THIS("------ [structure update] m_merge_n: " << m_merge);
+      DEBUG_THIS("------ [structure update] g_merge_n: " << g_merge);
       DEBUG_THIS("------ [structure update] compact_n: " << compact);
       DEBUG_THIS("------ [structure update] buf_size/cnt: " << 1.0 * buf_size /
                                                                    cnt);
@@ -555,82 +722,6 @@ Root<key_t, val_t, seq>::locate_group_pt2(const key_t &key, group_t *begin) {
     next = group->next;
   }
   return group;
-}
-
-template <class key_t, class val_t, bool seq>
-void Root<key_t, val_t, seq>::serialize_root(char *filename) {
-	struct stat dir_stat;
-	if (stat(filename, &dir_stat) == 0) {
-		if (std::remove(filename) != 0) {
-			printf("File exists while cannot remove: %s\n", filename);
-			exit(-1);
-		}
-	}
-
-	FILE *fp = fopen(filename, "w+");
-	INVARIANT(fp != nullptr);
-
-	// rmi 1st stage 
-	fwrite((void *)rmi_1st_stage.weights.data(), sizeof(double), key_t::model_key_size() + 1, fp);
-	// # of rmi 2st stage
-	fwrite((void *)&rmi_2nd_stage_model_n, sizeof(size_t), 1, fp);
-	// rmi 2nd stage
-	for (size_t i = 0; i < rmi_2nd_stage_model_n; i++) {
-		fwrite((void *)rmi_2nd_stage[i].weights.data(), sizeof(double), key_t::model_key_size() + 1, fp);
-	}
-
-	// group_n
-	fwrite((void *)&group_n, sizeof(size_t), 1, fp);
-	for (size_t i = 0; i < group_n; i++) {
-		// key
-		fwrite((void *)&(groups[i].first), sizeof(uint64_t), key_t::model_key_size(), fp);
-		// pivot
-		fwrite((void *)&(groups[i].second->pivot), sizeof(uint64_t), key_t::model_key_size(), fp);
-	}
-
-	fclose(fp);
-}
-
-template <class key_t, class val_t, bool seq>
-void Root<key_t, val_t, seq>::deserialize_root(char *filename) {
-	struct stat dir_stat;
-	if (stat(filename, &dir_stat) != 0) {
-		printf("No such file: %s\n", filename);
-		exit(-1);
-	}
-
-	FILE *fp = fopen(filename, "r");
-	INVARIANT(fp != nullptr);
-
-	double buf[key_t::model_key_size() + 1];
-	// rmi 1st stage 
-	fread((void *)buf, sizeof(double), key_t::model_key_size() + 1, fp);
-	for (size_t weight_idx = 0; weight_idx < (key_t::model_key_size()+1); weight_idx++) {
-		rmi_1st_stage.weights[weight_idx] = buf[weight_idx];
-	}
-	// # of rmi 2st stage
-	fread((void *)&rmi_2nd_stage_model_n, sizeof(size_t), 1, fp);
-	rmi_2nd_stage = new linear_model_t[rmi_2nd_stage_model_n]();
-	// rmi 2nd stage
-	for (size_t i = 0; i < rmi_2nd_stage_model_n; i++) {
-		fread((void *)buf, sizeof(double), key_t::model_key_size() + 1, fp);
-		for (size_t weight_idx = 0; weight_idx < (key_t::model_key_size()+1); weight_idx++) {
-			rmi_2nd_stage[i].weights[weight_idx] = buf[weight_idx];
-		}
-	}
-
-	// group_n
-	fread((void *)&group_n, sizeof(size_t), 1, fp);
-	groups = std::make_unique<std::pair<key_t, group_t *volatile>[]>(group_n);
-	for (size_t i = 0; i < group_n; i++) {
-		// key
-		fread((void *)&(groups[i].first), sizeof(uint64_t), key_t::model_key_size(), fp);
-		groups[i].second = new group_t();
-		// pivot
-		fread((void *)&(groups[i].second->pivot), sizeof(uint64_t), key_t::model_key_size(), fp);
-	}
-
-	fclose(fp);
 }
 
 }  // namespace xindex

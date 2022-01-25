@@ -1,9 +1,24 @@
-# Tofino + DPDK-based XIndex with in-memory KVS + variable-length key-value pair + YCSB (tofino-netbuffer-dpdk-memory-varkv)
+# Tofino + DPDK-based XIndex with in-memory KVS + variable-length key-value pair + YCSB (tofino-xindex-dpdk-memory-varkv)
 
 ## Implementation log
 
 - Copy from tofino-xindex-dpdk-lsm-varkv to tofino-xindex-dpdk-memory-varkv
 - Replace rocksdb with XIndex
+	+ Merge ycsb_local_client.c into ycsb_server.c (cannot split loading phase and running phase)
+		* Loading phase
+			- Load split_n-1 slice as keys and values to initialize xindex
+			- Load 0 ~ split_n-2 slices to put data into xindex
+		* Runing phase
+			- Launch fg_n threads to handle requests sent by ycsb_remote_client.c
+	+ Remove rocksdb (xindex_util.h)
+	+ Remove workload_name, open() and data_put(), and retrieve RMI training fro group_n during initialization (xindex.h, xindex_impl.h)
+	+ Remove workload_name, open(), data_put(), serialize_root(), and deserialize_root(), retrieve background model/group merge/split (xindex_root.h, xindex_root_impl.h)
+	+ Remove rocksdb, open(), and data_put() (xindex_group.h, xindex_group_impl.h)
+- TODO: add variable length value into XIndex
+	+ TODO: compile localtest.c, ycsb_server.c, and ycsb_remote_client.c
+	+ TODO: test xindex with varkv
+- TODO: add snapshot into xindex
+- TODO: test xindex with snapshot
 
 ## How to run
 

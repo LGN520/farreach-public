@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 
   parse_ini("config.ini");
   parse_args(argc, argv);
-  xindex::init_options(); // init options of rocksdb
+  //xindex::init_options(); // init options of rocksdb
   load();
 
   // prepare xindex

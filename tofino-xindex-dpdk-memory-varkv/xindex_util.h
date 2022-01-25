@@ -26,11 +26,11 @@
 #include <memory>
 #include <mutex>
 
-#include "rocksdb/db.h"
-#include "rocksdb/cache.h"
-#include "rocksdb/table.h"
-#include "rocksdb/utilities/transaction.h"
-#include "rocksdb/utilities/transaction_db.h"
+//#include "rocksdb/db.h"
+//#include "rocksdb/cache.h"
+//#include "rocksdb/table.h"
+//#include "rocksdb/utilities/transaction.h"
+//#include "rocksdb/utilities/transaction_db.h"
 
 #if !defined(XINDEX_UTIL_H)
 #define XINDEX_UTIL_H
@@ -80,20 +80,20 @@ struct IndexConfig {
   volatile bool exited = false;
 
   // RocksDB
-  size_t memtable_size = 4 * 1024 * 1024; // 4 MB
+  /*size_t memtable_size = 4 * 1024 * 1024; // 4 MB
   size_t max_memtable_num = 2;
   size_t sst_size = 4 * 1024 * 1024; // 4 MB
   size_t compaction_thread_num = 2;
   size_t level0_num = 8; // 32 MB
   size_t level_num = 4;
   size_t level1_size = 32 * 1024 * 1024; // 32 MB
-  size_t level_multiplier = 8; // level n+1 = 8 * level n
+  size_t level_multiplier = 8; // level n+1 = 8 * level n*/
 };
 
 index_config_t config;
 std::mutex config_mutex;
 
-rocksdb::Options data_options;
+/*rocksdb::Options data_options;
 rocksdb::Options buffer_options;
 void inline init_options() {
   std::shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache(4 * 1024 * 1024, 4); // 4 MB with 16 shards
@@ -129,7 +129,7 @@ void inline init_options() {
   buffer_options.num_levels = config.level_num;
   buffer_options.max_bytes_for_level_base = config.level1_size;
   buffer_options.max_bytes_for_level_multiplier = config.level_multiplier;
-}
+}*/
 
 // TODO replace it with user space RCU (e.g., qsbr)
 void rcu_init() {
