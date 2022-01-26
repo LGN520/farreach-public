@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
   // prepare xindex
   uint64_t init_val_data[1] = {1};
   std::vector<val_t> vals(exist_keys.size(), val_t(init_val_data, 1));
-  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
+  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   run_server(tab_xi, runtime);
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
@@ -89,6 +89,7 @@ inline void parse_ini(const char* config_file) {
 
 	fg_n = ini.get_server_num();
 	workload_name = ini.get_workload_name();
+	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -343,9 +344,9 @@ void *run_sfg(void * param) {
 
     double d = ratio_dis(gen);
 
-	int tmprun = 4;
-    //if (d <= read_ratio) {  // get
-    if (tmprun == 0) {  // get
+	//int tmprun = 4;
+    if (d <= read_ratio) {  // get
+    //if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
 	  Key tmp_key;
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << tmp_key.to_string());
@@ -363,8 +364,8 @@ void *run_sfg(void * param) {
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
       }
-    //} else if (d <= read_ratio + update_ratio) {  // update
-    } else if (tmprun == 1) {  // update
+    } else if (d <= read_ratio + update_ratio) {  // update
+    //} else if (tmprun == 1) {  // update
 	  bool tmp_stat = table->put(op_keys[(update_i + delete_i) % op_keys.size()], dummy_value, thread_id);
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << dummy_value.to_string()
 			  << " stat = " << tmp_stat);
@@ -372,8 +373,8 @@ void *run_sfg(void * param) {
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
       }
-    //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
-    } else if (tmprun == 2) {  // insert
+    } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
+    //} else if (tmprun == 2) {  // insert
 	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value.to_string()
 			  << " stat = " << tmp_stat);
@@ -381,8 +382,8 @@ void *run_sfg(void * param) {
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
       }
-    //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
-    } else if (tmprun == 3) {  // remove
+    } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
+    //} else if (tmprun == 3) {  // remove
 	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id);
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[delete_i].to_string() << " stat = " << tmp_stat);
       delete_i++;
@@ -403,7 +404,6 @@ void *run_sfg(void * param) {
       }
     }
     thread_param.throughput++;
-	break;
   }
 
   pthread_exit(nullptr);

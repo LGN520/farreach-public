@@ -1,6 +1,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <algorithm>
 #include <atomic>
@@ -17,6 +18,7 @@
 #include <arpa/inet.h> // inetaddr conversion
 #include <sys/time.h> // struct timeval
 #include <string.h>
+#include <map>
 
 #include "helper.h"
 #include "xindex.h"
@@ -27,6 +29,7 @@
 #include "key.h"
 #include "val.h"
 #include "iniparser/iniparser_wrapper.h"
+#include "ycsb/parser.h"
 
 #define MQ_SIZE 256
 
@@ -48,12 +51,15 @@ typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
 
+// loading phase
+void run_load_server(xindex_t *table); // loading phase
+void *run_load_sfg(void *param); // workers in loading phase
+void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals);
+
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
 void prepare_dpdk();
 void prepare_receiver();
-void run_load_server(xindex_t *table); // loading phase
-void *run_load_sfg(void *param); // workers in loading phase
 void run_server(xindex_t *table); // running phase
 //void *run_sfg(void *param);
 void kill(int signum);
@@ -94,7 +100,7 @@ bool killed = false;
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
 
-
+// loading phase
 struct alignas(CACHELINE_SIZE) LoadSFGParam {
 	xindex_t *table;
 	uint8_t thread_id;
@@ -118,7 +124,7 @@ int main(int argc, char **argv) {
   std::vector<index_key_t> keys;
   std::vector<val_t> vals;
   load(keys, vals); // Use the last split workload to initialize the XIndex
-  xindex_t *tab_xi = new xindex_t(keys, vals, fg_n, bg_n, workload_name); // fg_n to create array of RCU status; bg_n background threads have been launched
+  xindex_t *tab_xi = new xindex_t(keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   run_load_server(tab_xi); // loading phase
 
@@ -338,7 +344,7 @@ void run_load_server(xindex_t *table) {
 
 	// Prepare load_n params
 	pthread_t threads[load_n];
-	load_sfg_param_t load_sfg_params[load__n];
+	load_sfg_param_t load_sfg_params[load_n];
 	// check if parameters are cacheline aligned
 	for (size_t i = 0; i < load_n; i++) {
 		if ((uint64_t)(&(load_sfg_params[i])) % CACHELINE_SIZE != 0) {

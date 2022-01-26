@@ -23,6 +23,7 @@ class Val {
   Val(const uint64_t* buf, uint8_t length);
   Val(const Val &other);
   Val &operator=(const Val &other);
+  bool operator==(const Val& other);
 
   rocksdb::Slice to_slice() const; // NOTE: slice is shallow copy
 

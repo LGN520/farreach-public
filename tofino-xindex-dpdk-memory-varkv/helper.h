@@ -102,18 +102,22 @@
     abort();                       \
   }
 
+// 0: print information of background retraining thread
 #if 1
 #define NDEBUGGING
 #endif
 
-#if 1
+// 0: print information of main thread
+#if 0
 #define NDEBUGGING_LOG
 #endif
 
+// 1: test dpdk polling time to reduce it from normal RTT
 #if 0
 #define TEST_DPDK_POLLING
 #endif
 
+// 1: test aggregate throughput
 #if 1
 #define TEST_AGG_THPT
 #endif

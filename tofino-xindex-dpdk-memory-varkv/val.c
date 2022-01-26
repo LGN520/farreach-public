@@ -17,7 +17,7 @@ Val::~Val() {
 
 Val::Val(const uint64_t* buf, uint8_t length) {
 	INVARIANT(buf != nullptr);
-	INVARIANT(length != 0 && length <= MAX_VAL_LENGTH);
+	INVARIANT(length >= 0 && length <= MAX_VAL_LENGTH);
 
 	// Deep copy
 	val_data = new uint64_t[length];
@@ -56,6 +56,22 @@ Val& Val::operator=(const Val &other) {
 		val_data = nullptr;
 	}
 	return *this;
+}
+
+bool Val::operator==(const Val &other) {
+	if (val_length == 0 && val_data == nullptr && \
+			other.val_length == 0 && other.val_data == nullptr) {
+		return true;
+	}
+	if (val_length == other.val_length && val_data != nullptr && other.val_data != nullptr) {
+		for (size_t i = 0; i < val_length; i++) {
+			if (val_data[i] != other.val_data[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
 }
 
 rocksdb::Slice Val::to_slice() const {
