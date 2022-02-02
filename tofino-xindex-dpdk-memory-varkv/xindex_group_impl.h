@@ -1077,7 +1077,8 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq,
            max_model_n>::ArrayDataSource::advance_to_next_valid() {
   while (pos < array_size) {
-    if (data[pos].second.read(next_val)) {
+    //if (data[pos].second.read(next_val)) {
+    if (data[pos].second.read_snapshot(next_val)) {
       next_key = data[pos].first;
       has_next = true;
       pos++;

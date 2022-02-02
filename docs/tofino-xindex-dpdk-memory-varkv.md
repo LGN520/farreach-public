@@ -33,22 +33,26 @@
 		* If during compact, copy status, status', val, and val' in ReplacePointer (now val and val' must point to different memory)
 		* NOTE: we do not need the peace period in RCU (copy-on-write + peace period)
 - Variable length value and snapshot (based on the deprecated version)
-	+ NOTE: RCU-based method supports pointer-type dynamic variable, while version-based (copy-for-read) method only support static variable
-		* If using pointer-type dyanmic variable under version-based method, before assigning the pointer to the memory of new value, the pointer may still 
-		point to the memory of old value which has been deleted, copying the deleted memory will incur segmentation fault!!!
 	- Add variable length value into XIndex (replace original uint64_t with uint64_t[16])
 		+ Support val_length + val_data (max length: 16*8B) in AtomicVal (xindex_util.h, xindex_group_impl.h)
 		+ Compile and test
 			* localtest w/ 1 thread under read-only workload: 200K op/s
-		+ NOTE: if Val.val_length == 0, Val.val_data == nullptr, which cannot be used in memcpy -> segnmentation fault otherwise!!!
+		+ Debug of segmengtation fault (pointer, array boundary)
+			+ NOTE: RCU-based method supports pointer-type dynamic variable, while version-based (copy-for-read) method only support static variable
+				* If using pointer-type dyanmic variable under version-based method, before assigning the pointer to the memory of new value, the pointer may still 
+				point to the memory of old value which has been deleted, copying the deleted memory will incur segmentation fault!!!
+			+ NOTE: if Val.val_length == 0, Val.val_data == nullptr, which cannot be used in memcpy -> segnmentation fault otherwise!!!
 	- Support snapshot based on copy-o-write like Redis
-		+ Prepare val' (val_length' + val_data') and status' for snapshot
-		* For each AtomicVal, make snapshot
-			- Copy status as status' (status' != 0 means being snapshoted), copy val as val' (shallow copy, point to the same data)
-		* If delete AtomicVal, touch status instead of status'
-		* If modify AtomicVal, change val instead of val' (check address of data to decide whether to free the space of old data)
-			- If old data address of val = data address of val' -> not free; otherwise, free
-		* If during compact, copy status, status', val, and val' in ReplacePointer (now val and val' must point to different memory)
+		+ Update AtomicVal (xindex_util.h)
+			+ Prepare val' (val_length' + val_data') and status' for snapshot
+			* For each AtomicVal, make snapshot
+				- Copy status as status' (status' != 0 means being snapshoted), copy val as val' (shallow copy, point to the same data)
+			* If delete AtomicVal, touch status instead of status'
+			* If modify AtomicVal, change val instead of val' (check address of data to decide whether to free the space of old data)
+				- If old data address of val = data address of val' -> not free; otherwise, free
+			* If during compact, copy status, status', val, and val' in ReplacePointer (now val and val' must point to different memory)
+		+ Add make_snapshot() (xindex_impl.h, xindex_root_impl.h, xindex_group_impl.h)
+		+ Change DataSource and ArrayDataSource to read_snapshot() (xindex_util.h, xindex_group_impl.h, xindex_buffer_impl.h)
 
 ## How to run
 

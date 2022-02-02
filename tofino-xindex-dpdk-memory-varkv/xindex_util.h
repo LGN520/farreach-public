@@ -252,6 +252,32 @@ struct AtomicVal {
       }
     }
   }
+  // AtomicVal in buffer and buffer_temp cannot be ptr-type
+  bool read_snapshot_ignoring_ptr(val_t &val) {
+    while (true) {
+      uint64_t prev_ss_status = this->ss_status; // focus on version and remove
+      memory_fence();
+	  val_t tmpssval(this->ss_val_data, this->ss_val_length);
+	  //val_t tmpssval = this->ss_val;
+	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
+      memory_fence();
+
+	  uint64_t current_status = this->status; // focus on lock and is_ptr
+      memory_fence();
+      uint64_t current_ss_status = this->ss_status; // ensure consistent tmpval
+      memory_fence();
+
+      if (unlikely(locked(current_status))) {  // check lock
+        continue;
+      }
+
+      if (likely(get_version(prev_ss_status) ==
+                 get_version(current_ss_status))) {  // check version
+        val = tmpssval; 
+        return !removed(current_ss_status); // check removed of snapshot value
+      }
+    }
+  }
 
   AtomicVal() : status(0) {}
   ~AtomicVal() {
