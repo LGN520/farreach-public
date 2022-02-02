@@ -767,12 +767,12 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
     if (base_key < buf_key) {
       new_data[count].first = base_key;
       new_data[count].second = wrapped_val_t(&base_val); // put AtomicVal* into new_data
-      assert(new_data[count].second.ptr->val == base_val.val);
+      assert(*(new_data[count].second.aval_ptr->val_ptr) == *(base_val.val_ptr));
       array_source.advance_to_next_valid();
     } else {
       new_data[count].first = buf_key;
       new_data[count].second = wrapped_val_t(&buf_val); // put AtomicVal* into new_data
-      assert(new_data[count].second.ptr->val == buf_val.val);
+      assert(*(new_data[count].second.aval_ptr->val_ptr) == *(buf_val.val_ptr));
       buffer_source.advance_to_next_valid();
     }
     count++;
@@ -784,7 +784,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
     new_data[count].first = base_key;
     new_data[count].second = wrapped_val_t(&base_val);
-    assert(new_data[count].second.ptr->val == base_val.val);
+    assert(*(new_data[count].second.aval_ptr->val_ptr) == *(base_val.val_ptr));
 
     array_source.advance_to_next_valid();
     count++;
@@ -796,7 +796,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
     new_data[count].first = buf_key;
     new_data[count].second = wrapped_val_t(&buf_val);
-    assert(new_data[count].second.ptr->val == buf_val.val);
+    assert(*(new_data[count].second.aval_ptr->val_ptr) == *(buf_val.val_ptr));
 
     buffer_source.advance_to_next_valid();
     count++;

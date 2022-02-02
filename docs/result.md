@@ -102,7 +102,9 @@
 
 ## Preliminary Exp of Microbench (local test without persistency)
 
-- XIndex: 7M op/s = 0.14us 
+- 8B-value XIndex without log: 7M op/s = 0.14us 
+- Var-value XIndex with log: 3Mop/s = 0.31us
+- Var-value XIndex with log: 200K op/s = 0.47us
 
 ## Preliminary Exp of microbench (remote test without persistency)
 

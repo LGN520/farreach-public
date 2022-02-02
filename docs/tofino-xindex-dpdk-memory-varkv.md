@@ -14,13 +14,23 @@
 	+ Remove workload_name, open() and data_put(), and retrieve RMI training fro group_n during initialization (xindex.h, xindex_impl.h)
 	+ Remove workload_name, open(), data_put(), serialize_root(), and deserialize_root(), retrieve background model/group merge/split (xindex_root.h, xindex_root_impl.h)
 	+ Remove rocksdb, open(), and data_put() (xindex_group.h, xindex_group_impl.h)
-- Add variable length value into XIndex
-	+ Merge variable length Val into AtomicVal (val.c, xindex_util.h, xindex_group_impl,h)
+- Add variable length value into XIndex (replace original uint64_t with Val (pointing to variable-length value data) in vector)
+	+ Merge variable length Val into AtomicVal (val.c, xindex_util.h, xindex_group_impl.h)
 	+ Compile localtest.c, ycsb_server.c, and ycsb_remote_client.c
 		* Error: use of deleted function -> need to define some function explicitly
 		* Reason: C++ will not define fuction of a class implicitly if the internal member has explicit function
 	+ Test xindex with varkv -> localtest: 127561 op/s with 1 thread
-- TODO: add snapshot into xindex
+- TODO: Support snapshot operation in XIndex based on copy-on-write like Redis
+	* Use Val\* instead of Val for value in AtomicVal (xindex_util.h, xindex_group_impl.h)
+		* By doing this, we can keep copy constructor of both Val and AtomicVal as deep copy, while using pointer copy to achieve copy-on-write of snapshot
+		* Otherwise, if we directly maintain Val in AtomicVal, Val must support shallow copy which is not transparent to snapshot
+	* TODO: For each AtomicVal, make snapshot
+		- Copy status as status' (status' != 0 means being snapshoted), copy val as val' (shallow copy, point to the same data)
+	* TODO: If delete AtomicVal, touch status instead of status'
+	* TODO: If modify AtomicVal, change val instead of val' (check address of data to decide whether to free the space of old data)
+		- If old data address of val = data address of val' -> not free; otherwise, free
+	* TODO: If during compact, copy status, status', val, and val' in ReplacePointer (now val and val' must point to different memory)
+	* NOTE: we do not need the peace period in RCU (copy-on-write + peace period)
 - TODO: test xindex with snapshot
 
 ## How to run

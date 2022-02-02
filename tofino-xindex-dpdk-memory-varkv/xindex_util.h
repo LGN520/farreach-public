@@ -181,8 +181,8 @@ void rcu_barrier(const uint32_t worker_id) {
 template <class val_t>
 struct AtomicVal {
   typedef val_t value_type;
-  val_t val;
-  AtomicVal *ptr;
+  val_t *val_ptr = new val_t();
+  AtomicVal *aval_ptr = nullptr;
 
   // 60 bits for version
   static const uint64_t version_mask = 0x0fffffffffffffff;
@@ -194,9 +194,33 @@ struct AtomicVal {
   volatile uint64_t status;
 
   AtomicVal() : status(0) {}
-  ~AtomicVal() {}
-  AtomicVal(val_t val) : val(val), status(0) {}
-  AtomicVal(AtomicVal *ptr) : ptr(ptr), status(0) { set_is_ptr(); }
+  ~AtomicVal() {
+	  if (val_ptr != nullptr) {
+		  delete val_ptr;
+	  }
+	  // AtomicVal pointed by aval_ptr will be freed after compaction, we do not need to free it here
+  }
+  AtomicVal(val_t val) : status(0) {
+	  if (val_ptr != nullptr) {
+		  delete val_ptr;
+	  }
+	  val_ptr = new val_t(val);
+  }
+  AtomicVal(AtomicVal *ptr) : aval_ptr(ptr), status(0) { set_is_ptr(); }
+  AtomicVal(const AtomicVal& other) {
+	  *this = other;
+  }
+  AtomicVal & operator=(const AtomicVal& other) {
+	  if (other.val_ptr != nullptr) {
+		  if (val_ptr != nullptr) {
+			  delete val_ptr;
+		  }
+		  val_ptr = new val_t(*(other.val_ptr));
+	  }
+	  aval_ptr = other.aval_ptr;
+	  status = other.status;
+	  return *this;
+  }
 
   bool is_ptr(uint64_t status) { return status & pointer_mask; }
   bool removed(uint64_t status) { return status & removed_mask; }
@@ -226,8 +250,8 @@ struct AtomicVal {
   }
 
   friend std::ostream &operator<<(std::ostream &os, const AtomicVal &leaf) {
-    COUT_VAR(leaf.val.to_string());
-	COUT_VAR(leaf.val.ptr);
+    COUT_VAR(leaf.val_ptr->to_string());
+	COUT_VAR(leaf.aval_ptr);
     COUT_VAR(leaf.is_ptr);
     COUT_VAR(leaf.removed);
     COUT_VAR(leaf.locked);
@@ -240,8 +264,8 @@ struct AtomicVal {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
-      val_t tmpval = this->val; // copy-for-read (lock free vs. read-write lock)
-	  AtomicVal *tmpptr = this->ptr;
+      val_t tmpval = *(this->val_ptr); // copy-for-read (lock free vs. read-write lock); we must copy value istead of pointer here as write() could free the memory of old value
+	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read() due to RCU during compact
       memory_fence();
 
       uint64_t current_status = this->status; // ensure consistent tmpval
@@ -269,9 +293,12 @@ struct AtomicVal {
     bool res;
     if (unlikely(is_ptr(status))) {
       assert(!removed(status));
-      res = this->ptr->update(val);
+      res = this->aval_ptr->update(val);
     } else if (!removed(status)) {
-      this->val = val;
+	  if (this->val_ptr != nullptr) {
+		delete this->val_ptr;
+	  }
+      this->val_ptr = new val_t(val);
       res = true;
     } else {
       res = false;
@@ -288,7 +315,7 @@ struct AtomicVal {
     bool res;
     if (unlikely(is_ptr(status))) {
       assert(!removed(status));
-      res = this->ptr->remove();
+      res = this->aval_ptr->remove();
     } else if (!removed(status)) {
       set_removed();
       res = true;
@@ -307,7 +334,7 @@ struct AtomicVal {
     UNUSED(status);
     assert(is_ptr(status));
     assert(!removed(status));
-    if (!ptr->read(val)) {
+    if (!aval_ptr->read(*val_ptr)) {
       set_removed();
     }
     unset_is_ptr();
@@ -320,8 +347,8 @@ struct AtomicVal {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
-      val_t tmpval = this->val;
-	  AtomicVal *tmpptr = this->ptr;
+      val_t tmpval = *(this->val_ptr);
+	  AtomicVal *tmpptr = this->aval_ptr;
       memory_fence();
       if (unlikely(locked(status))) {
         continue;
@@ -340,7 +367,10 @@ struct AtomicVal {
     uint64_t status = this->status;
     bool res;
     if (!removed(status)) {
-      this->val = val;
+	  if (this->val_ptr != nullptr) {
+		delete this->val_ptr;
+	  }
+      this->val_ptr = new val_t(val);
       res = true;
     } else {
       res = false;
