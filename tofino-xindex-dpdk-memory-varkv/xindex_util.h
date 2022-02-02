@@ -193,17 +193,75 @@ struct AtomicVal {
   // lock - removed - is_ptr
   volatile uint64_t status;
 
+  // For snapshot (onlyl valid for value-type AtomicVal)
+  val_t *ss_val_ptr = new val_t();
+  volatile uint64_t ss_status = 0; // only focus on removed and version w/o lock and is_ptr
+
+  void make_snapshot() {
+	  lock();
+	  memory_fence();
+      if (unlikely(is_ptr(status))) {
+          assert(!removed(status));
+		  aval_ptr->make_snapshot();
+	  }
+	  else{
+		  /*if (ss_val_ptr != nullptr) {
+			  delete ss_val_ptr;
+		  }*/
+		  ss_val_ptr = val_ptr;
+		  if (removed(status)) {
+			  ss_status |= removed_mask;
+		  }
+		  ss_status++; // increase version 
+	  }
+	  memory_fence();
+	  unlock();
+  }
+  bool read_snapshot(val_t &val) {
+    while (true) {
+      uint64_t prev_ss_status = this->ss_status; // focus on version and remove
+      memory_fence();
+	  // TODO: may try to translate a deleted memory block (ss_val_ptr deleted by make_snapshot) as val_t -> use RCU, or just not delete memory
+      val_t tmpval = *(this->ss_val_ptr); // copy-for-read (lock free vs. read-write lock); we must copy value istead of pointer here as make_snapshot() could free the memory of old value
+	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
+      memory_fence();
+
+	  uint64_t current_status = this->status; // focus on lock and is_ptr
+      memory_fence();
+      uint64_t current_ss_status = this->ss_status; // ensure consistent tmpval
+      memory_fence();
+
+      if (unlikely(locked(current_status))) {  // check lock
+        continue;
+      }
+
+      if (likely(get_version(prev_ss_status) ==
+                 get_version(current_ss_status))) {  // check version
+        if (unlikely(is_ptr(current_status))) { // check is_ptr
+          assert(!removed(current_status)); // check removed of pointer-type atomic value
+          return tmpptr->read_snapshot(val);
+        } else {
+          val = tmpval;
+          return !removed(current_ss_status); // check removed of snapshot value
+        }
+      }
+    }
+  }
+
   AtomicVal() : status(0) {}
   ~AtomicVal() {
-	  if (val_ptr != nullptr) {
+	  if ((val_ptr != nullptr) && (val_ptr != ss_val_ptr)) {
 		  delete val_ptr;
+	  }
+	  if (ss_val_ptr != nullptr) {
+		  delete ss_val_ptr;
 	  }
 	  // AtomicVal pointed by aval_ptr will be freed after compaction, we do not need to free it here
   }
   AtomicVal(val_t val) : status(0) {
-	  if (val_ptr != nullptr) {
+	  /*if ((val_ptr != nullptr) && (val_ptr != ss_val_ptr)) {
 		  delete val_ptr;
-	  }
+	  }*/
 	  val_ptr = new val_t(val);
   }
   AtomicVal(AtomicVal *ptr) : aval_ptr(ptr), status(0) { set_is_ptr(); }
@@ -212,13 +270,18 @@ struct AtomicVal {
   }
   AtomicVal & operator=(const AtomicVal& other) {
 	  if (other.val_ptr != nullptr) {
-		  if (val_ptr != nullptr) {
+		  /*if ((val_ptr != nullptr) && (val_ptr != ss_val_ptr)) {
 			  delete val_ptr;
 		  }
+		  if (ss_val_ptr != nullptr) {
+			  delete ss_val_ptr;
+		  }*/
 		  val_ptr = new val_t(*(other.val_ptr));
+		  ss_val_ptr = new val_t(*(other.ss_val_ptr));
 	  }
 	  aval_ptr = other.aval_ptr;
 	  status = other.status;
+	  ss_status = other.ss_status;
 	  return *this;
   }
 
@@ -264,27 +327,27 @@ struct AtomicVal {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
-      val_t tmpval = *(this->val_ptr); // copy-for-read (lock free vs. read-write lock); we must copy value istead of pointer here as write() could free the memory of old value
+	  val_t tmpval = *(this->val_ptr); // copy-for-read (lock free vs. read-write lock); we must copy value istead of pointer here as write() could free the memory of old value
 	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read() due to RCU during compact
-      memory_fence();
+	  memory_fence();
 
-      uint64_t current_status = this->status; // ensure consistent tmpval
-      memory_fence();
+	  uint64_t current_status = this->status; // ensure consistent tmpval
+	  memory_fence();
 
-      if (unlikely(locked(current_status))) {  // check lock
-        continue;
-      }
+	  if (unlikely(locked(current_status))) {  // check lock
+		continue;
+	  }
 
-      if (likely(get_version(status) ==
-                 get_version(current_status))) {  // check version
-        if (unlikely(is_ptr(status))) {
-          assert(!removed(status));
-          return tmpptr->read(val);
-        } else {
-          val = tmpval;
-          return !removed(status);
-        }
-      }
+	  if (likely(get_version(status) ==
+				 get_version(current_status))) {  // check version
+		if (unlikely(is_ptr(status))) {
+		  assert(!removed(status));
+		  return tmpptr->read(val);
+		} else {
+		  val = tmpval;
+		  return !removed(status);
+		}
+	  }
     }
   }
   bool update(const val_t &val) {
@@ -295,9 +358,9 @@ struct AtomicVal {
       assert(!removed(status));
       res = this->aval_ptr->update(val);
     } else if (!removed(status)) {
-	  if (this->val_ptr != nullptr) {
+	  /*if ((val_ptr != nullptr) && (val_ptr != ss_val_ptr)) {
 		delete this->val_ptr;
-	  }
+	  }*/
       this->val_ptr = new val_t(val);
       res = true;
     } else {
@@ -337,6 +400,12 @@ struct AtomicVal {
     if (!aval_ptr->read(*val_ptr)) {
       set_removed();
     }
+	if (ss_val_ptr == val_ptr) {
+		ss_val_ptr = new val_t();
+	}
+	if (!aval_ptr->read_snapshot(*ss_val_ptr)) {
+		ss_status |= removed_mask;
+	}
     unset_is_ptr();
     memory_fence();
     incr_version();
@@ -367,9 +436,9 @@ struct AtomicVal {
     uint64_t status = this->status;
     bool res;
     if (!removed(status)) {
-	  if (this->val_ptr != nullptr) {
+	  /*if ((val_ptr != nullptr) && (val_ptr != ss_val_ptr)) {
 		delete this->val_ptr;
-	  }
+	  }*/
       this->val_ptr = new val_t(val);
       res = true;
     } else {

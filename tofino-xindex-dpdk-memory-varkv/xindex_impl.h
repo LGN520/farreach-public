@@ -55,6 +55,7 @@ XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t> &keys,
   // malloc memory for root & init root
   root = new root_t();
   root->init(keys, vals);
+  root->make_snapshot();
   start_bg();
 }
 
@@ -102,6 +103,12 @@ size_t XIndex<key_t, val_t, seq>::range_scan(
     std::vector<std::pair<key_t, val_t>> &result, const uint32_t worker_id) {
   rcu_progress(worker_id);
   return root->range_scan(begin, end, result);
+}
+
+template <class key_t, class val_t, bool seq>
+void XIndex<key_t, val_t, seq>::make_snapshot(const uint32_t worker_id) {
+  rcu_progress(worker_id);
+  root->make_snapshot();
 }
 
 template <class key_t, class val_t, bool seq>

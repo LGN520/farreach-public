@@ -50,10 +50,10 @@
 	+ Xindex with tofino-based netbuffer (DPDK) + LSM-based KVS + variable length value + YCSB + majority voting
 - [netreach-voting-v2](./netreach-voting-v2.md)
 	+ Xindex with tofino-based netbuffer (DPDK) + LSM-based KVS + variable length value + YCSB + majority voting + controller-based eviction
-- [netreach-voting-v2](./netreach-voting-v3.md)
+- [netreach-voting-v3](./netreach-voting-v3.md)
 	+ Xindex with tofino-based netbuffer (DPDK) + LSM-based KVS + variable length value + YCSB + majority voting + data-plane-based eviction optimization
 - [tofino-xindex-dpdk-memory-varkv](./tofino-xindex-dpdk-memory-varkv.md)
-	+ Xindex with tofino-based transmission delay (DPDK) + in-memory KVS + variable length value + YCSB
+	+ Xindex with tofino-based transmission delay (DPDK) + in-memory KVS + variable length value w/ snapshot + YCSB
 
 ## Global Configuration
 
