@@ -30,9 +30,9 @@ namespace xindex {
 
 template <class key_t, class val_t, bool seq>
 Root<key_t, val_t, seq>::~Root() {
-	for (size_t group_i = 0; group_i < group_n; group_i++) {
+	/*for (size_t group_i = 0; group_i < group_n; group_i++) {
 		delete groups[group_i].second;
-	}
+	}*/
 }
 
 template <class key_t, class val_t, bool seq>

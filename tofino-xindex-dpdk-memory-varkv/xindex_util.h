@@ -181,7 +181,9 @@ void rcu_barrier(const uint32_t worker_id) {
 template <class val_t>
 struct AtomicVal {
   typedef val_t value_type;
-  val_t *val_ptr = new val_t();
+  uint8_t val_length = 0;
+  uint64_t *val_data = new uint64_t[val_t::MAX_VAL_LENGTH];
+  //val_t val;
   AtomicVal *aval_ptr = nullptr;
 
   // 60 bits for version
@@ -194,7 +196,9 @@ struct AtomicVal {
   volatile uint64_t status;
 
   // For snapshot (onlyl valid for value-type AtomicVal)
-  val_t *ss_val_ptr = new val_t();
+  uint8_t ss_val_length = 0;
+  uint64_t *ss_val_data = new uint64_t[val_t::MAX_VAL_LENGTH];
+  //val_t ss_val;
   volatile uint64_t ss_status = 0; // only focus on removed and version w/o lock and is_ptr
 
   void make_snapshot() {
@@ -202,13 +206,13 @@ struct AtomicVal {
 	  memory_fence();
       if (unlikely(is_ptr(status))) {
           assert(!removed(status));
+		  assert(aval_ptr != nullptr);
 		  aval_ptr->make_snapshot();
 	  }
 	  else{
-		  /*if (ss_val_ptr != nullptr) {
-			  delete ss_val_ptr;
-		  }*/
-		  ss_val_ptr = val_ptr;
+		  ss_val_length = val_length;
+		  memcpy((char *)ss_val_data, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+		  //ss_val = val;
 		  if (removed(status)) {
 			  ss_status |= removed_mask;
 		  }
@@ -221,8 +225,8 @@ struct AtomicVal {
     while (true) {
       uint64_t prev_ss_status = this->ss_status; // focus on version and remove
       memory_fence();
-	  // TODO: may try to translate a deleted memory block (ss_val_ptr deleted by make_snapshot) as val_t -> use RCU, or just not delete memory
-      val_t tmpval = *(this->ss_val_ptr); // copy-for-read (lock free vs. read-write lock); we must copy value istead of pointer here as make_snapshot() could free the memory of old value
+	  val_t tmpssval(this->ss_val_data, this->ss_val_length);
+	  //val_t tmpssval = this->ss_val;
 	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
       memory_fence();
 
@@ -239,9 +243,10 @@ struct AtomicVal {
                  get_version(current_ss_status))) {  // check version
         if (unlikely(is_ptr(current_status))) { // check is_ptr
           assert(!removed(current_status)); // check removed of pointer-type atomic value
+		  assert(tmpptr != nullptr);
           return tmpptr->read_snapshot(val);
         } else {
-          val = tmpval;
+          val = tmpssval; 
           return !removed(current_ss_status); // check removed of snapshot value
         }
       }
@@ -250,35 +255,27 @@ struct AtomicVal {
 
   AtomicVal() : status(0) {}
   ~AtomicVal() {
-	  if ((val_ptr != nullptr) && (val_ptr != ss_val_ptr)) {
-		  delete val_ptr;
-	  }
-	  if (ss_val_ptr != nullptr) {
-		  delete ss_val_ptr;
-	  }
-	  // AtomicVal pointed by aval_ptr will be freed after compaction, we do not need to free it here
+	  delete [] val_data;
+	  delete [] ss_val_data;
   }
   AtomicVal(val_t val) : status(0) {
-	  /*if ((val_ptr != nullptr) && (val_ptr != ss_val_ptr)) {
-		  delete val_ptr;
-	  }*/
-	  val_ptr = new val_t(val);
+	  val_length = val.val_length;
+	  if (val_length > 0) { // NOTE: val.val_data may not long enough
+		  memcpy((char *)val_data, (char *)val.val_data, val_length * sizeof(uint64_t));
+	  }
+	  //this->val = val;
   }
   AtomicVal(AtomicVal *ptr) : aval_ptr(ptr), status(0) { set_is_ptr(); }
   AtomicVal(const AtomicVal& other) {
 	  *this = other;
   }
   AtomicVal & operator=(const AtomicVal& other) {
-	  if (other.val_ptr != nullptr) {
-		  /*if ((val_ptr != nullptr) && (val_ptr != ss_val_ptr)) {
-			  delete val_ptr;
-		  }
-		  if (ss_val_ptr != nullptr) {
-			  delete ss_val_ptr;
-		  }*/
-		  val_ptr = new val_t(*(other.val_ptr));
-		  ss_val_ptr = new val_t(*(other.ss_val_ptr));
-	  }
+	  val_length = other.val_length;
+	  memcpy((char *)val_data, (char *)other.val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+	  //val = other.val;
+	  ss_val_length = other.ss_val_length;
+	  memcpy((char *)ss_val_data, (char *)other.ss_val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+	  //ss_val = other.ss_val;
 	  aval_ptr = other.aval_ptr;
 	  status = other.status;
 	  ss_status = other.ss_status;
@@ -313,7 +310,10 @@ struct AtomicVal {
   }
 
   friend std::ostream &operator<<(std::ostream &os, const AtomicVal &leaf) {
-    COUT_VAR(leaf.val_ptr->to_string());
+	COUT_VAR(int(leaf.val_length));
+	for (size_t i = 0; i < leaf.val_length; i++) {
+		COUT_VAR(leaf.val_data[i]);
+	}
 	COUT_VAR(leaf.aval_ptr);
     COUT_VAR(leaf.is_ptr);
     COUT_VAR(leaf.removed);
@@ -327,7 +327,8 @@ struct AtomicVal {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
-	  val_t tmpval = *(this->val_ptr); // copy-for-read (lock free vs. read-write lock); we must copy value istead of pointer here as write() could free the memory of old value
+	  val_t tmpval(this->val_data, this->val_length);
+	  //val_t tmpval = this->val;
 	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read() due to RCU during compact
 	  memory_fence();
 
@@ -342,9 +343,10 @@ struct AtomicVal {
 				 get_version(current_status))) {  // check version
 		if (unlikely(is_ptr(status))) {
 		  assert(!removed(status));
+		  assert(tmpptr != nullptr);
 		  return tmpptr->read(val);
 		} else {
-		  val = tmpval;
+		  val = tmpval; 
 		  return !removed(status);
 		}
 	  }
@@ -356,12 +358,14 @@ struct AtomicVal {
     bool res;
     if (unlikely(is_ptr(status))) {
       assert(!removed(status));
+	  assert(aval_ptr != nullptr);
       res = this->aval_ptr->update(val);
     } else if (!removed(status)) {
-	  /*if ((val_ptr != nullptr) && (val_ptr != ss_val_ptr)) {
-		delete this->val_ptr;
-	  }*/
-      this->val_ptr = new val_t(val);
+	  this->val_length = val.val_length;
+	  if (this->val_length > 0) {
+		  memcpy((char *)this->val_data, (char *)val.val_data, this->val_length * sizeof(uint64_t));
+	  }
+	  //this->val = val;
       res = true;
     } else {
       res = false;
@@ -378,6 +382,7 @@ struct AtomicVal {
     bool res;
     if (unlikely(is_ptr(status))) {
       assert(!removed(status));
+	  assert(aval_ptr != nullptr);
       res = this->aval_ptr->remove();
     } else if (!removed(status)) {
       set_removed();
@@ -397,15 +402,26 @@ struct AtomicVal {
     UNUSED(status);
     assert(is_ptr(status));
     assert(!removed(status));
-    if (!aval_ptr->read(*val_ptr)) {
+	val_t tmpval;
+	assert(aval_ptr != nullptr);
+    if (!aval_ptr->read(tmpval)) {
       set_removed();
     }
-	if (ss_val_ptr == val_ptr) {
-		ss_val_ptr = new val_t();
+	this->val_length = tmpval.val_length;
+	if (tmpval.val_length > 0) {
+		memcpy((char *)this->val_data, (char *)tmpval.val_data, tmpval.val_length * sizeof(uint64_t));
 	}
-	if (!aval_ptr->read_snapshot(*ss_val_ptr)) {
+	//this->val = tmpval;
+	val_t tmpssval;
+	if (!aval_ptr->read_snapshot(tmpssval)) {
 		ss_status |= removed_mask;
 	}
+	this->ss_val_length = tmpssval.val_length;
+	// NOTE: if val_t.val_length == 0, then val_t.val_data is null
+	if (tmpssval.val_length > 0) {
+		memcpy((char *)this->ss_val_data, (char *)tmpssval.val_data, tmpssval.val_length * sizeof(uint64_t));
+	}
+	//this->ss_val = tmpssval;
     unset_is_ptr();
     memory_fence();
     incr_version();
@@ -416,7 +432,8 @@ struct AtomicVal {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
-      val_t tmpval = *(this->val_ptr);
+	  val_t tmpval(this->val_data, this->val_length);
+	  //val_t tmpval = this->val;
 	  AtomicVal *tmpptr = this->aval_ptr;
       memory_fence();
       if (unlikely(locked(status))) {
@@ -436,10 +453,11 @@ struct AtomicVal {
     uint64_t status = this->status;
     bool res;
     if (!removed(status)) {
-	  /*if ((val_ptr != nullptr) && (val_ptr != ss_val_ptr)) {
-		delete this->val_ptr;
-	  }*/
-      this->val_ptr = new val_t(val);
+	  this->val_length = val.val_length;
+	  if (this->val_length > 0) {
+		  memcpy((char *)this->val_data, (char *)val.val_data, this->val_length * sizeof(uint64_t));
+	  }
+	  //this->val = val;
       res = true;
     } else {
       res = false;

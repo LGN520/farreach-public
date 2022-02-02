@@ -227,12 +227,12 @@ template <class key_t, class val_t, bool seq>
 void XIndex<key_t, val_t, seq>::terminate_bg() {
   config.exited = true;
   bg_running = false;
-  void *status;
+  /*void *status;
   int rc = pthread_join(bg_master, &status);
   if (rc) {
     COUT_N_EXIT("Error: unable to join," << rc);
   }
-  delete root;
+  delete root;*/
 }
 
 }  // namespace xindex
