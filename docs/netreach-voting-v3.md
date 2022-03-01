@@ -57,7 +57,7 @@
 	+ Overview
 		* Stage 0: keylolo, keylohi, keyhilo, keyhihi, load_backup_tbl
 			- For key, we provide two operations: match, set_and_get
-		* Stage 1: valid, vote, seq (assign only if key matches for PUT/DELREQ), update_iskeymatch_tbl
+		* Stage 1: valid, vote, seq (assign only if key matches for PUT/DELREQ -> assign for each PUT/DELREQ), update_iskeymatch_tbl
 		* Stage 2: savedseq, lock, 
 		* Stage 3: vallen, vallo1, valhi1, case12
 			- For vallen and val, we provide two operations: get, set_and_get

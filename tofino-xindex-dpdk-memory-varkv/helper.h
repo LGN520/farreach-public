@@ -122,6 +122,11 @@
 #define TEST_AGG_THPT
 #endif
 
+// 1: original xindex with fixed 8B value and no snapshot
+#if 1
+#define ORIGINAL_XINDEX
+#endif
+
 #if defined(NDEBUGGING)
 #define DEBUG_THIS(this)
 #else

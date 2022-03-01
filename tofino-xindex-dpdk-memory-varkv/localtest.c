@@ -23,8 +23,11 @@
 struct alignas(CACHELINE_SIZE) SFGParam;
 
 typedef Key index_key_t;
+#ifdef ORIGINAL_XINDEX
+typedef uint64_t val_t;
+#else
 typedef Val val_t;
-//typedef uint64_t val_t;
+#endif
 typedef SFGParam sfg_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
@@ -74,8 +77,11 @@ int main(int argc, char **argv) {
 
   // prepare xindex
   uint64_t init_val_data[1] = {1};
+#ifdef ORIGINAL_XINDEX
+  std::vector<val_t> vals(exist_keys.size(), 1);
+#else
   std::vector<val_t> vals(exist_keys.size(), val_t(init_val_data, 1));
-  //std::vector<val_t> vals(exist_keys.size(), 1);
+#endif
   xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   run_server(tab_xi, runtime);
@@ -91,8 +97,10 @@ inline void parse_ini(const char* config_file) {
 
 	fg_n = ini.get_server_num();
 	workload_name = ini.get_workload_name();
+#ifndef ORIGINAL_XINDEX
 	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
 	COUT_VAR(val_t::MAX_VAL_LENGTH);
+#endif
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -316,8 +324,11 @@ void *run_sfg(void * param) {
 
   int res = 0;
   uint64_t dummy_value_data[2] = {1234, 5678};
+#ifdef ORIGINAL_XINDEX
+  val_t dummy_value = 1234;
+#else
   val_t dummy_value = val_t(dummy_value_data, 2);
-  //val_t dummy_value = 1234;
+#endif
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
   COUT_THIS("[localtest " << uint32_t(thread_id) << "] Ready.");
 
@@ -367,9 +378,13 @@ void *run_sfg(void * param) {
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << tmp_key.to_string() << " val = " << tmp_val);*/
 
 	  val_t tmp_val;
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string());
+#endif
 	  bool tmp_stat = table->get(op_keys[(query_i + delete_i) % op_keys.size()], tmp_val, thread_id);
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " val = " << tmp_val.to_string());
+#endif
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
@@ -377,8 +392,10 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio) {  // update
     } else if (tmprun == 1) {  // update
 	  bool tmp_stat = table->put(op_keys[(update_i + delete_i) % op_keys.size()], dummy_value, thread_id);
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << dummy_value.to_string()
 			  << " stat = " << tmp_stat);
+#endif
       update_i++;
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
@@ -386,8 +403,10 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     } else if (tmprun == 2) {  // insert
 	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value.to_string()
 			  << " stat = " << tmp_stat);
+#endif
       insert_i++;
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
@@ -395,7 +414,9 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
     } else if (tmprun == 3) {  // remove
 	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id);
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[delete_i].to_string() << " stat = " << tmp_stat);
+#endif
       delete_i++;
       if (unlikely(delete_i == op_keys.size())) {
         delete_i = 0;
@@ -405,11 +426,13 @@ void *run_sfg(void * param) {
 	  //size_t tmp_num = table->scan(op_keys[(query_i + delete_i) % op_keys.size()], 10, results, thread_id);
 	  size_t tmp_num = table->range_scan(op_keys[(query_i + delete_i) % op_keys.size()], \
 			  op_keys[(query_i + delete_i + 10) % op_keys.size()], results, thread_id);
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " num = " << tmp_num);
 	  for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 		  FDEBUG_THIS(ofs, results[val_i].first.to_string());
 		  FDEBUG_THIS(ofs, results[val_i].second.to_string());
 	  }
+#endif
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;

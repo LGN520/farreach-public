@@ -4,7 +4,7 @@
 #include <array>
 #include <limits>
 #include <string>
-#include "rocksdb/slice.h"
+//#include "rocksdb/slice.h"
 #include "helper.h"
 
 class Val {
@@ -25,9 +25,9 @@ class Val {
   Val &operator=(const Val &other);
   bool operator==(const Val& other);
 
-  rocksdb::Slice to_slice() const; // NOTE: slice is shallow copy
+  /*rocksdb::Slice to_slice() const; // NOTE: slice is shallow copy
+  void from_slice(rocksdb::Slice& slice);*/
 
-  void from_slice(rocksdb::Slice& slice);
   void from_string(std::string& str);
 
   // operation on packet buf (1B vallength + valdata)

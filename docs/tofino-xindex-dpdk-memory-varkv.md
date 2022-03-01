@@ -42,7 +42,7 @@
 				* If using pointer-type dyanmic variable under version-based method, before assigning the pointer to the memory of new value, the pointer may still 
 				point to the memory of old value which has been deleted, copying the deleted memory will incur segmentation fault!!!
 			+ NOTE: if Val.val_length == 0, Val.val_data == nullptr, which cannot be used in memcpy -> segnmentation fault otherwise!!!
-	- Support snapshot based on copy-o-write like Redis
+	- Support snapshot based on copy-on-write like Redis
 		+ Update AtomicVal (xindex_util.h)
 			+ Prepare val' (val_length' + val_data') and status' for snapshot
 			* For each AtomicVal, make snapshot
@@ -53,6 +53,8 @@
 			* If during compact, copy status, status', val, and val' in ReplacePointer (now val and val' must point to different memory)
 		+ Add make_snapshot() (xindex_impl.h, xindex_root_impl.h, xindex_group_impl.h)
 		+ Change DataSource and ArrayDataSource to read_snapshot() (xindex_util.h, xindex_group_impl.h, xindex_buffer_impl.h)
+- Compare extended XIndex with Redis
+	+ Add macro of ORIGINAL_XINDEX to allow the switch between original xindex and extended version
 
 ## How to run
 

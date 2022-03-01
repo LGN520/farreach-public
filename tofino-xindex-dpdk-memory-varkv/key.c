@@ -60,7 +60,7 @@ Key& Key::operator=(const Key &other) {
 	return *this;
 }
 
-
+/*
 rocksdb::Slice Key::to_slice() const {
 #ifdef LARGE_KEY
 	// NOTE: keylo-keyhi, in rocksdb/include/slice.h, we compare two slices from end to beginning
@@ -81,6 +81,7 @@ void Key::from_slice(rocksdb::Slice& slice) {
 	key = *(uint64_t*)slice.data_;
 #endif
 }
+*/
 
 Key::model_key_t Key::to_model_key() const {
     Key::model_key_t model_key;

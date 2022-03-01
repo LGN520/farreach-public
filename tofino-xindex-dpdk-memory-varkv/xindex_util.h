@@ -181,9 +181,12 @@ void rcu_barrier(const uint32_t worker_id) {
 template <class val_t>
 struct AtomicVal {
   typedef val_t value_type;
+#ifdef ORIGINAL_XINDEX
+  val_t val; // uint64_t
+#else
+  uint64_t *val_data = new uint64_t[val_t::MAX_VAL_LENGTH]; // trade space for high performance by optimistic locking
   uint8_t val_length = 0;
-  uint64_t *val_data = new uint64_t[val_t::MAX_VAL_LENGTH];
-  //val_t val;
+#endif
   AtomicVal *aval_ptr = nullptr;
 
   // 60 bits for version
@@ -195,12 +198,11 @@ struct AtomicVal {
   // lock - removed - is_ptr
   volatile uint64_t status;
 
+#ifndef ORIGINAL_XINDEX
   // For snapshot (onlyl valid for value-type AtomicVal)
   uint8_t ss_val_length = 0;
   uint64_t *ss_val_data = new uint64_t[val_t::MAX_VAL_LENGTH];
-  //val_t ss_val;
   volatile uint64_t ss_status = 0; // only focus on removed and version w/o lock and is_ptr
-
   void make_snapshot() {
 	  lock();
 	  memory_fence();
@@ -278,33 +280,41 @@ struct AtomicVal {
       }
     }
   }
+#endif
 
   AtomicVal() : status(0) {}
   ~AtomicVal() {
+#ifndef ORIGINAL_XINDEX
 	  delete [] val_data;
 	  delete [] ss_val_data;
+#endif
   }
   AtomicVal(val_t val) : status(0) {
+#ifdef ORIGINAL_XINDEX
+	  this->val = val;
+#else
 	  val_length = val.val_length;
 	  if (val_length > 0) { // NOTE: val.val_data may not long enough
 		  memcpy((char *)val_data, (char *)val.val_data, val_length * sizeof(uint64_t));
 	  }
-	  //this->val = val;
+#endif
   }
   AtomicVal(AtomicVal *ptr) : aval_ptr(ptr), status(0) { set_is_ptr(); }
   AtomicVal(const AtomicVal& other) {
 	  *this = other;
   }
   AtomicVal & operator=(const AtomicVal& other) {
+#ifdef ORIGINAL_XINDEX
+	  this->val = other.val;
+#else
 	  val_length = other.val_length;
 	  memcpy((char *)val_data, (char *)other.val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-	  //val = other.val;
 	  ss_val_length = other.ss_val_length;
 	  memcpy((char *)ss_val_data, (char *)other.ss_val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-	  //ss_val = other.ss_val;
+	  ss_status = other.ss_status;
+#endif
 	  aval_ptr = other.aval_ptr;
 	  status = other.status;
-	  ss_status = other.ss_status;
 	  return *this;
   }
 
@@ -336,10 +346,14 @@ struct AtomicVal {
   }
 
   friend std::ostream &operator<<(std::ostream &os, const AtomicVal &leaf) {
+#ifdef ORIGINAL_XINDEX
+	COUT_VAR(int(leaf.val));
+#else
 	COUT_VAR(int(leaf.val_length));
 	for (size_t i = 0; i < leaf.val_length; i++) {
 		COUT_VAR(leaf.val_data[i]);
 	}
+#endif
 	COUT_VAR(leaf.aval_ptr);
     COUT_VAR(leaf.is_ptr);
     COUT_VAR(leaf.removed);
@@ -353,8 +367,11 @@ struct AtomicVal {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
+#ifdef ORIGINAL_XINDEX
+	  val_t tmpval = this->val;
+#else
 	  val_t tmpval(this->val_data, this->val_length);
-	  //val_t tmpval = this->val;
+#endif
 	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read() due to RCU during compact
 	  memory_fence();
 
@@ -387,11 +404,14 @@ struct AtomicVal {
 	  assert(aval_ptr != nullptr);
       res = this->aval_ptr->update(val);
     } else if (!removed(status)) {
+#ifdef ORIGINAL_XINDEX
+	  this->val = val;
+#else
 	  this->val_length = val.val_length;
 	  if (this->val_length > 0) {
 		  memcpy((char *)this->val_data, (char *)val.val_data, this->val_length * sizeof(uint64_t));
 	  }
-	  //this->val = val;
+#endif
       res = true;
     } else {
       res = false;
@@ -433,11 +453,13 @@ struct AtomicVal {
     if (!aval_ptr->read(tmpval)) {
       set_removed();
     }
+#ifdef ORIGINAL_XINDEX
+	this->val = tmpval;
+#else
 	this->val_length = tmpval.val_length;
 	if (tmpval.val_length > 0) {
 		memcpy((char *)this->val_data, (char *)tmpval.val_data, tmpval.val_length * sizeof(uint64_t));
 	}
-	//this->val = tmpval;
 	val_t tmpssval;
 	if (!aval_ptr->read_snapshot(tmpssval)) {
 		ss_status |= removed_mask;
@@ -447,7 +469,7 @@ struct AtomicVal {
 	if (tmpssval.val_length > 0) {
 		memcpy((char *)this->ss_val_data, (char *)tmpssval.val_data, tmpssval.val_length * sizeof(uint64_t));
 	}
-	//this->ss_val = tmpssval;
+#endif
     unset_is_ptr();
     memory_fence();
     incr_version();
@@ -458,8 +480,11 @@ struct AtomicVal {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
+#ifdef ORIGINAL_XINDEX
+	  val_t tmpval = this->val;
+#else
 	  val_t tmpval(this->val_data, this->val_length);
-	  //val_t tmpval = this->val;
+#endif
 	  AtomicVal *tmpptr = this->aval_ptr;
       memory_fence();
       if (unlikely(locked(status))) {
@@ -479,11 +504,14 @@ struct AtomicVal {
     uint64_t status = this->status;
     bool res;
     if (!removed(status)) {
+#ifdef ORIGINAL_XINDEX
+	  this->val = val;
+#else
 	  this->val_length = val.val_length;
 	  if (this->val_length > 0) {
 		  memcpy((char *)this->val_data, (char *)val.val_data, this->val_length * sizeof(uint64_t));
 	  }
-	  //this->val = val;
+#endif
       res = true;
     } else {
       res = false;

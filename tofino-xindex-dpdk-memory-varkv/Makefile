@@ -56,13 +56,14 @@ LDDIR += $(DPDK_LDDIR)
 
 #ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
 #ROCKSDB_LDDIR += -L../rocksdb-6.22.1
-ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
-ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
-ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
+# V2: Bourbon
+#ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
+#ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
+#ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
 
-INCDIR += $(ROCKSDB_INCDIR)
-LDDIR += $(ROCKSDB_LDDIR)
-LDLIBS += $(ROCKSDB_LDLIBS)
+#INCDIR += $(ROCKSDB_INCDIR)
+#LDDIR += $(ROCKSDB_LDDIR)
+#LDLIBS += $(ROCKSDB_LDLIBS)
 
 ##############################################################################
 # MKL configuration

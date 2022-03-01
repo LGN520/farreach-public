@@ -4,7 +4,7 @@
 #include <array>
 #include <limits>
 #include <string>
-#include "rocksdb/slice.h"
+//#include "rocksdb/slice.h"
 #include "helper.h"
 
 // Comment it for 8B small key
@@ -37,9 +37,8 @@ class Key {
   Key(const Key &other);
   Key &operator=(const Key &other);
 
-  rocksdb::Slice to_slice() const;
-
-  void from_slice(rocksdb::Slice& slice);
+  /*rocksdb::Slice to_slice() const;
+  void from_slice(rocksdb::Slice& slice);*/
 
   model_key_t to_model_key() const;
 

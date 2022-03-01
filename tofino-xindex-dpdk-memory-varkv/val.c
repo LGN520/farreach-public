@@ -74,6 +74,7 @@ bool Val::operator==(const Val &other) {
 	return false;
 }
 
+/*
 rocksdb::Slice Val::to_slice() const {
 	return rocksdb::Slice((const char*)val_data, sizeof(uint64_t) * val_length); // NOTE: slice is shallow copy
 }
@@ -94,6 +95,7 @@ void Val::from_slice(rocksdb::Slice& slice) {
 		val_data = nullptr;
 	}
 }
+*/
 
 void Val::from_string(std::string& str) {
 	INVARIANT(str.length() % sizeof(uint64_t) == 0);
