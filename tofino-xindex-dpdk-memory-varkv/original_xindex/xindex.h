@@ -20,7 +20,6 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
-#include "helper.h"
 #include "xindex_buffer.h"
 #include "xindex_group.h"
 #include "xindex_model.h"
@@ -52,7 +51,7 @@ class XIndex {
   size_t range_scan(const key_t &begin, const key_t &end,
                     std::vector<std::pair<key_t, val_t>> &result,
                     const uint32_t worker_id);
-  void make_snapshot(const uint32_t workder_id);
+
  private:
   void start_bg();
   void terminate_bg();
@@ -64,6 +63,7 @@ class XIndex {
   pthread_t bg_master;
   size_t bg_num;
   volatile bool bg_running = true;
+
 };
 
 }  // namespace xindex

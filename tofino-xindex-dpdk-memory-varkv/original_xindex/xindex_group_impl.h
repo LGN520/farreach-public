@@ -767,20 +767,12 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
     if (base_key < buf_key) {
       new_data[count].first = base_key;
       new_data[count].second = wrapped_val_t(&base_val); // put AtomicVal* into new_data
-#ifdef ORIGINAL_XINDEX
 	  assert(new_data[count].second.aval_ptr->val == base_val.val);
-#else
-      assert(new_data[count].second.aval_ptr->val_length == base_val.val_length);
-#endif
       array_source.advance_to_next_valid();
     } else {
       new_data[count].first = buf_key;
       new_data[count].second = wrapped_val_t(&buf_val); // put AtomicVal* into new_data
-#ifdef ORIGINAL_XINDEX
       assert(new_data[count].second.aval_ptr->val == buf_val.val);
-#else
-      assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length);
-#endif
       buffer_source.advance_to_next_valid();
     }
     count++;
@@ -792,11 +784,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
     new_data[count].first = base_key;
     new_data[count].second = wrapped_val_t(&base_val);
-#ifdef ORIGINAL_XINDEX
     assert(new_data[count].second.aval_ptr->val == base_val.val);
-#else
-    assert(new_data[count].second.aval_ptr->val_length == base_val.val_length);
-#endif
 
     array_source.advance_to_next_valid();
     count++;
@@ -808,11 +796,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
     new_data[count].first = buf_key;
     new_data[count].second = wrapped_val_t(&buf_val);
-#ifdef ORIGINAL_XINDEX
     assert(new_data[count].second.aval_ptr->val == buf_val.val);
-#else
-    assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length);
-#endif
 
     buffer_source.advance_to_next_valid();
     count++;
@@ -1093,11 +1077,7 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq,
            max_model_n>::ArrayDataSource::advance_to_next_valid() {
   while (pos < array_size) {
-#ifdef ORIGINAL_XINDEX
     if (data[pos].second.read(next_val)) {
-#else
-    if (data[pos].second.read_snapshot(next_val)) {
-#endif
       next_key = data[pos].first;
       has_next = true;
       pos++;
@@ -1149,31 +1129,6 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 typename Group<key_t, val_t, seq, max_model_n>::atomic_val_t &
 Group<key_t, val_t, seq, max_model_n>::ArrayRefSource::get_val() {
   return *next_val_ptr;
-}
-
-template <class key_t, class val_t, bool seq, size_t max_model_n>
-void Group<key_t, val_t, seq, max_model_n>::make_snapshot() {
-#ifndef ORIGINAL_XINDEX
-	for (size_t i = 0; i < array_size; i++) {
-		data[i].second.make_snapshot();
-	}
-
-	auto buffer_source = typename buffer_t::RefSource(buffer);
-	buffer_source.advance_to_next_valid();
-	while (buffer_source.has_next) {
-		wrapped_val_t &buf_val = buffer_source.get_val();
-		buf_val.make_snapshot();
-	}
-
-	if (buffer_temp) {
-		auto buffer_temp_source = typename buffer_t::RefSource(buffer_temp);
-		buffer_temp_source.advance_to_next_valid();
-		while (buffer_temp_source.has_next) {
-			wrapped_val_t &buf_temp_val = buffer_temp_source.get_val();
-			buf_temp_val.make_snapshot();
-		}
-	}
-#endif
 }
 
 }	// namespace xindex

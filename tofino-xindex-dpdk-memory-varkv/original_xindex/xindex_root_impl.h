@@ -724,14 +724,6 @@ Root<key_t, val_t, seq>::locate_group_pt2(const key_t &key, group_t *begin) {
   return group;
 }
 
-
-template <class key_t, class val_t, bool seq>
-void Root<key_t, val_t, seq>::make_snapshot() {
-	for (size_t i = 0; i < group_n - 1; i++) {
-		groups[i].second->make_snapshot();
-	}
-}
-
 }  // namespace xindex
 
 #endif  // XINDEX_ROOT_IMPL_H

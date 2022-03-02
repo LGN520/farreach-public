@@ -108,14 +108,23 @@ class alignas(CACHELINE_SIZE) Group {
 
   void free_data();
   void free_buffer();
-  void make_snapshot();
+
+#ifndef ORIGINAL_XINDEX
+  void make_snapshot(uint8_t snapshot_id);
+#endif
 
  private:
   inline size_t locate_model(const key_t &key);
 
   inline bool get_from_array(const key_t &key, val_t &val);
+
+#ifdef ORIGINAL_XINDEX
   inline result_t update_to_array(const key_t &key, const val_t &val,
                                   const uint32_t worker_id);
+#else
+  inline result_t update_to_array(const key_t &key, const val_t &val,
+                                  const uint32_t worker_id, uint8_t snapshot_id);
+#endif
   inline bool remove_from_array(const key_t &key);
 
   inline size_t get_pos_from_array(const key_t &key);

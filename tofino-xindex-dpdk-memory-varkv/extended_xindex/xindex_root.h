@@ -37,7 +37,7 @@ class Root {
 
  public:
   ~Root();
-  void init(const std::vector<key_t> &keys, const std::vector<val_t> &vals);
+  void init(const std::vector<key_t> &keys, const std::vector<val_t> &vals, int32_t snapshot_id);
   void calculate_err(const std::vector<key_t> &keys,
                      const std::vector<val_t> &vals, size_t group_n_trial,
                      double &err_at_percentile, double &max_err,
@@ -45,17 +45,18 @@ class Root {
 
   inline result_t get(const key_t &key, val_t &val);
   inline result_t put(const key_t &key, const val_t &val,
-                      const uint32_t worker_id);
-  inline result_t remove(const key_t &key);
+                      const uint32_t worker_id, int32_t snapshot_id);
+  inline result_t remove(const key_t &key, int32_t snapshot_id);
   inline size_t scan(const key_t &begin, const size_t n,
-                     std::vector<std::pair<key_t, val_t>> &result);
+                     std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
   inline size_t range_scan(const key_t &begin, const key_t &end,
-                           std::vector<std::pair<key_t, val_t>> &result);
+                           std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
 
   static void *do_adjustment(void *args);
   Root *create_new_root();
   void trim_root();
-  void make_snapshot();
+
+  void make_snapshot(int32_t snapshot_id);
 
  private:
   void adjust_rmi();

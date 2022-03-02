@@ -703,11 +703,7 @@ AltBtreeBuffer<key_t, val_t>::DataSource::DataSource(key_t begin,
     int key_n = leaf_ptr->key_n;
     pos = 0;
     for (int i = slot; i < key_n; i++) {
-#ifdef ORIGINAL_XINDEX
       if (leaf_ptr->vals[i].read_ignoring_ptr(vals[pos])) {
-#else
-      if (leaf_ptr->vals[i].read_snapshot_ignoring_ptr(vals[pos])) { // buffer_t::DataSource only used for range query
-#endif
         keys[pos] = leaf_ptr->keys[i];
         pos++;
       }
@@ -757,11 +753,7 @@ void AltBtreeBuffer<key_t, val_t>::DataSource::advance_to_next_valid() {
         int key_n = leaf_ptr->key_n;
         pos = 0;
         for (int i = 0; i < key_n; i++) {
-#ifdef ORIGINAL_XINDEX
           if (leaf_ptr->vals[i].read_ignoring_ptr(vals[pos])) {
-#else
-          if (leaf_ptr->vals[i].read_snapshot_ignoring_ptr(vals[pos])) { // buffer_t::DataSource only used for range query
-#endif
             keys[pos] = leaf_ptr->keys[i];
             pos++;
           }

@@ -71,6 +71,7 @@
 	+ `make`
 	+ `sudo make install`
 		* Installed into /usr/local/bin, /usr/local/lib, and /usr/local/include
+	+ Add /usr/local/lib into /etc/ld.so.conf, and run `sudo ldconfig`
 - Install boost
 	+ `sudo apt-get install libboost-all-dev`
 - Install cmake

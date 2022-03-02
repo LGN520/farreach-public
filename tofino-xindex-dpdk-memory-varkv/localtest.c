@@ -12,13 +12,20 @@
 #include <sys/time.h> // struct timeval
 
 #include "helper.h"
-#include "xindex.h"
-#include "xindex_impl.h"
-#include "xindex_util.h"
 #include "packet_format_impl.h"
 #include "key.h"
-#include "val.h"
 #include "iniparser/iniparser_wrapper.h"
+
+#ifdef ORIGINAL_XINDEX
+#include "original_xindex/xindex.h"
+#include "original_xindex/xindex_impl.h"
+#include "original_xindex/xindex_util.h"
+#else
+#include "extended_xindex/xindex.h"
+#include "extended_xindex/xindex_impl.h"
+#include "extended_xindex/xindex_util.h"
+#include "val.h"
+#endif
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 
@@ -357,17 +364,17 @@ void *run_sfg(void * param) {
 	if (debugtest_i == 0) tmprun = 2;
 	debugtest_i++;*/
 
-	if (thread_id == 0) {
+	/*if (thread_id == 0) {
 		table->make_snapshot(thread_id);
 		FDEBUG_THIS(ofs, "make snapshot");
 		continue;
-	}
+	}*/
 
     double d = ratio_dis(gen);
 
 	int tmprun = 4;
-    //if (d <= read_ratio) {  // get
-    if (tmprun == 0) {  // get
+    if (d <= read_ratio) {  // get
+    //if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
 	  Key tmp_key;
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << tmp_key.to_string());
@@ -389,8 +396,8 @@ void *run_sfg(void * param) {
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
       }
-    //} else if (d <= read_ratio + update_ratio) {  // update
-    } else if (tmprun == 1) {  // update
+    } else if (d <= read_ratio + update_ratio) {  // update
+    //} else if (tmprun == 1) {  // update
 	  bool tmp_stat = table->put(op_keys[(update_i + delete_i) % op_keys.size()], dummy_value, thread_id);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << dummy_value.to_string()
@@ -400,8 +407,8 @@ void *run_sfg(void * param) {
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
       }
-    //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
-    } else if (tmprun == 2) {  // insert
+    } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
+    //} else if (tmprun == 2) {  // insert
 	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value.to_string()
@@ -411,8 +418,8 @@ void *run_sfg(void * param) {
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
       }
-    //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
-    } else if (tmprun == 3) {  // remove
+    } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
+    //} else if (tmprun == 3) {  // remove
 	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[delete_i].to_string() << " stat = " << tmp_stat);

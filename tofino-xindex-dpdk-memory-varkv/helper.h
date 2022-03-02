@@ -103,27 +103,32 @@
   }
 
 // 0: print information of background retraining thread
+// 1: not print
 #if 1
 #define NDEBUGGING
 #endif
 
 // 0: print information of main thread
-#if 0
+// 1: not print
+#if 1
 #define NDEBUGGING_LOG
 #endif
 
 // 1: test dpdk polling time to reduce it from normal RTT
+// 0: not test
 #if 0
 #define TEST_DPDK_POLLING
 #endif
 
 // 1: test aggregate throughput
+// 0: not test
 #if 1
 #define TEST_AGG_THPT
 #endif
 
 // 1: original xindex with fixed 8B value and no snapshot
-#if 1
+// 0: extended version with variable length value and snapshot
+#if 0
 #define ORIGINAL_XINDEX
 #endif
 
