@@ -293,9 +293,9 @@ struct AtomicVal {
 		  assert(aval_ptr != nullptr);
 		  aval_ptr->make_snapshot(snapshot_id);
 	  }
-	  else if (ss_id_0 != snapshot_id && ss_id_1 != snapshot_id && create_id != snapshot_id) {
-		  // (1) enpty snapshot; (2) older snapshot
-		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1)) {
+	  else if (ss_id_0 != snapshot_id && ss_id_1 != snapshot_id && create_id < snapshot_id) {
+		  // (1) empty snapshot; (2) older and out-of-date snapshot
+		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1 && ss_id_0 < snapshot_id)) {
 			  ss_id_0 = snapshot_id;
 			  ss_val_length_0 = val_length;
 			  memcpy((char *)ss_val_data_0, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
@@ -304,7 +304,7 @@ struct AtomicVal {
 			  }
 			  ss_status_0++; // increase version 
 		  }
-		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1)) {
+		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1 && ss_id_1 < snapshot_id)) {
 			  ss_id_1 = snapshot_id;
 			  ss_val_length_1 = val_length;
 			  memcpy((char *)ss_val_data_1, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
@@ -359,7 +359,7 @@ struct AtomicVal {
 			  return !removed(current_ss_status_1); // check removed of snapshot value
 			}
 			// (1) current atomic value has not been snapshotted and without PUT/DEL; (2) new entry without snapshot but created at the previous epoch
-			else if (tmp_createid != snapshot_id) {
+			else if (tmp_createid < snapshot_id) {
 				if (likely(get_version(prev_status) == get_version(current_status))) { // ensure the consistency of val
 					// We leave snapshot of current atomic value in other threads (make_snapshot/PUT/DEL)
 					val = tmpval;
@@ -476,7 +476,7 @@ struct AtomicVal {
 		  return !removed(current_ss_status_1); // check removed of snapshot value
 		}
 		// (1) current atomic value has not been snapshotted and without PUT/DEL; (2) new entry without snapshot but created at the previous epoch
-		else if (tmp_createid != snapshot_id) {
+		else if (tmp_createid < snapshot_id) {
 			if (likely(get_version(prev_status) == get_version(current_status))) { // ensure the consistency of val
 				// We leave snapshot of current atomic value in other threads (make_snapshot/PUT/DEL)
 				val = tmpval;
@@ -529,9 +529,9 @@ struct AtomicVal {
 	  assert(aval_ptr != nullptr);
       res = this->aval_ptr->update(val, snapshot_id);
     } else if (!removed(status)) {
-	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id != snapshot_id) {
+	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id < snapshot_id) {
 		  // (1) enpty snapshot; (2) older snapshot
-		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1)) {
+		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1 && ss_id_0 < snapshot_id)) {
 			  ss_id_0 = snapshot_id;
 			  ss_val_length_0 = val_length;
 			  memcpy((char *)ss_val_data_0, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
@@ -540,7 +540,7 @@ struct AtomicVal {
 			  }
 			  ss_status_0++; // increase version 
 		  }
-		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1)) {
+		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1 && ss_id_1 < snapshot_id)) {
 			  ss_id_1 = snapshot_id;
 			  ss_val_length_1 = val_length;
 			  memcpy((char *)ss_val_data_1, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
@@ -573,9 +573,9 @@ struct AtomicVal {
 	  assert(aval_ptr != nullptr);
       res = this->aval_ptr->remove(snapshot_id);
     } else if (!removed(status)) {
-	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id != snapshot_id) {
+	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id < snapshot_id) {
 		  // (1) enpty snapshot; (2) older snapshot
-		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1)) {
+		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1 && ss_id_0 < snapshot_id)) {
 			  ss_id_0 = snapshot_id;
 			  ss_val_length_0 = val_length;
 			  memcpy((char *)ss_val_data_0, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
@@ -584,7 +584,7 @@ struct AtomicVal {
 			  }
 			  ss_status_0++; // increase version 
 		  }
-		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1)) {
+		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1 && ss_id_1 < snapshot_id)) {
 			  ss_id_1 = snapshot_id;
 			  ss_val_length_1 = val_length;
 			  memcpy((char *)ss_val_data_1, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
@@ -676,9 +676,9 @@ struct AtomicVal {
     uint64_t status = this->status;
     bool res;
     if (!removed(status)) {
-	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id != snapshot_id) {
+	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id < snapshot_id) {
 		  // (1) enpty snapshot; (2) older snapshot
-		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1)) {
+		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1 && ss_id_0 < snapshot_id)) {
 			  ss_id_0 = snapshot_id;
 			  ss_val_length_0 = val_length;
 			  memcpy((char *)ss_val_data_0, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
@@ -687,7 +687,7 @@ struct AtomicVal {
 			  }
 			  ss_status_0++; // increase version 
 		  }
-		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1)) {
+		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1 && ss_id_1 < snapshot_id)) {
 			  ss_id_1 = snapshot_id;
 			  ss_val_length_1 = val_length;
 			  memcpy((char *)ss_val_data_1, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
@@ -716,9 +716,9 @@ struct AtomicVal {
     uint64_t status = this->status;
     bool res;
     if (!removed(status)) {
-	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id != snapshot_id) {
+	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id < snapshot_id) {
 		  // (1) enpty snapshot; (2) older snapshot
-		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1)) {
+		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1 && ss_id_0 < snapshot_id)) {
 			  ss_id_0 = snapshot_id;
 			  ss_val_length_0 = val_length;
 			  memcpy((char *)ss_val_data_0, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
@@ -727,7 +727,7 @@ struct AtomicVal {
 			  }
 			  ss_status_0++; // increase version 
 		  }
-		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1)) {
+		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1 && ss_id_1 < snapshot_id)) {
 			  ss_id_1 = snapshot_id;
 			  ss_val_length_1 = val_length;
 			  memcpy((char *)ss_val_data_1, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));

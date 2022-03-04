@@ -53,25 +53,30 @@
 			* If during compact, copy status, status', val, and val' in ReplacePointer (now val and val' must point to different memory)
 		+ Add make_snapshot() (xindex_impl.h, xindex_root_impl.h, xindex_group_impl.h)
 		+ Change DataSource and ArrayDataSource to read_snapshot() (xindex_util.h, xindex_group_impl.h, xindex_buffer_impl.h)
-- Compare extended XIndex with Redis
+- Implement extended xindex 
 	+ Add macro of ORIGINAL_XINDEX to allow the switching between original xindex and extended version
 	+ Place is_snapshot atomic flag and snapshot_id into xindex (xindex.h, xindex_impl.h)
-		* Alternate snapshot_id between 0 and 1 as snapshot is not a frequent operation
+		* Monotically increase snapshot_id to idenfity the current epoch ID for snapshot
 	+ Save ss_id and create_id for each atomic value; we maintain two versions for snapshot to support unfinished range query during making snapshot (xindex_util.h)
 		* NOTE: we assume that time of range query cannot exceed snapshot period (snapshot is an infrequent event)
 		* ss_id = -1: empty snapshot value; ss_id = k: existing entry with snapshot value of epoch k
 		* create_id = k: the entry is created at epoch k
 		* We snapshot the value only if
 			- Both ss_id_0 and ss_id_1 != snapshot_id: the snapshot of current epoch has not been made
-			- And create_id != snapshot_id: the entry is created at a previous epoch
-	+ Pass snapshot_id to each operation (init/SCAN/PUT/DEL) for consistent snapshot of atomic values (xindex.h, xindex_root.h, xindex_group.h, xindex_buffer.h, and xindex\*_impl.h)
+			- And create_id < snapshot_id: the entry is created at a previous epoch
+			- And one of ss_id_0 and ss_id_1 < snapshot_id: replace the out-of-date snapshot
+	+ Pass snapshot_id to each operation (init/SCAN/PUT/DEL) for consistent snapshot of atomic values (xindex.h, xindex_root.h, xindex_group.h, xindex_buffer.h, and xindex\*\_impl.h)
 		* NOTE: compact creates pointer-type atomic values, which do not need snapshot_id to initialize create_id
 		* When inserting a new entry, set ss_id = -1 and create_id = snapshot_id
 		* When updating an existing entry, we try to snapshot the old value if necessary
 		* When reading a snapshot
 			- Read the snapshot value only if either ss_id_0 or ss_id_1 == snapshot_id
-			- Read the latest value only if no matched snapshot and create_id != snapshot_id
-			- Return false (i.e., treat it as non-existing or deleted for the snapshot due to a new entry) only if create_id == snapshot_id
+			- Read the latest value only if no matched snapshot (both != snapshot_id) and create_id < snapshot_id
+			- Return false (i.e., treat it as non-existing or deleted for the snapshot due to a new entry) otherwise 
+	+ All of TommyDS (NetCache), Redis (DistCache), Memcached do not support range query for key-value store (i.e., sorted map)
+		* We cannot use levelDB (TurboKV) as it is not in-memory (not focus on small objects)
+		* We cannot self-implemented in-memory KVS (Pegasus) as it does not mention range query and Pegasus already has an in-switch design
+		* We can use xindex with simple extension as it is state-of-the-art in-memory KVS with range query
 
 ## How to run
 
