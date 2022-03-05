@@ -26,11 +26,11 @@
 #include <memory>
 #include <mutex>
 
-#include "rocksdb/db.h"
-#include "rocksdb/cache.h"
-#include "rocksdb/table.h"
-#include "rocksdb/utilities/transaction.h"
-#include "rocksdb/utilities/transaction_db.h"
+//#include "rocksdb/db.h"
+//#include "rocksdb/cache.h"
+//#include "rocksdb/table.h"
+//#include "rocksdb/utilities/transaction.h"
+//#include "rocksdb/utilities/transaction_db.h"
 
 #if !defined(XINDEX_UTIL_H)
 #define XINDEX_UTIL_H
@@ -74,26 +74,26 @@ struct IndexConfig {
   double group_error_tolerance = 4;
   size_t buffer_size_bound = 256;
   double buffer_size_tolerance = 3;
-  size_t buffer_compact_threshold = 256 * 1024; // 256K * 16B kvpair
+  size_t buffer_compact_threshold = 256 * 1024; // 256K * (16+128)B kvpair
   size_t worker_n = 0;
   std::unique_ptr<rcu_status_t[]> rcu_status;
   volatile bool exited = false;
 
   // RocksDB
-  size_t memtable_size = 4 * 1024 * 1024; // 4 MB
+  /*size_t memtable_size = 4 * 1024 * 1024; // 4 MB
   size_t max_memtable_num = 2;
   size_t sst_size = 4 * 1024 * 1024; // 4 MB
   size_t compaction_thread_num = 2;
   size_t level0_num = 8; // 32 MB
   size_t level_num = 4;
   size_t level1_size = 32 * 1024 * 1024; // 32 MB
-  size_t level_multiplier = 8; // level n+1 = 8 * level n
+  size_t level_multiplier = 8; // level n+1 = 8 * level n*/
 };
 
 index_config_t config;
 std::mutex config_mutex;
 
-rocksdb::Options data_options;
+/*rocksdb::Options data_options;
 rocksdb::Options buffer_options;
 void inline init_options() {
   std::shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache(4 * 1024 * 1024, 4); // 4 MB with 16 shards
@@ -129,7 +129,7 @@ void inline init_options() {
   buffer_options.num_levels = config.level_num;
   buffer_options.max_bytes_for_level_base = config.level1_size;
   buffer_options.max_bytes_for_level_multiplier = config.level_multiplier;
-}
+}*/
 
 // TODO replace it with user space RCU (e.g., qsbr)
 void rcu_init() {
@@ -180,16 +180,9 @@ void rcu_barrier(const uint32_t worker_id) {
 
 template <class val_t>
 struct AtomicVal {
-  union ValUnion;
-  typedef ValUnion val_union_t;
   typedef val_t value_type;
-  union ValUnion {
-    val_t val;
-    AtomicVal *ptr;
-    ValUnion() {}
-    ValUnion(val_t val) : val(val) {}
-    ValUnion(AtomicVal *ptr) : ptr(ptr) {}
-  };
+  val_t val; // uint64_t
+  AtomicVal *aval_ptr = nullptr; // Only aval_ptr makes sense for pointer-type atomic value
 
   // 60 bits for version
   static const uint64_t version_mask = 0x0fffffffffffffff;
@@ -197,13 +190,25 @@ struct AtomicVal {
   static const uint64_t removed_mask = 0x2000000000000000;
   static const uint64_t pointer_mask = 0x4000000000000000;
 
-  val_union_t val;
   // lock - removed - is_ptr
   volatile uint64_t status;
 
   AtomicVal() : status(0) {}
-  AtomicVal(val_t val) : val(val), status(0) {}
-  AtomicVal(AtomicVal *ptr) : val(ptr), status(0) { set_is_ptr(); }
+  ~AtomicVal() {
+  }
+  AtomicVal(val_t val) : status(0) {
+	  this->val = val;
+  }
+  AtomicVal(AtomicVal *ptr) : aval_ptr(ptr), status(0) { set_is_ptr(); }
+  AtomicVal(const AtomicVal& other) {
+	  *this = other;
+  }
+  AtomicVal & operator=(const AtomicVal& other) {
+	  this->val = other.val;
+	  aval_ptr = other.aval_ptr;
+	  status = other.status;
+	  return *this;
+  }
 
   bool is_ptr(uint64_t status) { return status & pointer_mask; }
   bool removed(uint64_t status) { return status & removed_mask; }
@@ -233,8 +238,8 @@ struct AtomicVal {
   }
 
   friend std::ostream &operator<<(std::ostream &os, const AtomicVal &leaf) {
-    COUT_VAR(leaf.val.val);
-    COUT_VAR(leaf.val.ptr);
+	COUT_VAR(int(leaf.val));
+	COUT_VAR(leaf.aval_ptr);
     COUT_VAR(leaf.is_ptr);
     COUT_VAR(leaf.removed);
     COUT_VAR(leaf.locked);
@@ -247,26 +252,28 @@ struct AtomicVal {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
-      val_union_t val_union = this->val;
-      memory_fence();
+	  val_t tmpval = this->val;
+	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read() due to RCU during compact
+	  memory_fence();
 
-      uint64_t current_status = this->status;
-      memory_fence();
+	  uint64_t current_status = this->status; // ensure consistent tmpval
+	  memory_fence();
 
-      if (unlikely(locked(current_status))) {  // check lock
-        continue;
-      }
+	  if (unlikely(locked(current_status))) {  // check lock
+		continue;
+	  }
 
-      if (likely(get_version(status) ==
-                 get_version(current_status))) {  // check version
-        if (unlikely(is_ptr(status))) {
-          assert(!removed(status));
-          return val_union.ptr->read(val);
-        } else {
-          val = val_union.val;
-          return !removed(status);
-        }
-      }
+	  if (likely(get_version(status) ==
+				 get_version(current_status))) {  // check version
+		if (unlikely(is_ptr(status))) {
+		  assert(!removed(status));
+		  assert(tmpptr != nullptr);
+		  return tmpptr->read(val);
+		} else {
+		  val = tmpval; 
+		  return !removed(status);
+		}
+	  }
     }
   }
   bool update(const val_t &val) {
@@ -275,9 +282,10 @@ struct AtomicVal {
     bool res;
     if (unlikely(is_ptr(status))) {
       assert(!removed(status));
-      res = this->val.ptr->update(val);
+	  assert(aval_ptr != nullptr);
+      res = this->aval_ptr->update(val);
     } else if (!removed(status)) {
-      this->val.val = val;
+	  this->val = val;
       res = true;
     } else {
       res = false;
@@ -294,7 +302,8 @@ struct AtomicVal {
     bool res;
     if (unlikely(is_ptr(status))) {
       assert(!removed(status));
-      res = this->val.ptr->remove();
+	  assert(aval_ptr != nullptr);
+      res = this->aval_ptr->remove();
     } else if (!removed(status)) {
       set_removed();
       res = true;
@@ -313,9 +322,12 @@ struct AtomicVal {
     UNUSED(status);
     assert(is_ptr(status));
     assert(!removed(status));
-    if (!val.ptr->read(val.val)) {
+	val_t tmpval;
+	assert(aval_ptr != nullptr);
+    if (!aval_ptr->read(tmpval)) {
       set_removed();
     }
+	this->val = tmpval;
     unset_is_ptr();
     memory_fence();
     incr_version();
@@ -326,7 +338,8 @@ struct AtomicVal {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
-      val_union_t val_union = this->val;
+	  val_t tmpval = this->val;
+	  AtomicVal *tmpptr = this->aval_ptr;
       memory_fence();
       if (unlikely(locked(status))) {
         continue;
@@ -335,7 +348,7 @@ struct AtomicVal {
 
       uint64_t current_status = this->status;
       if (likely(get_version(status) == get_version(current_status))) {
-        val = val_union.val;
+        val = tmpval;
         return !removed(status);
       }
     }
@@ -345,7 +358,7 @@ struct AtomicVal {
     uint64_t status = this->status;
     bool res;
     if (!removed(status)) {
-      this->val.val = val;
+	  this->val = val;
       res = true;
     } else {
       res = false;

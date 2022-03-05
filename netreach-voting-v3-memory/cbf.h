@@ -3,15 +3,24 @@
 
 #include "helper.h"
 #include <vector>
+#include <boost/thread/shared_mutex.hpp>
 
-typedef uint8_t bucket_t;
-#define MAX_BUCKET_VALUE 255
+#define MAX_COUNTER_VALUE 0xFFFFFFFFFFFFFFFF
+
+class Bucket {
+	uint64_t counter;
+	boost::shared_mutex rwlock; // fine-grained control
+
+	Bucket();
+}
 
 template<class key_t>
 class CBF {
+	typedef Bucket bucket_t;
+
 	public:
 		CBF(uint32_t bytes_num, uint32_t hash_num = 3);
-		void update(const key_t &key);
+		void update_nolock(const key_t &key);
 		void remove(const key_t &key);
 		uint32_t query(const key_t &key) const;
 	private:

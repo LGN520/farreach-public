@@ -20,8 +20,6 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
-#include <stdlib.h>
-
 #include "xindex_group.h"
 
 #if !defined(XINDEX_ROOT_H)
@@ -39,30 +37,26 @@ class Root {
 
  public:
   ~Root();
-  void init(const std::vector<key_t> &keys, const std::vector<val_t> &vals, std::string workload_name, uint32_t group_n = 10);
-  void open(std::string workload_name);
+  void init(const std::vector<key_t> &keys, const std::vector<val_t> &vals, int32_t snapshot_id);
   void calculate_err(const std::vector<key_t> &keys,
                      const std::vector<val_t> &vals, size_t group_n_trial,
                      double &err_at_percentile, double &max_err,
                      double &avg_err);
 
   inline result_t get(const key_t &key, val_t &val);
-  inline result_t put(const key_t &key, const val_t &val);
-  inline result_t data_put(const key_t &key, const val_t &val);
-  inline result_t remove(const key_t &key);
+  inline result_t put(const key_t &key, const val_t &val,
+                      const uint32_t worker_id, int32_t snapshot_id);
+  inline result_t remove(const key_t &key, int32_t snapshot_id);
   inline size_t scan(const key_t &begin, const size_t n,
-                     std::vector<std::pair<key_t, val_t>> &result);
+                     std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
   inline size_t range_scan(const key_t &begin, const key_t &end,
-                           std::vector<std::pair<key_t, val_t>> &result);
+                           std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
 
   static void *do_adjustment(void *args);
   Root *create_new_root();
   void trim_root();
 
-  void serialize_root(char* filename);
-  void deserialize_root(char* filename);
-
-  void make_snapshot(bool iswarmup=false);
+  void make_snapshot(int32_t snapshot_id);
 
  private:
   void adjust_rmi();

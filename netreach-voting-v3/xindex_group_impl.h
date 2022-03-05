@@ -37,6 +37,7 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>::~Group() {
 	if (!after_compact) {
+		// As we remove group merge/split, we can delete data/buffer/buffer_temp here
 		if (data != nullptr) delete data;
 		if (buffer != nullptr) delete buffer;
 		if (buffer_temp != nullptr) delete buffer_temp;

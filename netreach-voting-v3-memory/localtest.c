@@ -12,18 +12,29 @@
 #include <sys/time.h> // struct timeval
 
 #include "helper.h"
-#include "xindex.h"
-#include "xindex_impl.h"
-#include "xindex_util.h"
 #include "packet_format_impl.h"
 #include "key.h"
-#include "val.h"
 #include "iniparser/iniparser_wrapper.h"
+
+#ifdef ORIGINAL_XINDEX
+#include "original_xindex/xindex.h"
+#include "original_xindex/xindex_impl.h"
+#include "original_xindex/xindex_util.h"
+#else
+#include "extended_xindex_plus/xindex.h"
+#include "extended_xindex_plus/xindex_impl.h"
+#include "extended_xindex_plus/xindex_util.h"
+#include "val.h"
+#endif
 
 struct alignas(CACHELINE_SIZE) SFGParam;
 
 typedef Key index_key_t;
+#ifdef ORIGINAL_XINDEX
+typedef uint64_t val_t;
+#else
 typedef Val val_t;
+#endif
 typedef SFGParam sfg_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
@@ -79,15 +90,19 @@ int main(int argc, char **argv) {
 
   parse_ini("config.ini");
   parse_args(argc, argv);
-  xindex::init_options(); // init options of rocksdb
+  //xindex::init_options(); // init options of rocksdb
   load();
 
-  test_merge_latency(); // DEBUG test
+  //test_merge_latency(); // DEBUG test
 
   // prepare xindex
   uint64_t init_val_data[1] = {1};
+#ifdef ORIGINAL_XINDEX
+  std::vector<val_t> vals(exist_keys.size(), 1);
+#else
   std::vector<val_t> vals(exist_keys.size(), val_t(init_val_data, 1));
-  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
+#endif
+  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
 
   run_server(tab_xi, runtime);
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
@@ -103,6 +118,10 @@ inline void parse_ini(const char* config_file) {
 	fg_n = ini.get_server_num();
 	workload_name = ini.get_workload_name();
 	kv_bucket_num = ini.get_bucket_num();
+#ifndef ORIGINAL_XINDEX
+	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
+	COUT_VAR(val_t::MAX_VAL_LENGTH);
+#endif
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -326,7 +345,11 @@ void *run_sfg(void * param) {
 
   int res = 0;
   uint64_t dummy_value_data[2] = {1234, 5678};
+#ifdef ORIGINAL_XINDEX
+  val_t dummy_value = 1234;
+#else
   val_t dummy_value = val_t(dummy_value_data, 2);
+#endif
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
   COUT_THIS("[localtest " << uint32_t(thread_id) << "] Ready.");
 
@@ -355,6 +378,12 @@ void *run_sfg(void * param) {
 	if (debugtest_i == 0) tmprun = 2;
 	debugtest_i++;*/
 
+	/*if (thread_id == 0) {
+		table->make_snapshot(thread_id);
+		FDEBUG_THIS(ofs, "make snapshot");
+		continue;
+	}*/
+
     double d = ratio_dis(gen);
 
 	int tmprun = 4;
@@ -370,9 +399,13 @@ void *run_sfg(void * param) {
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << tmp_key.to_string() << " val = " << tmp_val);*/
 
 	  val_t tmp_val;
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string());
+#endif
 	  bool tmp_stat = table->get(op_keys[(query_i + delete_i) % op_keys.size()], tmp_val, thread_id);
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " val = " << tmp_val.to_string());
+#endif
       query_i++;
       if (unlikely(query_i == op_keys.size() / 2)) {
         query_i = 0;
@@ -380,8 +413,10 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio) {  // update
     } else if (tmprun == 1) {  // update
 	  bool tmp_stat = table->put(op_keys[(update_i + delete_i) % op_keys.size()], dummy_value, thread_id);
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << dummy_value.to_string()
 			  << " stat = " << tmp_stat);
+#endif
       update_i++;
       if (unlikely(update_i == op_keys.size() / 2)) {
         update_i = 0;
@@ -389,8 +424,10 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     } else if (tmprun == 2) {  // insert
 	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value.to_string()
 			  << " stat = " << tmp_stat);
+#endif
       insert_i++;
       if (unlikely(insert_i == op_keys.size())) {
         insert_i = 0;
@@ -398,7 +435,9 @@ void *run_sfg(void * param) {
     //} else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
     } else if (tmprun == 3) {  // remove
 	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id);
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[delete_i].to_string() << " stat = " << tmp_stat);
+#endif
       delete_i++;
       if (unlikely(delete_i == op_keys.size())) {
         delete_i = 0;
@@ -406,12 +445,15 @@ void *run_sfg(void * param) {
     } else {  // scan
 	  std::vector<std::pair<index_key_t, val_t>> results;
 	  size_t targetnum = 10;
-	  size_t tmp_num = table->scan(op_keys[(query_i + delete_i) % op_keys.size()], targetnum, results, thread_id);
+	  size_t tmp_num = table->range_scan(op_keys[(query_i + delete_i) % op_keys.size()], \
+			  op_keys[(query_i + delete_i + targetnum) % op_keys.size()], results, thread_id);
+#ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " num = " << tmp_num);
 	  for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 		  FDEBUG_THIS(ofs, results[val_i].first.to_string());
 		  FDEBUG_THIS(ofs, results[val_i].second.to_string());
 	  }
+#endif
 
 		std::vector<std::pair<index_key_t, val_t>> merge_results;
 		//std::map<index_key_t, val_t> *kvdata = listener_data;

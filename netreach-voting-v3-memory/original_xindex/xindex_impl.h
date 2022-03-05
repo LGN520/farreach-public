@@ -34,7 +34,7 @@ namespace xindex {
 template <class key_t, class val_t, bool seq>
 XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t> &keys,
                                   const std::vector<val_t> &vals,
-                                  size_t worker_num, size_t bg_n, std::string workload_name)
+                                  size_t worker_num, size_t bg_n)
     : bg_num(bg_n) {
   config.worker_n = worker_num;
   // sanity checks
@@ -54,31 +54,7 @@ XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t> &keys,
 
   // malloc memory for root & init root
   root = new root_t();
-  root->init(keys, vals, workload_name);
-  root->make_snapshot(true);
-  start_bg();
-}
-
-template <class key_t, class val_t, bool seq>
-XIndex<key_t, val_t, seq>::XIndex(size_t worker_num, size_t bg_n, std::string workload_name)
-    : bg_num(bg_n) {
-  config.worker_n = worker_num;
-  // sanity checks
-  INVARIANT(config.root_error_bound > 0);
-  INVARIANT(config.root_memory_constraint > 0);
-  INVARIANT(config.group_error_bound > 0);
-  INVARIANT(config.group_error_tolerance > 0);
-  INVARIANT(config.buffer_size_bound > 0);
-  INVARIANT(config.buffer_size_tolerance > 0);
-  INVARIANT(config.buffer_compact_threshold > 0);
-  INVARIANT(config.worker_n > 0);
-
-  rcu_init();
-
-  // malloc memory for root & init root
-  root = new root_t();
-  root->open(workload_name);
-  root->make_snapshot(true);
+  root->init(keys, vals);
   start_bg();
 }
 
@@ -99,18 +75,7 @@ inline bool XIndex<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
                                            const uint32_t worker_id) {
   result_t res;
   rcu_progress(worker_id);
-  while ((res = root->put(key, val)) == result_t::retry) {
-    rcu_progress(worker_id);
-  }
-  return res == result_t::ok;
-}
-
-template <class key_t, class val_t, bool seq>
-inline bool XIndex<key_t, val_t, seq>::data_put(const key_t &key, const val_t &val,
-                                           const uint32_t worker_id) {
-  result_t res;
-  rcu_progress(worker_id);
-  while ((res = root->data_put(key, val)) == result_t::retry) {
+  while ((res = root->put(key, val, worker_id)) == result_t::retry) {
     rcu_progress(worker_id);
   }
   return res == result_t::ok;
@@ -197,6 +162,33 @@ void *XIndex<key_t, val_t, seq>::background(void *this_) {
       info[bg_i].finished = false;
       info[bg_i].should_update_array = false;
     }
+
+	// RMI retraining
+    if (should_update_array) {
+      root_t *old_root = index.root;
+      index.root = old_root->create_new_root();
+      memory_fence();
+      rcu_barrier();
+      index.root->trim_root();
+      delete old_root;
+
+      double avg_group_error = 0, max_group_error = 0;
+      for (size_t group_i = 0; group_i < index.root->group_n; group_i++) {
+        avg_group_error += index.root->groups[group_i].second->mean_error;
+        if (index.root->groups[group_i].second->mean_error > max_group_error) {
+          max_group_error = index.root->groups[group_i].second->mean_error;
+        }
+      }
+      avg_group_error /= index.root->group_n;
+      DEBUG_THIS("--- [root] group_n: " << index.root->group_n);
+      DEBUG_THIS("--- [root] rmi_2nd_stage_model_n: "
+                 << index.root->rmi_2nd_stage_model_n);
+      DEBUG_THIS("--- [root] avg_group_error: " << avg_group_error);
+      DEBUG_THIS("--- [root] max_group_error: " << max_group_error);
+    }
+
+    memory_fence();  // ensure the background theads and the workers all see a
+    rcu_barrier();   // correct final stage of root.groups
   }
 
   for (size_t bg_i = 0; bg_i < bg_num; bg_i++) {
@@ -228,17 +220,12 @@ template <class key_t, class val_t, bool seq>
 void XIndex<key_t, val_t, seq>::terminate_bg() {
   config.exited = true;
   bg_running = false;
-  void *status;
+  /*void *status;
   int rc = pthread_join(bg_master, &status);
   if (rc) {
     COUT_N_EXIT("Error: unable to join," << rc);
   }
-  delete root;
-}
-
-template <class key_t, class val_t, bool seq>
-void XIndex<key_t, val_t, seq>::make_snapshot(bool iswarmup) {
-	root->make_snapshot(iswarmup);
+  delete root;*/
 }
 
 }  // namespace xindex

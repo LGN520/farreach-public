@@ -56,13 +56,14 @@ LDDIR += $(DPDK_LDDIR)
 
 #ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
 #ROCKSDB_LDDIR += -L../rocksdb-6.22.1
-ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
-ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
-ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
+# V2: Bourbon
+#ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
+#ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
+#ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
 
-INCDIR += $(ROCKSDB_INCDIR)
-LDDIR += $(ROCKSDB_LDDIR)
-LDLIBS += $(ROCKSDB_LDLIBS)
+#INCDIR += $(ROCKSDB_INCDIR)
+#LDDIR += $(ROCKSDB_LDDIR)
+#LDLIBS += $(ROCKSDB_LDLIBS)
 
 ##############################################################################
 # MKL configuration
@@ -87,7 +88,8 @@ include mk/recipes.mk
 
 DEPS :=
 CLEAN :=
-TARGETS := prepare split_workload ycsb_local_client ycsb_remote_client ycsb_server
+#TARGETS := prepare split_workload ycsb_local_client ycsb_remote_client ycsb_server
+TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_server
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
@@ -126,27 +128,27 @@ CLEAN += prepare.o prepare
 #DEPS += server.d
 #CLEAN += server.o server
 
-#localtest: localtest.o key.o val.o $(INIPARSER_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-#DEPS += localtest.d
-#CLEAN += localtest.o localtest
+localtest: localtest.o key.o val.o $(INIPARSER_OBJECTS)
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += localtest.d
+CLEAN += localtest.o localtest
 
 split_workload: split_workload.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += split_workload.d
 CLEAN += split_workload.o split_workload
 
-ycsb_local_client: ycsb_local_client.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-DEPS += ycsb_local_client.d
-CLEAN += ycsb_local_client.o ycsb_local_client
+#ycsb_local_client: ycsb_local_client.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
+#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+#DEPS += ycsb_local_client.d
+#CLEAN += ycsb_local_client.o ycsb_local_client
 
 ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += ycsb_remote_client.d
 CLEAN += ycsb_remote_client.o ycsb_remote_client
 
-ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) $(BACKUP_OBJECTS)
+ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) $(BACKUP_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += ycsb_server.d
 CLEAN += ycsb_server.o ycsb_server

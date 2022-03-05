@@ -17,22 +17,32 @@
 #include <arpa/inet.h> // inetaddr conversion
 #include <sys/time.h> // struct timeval
 #include <string.h>
+#include <map>
 
 #include "helper.h"
-#include "xindex.h"
-#include "xindex_impl.h"
-#include "xindex_util.h"
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
 #include "key.h"
-#include "val.h"
 #include "iniparser/iniparser_wrapper.h"
+#include "ycsb/parser.h"
 #include "backup_data.h"
 #include "special_case.h"
+
+#ifdef ORIGINAL_XINDEX
+#include "original_xindex/xindex.h"
+#include "original_xindex/xindex_impl.h"
+#include "original_xindex/xindex_util.h"
+#else
+#include "extended_xindexplus/xindex.h"
+#include "extended_xindexplus/xindex_impl.h"
+#include "extended_xindexplus/xindex_util.h"
+#include "val.h"
+#endif
 
 #define MQ_SIZE 256
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
+struct alignas(CACHELINE_SIZE) LoadSFGParam;
 struct alignas(CACHELINE_SIZE) SFGParam;
 //struct alignas((CACHELINE_SIZE)) ReceiverParam;
 
@@ -40,6 +50,7 @@ typedef BackupData backup_data_t;
 typedef SpecialCase special_case_t;
 typedef Key index_key_t;
 typedef Val val_t;
+typedef LoadSFGParam load_sfg_param_t;
 typedef SFGParam sfg_param_t;
 //typedef ReceiverParam receiver_param_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
@@ -63,17 +74,21 @@ typedef PutRequestPOPEvictCase2<index_key_t, val_t> put_request_pop_evict_case2_
 typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
 typedef DelRequestCase3<index_key_t> del_request_case3_t;
 
+// loading phase
+void run_load_server(xindex_t *table); // loading phase
+void *run_load_sfg(void *param); // workers in loading phase
+void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals);
+
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
 void prepare_dpdk();
 void prepare_receiver();
-
-void run_server(xindex_t *table);
+void run_server(xindex_t *table); // running phase
 //void *run_sfg(void *param);
 void kill(int signum);
 
 // DPDK
-static int run_sfg(void *param);
+static int run_sfg(void *param); // workers in runing phase
 static int run_receiver(__attribute__((unused)) void *param); // receiver
 //static int run_receiver(void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
@@ -96,10 +111,17 @@ bool volatile isbackup = false;
 std::atomic_flag is_kvsnapshot = ATOMIC_FLAG_INIT;
 void try_kvsnapshot(xindex_t *table);
 
-// parameters
-size_t fg_n;
-size_t bg_n;
-short dst_port_start;
+// loading parameters
+size_t split_n;
+size_t load_n;
+char output_dir[256];
+volatile bool load_running = false;
+std::atomic<size_t> load_ready_threads(0);
+
+// running parameters
+size_t fg_n = 1;
+size_t bg_n = 1;
+short dst_port_start = 1111;
 const char *workload_name = nullptr;
 uint32_t kv_bucket_num;
 
@@ -115,6 +137,12 @@ size_t get_server_idx(index_key_t key) {
 bool killed = false;
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
+
+// loading phase
+struct alignas(CACHELINE_SIZE) LoadSFGParam {
+	xindex_t *table;
+	uint8_t thread_id;
+};
 
 struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
@@ -132,13 +160,21 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 int main(int argc, char **argv) {
   parse_ini("config.ini");
   parse_args(argc, argv);
-  xindex::init_options(); // init options of rocksdb
+  //xindex::init_options(); // init options of rocksdb
 
   // Prepare per-thread special case
   special_cases_list = new std::map<unsigned short, special_case_t> *[fg_n];
   for (size_t i = 0; i < fg_n; i++) {
 	special_cases_list[i] = new std::map<unsigned short, special_case_t>;
   }
+
+  // prepare xindex
+  std::vector<index_key_t> keys;
+  std::vector<val_t> vals;
+  load(keys, vals); // Use the last split workload to initialize the XIndex
+  xindex_t *tab_xi = new xindex_t(keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
+
+  run_load_server(tab_xi); // loading phase
 
   // Prepare DPDK EAL param
   prepare_dpdk();
@@ -150,13 +186,10 @@ int main(int argc, char **argv) {
   backup_rcu = new uint32_t[fg_n];
   memset((void *)backup_rcu, 0, fg_n * sizeof(uint32_t));
 
-  // prepare xindex
-  xindex_t *tab_xi = new xindex_t(fg_n, bg_n, std::string(workload_name)); // fg_n to create array of RCU status; bg_n background threads have been launched
-
   // register signal handler
   signal(SIGTERM, SIG_IGN); // Ignore SIGTERM for subthreads
 
-  run_server(tab_xi);
+  run_server(tab_xi); // running phase
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
 
   // Free DPDK mbufs
@@ -177,7 +210,12 @@ inline void parse_ini(const char* config_file) {
 	IniparserWrapper ini;
 	ini.load(config_file);
 
+	split_n = ini.get_split_num();
+	INVARIANT(split_n >= 2);
+	load_n = split_n - 1;
+
 	fg_n = ini.get_server_num();
+	INVARIANT(fg_n >= load_n);
 	dst_port_start = ini.get_server_port();
 	workload_name = ini.get_workload_name();
 	kv_bucket_num = ini.get_bucket_num();
@@ -185,6 +223,15 @@ inline void parse_ini(const char* config_file) {
 	backup_port = ini.get_server_backup_port();
 	per_server_range = std::numeric_limits<size_t>::max() / fg_n;
 
+	LOAD_SPLIT_DIR(output_dir, workload_name, split_n); // get the split directory for loading phase
+	struct stat dir_stat;
+	if (!(stat(output_dir, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
+		printf("Output directory does not exist: %s\n", output_dir);
+		exit(-1);
+	}
+
+	COUT_VAR(split_n);
+	COUT_VAR(load_n);
 	COUT_VAR(fg_n);
 	COUT_VAR(dst_port_start);
 	printf("workload_name: %s\n", workload_name);
@@ -306,6 +353,142 @@ void prepare_receiver() {
 	  }
 	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
   }
+}
+
+void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {
+	char load_filename[256];
+	memset(load_filename, '\0', 256);
+	GET_SPLIT_WORKLOAD(load_filename, output_dir, split_n-1);
+
+	Parser parser(load_filename);
+	ParserIterator iter = parser.begin();
+	index_key_t tmpkey;
+	val_t tmpval;
+
+	std::map<index_key_t, val_t> loadmap;
+	while (true) {
+		tmpkey = iter.key();
+		tmpval = iter.val();	
+		if (iter.type() == uint8_t(packet_type_t::PUT_REQ)) {	// INESRT
+			loadmap.insert(std::pair<index_key_t, val_t>(tmpkey, tmpval));
+		}
+		else {
+			COUT_N_EXIT("Invalid type: !" << int(iter.type()));
+		}
+		if (!iter.next()) {
+			break;
+		}
+	}
+	iter.close();
+
+	keys.resize(loadmap.size());
+	vals.resize(loadmap.size());
+	size_t i = 0;
+	for (std::map<index_key_t, val_t>::iterator iter = loadmap.begin(); iter != loadmap.end(); iter++) {
+		keys[i] = iter->first;
+		vals[i] = iter->second;
+		i++;
+	}
+}
+
+void run_load_server(xindex_t *table) {
+	int ret = 0;
+	unsigned lcoreid = 1;
+
+	load_running = false;
+
+	// Prepare load_n params
+	pthread_t threads[load_n];
+	load_sfg_param_t load_sfg_params[load_n];
+	// check if parameters are cacheline aligned
+	for (size_t i = 0; i < load_n; i++) {
+		if ((uint64_t)(&(load_sfg_params[i])) % CACHELINE_SIZE != 0) {
+			COUT_N_EXIT("wrong parameter address: " << &(load_sfg_params[i]));
+		}
+	}
+
+	// Launch workers
+	for (size_t worker_i = 0; worker_i < load_n; worker_i++) {
+		load_sfg_params[worker_i].table = table;
+		load_sfg_params[worker_i].thread_id = static_cast<uint8_t>(worker_i);
+		int ret = pthread_create(&threads[worker_i], nullptr, run_load_sfg, (void *)&load_sfg_params[worker_i]);
+		if (ret) {
+			COUT_N_EXIT("Error:" << ret);
+		}
+		lcoreid++;
+		if (lcoreid >= MAX_LCORE_NUM) {
+			lcoreid = 1;
+		}
+	}
+
+	COUT_THIS("[local client] prepare server foreground threads...")
+	while (load_ready_threads < load_n) sleep(1);
+
+	load_running = true;
+	COUT_THIS("[local client] start running...")
+
+	void *status;
+	for (size_t i = 0; i < fg_n; i++) {
+		int rc = pthread_join(threads[i], &status);
+		if (rc) {
+			COUT_N_EXIT("Error:unable to join," << rc);
+		}
+	}
+	COUT_THIS("[local client] finish loading phase...")
+}
+
+void *run_load_sfg(void * param) {
+	// Parse param
+	load_sfg_param_t &thread_param = *(load_sfg_param_t *)param;
+	uint8_t thread_id = thread_param.thread_id;
+	xindex_t *table = thread_param.table;
+
+	char load_filename[256];
+	memset(load_filename, '\0', 256);
+	GET_SPLIT_WORKLOAD(load_filename, output_dir, thread_id);
+
+	Parser parser(load_filename);
+	ParserIterator iter = parser.begin();
+	index_key_t tmpkey;
+	val_t tmpval;
+
+	int res = 0;
+	COUT_THIS("[local client " << uint32_t(thread_id) << "] Ready.");
+
+	ready_threads++;
+
+#if !defined(NDEBUGGING_LOG)
+  std::string logname;
+  GET_STRING(logname, "tmp_localtest"<< uint32_t(thread_id)<<".out");
+  std::ofstream ofs(logname, std::ofstream::out);
+#endif
+
+	while (!load_running) {
+	}
+
+	while (load_running) {
+		tmpkey = iter.key();
+		tmpval = iter.val();	
+		if (iter.type() == uint8_t(packet_type_t::PUT_REQ)) {	// INESRT
+			bool tmp_stat = table->put(tmpkey, tmpval, thread_id); // Use put instead of data_put as data structure (i.e., vector) cannot handle dyanmic insert
+			if (!tmp_stat) {
+				COUT_N_EXIT("Loading phase: fail to put <" << tmpkey.to_string() << ", " << tmpval.to_string() << ">");
+			}
+		}
+		else {
+			COUT_N_EXIT("Invalid type: !" << int(iter.type()));
+		}
+		if (!iter.next()) {
+			break;
+		}
+	}
+
+	pthread_exit(nullptr);
+	iter.close();
+#if !defined(NDEBUGGING_LOG)
+	ofs.close();
+#endif
+	return 0;
 }
 
 void run_server(xindex_t *table) {

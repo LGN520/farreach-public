@@ -32,8 +32,11 @@
 		* Case 1: change on in-switch cache value;
 		* Case 2: change on in-switch cache key-value pair;
 		* Case 3: change on server KVS for range query;
+	+ CBF-based fast path
+		* In LSM-based KVS, as data is very large, we can only maintain CBF for buffer and buffer_temp
+		* Now we focus on in-memory KVS where data can fit into memory, so we can directly maintain CBF for data array
+			- As we keep group merge/split and model merge/split, we cannot free data, buffer, and CBF in deconstructor
 	+ TODO: Others
-		* CBF-based fast path
 		* Range query support
 		* Switch-driven consistent hashing
 		* Distributed extension
@@ -289,23 +292,10 @@
 
 ## Implementation log
 
-- Copy netreach-voting to netreach-voting-v3
-- Embed hashidx into packet op_hdr at client side (ycsb_remote_client.c, config.ini, packet_format.h, packet_format_impl,h, ycsb_server.c)
-- Packet support
-	+ Switch-side: tofino/\*.p4
-	+ Server-side: packet_format.h, packet_format_impl,h, ycsb_server.c
-	+ Support GETREQ, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_EVICT
-	+ Support PUTREQ, PUTREQ_POP, PUTREQ_RECIR, PUTREQ_POP_EVICT
-	+ Support DELREQ, DELREQ_RECIR
-	+ Support PUTREQ_CASE1, DELREQ_CASE1
-	+ Support GETRES_POP_CASE2, PUTREQ_POP_CASE2
-	+ Support PUTREQ_MAY_CASE3, PUTREQ_CASE3, DELREQ_MAY_CASE3, DELREQ_CASE3
-- Support crash-consistent backup in switch OS
-- Debug and test
-	+ Pass normal cases: case1 to case11
-	+ Pass concurrent case
-	+ Pass backup cases: case1-1 to case4-1
-- Try as long value as we can (pass compilation by bfe 9.4.0; TODO: check in runtime)
+- Copy netreach-voting-v3 to netreach-voting-v3-memory
+- Merge extended xindex from tofino-xindex-dpdk-memory-varkv into netreach-voting-v3-memory
+	* Including: helper.h, original_xindex/\*, extended_xindex/\*, localtest.c, Makefile, ycsb_server.c
+- Add CBF-based fast path to get xindex+
 - TODO: extend xindex with variable-length value and snapshot
 - TODO: replace rocksdb with xindex
 - TODO: range query
