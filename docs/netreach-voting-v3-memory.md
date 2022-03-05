@@ -1,4 +1,4 @@
-# Tofino-based NetREACH (voting-based) + DPDK-based XIndex with persistence + variable-length key-value pair (netreach-voting-v3)
+# Tofino-based NetREACH (voting-based) + DPDK-based XIndex (in-memory KVS) + variable-length key-value pair w/ snapshot (netreach-voting-v3-memory)
 
 - Client calculates op_hdr.hashidx as slot index to reduce 1 stage (similar as OmniMon)
 	+ We calculate meta.hashidx for hash partition in switch
