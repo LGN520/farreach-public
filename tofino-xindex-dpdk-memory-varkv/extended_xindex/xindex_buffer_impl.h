@@ -819,14 +819,18 @@ void AltBtreeBuffer<key_t, val_t>::RefSource::advance_to_next_valid() {
       int key_n = leaf_ptr->key_n;
 
       pos = 0;
-      val_t temp_val;
+      //val_t temp_val;
       for (int i = 0; i < key_n; i++) {
-        if (leaf_ptr->vals[i].read_ignoring_ptr(temp_val)) {
+        /*if (leaf_ptr->vals[i].read_ignoring_ptr(temp_val)) {
           keys[pos] = leaf_ptr->keys[i];
           val_ptrs[pos] = &(leaf_ptr->vals[i]);
           pos++;
         } else {
-        }
+        }*/
+		// Consider each value in buffer even if it is all removed
+        keys[pos] = leaf_ptr->keys[i];
+        val_ptrs[pos] = &(leaf_ptr->vals[i]);
+        pos++;
       }
       n = pos;
       pos = 0;

@@ -81,10 +81,12 @@
 				- NOTE: latest_id is always larger than the two ss_id, and latest_id >= 0
 			* Each snapshot version of 2 has ss_value, ss_id (id of the snapshot), and ss_status (isremoved, version check)
 				- NOTE: ss_id = -1: empty snapshot value; ss_id = k: valid entry with snapshot value at the beginning of epoch k
-				- NOTE: snapshot version cannot be in removed status, because if latest version is removed, xindex will insert new record instead of updating removed one
+				- NOTE: snapshot version may be in removed status
+					+ In normal case, if latest version is removed, xindex will insert new record instead of updating removed one and making snapshot
+					+ However, during compact, removed value of data may be merged into atomic value of buffer as a snaoshot!
 			* We increase the snapshot id by 1 when making snapshot
 				- NOTE: snapshot id can be local to each server in a practical distributed KVS
-		+ TODO: Pass snapshot_id to each operation (init/SCAN/PUT/DEL) for consistent snapshot of atomic values (xindex.h, xindex_root.h, xindex_group.h, xindex_buffer.h, and xindex\*\_impl.h)
+		+ Pass snapshot_id to each operation (init/SCAN/PUT/DEL) for consistent snapshot of atomic values (xindex.h, xindex_root.h, xindex_group.h, xindex_buffer.h, and xindex\*\_impl.h)
 			* When inserting a new record
 				- Set latest_id = current snapshot_id and update the latest vlaue
 			* When updating an existing record 
@@ -94,13 +96,47 @@
 				- If latest_id < snapshot_id, return latest_value
 				- Otherwise, find the max ss_id != -1 and < snapshot_id, return corresponding value
 				- Otherwise, return false
-			* TODO: fix snapshot issues when range query, compact, and group merge/split
-				- NOTE: all of data, buffer, and buffer_temp may have snapshot of the same key
-					+ We should consider the removed records for range query to read snapshot
-					+ We should consider the removed records for compact and group merge/split to maintain snapshot
-				- NOTE: only PUT/DEL in data/buffer/buffer_temp can ignore record with removed latest version
-					+ Reason: they only perform in-place PUT/DEL and possible snapshot for unremoved record
-			* TODO: use dynamic memory allocation for snapshot versions to save space
+		+ Fix snapshot issues when compact and group merge/split without range query
+			* NOTE: we only answer range query based on the latest snapshot
+			* NOTE: all of data, buffer, and buffer_temp may have snapshot of the same key
+				- Case 1: data is not removed (buffer and buffer_temp cannot have the key)
+				- Case 2: data is removed or not exist, buffer is not removed (buffer_temp cannot have the key)
+					+ If data is removed, buffer.min_snapshot_id >= data.max_snapshot_id
+				- Case 3: data is removed or not exist, buffer is removed or not exist, buffer_temp is not removed
+					+ If data is removed and buffer is removed, buffer.min_snapshot_id >= data.max_snapshot_id
+					+ If buffer is removed, buffer_temp.min_snapshot_id >= buffer.max_snapshot_id
+				- Case 4: data is removed or not exist, buffer is removed or not exist, buffer_temp is removed or not exist
+					+ If data is removed and buffer is removed, buffer.min_snapshot_id >= data.max_snapshot_id
+					+ If buffer is removed and buffer_temp is removed, buffer_temp.min_snapshot_id >= buffer.max_snapshot_id
+			* We do not need to consider the records for range query if read_snapshot() returns false 
+				- Case 1: directly try to get snapshot from data
+				- Case 2
+					+ If snapshot_id <= data.max_snapshot_id: data.read_snapshot() may return true while buffer must return false
+					+ If snapshot_id > data.max_snapshot_id: data must return false due to removed while buffer may return true
+					+ NOTE: data and buffer cannot return true for the same key -> do not need to fix two valid snapshots for range query
+				- Case 3 and 4: similar as case 2, at most one of data/buffer/buffer_temp.read_snapshot() can return true
+			- We only need to consider the removed records for compact between (a value in) data and (a value in) buffer
+				- If they have records with the same key
+					+ Case 1: data is all removed and buffer is all removed -> ignore both data and buffer
+   					+ Case 2: data is all removed and buffer is not all removed -> ignore data and keep buffer
+						* We do not need to merge snapshots from data into buffer even if buffer has empty snapshot entries
+						* Reason: buffer.min_snapshot_id >= data.max_snapshot_id and data is all removed
+					+ Case 3: data is not all removed and buffer is all removed -> try to merge data into buffer and keep buffer
+					+ Case 4: data is not all removed and buffer is not all removed -> try to merge data into buffer and keep buffer
+				+ Implement all_removed() and all_removed_ignoring_ptr() (xindex_util.h)
+					* Return true only if the latest version is removed and both snapshots are removed or not existing 
+					* Invoke them in ArrayRefSource and merge_refs_internal (xindex_group_impl.h)
+				+ Implement merge_snapshot() (xindex_util.h)
+					+ If buf_val has base_val.latest_id, try to merge two snapshot versions of data into buffer if with empty entries
+					+ Otherwise, try to merge the latest version and a newer snapshot version of data into buffer if with empty entries
+					* Invoke it in merge_refs_internal before adding buf_val into new_data (xindex_group_impl.h)
+				- NOTE: we do not need to change group split/merge
+					+ Group split: compact current group to get a compacted data, and split the data into two groups
+					+ Group merge: compact each of two groups to get a compacted data, and concatenate two data for the new group
+					+ Since different groups must have disjoint key ranges, we do not need to consider merging multiple snapshots for the same key
+			* NOTE: only PUT/DEL in data/buffer/buffer_temp can ignore record with removed latest version
+				- Reason: they only perform in-place PUT/DEL and possible snapshot for unremoved record
+		* TODO: use dynamic memory allocation for snapshot versions to save space
 	+ All of TommyDS (NetCache), Redis (DistCache), Memcached do not support range query for key-value store (i.e., sorted map)
 		* We cannot use levelDB (TurboKV) as it is not in-memory (not focus on small objects)
 		* We cannot self-implemented in-memory KVS (Pegasus) as it does not mention range query and Pegasus already has an in-switch design
