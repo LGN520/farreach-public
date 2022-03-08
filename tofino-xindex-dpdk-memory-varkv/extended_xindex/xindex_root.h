@@ -56,8 +56,6 @@ class Root {
   Root *create_new_root();
   void trim_root();
 
-  void make_snapshot(int32_t snapshot_id);
-
  private:
   void adjust_rmi();
   void train_rmi(size_t rmi_2nd_stage_model_n);

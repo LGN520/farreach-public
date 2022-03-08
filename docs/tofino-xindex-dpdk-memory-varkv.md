@@ -57,22 +57,46 @@
 	+ Add macro of ORIGINAL_XINDEX to allow the switching between original xindex and extended version
 	+ Place is_snapshot atomic flag and snapshot_id into xindex (xindex.h, xindex_impl.h)
 		* Monotically increase snapshot_id to idenfity the current epoch ID for snapshot
-	+ Save ss_id and create_id for each atomic value; we maintain two versions for snapshot to support unfinished range query during making snapshot (xindex_util.h)
-		* NOTE: we assume that time of range query cannot exceed snapshot period (snapshot is an infrequent event)
-		* ss_id = -1: empty snapshot value; ss_id = k: existing entry with snapshot value of epoch k
-		* create_id = k: the entry is created at epoch k
-		* We snapshot the value only if
-			- Both ss_id_0 and ss_id_1 != snapshot_id: the snapshot of current epoch has not been made
-			- And create_id < snapshot_id: the entry is created at a previous epoch
-			- And one of ss_id_0 and ss_id_1 < snapshot_id: replace the out-of-date snapshot
-	+ Pass snapshot_id to each operation (init/SCAN/PUT/DEL) for consistent snapshot of atomic values (xindex.h, xindex_root.h, xindex_group.h, xindex_buffer.h, and xindex\*\_impl.h)
-		* NOTE: compact creates pointer-type atomic values, which do not need snapshot_id to initialize create_id
-		* When inserting a new entry, set ss_id = -1 and create_id = snapshot_id
-		* When updating an existing entry, we try to snapshot the old value if necessary
-		* When reading a snapshot
-			- Read the snapshot value only if either ss_id_0 or ss_id_1 == snapshot_id
-			- Read the latest value only if no matched snapshot (both != snapshot_id) and create_id < snapshot_id
-			- Return false (i.e., treat it as non-existing or deleted for the snapshot due to a new entry) otherwise 
+	+ Deprecated
+		+ Save ss_id and create_id for each atomic value; we maintain two versions for snapshot to support unfinished range query during making snapshot (xindex_util.h)
+			* NOTE: we assume that time of range query cannot exceed snapshot period (snapshot is an infrequent event)
+			* ss_id = -1: empty snapshot value; ss_id = k: existing entry with snapshot value of epoch k
+			* create_id = k: the entry is created at epoch k
+			* We snapshot the value only if
+				- Both ss_id_0 and ss_id_1 != snapshot_id: the snapshot of current epoch has not been made
+				- And create_id < snapshot_id: the entry is created at a previous epoch
+				- And one of ss_id_0 and ss_id_1 < snapshot_id: replace the out-of-date snapshot
+		+ Pass snapshot_id to each operation (init/SCAN/PUT/DEL) for consistent snapshot of atomic values (xindex.h, xindex_root.h, xindex_group.h, xindex_buffer.h, and xindex\*\_impl.h)
+			* NOTE: compact creates pointer-type atomic values, which do not need snapshot_id to initialize create_id
+			* When inserting a new entry, set ss_id = -1 and create_id = snapshot_id
+			* When updating an existing entry, we try to snapshot the old value if necessary
+			* When reading a snapshot
+				- Read the snapshot value only if either ss_id_0 or ss_id_1 == snapshot_id
+				- Read the latest value only if no matched snapshot (both != snapshot_id) and create_id < snapshot_id
+				- Return false (i.e., treat it as non-existing or deleted for the snapshot due to a new entry) otherwise 
+	+ Standard multi-versioning algorithm
+		+ We maintain one latest version and two snapshot versions to support unfinished range query during making snapshot (xindex_util.h)
+			* NOTE: we assume that time of range query cannot exceed snapshot period (snapshot is an infrequent event)
+			* Latest version has value, latest_id (snapshot id of latest PUT/DEL), and status (islock, isptr, isremoved, version check)
+				- NOTE: latest_id is always larger than the two ss_id, and latest_id >= 0
+			* Each snapshot version of 2 has ss_value, ss_id (id of the snapshot), and ss_status (isremoved, version check)
+				- NOTE: ss_id = -1: empty snapshot value; ss_id = k: valid entry with snapshot value at the beginning of epoch k
+				- NOTE: snapshot version cannot be in removed status, because if latest version is removed, xindex will insert new record instead of updating removed one
+			* We increase the snapshot id by 1 when making snapshot
+				- NOTE: snapshot id can be local to each server in a practical distributed KVS
+		+ TODO: Pass snapshot_id to each operation (init/SCAN/PUT/DEL) for consistent snapshot of atomic values (xindex.h, xindex_root.h, xindex_group.h, xindex_buffer.h, and xindex\*\_impl.h)
+			* When inserting a new record
+				- Set latest_id = current snapshot_id and update the latest vlaue
+			* When updating an existing record 
+				- If latest_id = current snapshot_id, update the lastest value
+				- Otherwise, replace older snapshot version with the latest version, and update lastest value as well as latest_id
+			* When reading a snapshot
+				- If latest_id < snapshot_id, return latest_value
+				- Otherwise, find the max ss_id != -1 and < snapshot_id, return corresponding value
+				- Otherwise, return false
+			* TODO: fix snapshot issues when range query (all of data, buffer, and buffer_temp may have snapshot of the same key)
+			* TODO: fix snapshot issues when compact, group merge/split
+			* TODO: use dynamic memory allocation for snapshot versions to save space
 	+ All of TommyDS (NetCache), Redis (DistCache), Memcached do not support range query for key-value store (i.e., sorted map)
 		* We cannot use levelDB (TurboKV) as it is not in-memory (not focus on small objects)
 		* We cannot self-implemented in-memory KVS (Pegasus) as it does not mention range query and Pegasus already has an in-switch design

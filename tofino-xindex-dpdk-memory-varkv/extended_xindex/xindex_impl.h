@@ -110,7 +110,6 @@ void XIndex<key_t, val_t, seq>::make_snapshot(const uint32_t worker_id) {
   if (!is_snapshot.test_and_set(std::memory_order_acquire)) {
     rcu_progress(worker_id);
 	snapshot_id += 1; // monotically increase snapshot id
-    root->make_snapshot(snapshot_id);
   }
 }
 template <class key_t, class val_t, bool seq>
@@ -120,7 +119,6 @@ void XIndex<key_t, val_t, seq>::stop_snapshot() {
 template <class key_t, class val_t, bool seq>
 void XIndex<key_t, val_t, seq>::init_snapshot() {
   snapshot_id += 1; // from 0 to 1 
-  root->make_snapshot(snapshot_id);
 }
 
 template <class key_t, class val_t, bool seq>

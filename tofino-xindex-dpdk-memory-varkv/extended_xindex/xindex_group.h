@@ -109,8 +109,6 @@ class alignas(CACHELINE_SIZE) Group {
   void free_data();
   void free_buffer();
 
-  void make_snapshot(int32_t snapshot_id);
-
  private:
   inline size_t locate_model(const key_t &key);
 

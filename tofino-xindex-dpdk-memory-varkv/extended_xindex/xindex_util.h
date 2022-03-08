@@ -196,16 +196,17 @@ struct AtomicVal {
   volatile uint64_t status;
 
   // For snapshot (only valid for value-type AtomicVal)
-  // Maintain two versions for snapshot to support unfinished range query when making new snapshot
-  int32_t create_id = -1; // -1: impossible value; 0: new entry created at epoch 0; 1: created at epoch 1
+  // Maintain one latest version and two versions for snapshot to support unfinished range query when making new snapshot
+  // NOTE: the two snapshot versions cannot be in removed status
+  int32_t latest_id = -1; // -1: impossible value; k: latest write happens at epoch k 
   uint8_t ss_val_length_0 = 0;
   uint64_t *ss_val_data_0 = new uint64_t[val_t::MAX_VAL_LENGTH];
-  volatile uint64_t ss_status_0 = 0; // only focus on removed and version w/o lock and is_ptr
+  volatile uint64_t ss_status_0 = 0; // only focus on version w/o lock, is_ptr, and removed
   int32_t ss_id_0 = -1; // -1: no snapshot; otherwise: snapshot of epoch k 
   uint8_t ss_val_length_1 = 0;
   uint64_t *ss_val_data_1 = new uint64_t[val_t::MAX_VAL_LENGTH];
   int32_t ss_id_1 = -1; // -1: no snapshot; otherwise: snapshot of epoch k'
-  volatile uint64_t ss_status_1 = 0; // only focus on removed and version w/o lock and is_ptr
+  volatile uint64_t ss_status_1 = 0; // only focus on version w/o lock, is_ptr, and removed
 
   AtomicVal() : status(0) {}
   ~AtomicVal() {
@@ -221,14 +222,14 @@ struct AtomicVal {
 	  // Empty snapshot
 	  ss_id_0 = -1;
 	  ss_id_1 = -1;
-	  create_id = snapshot_id; // created at current epoch (help to decide if we need to snapshot the new entry)
+	  latest_id = snapshot_id; 
   }
   AtomicVal(AtomicVal *ptr) : aval_ptr(ptr), status(0) { set_is_ptr(); }
   AtomicVal(const AtomicVal& other) {
 	  *this = other;
   }
   AtomicVal & operator=(const AtomicVal& other) {
-	  create_id = other.create_id;
+	  latest_id = other.latest_id;
 	  val_length = other.val_length;
 	  memcpy((char *)val_data, (char *)other.val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
 	  ss_val_length_0 = other.ss_val_length_0;
@@ -284,52 +285,20 @@ struct AtomicVal {
     return os;
   }
 
-  // Snapshot
-  void make_snapshot(int32_t snapshot_id) {
-	  lock();
-	  memory_fence();
-      if (unlikely(is_ptr(status))) {
-          assert(!removed(status));
-		  assert(aval_ptr != nullptr);
-		  aval_ptr->make_snapshot(snapshot_id);
-	  }
-	  else if (ss_id_0 != snapshot_id && ss_id_1 != snapshot_id && create_id < snapshot_id) {
-		  // (1) empty snapshot; (2) older and out-of-date snapshot
-		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1 && ss_id_0 < snapshot_id)) {
-			  ss_id_0 = snapshot_id;
-			  ss_val_length_0 = val_length;
-			  memcpy((char *)ss_val_data_0, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-			  if (removed(status)) {
-				  ss_status_0 |= removed_mask;
-			  }
-			  ss_status_0++; // increase version 
-		  }
-		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1 && ss_id_1 < snapshot_id)) {
-			  ss_id_1 = snapshot_id;
-			  ss_val_length_1 = val_length;
-			  memcpy((char *)ss_val_data_1, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-			  if (removed(status)) {
-				  ss_status_1 |= removed_mask;
-			  }
-			  ss_status_1++; // increase version 
-		  }
-	  }
-	  memory_fence();
-	  unlock();
-  }
-  bool read_snapshot(val_t &val, int32_t snapshot_id) {
+  // Snapshot by multi-versioning
+  bool read_snapshot(val_t &val, int32_t &ss_id, int32_t snapshot_id) {
     while (true) {
 	  uint64_t prev_status = this->status;
       uint64_t prev_ss_status_0 = this->ss_status_0; // focus on version and remove
       uint64_t prev_ss_status_1 = this->ss_status_1; // focus on version and remove
       memory_fence();
-	  int32_t tmp_createid = this->create_id;
+	  val_t tmpval(this->val_data, this->val_length);
+	  int32_t tmp_latestid = this->latest_id;
 	  val_t tmpssval_0(this->ss_val_data_0, this->ss_val_length_0);
 	  int32_t tmpssid_0 = this->ss_id_0;
 	  val_t tmpssval_1(this->ss_val_data_1, this->ss_val_length_1);
 	  int32_t tmpssid_1 = this->ss_id_1;
 	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
-	  val_t tmpval(this->val_data, this->val_length);
       memory_fence();
 
 	  uint64_t current_status = this->status; // focus on lock, is_ptr, and consistency of val
@@ -344,32 +313,47 @@ struct AtomicVal {
       }
 
       if (likely(get_version(prev_ss_status_0) == get_version(current_ss_status_0) && 
-				  get_version(prev_ss_status_1 == get_version(current_ss_status_1)))) {  // check version
+				  get_version(prev_ss_status_1) == get_version(current_ss_status_1) && 
+				  get_version(prev_status) == get_version(current_status))) {  // check version
         if (unlikely(is_ptr(current_status))) { // check is_ptr
           assert(!removed(current_status)); // check removed of pointer-type atomic value
 		  assert(tmpptr != nullptr);
           return tmpptr->read_snapshot(val, snapshot_id);
         } else {
-			if (tmpssid_0 == snapshot_id) {
-			  val = tmpssval_0; 
-			  return !removed(current_ss_status_0); // check removed of snapshot value
+			if (tmp_latestid < snapshot_id) {
+				val = tmpval;
+				ss_id = tmp_latestid;
+				return !removed(current_status);
 			}
-			else if (tmpssid_1 == snapshot_id) {
-			  val = tmpssval_1; 
-			  return !removed(current_ss_status_1); // check removed of snapshot value
-			}
-			// (1) current atomic value has not been snapshotted and without PUT/DEL; (2) new entry without snapshot but created at the previous epoch
-			else if (tmp_createid < snapshot_id) {
-				if (likely(get_version(prev_status) == get_version(current_status))) { // ensure the consistency of val
-					// We leave snapshot of current atomic value in other threads (make_snapshot/PUT/DEL)
-					val = tmpval;
-					return !removed(current_status);
+			if (tmpssid_0 <= tmpssid_1) {
+				if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
+					val = tmpssval_1;
+					ss_id = tmpssid_1;
+					return true; // snapshot cannot be in removed status
+					//return !removed(current_ss_status_1);
+				}
+				else if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
+					val = tmpssval_0;
+					ss_id = tmpssid_0;
+					return true; // snapshot cannot be in removed status
+					//return !removed(current_ss_status_9);
 				}
 			}
-			// new entry without snapshot and created at the current epoch
 			else {
-				return false;
+				if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
+					val = tmpssval_0;
+					ss_id = tmpssid_0;
+					return true; // snapshot cannot be in removed status
+					//return !removed(current_ss_status_9);
+				}
+				else if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
+					val = tmpssval_1;
+					ss_id = tmpssid_1;
+					return true; // snapshot cannot be in removed status
+					//return !removed(current_ss_status_1);
+				}
 			}
+			return false;
         }
       }
     }
@@ -401,7 +385,8 @@ struct AtomicVal {
         } else {
 			val = tmpssval_0;
 			ss_id = tmpssid_0;
-			return !removed(current_ss_status_0); // check removed of snapshot value
+			return true; // snapshot cannot be in removed status
+			//return !removed(current_ss_status_0); // check removed of snapshot value
         }
       }
     }
@@ -433,25 +418,26 @@ struct AtomicVal {
         } else {
 			val = tmpssval_1;
 			ss_id = tmpssid_1;
-			return !removed(current_ss_status_1); // check removed of snapshot value
+			return true; // snapshot cannot be in removed status
+			//return !removed(current_ss_status_1); // check removed of snapshot value
         }
       }
     }
   }
   // AtomicVal in buffer and buffer_temp cannot be ptr-type
-  bool read_snapshot_ignoring_ptr(val_t &val, int32_t snapshot_id) {
+  bool read_snapshot_ignoring_ptr(val_t &val, int32_t &ss_id, int32_t snapshot_id) {
     while (true) {
 	  uint64_t prev_status = this->status;
       uint64_t prev_ss_status_0 = this->ss_status_0; // focus on version and remove
       uint64_t prev_ss_status_1 = this->ss_status_1; // focus on version and remove
       memory_fence();
-	  int32_t tmp_createid = this->create_id;
+	  val_t tmpval(this->val_data, this->val_length);
+	  int32_t tmp_latestid = this->latest_id;
 	  val_t tmpssval_0(this->ss_val_data_0, this->ss_val_length_0);
 	  int32_t tmpssid_0 = this->ss_id_0;
 	  val_t tmpssval_1(this->ss_val_data_1, this->ss_val_length_1);
 	  int32_t tmpssid_1 = this->ss_id_1;
 	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
-	  val_t tmpval(this->val_data, this->val_length);
       memory_fence();
 
 	  uint64_t current_status = this->status; // focus on lock and is_ptr
@@ -466,27 +452,42 @@ struct AtomicVal {
       }
 
       if (likely(get_version(prev_ss_status_0) == get_version(current_ss_status_0) && 
-				  get_version(prev_ss_status_1 == get_version(current_ss_status_1)))) {  // check version
-		if (tmpssid_0 == snapshot_id) {
-		  val = tmpssval_0; 
-		  return !removed(current_ss_status_0); // check removed of snapshot value
+				  get_version(prev_ss_status_1) == get_version(current_ss_status_1) && 
+				  get_version(prev_status) == get_version(current_status))) {  // check version
+		if (tmp_latestid < snapshot_id) {
+			val = tmpval;
+			ss_id = tmp_latestid;
+			return !removed(current_status);
 		}
-		else if (tmpssid_1 == snapshot_id) {
-		  val = tmpssval_1; 
-		  return !removed(current_ss_status_1); // check removed of snapshot value
-		}
-		// (1) current atomic value has not been snapshotted and without PUT/DEL; (2) new entry without snapshot but created at the previous epoch
-		else if (tmp_createid < snapshot_id) {
-			if (likely(get_version(prev_status) == get_version(current_status))) { // ensure the consistency of val
-				// We leave snapshot of current atomic value in other threads (make_snapshot/PUT/DEL)
-				val = tmpval;
-				return !removed(current_status);
+		if (tmpssid_0 <= tmpssid_1) {
+			if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
+				val = tmpssval_1;
+				ss_id = tmpssid_1;
+				return true; // snapshot cannot be in removed status
+				//return !removed(current_ss_status_1);
+			}
+			else if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
+				val = tmpssval_0;
+				ss_id = tmpssid_0;
+				return true; // snapshot cannot be in removed status
+				//return !removed(current_ss_status_9);
 			}
 		}
-		// new entry without snapshot and created at the current epoch
 		else {
-			return false;
+			if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
+				val = tmpssval_0;
+				ss_id = tmpssid_0;
+				return true; // snapshot cannot be in removed status
+				//return !removed(current_ss_status_9);
+			}
+			else if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
+				val = tmpssval_1;
+				ss_id = tmpssid_1;
+				return true; // snapshot cannot be in removed status
+				//return !removed(current_ss_status_1);
+			}
 		}
+		return false;
       }
     }
   }
@@ -528,34 +529,49 @@ struct AtomicVal {
       assert(!removed(status));
 	  assert(aval_ptr != nullptr);
       res = this->aval_ptr->update(val, snapshot_id);
-    } else if (!removed(status)) {
-	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id < snapshot_id) {
-		  // (1) enpty snapshot; (2) older snapshot
-		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1 && ss_id_0 < snapshot_id)) {
-			  ss_id_0 = snapshot_id;
-			  ss_val_length_0 = val_length;
-			  memcpy((char *)ss_val_data_0, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-			  if (removed(status)) {
-				  ss_status_0 |= removed_mask;
-			  }
-			  ss_status_0++; // increase version 
+    } else if (!removed(status)) { // do not make snapshot for removed latest version
+		if (this->latest_id == snapshot_id) {
+		  this->val_length = val.val_length;
+		  if (this->val_length > 0) {
+			  memcpy((char *)this->val_data, (char *)val.val_data, this->val_length * sizeof(uint64_t));
 		  }
-		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1 && ss_id_1 < snapshot_id)) {
-			  ss_id_1 = snapshot_id;
-			  ss_val_length_1 = val_length;
-			  memcpy((char *)ss_val_data_1, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-			  if (removed(status)) {
-				  ss_status_1 |= removed_mask;
-			  }
-			  ss_status_1++; // increase version 
-		  }
-	  }
-	  this->val_length = val.val_length;
-	  if (this->val_length > 0) {
-		  memcpy((char *)this->val_data, (char *)val.val_data, this->val_length * sizeof(uint64_t));
-	  }
-      res = true;
-    } else {
+		  res = true;
+		}
+		else {
+			// latest_id must > any ss_id
+			if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+				this->ss_id_0 = this->latest_id;
+				this->ss_val_length_0 = this->val_length;
+				if (this->val_length > 0) {
+					memcpy((char *)this->ss_val_data_0, (char *)this->val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+				}
+				// lasest version must not be removed
+				/*if (removed(status)) {
+					this->ss_status_0 |= removed_mask;
+				}*/
+				this->ss_status_0++;
+			}
+			else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+				this->ss_id_1 = this->latest_id;
+				this->ss_val_length_1 = this->val_length;
+				if (this->val_length > 0) {
+					memcpy((char *)this->ss_val_data_1, (char *)this->val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+				}
+				// lasest version must not be removed
+				/*if (removed(status)) {
+					this->ss_status_1 |= removed_mask;
+				}*/
+				this->ss_status_1++;
+			}
+
+			this->latest_id = snapshot_id;
+			this->val_length = val.val_length;
+			if (this->val_length > 0) {
+				memcpy((char *)this->val_data, (char *)val.val_data, this->val_length * sizeof(uint64_t));
+			}
+			res = true;
+		}
+    } else { // if the latest version is removed, xindex should insert the val into buffer/buffer_temp as a new record
       res = false;
     }
     memory_fence();
@@ -572,30 +588,42 @@ struct AtomicVal {
       assert(!removed(status));
 	  assert(aval_ptr != nullptr);
       res = this->aval_ptr->remove(snapshot_id);
-    } else if (!removed(status)) {
-	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id < snapshot_id) {
-		  // (1) enpty snapshot; (2) older snapshot
-		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1 && ss_id_0 < snapshot_id)) {
-			  ss_id_0 = snapshot_id;
-			  ss_val_length_0 = val_length;
-			  memcpy((char *)ss_val_data_0, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-			  if (removed(status)) {
-				  ss_status_0 |= removed_mask;
-			  }
-			  ss_status_0++; // increase version 
-		  }
-		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1 && ss_id_1 < snapshot_id)) {
-			  ss_id_1 = snapshot_id;
-			  ss_val_length_1 = val_length;
-			  memcpy((char *)ss_val_data_1, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-			  if (removed(status)) {
-				  ss_status_1 |= removed_mask;
-			  }
-			  ss_status_1++; // increase version 
-		  }
-	  }
-      set_removed();
-      res = true;
+    } else if (!removed(status)) { // do not make snapshot for removed latest version
+		if (this->latest_id == snapshot_id) {
+		  set_removed();
+		  res = true;
+		}
+		else {
+			// latest_id must > any ss_id
+			if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+				this->ss_id_0 = this->latest_id;
+				this->ss_val_length_0 = this->val_length;
+				if (this->val_length > 0) {
+					memcpy((char *)this->ss_val_data_0, (char *)this->val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+				}
+				// lasest version must not be removed
+				/*if (removed(status)) {
+					this->ss_status_0 |= removed_mask;
+				}*/
+				this->ss_status_0++;
+			}
+			else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+				this->ss_id_1 = this->latest_id;
+				this->ss_val_length_1 = this->val_length;
+				if (this->val_length > 0) {
+					memcpy((char *)this->ss_val_data_1, (char *)this->val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+				}
+				// lasest version must not be removed
+				/*if (removed(status)) {
+					this->ss_status_1 |= removed_mask;
+				}*/
+				this->ss_status_1++;
+			}
+
+			this->latest_id = snapshot_id;
+		    set_removed();
+		    res = true;
+		}
     } else {
       res = false;
     }
@@ -625,9 +653,10 @@ struct AtomicVal {
 	// Get snapshot value 0
 	val_t tmpssval_0;
 	int32_t tmpssid_0;
-	if (!aval_ptr->read_snapshot_0(tmpssval_0, tmpssid_0)) {
+	aval_ptr->read_snapshot_0(tmpssval_0, tmpssid_0);
+	/*if (!aval_ptr->read_snapshot_0(tmpssval_0, tmpssid_0)) {
 		ss_status_0 != removed_mask;
-	}
+	}*/
 	ss_id_0 = tmpssid_0;
 	this->ss_val_length_0 = tmpssval_0.val_length;
 	// NOTE: if val_t.val_length == 0, then val_t.val_data is null
@@ -637,9 +666,10 @@ struct AtomicVal {
 	// Get snapshot value 1
 	val_t tmpssval_1;
 	int32_t tmpssid_1;
-	if (!aval_ptr->read_snapshot_1(tmpssval_1, tmpssid_1)) {
+	aval_ptr->read_snapshot_1(tmpssval_1, tmpssid_1);
+	/*if (!aval_ptr->read_snapshot_1(tmpssval_1, tmpssid_1)) {
 		ss_status_1 != removed_mask;
-	}
+	}*/
 	ss_id_1 = tmpssid_1;
 	this->ss_val_length_1 = tmpssval_1.val_length;
 	// NOTE: if val_t.val_length == 0, then val_t.val_data is null
@@ -676,32 +706,47 @@ struct AtomicVal {
     uint64_t status = this->status;
     bool res;
     if (!removed(status)) {
-	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id < snapshot_id) {
-		  // (1) enpty snapshot; (2) older snapshot
-		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1 && ss_id_0 < snapshot_id)) {
-			  ss_id_0 = snapshot_id;
-			  ss_val_length_0 = val_length;
-			  memcpy((char *)ss_val_data_0, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-			  if (removed(status)) {
-				  ss_status_0 |= removed_mask;
-			  }
-			  ss_status_0++; // increase version 
+		if (this->latest_id == snapshot_id) {
+		  this->val_length = val.val_length;
+		  if (this->val_length > 0) {
+			  memcpy((char *)this->val_data, (char *)val.val_data, this->val_length * sizeof(uint64_t));
 		  }
-		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1 && ss_id_1 < snapshot_id)) {
-			  ss_id_1 = snapshot_id;
-			  ss_val_length_1 = val_length;
-			  memcpy((char *)ss_val_data_1, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-			  if (removed(status)) {
-				  ss_status_1 |= removed_mask;
-			  }
-			  ss_status_1++; // increase version 
-		  }
-	  }
-	  this->val_length = val.val_length;
-	  if (this->val_length > 0) {
-		  memcpy((char *)this->val_data, (char *)val.val_data, this->val_length * sizeof(uint64_t));
-	  }
-      res = true;
+		  res = true;
+		}
+		else {
+			// latest_id must > any ss_id
+			if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+				this->ss_id_0 = this->latest_id;
+				this->ss_val_length_0 = this->val_length;
+				if (this->val_length > 0) {
+					memcpy((char *)this->ss_val_data_0, (char *)this->val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+				}
+				// lasest version must not be removed
+				/*if (removed(status)) {
+					this->ss_status_0 |= removed_mask;
+				}*/
+				this->ss_status_0++;
+			}
+			else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+				this->ss_id_1 = this->latest_id;
+				this->ss_val_length_1 = this->val_length;
+				if (this->val_length > 0) {
+					memcpy((char *)this->ss_val_data_1, (char *)this->val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+				}
+				// lasest version must not be removed
+				/*if (removed(status)) {
+					this->ss_status_1 |= removed_mask;
+				}*/
+				this->ss_status_1++;
+			}
+
+			this->latest_id = snapshot_id;
+			this->val_length = val.val_length;
+			if (this->val_length > 0) {
+				memcpy((char *)this->val_data, (char *)val.val_data, this->val_length * sizeof(uint64_t));
+			}
+			res = true;
+		}
     } else {
       res = false;
     }
@@ -716,29 +761,41 @@ struct AtomicVal {
     uint64_t status = this->status;
     bool res;
     if (!removed(status)) {
-	  if (this->ss_id_0 != snapshot_id && this->ss_id_1 != snapshot_id && this->create_id < snapshot_id) {
-		  // (1) enpty snapshot; (2) older snapshot
-		  if ((ss_id_0 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 < ss_id_1 && ss_id_0 < snapshot_id)) {
-			  ss_id_0 = snapshot_id;
-			  ss_val_length_0 = val_length;
-			  memcpy((char *)ss_val_data_0, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-			  if (removed(status)) {
-				  ss_status_0 |= removed_mask;
-			  }
-			  ss_status_0++; // increase version 
-		  }
-		  else if ((ss_id_1 == -1) || (ss_id_0 != -1 && ss_id_1 != -1 && ss_id_0 >= ss_id_1 && ss_id_1 < snapshot_id)) {
-			  ss_id_1 = snapshot_id;
-			  ss_val_length_1 = val_length;
-			  memcpy((char *)ss_val_data_1, (char *)val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
-			  if (removed(status)) {
-				  ss_status_1 |= removed_mask;
-			  }
-			  ss_status_1++; // increase version 
-		  }
-	  }
-      set_removed();
-      res = true;
+		if (this->latest_id == snapshot_id) {
+		  set_removed();
+		  res = true;
+		}
+		else {
+			// latest_id must > any ss_id
+			if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+				this->ss_id_0 = this->latest_id;
+				this->ss_val_length_0 = this->val_length;
+				if (this->val_length > 0) {
+					memcpy((char *)this->ss_val_data_0, (char *)this->val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+				}
+				// lasest version must not be removed
+				/*if (removed(status)) {
+					this->ss_status_0 |= removed_mask;
+				}*/
+				this->ss_status_0++;
+			}
+			else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+				this->ss_id_1 = this->latest_id;
+				this->ss_val_length_1 = this->val_length;
+				if (this->val_length > 0) {
+					memcpy((char *)this->ss_val_data_1, (char *)this->val_data, val_t::MAX_VAL_LENGTH * sizeof(uint64_t));
+				}
+				// lasest version must not be removed
+				/*if (removed(status)) {
+					this->ss_status_1 |= removed_mask;
+				}*/
+				this->ss_status_1++;
+			}
+
+			this->latest_id = snapshot_id;
+		    set_removed();
+		    res = true;
+		}
     } else {
       res = false;
     }

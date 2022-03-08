@@ -284,7 +284,9 @@ struct AtomicVal {
     return os;
   }
 
-  // Snapshot
+  // Snapshot based on multiple versions
+  // Compared with common multi-versioning which makes the snapshot for a record when the write in new epoch arrives,
+  // we make the snapshot in a batch for each record when epoch switches before the write arrives to reduce write latency
   void make_snapshot(int32_t snapshot_id) {
 	  lock();
 	  memory_fence();

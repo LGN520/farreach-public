@@ -1131,31 +1131,6 @@ Group<key_t, val_t, seq, max_model_n>::ArrayRefSource::get_val() {
   return *next_val_ptr;
 }
 
-#ifndef ORIGINAL_XINDEX
-template <class key_t, class val_t, bool seq, size_t max_model_n>
-void Group<key_t, val_t, seq, max_model_n>::make_snapshot(int32_t snapshot_id) {
-	for (size_t i = 0; i < array_size; i++) {
-		data[i].second.make_snapshot(snapshot_id);
-	}
-
-	auto buffer_source = typename buffer_t::RefSource(buffer);
-	buffer_source.advance_to_next_valid();
-	while (buffer_source.has_next) {
-		wrapped_val_t &buf_val = buffer_source.get_val();
-		buf_val.make_snapshot(snapshot_id);
-	}
-
-	if (buffer_temp) {
-		auto buffer_temp_source = typename buffer_t::RefSource(buffer_temp);
-		buffer_temp_source.advance_to_next_valid();
-		while (buffer_temp_source.has_next) {
-			wrapped_val_t &buf_temp_val = buffer_temp_source.get_val();
-			buf_temp_val.make_snapshot(snapshot_id);
-		}
-	}
-}
-#endif
-
 }	// namespace xindex
 
 #endif	// XINDEX_GROUP_IMPL_H
