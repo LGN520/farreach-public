@@ -94,8 +94,12 @@
 				- If latest_id < snapshot_id, return latest_value
 				- Otherwise, find the max ss_id != -1 and < snapshot_id, return corresponding value
 				- Otherwise, return false
-			* TODO: fix snapshot issues when range query (all of data, buffer, and buffer_temp may have snapshot of the same key)
-			* TODO: fix snapshot issues when compact, group merge/split
+			* TODO: fix snapshot issues when range query, compact, and group merge/split
+				- NOTE: all of data, buffer, and buffer_temp may have snapshot of the same key
+					+ We should consider the removed records for range query to read snapshot
+					+ We should consider the removed records for compact and group merge/split to maintain snapshot
+				- NOTE: only PUT/DEL in data/buffer/buffer_temp can ignore record with removed latest version
+					+ Reason: they only perform in-place PUT/DEL and possible snapshot for unremoved record
 			* TODO: use dynamic memory allocation for snapshot versions to save space
 	+ All of TommyDS (NetCache), Redis (DistCache), Memcached do not support range query for key-value store (i.e., sorted map)
 		* We cannot use levelDB (TurboKV) as it is not in-memory (not focus on small objects)
