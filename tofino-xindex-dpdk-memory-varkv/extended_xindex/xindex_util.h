@@ -500,25 +500,27 @@ struct AtomicVal {
     lock();
 	// NOTE: buffer.buf_val.min_snapshot_id >= data.base_val.max_snapshot_id
 	if (this->ss_id_0 != -1 && this->ss_id_1 != -1) { // without empty snapshot entry
-	  return removed(current_status) && (tmpssid_0 == -1 || removed(current_ss_status_0)) && (tmpssid_1 == -1 || removed(current_ss_status_1));
+	  return removed(this->status) && (this->ss_id_0 == -1 || removed(this->ss_status_0)) && (this->ss_id_1 == -1 || removed(this->ss_status_1));
 	}
-	int32_t *newer_ssid, *older_ssid = NULL, NULL;
-	val_t *newer_ssval, *older_ssval = NULL, NULL;
+	int32_t *newer_ssid = NULL;
+	int32_t *older_ssid = NULL;
+	val_t *newer_ssval = NULL;
+	val_t *older_ssval = NULL;
 	bool newer_removed, older_removed;
-	if (this->latest_id == data_latestid || this->ss_id_0 == data_latest_id || this->ss_id_1 == data_latest_id) {
+	if (this->latest_id == data_latestid || this->ss_id_0 == data_latestid || this->ss_id_1 == data_latestid) {
 		newer_ssid = &data_ssid_0;
 		newer_ssval = &data_ssval_0;
-		newer_removed = data_ss_removed_0;
+		newer_removed = data_ssremoved_0;
 		older_ssid = &data_ssid_1;
 		older_ssval = &data_ssval_1;
-		older_removed = data_ss_removed_1;
+		older_removed = data_ssremoved_1;
 		if (data_ssid_0 < data_ssid_1) {
 			newer_ssid = &data_ssid_1;
 			newer_ssval = &data_ssval_1;
-			newer_removed = data_ss_removed_1;
+			newer_removed = data_ssremoved_1;
 			older_ssid = &data_ssid_0;
 			older_ssval = &data_ssval_0;
-			older_removed = data_ss_removed_0;
+			older_removed = data_ssremoved_0;
 		}
 	}
 	else {
@@ -580,7 +582,9 @@ struct AtomicVal {
     memory_fence();
     incr_version();
     memory_fence();
+	bool res = removed(this->status) && (this->ss_id_0 == -1 || removed(this->ss_status_0)) && (this->ss_id_1 == -1 || removed(this->ss_status_1));
     unlock();
+	return res;
   }
 
   // semantics: atomically read the value and the `removed` flag
@@ -607,6 +611,36 @@ struct AtomicVal {
 		  return tmpptr->read(val);
 		} else {
 		  val = tmpval; 
+		  return !removed(status);
+		}
+	  }
+    }
+  }
+  bool read_with_latestid(val_t &val, int32_t &id) {
+    while (true) {
+      uint64_t status = this->status;
+      memory_fence();
+	  val_t tmpval(this->val_data, this->val_length);
+	  int32_t tmp_latestid = this->latest_id;
+	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read() due to RCU during compact
+	  memory_fence();
+
+	  uint64_t current_status = this->status; // ensure consistent tmpval
+	  memory_fence();
+
+	  if (unlikely(locked(current_status))) {  // check lock
+		continue;
+	  }
+
+	  if (likely(get_version(status) ==
+				 get_version(current_status))) {  // check version
+		if (unlikely(is_ptr(status))) {
+		  assert(!removed(status));
+		  assert(tmpptr != nullptr);
+		  return tmpptr->read(val);
+		} else {
+		  val = tmpval; 
+		  id = tmp_latestid;
 		  return !removed(status);
 		}
 	  }
@@ -766,13 +800,14 @@ struct AtomicVal {
     UNUSED(status);
     assert(is_ptr(status));
     assert(!removed(status));
-	this->create_id = aval_ptr->create_id;
 	// Get value
 	val_t tmpval;
+	int32_t tmplatestid;
 	assert(aval_ptr != nullptr);
-    if (!aval_ptr->read(tmpval)) {
+    if (!aval_ptr->read_with_latestid(tmpval, tmplatestid)) {
       set_removed();
     }
+	this->latest_id = tmplatestid;
 	this->val_length = tmpval.val_length;
 	if (tmpval.val_length > 0) {
 		memcpy((char *)this->val_data, (char *)tmpval.val_data, tmpval.val_length * sizeof(uint64_t));
