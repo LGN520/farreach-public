@@ -289,19 +289,64 @@ struct AtomicVal {
   //bool read_snapshot(val_t &val, int32_t &ss_id, int32_t snapshot_id) {
   bool read_snapshot(val_t &val, int32_t snapshot_id) {
     while (true) {
+	  // Get version
 	  uint64_t prev_status = this->status;
       uint64_t prev_ss_status_0 = this->ss_status_0; // focus on version and remove
       uint64_t prev_ss_status_1 = this->ss_status_1; // focus on version and remove
       memory_fence();
-	  val_t tmpval(this->val_data, this->val_length);
-	  int32_t tmp_latestid = this->latest_id;
-	  val_t tmpssval_0(this->ss_val_data_0, this->ss_val_length_0);
-	  int32_t tmpssid_0 = this->ss_id_0;
-	  val_t tmpssval_1(this->ss_val_data_1, this->ss_val_length_1);
-	  int32_t tmpssid_1 = this->ss_id_1;
-	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
+
+	  // Execution
+	  AtomicVal *tmpptr = NULL;
+	  bool tmp_snapshot_removed = true;
+	  val_t *tmp_snapshot_valptr = NULL;
+
+	  if (unlikely(is_ptr(prev_status))) {
+		  tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
+	  }
+	  else {
+		  // At most one memcpy
+		  if(this->latest_id < snapshot_id) {
+			  tmp_snapshot_removed = removed(prev_status);
+			  if (!tmp_snapshot_removed) {
+				  tmp_snapshot_valptr = new val_t(this->val_data, this->val_length);
+			  }
+		  }
+		  else {
+			  int32_t tmpssid_0 = this->ss_id_0;
+			  int32_t tmpssid_1 = this->ss_id_1;
+			  if (tmpssid_0 <= tmpssid_1) {
+				  if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
+					  tmp_snapshot_removed = removed(prev_ss_status_1);
+					  if (!tmp_snapshot_removed) {
+						  tmp_snapshot_valptr = new val_t(this->ss_val_data_1, this->ss_val_length_1);
+					  }
+				  }
+				  else if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
+					  tmp_snapshot_removed = removed(prev_ss_status_0);
+					  if (!tmp_snapshot_removed) {
+						  tmp_snapshot_valptr = new val_t(this->ss_val_data_0, this->ss_val_length_0);
+					  }
+				  }
+			  }
+			  else {
+				  if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
+					  tmp_snapshot_removed = removed(prev_ss_status_0);
+					  if (!tmp_snapshot_removed) {
+						  tmp_snapshot_valptr = new val_t(this->ss_val_data_0, this->ss_val_length_0);
+					  }
+				  }
+				  else if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
+					  tmp_snapshot_removed = removed(prev_ss_status_1);
+					  if (!tmp_snapshot_removed) {
+						  tmp_snapshot_valptr = new val_t(this->ss_val_data_1, this->ss_val_length_1);
+					  }
+				  }
+			  }
+		  }
+	  }
       memory_fence();
 
+	  // Get version again for validation
 	  uint64_t current_status = this->status; // focus on lock, is_ptr, and consistency of val
       memory_fence();
       uint64_t current_ss_status_0 = this->ss_status_0; // ensure consistent ss_val
@@ -310,9 +355,14 @@ struct AtomicVal {
       memory_fence();
 
       if (unlikely(locked(current_status))) {  // check lock
-        continue;
+		  if (tmp_snapshot_valptr != NULL) {
+			  delete tmp_snapshot_valptr;
+			  tmp_snapshot_valptr = NULL;
+		  }
+		  continue;
       }
 
+	  // Apply execution results
       if (likely(get_version(prev_ss_status_0) == get_version(current_ss_status_0) && 
 				  get_version(prev_ss_status_1) == get_version(current_ss_status_1) && 
 				  get_version(prev_status) == get_version(current_status))) {  // check version
@@ -321,40 +371,12 @@ struct AtomicVal {
 		  assert(tmpptr != nullptr);
           return tmpptr->read_snapshot(val, snapshot_id);
         } else {
-			if (tmp_latestid < snapshot_id) {
-				val = tmpval;
-				//ss_id = tmp_latestid;
-				return !removed(current_status);
+			if (!tmp_snapshot_removed) {
+				val = *tmp_snapshot_valptr;
+				delete tmp_snapshot_valptr;
+				tmp_snapshot_valptr = NULL;
+				return true;
 			}
-			if (tmpssid_0 <= tmpssid_1) {
-				if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
-					val = tmpssval_1;
-					//ss_id = tmpssid_1;
-					//return true; // snapshot may be in removed status
-					return !removed(current_ss_status_1);
-				}
-				else if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
-					val = tmpssval_0;
-					//ss_id = tmpssid_0;
-					//return true; // snapshot may be in removed status
-					return !removed(current_ss_status_0);
-				}
-			}
-			else {
-				if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
-					val = tmpssval_0;
-					//ss_id = tmpssid_0;
-					//return true; // snapshot may be in removed status
-					return !removed(current_ss_status_0);
-				}
-				else if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
-					val = tmpssval_1;
-					//ss_id = tmpssid_1;
-					//return true; // snapshot may be in removed status
-					return !removed(current_ss_status_1);
-				}
-			}
-			//ss_id = -1;
 			return false;
         }
       }
@@ -362,12 +384,29 @@ struct AtomicVal {
   }
   bool read_snapshot_0(val_t &val, int32_t &ss_id) {
     while (true) {
+	  // Get version
 	  uint64_t prev_status = this->status;
       uint64_t prev_ss_status_0 = this->ss_status_0; // focus on version and remove
       memory_fence();
-	  val_t tmpssval_0(this->ss_val_data_0, this->ss_val_length_0);
-	  int32_t tmpssid_0 = this->ss_id_0;
-	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
+
+	  // Execution
+	  AtomicVal *tmpptr = NULL;
+	  int32_t tmp_ssid = -1;
+	  bool tmp_snapshot_removed = true;
+	  val_t *tmp_snapshot_valptr = NULL;
+
+	  if (unlikely(is_ptr(prev_status))) {
+		  tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
+	  }
+	  else {
+		  tmp_ssid = this->ss_id_0;
+		  if (tmp_ssid != -1) {
+			  tmp_snapshot_removed = removed(prev_ss_status_0);
+			  if (!tmp_snapshot_removed) {
+				  tmp_snapshot_valptr = new val_t(this->ss_val_data_0, this->ss_val_length_0);
+			  }
+		  }
+	  }
       memory_fence();
 
 	  uint64_t current_status = this->status; // focus on lock, is_ptr, and consistency of val
@@ -379,28 +418,50 @@ struct AtomicVal {
         continue;
       }
 
-      if (likely(get_version(prev_ss_status_0) == get_version(current_ss_status_0))) {  // check version
+      if (likely(get_version(prev_ss_status_0) == get_version(current_ss_status_0) &&
+				  get_version(prev_status) == get_version(current_status))) {  // check version
         if (unlikely(is_ptr(current_status))) { // check is_ptr
           assert(!removed(current_status)); // check removed of pointer-type atomic value
 		  assert(tmpptr != nullptr);
           return tmpptr->read_snapshot_0(val, ss_id);
         } else {
-			val = tmpssval_0;
-			ss_id = tmpssid_0;
-			//return true; // snapshot may be in removed status
-			return !removed(current_ss_status_0); // check removed of snapshot value
+			ss_id = tmp_ssid;
+			if (!tmp_snapshot_removed) {
+				val = *tmp_snapshot_valptr;
+				delete tmp_snapshot_valptr;
+				tmp_snapshot_valptr = NULL;
+				return true;
+			}
+			return false;
         }
       }
     }
   }
   bool read_snapshot_1(val_t &val, int32_t &ss_id) {
     while (true) {
+	  // Get version
 	  uint64_t prev_status = this->status;
       uint64_t prev_ss_status_1 = this->ss_status_1; // focus on version and remove
       memory_fence();
-	  val_t tmpssval_1(this->ss_val_data_1, this->ss_val_length_1);
-	  int32_t tmpssid_1 = this->ss_id_1;
-	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
+
+	  // Execution
+	  AtomicVal *tmpptr = NULL;
+	  int32_t tmp_ssid = -1;
+	  bool tmp_snapshot_removed = true;
+	  val_t *tmp_snapshot_valptr = NULL;
+
+	  if (unlikely(is_ptr(prev_status))) {
+		  tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
+	  }
+	  else {
+		  tmp_ssid = this->ss_id_1;
+		  if (tmp_ssid != -1) {
+			  tmp_snapshot_removed = removed(prev_ss_status_1);
+			  if (!tmp_snapshot_removed) {
+				  tmp_snapshot_valptr = new val_t(this->ss_val_data_1, this->ss_val_length_1);
+			  }
+		  }
+	  }
       memory_fence();
 
 	  uint64_t current_status = this->status; // focus on lock, is_ptr, and consistency of val
@@ -412,38 +473,82 @@ struct AtomicVal {
         continue;
       }
 
-      if (likely(get_version(prev_ss_status_1) == get_version(current_ss_status_1))) {  // check version
+      if (likely(get_version(prev_ss_status_1) == get_version(current_ss_status_1) &&
+				  get_version(prev_status) == get_version(current_status))) {  // check version
         if (unlikely(is_ptr(current_status))) { // check is_ptr
           assert(!removed(current_status)); // check removed of pointer-type atomic value
 		  assert(tmpptr != nullptr);
           return tmpptr->read_snapshot_1(val, ss_id);
         } else {
-			val = tmpssval_1;
-			ss_id = tmpssid_1;
-			//return true; // snapshot may be in removed status
-			return !removed(current_ss_status_1); // check removed of snapshot value
+			ss_id = tmp_ssid;
+			if (!tmp_snapshot_removed) {
+				val = *tmp_snapshot_valptr;
+				delete tmp_snapshot_valptr;
+				tmp_snapshot_valptr = NULL;
+				return true;
+			}
+			return false;
         }
       }
     }
   }
-  // AtomicVal in buffer and buffer_temp cannot be ptr-type
+  // Snapshot by multi-versioning while ignoring ptr, as AtomicVal in buffer and buffer_temp cannot be ptr-type
   //bool read_snapshot_ignoring_ptr(val_t &val, int32_t &ss_id, int32_t snapshot_id) {
   bool read_snapshot_ignoring_ptr(val_t &val, int32_t snapshot_id) {
     while (true) {
+	  // Get version
 	  uint64_t prev_status = this->status;
       uint64_t prev_ss_status_0 = this->ss_status_0; // focus on version and remove
       uint64_t prev_ss_status_1 = this->ss_status_1; // focus on version and remove
       memory_fence();
-	  val_t tmpval(this->val_data, this->val_length);
-	  int32_t tmp_latestid = this->latest_id;
-	  val_t tmpssval_0(this->ss_val_data_0, this->ss_val_length_0);
-	  int32_t tmpssid_0 = this->ss_id_0;
-	  val_t tmpssval_1(this->ss_val_data_1, this->ss_val_length_1);
-	  int32_t tmpssid_1 = this->ss_id_1;
-	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read_snapshot() due to RCU during compact
+
+	  // Execution
+	  bool tmp_snapshot_removed = true;
+	  val_t *tmp_snapshot_valptr = NULL;
+
+	  // At most one memcpy
+	  if(this->latest_id < snapshot_id) {
+		  tmp_snapshot_removed = removed(prev_status);
+		  if (!tmp_snapshot_removed) {
+			  tmp_snapshot_valptr = new val_t(this->val_data, this->val_length);
+		  }
+	  }
+	  else {
+		  int32_t tmpssid_0 = this->ss_id_0;
+		  int32_t tmpssid_1 = this->ss_id_1;
+		  if (tmpssid_0 <= tmpssid_1) {
+			  if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
+				  tmp_snapshot_removed = removed(prev_ss_status_1);
+				  if (!tmp_snapshot_removed) {
+					  tmp_snapshot_valptr = new val_t(this->ss_val_data_1, this->ss_val_length_1);
+				  }
+			  }
+			  else if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
+				  tmp_snapshot_removed = removed(prev_ss_status_0);
+				  if (!tmp_snapshot_removed) {
+					  tmp_snapshot_valptr = new val_t(this->ss_val_data_0, this->ss_val_length_0);
+				  }
+			  }
+		  }
+		  else {
+			  if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
+				  tmp_snapshot_removed = removed(prev_ss_status_0);
+				  if (!tmp_snapshot_removed) {
+					  tmp_snapshot_valptr = new val_t(this->ss_val_data_0, this->ss_val_length_0);
+				  }
+			  }
+			  else if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
+				  tmp_snapshot_removed = removed(prev_ss_status_1);
+				  if (!tmp_snapshot_removed) {
+					  tmp_snapshot_valptr = new val_t(this->ss_val_data_1, this->ss_val_length_1);
+				  }
+			  }
+		  }
+	  }
       memory_fence();
 
-	  uint64_t current_status = this->status; // focus on lock and is_ptr
+	  // Get version again for validation
+	  uint64_t current_status = this->status; // focus on lock, is_ptr, and consistency of val
       memory_fence();
       uint64_t current_ss_status_0 = this->ss_status_0; // ensure consistent ss_val
       memory_fence();
@@ -451,46 +556,23 @@ struct AtomicVal {
       memory_fence();
 
       if (unlikely(locked(current_status))) {  // check lock
-        continue;
+		  if (tmp_snapshot_valptr != NULL) {
+			  delete tmp_snapshot_valptr;
+			  tmp_snapshot_valptr = NULL;
+		  }
+		  continue;
       }
 
+	  // Apply execution results
       if (likely(get_version(prev_ss_status_0) == get_version(current_ss_status_0) && 
 				  get_version(prev_ss_status_1) == get_version(current_ss_status_1) && 
 				  get_version(prev_status) == get_version(current_status))) {  // check version
-		if (tmp_latestid < snapshot_id) {
-			val = tmpval;
-			//ss_id = tmp_latestid;
-			return !removed(current_status);
+		if (!tmp_snapshot_removed) {
+			val = *tmp_snapshot_valptr;
+			delete tmp_snapshot_valptr;
+			tmp_snapshot_valptr = NULL;
+			return true;
 		}
-		if (tmpssid_0 <= tmpssid_1) {
-			if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
-				val = tmpssval_1;
-				//ss_id = tmpssid_1;
-				//return true; // snapshot may be in removed status
-				return !removed(current_ss_status_1);
-			}
-			else if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
-				val = tmpssval_0;
-				//ss_id = tmpssid_0;
-				//return true; // snapshot may be in removed status
-				return !removed(current_ss_status_0);
-			}
-		}
-		else {
-			if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
-				val = tmpssval_0;
-				//ss_id = tmpssid_0;
-				//return true; // snapshot may be in removed status
-				return !removed(current_ss_status_0);
-			}
-			else if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
-				val = tmpssval_1;
-				//ss_id = tmpssid_1;
-				//return true; // snapshot may be in removed status
-				return !removed(current_ss_status_1);
-			}
-		}
-		//ss_id = -1;
 		return false;
       }
     }
@@ -590,17 +672,35 @@ struct AtomicVal {
   // semantics: atomically read the value and the `removed` flag
   bool read(val_t &val) {
     while (true) {
+	  // Get version
       uint64_t status = this->status;
       memory_fence();
-	  val_t tmpval(this->val_data, this->val_length);
-	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read() due to RCU during compact
+
+	  // Execution
+	  bool tmp_isremoved = true;
+	  val_t *tmp_valptr = NULL;
+	  AtomicVal *tmpptr = NULL;
+
+	  if (unlikely(is_ptr(status))) {
+	  	tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read() due to RCU during compact
+	  }
+	  else {
+		tmp_isremoved = removed(status);
+		if (!tmp_isremoved) {
+			tmp_valptr = new val_t(this->val_data, this->val_length);
+		}
+	  }
 	  memory_fence();
 
 	  uint64_t current_status = this->status; // ensure consistent tmpval
 	  memory_fence();
 
 	  if (unlikely(locked(current_status))) {  // check lock
-		continue;
+		  if (tmp_valptr != NULL) {
+			  delete tmp_valptr;
+			  tmp_valtpr = NULL;
+		  }
+		  continue;
 	  }
 
 	  if (likely(get_version(status) ==
@@ -610,26 +710,50 @@ struct AtomicVal {
 		  assert(tmpptr != nullptr);
 		  return tmpptr->read(val);
 		} else {
-		  val = tmpval; 
-		  return !removed(status);
+			if (!tmp_isremoved) {
+				val = *tmp_valptr;
+			    delete tmp_valptr;
+			    tmp_valtpr = NULL;
+				return true;
+			}
+			return false;
 		}
 	  }
     }
   }
   bool read_with_latestid(val_t &val, int32_t &id) {
     while (true) {
+	  // Get version
       uint64_t status = this->status;
       memory_fence();
-	  val_t tmpval(this->val_data, this->val_length);
-	  int32_t tmp_latestid = this->latest_id;
-	  AtomicVal *tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read() due to RCU during compact
+
+	  // Execution
+	  bool tmp_isremoved = true;
+	  int32_t tmp_latestid = -1;
+	  val_t *tmp_valptr = NULL;
+	  AtomicVal *tmpptr = NULL;
+
+	  if (unlikely(is_ptr(status))) {
+	  	tmpptr = this->aval_ptr; // AtomicVal pointed by tmpptr will not be freed before finishing this read() due to RCU during compact
+	  }
+	  else {
+		tmp_latestid = this->latest_id;
+		tmp_isremoved = removed(status);
+		if (!tmp_isremoved) {
+			tmp_valptr = new val_t(this->val_data, this->val_length);
+		}
+	  }
 	  memory_fence();
 
 	  uint64_t current_status = this->status; // ensure consistent tmpval
 	  memory_fence();
 
 	  if (unlikely(locked(current_status))) {  // check lock
-		continue;
+		  if (tmp_valptr != NULL) {
+			  delete tmp_valptr;
+			  tmp_valtpr = NULL;
+		  }
+		  continue;
 	  }
 
 	  if (likely(get_version(status) ==
@@ -639,9 +763,14 @@ struct AtomicVal {
 		  assert(tmpptr != nullptr);
 		  return tmpptr->read(val);
 		} else {
-		  val = tmpval; 
-		  id = tmp_latestid;
-		  return !removed(status);
+		    id = tmp_latestid;
+			if (!tmp_isremoved) {
+				val = *tmp_valptr;
+			    delete tmp_valptr;
+			    tmp_valtpr = NULL;
+				return true;
+			}
+			return false;
 		}
 	  }
     }
@@ -752,6 +881,7 @@ struct AtomicVal {
     } else if (!removed(status)) { // do not make snapshot for removed latest version
 		if (this->latest_id == snapshot_id) {
 		  set_removed();
+		  this->val_length = 0;
 		  res = true;
 		}
 		else {
@@ -783,6 +913,7 @@ struct AtomicVal {
 
 			this->latest_id = snapshot_id;
 		    set_removed();
+			this->val_length = 0;
 		    res = true;
 		}
     } else {
@@ -846,20 +977,38 @@ struct AtomicVal {
   }
   bool read_ignoring_ptr(val_t &val) {
     while (true) {
+	  // Get version
       uint64_t status = this->status;
       memory_fence();
-	  val_t tmpval(this->val_data, this->val_length);
-	  AtomicVal *tmpptr = this->aval_ptr;
+
+	  // Execution
+	  bool tmp_isremoved = true;
+	  val_t *tmp_valptr = NULL;
+
+	  tmp_isremoved = removed(status);
+	  if (!tmp_isremoved) {
+		tmp_valptr = new val_t(this->val_data, this->val_length);
+	  }
       memory_fence();
+
       if (unlikely(locked(status))) {
-        continue;
+		  if (tmp_valptr != NULL) {
+			  delete tmp_valptr;
+			  tmp_valtpr = NULL;
+		  }
+		  continue;
       }
       memory_fence();
 
       uint64_t current_status = this->status;
       if (likely(get_version(status) == get_version(current_status))) {
-        val = tmpval;
-        return !removed(status);
+		if (!tmp_isremoved) {
+			val = *tmp_valptr;
+			delete tmp_valptr;
+			tmp_valtpr = NULL;
+			return true;
+		}
+		return false;
       }
     }
   }
@@ -955,6 +1104,7 @@ struct AtomicVal {
     if (!removed(status)) {
 		if (this->latest_id == snapshot_id) {
 		  set_removed();
+		  this->val_length = 0;
 		  res = true;
 		}
 		else {
@@ -986,6 +1136,7 @@ struct AtomicVal {
 
 			this->latest_id = snapshot_id;
 		    set_removed();
+			this->val_length = 0;
 		    res = true;
 		}
     } else {
@@ -997,6 +1148,7 @@ struct AtomicVal {
     unlock();
     return res;
   }
+
 };
 
 }  // namespace xindex
