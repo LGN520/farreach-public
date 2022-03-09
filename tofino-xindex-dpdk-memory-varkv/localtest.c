@@ -409,6 +409,9 @@ void *run_sfg(void * param) {
       }
     } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     //} else if (tmprun == 2) {  // insert
+#ifndef ORIGINAL_XINDEX
+	  FDEBUG_THIS(ofs, "[localtest INSERT" << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string());
+#endif
 	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value.to_string()

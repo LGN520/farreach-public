@@ -227,6 +227,7 @@ void *XIndex<key_t, val_t, seq>::background(void *this_) {
 template <class key_t, class val_t, bool seq>
 void XIndex<key_t, val_t, seq>::start_bg() {
   bg_running = true;
+  // TMPTMP
   int ret = pthread_create(&bg_master, nullptr, background, this);
   if (ret) {
     COUT_N_EXIT("Error: unable to create background thread," << ret);

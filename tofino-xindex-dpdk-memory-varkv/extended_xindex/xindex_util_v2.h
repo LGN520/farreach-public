@@ -184,7 +184,7 @@ template <class val_t>
 struct AtomicVal {
   typedef val_t value_type;
   // Use dynamic memory for var-len value to save space
-  val_t latest_val; // val_length = 0 and val_data = NULL
+  volatile val_t latest_val; // val_length = 0 and val_data = NULL
   AtomicVal *aval_ptr = nullptr; // Only aval_ptr makes sense for pointer-type atomic value
 
   // 60 bits for version
@@ -201,10 +201,10 @@ struct AtomicVal {
   // Maintain one latest version and two versions for snapshot to support unfinished range query when making new snapshot
   // NOTE: the two snapshot versions may be in removed status due to merge_snapshot in compact
   int32_t latest_id = -1; // -1: impossible value; k: latest write happens at epoch k 
-  val_t ss_val_0; // val_length = 0 and val_data = NULL
+  volatile val_t ss_val_0; // val_length = 0 and val_data = NULL
   volatile uint64_t ss_status_0 = 0; // only focus on removed w/o lock, is_ptr, and version
   int32_t ss_id_0 = -1; // -1: no snapshot; otherwise: snapshot of epoch k 
-  val_t ss_val_1; // val_length = 0 and val_data = NULL
+  volatile val_t ss_val_1; // val_length = 0 and val_data = NULL
   int32_t ss_id_1 = -1; // -1: no snapshot; otherwise: snapshot of epoch k'
   volatile uint64_t ss_status_1 = 0; // only focus on removed w/o lock, is_ptr, and version
 
@@ -222,6 +222,10 @@ struct AtomicVal {
 	  *this = other;
   }
   AtomicVal & operator=(const AtomicVal& other) {
+	  // TMPTMP
+	  while (true) {
+		  if (this->rwlock.try_lock()) break;
+	  }
 	  latest_id = other.latest_id;
 	  latest_val = other.latest_val;
 	  status = other.status;
@@ -232,6 +236,7 @@ struct AtomicVal {
 	  ss_status_1 = other.ss_status_1;
 	  ss_id_1 = other.ss_id_1;
 	  aval_ptr = other.aval_ptr;
+	  this->rwlock.unlock();
 	  return *this;
   }
 
@@ -473,7 +478,7 @@ struct AtomicVal {
 			this->ss_id_0 = *newer_ssid; 
 			this->ss_status_0 = 0; // set not removed
 			if (!newer_removed) {
-				this->ss_val_0 = *new_ssval;
+				this->ss_val_0 = *newer_ssval;
 			}
 			else {
 				this->ss_status_0 |= removed_mask; // set removed
@@ -493,7 +498,7 @@ struct AtomicVal {
 			this->ss_id_1 = *newer_ssid; 
 			this->ss_status_1 = 0; // set not removed
 			if (!newer_removed) {
-				this->ss_val_1 = *newer_ssid;
+				this->ss_val_1 = *newer_ssval;
 			}
 			else {
 				this->ss_status_1 |= removed_mask; // set removed
@@ -613,7 +618,7 @@ struct AtomicVal {
     if (unlikely(is_ptr(this->status))) {
       assert(!removed(this->status));
 	  assert(this->aval_ptr != nullptr);
-      res = this->aval_ptr->remove(val);
+      res = this->aval_ptr->remove(snapshot_id);
     } else if (!removed(this->status)) { // do not make snapshot for removed latest version
 		if (this->latest_id == snapshot_id) {
 		  set_removed();
@@ -654,17 +659,29 @@ struct AtomicVal {
     assert(!removed(status));
 	// Get value
 	assert(aval_ptr != nullptr);
-    if (!aval_ptr->read_with_latestid(this->latest_val, this->latest_id)) {
+	val_t tmp_latestval;
+	int32_t tmp_latestid;
+    if (!aval_ptr->read_with_latestid(tmp_latestval, tmp_latestid)) {
       set_removed();
     }
+	this->latest_val = tmp_latestval;
+	this->latest_id = tmp_latestid;
 	// Get snapshot value 0
-	if (!aval_ptr->read_snapshot_0(this->ss_val_0, this->ss_id_0)) {
+	val_t tmp_ssval_0;
+	int32_t tmp_ssid_0;
+	if (!aval_ptr->read_snapshot_0(tmp_ssval_0, tmp_ssid_0)) {
 		this->ss_status_0 != removed_mask;
 	}
+	this->ss_val_0 = tmp_ssval_0;
+	this->ss_id_0 = tmp_ssid_0;
 	// Get snapshot value 1
-	if (!aval_ptr->read_snapshot_1(this->ss_val_1, this->ss_id_1)) {
+	val_t tmp_ssval_1;
+	int32_t tmp_ssid_1;
+	if (!aval_ptr->read_snapshot_1(tmp_ssval_1, tmp_ssid_1)) {
 		this->ss_status_1 != removed_mask;
 	}
+	this->ss_val_1 = tmp_ssval_1;
+	this->ss_id_1 = tmp_ssid_1;
     unset_is_ptr();
     memory_fence();
     this->rwlock.unlock();

@@ -22,7 +22,12 @@ class Val {
   ~Val();
   Val(const uint64_t* buf, uint8_t length);
   Val(const Val &other);
+  Val(const volatile Val &other);
   Val &operator=(const Val &other);
+  Val &operator=(const volatile Val &other);
+  // Qualifiers of member functions are used to restrict "this"
+  volatile Val &operator=(const Val &other) volatile;
+  volatile Val &operator=(const volatile Val &other) volatile;
   bool operator==(const Val& other);
 
   /*rocksdb::Slice to_slice() const; // NOTE: slice is shallow copy

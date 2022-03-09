@@ -95,12 +95,22 @@
   COUT_THIS(msg);        \
   COUT_POS();            \
   abort();
+
+// 1: assert
+// 0: ignore assert
+#if 1
+#define DEBUG_ASSERT
+#endif
+#ifdef DEBUG_ASSERT
 #define INVARIANT(cond)            \
   if (!(cond)) {                   \
     COUT_THIS(#cond << " failed"); \
     COUT_POS();                    \
     abort();                       \
   }
+#else
+#define INVARIANT(cond)
+#endif
 
 // 0: print information of background retraining thread
 // 1: not print

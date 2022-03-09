@@ -21,7 +21,7 @@
 	+ 32 threads (0.5 range query): 4.3 Mops (reasonable)
 	+ 32 threads (0.5 read and 0.5 write): 19.1 Mops
 	+ 1 thread (0.5 range query): 0.45 Mops
-- Improve newly extended xindex (same setting as the previous one)
+- Improve newly extended xindex w/ at most one memcpy per-op (same setting as the previous one)
 	+ 1 thread: 2.7 Mops
 	+ 32 threads: 58 Mops
 	+ 32 threads w/ 1 thread for making snapshot: 38 Mops
@@ -29,3 +29,9 @@
 	+ 32 threads (0.5 range query): 4.7 Mops (reasonable)
 	+ 32 threads (0.5 read and 0.5 write): 20 Mops
 	+ 1 thread (0.5 range query): 0.47 Mops
+_ Introduce dynamic memory management
+	+ 1 thread: 2.5 Mops (due to rwlock overhead)
+	+ 32 threads: 55 Mops (due to rwlock overhead)
+	+ 32 threads (0.5 range query): 4.3 Mops (reasonable)
+	+ 32 threads (0.5 read and 0.5 write): 21.7 Mops
+	+ 1 thread (0.5 range query): 0.48 Mops
