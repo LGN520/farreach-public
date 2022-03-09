@@ -22,7 +22,12 @@
 
 #include "xindex_buffer.h"
 #include "xindex_model.h"
+#include "../helper.h"
+#ifdef DYNAMIC_MEMORY
+#include "xindex_util_v2.h"
+#else
 #include "xindex_util.h"
+#endif
 
 #if !defined(XINDEX_GROUP_H)
 #define XINDEX_GROUP_H
