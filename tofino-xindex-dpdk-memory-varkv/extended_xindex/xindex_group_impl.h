@@ -909,7 +909,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
   return n - remaining;
 }
 
-// Only one of data/buffer can have a valid snapshot -> do not need to fix multiple valid snapshots
+// Only one of data/buffer/buffer_temp can have a valid snapshot -> do not need to fix multiple valid snapshots
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
     const key_t &begin, const size_t n, const key_t &end,

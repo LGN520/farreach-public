@@ -56,6 +56,7 @@ class alignas(CACHELINE_SIZE) Group {
     linear_model_t model;
   };
 
+  // ArrayDataSource only used for range query
   struct ArrayDataSource {
     ArrayDataSource(record_t *data, uint32_t array_size, uint32_t pos);
     void advance_to_next_valid(int32_t snapshot_id);
@@ -69,6 +70,7 @@ class alignas(CACHELINE_SIZE) Group {
     val_t next_val;
   };
 
+  // ArrayRefSource only used for merge_refs_internal (compact)
   struct ArrayRefSource {
     ArrayRefSource(record_t *data, uint32_t array_size);
     void advance_to_next_valid();
@@ -114,8 +116,6 @@ class alignas(CACHELINE_SIZE) Group {
   void free_data();
   void free_buffer();
   void free_cbf();
-
-  void make_snapshot(int32_t snapshot_id);
 
  private:
   inline size_t locate_model(const key_t &key);

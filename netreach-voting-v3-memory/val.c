@@ -58,6 +58,23 @@ Val& Val::operator=(const Val &other) {
 	return *this;
 }
 
+bool Val::operator==(const Val &other) {
+	if (val_length == 0 && val_data == nullptr && \
+			other.val_length == 0 && other.val_data == nullptr) {
+		return true;
+	}
+	if (val_length == other.val_length && val_data != nullptr && other.val_data != nullptr) {
+		for (size_t i = 0; i < val_length; i++) {
+			if (val_data[i] != other.val_data[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+/*
 rocksdb::Slice Val::to_slice() const {
 	return rocksdb::Slice((const char*)val_data, sizeof(uint64_t) * val_length); // NOTE: slice is shallow copy
 }
@@ -78,6 +95,7 @@ void Val::from_slice(rocksdb::Slice& slice) {
 		val_data = nullptr;
 	}
 }
+*/
 
 void Val::from_string(std::string& str) {
 	INVARIANT(str.length() % sizeof(uint64_t) == 0);

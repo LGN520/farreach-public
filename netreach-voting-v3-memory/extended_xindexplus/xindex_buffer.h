@@ -104,6 +104,7 @@ class AltBtreeBuffer {
     Leaf *next;
   };
 
+  // Only used for range query
   struct DataSource {
     DataSource(key_t begin, AltBtreeBuffer *buffer, int32_t snapshot_id);
     void advance_to_next_valid(int32_t snapshot_id);
@@ -117,6 +118,7 @@ class AltBtreeBuffer {
     val_t vals[node_capacity];
   };
 
+  // Only used for compact
   struct RefSource {
     typedef AtomicVal<val_t> atomic_val_t;
 

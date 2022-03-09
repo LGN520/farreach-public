@@ -136,6 +136,7 @@
 					+ Since different groups must have disjoint key ranges, we do not need to consider merging multiple snapshots for the same key
 			* NOTE: only PUT/DEL in data/buffer/buffer_temp can ignore record with removed latest version
 				- Reason: they only perform in-place PUT/DEL and possible snapshot for unremoved record
+		* Improve extended xindex by avoiding unnecessary memcpy during execution phase of optimistic locking
 		* TODO: use dynamic memory allocation for snapshot versions to save space
 	+ All of TommyDS (NetCache), Redis (DistCache), Memcached do not support range query for key-value store (i.e., sorted map)
 		* We cannot use levelDB (TurboKV) as it is not in-memory (not focus on small objects)

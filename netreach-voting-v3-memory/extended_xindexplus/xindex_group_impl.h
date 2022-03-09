@@ -805,19 +805,44 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
     const key_t &buf_key = buffer_source.get_key();
     wrapped_val_t &buf_val = buffer_source.get_val();
 
-    assert(base_key != buf_key);  // since update are inplaced
+	// After introducing snapshot versions, key may be the same between data and buffer
+	// In this case, latest version of data must be removed, and buffer.snapshot_id must be larger than data
+    //assert(base_key != buf_key);  // since update are inplaced
 
     if (base_key < buf_key) {
+	  // base_val must be not all_removed
       new_data[count].first = base_key;
       new_data[count].second = wrapped_val_t(&base_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
       assert(new_data[count].second.aval_ptr->val_length == base_val.val_length);
       array_source.advance_to_next_valid();
-    } else {
-      new_data[count].first = buf_key;
-      new_data[count].second = wrapped_val_t(&buf_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
-      assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length);
+    } else if (base_key > buf_key) {
+	  // buf_val may be all_removed
+	  // As no same base_key, either the key does not exist in data, or it exists yet is all removed in data
+	  if (!buf_val.all_removed()) { // Ignore buf_val if it is all removed
+		  new_data[count].first = buf_key;
+		  new_data[count].second = wrapped_val_t(&buf_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
+		  assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length);
+	  }
       buffer_source.advance_to_next_valid();
-    }
+	} else { // Merge snapshot versions
+	  assert(base_val.removed(base_val.status)); // latest version in data must be removed
+	  // NOTE: as the lastet version in base_val is removed now, its snapshot versions must not be changed
+	  val_t base_ssval_0, base_ssval_1;
+	  int32_t base_ssid_0, base_ssid_1;
+	  bool base_ssremoved_0 = base_val.read_snapshot_0(base_ssval_0, base_ssid_0);
+	  bool base_ssremoved_1 = base_val.read_snapshot_1(base_ssval_1, base_ssid_1);
+	  int32_t base_latestid = base_val.latest_id;
+	  bool buf_all_removed = buf_val.merge_snapshot(base_latestid, base_ssval_0, base_ssid_0, base_ssremoved_0, base_ssval_1, base_ssid_1, base_ssremoved_1);
+
+		// Ignore buf_val if it is all removed after merging snapshots from base_val
+		// We directly drop the stale snapshots in data as we only need latest snapshot for range query
+	  if (!buf_all_removed) { 
+		  new_data[count].first = buf_key;
+		  new_data[count].second = wrapped_val_t(&buf_val);
+	  }
+	  array_source.advance_to_next_valid();
+	  buffer_source.advance_to_next_valid();
+	}
     count++;
   }
 
@@ -855,6 +880,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
   // assert(count > 0);
 }
 
+// Only one of data/buffer can have a valid snapshot -> do not need to fix multiple valid snapshots
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
     const key_t &begin, const size_t n, const key_t &end,
@@ -926,6 +952,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
   return n - remaining;
 }
 
+// Only one of data/buffer/buffer_temp can have a valid snapshot -> do not need to fix multiple valid snapshots
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
     const key_t &begin, const size_t n, const key_t &end,
@@ -1150,8 +1177,9 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq,
            max_model_n>::ArrayRefSource::advance_to_next_valid() {
   while (pos < array_size) {
-    val_t temp_val;
-    if (data[pos].second.read(temp_val)) {
+    //val_t temp_val;
+    //if (data[pos].second.read(temp_val)) {
+	if (!data[pos].second.all_removed()) {
       next_val_ptr = &data[pos].second;
       next_key = data[pos].first;
       has_next = true;
@@ -1173,31 +1201,6 @@ typename Group<key_t, val_t, seq, max_model_n>::atomic_val_t &
 Group<key_t, val_t, seq, max_model_n>::ArrayRefSource::get_val() {
   return *next_val_ptr;
 }
-
-#ifndef ORIGINAL_XINDEX
-template <class key_t, class val_t, bool seq, size_t max_model_n>
-void Group<key_t, val_t, seq, max_model_n>::make_snapshot(int32_t snapshot_id) {
-	for (size_t i = 0; i < array_size; i++) {
-		data[i].second.make_snapshot(snapshot_id);
-	}
-
-	auto buffer_source = typename buffer_t::RefSource(buffer);
-	buffer_source.advance_to_next_valid();
-	while (buffer_source.has_next) {
-		wrapped_val_t &buf_val = buffer_source.get_val();
-		buf_val.make_snapshot(snapshot_id);
-	}
-
-	if (buffer_temp) {
-		auto buffer_temp_source = typename buffer_t::RefSource(buffer_temp);
-		buffer_temp_source.advance_to_next_valid();
-		while (buffer_temp_source.has_next) {
-			wrapped_val_t &buf_temp_val = buffer_temp_source.get_val();
-			buf_temp_val.make_snapshot(snapshot_id);
-		}
-	}
-}
-#endif
 
 }	// namespace xindex
 

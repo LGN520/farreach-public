@@ -21,9 +21,9 @@
 #include "original_xindex/xindex_impl.h"
 #include "original_xindex/xindex_util.h"
 #else
-#include "extended_xindex_plus/xindex.h"
-#include "extended_xindex_plus/xindex_impl.h"
-#include "extended_xindex_plus/xindex_util.h"
+#include "extended_xindexplus/xindex.h"
+#include "extended_xindexplus/xindex_impl.h"
+#include "extended_xindexplus/xindex_util.h"
 #include "val.h"
 #endif
 

@@ -294,7 +294,7 @@
 
 - Copy netreach-voting-v3 to netreach-voting-v3-memory
 - Merge extended xindex from tofino-xindex-dpdk-memory-varkv into netreach-voting-v3-memory
-	* Including: helper.h, original_xindex/\*, extended_xindex/\*, localtest.c, Makefile, ycsb_server.c
+	* Including: helper.h, original_xindex/\*, extended_xindexplus/\*, localtest.c, Makefile, ycsb_server.c, key.\*, val.\*
 - Add CBF-based fast path to get xindex+
 - TODO: extend xindex with variable-length value and snapshot
 - TODO: replace rocksdb with xindex
