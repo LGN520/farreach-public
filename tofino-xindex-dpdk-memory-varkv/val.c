@@ -10,7 +10,7 @@ Val::Val() {
 
 Val::~Val() {
 	if (val_data != nullptr) {
-		delete val_data;
+		delete [] val_data;
 		val_data = nullptr;
 	}
 }

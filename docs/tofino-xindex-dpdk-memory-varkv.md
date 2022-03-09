@@ -142,6 +142,12 @@
 		* We cannot use levelDB (TurboKV) as it is not in-memory (not focus on small objects)
 		* We cannot self-implemented in-memory KVS (Pegasus) as it does not mention range query and Pegasus already has an in-switch design
 		* We can use xindex with simple extension as it is state-of-the-art in-memory KVS with range query
+- Fix segmentation faults
+	+ Use gdb to locate segmentation fault by backtrace
+	+ Common errors
+		* memcpy_avx_unaligned: access null address or unaligned address (new should return 16-byte-aligned memory address)
+			- If new returns not-null pointer yet still raise the error, it means the memory address is not aligned and your program has some other bug for memory management
+		* je_extent_heap_remove: incorrect size passed to delete
 
 ## How to run
 
