@@ -222,10 +222,6 @@ struct AtomicVal {
 	  *this = other;
   }
   AtomicVal & operator=(const AtomicVal& other) {
-	  // TMPTMP
-	  while (true) {
-		  if (this->rwlock.try_lock()) break;
-	  }
 	  latest_id = other.latest_id;
 	  latest_val = other.latest_val;
 	  status = other.status;
@@ -236,7 +232,6 @@ struct AtomicVal {
 	  ss_status_1 = other.ss_status_1;
 	  ss_id_1 = other.ss_id_1;
 	  aval_ptr = other.aval_ptr;
-	  this->rwlock.unlock();
 	  return *this;
   }
 

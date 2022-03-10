@@ -282,6 +282,7 @@ void run_server(xindex_t *table, size_t sec) {
 		uint64_t tput = 0;
 		for (size_t i = 0; i < fg_n; i++) {
 		  tput += sfg_params[i].throughput - tput_history[i];
+		  //COUT_THIS("[localtest] sec: " << current_sec << " worker " << i << " throughput: " << (sfg_params[i].throughput - tput_history[i]));
 		  tput_history[i] = sfg_params[i].throughput;
 		}
 		COUT_THIS("[localtest] >>> sec " << current_sec << " throughput: " << tput);
@@ -336,7 +337,7 @@ void *run_sfg(void * param) {
 #else
   val_t dummy_value = val_t(dummy_value_data, 2);
 #endif
-  size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0;
+  size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0, scan_i = 0;
   COUT_THIS("[localtest " << uint32_t(thread_id) << "] Ready.");
 
   ready_threads++;
@@ -409,9 +410,6 @@ void *run_sfg(void * param) {
       }
     } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     //} else if (tmprun == 2) {  // insert
-#ifndef ORIGINAL_XINDEX
-	  FDEBUG_THIS(ofs, "[localtest INSERT" << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string());
-#endif
 	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value.to_string()
@@ -434,18 +432,19 @@ void *run_sfg(void * param) {
     } else {  // scan
 	  std::vector<std::pair<index_key_t, val_t>> results;
 	  //size_t tmp_num = table->scan(op_keys[(query_i + delete_i) % op_keys.size()], 10, results, thread_id);
-	  size_t tmp_num = table->range_scan(op_keys[(query_i + delete_i) % op_keys.size()], \
-			  op_keys[(query_i + delete_i + 10) % op_keys.size()], results, thread_id);
+	  size_t tmp_num = 0;
+	  tmp_num = table->range_scan(op_keys[(scan_i) % op_keys.size()], \
+			  op_keys[scan_i % op_keys.size()], results, thread_id);
 #ifndef ORIGINAL_XINDEX
-	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " num = " << tmp_num);
+	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(scan_i) % op_keys.size()].to_string() << " num = " << tmp_num);
 	  for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 		  FDEBUG_THIS(ofs, results[val_i].first.to_string());
 		  FDEBUG_THIS(ofs, results[val_i].second.to_string());
 	  }
 #endif
-      query_i++;
-      if (unlikely(query_i == op_keys.size() / 2)) {
-        query_i = 0;
+      scan_i++;
+      if (unlikely(scan_i == op_keys.size() / 2)) {
+        scan_i = 0;
       }
     }
     thread_param.throughput++;

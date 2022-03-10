@@ -277,12 +277,10 @@ Group<key_t, val_t, seq, max_model_n>
 
   new_group_1->pivot = pivot;
   new_group_2->pivot = this->next->pivot;
-printf("Start merge_refs_n_split\n"); // TMPTMP
   merge_refs_n_split(new_group_1->data, new_group_1->array_size,
                      new_group_1->capacity, new_group_2->data,
                      new_group_2->array_size, new_group_2->capacity,
                      this->next->pivot);
-printf("End merge_refs_n_split\n"); // TMPTMP
   // mark capacity as negative to let seq insert not inserting to buf
   if (seq) {
     new_group_1->disable_seq_insert_opt();
@@ -707,11 +705,8 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_n_split(
   new_capacity_1 =
       (int32_t)est_size > new_capacity_1 ? est_size : new_capacity_1;
 
-printf("new capacity 1: %d\n", new_capacity_1); // TMPTMP
   record_t *intermediate = new record_t[new_capacity_1]();
-printf("Start merge_refs_internal from merge_refs_n_split\n"); // TMPTMP
   merge_refs_internal(intermediate, intermediate_size);
-printf("End merge_refs_internal from merge_refs_n_split\n"); // TMPTMP
 
   uint32_t split_pos = exponential_search_key(intermediate, intermediate_size,
                                               key, intermediate_size / 2);
@@ -787,7 +782,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 	  if (!buf_val.all_removed()) { // Ignore buf_val if it is all removed
 		  new_data[count].first = buf_key;
 		  new_data[count].second = wrapped_val_t(&buf_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
-		  //assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length); // TODO
+#ifdef DYNAMIC_MEMORY
+		  assert(new_data[count].second.aval_ptr->latest_val.val_length == buf_val.latest_val.val_length);
+#else
+		  assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length);
+#endif
 	  }
       buffer_source.advance_to_next_valid();
 	} else { // Merge snapshot versions
@@ -818,7 +817,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
     new_data[count].first = base_key;
     new_data[count].second = wrapped_val_t(&base_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
-    //assert(new_data[count].second.aval_ptr->val_length == base_val.val_length); // TODO
+#ifdef DYNAMIC_MEMORY
+    assert(new_data[count].second.aval_ptr->latest_val.val_length == base_val.latest_val.val_length);
+#else
+    assert(new_data[count].second.aval_ptr->val_length == base_val.val_length);
+#endif
 
     array_source.advance_to_next_valid();
     count++;
@@ -830,7 +833,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
     new_data[count].first = buf_key;
     new_data[count].second = wrapped_val_t(&buf_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
-    //assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length); // TODO
+#ifdef DYNAMIC_MEMORY
+    assert(new_data[count].second.aval_ptr->latest_val.val_length == buf_val.latest_val.val_length);
+#else
+    assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length);
+#endif
 
     buffer_source.advance_to_next_valid();
     count++;

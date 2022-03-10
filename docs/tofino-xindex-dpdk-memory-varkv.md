@@ -148,6 +148,9 @@
 		* memcpy_avx_unaligned: access null address or unaligned address (new should return 16-byte-aligned memory address)
 			- If new returns not-null pointer yet still raise the error, it means the memory address is not aligned and your program has some other bug for memory management
 		* je_extent_heap_remove: incorrect size passed to delete
+- Fix degraded range perf
+	+ Use scan_i instead of query_i in localtest.c
+	+ The fluctutaion of perf is due to the design of original xindex
 
 ## How to run
 

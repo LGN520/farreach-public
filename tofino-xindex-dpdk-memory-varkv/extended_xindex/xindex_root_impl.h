@@ -371,23 +371,16 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
             // DEBUG_THIS("------ [group split] buf_size="
             //            << buffer_size << ", group_i=" << group_i);
 
-printf("Start split group pt1\n"); // TMPTMP
-assert(group != NULL);
             group_t *intermediate = old_group->split_group_pt1();
             *group = intermediate;  // create 2 new groups with freezed buffer
             memory_fence();
             rcu_barrier();  // make sure no one is inserting to buffer
-printf("Start split group pt2\n"); // TMPTMP
-assert(intermediate != NULL);
-assert(group != NULL);
             group_t *new_group = intermediate->split_group_pt2();  // now merge
             *group = new_group;
             memory_fence();
             rcu_barrier();  // make sure no one is using old/intermedia groups
             g_split++;
-printf("Start split group compact phase 2\n"); // TMPTMP
             new_group->compact_phase_2();
-printf("Start split group next compact phase 2\n"); // TMPTMP
             new_group->next->compact_phase_2();
             memory_fence();
             rcu_barrier();  // make sure no one is accessing the old data
@@ -400,12 +393,10 @@ printf("Start split group next compact phase 2\n"); // TMPTMP
 
             // skip next (the split new one), to avoid ping-pong split / merge
             group = &((*group)->next);
-printf("End split group\n"); // TMPTMP
           } else if (might_merge_group &&
                      buffer_size < config.buffer_size_bound /
                                        config.buffer_size_tolerance &&
                      next_group != nullptr) {
-printf("Start merge group\n"); // TMPTMP
             if (seq == true) {
               COUT_VAR(group_i);
               COUT_VAR(begin_group_i);
@@ -435,26 +426,22 @@ printf("Start merge group\n"); // TMPTMP
             delete old_group;
             delete old_next;
             should_update_array = true;
-printf("End merge group\n"); // TMPTMP
           } else if (buffer_size > config.buffer_compact_threshold) {
             // DEBUG_THIS("------ [compaction], buf_size="
             //            << buffer_size << ", group_i=" << group_i);
 
 			// Compact
-printf("Start compact phase 1\n"); // TMPTMP
             group_t *new_group = old_group->compact_phase_1();
             *group = new_group;
             memory_fence();
             rcu_barrier();
             compact++;
-printf("Start compact phase 2\n"); // TMPTMP
             new_group->compact_phase_2();
             memory_fence();
             rcu_barrier();  // make sure no one is accessing the old data
             old_group->free_data();
             old_group->free_buffer();
             delete old_group;
-printf("End compact\n"); // TMPTMP
           }
 
           // do next (in the chain)
