@@ -55,36 +55,51 @@
 
 - Packet format
 	+ op_hdr: 1B optype, 2B hashidx, 16B key
-	+ val_hdr: 1B vallen, 128B value
+	+ val_hdr: TODO: 4B vallen, variable-length value
+		* TODO: If value <= 128B, align with 8B
+		* If value > 128B, do not need alignment
+- Client-side processing
+	+ Client side calculates hash into op_hdr.hashidx
+	+ Only GET and PUT are related with value length, while DEL does not care
+		* GET is processed by server for GETREQ_POP: if value>128B, return GETRES_LARGE that behaves similar as GETRES_NPOP in switch
+		* TODO: For PUT, client sends PUTREQ_LARGE if value>128B, which does not update vote and may invalidate cached item in switch
+			- If with invalidation (i.e., becoming PUTREQ_LARGE_EVICT and clone a PUTREQ_LARGE), PUTREQ_LARGE_EVICT will be mirrored to switch OS to cope with packet loss
 - In-switch processing
 	+ Overview
 		* Stage 0: keylolo, keylohi, keyhilo, keyhihi, load_backup_tbl
 			- For key, we provide two operations: match, set_and_get
-		* Stage 1: valid, vote, seq (assign only if key matches for PUT/DELREQ -> assign for each PUT/DELREQ), update_iskeymatch_tbl
-		* Stage 2: savedseq, lock, 
+		* Stage 1: valid, vote, seq (assign for each PUTREQ/DELREQ/PUTREQ_LARGE), update_iskeymatch_tbl
+			- TODO: To avoid seq overflow, we can maintain an array of seq, each corresponds to a value in the hash range of key (i.e. a hash slot)
+				+ It guarantees that for each key, seq always increases (server uses 0 as initial value, while switch increases from 1)
+				+ Another way is to use more bits and stages for seq (we do not use due to stage limitation)
+					* For example, we can use a 64-bit register array for seq (register_hi for highest 32 bits, while register_lo for lowest 32 bits)
+					* Due to lack of comparator within each ALU, we must maintain savedseq_hi and savedseq_lo in two 32-bit register arrays, which wastes stage
+				+ TODO: both GETRES_POP, PUTREQ_POP, and evicted packets needs to set savedseq correspondingly
+					* TODO: Note that for GETRES_POP which carries savedseq from server, if new PUT/DEL arrives at switch after GETRES_POP is applied into switch, the assigned seq must be larger than that carried from server
+				+ TODO: server also needs to save the seq number
+		* Stage 2: savedseq, lock 
 		* Stage 3: vallen, vallo1, valhi1, case12
 			- For vallen and val, we provide two operations: get, set_and_get
 		* Stage 4-10: from val2 to val15
-		* Stage 11: vallo16, valhi16, port_forward_tbl
+		* Stage 11: vallo16, valhi16, ~~case3~~, port_forward_tbl
 		* Egress pipeline
 			- For cloned packet
 				+ If PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, update as PUT/DELRES/PUTRES to client
+				+ If PUTREQ_LARGE/PUTREQ_LARGE_RECIR, update as PUTREQ_LARGE to server
 				+ If GETRES_POP (with new key-value), update it as GETRES to client
 				+ If PUTREQ_POP (with new key-value), update it as PUTRES to client
 			- For non-cloned packet
 				- Hash parition for normal REQ pacekts
-				- TODO: Access per-server iscase3 and seq2
+				- TODO: Access per-server iscase3
 				- TODO: Access eg_port_forward_tbl
 					- TODO: For PUT/DELREQ, and PUT/DELREQ_RECIR
 						+ If iscase3=0, update it as PUT/DELREQ_CASE3 to server
 						+ Otherwise, update it as PUT/DELREQ to server
-					- TODO: If PUTREQ/GETRES_POP_EVICT and PUTREQ_LARGE_INVALIDATE, embed seq2, and clone_e2e for switchOS thread
-						+ Not use seq
-							* GETRES_POP does not have seq for eviction if any
-							* seq is not continuous for server -> space consuming
-						+ Use seq2 for each eviction from switch to each server
-							* Server only needs to remember the missed seq2 numbers -> avoid overwrites under packet loss
-						+ Bandwidth overhead of switch OS and memory cost of servers are limited, as eviction is rare under skewed workload and packet loss is rare
+					- TODO: If PUTREQ/GETRES_POP_EVICT/EVICT_CASE2 and PUTREQ_LARGE_EVICT/EVICT_CASE2, forward to server, and clone_e2e for switchOS thread
+						+ For CASE2, switch OS can both cope with packet loss and perform rollback for snapshot
+						+ For each evicted packet sent from switch OS, server can compare the carried seq with that saved in server to decide whether overwrite
+						+ No matther whether overwrite, server always sends ACK to switch OS
+						+ Bandwidth overhead of switch OS is limited, as eviction is rare under skewed workload and packet loss is rare
 			- Access update_macaddr_tbl
 	+ GETREQ
 		* Stage 0: match key 
@@ -118,6 +133,9 @@
 	+ GETRES_NPOP
 		* Stage 2: set lock=0
 		* Stage 11: port_forward -> update GETRES_NPOP as GETRES to client
+	+ TODO: GETRES_LARGE
+		* Stage 2: set lock=0
+		* Stage 11: port_forward -> update GETRES_LARGE as GETRES to client
 	+ PUTREQ
 		* Stage 0: match key
 		* Stage 1
@@ -143,13 +161,33 @@
 					+ If isbackup=0, forward PUTREQ to server -> hash_partition_tbl
 					+ If isbackup=1, update PUTREQ as PUTREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
 			- If "otherwise" and isbackup=1, try_case3
+	+ TODO: PUTREQ_LARGE/RECIR
+		* Stage 0: match key
+		* Stage 1
+			- Set_and_get valid=0 if key matches
+			- Assign seq
+			- Update iskeymatch
+		* Stage 3-11
+			- Load vallen and value if iskeymatch=1 and isvalid=1
+			- Try case12 if isbackup=1, iskeymatch=1, and isvalid=1; otherwise, read case12
+		* Stage 11
+			- NOTE: PUTREQ_LARGE can trigger both case 2 and case 3
+			- Access port_forward_tbl
+				+ If lock=1, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_RECIR (with seq_hdr, not need to assign seq again) and recirculate
+				+ If lock=0
+					* If iskeymatch=1 and isvalid=1
+						- If isbackup=1 and iscase12=0, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT_CASE2 to server (evict the value of the same key to cope with packet loss), clone_i2e for PUTREQ_LARGE/RECIR to server
+							+ PUTREQ_LARGE_EVICT_CASE2 -> hash_partition_tbl
+						- Otherwise, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT to server, clone_i2e for PUTREQ_LARGE/RECIR to server
+					* Otherwise, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE to server
+			- If lock=0 and isbackup=1, try_case3
 	+ PUTREQ_POP
 		* Stage 0: set_and_get key
 		* Stage 1: set valid=1, vote=1
 		* Stage 2: set savedseq=0, lock=0
 		* Stage 3-11:
 			- Set_and_get vallen and value
-			- Try_case12 isbackup=1; otherwise, read_case12
+			- Try case12 if isbackup=1; otherwise, read_case12
 		* Stage 11: port_forward
 			- NOTE: current PUTREQ_POP has old key-value pair instead of new one, we must send original packet to egress pipeline
 			- If isbackup=1 and iscase12=0, update PUTREQ_POP as PUTREQ_POP_EVICT_CASE2 to server, clone_i2e for PUTRES to client
@@ -237,7 +275,9 @@
 - Server-side processsing
 	+ GETREQ: sendback GETRES
 	+ GETREQ_POP:
-		* If key exists in KVS, sendback GETRES_POP
+		* If key exists in KVS
+			- If value <= 128B, sendback GETRES_POP
+			- TODO: If value > 128B, sendback GETRES_LARGE
 		* Otherwise, sendback GETRES_NPOP
 	+ GETRES_POP_EVICT:
 		* If vallen > 0, put evicted key-value pair into KVS without response
@@ -248,8 +288,11 @@
 	+ PUTREQ_CASE1/DELREQ_CASE1:
 		* Add into special case
 	+ GETRES_POP_EVICT_CASE2/PUTREQ_POP_EVICT_CASE2
+		* TODO: make snapshot
 		* If vallen > 0, put evicted key-value pair into KVS without response, add into special case (valid)
 		* Otherwise, delete evicted key from KVS without response, add into special case (invalid)
+	+ PUTREQ/DELREQ/PUTREQ_LARGE_CASE3:
+		* TODO: make snapshot
 	+ TODO: snapshot for range query
 		* Make a snapshot when init or open
 		* Ensure that in each period of backup, kv snapshot can only be performance once
@@ -283,7 +326,8 @@
 		* Send backup data by TCP
 - TODO: Simulation tricks
 	+ Snapshot
-		* The case1 and case2 packets received by server should be counted into switch OS
+		* Case1 should be forwarded to switch OS thread
+		* Case2 should be forwarded to both the corresponding server thread and switch OS thread
 		* Notification for server-side snapshot should be counted into server (multiply # of servers)
 	+ Packet loss issued by switch to server
 		* GETRES/PUTREQ_EVICT received by switch OS thread should be counted into server
@@ -292,12 +336,12 @@
 
 ## Implementation log
 
-- Copy netreach-voting-v3 to netreach-voting-v3-memory
+- Copy netreach-voting-v3 to netreach-voting-v3-memory and replace rocksdb with xindex
 - Merge extended xindex from tofino-xindex-dpdk-memory-varkv into netreach-voting-v3-memory
 	* Including: helper.h, original_xindex/\*, extended_xindexplus/\*, localtest.c, Makefile, ycsb_server.c, key.\*, val.\*
 - Add CBF-based fast path to get xindex+
-- TODO: extend xindex with variable-length value and snapshot
-- TODO: replace rocksdb with xindex
+- Sync tofino-xindex-dpdk-memory-varkv to extend xindex with variable-length value and snapshot
+- Support value > 128B
 - TODO: range query
 - TODO: NetCache
 - TODO: switch-driven consistent hashing

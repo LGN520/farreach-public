@@ -183,7 +183,6 @@ template <class val_t>
 struct AtomicVal {
   typedef val_t value_type;
   // Trade space for high performance by optimistic locking w/ inplace update -> acceptable as object size is small in in-memory KVS
-  // To support dynamic memory allocation, you can use optimistic locking + RCU (w/ extra space cost) or rwlock (lower perf) -> unnecessary for in-memory KVS
   uint64_t *val_data = new uint64_t[val_t::MAX_VAL_LENGTH]; 
   uint8_t val_length = 0;
   AtomicVal *aval_ptr = nullptr; // Only aval_ptr makes sense for pointer-type atomic value

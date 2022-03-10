@@ -95,12 +95,22 @@
   COUT_THIS(msg);        \
   COUT_POS();            \
   abort();
+
+// 1: assert
+// 0: ignore assert
+#if 1
+#define DEBUG_ASSERT
+#endif
+#ifdef DEBUG_ASSERT
 #define INVARIANT(cond)            \
   if (!(cond)) {                   \
     COUT_THIS(#cond << " failed"); \
     COUT_POS();                    \
     abort();                       \
   }
+#else
+#define INVARIANT(cond)
+#endif
 
 // 0: print information of background retraining thread
 // 1: not print
@@ -130,6 +140,12 @@
 // 0: extended version with variable length value and snapshot
 #if 0
 #define ORIGINAL_XINDEX
+#endif
+
+// 1: use dynamic memory for variable-length value to save space by read-write locking
+// 0: use max memory for vaiable-length value to trade space for performance by optimistic locking
+#if 1
+#define DYNAMIC_MEMORY
 #endif
 
 #if defined(NDEBUGGING)

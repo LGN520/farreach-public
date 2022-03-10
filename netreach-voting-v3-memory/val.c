@@ -10,7 +10,7 @@ Val::Val() {
 
 Val::~Val() {
 	if (val_data != nullptr) {
-		delete val_data;
+		delete [] val_data;
 		val_data = nullptr;
 	}
 }
@@ -42,7 +42,70 @@ Val::Val(const Val &other) {
 	}
 }
 
+Val::Val(const volatile Val &other) {
+	if (other.val_data != nullptr && other.val_length != 0) {
+		// Deep copy
+		val_data = new uint64_t[other.val_length];
+		INVARIANT(val_data != nullptr);
+		memcpy((char *)val_data, other.val_data, sizeof(uint64_t) * other.val_length);
+
+		val_length = other.val_length;
+	}
+	else {
+		val_length = 0;
+		val_data = nullptr;
+	}
+}
+
 Val& Val::operator=(const Val &other) {
+	if (other.val_data != nullptr && other.val_length != 0) {
+		// Deep copy
+		val_data = new uint64_t[other.val_length];
+		INVARIANT(val_data != nullptr);
+		memcpy((char *)val_data, other.val_data, sizeof(uint64_t) * other.val_length);
+
+		val_length = other.val_length;
+	}
+	else {
+		val_length = 0;
+		val_data = nullptr;
+	}
+	return *this;
+}
+
+Val& Val::operator=(const volatile Val &other) {
+	if (other.val_data != nullptr && other.val_length != 0) {
+		// Deep copy
+		val_data = new uint64_t[other.val_length];
+		INVARIANT(val_data != nullptr);
+		memcpy((char *)val_data, other.val_data, sizeof(uint64_t) * other.val_length);
+
+		val_length = other.val_length;
+	}
+	else {
+		val_length = 0;
+		val_data = nullptr;
+	}
+	return *this;
+}
+
+volatile Val& Val::operator=(const Val &other) volatile {
+	if (other.val_data != nullptr && other.val_length != 0) {
+		// Deep copy
+		val_data = new uint64_t[other.val_length];
+		INVARIANT(val_data != nullptr);
+		memcpy((char *)val_data, other.val_data, sizeof(uint64_t) * other.val_length);
+
+		val_length = other.val_length;
+	}
+	else {
+		val_length = 0;
+		val_data = nullptr;
+	}
+	return *this;
+}
+
+volatile Val& Val::operator=(const volatile Val &other) volatile {
 	if (other.val_data != nullptr && other.val_length != 0) {
 		// Deep copy
 		val_data = new uint64_t[other.val_length];
@@ -148,6 +211,7 @@ uint32_t Val::deserialize(const char *buf) {
 }
 
 uint32_t Val::serialize(char *buf) {
+	INVARIANT(val_data != nullptr);
 	memcpy(buf, (char *)&val_length, sizeof(uint8_t));
 	memcpy(buf + sizeof(uint8_t), (char *)val_data, sizeof(uint64_t) * val_length);
 	return sizeof(uint8_t) + sizeof(uint64_t) * val_length;

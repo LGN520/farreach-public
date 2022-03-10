@@ -21,15 +21,20 @@
 #include <map>
 
 #include "helper.h"
-#include "xindex.h"
-#include "xindex_impl.h"
-#include "xindex_util.h"
 #include "packet_format_impl.h"
 #include "dpdk_helper.h"
 #include "key.h"
-#include "val.h"
 #include "iniparser/iniparser_wrapper.h"
 #include "ycsb/parser.h"
+
+#ifdef ORIGINAL_XINDEX
+#include "original_xindex/xindex.h"
+#include "original_xindex/xindex_impl.h"
+#else
+#include "extended_xindex/xindex.h"
+#include "extended_xindex/xindex_impl.h"
+#include "val.h"
+#endif
 
 #define MQ_SIZE 256
 

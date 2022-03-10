@@ -180,7 +180,6 @@ void Val::from_string(std::string& str) {
 std::string Val::to_string() const { // For print
 	std::stringstream ss;
 	for (uint8_t i = 0; i < val_length; i++) {
-		INVARIANT(val_data != nullptr);
 		ss << val_data[i];
 		if (i != val_length-1) {
 			ss << ", ";

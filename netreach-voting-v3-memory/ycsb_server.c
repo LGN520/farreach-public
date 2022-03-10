@@ -31,11 +31,9 @@
 #ifdef ORIGINAL_XINDEX
 #include "original_xindex/xindex.h"
 #include "original_xindex/xindex_impl.h"
-#include "original_xindex/xindex_util.h"
 #else
 #include "extended_xindexplus/xindex.h"
 #include "extended_xindexplus/xindex_impl.h"
-#include "extended_xindexplus/xindex_util.h"
 #include "val.h"
 #endif
 
