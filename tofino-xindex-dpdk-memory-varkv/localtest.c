@@ -258,7 +258,7 @@ void run_server(xindex_t *table, size_t sec) {
 		sfg_params[worker_i].table = table;
     	sfg_params[worker_i].throughput = 0;
 		sfg_params[worker_i].thread_id = static_cast<uint8_t>(worker_i);
-		int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
+		ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error:" << ret);
 		}
@@ -328,7 +328,6 @@ void *run_sfg(void * param) {
                    non_exist_keys.begin() + non_exist_key_end);
   }
 
-  int res = 0;
   uint64_t dummy_value_data[2] = {1234, 5678};
 #ifdef ORIGINAL_XINDEX
   val_t dummy_value = 1234;
@@ -370,8 +369,10 @@ void *run_sfg(void * param) {
 	}*/
 
     double d = ratio_dis(gen);
+	UNUSED(d);
 
 	int tmprun = 4;
+	UNUSED(tmprun);
     if (d <= read_ratio) {  // get
     //if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
@@ -388,6 +389,7 @@ void *run_sfg(void * param) {
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string());
 #endif
 	  bool tmp_stat = table->get(op_keys[(query_i + delete_i) % op_keys.size()], tmp_val, thread_id);
+	  UNUSED(tmp_stat);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string() << " val = " << tmp_val.to_string());
 #endif
@@ -398,6 +400,7 @@ void *run_sfg(void * param) {
     } else if (d <= read_ratio + update_ratio) {  // update
     //} else if (tmprun == 1) {  // update
 	  bool tmp_stat = table->put(op_keys[(update_i + delete_i) % op_keys.size()], dummy_value, thread_id);
+	  UNUSED(tmp_stat);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << dummy_value.to_string()
 			  << " stat = " << tmp_stat);
@@ -409,6 +412,7 @@ void *run_sfg(void * param) {
     } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     //} else if (tmprun == 2) {  // insert
 	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
+	  UNUSED(tmp_stat);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value.to_string()
 			  << " stat = " << tmp_stat);
@@ -420,6 +424,7 @@ void *run_sfg(void * param) {
     } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
     //} else if (tmprun == 3) {  // remove
 	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id);
+	  UNUSED(tmp_stat);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[delete_i].to_string() << " stat = " << tmp_stat);
 #endif
@@ -430,9 +435,9 @@ void *run_sfg(void * param) {
     } else {  // scan
 	  std::vector<std::pair<index_key_t, val_t>> results;
 	  //size_t tmp_num = table->scan(op_keys[(query_i + delete_i) % op_keys.size()], 10, results, thread_id);
-	  size_t tmp_num = 0;
-	  tmp_num = table->range_scan(op_keys[(scan_i) % op_keys.size()], \
-			  op_keys[scan_i % op_keys.size()], results, thread_id);
+	  size_t targetnum = 10;
+	  size_t tmp_num = table->range_scan(op_keys[(scan_i) % op_keys.size()], \
+			  op_keys[(scan_i+targetnum) % op_keys.size()], results, thread_id);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(scan_i) % op_keys.size()].to_string() << " num = " << tmp_num);
 	  for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {

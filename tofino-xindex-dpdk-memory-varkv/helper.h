@@ -142,10 +142,12 @@
 #define ORIGINAL_XINDEX
 #endif
 
+#ifndef ORIGINAL_XINDEX
 // 1: use dynamic memory for variable-length value to save space by read-write locking
 // 0: use max memory for vaiable-length value to trade space for performance by optimistic locking
 #if 1
 #define DYNAMIC_MEMORY
+#endif
 #endif
 
 #if defined(NDEBUGGING)

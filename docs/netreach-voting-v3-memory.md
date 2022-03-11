@@ -65,6 +65,7 @@
 		* TODO: For PUT, client sends PUTREQ_LARGE if value>128B, which does not update vote and may invalidate cached item in switch
 			- If with invalidation (i.e., becoming PUTREQ_LARGE_EVICT and clone a PUTREQ_LARGE), PUTREQ_LARGE_EVICT will be mirrored to switch OS to cope with packet loss
 - In-switch processing
+	+ NOTE: clone_i2e clones the original packet to egress pipeline; clone_e2e clones the deparsed packet to egress pipeline
 	+ Overview
 		* Stage 0: keylolo, keylohi, keyhilo, keyhihi, load_backup_tbl
 			- For key, we provide two operations: match, set_and_get
@@ -88,8 +89,15 @@
 				+ If PUTREQ_LARGE/PUTREQ_LARGE_RECIR, update as PUTREQ_LARGE to server
 				+ If GETRES_POP (with new key-value), update it as GETRES to client
 				+ If PUTREQ_POP (with new key-value), update it as PUTRES to client
+				+ TODO: If SCANREQ_SPLIT
+					* TODO: If split_idx == 1 (the last 2nd pkt has been sent), set split_idx=0 (send the last pkt) and send to next server (increase dst_port)
+					* TODO: Otherwise: decrease split_idx, send to next server, and clone_e2e
 			- For non-cloned packet
-				- Hash parition for normal REQ pacekts
+				- TODO: switch-driven partition scheme
+					+ If no range query, hash parition for normal REQ packets
+					+ TODO: If w/ range query, range partition for normal REQ packets
+						* TODO: For SCANREQ, update it as SCANREQ_SPLIT to corresponding server (based on beginkey) with split_num (based on beginkey and endkey) and split_idx (always start from split_num-1), and clone_e2e
+						* TODO: Server needs to embed snapshot id into SCANRES for client to judge the consistency, and retry if not (snapshot and hence inconsistent SCANRES is rare)
 				- TODO: Access per-server iscase3
 				- TODO: Access eg_port_forward_tbl
 					- TODO: For PUT/DELREQ, and PUT/DELREQ_RECIR
@@ -293,9 +301,13 @@
 		* Otherwise, delete evicted key from KVS without response, add into special case (invalid)
 	+ PUTREQ/DELREQ/PUTREQ_LARGE_CASE3:
 		* TODO: make snapshot
+	+ SCANREQ:
+		* TODO: Switch: split SCANREQ to the corresponding server based on key range
+		* TODO: Server: perform SCANREQ in snapshot of in-memory KVS and that of in-switch cache, and merge results
+		* TODO: Client: wait for all responses (each response carries # of splits)
 	+ TODO: snapshot for range query
 		* Make a snapshot when init or open
-		* Ensure that in each period of backup, kv snapshot can only be performance once
+		* Ensure that in each period of backup, kv snapshot can only be performed once
 			* Use std::atomic_flag: test_and_set & clear
 		* Steps of processing backup and making snapshot
 			* Set isbackup as true to disable server threads from touching per-thread special cases

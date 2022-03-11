@@ -29,9 +29,10 @@
 #include "xindex_util.h"
 #endif
 
-#include "cbf_impl.h"
-
-#define CBF_BYTES_NUM 1024 * 1024 // 1 MB
+#ifdef BF_OPTIMIZATION
+#include "../bf_impl.h"
+#define BF_BYTES_NUM 1024 * 1024 // 1 MB
+#endif
 
 #if !defined(XINDEX_GROUP_H)
 #define XINDEX_GROUP_H
@@ -54,7 +55,9 @@ class alignas(CACHELINE_SIZE) Group {
   friend class XIndex;
   template <class key_tt, class val_tt, bool sequential>
   friend class Root;
-  typedef CBF<key_t> cbf_t;
+#ifdef BF_OPTIMIZATION
+  typedef BF<key_t> bf_t;
+#endif
 
   struct ModelInfo {
     key_t pivot;
@@ -120,7 +123,7 @@ class alignas(CACHELINE_SIZE) Group {
 
   void free_data();
   void free_buffer();
-  void free_cbf();
+  void free_bf();
 
  private:
   inline size_t locate_model(const key_t &key);
@@ -186,7 +189,9 @@ class alignas(CACHELINE_SIZE) Group {
   int32_t capacity = 0;       // used for seqential insertion
   volatile uint8_t lock = 0;  // used for seqential insertion
 
-  cbf_t* cbf = nullptr; // CBF for data in each group
+#ifdef BF_OPTIMIZATION
+  bf_t* bf = nullptr; // BF for data in each group
+#endif
 };
 
 }  // namespace xindex

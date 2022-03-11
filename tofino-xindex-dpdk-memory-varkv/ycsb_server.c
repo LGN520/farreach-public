@@ -40,7 +40,6 @@
 
 struct alignas(CACHELINE_SIZE) LoadSFGParam;
 struct alignas(CACHELINE_SIZE) SFGParam;
-class Key;
 
 typedef Key index_key_t;
 typedef Val val_t;
@@ -339,6 +338,14 @@ void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {
 		vals[i] = iter->second;
 		i++;
 	}
+
+	// Check whether keys are sorted (xindex requires sorted data for initialization) -> sorted
+	/*for (size_t check_i = 0; check_i < (keys.size()-1); check_i++) {
+		if (keys[check_i] >= keys[check_i+1]) {
+			COUT_N_EXIT("keys["<<check_i<<"] "<<keys[check_i].to_string()<<" >= keys["<<check_i+1<<"] "<<keys[check_i+1].to_string());
+		}
+	}
+	COUT_N_EXIT("Keys are sorted!");*/
 }
 
 void run_load_server(xindex_t *table) {

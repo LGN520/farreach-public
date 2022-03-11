@@ -8,11 +8,14 @@
 #define MAX_COUNTER_VALUE 0xFFFFFFFFFFFFFFFF
 
 class Bucket {
-	uint64_t counter;
-	boost::shared_mutex rwlock; // fine-grained control
+	public:
+		uint64_t counter;
+		boost::shared_mutex rwlock; // fine-grained control
 
-	Bucket();
-}
+		Bucket();
+		Bucket(const Bucket &other);
+		Bucket &operator=(const Bucket &other);
+};
 
 template<class key_t>
 class CBF {
@@ -22,7 +25,7 @@ class CBF {
 		CBF(uint32_t bytes_num, uint32_t hash_num = 3);
 		void update_nolock(const key_t &key);
 		void remove(const key_t &key);
-		uint32_t query(const key_t &key) const;
+		uint32_t query(const key_t &key);
 	private:
 		uint64_t a_ = 101;
 		uint64_t b_ = 1009;

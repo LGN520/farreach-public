@@ -250,11 +250,11 @@ inline size_t Root<key_t, val_t, seq>::range_scan(
   result.clear();
   key_t latest_group_pivot = key_t::min();  // for cross-slot chained groups
 
-  bool done = false;
   int group_i;
   int group_i_last;
   group_t *group = locate_group_pt2(begin, locate_group_pt1(begin, group_i));
   group_t *group_last = locate_group_pt2(end, locate_group_pt1(end, group_i_last));
+  UNUSED(group_last);
   while (group_i <= group_i_last && group_i_last < (int)group_n) {
     while (group && group->get_pivot() > latest_group_pivot) { // avoid re-entry
       group->range_scan(begin, end, result, snapshot_id);
@@ -386,7 +386,9 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
             rcu_barrier();  // make sure no one is accessing the old data
             old_group->free_data();  // intermidiates share the array and buffer
             old_group->free_buffer();  // so no free_xxx is needed
-			old_group->free_cbf();
+#ifdef CBF_OPTIMIZATION
+			old_group->free_bf();
+#endif
             delete old_group;
             delete intermediate->next;  // but deleting the metadata is needed
             delete intermediate;
@@ -422,10 +424,14 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
             rcu_barrier();  // make sure no one is accessing the old data
             old_group->free_data();
             old_group->free_buffer();
-			old_group->free_cbf();
+#ifdef CBF_OPTIMIZATION
+			old_group->free_bf();
+#endif
             old_next->free_data();
             old_next->free_buffer();
-			old_next->free_cbf();
+#ifdef CBF_OPTIMIZATION
+			old_next->free_bf();
+#endif
             delete old_group;
             delete old_next;
             should_update_array = true;
@@ -444,7 +450,9 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
             rcu_barrier();  // make sure no one is accessing the old data
             old_group->free_data();
             old_group->free_buffer();
-			old_group->free_cbf();
+#ifdef CBF_OPTIMIZATION
+			old_group->free_bf();
+#endif
             delete old_group;
           }
 

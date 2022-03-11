@@ -65,11 +65,13 @@ void Group<key_t, val_t, seq, max_model_n>::init(
 
   init_models(model_n);
 
-  // No other thread can access the cbf now (remove through old group may incur false positive)
-  cbf = new cbf_t(CBF_BYTES_NUM);
+#ifdef BF_OPTIMIZATION
+  // No other thread can access the bf now (remove through old group may incur false positive)
+  bf = new bf_t(BF_BYTES_NUM);
   for (size_t i = 0; i < array_size; i++) {
-	  cbf->update_nolock(data[i].first);
+	  bf->update(data[i].first);
   }
+#endif
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
@@ -80,11 +82,17 @@ const key_t &Group<key_t, val_t, seq, max_model_n>::get_pivot() {
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t &key,
                                                            val_t &val) {
-  if (cbf->query(key) > 0) { // may have false positive
+#ifdef BF_OPTIMIZATION
+  if (bf->query(key) == true) { // may have false positive
     if (get_from_array(key, val)) {
       return result_t::ok;
     }
   }
+#else
+  if (get_from_array(key, val)) {
+    return result_t::ok;
+  }
+#endif
   if (get_from_buffer(key, val, buffer)) {
     return result_t::ok;
   }
@@ -98,12 +106,19 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::put(
     const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id) {
   result_t res;
-  if (cbf->query(key) > 0) { // may have false positive
+#ifdef BF_OPTIMIZATION
+  if (bf->query(key) == true) { // may have false positive
     res = update_to_array(key, val, worker_id, snapshot_id);
     if (res == result_t::ok || res == result_t::retry) {
       return res;
     }
   }
+#else
+  res = update_to_array(key, val, worker_id, snapshot_id);
+  if (res == result_t::ok || res == result_t::retry) {
+    return res;
+  }
+#endif
 
   if (likely(buffer_temp == nullptr)) {
     if (buf_frozen) {
@@ -124,12 +139,17 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::remove(
     const key_t &key, int32_t snapshot_id) {
-  if (cbf->query(key) > 0) { // may have false positive
+#ifdef BF_OPTIMIZATION
+  if (bf->query(key) == true) { // may have false positive
 	  if (remove_from_array(key, snapshot_id)) {
-		cbf->remove(key);
 		return result_t::ok;
 	  }
   }
+#else
+  if (remove_from_array(key, snapshot_id)) {
+	return result_t::ok;
+  }
+#endif
   if (remove_from_buffer(key, buffer, snapshot_id)) {
     return result_t::ok;
   }
@@ -215,7 +235,9 @@ Group<key_t, val_t, seq, max_model_n>
   new_group->array_size = array_size;
   new_group->capacity = capacity;  // keep capacity negative for now
   new_group->data = data;
-  new_group->cbf = cbf;
+#ifdef BF_OPTIMIZATION
+  new_group->bf = bf;
+#endif
   new_group->init_models(model_n + 1);
   new_group->buffer = buffer;
   new_group->buffer_temp = buffer_temp;
@@ -239,7 +261,9 @@ Group<key_t, val_t, seq, max_model_n>
   new_group->array_size = array_size;
   new_group->capacity = capacity;  // keep capacity negative for now
   new_group->data = data;
-  new_group->cbf = cbf;
+#ifdef BF_OPTIMIZATION
+  new_group->bf = bf;
+#endif
   new_group->init_models(model_n - 1);
   new_group->buffer = buffer;
   new_group->buffer_temp = buffer_temp;
@@ -263,8 +287,10 @@ Group<key_t, val_t, seq, max_model_n>
   assert(new_group_2->pivot > new_group_1->pivot);
   new_group_1->data = data;
   new_group_2->data = data;
-  new_group_1->cbf = cbf;
-  new_group_2->cbf = cbf;
+#ifdef BF_OPTIMIZATION
+  new_group_1->bf = bf;
+  new_group_2->bf = bf;
+#endif
   new_group_1->array_size = array_size;
   new_group_2->array_size = array_size;
   // mark capacity as negative to let seq insert not inserting to buf
@@ -310,15 +336,17 @@ Group<key_t, val_t, seq, max_model_n>
   new_group_1->next = new_group_2;
   new_group_2->next = next->next;
 
-  // No other thread can access the cbf now (remove through old group may incur false positive)
-  new_group_1->cbf = new cbf_t(CBF_BYTES_NUM);
+#ifdef BF_OPTIMIZATION
+  // No other thread can access the bf now (remove through old group may incur false positive)
+  new_group_1->bf = new bf_t(BF_BYTES_NUM);
   for (size_t i = 0; i < new_group_1->array_size; i++) {
-	  new_group_1->cbf->update_nolock(new_group_1->data[i].first);
+	  new_group_1->bf->update(new_group_1->data[i].first);
   }
-  new_group_2->cbf = new cbf_t(CBF_BYTES_NUM);
+  new_group_2->bf = new bf_t(BF_BYTES_NUM);
   for (size_t i = 0; i < new_group_2->array_size; i++) {
-	  new_group_2->cbf->update_nolock(new_group_2->data[i].first);
+	  new_group_2->bf->update(new_group_2->data[i].first);
   }
+#endif
 
   return new_group_1;
 }
@@ -356,11 +384,13 @@ Group<key_t, val_t, seq, max_model_n>
   new_group->buffer = buffer_temp;
   new_group->next = next_group.next;
 
-  // No other thread can access the cbf now (remove through old group may incur false positive)
-  new_group->cbf = new cbf_t(CBF_BYTES_NUM);
+#ifdef BF_OPTIMIZATION
+  // No other thread can access the bf now (remove through old group may incur false positive)
+  new_group->bf = new bf_t(BF_BYTES_NUM);
   for (size_t i = 0; i < new_group->array_size; i++) {
-	  new_group->cbf->update_nolock(new_group->data[i].first);
+	  new_group->bf->update(new_group->data[i].first);
   }
+#endif
 
   return new_group;
 }
@@ -389,11 +419,13 @@ Group<key_t, val_t, seq, max_model_n>
   new_group->buffer = buffer_temp;
   new_group->next = next;
 
-  // No other thread can access the cbf now (remove through old group may incur false positive)
-  new_group->cbf = new cbf(CBF_BYTES_NUM);
+#ifdef BF_OPTIMIZATION
+  // No other thread can access the bf now (remove through old group may incur false positive)
+  new_group->bf = new BF<key_t>(BF_BYTES_NUM);
   for (size_t i = 0; i < new_group->array_size; i++) {
-	  new_group->cbf->update_nolock(new_group->data[i].first);
+	  new_group->bf->update(new_group->data[i].first);
   }
+#endif
 
   return new_group;
 }
@@ -418,10 +450,13 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
   delete buffer;
 }
+
+#ifdef BF_OPTIMIZATION
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-void Group<key_t, val_t, seq, max_model_n>::free_cbf() {
-  delete cbf;
+void Group<key_t, val_t, seq, max_model_n>::free_bf() {
+  delete bf;
 }
+#endif
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::locate_model(

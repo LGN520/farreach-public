@@ -1,7 +1,19 @@
+#ifndef CBF_IMPL_H
+#define CBF_IMPL_H
+
 #include "cbf.h"
 
 Bucket::Bucket() {
 	counter = 0;
+}
+
+Bucket::Bucket(const Bucket &other) {
+	counter = other.counter;
+}
+
+Bucket &Bucket::operator=(const Bucket &other) {
+	counter = other.counter;
+	return *this;
 }
 
 template<class key_t>
@@ -35,12 +47,12 @@ void CBF<key_t>::remove(const key_t &key) {
 			if (sketch[hashidx].rwlock.try_lock()) break;
 		}
 		sketch[hashidx].counter -= 1;
-		sketch[hashidx].rwlock->unlock();
+		sketch[hashidx].rwlock.unlock();
 	}
 }
 
 template<class key_t>
-uint32_t CBF<key_t>::query(const key_t &key) const {
+uint32_t CBF<key_t>::query(const key_t &key) {
 	uint32_t min = 0;
 	for (uint32_t i = 0; i < hash_num; i++) {
 		uint32_t hashidx = hash(key, i);
@@ -60,3 +72,5 @@ uint32_t CBF<key_t>::hash(const key_t &key, uint32_t seed) const {
 	uint64_t result = ((a_ * uint64_t(key.to_int()) + b_) % p_list_[seed]) % width;
 	return uint32_t(result);
 }
+
+#endif

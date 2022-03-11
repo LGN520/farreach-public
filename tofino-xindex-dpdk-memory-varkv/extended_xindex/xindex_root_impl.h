@@ -250,11 +250,11 @@ inline size_t Root<key_t, val_t, seq>::range_scan(
   result.clear();
   key_t latest_group_pivot = key_t::min();  // for cross-slot chained groups
 
-  bool done = false;
   int group_i;
   int group_i_last;
   group_t *group = locate_group_pt2(begin, locate_group_pt1(begin, group_i));
   group_t *group_last = locate_group_pt2(end, locate_group_pt1(end, group_i_last));
+  UNUSED(group_last);
   while (group_i <= group_i_last && group_i_last < (int)group_n) {
     while (group && group->get_pivot() > latest_group_pivot) { // avoid re-entry
       group->range_scan(begin, end, result, snapshot_id);
