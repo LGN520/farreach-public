@@ -126,6 +126,11 @@ action update_getres_npop_to_getres(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
+action update_getres_pop_large_to_getres(port) {
+	modify_field(op_hdr.optype, GETRES_TYPE);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
 action update_putreq_to_putreq_pop(port) {
 	modify_field(op_hdr.optype, PUTREQ_POP_TYPE);
 

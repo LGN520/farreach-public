@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
   //test_merge_latency(); // DEBUG test
 
   // prepare xindex
-  uint64_t init_val_data[1] = {1};
+  char init_val_data[1] = {1};
 #ifdef ORIGINAL_XINDEX
   std::vector<val_t> vals(exist_keys.size(), 1);
 #else
@@ -117,8 +117,10 @@ inline void parse_ini(const char* config_file) {
 	workload_name = ini.get_workload_name();
 	kv_bucket_num = ini.get_bucket_num();
 #ifndef ORIGINAL_XINDEX
-	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
-	COUT_VAR(val_t::MAX_VAL_LENGTH);
+	val_t::MAX_VALLEN = ini.get_max_vallen();
+	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
+	COUT_VAR(val_t::MAX_VALLEN);
+	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 #endif
 }
 
@@ -341,10 +343,10 @@ void *run_sfg(void * param) {
                    non_exist_keys.begin() + non_exist_key_end);
   }
 
-  uint64_t dummy_value_data[2] = {1234, 5678};
 #ifdef ORIGINAL_XINDEX
   val_t dummy_value = 1234;
 #else
+  char dummy_value_data[2] = {12, 34};
   val_t dummy_value = val_t(dummy_value_data, 2);
 #endif
   size_t query_i = 0, insert_i = op_keys.size() / 2, delete_i = 0, update_i = 0, scan_i = 0;

@@ -157,7 +157,8 @@ inline void parse_ini(const char* config_file) {
 	per_server_range = std::numeric_limits<size_t>::max() / server_num;
 	per_client_per_period_max_sending_rate = max_sending_rate / fg_n / (1 * 1000 * 1000 / rate_limit_period);
 	kv_bucket_num = ini.get_bucket_num();
-	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
+	val_t::MAX_VALLEN = ini.get_max_vallen();
+	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
 
 	printf("src_macaddr: ");
 	for (size_t i = 0; i < 6; i++) {
@@ -181,7 +182,8 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(server_num);
 	COUT_VAR(per_server_range);
 	COUT_VAR(kv_bucket_num);
-	COUT_VAR(val_t::MAX_VAL_LENGTH);
+	COUT_VAR(val_t::MAX_VALLEN);
+	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 }
 
 void prepare_dpdk() {

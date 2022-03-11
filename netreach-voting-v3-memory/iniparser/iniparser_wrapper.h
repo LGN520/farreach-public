@@ -11,7 +11,7 @@ class IniparserWrapper {
 		void load(const char* filename);
 
 		const char *get_workload_name();
-		uint32_t get_max_val_length();
+		uint32_t get_max_vallen();
 
 		size_t get_client_num();
 		short get_client_port();
@@ -26,6 +26,7 @@ class IniparserWrapper {
 		short get_server_backup_port();
 
 		uint32_t get_bucket_num();
+		uint32_t get_switch_max_vallen();
 
 		size_t get_split_num();
 

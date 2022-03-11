@@ -51,28 +51,44 @@ parser parse_op {
 parser parse_vallen {
 	extract(vallen_hdr);
 	return select(vallen_hdr.vallen) {
-		1: parse_val_len1;
-		2: parse_val_len2;
-		3: parse_val_len3;
-		4: parse_val_len4;
-		5: parse_val_len5;
-		6: parse_val_len6;
-		7: parse_val_len7;
-		8: parse_val_len8;
-		9: parse_val_len9;
-		10: parse_val_len10;
-		11: parse_val_len11;
-		12: parse_val_len12;
-		13: parse_val_len13;
-		14: parse_val_len14;
-		15: parse_val_len15;
-		16: parse_val_len16;
-		default: ingress; // 0
+		0: parse_val_len0;
+		0 mask 0xFFFFFFF8: parse_val_len1;
+		8: parse_val_len1;
+		8 mask 0xFFFFFFF8: parse_val_len2;
+		16: parse_val_len2;
+		16 mask 0xFFFFFFF8: parse_val_len3;
+		24: parse_val_len3;
+		24 mask 0xFFFFFFF8: parse_val_len4;
+		32: parse_val_len4;
+		32 mask 0xFFFFFFF8: parse_val_len5;
+		40: parse_val_len5;
+		40 mask 0xFFFFFFF8: parse_val_len6;
+		48: parse_val_len6;
+		48 mask 0xFFFFFFF8: parse_val_len7;
+		56: parse_val_len7;
+		56 mask 0xFFFFFFF8: parse_val_len8;
+		64: parse_val_len8;
+		64 mask 0xFFFFFFF8: parse_val_len9;
+		72: parse_val_len9;
+		72 mask 0xFFFFFFF8: parse_val_len10;
+		80: parse_val_len10;
+		80 mask 0xFFFFFFF8: parse_val_len11;
+		88: parse_val_len11;
+		88 mask 0xFFFFFFF8: parse_val_len12;
+		96: parse_val_len12;
+		96 mask 0xFFFFFFF8: parse_val_len13;
+		104: parse_val_len13;
+		104 mask 0xFFFFFFF8: parse_val_len14;
+		112: parse_val_len14;
+		112 mask 0xFFFFFFF8: parse_val_len15;
+		120: parse_val_len15;
+		120 mask 0xFFFFFFF8: parse_val_len16;
+		128: parse_val_len16;
+		default: ingress; // > 128
 	}
 }
 
-parser parse_val_len1 {
-	extract(val1_hdr);
+parser parse_val_len0 {
 	return select(op_hdr.optype) {
 		PUTREQ_RECIR_TYPE: parse_seq;
 		DELREQ_RECIR_TYPE: parse_seq;
@@ -80,6 +96,11 @@ parser parse_val_len1 {
 		DELREQ_MAY_CASE3_TYPE: parse_other;
 		default: ingress;
 	}
+}
+
+parser parse_val_len1 {
+	extract(val1_hdr);
+	return paser_val_len0;
 }
 
 parser parse_val_len2 {

@@ -11,12 +11,8 @@ class Val {
 
  public:
 
-  static uint32_t MAX_VAL_LENGTH;
-
-  // MAX_VAL_LENGTH * 8B
-  static uint32_t max_bytesnum() {
-	return MAX_VAL_LENGTH * sizeof(uint64_t);
-  }
+  static uint32_t MAX_VALLEN; // max # of bytes
+  static uint32_t SWITCH_MAX_VALLEN; // max # of bytes in switch
 
   Val();
   ~Val();
@@ -43,8 +39,8 @@ class Val {
 
   std::string to_string() const; // For print
 
-  uint8_t val_length; // val_length * 8B
-  uint64_t *val_data;
+  uint8_t val_length; // val_length (# of bytes)
+  char *val_data;
 } PACKED;
 
 #endif

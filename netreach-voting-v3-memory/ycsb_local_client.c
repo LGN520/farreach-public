@@ -98,6 +98,11 @@ inline void parse_ini(const char* config_file) {
 		printf("Output directory does not exist: %s\n", output_dir);
 		exit(-1);
 	}
+
+	val_t::MAX_VALLEN = ini.get_max_vallen();
+	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
+	COUT_VAR(val_t::MAX_VALLEN);
+	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 }
 
 void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {

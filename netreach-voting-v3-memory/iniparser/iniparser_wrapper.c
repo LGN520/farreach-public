@@ -22,10 +22,10 @@ const char *IniparserWrapper::get_workload_name() {
 	return workload_name;
 }
 
-uint32_t IniparserWrapper::get_max_val_length() {
-	int tmp = iniparser_getint(ini, "global:max_val_length", -1);
+uint32_t IniparserWrapper::get_max_vallen() {
+	int tmp = iniparser_getint(ini, "global:max_vallen", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [global:max_val_length]: %d\n", tmp);
+		printf("Invalid entry of [global:max_vallen]: %d\n", tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);
@@ -125,6 +125,15 @@ uint32_t IniparserWrapper::get_bucket_num() {
 	int tmp = iniparser_getint(ini, "switch:bucket_num", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switch:bucket_num]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
+uint32_t IniparserWrapper::get_switch_max_vallen() {
+	int tmp = iniparser_getint(ini, "global:switch_max_vallen", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [global:switch_max_vallen]: %d\n", tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);

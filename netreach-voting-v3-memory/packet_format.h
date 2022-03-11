@@ -8,7 +8,7 @@
 #include "helper.h"
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
-	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_EVICT,
+	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_LARGE, GET_RES_POP_EVICT,
 	PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, DEL_REQ_RECIR,
 	PUT_REQ_CASE1, DEL_REQ_CASE1, GET_RES_POP_EVICT_CASE2, PUT_REQ_POP_EVICT_CASE2, 
 	PUT_REQ_MAY_CASE3, PUT_REQ_CASE3, DEL_REQ_MAY_CASE3, DEL_REQ_CASE3};
@@ -184,6 +184,15 @@ template<class key_t, class val_t>
 class GetResponseNPOP : public GetResponse<key_t, val_t> {
 	public: 
 		GetResponseNPOP(uint16_t hashidx, key_t key, val_t val);
+
+	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t, class val_t>
+class GetResponsePOPLarge : public GetResponse<key_t, val_t> {
+	public: 
+		GetResponsePOPLarge(uint16_t hashidx, key_t key, val_t val);
 
 	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);

@@ -64,6 +64,7 @@ typedef ScanResponse<index_key_t, val_t> scan_response_t;
 typedef GetRequestPOP<index_key_t> get_request_pop_t;
 typedef GetResponsePOP<index_key_t, val_t> get_response_pop_t;
 typedef GetResponseNPOP<index_key_t, val_t> get_response_npop_t;
+typedef GetResponsePOPLarge<index_key_t, val_t> get_response_pop_lareg_t;
 typedef GetResponsePOPEvict<index_key_t, val_t> get_response_pop_evict_t;
 typedef PutRequestPOPEvict<index_key_t, val_t> put_request_pop_evict_t;
 typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
@@ -218,7 +219,8 @@ inline void parse_ini(const char* config_file) {
 	dst_port_start = ini.get_server_port();
 	workload_name = ini.get_workload_name();
 	kv_bucket_num = ini.get_bucket_num();
-	val_t::MAX_VAL_LENGTH = ini.get_max_val_length();
+	val_t::MAX_VALLEN = ini.get_max_vallen();
+	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
 	backup_port = ini.get_server_backup_port();
 	per_server_range = std::numeric_limits<size_t>::max() / fg_n;
 
@@ -235,7 +237,8 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(dst_port_start);
 	printf("workload_name: %s\n", workload_name);
 	COUT_VAR(kv_bucket_num);
-	COUT_VAR(val_t::MAX_VAL_LENGTH);
+	COUT_VAR(val_t::MAX_VALLEN);
+	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 	COUT_VAR(backup_port);
 	COUT_VAR(per_server_range);
 }
@@ -1113,13 +1116,19 @@ static int run_sfg(void * param) {
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
-					if (tmp_val.val_length > 0) {
+					if (tmp_stat && tmp_val.val_length > 0) {
 						get_response_pop_t rsp(req.hashidx(), req.key(), tmp_val);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
 					else {
-						get_response_npop_t rsp(req.hashidx(), req.key(), tmp_val);
-						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						if (tmp_val.val_length > val_t::SWITCH_MAX_VALLEN) {
+							get_response_pop_large_t rsp(req.hashidx(), req.key(), tmp_val);
+							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						}
+						else {
+							get_response_npop_t rsp(req.hashidx(), req.key(), tmp_val);
+							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+						}
 					}
 					
 					// DPDK

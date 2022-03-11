@@ -82,19 +82,20 @@ SCANRES_TYPE = 0x07
 GETREQ_POP_TYPE = 0x08
 GETRES_POP_TYPE = 0x09
 GETRES_NPOP_TYPE = 0x0a
-GETRES_POP_EVICT_TYPE = 0x0b
-PUTREQ_POP_TYPE = 0x0c
-PUTREQ_RECIR_TYPE = 0x0d
-PUTREQ_POP_EVICT_TYPE = 0x0e
-DELREQ_RECIR_TYPE = 0x0f
-PUTREQ_CASE1_TYPE = 0x10
-DELREQ_CASE1_TYPE = 0x11
-GETRES_POP_EVICT_CASE2_TYPE = 0x12
-PUTREQ_POP_EVICT_CASE2_TYPE = 0x13
-PUTREQ_MAY_CASE3_TYPE = 0x14
-PUTREQ_CASE3_TYPE = 0x15
-DELREQ_MAY_CASE3_TYPE = 0x16
-DELREQ_CASE3_TYPE = 0x17
+GETRES_POP_LARGE_TYPE = 0x0b
+GETRES_POP_EVICT_TYPE = 0x0c
+PUTREQ_POP_TYPE = 0x0d
+PUTREQ_RECIR_TYPE = 0x0e
+PUTREQ_POP_EVICT_TYPE = 0x0f
+DELREQ_RECIR_TYPE = 0x10
+PUTREQ_CASE1_TYPE = 0x11
+DELREQ_CASE1_TYPE = 0x12
+GETRES_POP_EVICT_CASE2_TYPE = 0x13
+PUTREQ_POP_EVICT_CASE2_TYPE = 0x14
+PUTREQ_MAY_CASE3_TYPE = 0x15
+PUTREQ_CASE3_TYPE = 0x16
+DELREQ_MAY_CASE3_TYPE = 0x17
+DELREQ_CASE3_TYPE = 0x18
 
 valid_list = [0, 1]
 keymatch_list = [0, 1]
@@ -418,7 +419,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0)
             for isvalid in valid_list:
                 for zerovote in predicate_list:
-                    for tmpoptype in [GETRES_POP_TYPE, GETRES_NPOP_TYPE, PUTREQ_POP_TYPE]:
+                    for tmpoptype in [GETRES_POP_TYPE, GETRES_NPOP_TYPE, GETRES_POP_LARGE_TYPE, PUTREQ_POP_TYPE]:
                         matchspec0 = netbufferv3_access_lock_tbl_match_spec_t(
                                 op_hdr_optype=tmpoptype,
                                 meta_isvalid=isvalid,
@@ -746,6 +747,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         actnspec0 = netbufferv3_update_getres_npop_to_getres_action_spec_t(\
                                                 self.devPorts[0])
                                         self.client.port_forward_tbl_table_add_with_update_getres_npop_to_getres(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        # Update GETRES_POP_LARGE as GETRES to client
+                                        matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = GETRES_POP_LARGE_TYPE,
+                                                meta_isvalid = isvalid,
+                                                meta_zerovote = zerovote,
+                                                meta_iskeymatch = iskeymatch,
+                                                meta_islock = islock,
+                                                meta_canput = canput,
+                                                meta_isbackup = isbackup,
+                                                meta_iscase12 = iscase12)
+                                        actnspec0 = netbufferv3_update_getres_pop_large_to_getres_action_spec_t(\
+                                                self.devPorts[0])
+                                        self.client.port_forward_tbl_table_add_with_update_getres_pop_large_to_getres(\
                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                                 op_hdr_optype = PUTREQ_TYPE,

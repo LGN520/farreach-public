@@ -284,8 +284,8 @@ val_t GetResponse<key_t, val_t>::val() const {
 }
 
 template<class key_t, class val_t>
-uint32_t GetResponse<key_t, val_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
+uint32_t GetResponse<key_t, val_t>::size() { // unused
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::MAX_VALLEN;
 }
 
 template<class key_t, class val_t>
@@ -300,7 +300,7 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
-	uint32_t tmpsize = this->_val.serialize(begin);
+	uint32_t tmpsize = this->_val.serialize(begin, max_size-sizeof(uint8_t)-sizeof(uint16_t)-sizeof(key_t));
 	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + tmpsize;
 }
 
@@ -316,7 +316,7 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
-	uint32_t tmpsize = this->_val.deserialize(begin);
+	uint32_t tmpsize = this->_val.deserialize(begin, recv_size-sizeof(uint8_t)-sizeof(uint16_t)-sizeof(key_t));
 }
 
 // PutResponse
@@ -577,6 +577,21 @@ template<class key_t, class val_t>
 void GetResponseNPOP<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 {
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseNPOP");
+}
+
+// GetResponsePOPLarge
+
+template<class key_t, class val_t>
+GetResponsePOPLarge<key_t, val_t>::GetResponsePOPLarge(uint16_t hashidx, key_t key, val_t val)
+	: GetResponse<key_t, val_t>::GetResponse(hashidx, key, val)
+{
+	this->_type = static_cast<uint8_t>(PacketType::GET_RES_POP_LARGE);
+}
+
+template<class key_t, class val_t>
+void GetResponsePOPLarge<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
+{
+	COUT_N_EXIT("Invalid invoke of deserialize for GetResponsePOPLarge");
 }
 
 // GetResponsePOPEvict

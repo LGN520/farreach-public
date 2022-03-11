@@ -139,11 +139,11 @@ bool ParserIterator::parsekv(const char* line) {
 	val_end = line + strlen(line) - 3; // The last substr is " ]\n"
 	if (unlikely(strncmp(val_end, " ]\n", 3) != 0)) return false;
 	if (unlikely(val_begin >= val_end)) return false;
-	uint8_t val_len = uint8_t(((val_end - val_begin) + 7) / 8);
-	char val_buf[val_len * 8];
-	memset(val_buf, '\0', val_len * 8);
+	uint8_t val_len = uint8_t(val_end - val_begin); // # of bytes
+	char val_buf[val_len];
+	memset(val_buf, '\0', val_len);
 	memcpy(val_buf, val_begin, val_end - val_begin);
-	_val = Val((uint64_t*)val_buf, val_len);
+	_val = Val(val_buf, val_len);
 
 	_line = std::string(line, strlen(line));
 	return true;

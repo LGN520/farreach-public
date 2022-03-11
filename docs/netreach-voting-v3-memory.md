@@ -56,12 +56,12 @@
 - Packet format
 	+ op_hdr: 1B optype, 2B hashidx, 16B key
 	+ val_hdr: TODO: 4B vallen, variable-length value
-		* TODO: If value <= 128B, align with 8B
+		* If value <= 128B, align with 8B
 		* If value > 128B, do not need alignment
 - Client-side processing
 	+ Client side calculates hash into op_hdr.hashidx
 	+ Only GET and PUT are related with value length, while DEL does not care
-		* GET is processed by server for GETREQ_POP: if value>128B, return GETRES_LARGE that behaves similar as GETRES_NPOP in switch
+		* GET is processed by server for GETREQ_POP: if value>128B, return GETRES_POP_LARGE that behaves similar as GETRES_NPOP in switch
 		* TODO: For PUT, client sends PUTREQ_LARGE if value>128B, which does not update vote and may invalidate cached item in switch
 			- If with invalidation (i.e., becoming PUTREQ_LARGE_EVICT and clone a PUTREQ_LARGE), PUTREQ_LARGE_EVICT will be mirrored to switch OS to cope with packet loss
 - In-switch processing
@@ -77,7 +77,7 @@
 					* Due to lack of comparator within each ALU, we must maintain savedseq_hi and savedseq_lo in two 32-bit register arrays, which wastes stage
 				+ TODO: both GETRES_POP, PUTREQ_POP, and evicted packets needs to set savedseq correspondingly
 					* TODO: Note that for GETRES_POP which carries savedseq from server, if new PUT/DEL arrives at switch after GETRES_POP is applied into switch, the assigned seq must be larger than that carried from server
-				+ TODO: server also needs to save the seq number
+				+ TODO: server also needs to save the seq number, which should be invisible to client
 		* Stage 2: savedseq, lock 
 		* Stage 3: vallen, vallo1, valhi1, case12
 			- For vallen and val, we provide two operations: get, set_and_get
@@ -141,7 +141,7 @@
 	+ GETRES_NPOP
 		* Stage 2: set lock=0
 		* Stage 11: port_forward -> update GETRES_NPOP as GETRES to client
-	+ TODO: GETRES_LARGE
+	+ GETRES_POP_LARGE
 		* Stage 2: set lock=0
 		* Stage 11: port_forward -> update GETRES_LARGE as GETRES to client
 	+ PUTREQ
@@ -285,7 +285,7 @@
 	+ GETREQ_POP:
 		* If key exists in KVS
 			- If value <= 128B, sendback GETRES_POP
-			- TODO: If value > 128B, sendback GETRES_LARGE
+			- TODO: If value > 128B, sendback GETRES_POP_LARGE
 		* Otherwise, sendback GETRES_NPOP
 	+ GETRES_POP_EVICT:
 		* If vallen > 0, put evicted key-value pair into KVS without response
@@ -353,7 +353,16 @@
 	* Including: helper.h, original_xindex/\*, extended_xindexplus/\*, localtest.c, Makefile, ycsb_server.c, key.\*, val.\*
 - Add CBF-based fast path to get xindex+
 - Sync tofino-xindex-dpdk-memory-varkv to extend xindex with variable-length value and snapshot
-- Support value > 128B
+- Support value > 128B (TODO: apply to baseline?)
+	+ Add switch_max_vallen and max_vallen (use # of bytes instead of # of 8B) (config.ini, iniparser/iniparser_wrapper.\*, val.\*, localtest.c, ycsb_server.c, ycsb_local_client.c, ycsb_remote_client.c, ycsb/parser.c)
+	+ When serializing/deserializing value, if vallen <= 128B, we need to pad it with 8B alignment (val.\*)
+		* TODO: Introduce buflen when serializing/deserializing value for each packet with value (packet_format_impl.h)
+	+ TODO: Change vallen from 1B to 4B (note that vallen should be used in switch -> convert between little-endian and big-endian)
+	+ TODO: Dynamically calculate header length change according to vallen in switch
+	+ TODO: Check localtest
+- Support GET
+	+ Suport GETREQ, GETREQ_RECIR, GETRES from server, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_LARGE
+	+ TODO: GETRES from switch, GETRES_POP_EVICT, GETRES_POP_EVICT_CASE2
 - TODO: range query
 - TODO: NetCache
 - TODO: switch-driven consistent hashing
