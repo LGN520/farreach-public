@@ -42,7 +42,7 @@
 		* Distributed extension
 		* Variable-length key-value
 - Term routine
-	+ Match: just compare without changing packet header field
+	+ Match: just compare without 
 	+ Get: load to change packet header field (or metadata field)
 	+ Set: store new value without changing packet header field
 	+ Set_and_get: store new value and change packet header field with old value
@@ -55,8 +55,8 @@
 
 - Packet format
 	+ op_hdr: 1B optype, 2B hashidx, 16B key
-	+ val_hdr: TODO: 4B vallen, variable-length value
-		* If value <= 128B, align with 8B
+	+ val_hdr: 4B vallen, variable-length value
+		* If value <= 128B, align with 8B (only when serializing/deserializing to/from packet, invisible to client)
 		* If value > 128B, do not need alignment
 - Client-side processing
 	+ Client side calculates hash into op_hdr.hashidx
@@ -103,12 +103,18 @@
 					- TODO: For PUT/DELREQ, and PUT/DELREQ_RECIR
 						+ If iscase3=0, update it as PUT/DELREQ_CASE3 to server
 						+ Otherwise, update it as PUT/DELREQ to server
-					- TODO: If PUTREQ/GETRES_POP_EVICT/EVICT_CASE2 and PUTREQ_LARGE_EVICT/EVICT_CASE2, forward to server, and clone_e2e for switchOS thread
+					- TODO: If PUTREQ/GETRES_POP_EVICT/EVICT_CASE2 and PUTREQ_LARGE_EVICT/EVICT_CASE2, forward to server, and clone_e2e for switchOS thread (simulate copy_to_cpu)
 						+ For CASE2, switch OS can both cope with packet loss and perform rollback for snapshot
 						+ For each evicted packet sent from switch OS, server can compare the carried seq with that saved in server to decide whether overwrite
-						+ No matther whether overwrite, server always sends ACK to switch OS
+						+ No matter whether overwrite, server always sends ACK to switch OS
 						+ Bandwidth overhead of switch OS is limited, as eviction is rare under skewed workload and packet loss is rare
-			- Access update_macaddr_tbl
+			- Same stage
+				+ Access update_udplen_tbl (default: not change udp_hdr.hdrLen)
+					* NOTE: only match vallen <= 128B; udp_hdr.hdrLen = 6 + payloadsize
+						- Payloadsize: 1B optype + 2B hashidx + 16B key + 4B vallen + aligned vallen
+					* TODO: Including GETRES from server, GETRES_POP_EVICT/_CASE2
+					* TODO: check why we need parameter 0 when adding entry with range field
+				+ Access update_macaddr_tbl
 	+ GETREQ
 		* Stage 0: match key 
 		* Stage 1
@@ -357,12 +363,13 @@
 	+ Add switch_max_vallen and max_vallen (use # of bytes instead of # of 8B) (config.ini, iniparser/iniparser_wrapper.\*, val.\*, localtest.c, ycsb_server.c, ycsb_local_client.c, ycsb_remote_client.c, ycsb/parser.c)
 	+ When serializing/deserializing value, if vallen <= 128B, we need to pad it with 8B alignment (val.\*)
 		* TODO: Introduce buflen when serializing/deserializing value for each packet with value (packet_format_impl.h)
-	+ TODO: Change vallen from 1B to 4B (note that vallen should be used in switch -> convert between little-endian and big-endian)
-	+ TODO: Dynamically calculate header length change according to vallen in switch
+	+ Change vallen from 1B to 4B (note that vallen should be used in switch -> convert between little-endian and big-endian) (val.\*, packet_format_impl.h)
+	+ Dynamically calculate udp header length according to vallen in switch and update udp_hdr.hdrLen if necessary
 	+ TODO: Check localtest
-- Support GET
-	+ Suport GETREQ, GETREQ_RECIR, GETRES from server, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_LARGE
-	+ TODO: GETRES from switch, GETRES_POP_EVICT, GETRES_POP_EVICT_CASE2
+- Support normal packets
+	+ Suport 9 types of GET: GETREQ, GETREQ_RECIR, GETRES from server, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_LARGE, GETRES from switch, GETRES_POP_EVICT, GETRES_POP_EVICT_CASE2
+	+ Support ? types of PUT: PUTREQ
+	+ TODO: PUTREQ_RECIR, PUTRES from server, PUTREQ_POP, PUTREQ_POP_EVICT, PUTREQ_POP_EVICT_CASE2, PUTRES from switch, PUTREQ_CASE1, PUTREQ_CASE3, PUTREQ_LARGE, PUTREQ_LARGE_RECIR, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
 - TODO: range query
 - TODO: NetCache
 - TODO: switch-driven consistent hashing

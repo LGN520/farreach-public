@@ -58,10 +58,10 @@
 // VAL_PKTLEN_MINUS_SEQ: sizeof(vallen) + sizeof(value) - sizeof(seq), e.g., DELREQ_RECIR -> DELREQ_CASE1
 // OTHER_PKTLEN: sizeof(other), e.g., PUTREQ -> PUTREQ_MAY_CASE3
 // SEQ_PKTLEN_MINUS_OTHER: sizeof(seq) - sizeof(other), e.g., PUTREQ_RECIR -> PUTREQ_MAY_CASE3
-#define VAL_PKTLEN 129
-#define VAL_PKTLEN_MINUS_STAT 128
-#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 132
-#define VAL_PKTLEN_MINUS_SEQ 125
+//#define VAL_PKTLEN 129
+//#define VAL_PKTLEN_MINUS_STAT 128
+//#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 132
+//#define VAL_PKTLEN_MINUS_SEQ 125
 //#define VAL_PKTLEN 9
 //#define VAL_PKTLEN_MINUS_STAT 8
 //#define VAL_PKTLEN_MINUS_STAT_PLUS_SEQ 12
@@ -190,5 +190,6 @@ control egress {
 			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 		}
 	}
+	apply(update_udplen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
 	apply(update_macaddr_tbl); // Update mac addr for responses and PUTREQ_GS/GS_CASE2
 }

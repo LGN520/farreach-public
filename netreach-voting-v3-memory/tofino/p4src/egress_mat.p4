@@ -265,3 +265,26 @@ table update_macaddr_tbl {
 	default_action: nop();
 	size: 8;
 }
+
+action update_getres_udplen(aligned_vallen) {
+	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen
+	add(udp_hdr.hdrLen, aligned_vallen, 29);
+}
+
+// For GETRES_POP_EVICT/_CASE2
+action update_getres_pop_evict_udplen(aligned_vallen) {
+	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + [4(seq)]
+	add(udp_hdr.hdrLen, aligned_vallen, 29);
+}
+
+table update_udplen_tbl {
+	reads {
+		op_hdr.optype: exact;
+		vallen_hdr.vallen: range;
+	}
+	actions {
+		update_getres_udplen;
+		update_getres_pop_evict_udplen;
+	}
+	default_action: nop(); // not change udp_hdr.hdrLen
+}

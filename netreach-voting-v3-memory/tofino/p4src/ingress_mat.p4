@@ -75,7 +75,7 @@ action update_getreq_to_getres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
-	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN);
+	//add_to_field(udp_hdr.hdrlen, VAL_PKTLEN); // Leave to update_udplen_tbl in egress
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
 

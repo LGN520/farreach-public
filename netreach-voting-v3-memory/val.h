@@ -39,7 +39,7 @@ class Val {
 
   std::string to_string() const; // For print
 
-  uint8_t val_length; // val_length (# of bytes)
+  uint32_t val_length; // val_length (# of bytes)
   char *val_data;
 } PACKED;
 

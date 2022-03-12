@@ -16,7 +16,7 @@ Val::~Val() {
 	}
 }
 
-Val::Val(const char* buf, uint8_t length) {
+Val::Val(const char* buf, uint32_t length) {
 	INVARIANT(buf != nullptr);
 	INVARIANT(length >= 0 && length <= MAX_VALLEN);
 
@@ -151,7 +151,7 @@ void Val::from_slice(rocksdb::Slice& slice) {
 		INVARIANT(val_data != nullptr);
 		memcpy((char *)val_data, slice.data_, slice.size_);
 
-		val_length = uint8_t(slice.size_);
+		val_length = uint32_t(slice.size_);
 	}
 	else {
 		val_length = 0;
@@ -168,7 +168,7 @@ void Val::from_string(std::string& str) {
 		INVARIANT(val_data != nullptr);
 		memcpy((char *)val_data, str.data(), str.length());
 
-		val_length = uint8_t(str.length());
+		val_length = uint32_t(str.length());
 	}
 	else {
 		val_length = 0;
@@ -178,7 +178,7 @@ void Val::from_string(std::string& str) {
 
 std::string Val::to_string() const { // For print
 	std::stringstream ss;
-	for (uint8_t i = 0; i < val_length; i++) {
+	for (uint32_t i = 0; i < val_length; i++) {
 		ss << uint8_t(val_data[i]);
 		if (i != val_length-1) {
 			ss << ":";
@@ -194,13 +194,14 @@ uint32_t Val::get_bytesnum() const {
 uint32_t Val::deserialize(const char *buf, uint32_t buflen) {
 	INVARIANT(buf != nullptr);
 
-	INVARIANT(buflen >= sizeof(uint8_t));
-	val_length = *(const uint8_t*)buf; // # of bytes
-	buf += sizeof(uint8_t);
+	INVARIANT(buflen >= sizeof(uint32_t));
+	val_length = *(const uint32_t*)buf; // # of bytes
+	val_length = ntohl(val_length); // Big-endian to little-endian
+	buf += sizeof(uint32_t);
 	INVARIANT(val_length <= MAX_VALLEN);
 
 	uint32_t padding_size = 0;
-	uint32_t deserialize_size = sizeof(uint8_t) + val_length;
+	uint32_t deserialize_size = sizeof(uint32_t) + val_length;
 	if (val_length <= SWITCH_MAX_VALLEN) {
 		if (val_length % 8 != 0) {
 			padding_size = 8 - val_length % 8;
@@ -224,7 +225,7 @@ uint32_t Val::serialize(char *buf, uint32_t buflen) {
 	INVARIANT(val_data != nullptr);
 
 	uint32_t padding_size = 0;
-	uint32_t serialize_size = sizeof(uint8_t) + val_length;
+	uint32_t serialize_size = sizeof(uint32_t) + val_length;
 	if (val_length <= SWITCH_MAX_VALLEN) {
 		if (val_length % 8 != 0) {
 			padding_size = 8 - val_length % 8;
@@ -233,10 +234,11 @@ uint32_t Val::serialize(char *buf, uint32_t buflen) {
 	}
 	INVARIANT(buflen >= serialize_size);
 
-	memcpy(buf, (char *)&val_length, sizeof(uint8_t));
-	memcpy(buf + sizeof(uint8_t), val_data, val_length);
+	uint32_t bigendian_vallen = htonl(val_length); // Little-endian to big-endian
+	memcpy(buf, (char *)&bigendian_vallen, sizeof(uint32_t)); // Switch needs to use vallen
+	memcpy(buf + sizeof(uint32_t), val_data, val_length);
 	if (padding_size > 0) { // vallen <= 128B and vallen % 8 != 0
-		memset(buf + sizeof(uint8_t) + val_length, 0, padding_size);
+		memset(buf + sizeof(uint32_t) + val_length, 0, padding_size);
 	}
 	return serialize_size; // sizeof(vallen) + vallen + [padding size]
 }

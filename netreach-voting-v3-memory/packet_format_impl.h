@@ -108,7 +108,7 @@ val_t PutRequest<key_t, val_t>::val() const {
 
 template<class key_t, class val_t>
 uint32_t PutRequest<key_t, val_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::max_bytesnum();
 }
 
 template<class key_t, class val_t>
@@ -123,7 +123,7 @@ uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_key, sizeof(key_t));
 	begin += sizeof(key_t);
-	uint32_t tmpsize = this->_val.serialize(begin);
+	uint32_t tmpsize = this->_val.serialize(begin, max_size-sizeof(uint8_t)-sizeof(uint16_t)-sizeof(key_t));
 	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + tmpsize;
 }
 
@@ -139,7 +139,7 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 	begin += sizeof(key_t);
-	uint32_t tmpsize = this->_val.deserialize(begin);
+	uint32_t tmpsize = this->_val.deserialize(begin, max_size-sizeof(uint8_t)-sizeof(uint16_t)-sizeof(key_t));
 }
 
 // DelRequest
@@ -285,7 +285,7 @@ val_t GetResponse<key_t, val_t>::val() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() { // unused
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint8_t) + val_t::MAX_VALLEN;
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN;
 }
 
 template<class key_t, class val_t>
