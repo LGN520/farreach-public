@@ -133,6 +133,7 @@ action update_getres_pop_large_to_getres(port) {
 
 action update_putreq_to_putreq_pop(port) {
 	modify_field(op_hdr.optype, PUTREQ_POP_TYPE);
+	// TODO: add seq header to cope with packet loss between switch and server
 
 	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
 	recirculate(port);

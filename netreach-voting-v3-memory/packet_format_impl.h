@@ -81,7 +81,7 @@ void GetRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 }
 
-// PutRequest
+// PutRequest (value must <= 128B)
 
 template<class key_t, class val_t>
 PutRequest<key_t, val_t>::PutRequest()
@@ -93,12 +93,14 @@ template<class key_t, class val_t>
 PutRequest<key_t, val_t>::PutRequest(uint16_t hashidx, key_t key, val_t val) 
 	: Packet<key_t>(PacketType::PUT_REQ, hashidx, key), _val(val)
 {	
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
 }
 
 template<class key_t, class val_t>
 PutRequest<key_t, val_t>::PutRequest(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
 }
 
 template<class key_t, class val_t>
@@ -258,7 +260,7 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 }
 
 
-// GetResponse
+// GetResponse (value must be any size)
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse()
@@ -549,13 +551,14 @@ uint32_t GetRequestPOP<key_t>::serialize(char * const data, uint32_t max_size)
 	COUT_N_EXIT("Invalid invoke of serialize for GetRequestPOP");
 }
 
-// GetResponsePOP
+// GetResponsePOP (value must <= 128B)
 
 template<class key_t, class val_t>
 GetResponsePOP<key_t, val_t>::GetResponsePOP(uint16_t hashidx, key_t key, val_t val)
 	: GetResponse<key_t, val_t>::GetResponse(hashidx, key, val)
 {
 	this->_type = static_cast<uint8_t>(PacketType::GET_RES_POP);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
@@ -564,13 +567,14 @@ void GetResponsePOP<key_t, val_t>::deserialize(const char * data, uint32_t recv_
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponsePOP");
 }
 
-// GetResponseNPOP
+// GetResponseNPOP (value must = 0B)
 
 template<class key_t, class val_t>
 GetResponseNPOP<key_t, val_t>::GetResponseNPOP(uint16_t hashidx, key_t key, val_t val)
 	: GetResponse<key_t, val_t>::GetResponse(hashidx, key, val)
 {
 	this->_type = static_cast<uint8_t>(PacketType::GET_RES_NPOP);
+	INVARIANT(this->_val.val_length == 0);
 }
 
 template<class key_t, class val_t>
@@ -579,13 +583,14 @@ void GetResponseNPOP<key_t, val_t>::deserialize(const char * data, uint32_t recv
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseNPOP");
 }
 
-// GetResponsePOPLarge
+// GetResponsePOPLarge (value must > 128B)
 
 template<class key_t, class val_t>
 GetResponsePOPLarge<key_t, val_t>::GetResponsePOPLarge(uint16_t hashidx, key_t key, val_t val)
 	: GetResponse<key_t, val_t>::GetResponse(hashidx, key, val)
 {
 	this->_type = static_cast<uint8_t>(PacketType::GET_RES_POP_LARGE);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
@@ -594,12 +599,13 @@ void GetResponsePOPLarge<key_t, val_t>::deserialize(const char * data, uint32_t 
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponsePOPLarge");
 }
 
-// GetResponsePOPEvict
+// GetResponsePOPEvict (value must <= 128B)
 
 template<class key_t, class val_t>
 GetResponsePOPEvict<key_t, val_t>::GetResponsePOPEvict(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES_POP_EVICT);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
@@ -607,12 +613,13 @@ uint32_t GetResponsePOPEvict<key_t, val_t>::serialize(char * const data, uint32_
 	COUT_N_EXIT("Invalid invoke of serialize for GetResponsePOPEvict");
 }
 
-// PutRequestPOPEvict
+// PutRequestPOPEvict (value must <= 128B)
 
 template<class key_t, class val_t>
 PutRequestPOPEvict<key_t, val_t>::PutRequestPOPEvict(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_POP_EVICT);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
@@ -620,12 +627,31 @@ uint32_t PutRequestPOPEvict<key_t, val_t>::serialize(char * const data, uint32_t
 	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPOPEvict");
 }
 
-// PutRequestCase1
+// PutRequestLarge (value must > 128B)
+
+template<class key_t, class val_t>
+PutRequestLarge<key_t, val_t>::PutRequestLarge(uint16_t hashidx, key_t key, val_t val)
+	: PutRequest<key_t, val_t>::PutRequest(hashidx, key, val)
+{
+	this->_type = static_cast<uint8_t>(PacketType::PUT_REQ_LARGE);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALUE);
+}
+
+template<class key_t, class val_t>
+PutRequestLarge<key_t, val_t>::PutRequestLarge(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_LARGE);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+
+// PutRequestCase1 (value must <= 128B)
 
 template<class key_t, class val_t>
 PutRequestCase1<key_t, val_t>::PutRequestCase1(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_CASE1);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
@@ -646,12 +672,13 @@ uint32_t DelRequestCase1<key_t, val_t>::serialize(char * const data, uint32_t ma
 	COUT_N_EXIT("Invalid invoke of serialize for DelRequestCase1");
 }
 
-// GetResponsePOPEvictCase2
+// GetResponsePOPEvictCase2 (value must <= 128B)
 
 template<class key_t, class val_t>
 GetResponsePOPEvictCase2<key_t, val_t>::GetResponsePOPEvictCase2(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES_POP_EVICT_CASE2);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
@@ -659,12 +686,13 @@ uint32_t GetResponsePOPEvictCase2<key_t, val_t>::serialize(char * const data, ui
 	COUT_N_EXIT("Invalid invoke of serialize for GetResponsePOPEvictCase2");
 }
 
-// PutRequestPOPEvictCase2
+// PutRequestPOPEvictCase2 (value must <= 128B)
 
 template<class key_t, class val_t>
 PutRequestPOPEvictCase2<key_t, val_t>::PutRequestPOPEvictCase2(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_POP_EVICT_CASE2);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
@@ -672,12 +700,13 @@ uint32_t PutRequestPOPEvictCase2<key_t, val_t>::serialize(char * const data, uin
 	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPOPEvictCase2");
 }
 
-// PutRequestCase3
+// PutRequestCase3 (value must <= 128B)
 
 template<class key_t, class val_t>
 PutRequestCase3<key_t, val_t>::PutRequestCase3(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_CASE3);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>

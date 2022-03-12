@@ -1069,10 +1069,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: update_udplen_tbl (default: nop; ?)
             print "Configuring update_udplen_tbl"
-            for i in range(switch_max_vallen/8): # i from 0 to 15
-                vallen_start = i*8+1 # 1, ..., 121
-                vallen_end = i*8+8 # 8, ..., 128
-                aligned_vallen = vallen_end # 8, ..., 128
+            for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
+                if i == 0:
+                    vallen_start = 0
+                    vallen_end = 0
+                    aligned_vallen = 0
+                else:
+                    vallen_start = (i-1)*8+1 # 1, ..., 121
+                    vallen_end = (i-1)*8+8 # 8, ..., 128
+                    aligned_vallen = vallen_end # 8, ..., 128
+                # NOTE: if vallen of GETRES > 128B, it must be issued by server which has already set correct udplen
                 matchspec0 = netbufferv3_update_udplen_tbl_match_spec_t(\
                         op_hdr_optype=GETRES_TYPE,
                         vallen_hdr_vallen_start=vallen_start,
@@ -1083,13 +1089,37 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                 for tmpoptype in [GETRES_POP_EVICT_TYPE, GETRES_POP_EVICT_CASE2_TYPE]:
                     matchspec0 = netbufferv3_update_udplen_tbl_match_spec_t(\
-                            op_hdr_optype=tmpoptype
+                            op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,
                             vallen_hdr_vallen_end=vallen_end)
                     actnspec0 = netbufferv3_update_getres_pop_evict_udplen_action_spec_t(\
                             aligned_vallen)
                     self.client.update_udplen_tbl_table_add_with_update_getres_pop_evict_udplen(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                for tmpoptype in [PUTREQ_POP_EVICT_TYPE, PUTREQ_POP_EVICT_CASE2_TYPE]:
+                    matchspec0 = netbufferv3_update_udplen_tbl_match_spec_t(\
+                            op_hdr_optype=tmpoptype,
+                            vallen_hdr_vallen_start=vallen_start,
+                            vallen_hdr_vallen_end=vallen_end)
+                    actnspec0 = netbufferv3_update_putreq_pop_evict_udplen_action_spec_t(\
+                            aligned_vallen)
+                    self.client.update_udplen_tbl_table_add_with_update_putreq_pop_evict_udplen(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                matchspec0 = netbufferv3_update_udplen_tbl_match_spec_t(\
+                        op_hdr_optype=PUTREQ_CASE1_TYPE,
+                        vallen_hdr_vallen_start=vallen_start,
+                        vallen_hdr_vallen_end=vallen_end)
+                actnspec0 = netbufferv3_update_putreq_case1_udplen_action_spec_t(\
+                        aligned_vallen)
+                self.client.update_udplen_tbl_table_add_with_update_putreq_case1_udplen(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+            # NOTE: if vallen of PUTREQ > 128B, its PUTRES must be issued by server which has already set correct udplen
+            matchspec0 = netbufferv3_update_udplen_tbl_match_spec_t(\
+                    op_hdr_optype=PUTRES_TYPE,
+                    vallen_hdr_vallen_start=0,
+                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+            self.client.update_udplen_tbl_table_add_with_update_putres_udplen(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: update_macaddr_tbl (default: nop; 5)
             print "Configuring update_macaddr_tbl"

@@ -40,7 +40,6 @@
 		* Range query support
 		* Switch-driven consistent hashing
 		* Distributed extension
-		* Variable-length key-value
 - Term routine
 	+ Match: just compare without 
 	+ Get: load to change packet header field (or metadata field)
@@ -48,8 +47,11 @@
 	+ Set_and_get: store new value and change packet header field with old value
 	+ Reset: reset value as 0
 	+ Init: initialize value as 1
-- Baselines
 - NOTES
+	+ TODO: we need to verify the liimted bandwidth overhead of switch OS (case1, mirrored evict/case2, backup data)
+	+ TODO: we need to verify the limited recirculation rate due to data-plane-based eviction
+		* We can clone a pkt for each recirculation to cound the # of recirculations, then divide it with # of pkts
+		* Note that one packet has only one recirculation if locked by PUTREQ_POP, while multiple recirculations if by GETRES_POP
 
 ## Details 
 
@@ -92,12 +94,15 @@
 				+ TODO: If SCANREQ_SPLIT
 					* TODO: If split_idx == 1 (the last 2nd pkt has been sent), set split_idx=0 (send the last pkt) and send to next server (increase dst_port)
 					* TODO: Otherwise: decrease split_idx, send to next server, and clone_e2e
+				+ TODO: For mirrored EVICT and mirrored EVICT_CASE2, assign a specific udp port as switch OS
 			- For non-cloned packet
-				- TODO: switch-driven partition scheme
+				- TODO: switch-driven partition scheme (change udp port)
 					+ If no range query, hash parition for normal REQ packets
 					+ TODO: If w/ range query, range partition for normal REQ packets
 						* TODO: For SCANREQ, update it as SCANREQ_SPLIT to corresponding server (based on beginkey) with split_num (based on beginkey and endkey) and split_idx (always start from split_num-1), and clone_e2e
 						* TODO: Server needs to embed snapshot id into SCANRES for client to judge the consistency, and retry if not (snapshot and hence inconsistent SCANRES is rare)
+					+ TODO: assign a specific udp port as switch OS for all packets of CASE1
+					+ TODO: try to move it after eg_port_forward_tbl to reduce MAT entries and actions?
 				- TODO: Access per-server iscase3
 				- TODO: Access eg_port_forward_tbl
 					- TODO: For PUT/DELREQ, and PUT/DELREQ_RECIR
@@ -112,7 +117,7 @@
 				+ Access update_udplen_tbl (default: not change udp_hdr.hdrLen)
 					* NOTE: only match vallen <= 128B; udp_hdr.hdrLen = 6 + payloadsize
 						- Payloadsize: 1B optype + 2B hashidx + 16B key + 4B vallen + aligned vallen
-					* TODO: Including GETRES from server, GETRES_POP_EVICT/_CASE2
+					* TODO: Including GETRES from server/switch, GETRES_POP_EVICT/_CASE2, PUTRES from server/switch, PUTREQ_POP_EVICT/_CASE2, PUTREQ_CASE1
 					* TODO: check why we need parameter 0 when adding entry with range field
 				+ Access update_macaddr_tbl
 	+ GETREQ
@@ -365,11 +370,12 @@
 		* TODO: Introduce buflen when serializing/deserializing value for each packet with value (packet_format_impl.h)
 	+ Change vallen from 1B to 4B (note that vallen should be used in switch -> convert between little-endian and big-endian) (val.\*, packet_format_impl.h)
 	+ Dynamically calculate udp header length according to vallen in switch and update udp_hdr.hdrLen if necessary
-	+ TODO: Check localtest
 - Support normal packets
 	+ Suport 9 types of GET: GETREQ, GETREQ_RECIR, GETRES from server, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_LARGE, GETRES from switch, GETRES_POP_EVICT, GETRES_POP_EVICT_CASE2
-	+ Support ? types of PUT: PUTREQ
-	+ TODO: PUTREQ_RECIR, PUTRES from server, PUTREQ_POP, PUTREQ_POP_EVICT, PUTREQ_POP_EVICT_CASE2, PUTRES from switch, PUTREQ_CASE1, PUTREQ_CASE3, PUTREQ_LARGE, PUTREQ_LARGE_RECIR, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
+	+ Support ? types of PUT: PUTREQ, PUTREQ_RECIR, PUTRES from server, PUTREQ_POP, PUTREQ_POP_EVICT, PUTREQ_POP_EVICT_CASE2, PUTRES from switch, PUTREQ_CASE1, PUTREQ_CASE3,
+	+ TODO: PUTREQ_LARGE, PUTREQ_LARGE_CASE3, PUTREQ_LARGE_RECIR, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
++ TODO: Check localtest
++ TODO: Check ycsb
 - TODO: range query
 - TODO: NetCache
 - TODO: switch-driven consistent hashing
