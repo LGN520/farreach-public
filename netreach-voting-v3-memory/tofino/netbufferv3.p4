@@ -29,15 +29,19 @@
 #define PUTREQ_POP_TYPE 0x0d
 #define PUTREQ_RECIR_TYPE 0x0e
 #define PUTREQ_POP_EVICT_TYPE 0x0f
-#define DELREQ_RECIR_TYPE 0x10
-#define PUTREQ_CASE1_TYPE 0x11
-#define DELREQ_CASE1_TYPE 0x12
-#define GETRES_POP_EVICT_CASE2_TYPE 0x13
-#define PUTREQ_POP_EVICT_CASE2_TYPE 0x14
-#define PUTREQ_MAY_CASE3_TYPE 0x15
-#define PUTREQ_CASE3_TYPE 0x16
-#define DELREQ_MAY_CASE3_TYPE 0x17
-#define DELREQ_CASE3_TYPE 0x18
+#define PUTREQ_LARGE_TYPE 0x10
+#define PUTREQ_LARGE_RECIR_TYPE 0x11
+#define PUTREQ_LARGE_EVICT_TYPE 0x12
+#define DELREQ_RECIR_TYPE 0x13
+#define PUTREQ_CASE1_TYPE 0x14
+#define DELREQ_CASE1_TYPE 0x15
+#define GETRES_POP_EVICT_CASE2_TYPE 0x16
+#define PUTREQ_POP_EVICT_CASE2_TYPE 0x17
+#define PUTREQ_LARGE_EVICT_CASE2_TYPE 0x18
+#define PUTREQ_MAY_CASE3_TYPE 0x19
+#define PUTREQ_CASE3_TYPE 0x1a
+#define DELREQ_MAY_CASE3_TYPE 0x1b
+#define DELREQ_CASE3_TYPE 0x1c
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -175,7 +179,9 @@ control egress {
 	if (pkt_is_i2e_mirrored) {
 		apply(process_cloned_packet_tbl);
 	}
-	else {
+
+	// TODO: following MATs should be applied for PUTREQ_LARGE even if being cloned
+
 		apply(process_may_case3_tbl);
 
 		// NOTE: for packets requring origin_hash, the key and value in packet header have already been set as origin_key/val
@@ -189,7 +195,7 @@ control egress {
 		else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
 			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 		}
-	}
+
 	apply(update_udplen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
 	apply(update_macaddr_tbl); // Update mac addr for responses and PUTREQ_GS/GS_CASE2
 }

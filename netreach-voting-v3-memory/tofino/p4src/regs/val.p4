@@ -47,6 +47,7 @@ table update_vallen_tbl {
 		op_hdr.optype: exact;
 		meta.canput: exact;
 		meta.iskeymatch: exact;
+		meta.isvalid: exact;
 	}
 	actions {
 		get_vallen;
@@ -55,7 +56,7 @@ table update_vallen_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 16;
+	size: 32;
 }
 
 register vallo1_reg {

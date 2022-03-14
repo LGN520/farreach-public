@@ -4,6 +4,9 @@
 	+ We calculate meta.hashidx for hash partition in switch
 - Offload some functions to egress pipeline to reduce stages
 - Using 4B for each unit of key instead of 2B to reduce 1 stage
+- TODO: If with IP-level fragmentation
+	+ Configure MTU
+	+ Only process the first fragmented packet
 
 ## Overview
 
@@ -80,39 +83,48 @@
 				+ TODO: both GETRES_POP, PUTREQ_POP, and evicted packets needs to set savedseq correspondingly
 					* TODO: Note that for GETRES_POP which carries savedseq from server, if new PUT/DEL arrives at switch after GETRES_POP is applied into switch, the assigned seq must be larger than that carried from server
 				+ TODO: server also needs to save the seq number, which should be invisible to client
+				+ TODO: For PUTREQ_LARGE, assign seq to meta.seq instead of seq_hdr.seq
+				+ TODO: For PUTREQ_LARGE_RECIR, set meta.seq = seq_hdr.seq
 		* Stage 2: savedseq, lock 
+			- For PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, if iskeymatch=1, try_update_savedseq: if seq<=savedseq, directly send back response; otherwise, update vallen and value before sending back response
+			- TODO: For PUTREQ_POP/DELREQ_POP, set_and_get_savedseq: set savedseq as embedded one, get old savedseq for possible eviction
+				+ TODO: NOTE: as cloned packet does not need seq, both set and get can happen on seq_hdr
+			- TODO: For PUTREQ_LARGE/_RECIR, if iskeymatch=1 and valid=1, get_savedseq_large: get savedseq to seq_hdr 
+				+ NOTE: PUTREQ_LARGE/_RECIR always evicts cached record if any even if seq<=savedseq due to stage limitation
+
 		* Stage 3: vallen, vallo1, valhi1, case12
 			- For vallen and val, we provide two operations: get, set_and_get
 		* Stage 4-10: from val2 to val15
 		* Stage 11: vallo16, valhi16, ~~case3~~, port_forward_tbl
 		* Egress pipeline
-			- For cloned packet
+			- process_cloned_packet_tbl for cloned packet 
 				+ If PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, update as PUT/DELRES/PUTRES to client
-				+ If PUTREQ_LARGE/PUTREQ_LARGE_RECIR, update as PUTREQ_LARGE to server
+				+ If PUTREQ_LARGE_RECIR, update as PUTREQ_LARGE to server
+					* NOTE: for cloned PUTREQ_LARGE, we do not need to update op_hdr.optype
+					* TODO: Only PUTREQ_LARGE will aplly the following MATs in egress pipeline
 				+ If GETRES_POP (with new key-value), update it as GETRES to client
 				+ If PUTREQ_POP (with new key-value), update it as PUTRES to client
 				+ TODO: If SCANREQ_SPLIT
 					* TODO: If split_idx == 1 (the last 2nd pkt has been sent), set split_idx=0 (send the last pkt) and send to next server (increase dst_port)
 					* TODO: Otherwise: decrease split_idx, send to next server, and clone_e2e
 				+ TODO: For mirrored EVICT and mirrored EVICT_CASE2, assign a specific udp port as switch OS
-			- For non-cloned packet
-				- TODO: switch-driven partition scheme (change udp port)
-					+ If no range query, hash parition for normal REQ packets
-					+ TODO: If w/ range query, range partition for normal REQ packets
-						* TODO: For SCANREQ, update it as SCANREQ_SPLIT to corresponding server (based on beginkey) with split_num (based on beginkey and endkey) and split_idx (always start from split_num-1), and clone_e2e
-						* TODO: Server needs to embed snapshot id into SCANRES for client to judge the consistency, and retry if not (snapshot and hence inconsistent SCANRES is rare)
-					+ TODO: assign a specific udp port as switch OS for all packets of CASE1
-					+ TODO: try to move it after eg_port_forward_tbl to reduce MAT entries and actions?
-				- TODO: Access per-server iscase3
-				- TODO: Access eg_port_forward_tbl
-					- TODO: For PUT/DELREQ, and PUT/DELREQ_RECIR
-						+ If iscase3=0, update it as PUT/DELREQ_CASE3 to server
-						+ Otherwise, update it as PUT/DELREQ to server
-					- TODO: If PUTREQ/GETRES_POP_EVICT/EVICT_CASE2 and PUTREQ_LARGE_EVICT/EVICT_CASE2, forward to server, and clone_e2e for switchOS thread (simulate copy_to_cpu)
-						+ For CASE2, switch OS can both cope with packet loss and perform rollback for snapshot
-						+ For each evicted packet sent from switch OS, server can compare the carried seq with that saved in server to decide whether overwrite
-						+ No matter whether overwrite, server always sends ACK to switch OS
-						+ Bandwidth overhead of switch OS is limited, as eviction is rare under skewed workload and packet loss is rare
+			- TODO: switch-driven partition scheme (change udp port)
+				+ If no range query, hash parition for normal REQ packets
+				+ TODO: If w/ range query, range partition for normal REQ packets
+					* TODO: For SCANREQ, update it as SCANREQ_SPLIT to corresponding server (based on beginkey) with split_num (based on beginkey and endkey) and split_idx (always start from split_num-1), and clone_e2e
+					* TODO: Server needs to embed snapshot id into SCANRES for client to judge the consistency, and retry if not (snapshot and hence inconsistent SCANRES is rare)
+				+ TODO: assign a specific udp port as switch OS for all packets of CASE1
+				+ TODO: try to move it after eg_port_forward_tbl to reduce MAT entries and actions?
+			- TODO: Access per-server iscase3
+			- TODO: Access eg_port_forward_tbl
+				- TODO: For PUT/DELREQ, and PUT/DELREQ_RECIR
+					+ If iscase3=0, update it as PUT/DELREQ_CASE3 to server
+					+ Otherwise, update it as PUT/DELREQ to server
+				- TODO: If PUTREQ/GETRES_POP_EVICT/EVICT_CASE2 and PUTREQ_LARGE_EVICT/EVICT_CASE2, forward to server, and clone_e2e for switchOS thread (simulate copy_to_cpu)
+					+ For CASE2, switch OS can both cope with packet loss and perform rollback for snapshot
+					+ For each evicted packet sent from switch OS, server can compare the carried seq with that saved in server to decide whether overwrite
+					+ No matter whether overwrite, server always sends ACK to switch OS
+					+ Bandwidth overhead of switch OS is limited, as eviction is rare under skewed workload and packet loss is rare
 			- Same stage
 				+ Access update_udplen_tbl (default: not change udp_hdr.hdrLen)
 					* NOTE: only match vallen <= 128B; udp_hdr.hdrLen = 6 + payloadsize
@@ -180,26 +192,26 @@
 					+ If isbackup=0, forward PUTREQ to server -> hash_partition_tbl
 					+ If isbackup=1, update PUTREQ as PUTREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
 			- If "otherwise" and isbackup=1, try_case3
-	+ TODO: PUTREQ_LARGE/RECIR
+	+ PUTREQ_LARGE/RECIR
 		* Stage 0: match key
 		* Stage 1
-			- Set_and_get valid=0 if key matches
-			- Assign seq
+			- Reset_and_get valid=0 if key matches
+			- Assign seq only for PUTREQ_LARGE not PUTREQ_LARGE_RECIR
 			- Update iskeymatch
 		* Stage 3-11
-			- Load vallen and value if iskeymatch=1 and isvalid=1
+			- Get vallen if iskeymatch=1 and isvalid=1; get val if iskeymatch=1
+				+ NOTE: if PUTREQ_LARGE/RECIR do not need EVICT, they should not change vallen_hdr which will be deparsed; but they can simply change val_hdr as it will not be deparsed due to vallen > 128
 			- Try case12 if isbackup=1, iskeymatch=1, and isvalid=1; otherwise, read case12
 		* Stage 11
 			- NOTE: PUTREQ_LARGE can trigger both case 2 and case 3
 			- Access port_forward_tbl
-				+ If lock=1, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_RECIR (with seq_hdr, not need to assign seq again) and recirculate
-				+ If lock=0
-					* If iskeymatch=1 and isvalid=1
-						- If isbackup=1 and iscase12=0, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT_CASE2 to server (evict the value of the same key to cope with packet loss), clone_i2e for PUTREQ_LARGE/RECIR to server
-							+ PUTREQ_LARGE_EVICT_CASE2 -> hash_partition_tbl
-						- Otherwise, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT to server, clone_i2e for PUTREQ_LARGE/RECIR to server
-					* Otherwise, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE to server
-			- If lock=0 and isbackup=1, try_case3
+				+ If iskeymatch=0 and lock=1, TODO: set seq_hdr.seq=meta.seq, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_RECIR (with seq_hdr, not need to assign seq again) and recirculate
+				+ If iskeymatch=1 and isvalid=1
+					- If isbackup=1 and iscase12=0, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT_CASE2 to server (evict the value of the same key to cope with packet loss), clone_i2e for PUTREQ_LARGE/RECIR to server with meta.seq
+						+ PUTREQ_LARGE_EVICT_CASE2 -> hash_partition_tbl
+					- Otherwise, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT to server, clone_i2e for PUTREQ_LARGE/RECIR to server with meta.seq
+				+ Otherwise, TODO: set seq_hdr.seq=meta.seq, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE to server
+			- TODO: If lock=0 and isbackup=1, try_case3
 	+ PUTREQ_POP
 		* Stage 0: set_and_get key
 		* Stage 1: set valid=1, vote=1
@@ -304,6 +316,7 @@
 	+ PUTREQ_POP_EVICT:
 		* If vallen > 0, put evicted key-value pair into KVS without response
 		* Otherwise, delete evicted key from KVS without response
+	+ TODOTODO: PUTREQ_LARGE, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
 	+ PUTREQ_CASE1/DELREQ_CASE1:
 		* Add into special case
 	+ GETRES_POP_EVICT_CASE2/PUTREQ_POP_EVICT_CASE2

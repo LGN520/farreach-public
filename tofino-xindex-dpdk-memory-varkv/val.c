@@ -200,7 +200,7 @@ uint32_t Val::deserialize(const char *buf) {
 	INVARIANT(val_length <= MAX_VAL_LENGTH);
 
 	if (val_data != nullptr) {
-		delete val_data;
+		delete [] val_data;
 	}
 
 	// Deep copy

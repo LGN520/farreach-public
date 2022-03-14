@@ -38,6 +38,7 @@ typedef Key index_key_t;
 typedef Val val_t;
 typedef GetRequest<index_key_t> get_request_t;
 typedef PutRequest<index_key_t, val_t> put_request_t;
+typedef PutRequestLarge<index_key_t, val_t> put_request_large_t;
 typedef DelRequest<index_key_t> del_request_t;
 typedef ScanRequest<index_key_t> scan_request_t;
 typedef GetResponse<index_key_t, val_t> get_response_t;
@@ -496,9 +497,16 @@ static int run_fg(void *param) {
 
 			CUR_TIME(req_t1);
 			uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
-			put_request_t req(hashidx, tmpkey, tmpval);
+
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
-			req_size = req.serialize(buf, MAX_BUFSIZE);
+			if (tmpval.val_length <= val_t::SWITCH_MAX_VALLEN) {
+				put_request_t req(hashidx, tmpkey, tmpval);
+				req_size = req.serialize(buf, MAX_BUFSIZE);
+			}
+			else {
+				put_request_large_t req(hashidx, tmpkey, tmpval);
+				req_size = req.serialize(buf, MAX_BUFSIZE);
+			}
 
 			// DPDK
 			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);

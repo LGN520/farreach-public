@@ -120,6 +120,12 @@ action update_cloned_putreq_pop_to_putres() {
 	add_header(res_hdr);
 }
 
+action update_cloned_putreq_large_recir_to_putreq_large() {
+	modify_field(op_hdr.optype, PUTREQ_LARGE_TYPE);
+	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	remove_header(seq_hdr);
+}
+
 table process_cloned_packet_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -131,6 +137,7 @@ table process_cloned_packet_tbl {
 		update_cloned_delreq_recir_to_delres;
 		update_cloned_getres_pop_to_getres;
 		update_cloned_putreq_pop_to_putres;
+		update_cloned_putreq_large_recir_to_putreq_large;
 		nop;
 	}
 	default_action: nop();
@@ -306,4 +313,5 @@ table update_udplen_tbl {
 		update_putreq_pop_evict_udplen;
 	}
 	default_action: nop(); // not change udp_hdr.hdrLen
+	size: 128;
 }
