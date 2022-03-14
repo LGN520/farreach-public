@@ -222,6 +222,14 @@ class PutRequestLarge : public PutRequest<key_t, val_t> {
 };
 
 template<class key_t, class val_t>
+class PutRequestLargeEvict : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestLargeEvict(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
 class PutRequestCase1 : public PutRequest<key_t, val_t> {
 	public:
 		PutRequestCase1(const char * data, uint32_t recv_size);
@@ -249,6 +257,14 @@ template<class key_t, class val_t>
 class PutRequestPOPEvictCase2 : public PutRequest<key_t, val_t> {
 	public:
 		PutRequestPOPEvictCase2(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestLargeEvictCase2 : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestLargeEvictCase2(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };

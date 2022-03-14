@@ -67,9 +67,12 @@ typedef GetResponseNPOP<index_key_t, val_t> get_response_npop_t;
 typedef GetResponsePOPLarge<index_key_t, val_t> get_response_pop_lareg_t;
 typedef GetResponsePOPEvict<index_key_t, val_t> get_response_pop_evict_t;
 typedef PutRequestPOPEvict<index_key_t, val_t> put_request_pop_evict_t;
+typedef PutRequestLarge<index_key_t, val_t> put_request_large_t;
+typedef PutRequestLargeEvict<index_key_t, val_t> put_request_large_evict_t;
 typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
 typedef DelRequestCase1<index_key_t, val_t> del_request_case1_t;
 typedef GetResponsePOPEvictCase2<index_key_t, val_t> get_response_pop_evict_case2_t;
+typedef PutRequestLargeEvictCase2<index_key_t, val_t> put_request_large_evict_case2_t;
 typedef PutRequestPOPEvictCase2<index_key_t, val_t> put_request_pop_evict_case2_t;
 typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
 typedef DelRequestCase3<index_key_t> del_request_case3_t;
@@ -1163,6 +1166,36 @@ static int run_sfg(void * param) {
 					}
 					break;
 				}
+			case packet_type_t::PUT_REQ_LARGE:
+				{
+					put_request_large_t req(buf, recv_size);
+					INVARIANT(req.val().val_length > val_t::SWITCH_MAX_VALLEN);
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::PUT_REQ_LARGE_EVICT:
+				{
+					// Put evicted data into key-value store
+					put_request_large_evict_t req(buf, recv_size);
+					INVARIANT(req.val().val_length <= val_t::SWITCH_MAX_VALLEN);
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+					if (req.val().val_length > 0) {
+						table->put(req.key(), req.val(), thread_id);
+					}
+					else {
+						table->remove(req.key(), thread_id);
+					}
+					break;
+				}
 			case packet_type_t::PUT_REQ_CASE1:
 				{
 					COUT_THIS("PUT_REQ_CASE1")
@@ -1230,6 +1263,31 @@ static int run_sfg(void * param) {
 					COUT_THIS("PUT_REQ_POP_EVICT_CASE2")
 					put_request_pop_evict_case2_t req(buf, recv_size);
 					if (!isbackup) {
+						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+								== special_cases_list[thread_id]->end()) { // No such hashidx
+							SpecialCase tmpcase;
+							tmpcase._key = req.key();
+							tmpcase._val = req.val();
+							tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
+							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+										(unsigned short)req.hashidx(), tmpcase));
+						}
+						try_kvsnapshot(table);
+					}
+					if (req.val().val_length > 0) {
+						table->put(req.key(), req.val(), thread_id);
+					}
+					else {
+						table->remove(req.key(), thread_id);
+					}
+					break;
+				}
+			case packet_type_t::PUT_REQ_LARGE_EVICT_CASE2:
+				{
+					COUT_THIS("PUT_REQ_LARGE_EVICT_CASE2")
+					put_request_large_evict_case2_t req(buf, recv_size);
+					INVARIANT(req.val().val_length <= val_t.SWITCH_MAX_VALLEN);
+					if (!isbackup) { // Not receive backup data yet
 						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
 								== special_cases_list[thread_id]->end()) { // No such hashidx
 							SpecialCase tmpcase;

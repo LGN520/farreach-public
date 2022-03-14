@@ -85,6 +85,8 @@
 				+ TODO: server also needs to save the seq number, which should be invisible to client
 				+ TODO: For PUTREQ_LARGE, assign seq to meta.seq instead of seq_hdr.seq
 				+ TODO: For PUTREQ_LARGE_RECIR, set meta.seq = seq_hdr.seq
+				+ TODO: For DELREQ, we maintain a small set of recently-deleted keys and the corresponding seq numbers
+					* TODO: We only need to check seq of deleted set for EVICT packets: if evict.seq<=delete.seq, treat it as deleted; otherwise, perform the EVICT packet and remove it from the deleted set
 		* Stage 2: savedseq, lock 
 			- For PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, if iskeymatch=1, try_update_savedseq: if seq<=savedseq, directly send back response; otherwise, update vallen and value before sending back response
 			- TODO: For PUTREQ_POP/DELREQ_POP, set_and_get_savedseq: set savedseq as embedded one, get old savedseq for possible eviction
@@ -316,10 +318,11 @@
 	+ PUTREQ_POP_EVICT:
 		* If vallen > 0, put evicted key-value pair into KVS without response
 		* Otherwise, delete evicted key from KVS without response
-	+ TODOTODO: PUTREQ_LARGE, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
+	+ PUTREQ_LARGE: sendback PUTRES
+	+ PUTREQ_LARGE_EVICT: similar as PUTREQ_POP_EVICT
 	+ PUTREQ_CASE1/DELREQ_CASE1:
 		* Add into special case
-	+ GETRES_POP_EVICT_CASE2/PUTREQ_POP_EVICT_CASE2
+	+ GETRES_POP_EVICT_CASE2/PUTREQ_POP_EVICT_CASE2/PUTREQ_LARGE_EVICT_CASE2
 		* TODO: make snapshot
 		* If vallen > 0, put evicted key-value pair into KVS without response, add into special case (valid)
 		* Otherwise, delete evicted key from KVS without response, add into special case (invalid)
@@ -385,8 +388,8 @@
 	+ Dynamically calculate udp header length according to vallen in switch and update udp_hdr.hdrLen if necessary
 - Support normal packets
 	+ Suport 9 types of GET: GETREQ, GETREQ_RECIR, GETRES from server, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_LARGE, GETRES from switch, GETRES_POP_EVICT, GETRES_POP_EVICT_CASE2
-	+ Support ? types of PUT: PUTREQ, PUTREQ_RECIR, PUTRES from server, PUTREQ_POP, PUTREQ_POP_EVICT, PUTREQ_POP_EVICT_CASE2, PUTRES from switch, PUTREQ_CASE1, PUTREQ_CASE3,
-	+ TODO: PUTREQ_LARGE, PUTREQ_LARGE_CASE3, PUTREQ_LARGE_RECIR, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
+	+ Support ? types of PUT: PUTREQ, PUTREQ_RECIR, PUTRES from server, PUTREQ_POP, PUTREQ_POP_EVICT, PUTREQ_POP_EVICT_CASE2, PUTRES from switch, PUTREQ_CASE1, PUTREQ_CASE3, PUTREQ_LARGE, PUTREQ_LARGE_RECIR, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
+	+ TODO: PUTREQ_LARGE_CASE3
 + TODO: Check localtest
 + TODO: Check ycsb
 - TODO: range query

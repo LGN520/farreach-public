@@ -321,7 +321,7 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	uint32_t tmpsize = this->_val.deserialize(begin, recv_size-sizeof(uint8_t)-sizeof(uint16_t)-sizeof(key_t));
 }
 
-// PutResponse
+// PutResponse (value must be any size)
 
 template<class key_t>
 PutResponse<key_t>::PutResponse(uint16_t hashidx, key_t key, bool stat) 
@@ -644,6 +644,20 @@ PutRequestLarge<key_t, val_t>::PutRequestLarge(const char * data, uint32_t recv_
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
+// PutRequestLargeEvict (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestLargeEvict<key_t, val_t>::PutRequestLargeEvict(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_LARGE_EVICT);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestLargeEvict<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestLargeEvict");
+}
+
 
 // PutRequestCase1 (value must <= 128B)
 
@@ -698,6 +712,20 @@ PutRequestPOPEvictCase2<key_t, val_t>::PutRequestPOPEvictCase2(const char * data
 template<class key_t, class val_t>
 uint32_t PutRequestPOPEvictCase2<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPOPEvictCase2");
+}
+
+// PutRequestLargeEvictCase2 (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestLargeEvictCase2<key_t, val_t>::PutRequestLargeEvictCase2(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_LARGE_EVICT_CASE2);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestLargeEvictCase2<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestLargeEvictCase2");
 }
 
 // PutRequestCase3 (value must <= 128B)
