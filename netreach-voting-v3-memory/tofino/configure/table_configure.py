@@ -1177,7 +1177,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                 hash_start = hash_end
 
-            # Table: update_udplen_tbl (default: nop; 102)
+            # Table: update_udplen_tbl (default: nop; 120)
             print "Configuring update_udplen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
@@ -1222,6 +1222,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec0 = netbufferv3_update_putreq_case1_udplen_action_spec_t(\
                         aligned_vallen)
                 self.client.update_udplen_tbl_table_add_with_update_putreq_case1_udplen(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                matchspec0 = netbufferv3_update_udplen_tbl_match_spec_t(\
+                        op_hdr_optype=DELREQ_CASE1_TYPE,
+                        vallen_hdr_vallen_start=vallen_start,
+                        vallen_hdr_vallen_end=vallen_end)
+                actnspec0 = netbufferv3_update_delreq_case1_udplen_action_spec_t(\
+                        aligned_vallen)
+                self.client.update_udplen_tbl_table_add_with_update_delreq_case1_udplen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
             # NOTE: if vallen of PUTREQ > 128B, its PUTRES must be issued by server which has already set correct udplen
             matchspec0 = netbufferv3_update_udplen_tbl_match_spec_t(\

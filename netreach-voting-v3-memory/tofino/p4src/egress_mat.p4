@@ -301,6 +301,13 @@ action update_putreq_case1_udplen() {
 	add(udp_hdr.hdrLen, aligned_vallen, 29);
 }
 
+action update_delreq_case1_udplen() {
+	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen
+	// NOTE: case 1 does not need seq, as it is sent from switch to switch OS in design without packet loss
+	// and we do not need to save it in server-side KVS and hence not need to cope with overwrite
+	add(udp_hdr.hdrLen, aligned_vallen, 29);
+}
+
 table update_udplen_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -308,9 +315,11 @@ table update_udplen_tbl {
 	}
 	actions {
 		update_getres_udplen;
-		update_getres_pop_evict_udplen;
+		update_getres_pop_evict_udplen; // For GETRES_POP_EVICT/_CASE2
 		update_putres_udplen;
-		update_putreq_pop_evict_udplen;
+		update_putreq_pop_evict_udplen; // For PUTREQ_POP_EVICT/_CASE2
+		update_putreq_case1_udplen;
+		update_delreq_case1_udplen;
 	}
 	default_action: nop(); // not change udp_hdr.hdrLen
 	size: 128;

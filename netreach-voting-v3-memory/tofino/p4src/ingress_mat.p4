@@ -344,7 +344,7 @@ action update_putreq_recir_to_case1_clone_for_putres(sid, port) {
 action update_delreq_to_case1_clone_for_delres(sid, port) {
 	modify_field(op_hdr.optype, DELREQ_CASE1_TYPE);
 
-	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN);
+	//add_to_field(udp_hdr.hdrlen, VAL_PKTLEN);
 	add_header(vallen_hdr);
 	add_header(val1_hdr);
 	add_header(val2_hdr);
@@ -370,7 +370,8 @@ action update_delreq_to_case1_clone_for_delres(sid, port) {
 action update_delreq_recir_to_case1_clone_for_delres(sid, port) {
 	modify_field(op_hdr.optype, DELREQ_CASE1_TYPE);
 
-	add_to_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_SEQ);
+	//add_to_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_SEQ);
+	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
 	add_header(vallen_hdr);
 	add_header(val1_hdr);
 	add_header(val2_hdr);

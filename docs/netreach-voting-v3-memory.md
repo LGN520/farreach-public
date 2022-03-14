@@ -7,6 +7,7 @@
 - TODO: If with IP-level fragmentation
 	+ Configure MTU
 	+ Only process the first fragmented packet
+- TODO: in final test, we need to reset DEBUG_ASSERT as 0 
 
 ## Overview
 
@@ -85,8 +86,6 @@
 				+ TODO: server also needs to save the seq number, which should be invisible to client
 				+ TODO: For PUTREQ_LARGE, assign seq to meta.seq instead of seq_hdr.seq
 				+ TODO: For PUTREQ_LARGE_RECIR, set meta.seq = seq_hdr.seq
-				+ TODO: For DELREQ, we maintain a small set of recently-deleted keys and the corresponding seq numbers
-					* TODO: We only need to check seq of deleted set for EVICT packets: if evict.seq<=delete.seq, treat it as deleted; otherwise, perform the EVICT packet and remove it from the deleted set
 		* Stage 2: savedseq, lock 
 			- For PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, if iskeymatch=1, try_update_savedseq: if seq<=savedseq, directly send back response; otherwise, update vallen and value before sending back response
 			- TODO: For PUTREQ_POP/DELREQ_POP, set_and_get_savedseq: set savedseq as embedded one, get old savedseq for possible eviction
@@ -310,24 +309,22 @@
 	+ GETREQ_POP:
 		* If key exists in KVS
 			- If value <= 128B, sendback GETRES_POP
-			- TODO: If value > 128B, sendback GETRES_POP_LARGE
+			- If value > 128B, sendback GETRES_POP_LARGE
 		* Otherwise, sendback GETRES_NPOP
-	+ GETRES_POP_EVICT:
+	+ PUTREQ: sendback PUTRES
+	+ GETRES_POP_EVICT/PUTREQ_POP_EVICT/PUTREQ_lARGE_EVICT and GETRES_POP_EVICT_CASE2/PUTREQ_POP_EVICT_CASE2/PUTREQ_LARGE_EVICT_CASE2:
+		* Check seq of recently-deleted record set: if evict.seq<=delete.seq, treat it as deleted; otherwise, perform the EVICT packet and remove it from the deleted set
 		* If vallen > 0, put evicted key-value pair into KVS without response
 		* Otherwise, delete evicted key from KVS without response
-	+ PUTREQ_POP_EVICT:
-		* If vallen > 0, put evicted key-value pair into KVS without response
-		* Otherwise, delete evicted key from KVS without response
+		* TODO: For CASE2: make snapshot
 	+ PUTREQ_LARGE: sendback PUTRES
-	+ PUTREQ_LARGE_EVICT: similar as PUTREQ_POP_EVICT
+	+ DELREQ:
+		* Update recently-deleted record set (within c*RTT time), and sendback DELRES
 	+ PUTREQ_CASE1/DELREQ_CASE1:
 		* Add into special case
-	+ GETRES_POP_EVICT_CASE2/PUTREQ_POP_EVICT_CASE2/PUTREQ_LARGE_EVICT_CASE2
-		* TODO: make snapshot
-		* If vallen > 0, put evicted key-value pair into KVS without response, add into special case (valid)
-		* Otherwise, delete evicted key from KVS without response, add into special case (invalid)
 	+ PUTREQ/DELREQ/PUTREQ_LARGE_CASE3:
 		* TODO: make snapshot
+		* For DELREQ_CASE3, it needs to update recently-deleted record set
 	+ SCANREQ:
 		* TODO: Switch: split SCANREQ to the corresponding server based on key range
 		* TODO: Server: perform SCANREQ in snapshot of in-memory KVS and that of in-switch cache, and merge results
@@ -388,8 +385,13 @@
 	+ Dynamically calculate udp header length according to vallen in switch and update udp_hdr.hdrLen if necessary
 - Support normal packets
 	+ Suport 9 types of GET: GETREQ, GETREQ_RECIR, GETRES from server, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_LARGE, GETRES from switch, GETRES_POP_EVICT, GETRES_POP_EVICT_CASE2
-	+ Support ? types of PUT: PUTREQ, PUTREQ_RECIR, PUTRES from server, PUTREQ_POP, PUTREQ_POP_EVICT, PUTREQ_POP_EVICT_CASE2, PUTRES from switch, PUTREQ_CASE1, PUTREQ_CASE3, PUTREQ_LARGE, PUTREQ_LARGE_RECIR, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
-	+ TODO: PUTREQ_LARGE_CASE3
+	+ Support 13 types of PUT: PUTREQ, PUTREQ_RECIR, PUTRES from server, PUTREQ_POP, PUTREQ_POP_EVICT, PUTREQ_POP_EVICT_CASE2, PUTRES from switch, PUTREQ_CASE3, PUTREQ_LARGE, PUTREQ_LARGE_RECIR, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
+		* TODO: PUTREQ_CASE1, PUTREQ_LARGE_CASE3
+	+ Support 5 types of DEL: DELREQ, DELRES from server, DELREQ_RECIR, DELRES from switch
+		* TODO: DELREQ_CASE1, DELREQ_CASE3
+		* Implement DELREQ in server-side
+- TODO: Implement switch OS thread
+- TODO: Implement design for packet loss (switch OS retry + seq mechanism)
 + TODO: Check localtest
 + TODO: Check ycsb
 - TODO: range query

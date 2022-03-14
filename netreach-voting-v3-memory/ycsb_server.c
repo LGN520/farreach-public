@@ -28,6 +28,7 @@
 #include "ycsb/parser.h"
 #include "backup_data.h"
 #include "special_case.h"
+#include "deleted_set_impl.h"
 
 #ifdef ORIGINAL_XINDEX
 #include "original_xindex/xindex.h"
@@ -47,6 +48,7 @@ struct alignas(CACHELINE_SIZE) SFGParam;
 
 typedef BackupData backup_data_t;
 typedef SpecialCase special_case_t;
+typedef DeletedSet deleted_set_t;
 typedef Key index_key_t;
 typedef Val val_t;
 typedef LoadSFGParam load_sfg_param_t;
@@ -114,6 +116,9 @@ bool volatile isbackup = false;
 std::atomic_flag is_kvsnapshot = ATOMIC_FLAG_INIT;
 void try_kvsnapshot(xindex_t *table);
 
+// parameters for packet loss
+deleted_set_t *deleted_sets = NULL;
+
 // loading parameters
 size_t split_n;
 size_t load_n;
@@ -165,10 +170,15 @@ int main(int argc, char **argv) {
   parse_args(argc, argv);
   //xindex::init_options(); // init options of rocksdb
 
-  // Prepare per-thread special case
+  // Prepare per-server special case
   special_cases_list = new std::map<unsigned short, special_case_t> *[fg_n];
   for (size_t i = 0; i < fg_n; i++) {
 	special_cases_list[i] = new std::map<unsigned short, special_case_t>;
+  }
+
+  // Prepare for packet loss
+  for (size_t i = 0; i < fg_n; i++) { // per-server deleted set
+	  deleted_sets[i] = new deleted_set_t();
   }
 
   // prepare xindex
@@ -1081,6 +1091,9 @@ static int run_sfg(void * param) {
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
+
+					// NOTE: no matter tmp_stat is true (key is deleted) or false (no such key or key has been deleted before), we should always treat the key does not exist (i.e., being deleted), so a reordered eviction will never overwrite this result for linearizability -> we should always update the corresponding deleted set
+					deleted_sets[thread_id].add(req.key(), 1); // TODO: seq
 					break;
 				}
 			case packet_type_t::SCAN_REQ:
@@ -1145,11 +1158,14 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					get_response_pop_evict_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					if (req.val().val_length > 0) {
-						table->put(req.key(), req.val(), thread_id);
-					}
-					else {
-						table->remove(req.key(), thread_id);
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
 					}
 					break;
 				}
@@ -1158,11 +1174,14 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					put_request_pop_evict_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					if (req.val().val_length > 0) {
-						table->put(req.key(), req.val(), thread_id);
-					}
-					else {
-						table->remove(req.key(), thread_id);
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
 					}
 					break;
 				}
@@ -1188,11 +1207,14 @@ static int run_sfg(void * param) {
 					put_request_large_evict_t req(buf, recv_size);
 					INVARIANT(req.val().val_length <= val_t::SWITCH_MAX_VALLEN);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					if (req.val().val_length > 0) {
-						table->put(req.key(), req.val(), thread_id);
-					}
-					else {
-						table->remove(req.key(), thread_id);
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
 					}
 					break;
 				}
@@ -1250,11 +1272,15 @@ static int run_sfg(void * param) {
 						}
 						try_kvsnapshot(table);
 					}
-					if (req.val().val_length > 0) {
-						table->put(req.key(), req.val(), thread_id);
-					}
-					else {
-						table->remove(req.key(), thread_id);
+
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
 					}
 					break;
 				}
@@ -1274,11 +1300,15 @@ static int run_sfg(void * param) {
 						}
 						try_kvsnapshot(table);
 					}
-					if (req.val().val_length > 0) {
-						table->put(req.key(), req.val(), thread_id);
-					}
-					else {
-						table->remove(req.key(), thread_id);
+
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
 					}
 					break;
 				}
@@ -1299,11 +1329,15 @@ static int run_sfg(void * param) {
 						}
 						try_kvsnapshot(table);
 					}
-					if (req.val().val_length > 0) {
-						table->put(req.key(), req.val(), thread_id);
-					}
-					else {
-						table->remove(req.key(), thread_id);
+
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
 					}
 					break;
 				}
@@ -1343,6 +1377,9 @@ static int run_sfg(void * param) {
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
+
+					// NOTE: no matter tmp_stat is true (key is deleted) or false (no such key or key has been deleted before), we should always treat the key does not exist (i.e., being deleted), so a reordered eviction will never overwrite this result for linearizability -> we should always update the corresponding deleted set
+					deleted_sets[thread_id].add(req.key(), 1); // TODO: seq
 					break;
 				}
 			default:
