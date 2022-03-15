@@ -98,23 +98,24 @@
 		* Stage 4-10: from val2 to val15
 		* Stage 11: vallo16, valhi16, ~~case3~~, port_forward_tbl
 		* Egress pipeline
-			- process_cloned_packet_tbl for cloned packet 
+			- process_i2e_cloned_packet_tbl for cloned packet from ingress to egress
 				+ If PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, update as PUT/DELRES/PUTRES to client
 				+ If PUTREQ_LARGE_RECIR, update as PUTREQ_LARGE to server
 					* NOTE: for cloned PUTREQ_LARGE, we do not need to update op_hdr.optype
 					* TODO: Only PUTREQ_LARGE will aplly the following MATs in egress pipeline
 				+ If GETRES_POP (with new key-value), update it as GETRES to client
 				+ If PUTREQ_POP (with new key-value), update it as PUTRES to client
+			- process_e2e_cloned_packet_tbl for cloned packet from egress to egress
 				+ TODO: If SCANREQ_SPLIT
 					* TODO: If split_idx == 1 (the last 2nd pkt has been sent), set split_idx=0 (send the last pkt) and send to next server (increase dst_port)
 					* TODO: Otherwise: decrease split_idx, send to next server, and clone_e2e
-				+ TODO: For mirrored EVICT and mirrored EVICT_CASE2, assign a specific udp port as switch OS
+				+ For mirrored EVICT and mirrored EVICT_CASE2, convert them as EVICT_SWITCH and EVICT_CASE2_SWITCH to switch OS
 			- TODO: switch-driven partition scheme (change udp port)
 				+ If no range query, hash parition for normal REQ packets
 				+ TODO: If w/ range query, range partition for normal REQ packets
 					* TODO: For SCANREQ, update it as SCANREQ_SPLIT to corresponding server (based on beginkey) with split_num (based on beginkey and endkey) and split_idx (always start from split_num-1), and clone_e2e
 					* TODO: Server needs to embed snapshot id into SCANRES for client to judge the consistency, and retry if not (snapshot and hence inconsistent SCANRES is rare)
-				+ TODO: assign a specific udp port as switch OS for all packets of CASE1
+				+ TODO: Including cloned PUTREQ_LARGE, CASE1, EVICT_SWITCH, and EVICT_CASE2_SWITCH
 				+ TODO: try to move it after eg_port_forward_tbl to reduce MAT entries and actions?
 			- TODO: Access per-server iscase3
 			- TODO: Access eg_port_forward_tbl
@@ -320,8 +321,6 @@
 	+ PUTREQ_LARGE: sendback PUTRES
 	+ DELREQ:
 		* Update recently-deleted record set (within c*RTT time), and sendback DELRES
-	+ PUTREQ_CASE1/DELREQ_CASE1:
-		* Add into special case
 	+ PUTREQ/DELREQ/PUTREQ_LARGE_CASE3:
 		* TODO: make snapshot
 		* For DELREQ_CASE3, it needs to update recently-deleted record set
@@ -360,6 +359,9 @@
 			* Reset flag -> no special optype from now on
 			* Optional: reset registers: case1_reg, case2_reg, case3_reg
 		* Send backup data by TCP
+- Switch-OS processing
+	+ PUTREQ_CASE1/DELREQ_CASE1:
+		* Add into special case
 - TODO: Simulation tricks
 	+ Snapshot
 		* Case1 should be forwarded to switch OS thread
@@ -390,7 +392,12 @@
 	+ Support 5 types of DEL: DELREQ, DELRES from server, DELREQ_RECIR, DELRES from switch
 		* TODO: DELREQ_CASE1, DELREQ_CASE3
 		* Implement DELREQ in server-side
-- TODO: Implement switch OS thread
+	+ Support 8 types for switch OS: PUT/DELREQ_CASE1, GETRES_POP_EVICT/CASE2, PUTREQ_POP_EVICT/CASE2, PUTREQ_LARGE_EVICT/CASE2
+- Implement switch OS thread
+	+ Support PUT/DELREQ_CASE1
+	+ TODO: Support EVICT
+	+ TODO: Support CASE2
+	+ TODO; Consider whether we can optimize for speical case: only switch os write special case, and only backuper read special case 
 - TODO: Implement design for packet loss (switch OS retry + seq mechanism)
 + TODO: Check localtest
 + TODO: Check ycsb

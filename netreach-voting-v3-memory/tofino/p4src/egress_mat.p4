@@ -126,7 +126,7 @@ action update_cloned_putreq_large_recir_to_putreq_large() {
 	remove_header(seq_hdr);
 }
 
-table process_cloned_packet_tbl {
+table process_i2e_cloned_packet_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
@@ -141,7 +141,49 @@ table process_cloned_packet_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 128;
+	size: 8;
+}
+
+action update_cloned_getres_pop_evict_to_switch() {
+	modify_field(op_hdr.optype, GETRES_POP_EVICT_SWITCH);
+}
+
+action update_cloned_getres_pop_evict_case2_to_switch() {
+	modify_field(op_hdr.optype, GETRES_POP_EVICT_CASE2_SWITCH);
+}
+
+action update_cloned_putreq_pop_evict_to_switch() {
+	modify_field(op_hdr.optype, PUTREQ_POP_EVICT_SWITCH);
+}
+
+action update_cloned_putreq_pop_evict_case2_to_switch() {
+	modify_field(op_hdr.optype, PUTREQ_POP_EVICT_CASE2_SWITCH);
+}
+
+action update_cloned_putreq_large_evict_to_switch() {
+	modify_field(op_hdr.optype, PUTREQ_LARGE_EVICT_SWITCH);
+}
+
+action update_cloned_putreq_large_evict_case2_to_switch() {
+	modify_field(op_hdr.optype, PUTREQ_LARGE_EVICT_CASE2_SWITCH);
+}
+
+table process_e2e_cloned_packet_tbl {
+	reads {
+		op_hdr.optye: exact;
+	}
+	actions {
+		update_cloned_getres_pop_evict_to_switch;
+		update_cloned_getres_pop_evict_case2_to_switch;
+		update_cloned_putreq_pop_evict_to_switch;
+		update_cloned_putreq_pop_evict_case2_to_switch;
+		update_cloned_putreq_large_evict_to_switch;
+		update_cloned_putreq_large_evict_case2_to_switch;
+		nop;
+	}
+	default_action: nop();
+	size: 8;
+		
 }
 
 action update_putreq_may_case3_to_case3() {

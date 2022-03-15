@@ -755,6 +755,90 @@ uint32_t DelRequestCase3<key_t>::serialize(char * const data, uint32_t max_size)
 	COUT_N_EXIT("Invalid invoke of serialize for DelRequestCase3");
 }
 
+// GetResponsePOPEvictSwitch (value must <= 128B)
+
+template<class key_t, class val_t>
+GetResponsePOPEvictSwitch<key_t, val_t>::GetResponsePOPEvictSwitch(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES_POP_EVICT_SWITCH);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t GetResponsePOPEvictSwitch<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for GetResponsePOPEvictSwitch");
+}
+
+// GetResponsePOPEvictCase2Switch (value must <= 128B)
+
+template<class key_t, class val_t>
+GetResponsePOPEvictCase2Switch<key_t, val_t>::GetResponsePOPEvictCase2Switch(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES_POP_EVICT_CASE2_SWITCH);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t GetResponsePOPEvictCase2Switch<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for GetResponsePOPEvictCase2Switch");
+}
+
+// PutRequestPOPEvictSwitch (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestPOPEvictSwitch<key_t, val_t>::PutRequestPOPEvictSwitch(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES_POP_EVICT_SWITCH);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestPOPEvictSwitch<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPOPEvictSwitch");
+}
+
+// PutRequestPOPEvictCase2Switch (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestPOPEvictCase2Switch<key_t, val_t>::PutRequestPOPEvictCase2Switch(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES_POP_EVICT_CASE2_SWITCH);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestPOPEvictCase2Switch<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPOPEvictCase2Switch");
+}
+
+// PutRequestLargeEvictSwitch (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestLargeEvictSwitch<key_t, val_t>::PutRequestLargeEvictSwitch(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES_Large_EVICT_SWITCH);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestLargeEvictSwitch<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestLargeEvictSwitch");
+}
+
+// PutRequestLargeEvictCase2Switch (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestLargeEvictCase2Switch<key_t, val_t>::PutRequestLargeEvictCase2Switch(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES_Large_EVICT_CASE2_SWITCH);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestLargeEvictCase2Switch<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestLargeEvictCase2Switch");
+}
+
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size) {
 	INVARIANT(recv_size >= sizeof(uint8_t));

@@ -11,7 +11,9 @@ enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DE
 	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_LARGE, GET_RES_POP_EVICT,
 	PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, PUT_REQ_LARGE, PUT_REQ_LARGE_RECIR, PUT_REQ_LARGE_EVICT,
 	DEL_REQ_RECIR, PUT_REQ_CASE1, DEL_REQ_CASE1, GET_RES_POP_EVICT_CASE2, PUT_REQ_POP_EVICT_CASE2, 
-	PUT_REQ_LARGE_EVICT_CASE2, PUT_REQ_MAY_CASE3, PUT_REQ_CASE3, DEL_REQ_MAY_CASE3, DEL_REQ_CASE3};
+	PUT_REQ_LARGE_EVICT_CASE2, PUT_REQ_MAY_CASE3, PUT_REQ_CASE3, DEL_REQ_MAY_CASE3, DEL_REQ_CASE3,
+	GET_RES_POP_EVICT_SWITCH, GET_RES_POP_EVICT_CASE2_SWITCH, PUT_REQ_POP_EVICT_SWITCH, PUT_REQ_POP_EVICT_CASE2_SWITCH,
+	PUT_REQ_LARGE_POP_EVICT_SWITCH, PUT_REQ_LARGE_POP_EVICT_CASE2_SWITCH};
 typedef PacketType packet_type_t;
 
 template<class key_t>
@@ -281,6 +283,55 @@ template<class key_t>
 class DelRequestCase3 : public DelRequest<key_t> {
 	public:
 		DelRequestCase3(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+
+template<class key_t, class val_t>
+class GetResponsePOPEvictSwitch : public PutRequest<key_t, val_t> {
+	public:
+		GetResponsePOPEvictSwitch(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class GetResponsePOPEvictCase2Switch : public PutRequest<key_t, val_t> {
+	public:
+		GetResponsePOPEvictCase2Switch(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestPOPEvictSwitch : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestPOPEvictSwitch(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestPOPEvictCase2Switch : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestPOPEvictCase2Switch(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestLargeEvictSwitch : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestLargeEvictSwitch(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestLargeEvictCase2Switch : public PutRequest<key_t, val_t> {
+	public:
+		PutRequestLargeEvictCase2Switch(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };

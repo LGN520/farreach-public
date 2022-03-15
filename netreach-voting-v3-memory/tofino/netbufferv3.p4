@@ -42,6 +42,12 @@
 #define PUTREQ_CASE3_TYPE 0x1a
 #define DELREQ_MAY_CASE3_TYPE 0x1b
 #define DELREQ_CASE3_TYPE 0x1c
+#define GETRES_POP_EVICT_SWITCH_TYPE 0x1d
+#define GETRES_POP_EVICT_CASE2_SWITCH_TYPE 0x1e
+#define PUTREQ_POP_EVICT_SWITCH_TYPE 0x1f
+#define PUTREQ_POP_EVICT_CASE2_SWITCH_TYPE 0x20
+#define PUTREQ_LARGE_EVICT_SWITCH_TYPE 0x21
+#define PUTREQ_LARGE_EVICT_CASE2_SWITCH_TYPE 0x22
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -177,7 +183,10 @@ control ingress {
 control egress {
 	// NOTE: make sure that normal packet will not apply these tables
 	if (pkt_is_i2e_mirrored) {
-		apply(process_cloned_packet_tbl);
+		apply(process_i2e_cloned_packet_tbl);
+	}
+	else if (pkt_is_e2e_mirrored) {
+		apply(process_e2e_cloned_packet_tbl);
 	}
 
 	// TODO: following MATs should be applied for PUTREQ_LARGE even if being cloned

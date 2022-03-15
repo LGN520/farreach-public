@@ -1087,34 +1087,61 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             ### Egress ###
 
-            # Table: process_cloned_packet_tbl
-            print "Configuring process_cloned_packet_tbl"
-            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+            # Table: process_i2e_cloned_packet_tbl
+            print "Configuring process_i2e_cloned_packet_tbl"
+            matchspec0 = netbufferv3_process_i2e_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_TYPE)
-            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_putreq_to_putres(\
+            self.client.process_i2e_cloned_packet_tbl_table_add_with_update_cloned_putreq_to_putres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+            matchspec0 = netbufferv3_process_i2e_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_RECIR_TYPE)
-            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_putreq_recir_to_putres(\
+            self.client.process_i2e_cloned_packet_tbl_table_add_with_update_cloned_putreq_recir_to_putres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+            matchspec0 = netbufferv3_process_i2e_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = DELREQ_TYPE)
-            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_delreq_to_delres(\
+            self.client.process_i2e_cloned_packet_tbl_table_add_with_update_cloned_delreq_to_delres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+            matchspec0 = netbufferv3_process_i2e_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = DELREQ_RECIR_TYPE)
-            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_delreq_to_delres(\
+            self.client.process_i2e_cloned_packet_tbl_table_add_with_update_cloned_delreq_to_delres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+            matchspec0 = netbufferv3_process_i2e_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = GETRES_POP_TYPE)
-            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_getres_pop_to_getres(\
+            self.client.process_i2e_cloned_packet_tbl_table_add_with_update_cloned_getres_pop_to_getres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = netbufferv3_process_cloned_packet_tbl_match_spec_t(\
+            matchspec0 = netbufferv3_process_i2e_cloned_packet_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_POP_TYPE)
-            self.client.process_cloned_packet_tbl_table_add_with_update_cloned_putreq_pop_to_putres(\
+            self.client.process_i2e_cloned_packet_tbl_table_add_with_update_cloned_putreq_pop_to_putres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table process_may_case3_tbl (default: nop; ?)
+            # Table: process_e2e_cloned_packet_tbl 
+            print "Configuring process_e2e_cloned_packet_tbl"
+            matchspec0 = netbufferv3_process_e2e_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = GETRES_POP_EVICT)
+            self.client.process_e2e_cloned_packet_tbl_table_add_with_update_cloned_getres_pop_evict_to_switch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_e2e_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = GETRES_POP_EVICT_CASE2)
+            self.client.process_e2e_cloned_packet_tbl_table_add_with_update_cloned_getres_pop_evict_case2_to_switch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_e2e_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_POP_EVICT)
+            self.client.process_e2e_cloned_packet_tbl_table_add_with_update_cloned_putreq_pop_evict_to_switch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_e2e_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_POP_EVICT_CASE2)
+            self.client.process_e2e_cloned_packet_tbl_table_add_with_update_cloned_putreq_pop_evict_case2_to_switch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_e2e_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_LARGE_EVICT)
+            self.client.process_e2e_cloned_packet_tbl_table_add_with_update_cloned_putreq_large_evict_to_switch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_e2e_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_LARGE_EVICT_CASE2)
+            self.client.process_e2e_cloned_packet_tbl_table_add_with_update_cloned_putreq_large_evict_case2_to_switch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: process_may_case3_tbl (default: nop; ?)
             print "Configuring process_may_case3_tbl"
             matchspec0 = netbufferv3_process_may_case3_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_MAY_CASE3_TYPE,

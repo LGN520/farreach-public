@@ -79,31 +79,41 @@ typedef PutRequestPOPEvictCase2<index_key_t, val_t> put_request_pop_evict_case2_
 typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
 typedef DelRequestCase3<index_key_t> del_request_case3_t;
 
+// Get configuration
+inline void parse_ini(const char * config_file);
+inline void parse_args(int, char **);
+
+// Prepare data structures
+void prepare_dpdk();
+void prepare_receiver();
+
 // loading phase
+size_t split_n;
+size_t load_n;
+char output_dir[256];
+volatile bool load_running = false;
+std::atomic<size_t> load_ready_threads(0);
 void run_load_server(xindex_t *table); // loading phase
 void *run_load_sfg(void *param); // workers in loading phase
 void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals);
 
-inline void parse_ini(const char * config_file);
-inline void parse_args(int, char **);
-void prepare_dpdk();
-void prepare_receiver();
+// Transaction phase
 void run_server(xindex_t *table); // running phase
-//void *run_sfg(void *param);
-void kill(int signum);
 
-// DPDK
-static int run_sfg(void *param); // workers in runing phase
+// (1) Receiver for receiving pkts
 static int run_receiver(__attribute__((unused)) void *param); // receiver
 //static int run_receiver(void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
-struct rte_mbuf*** volatile pkts_list;
+struct rte_mbuf*** volatile pkts_list; // pkts for each server
 uint32_t* volatile heads;
 uint32_t* volatile tails;
+struct rte_mbuf** volatile pkts_for_simulator; // pkts for switch os simulator
+volatile uint32_t head_for_simulator;
+volatile uint32_t tail_for_simulator;
 
-// Periodic backup
+// (2) Backuper for processing in-switch snapshot
 short backup_port;
 void *run_backuper(void *param); // backuper
 void *run_kvparser(void *param); // KV parser 
@@ -116,22 +126,21 @@ bool volatile isbackup = false;
 std::atomic_flag is_kvsnapshot = ATOMIC_FLAG_INIT;
 void try_kvsnapshot(xindex_t *table);
 
-// parameters for packet loss
+// (3) Switch os simulator for processing special cases and packet loss handling
 deleted_set_t *deleted_sets = NULL;
+//static int run_switchos_simulator(void *param);
+void *run_switchos_simulator(void *param);
 
-// loading parameters
-size_t split_n;
-size_t load_n;
-char output_dir[256];
-volatile bool load_running = false;
-std::atomic<size_t> load_ready_threads(0);
-
-// running parameters
+// (4) Worker for processing pkts
+static int run_sfg(void *param); // workers in runing phase
+//void *run_sfg(void *param);
+void kill(int signum);
 size_t fg_n = 1;
 size_t bg_n = 1;
 short dst_port_start = 1111;
 const char *workload_name = nullptr;
 uint32_t kv_bucket_num;
+
 
 size_t per_server_range;
 size_t get_server_idx(index_key_t key) {
@@ -218,6 +227,10 @@ int main(int argc, char **argv) {
   COUT_THIS("[server] Exit successfully")
   exit(0);
 }
+
+/*
+ * Get configuration
+ */
 
 inline void parse_ini(const char* config_file) {
 	IniparserWrapper ini;
@@ -321,6 +334,10 @@ inline void parse_args(int argc, char **argv) {
   COUT_VAR(xindex::config.buffer_compact_threshold);
 }
 
+/*
+ * Prepare data structures 
+ */
+
 void prepare_dpdk() {
   int dpdk_argc = 5;
   char **dpdk_argv;
@@ -368,7 +385,18 @@ void prepare_receiver() {
 	  }
 	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
   }
+
+  pkts_for_simulator = new struct rte_mbuf*[MQ_SIZE];
+  for (size_t j = 0; j < MQ_SIZE; j++) {
+	  pkts_for_simulator[i][j] = nullptr;
+  }
+  head_for_simulator = 0;
+  tail_for_simulator = 0;
 }
+
+/*
+ * Loading phase
+ */
 
 void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {
 	char load_filename[256];
@@ -514,13 +542,18 @@ void *run_load_sfg(void * param) {
 	return 0;
 }
 
+
+/*
+ * Transaction phase 
+ */
+
 void run_server(xindex_t *table) {
 	int ret = 0;
 	unsigned lcoreid = 1;
 
 	running = false;
 
-	// Launch receiver
+	// Launch receiver (receiving normal packets)
 	//receiver_param_t receiver_param;
 	//receiver_param.overall_thpt = 0;
 	//ret = rte_eal_remote_launch(run_receiver, (void*)&receiver_param, lcoreid);
@@ -531,14 +564,21 @@ void run_server(xindex_t *table) {
 	COUT_THIS("[server] Launch receiver with ret code " << ret)
 	lcoreid++;
 
-	// Launch backuper
+	// Launch backuper (processing in-switch snapshot from switch OS)
 	pthread_t backuper_thread;
 	ret = pthread_create(&backuper_thread, nullptr, run_backuper, (void *)table);
 	if (ret) {
 		COUT_N_EXIT("Error: unable to create backuper " << ret);
 	}
 
-	// Prepare fg params
+	// Launch switch OS simulator (processing rollback messages (case1 and case2) and mirrored evicted data)
+	pthread_t switchos_simulator_thread;
+	ret = pthread_create(&switchos_simulator_thread, nullptr, run_switchos_simulator, (void *)nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: unable to create switch os simulator " << ret);
+	}
+
+	// Launch workers (processing normal packets)
 	//pthread_t threads[fg_n];
 	sfg_param_t sfg_params[fg_n];
 	// check if parameters are cacheline aligned
@@ -547,8 +587,6 @@ void run_server(xindex_t *table) {
 			COUT_N_EXIT("wrong parameter address: " << &(sfg_params[i]));
 		}
 	}
-
-	// Launch workers
 	for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
 		sfg_params[worker_i].table = table;
 		sfg_params[worker_i].thread_id = worker_i;
@@ -614,10 +652,19 @@ void run_server(xindex_t *table) {
 	void * status;
 	int rc = pthread_join(backuper_thread, &status);
 	if (rc) {
-		COUT_N_EXIT("Error: unable to join " << rc);
+		COUT_N_EXIT("Error: unable to join backuper: " << rc);
+	}
+	rc = pthread_join(switchos_simulator_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join simulator: " << rc);
 	}
 	rte_eal_mp_wait_lcore();
 }
+
+
+/*
+ * Receiver for normal packets
+ */
 
 static int run_receiver(void *param) {
 	//receiver_param_t &receiver_param = *((receiver_param_t *)param);
@@ -682,29 +729,44 @@ static int run_receiver(void *param) {
 					}
 				}
 				else {
-					uint16_t received_port = (uint16_t)ret;
-					int idx = received_port - dst_port_start;
-					if (idx < 0 || unsigned(idx) >= fg_n) {
-						COUT_THIS("Invalid dst port received by server: " << received_port)
-						continue;
+					packet_type_t optype = packet_type_t(get_optype(received_pkts[i]));
+					if (optype == packet_type_t::PUT_REQ_CASE1 || optype == packet_type_t::DEL_REQ_CASE1 || \
+							optype == packet_type_t::PUT_REQ_POP_EVICT_SWITCH || optype == packet_type_t::PUT_REQ_POP_EVICT_SWITCH_CASE2 || \
+							optype == packet_type_t::PUT_REQ_LARGE_EVICT_SWITCH || optype == packet_type_t::PUT_REQ_LARGE_EVICT_SWITCH_CASE2 || \
+							optype == packet_type_t::GET_RES_POP_EVICT_SWITCH || optype == packet_type_t::GET_RES_POP_EVICT_SWITCH_CASE2) { // Forward to switch os simulator to simulator the process of copy to cpu
+						if (((head_for_simulator+1) % MQ_SIZE) != tail_for_simulator) {
+							pkts_for_simulator[head_for_simulator] = received_pkts[i];
+							head_for_simulator = (head_for_simulator + 1) % MQ_SIZE;
+						}
+						else {
+							COUT_THIS("Drop pkt for switch os simulator since pkts_for_simluator is full!")
+							rte_pktmbuf_free(received_pkts[i]);
+						}
 					}
-					else {
-						/*if (stats[idx]) {
-							COUT_THIS("Invalid stas[" << idx << "] which is true!")
+					else { // normal packets
+						int idx = received_port - dst_port_start;
+						if (idx < 0 || unsigned(idx) >= fg_n) {
+							COUT_THIS("Invalid dst port received by server: " << received_port)
 							continue;
 						}
 						else {
-							pkts[idx] = received_pkts[i];
-							stats[idx] = true;
-						}*/
-						if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
-							//receiver_param.overall_thpt++;
-							pkts_list[idx][heads[idx]] = received_pkts[i];
-							heads[idx] = (heads[idx] + 1) % MQ_SIZE;
-						}
-						else {
-							COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
-							rte_pktmbuf_free(received_pkts[i]);
+							/*if (stats[idx]) {
+								COUT_THIS("Invalid stas[" << idx << "] which is true!")
+								continue;
+							}
+							else {
+								pkts[idx] = received_pkts[i];
+								stats[idx] = true;
+							}*/
+							if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
+								//receiver_param.overall_thpt++;
+								pkts_list[idx][heads[idx]] = received_pkts[i];
+								heads[idx] = (heads[idx] + 1) % MQ_SIZE;
+							}
+							else {
+								COUT_THIS("Drop pkt since pkts_list["<<idx<<"] is full!")
+								rte_pktmbuf_free(received_pkts[i]);
+							}
 						}
 					}
 				}
@@ -713,6 +775,10 @@ static int run_receiver(void *param) {
 	}
 	return 0;
 }
+
+/*
+ * Backuper for in-switch snapshot 
+ */
 
 void *run_backuper(void *param) {
 	xindex_t *table = (xindex_t*)param;
@@ -771,6 +837,7 @@ void *run_backuper(void *param) {
 
 			try_kvsnapshot(table);
 
+			// TODO: we do not need multi-threading here?
 			int ret = pthread_create(&latest_thread, nullptr, run_kvparser, (void *)&connfd); // It finally sets backup as false
 			iscreate = true;
 			if (ret) {
@@ -943,6 +1010,81 @@ void try_kvsnapshot(xindex_t *table) {
 		table->make_snapshot(true);
 	}
 }
+
+/*
+ * Switch OS simulator for special case processing and packet loss handling
+ */
+
+void *run_switchos_simulator(void *param) {
+	int res = 0;
+
+	// (1) Switch OS simulator does not need mbufs to send DPDK packets; instead, it uses tcp packets to communicate with servers if necessary; (2) it also does not need to decode metadata of client; instead, it only needs to get the payload;
+
+	char buf[MAX_BUFSIZE];
+	int recv_size = 0;
+
+	while (!running) {
+	}
+
+	while (running) {
+		if (head_for_simulator != tail_for_simulator) {
+			recv_size = get_payload(pkts_for_simulator[tail_for_simulator], buf);
+			rte_pktmbuf_free((struct rte_mbuf*)pkts_for_simulator[tail_for_simulator]);
+			tail_for_simulator = (tail_for_simulator + 1) % MQ_SIZE;
+
+			packet_type_t pkt_type = get_packet_type(buf, recv_size);
+			switch (pkt_type) {
+				case packet_type_t::PUT_REQ_CASE1:
+					{
+						COUT_THIS("PUT_REQ_CASE1")
+						if (!isbackup) {
+							put_request_case1_t req(buf, recv_size);
+							if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+									== special_cases_list[thread_id]->end()) { // No such hashidx
+								SpecialCase tmpcase;
+								tmpcase._key = req.key();
+								tmpcase._val = req.val();
+								tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
+								special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+											(unsigned short)req.hashidx(), tmpcase));
+							}
+							try_kvsnapshot(table);
+						}
+						break;
+					}
+				case packet_type_t::DEL_REQ_CASE1:
+					{
+						COUT_THIS("DEL_REQ_CASE1")
+						del_request_case1_t req(buf, recv_size);
+						if (!isbackup) {
+							if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+									== special_cases_list[thread_id]->end()) { // No such hashidx
+								SpecialCase tmpcase;
+								tmpcase._key = req.key();
+								tmpcase._val = req.val();
+								tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
+								special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+											(unsigned short)req.hashidx(), tmpcase));
+							}
+							try_kvsnapshot(table);
+						}
+						// Leave it to SCANREQ to cope with multiple versions 
+						//bool tmp_stat = table->remove(req.key(), thread_id);
+						break;
+					}
+				// TODO: process CASE2, and EVICT
+			}
+
+		}
+	}
+
+	COUT_THIS("switch os simulator exits")
+	pthread_exit(nullptr);
+}
+
+/*
+ * Worker for server-side processing 
+ */
 
 static int run_sfg(void * param) {
 //void *run_sfg(void * param) {
@@ -1216,44 +1358,6 @@ static int run_sfg(void * param) {
 							table->remove(req.key(), thread_id);
 						}
 					}
-					break;
-				}
-			case packet_type_t::PUT_REQ_CASE1:
-				{
-					COUT_THIS("PUT_REQ_CASE1")
-					if (!isbackup) {
-						put_request_case1_t req(buf, recv_size);
-						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
-								== special_cases_list[thread_id]->end()) { // No such hashidx
-							SpecialCase tmpcase;
-							tmpcase._key = req.key();
-							tmpcase._val = req.val();
-							tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
-							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.hashidx(), tmpcase));
-						}
-						try_kvsnapshot(table);
-					}
-					break;
-				}
-			case packet_type_t::DEL_REQ_CASE1:
-				{
-					COUT_THIS("DEL_REQ_CASE1")
-					del_request_case1_t req(buf, recv_size);
-					if (!isbackup) {
-						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
-								== special_cases_list[thread_id]->end()) { // No such hashidx
-							SpecialCase tmpcase;
-							tmpcase._key = req.key();
-							tmpcase._val = req.val();
-							tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
-							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.hashidx(), tmpcase));
-						}
-						try_kvsnapshot(table);
-					}
-					// Leave it to SCANREQ to cope with multiple versions 
-					//bool tmp_stat = table->remove(req.key(), thread_id);
 					break;
 				}
 			case packet_type_t::GET_RES_POP_EVICT_CASE2:

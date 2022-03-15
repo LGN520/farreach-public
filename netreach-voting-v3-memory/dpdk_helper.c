@@ -465,6 +465,13 @@ int get_payload(struct rte_mbuf *volatile mbuf, char *payload) {
 	return payload_size;
 }
 
+uint8_t get_optype(struct rte_mbuf * volatile mbuf) {
+	char *data;
+	data = rte_pktmbuf_mtod(mbuf, char *);
+	uint8_t optype = *(uint8_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 6);
+	return optype;
+}
+
 bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num) {
 	char *data;
 
