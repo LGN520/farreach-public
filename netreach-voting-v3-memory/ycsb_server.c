@@ -45,6 +45,7 @@
 struct alignas(CACHELINE_SIZE) LoadSFGParam;
 struct alignas(CACHELINE_SIZE) SFGParam;
 //struct alignas((CACHELINE_SIZE)) ReceiverParam;
+struct alignas((CACHELINE_SIZE)) TcpServerParam;
 
 typedef BackupData backup_data_t;
 typedef SpecialCase special_case_t;
@@ -54,6 +55,7 @@ typedef Val val_t;
 typedef LoadSFGParam load_sfg_param_t;
 typedef SFGParam sfg_param_t;
 //typedef ReceiverParam receiver_param_t;
+typedef TcpServerParam tcpserver_param_t
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
 typedef PutRequest<index_key_t, val_t> put_request_t;
@@ -78,12 +80,19 @@ typedef PutRequestLargeEvictCase2<index_key_t, val_t> put_request_large_evict_ca
 typedef PutRequestPOPEvictCase2<index_key_t, val_t> put_request_pop_evict_case2_t;
 typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
 typedef DelRequestCase3<index_key_t> del_request_case3_t;
+typedef GetResponsePOPEvictSwitch<index_key_t, val_t> get_response_pop_evict_switch_t;
+typedef PutRequestPOPEvictSwitch<index_key_t, val_t> put_request_pop_evict_switch_t;
+typedef PutRequestLargeEvictSwitch<index_key_t, val_t> put_request_large_evict_switch_t;
+typedef GetResponsePOPEvictCase2Switch<index_key_t, val_t> get_response_pop_evict_case2_switch_t;
+typedef PutRequestPOPEvictCase2Switch<index_key_t, val_t> put_request_pop_evict_case2_switch_t;
+typedef PutRequestLargeEvictCase2Switch<index_key_t, val_t> put_request_large_evict_case2_switch_t;
 
 // Get configuration
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
 
 // Prepare data structures
+void preprae_for_pktloss();
 void prepare_dpdk();
 void prepare_receiver();
 
@@ -96,6 +105,10 @@ std::atomic<size_t> load_ready_threads(0);
 void run_load_server(xindex_t *table); // loading phase
 void *run_load_sfg(void *param); // workers in loading phase
 void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals);
+struct alignas(CACHELINE_SIZE) LoadSFGParam {
+	xindex_t *table;
+	uint8_t thread_id;
+};
 
 // Transaction phase
 void run_server(xindex_t *table); // running phase
@@ -106,12 +119,18 @@ static int run_receiver(__attribute__((unused)) void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
-struct rte_mbuf*** volatile pkts_list; // pkts for each server
+struct rte_mbuf*** volatile pkts_list; // pkts from receiver to each server
 uint32_t* volatile heads;
 uint32_t* volatile tails;
-struct rte_mbuf** volatile pkts_for_simulator; // pkts for switch os simulator
+struct rte_mbuf** volatile pkts_for_simulator; // pkts from receiver to switch os simulator
 volatile uint32_t head_for_simulator;
 volatile uint32_t tail_for_simulator;
+struct rte_mbuf*** volatile pkts_list_for_pktloss; // pkts from switch os to each server 
+uint32_t* volatile heads_for_pktloss;
+uint32_t* volatile tails_for_pktloss;
+/*struct alignas(CACHELINE_SIZE) ReceiverParam {
+	size_t overall_thpt;
+};*/
 
 // (2) Backuper for processing in-switch snapshot
 short backup_port;
@@ -121,15 +140,23 @@ void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expecte
 void rollback(backup_data_t *new_backup_data);
 backup_data_t * volatile backup_data = nullptr;
 uint32_t* volatile backup_rcu;
-std::map<unsigned short, special_case_t> **special_cases_list = nullptr; // per-thread special cases
-bool volatile isbackup = false;
+std::map<unsigned short, special_case_t> **special_cases_list = nullptr; // per-thread special cases -> TODO: one-thread special cases for switch os simulator
+bool volatile isbackup = false; // TODO: it should be atomic
 std::atomic_flag is_kvsnapshot = ATOMIC_FLAG_INIT;
 void try_kvsnapshot(xindex_t *table);
 
-// (3) Switch os simulator for processing special cases and packet loss handling
+// (3) Switch os simulator for processing special cases and packet loss handling (and tcp servers for workers)
 deleted_set_t *deleted_sets = NULL;
 //static int run_switchos_simulator(void *param);
 void *run_switchos_simulator(void *param);
+short pktloss_port_start = 2222;
+int * volatile server_tcpsocks = NULL; // tcp socket in server to receive mirrored pkt from switch os
+int * volatile switchos_tcpsocks = NULL; // tcp socket in switch os to send mirrored pkt to server
+std::atomic<size_t> ready_tcpserver_threads(0);
+void *run_tcpserver_for_pktloss(void *param);
+struct alignas(CACHELINE_SIZE) TcpServerParam {
+	uint8_t thread_id;
+};
 
 // (4) Worker for processing pkts
 static int run_sfg(void *param); // workers in runing phase
@@ -140,6 +167,14 @@ size_t bg_n = 1;
 short dst_port_start = 1111;
 const char *workload_name = nullptr;
 uint32_t kv_bucket_num;
+struct alignas(CACHELINE_SIZE) SFGParam {
+  xindex_t *table;
+  uint8_t thread_id;
+  size_t throughput;
+#ifdef TEST_AGG_THPT
+  double sum_latency;
+#endif
+};
 
 
 size_t per_server_range;
@@ -155,24 +190,6 @@ bool killed = false;
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
 
-// loading phase
-struct alignas(CACHELINE_SIZE) LoadSFGParam {
-	xindex_t *table;
-	uint8_t thread_id;
-};
-
-struct alignas(CACHELINE_SIZE) SFGParam {
-  xindex_t *table;
-  uint8_t thread_id;
-  size_t throughput;
-#ifdef TEST_AGG_THPT
-  double sum_latency;
-#endif
-};
-
-/*struct alignas(CACHELINE_SIZE) ReceiverParam {
-	size_t overall_thpt;
-};*/
 
 int main(int argc, char **argv) {
   parse_ini("config.ini");
@@ -185,10 +202,8 @@ int main(int argc, char **argv) {
 	special_cases_list[i] = new std::map<unsigned short, special_case_t>;
   }
 
-  // Prepare for packet loss
-  for (size_t i = 0; i < fg_n; i++) { // per-server deleted set
-	  deleted_sets[i] = new deleted_set_t();
-  }
+  // Prepare switch os simulator for packet loss
+  prepare_for_pktloss();
 
   // prepare xindex
   std::vector<index_key_t> keys;
@@ -248,6 +263,7 @@ inline void parse_ini(const char* config_file) {
 	val_t::MAX_VALLEN = ini.get_max_vallen();
 	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
 	backup_port = ini.get_server_backup_port();
+	pktloss_port_start = ini.get_server_pktloss_port();
 	per_server_range = std::numeric_limits<size_t>::max() / fg_n;
 
 	LOAD_SPLIT_DIR(output_dir, workload_name, split_n); // get the split directory for loading phase
@@ -266,6 +282,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(val_t::MAX_VALLEN);
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 	COUT_VAR(backup_port);
+	COUT_VAR(pktloss_port_start);
 	COUT_VAR(per_server_range);
 }
 
@@ -338,6 +355,66 @@ inline void parse_args(int argc, char **argv) {
  * Prepare data structures 
  */
 
+void prepare_for_pktloss() {
+	// From switch os to each server
+	pkts_list_for_pktloss = new struct rte_mbuf**[fg_n];
+	heads_for_pktloss = new uint32_t[fg_n];
+	tails_for_pktloss = new uint32_t[fg_n];
+	memset((void*)heads_for_pktloss, 0, sizeof(uint32_t)*fg_n);
+	memset((void*)tails_for_pktloss, 0, sizeof(uint32_t)*fg_n);
+	for (size_t i = 0; i < fg_n; i++) {
+		pkts_list_for_pktloss[i] = new struct rte_mbuf*[MQ_SIZE];
+		for (size_t j = 0; j < MQ_SIZE; j++) {
+			pkts_list_for_pktloss[i][j] = nullptr;
+		}
+	}
+
+	// For linearizability under packet loss
+	for (size_t i = 0; i < fg_n; i++) { // per-server deleted set
+		deleted_sets[i] = new deleted_set_t();
+	}
+
+	// Tcp channels between switch os and servers
+	server_tcpsocks = new int[fg_n];
+	switchos_tcpsocks = new int[fg_n];
+	for (size_t i = 0; i < fg_n; i++) {
+		// Set server sockets
+		server_tcpsocks[i] = socket(AF_INET, SOCK_STREAM, 0);
+		if (server_tcpsocks[i] == -1) {
+			printf("Fail to create tcp socket of server %ld: errno: %d!\n", i, errno);
+			exit(-1);
+		}
+		// reuse the occupied port for the last created socket instead of being crashed
+		const int trueFlag = 1;
+		if (setsockopt(server_tcpsocks[i], SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
+			printf("Fail to setsockopt of of server %ld: errno: %d!\n", i, errno);
+			exit(-1);
+		}
+		sockaddr_in listen_addr;
+		memset(&listen_addr, 0, sizeof(listen_addr));
+		listen_addr.sin_family = AF_INET;
+		listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+		listen_addr.sin_port = htons(pktloss_start_port+i); // start from 2222
+		if ((bind(server_tcpsocks[i], (struct sockaddr*)&listen_addr, sizeof(listen_addr))) != 0) {
+			printf("Fail to bind socket on 0.0.0.0:%hu of server %ld, errno: %d!\n", pktloss_start_port+i, i, errno);
+			exit(-1);
+		}
+		if ((listen(server_tcpsocks[i], 1)) != 0) { // MAX_PENDING_CONNECTINO = 1
+			printf("Fail to listen on 0.0.0.0:%hu, errno: %d!\n", listen_port, errno);
+			exit(-1);
+		}
+		// Leave accept in each worker_tcpserver
+
+		// Set switch os sockets
+		switchos_tcpsocks[i] = socket(AF_INET, SOCK_STREAM, 0);
+		if (switchos_tcpsocks[i] == -1) {
+			printf("Fail to create tcp socket in switch os for server %ld: errno: %d!\n", i, errno);
+			exit(-1);
+		}
+		// Leave connect in switchos_simulator
+	}
+}
+
 void prepare_dpdk() {
   int dpdk_argc = 5;
   char **dpdk_argv;
@@ -365,6 +442,7 @@ void prepare_dpdk() {
 }
 
 void prepare_receiver() {
+  // From receiver to each server
   //pkts = new volatile struct rte_mbuf*[fg_n];
   //stats = new volatile bool[fg_n];
   //memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
@@ -386,6 +464,7 @@ void prepare_receiver() {
 	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
   }
 
+  // From receiver to switch os
   pkts_for_simulator = new struct rte_mbuf*[MQ_SIZE];
   for (size_t j = 0; j < MQ_SIZE; j++) {
 	  pkts_for_simulator[i][j] = nullptr;
@@ -571,6 +650,26 @@ void run_server(xindex_t *table) {
 		COUT_N_EXIT("Error: unable to create backuper " << ret);
 	}
 
+	// Launch a tcp server for each worker (i.e., server) to receive mirrored packets
+	tcpserver_param_t tcpserver_params[fg_n];
+	for (size_t i = 0; i < fg_n; i++) {
+		if ((uint64_t)(&(tcpserver_params[i])) % CACHELINE_SIZE != 0) {
+			COUT_N_EXIT("wrong parameter address: " << &(tcpserver_params[i]));
+		}
+	}
+	pthread_t tcpserver_threads[fg_n];
+	for (size_t i = 0; i < fg_n; i++) {
+		tcpserver_params[i].thread_id = uint8_t(i);
+		ret = pthread_create(&tcpserver_threads[i], nullptr, run_tcpserver_for_pktloss, (void *)&tcpserver_params[i]);
+		if (ret) {
+			COUT_N_EXIT("Error: unable to create tcp server for worker " << i);
+		}
+	}
+
+	// Wait for tcpservers, as switch os simulator needs to connect each tcpserver to build reliable channel for mirroring
+	while (ready_tcpserver_threads < fg_n) sleep(1);
+	sleep(1); // Ensure that all tcpservers enter accept status
+
 	// Launch switch OS simulator (processing rollback messages (case1 and case2) and mirrored evicted data)
 	pthread_t switchos_simulator_thread;
 	ret = pthread_create(&switchos_simulator_thread, nullptr, run_switchos_simulator, (void *)nullptr);
@@ -658,6 +757,12 @@ void run_server(xindex_t *table) {
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join simulator: " << rc);
 	}
+	for (size_t i = 0; i < fg_n; i++) {
+		rc = pthread_join(tcpserver_threads[i], &status);
+		if (rc) {
+			COUT_N_EXIT("Error: unable to join tcpserver " << i << ": " << rc);
+		}
+	}
 	rte_eal_mp_wait_lcore();
 }
 
@@ -682,8 +787,8 @@ static int run_receiver(void *param) {
 
 		if (n_rx == 0) continue;
 		for (size_t i = 0; i < n_rx; i++) {
-			int ret = get_dstport(received_pkts[i]);
-			if (ret == -1) {
+			int received_port = get_dstport(received_pkts[i]);
+			if (received_port == -1) {
 				continue;
 			}
 			else {
@@ -731,9 +836,9 @@ static int run_receiver(void *param) {
 				else {
 					packet_type_t optype = packet_type_t(get_optype(received_pkts[i]));
 					if (optype == packet_type_t::PUT_REQ_CASE1 || optype == packet_type_t::DEL_REQ_CASE1 || \
-							optype == packet_type_t::PUT_REQ_POP_EVICT_SWITCH || optype == packet_type_t::PUT_REQ_POP_EVICT_SWITCH_CASE2 || \
-							optype == packet_type_t::PUT_REQ_LARGE_EVICT_SWITCH || optype == packet_type_t::PUT_REQ_LARGE_EVICT_SWITCH_CASE2 || \
-							optype == packet_type_t::GET_RES_POP_EVICT_SWITCH || optype == packet_type_t::GET_RES_POP_EVICT_SWITCH_CASE2) { // Forward to switch os simulator to simulator the process of copy to cpu
+							optype == packet_type_t::PUT_REQ_POP_EVICT_SWITCH || optype == packet_type_t::PUT_REQ_POP_EVICT_CASE2_SWITCH || \
+							optype == packet_type_t::PUT_REQ_LARGE_EVICT_SWITCH || optype == packet_type_t::PUT_REQ_LARGE_EVICT_CASE2_SWITCH || \
+							optype == packet_type_t::GET_RES_POP_EVICT_SWITCH || optype == packet_type_t::GET_RES_POP_EVICT_CASE2_SWITCH) { // Forward to switch os simulator to simulator the process of copy to cpu
 						if (((head_for_simulator+1) % MQ_SIZE) != tail_for_simulator) {
 							pkts_for_simulator[head_for_simulator] = received_pkts[i];
 							head_for_simulator = (head_for_simulator + 1) % MQ_SIZE;
@@ -1012,28 +1117,146 @@ void try_kvsnapshot(xindex_t *table) {
 }
 
 /*
+ * Tcp server for each worker to receive mirrored packet for packet loss
+ */
+
+void *run_tcpserver_for_pktloss(void *param) {
+	tcpserver_param_t param = *((tcpserver_param_t *)param);
+	uint8_t thread_id = param.thread_id;
+
+	//sockaddr_in switchos_addr;
+    //memset(&switchos_addr, 0, sizeof(switchos_addr)); 
+    //unsigned int len = sizeof(switchos_addr);
+	//int connfd = accept(server_tcpsocks[thread_id], (struct sockaddr*)&switchos_addr, &len);
+	
+	// For tcp channel
+	char buf[MAX_BUFSIZE];
+	int cur_recv_bytes = 0;
+	int cur_vallen_bytes = -1;
+	const int min_recv_bytes = sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint32_t); // sizeof(op_hdr) + sizeof(vallen)
+	// For mbuf from tcpserver to worker
+	uint16_t burst_size = 256;
+	struct rte_mbuf *sent_pkts[burst_size]; // Worker will free each sent_pkt after processing
+	uint16_t sent_pkt_idx = 0;
+	int res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+	INVARIANT(res == 0);
+	// Used as placeholder in mbuf; worker does not care about them as EVICT/CASE2 do not need response
+	uint8_t emptymac[6];
+	memset((char *)emptymac, 0, 6);
+	char emptyip[16] = "0.0.0.0";
+	uint16_t emptyport = 0;
+	
+	ready_tcpserver_threads++;
+	
+	// We only accept one connection from switch os to each tcpserver in worker i
+	int connfd = accept(server_tcpsocks[thread_id], NULL, NULL);
+	if (connfd < 0) {
+		printf("Tcp server of server %ld fails to accept, errno: %d!\n", thread_id, errno);
+		exit(-1);
+	}
+	//printf("Tcp server of server %ld accepts a connection successfully: %d\n", thread_id, connfd);
+	
+	while (true) {
+		int tmpsize = recv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0);
+		if (tmpsize < 0) {
+            printf("Fail to recv at tcp server of server %ld: %d\n", thread_id, tmpsize);
+			break;
+        }
+		cur_recv_bytes += tmpsize;
+		if (cur_recv_bytes >= MAX_BUFSIZE) {
+			printf("Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
+            exit(-1);
+		}
+
+		// Get value length
+		if (cur_vallen_bytes == -1 && cur_recv_bytes >= min_recv_bytes) {
+			cur_vallen_bytes = *((uint32_t*)(buf+min_recv_bytes-sizeof(uint32_t)));
+			// padding if necessary
+			if (cur_vallen_bytes <= val_t::SWITCH_MAX_VALLEN) {
+				cur_vallen_bytes = (cur_vallen_bytes+7)/8*8;
+			}
+		}
+
+		// Get one complete packet
+		if (cur_vallen_bytes != -1 && cur_recv_bytes >= (min_recv_bytes + cur_vallen_bytes)) {
+			// Notify mbuf to corresponding worker
+			encode_mbuf(sent_pkts[sent_pkt_idx], emptymac, emptymac, emptyip, emptyip, emptyport, emptyport, buf, min_recv_bytes+cur_vallen_bytes);
+			if (((heads_for_pktloss[thread_id] + 1) % MQ_SIZE) != tails_for_pktloss[thread_id]) {
+				pkts_list_for_pktloss[thread_id][heads_for_pktloss[thread_id]] = sent_pkts[sent_pkt_idx]; // it will be freed by worker
+				heads_for_pktloss[thread_id] = (heads_for_pktloss[thread_id] + 1) % MQ_SIZE;
+			}
+			else {
+				COUT_THIS("Drop pkt since pkts_list_for_pktloss["<<thread_id<<"] is full!")
+				rte_pktmbuf_free(sent_pkts[sent_pkt_idx]);
+			}
+
+			// Move remaining bytes and reset metadata
+			if (cur_recv_bytes > (min_recv_bytes + cur_vallen_bytes)) {
+				memcpy(buf, buf + min_recv_bytes + cur_vallen_bytes, cur_recv_bytes - min_recv_bytes - cur_vallen_bytes);
+				cur_recv_bytes = cur_recv_bytes - min_recv_bytes - cur_vallen_bytes;
+				cur_vallen_bytes = -1;
+			}
+			else {
+				cur_recv_bytes = 0;
+				cur_vallen_bytes = -1;
+			}
+
+			sent_pkt_idx++;
+			if (sent_pkt_idx >= burst_size) {
+				sent_pkt_idx = 0;
+				res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+				INVARIANT(res == 0);
+			}
+		}
+	}
+
+	if (sent_pkt_idx < burst_size) {
+		for (uint16_t free_idx = sent_pkt_idx; free_idx != burst_size; free_idx++) {
+			rte_pktmbuf_free(sent_pkts[free_idx]);
+		}
+	}
+	close(connfd);
+	close(server_tcpsocks[thread_id]);
+	pthread_exit(NULL);
+}
+
+/*
  * Switch OS simulator for special case processing and packet loss handling
  */
 
 void *run_switchos_simulator(void *param) {
-	int res = 0;
-
-	// (1) Switch OS simulator does not need mbufs to send DPDK packets; instead, it uses tcp packets to communicate with servers if necessary; (2) it also does not need to decode metadata of client; instead, it only needs to get the payload;
+	// (1) Switch OS simulator does not need mbufs to send DPDK packets; instead, it uses tcp packets to communicate with servers if necessary; (2) it also does not need to decode metadata of client; instead, it only needs to get the payload; (3) we simulate practical latency (pcie latency of copy to switch os + transmission latency from switch os to server -> transmission latency of copy to switch os + pcie latency from switch os to server); what's more, it is irrelevant of normal pkt latency and very rare on skewed workload;
+	
+	// Create fg_n tcp channels
+	for (size_t i = 0; i < fg_n; i++) {
+		sockaddr_in server_addr;
+		memset(&server_addr, 0, sizeof(server_addr));
+		server_addr.sin_family = AF_INET;
+		server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); // enforce the packet to go through NIC 
+		server_addr.sin_port = htons(pktloss_start_port+i);
+		if (connect(switchos_tcpsocks[i], (struct sockaddr*)&server_addr, sizeof(server_addr)) != 0) {
+			error("Fail to connect tcp server at %hu, errno: %d!\n", pktloss_start_port+i, errno);
+		}
+	}
 
 	char buf[MAX_BUFSIZE];
 	int recv_size = 0;
+	int received_port = -1;
 
 	while (!running) {
 	}
 
 	while (running) {
 		if (head_for_simulator != tail_for_simulator) {
+			INVARIANT(pkts_for_simulator[tail_for_simulator] != nullptr);
+			received_port = get_dstport(pkts_for_simulator[tail_for_simulator]);
 			recv_size = get_payload(pkts_for_simulator[tail_for_simulator], buf);
 			rte_pktmbuf_free((struct rte_mbuf*)pkts_for_simulator[tail_for_simulator]);
 			tail_for_simulator = (tail_for_simulator + 1) % MQ_SIZE;
 
 			packet_type_t pkt_type = get_packet_type(buf, recv_size);
 			switch (pkt_type) {
+				// NOTE: switch os add special cases for rollback
 				case packet_type_t::PUT_REQ_CASE1:
 					{
 						COUT_THIS("PUT_REQ_CASE1")
@@ -1068,11 +1291,92 @@ void *run_switchos_simulator(void *param) {
 							}
 							try_kvsnapshot(table);
 						}
-						// Leave it to SCANREQ to cope with multiple versions 
-						//bool tmp_stat = table->remove(req.key(), thread_id);
 						break;
 					}
-				// TODO: process CASE2, and EVICT
+				case packet_type_t::GET_RES_POP_EVICT_SWITCH:
+				case packet_type_t::PUT_REQ_POP_EVICT_SWITCH:
+				case packet_type_t::PUT_REQ_LARGE_EVICT_SWITCH:
+				case packet_type_t::GET_RES_POP_EVICT_CASE2_SWITCH:
+				case packet_type_t::PUT_REQ_POP_EVICT_CASE2_SWITCH:
+				case packet_type_t::PUT_REQ_LARGE_EVICT_CASE2_SWITCH:
+					{
+						// NOTE: not break -> proceed to forward to server by tcp channel
+						if (pkt_type == packet_type_t::GET_RES_POP_EVICT_CASE2_SWITCH) {
+							COUT_THIS("GET_RES_POP_EVICT_CASE2_SWITCH")
+							get_response_pop_evict_case2_switch_t req(buf, recv_size);
+							if (!isbackup) {
+								if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+										== special_cases_list[thread_id]->end()) { // No such hashidx
+									SpecialCase tmpcase;
+									tmpcase._key = req.key();
+									tmpcase._val = req.val();
+									tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
+									special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+												(unsigned short)req.hashidx(), tmpcase));
+								}
+								try_kvsnapshot(table);
+							}
+						}
+						else if (pkt_type == packet_type_t::PUT_REQ_POP_EVICT_CASE2_SWITCH) {
+							COUT_THIS("PUT_REQ_POP_EVICT_CASE2_SWITCH")
+							put_request_pop_evict_case2_switch_t req(buf, recv_size);
+							if (!isbackup) {
+								if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+										== special_cases_list[thread_id]->end()) { // No such hashidx
+									SpecialCase tmpcase;
+									tmpcase._key = req.key();
+									tmpcase._val = req.val();
+									tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
+									special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+												(unsigned short)req.hashidx(), tmpcase));
+								}
+								try_kvsnapshot(table);
+							}
+						}
+						else if (pkt_type == packet_type_t::PUT_REQ_LARGE_EVICT_CASE2_SWITCH) {
+							COUT_THIS("PUT_REQ_LARGE_EVICT_CASE2_SWITCH")
+							put_request_large_evict_case2_switch_t req(buf, recv_size);
+							INVARIANT(req.val().val_length <= val_t.SWITCH_MAX_VALLEN);
+							if (!isbackup) { // Not receive backup data yet
+								if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+										== special_cases_list[thread_id]->end()) { // No such hashidx
+									SpecialCase tmpcase;
+									tmpcase._key = req.key();
+									tmpcase._val = req.val();
+									tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
+									special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+												(unsigned short)req.hashidx(), tmpcase));
+								}
+								try_kvsnapshot(table);
+							}
+						}
+
+						// Forward to corresponding server by tcp channel
+						int idx = received_port - dst_port_start;
+						if (idx < 0 || unsigned(idx) >= fg_n) {
+							COUT_THIS("Invalid dst port received by switch os: " << received_port)
+							continue;
+						}
+						int send_size = recv_size;
+						const char *ptr = buf;
+						while (send_size > 0) {
+							int tmpsize = send(switchos_socks[idx], ptr, send_size, 0);
+							f (tmpsize < 0) {
+								// Errno 32 means broken pipe, i.e., remote TCP connection is closed
+								error("TCP send returns %d, errno: %d\n", tmpsize, errno);
+								break;
+							}
+							ptr += tmpsize;
+							send_size -= tmpsize;
+						}
+						break;
+					}
+				default:
+					{
+						COUT_THIS("[switch os simulator] Invalid packet type: " << int(pkt_type))
+						std::cout << std::flush;
+						exit(-1);
+					}
 			}
 
 		}
@@ -1362,21 +1666,8 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::GET_RES_POP_EVICT_CASE2:
 				{
-					COUT_THIS("GET_RES_POP_EVICT_CASE2")
+					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					get_response_pop_evict_case2_t req(buf, recv_size);
-					if (!isbackup) {
-						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
-								== special_cases_list[thread_id]->end()) { // No such hashidx
-							SpecialCase tmpcase;
-							tmpcase._key = req.key();
-							tmpcase._val = req.val();
-							tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
-							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.hashidx(), tmpcase));
-						}
-						try_kvsnapshot(table);
-					}
-
 					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
@@ -1390,21 +1681,8 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::PUT_REQ_POP_EVICT_CASE2:
 				{
-					COUT_THIS("PUT_REQ_POP_EVICT_CASE2")
+					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_pop_evict_case2_t req(buf, recv_size);
-					if (!isbackup) {
-						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
-								== special_cases_list[thread_id]->end()) { // No such hashidx
-							SpecialCase tmpcase;
-							tmpcase._key = req.key();
-							tmpcase._val = req.val();
-							tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
-							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.hashidx(), tmpcase));
-						}
-						try_kvsnapshot(table);
-					}
-
 					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
@@ -1418,22 +1696,9 @@ static int run_sfg(void * param) {
 				}
 			case packet_type_t::PUT_REQ_LARGE_EVICT_CASE2:
 				{
-					COUT_THIS("PUT_REQ_LARGE_EVICT_CASE2")
+					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_large_evict_case2_t req(buf, recv_size);
 					INVARIANT(req.val().val_length <= val_t.SWITCH_MAX_VALLEN);
-					if (!isbackup) { // Not receive backup data yet
-						if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
-								== special_cases_list[thread_id]->end()) { // No such hashidx
-							SpecialCase tmpcase;
-							tmpcase._key = req.key();
-							tmpcase._val = req.val();
-							tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
-							special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-										(unsigned short)req.hashidx(), tmpcase));
-						}
-						try_kvsnapshot(table);
-					}
-
 					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
@@ -1488,7 +1753,7 @@ static int run_sfg(void * param) {
 				}
 			default:
 				{
-					COUT_THIS("[server] Invalid packet type: " << int(pkt_type))
+					COUT_THIS("[server] Invalid packet type from receiver: " << int(pkt_type))
 					std::cout << std::flush;
 					exit(-1);
 				}
@@ -1506,7 +1771,119 @@ static int run_sfg(void * param) {
 			res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
 			INVARIANT(res == 0);
 		}
-	}
+	} // End for mbuf from receiver to server
+	if (heads_for_pktloss[thread_id] != tails_for_pktloss[thread_id]) {
+		INVARIANT(pkts_list_for_pktloss[thread_id][tails_for_pktloss[thread_id]] != nullptr);
+		recv_size = get_payload(pkts_list_for_pktloss[thread_id][tails_for_pktloss[thread_id]], buf);
+		rte_pktmbuf_free((struct rte_mbuf*)pkts_list_for_pktloss[thread_id][tails_for_pktloss[thread_id]]);
+		tails_for_pktloss[thread_id] = (tails_for_pktloss[thread_id] + 1) % MQ_SIZE;
+
+		packet_type_t pkt_type = get_packet_type(buf, recv_size);
+		switch (pkt_type) {
+			// NOTE: we use seq mechanism to avoid incorrect overwrite of packet reordering
+			case packet_type_t::GET_RES_POP_EVICT_SWITCH:
+				{
+					// Put evicted data into key-value store
+					get_response_pop_evict_switch_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
+					}
+					break;
+				}
+			case packet_type_t::PUT_REQ_POP_EVICT_SWITCH:
+				{
+					// Put evicted data into key-value store
+					put_request_pop_evict_switch_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
+					}
+					break;
+				}
+			case packet_type_t::PUT_REQ_LARGE_EVICT_SWITCH:
+				{
+					// Put evicted data into key-value store
+					put_request_large_evict_switch_t req(buf, recv_size);
+					INVARIANT(req.val().val_length <= val_t::SWITCH_MAX_VALLEN);
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
+					}
+					break;
+				}
+			case packet_type_t::GET_RES_POP_EVICT_CASE2_SWITCH:
+				{
+					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
+					get_response_pop_evict_case2_switch_t req(buf, recv_size);
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
+					}
+					break;
+				}
+			case packet_type_t::PUT_REQ_POP_EVICT_CASE2_SWITCH:
+				{
+					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
+					put_request_pop_evict_case2_switch_t req(buf, recv_size);
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
+					}
+					break;
+				}
+			case packet_type_t::PUT_REQ_LARGE_EVICT_CASE2_SWITCH:
+				{
+					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
+					put_request_large_evict_case2_switch_t req(buf, recv_size);
+					INVARIANT(req.val().val_length <= val_t.SWITCH_MAX_VALLEN);
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
+						if (req.val().val_length > 0) {
+							table->put(req.key(), req.val(), thread_id);
+						}
+						else {
+							table->remove(req.key(), thread_id);
+						}
+					}
+					break;
+				}
+			default:
+				{
+					COUT_THIS("[server] Invalid packet type from tcp channel: " << int(pkt_type))
+					std::cout << std::flush;
+					exit(-1);
+				}
+		}
+	} // End for mbuf from switch os (and tcp server) to server 
   }
   
   // DPDK

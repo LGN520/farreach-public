@@ -24,6 +24,7 @@ class IniparserWrapper {
 		void get_server_mac(uint8_t* macaddr);
 		const char *get_server_backup_ip();
 		short get_server_backup_port();
+		short get_server_pktlos_port();
 
 		uint32_t get_bucket_num();
 		uint32_t get_switch_max_vallen();

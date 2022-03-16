@@ -8,6 +8,7 @@
 	+ Configure MTU
 	+ Only process the first fragmented packet
 - TODO: in final test, we need to reset DEBUG_ASSERT as 0 
+- TODO: Increase MAX_BUFSIZE in helper.h for large value if necessary
 
 ## Overview
 
@@ -385,7 +386,7 @@
 		* TODO: Introduce buflen when serializing/deserializing value for each packet with value (packet_format_impl.h)
 	+ Change vallen from 1B to 4B (note that vallen should be used in switch -> convert between little-endian and big-endian) (val.\*, packet_format_impl.h)
 	+ Dynamically calculate udp header length according to vallen in switch and update udp_hdr.hdrLen if necessary
-- Support normal packets
+- Support normal packets (packet_format.\*, ycsb_remote_client.c, ycsb_server.c, iniparser_wrapper.\*, deleted_set.\*)
 	+ Suport 9 types of GET: GETREQ, GETREQ_RECIR, GETRES from server, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_LARGE, GETRES from switch, GETRES_POP_EVICT, GETRES_POP_EVICT_CASE2
 	+ Support 13 types of PUT: PUTREQ, PUTREQ_RECIR, PUTRES from server, PUTREQ_POP, PUTREQ_POP_EVICT, PUTREQ_POP_EVICT_CASE2, PUTRES from switch, PUTREQ_CASE3, PUTREQ_LARGE, PUTREQ_LARGE_RECIR, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
 		* TODO: PUTREQ_CASE1, PUTREQ_LARGE_CASE3
@@ -395,8 +396,8 @@
 	+ Support 8 types for switch OS: PUT/DELREQ_CASE1, GETRES_POP_EVICT/CASE2, PUTREQ_POP_EVICT/CASE2, PUTREQ_LARGE_EVICT/CASE2
 - Implement switch OS thread
 	+ Support PUT/DELREQ_CASE1
-	+ TODO: Support EVICT
-	+ TODO: Support CASE2
+	+ Support EVICT: GETRES_POP_EVICT, PUTREQ_POP_EVICT, and PUTREQ_LARGE_POP_EVICT
+	+ Support CASE2: GETRES_POP_EVICT_CASE2, PUTREQ_POP_EVICT_CASE2, and PUTREQ_LARGE_POP_EVICT_CASE2
 	+ TODO; Consider whether we can optimize for speical case: only switch os write special case, and only backuper read special case 
 - TODO: Implement design for packet loss (switch OS retry + seq mechanism)
 + TODO: Check localtest
