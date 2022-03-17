@@ -47,7 +47,7 @@ table update_vallen_tbl {
 		op_hdr.optype: exact;
 		meta.canput: exact;
 		meta.iskeymatch: exact;
-		meta.isvalid: exact;
+		other_hdr.isvalid: exact;
 	}
 	actions {
 		get_vallen;

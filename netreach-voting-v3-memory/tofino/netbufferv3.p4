@@ -26,6 +26,8 @@
 #define GETRES_NPOP_TYPE 0x0a
 #define GETRES_POP_LARGE_TYPE 0x0b
 #define GETRES_POP_EVICT_TYPE 0x0c
+#define PUTREQ_SEQ_TYPE 0x0d 
+// TODO: update macro value
 #define PUTREQ_POP_TYPE 0x0d
 #define PUTREQ_RECIR_TYPE 0x0e
 #define PUTREQ_POP_EVICT_TYPE 0x0f
@@ -181,6 +183,7 @@ control ingress {
 /* Egress Processing */
 
 control egress {
+	// Stage 0
 	// NOTE: make sure that normal packet will not apply these tables
 	if (pkt_is_i2e_mirrored) {
 		apply(process_i2e_cloned_packet_tbl);
@@ -189,22 +192,27 @@ control egress {
 		apply(process_e2e_cloned_packet_tbl);
 	}
 
-	// TODO: following MATs should be applied for PUTREQ_LARGE even if being cloned
+	// NOTE: the following MATs should be applied for PUTREQ_LARGE even if being cloned
 
-		apply(process_may_case3_tbl);
+	// TODO: optimize the following tables
+	apply(process_may_case3_tbl);
+	// NOTE: for packets requring origin_hash, the key and value in packet header have already been set as origin_key/val
+	apply(eg_calculate_hash_tbl);
+	if (op_hdr.optype == GETRES_POP_EVICT_TYPE) {
+		apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
+	}
+	else if (op_hdr.optype == GETRES_POP_EVICT_CASE2_TYPE) {
+		apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
+	}
+	else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
+		apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
+	}
 
-		// NOTE: for packets requring origin_hash, the key and value in packet header have already been set as origin_key/val
-		apply(eg_calculate_hash_tbl);
-		if (op_hdr.optype == GETRES_POP_EVICT_TYPE) {
-			apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
-		}
-		else if (op_hdr.optype == GETRES_POP_EVICT_CASE2_TYPE) {
-			apply(hash_partition_reverse_tbl); // update src port as meta.tmp_dport; update dst port as hash value of origin key (evicted key)
-		}
-		else if (op_hdr.optype != SCANREQ_TYPE){ // NOTE: even we invoke this MAT for PUTREQ_U, it does not affect the recirculated packet (PUTREQ + meta.is_putreq_ru of 1)
-			apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
-		}
+	// Stage 1
+	apply(eg_port_forward_tbl);
 
+	// Stage 2
+	// The same stage
 	apply(update_udplen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
 	apply(update_macaddr_tbl); // Update mac addr for responses and PUTREQ_GS/GS_CASE2
 }

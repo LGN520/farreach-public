@@ -38,6 +38,7 @@ register savedseq_reg {
 	instance_count: KV_BUCKET_COUNT;
 }
 
+// key matches
 blackbox stateful_alu try_update_savedseq_alu {
 	reg: savedseq_reg;
 
@@ -58,7 +59,21 @@ action try_update_savedseq() {
 	try_update_savedseq_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
-blackbox stateful_alu reset_savedseq_alu {
+// key not match
+blackbox stateful_alu set_and_get_savedseq_alu {
+	reg: savedseq_reg;
+
+	update_lo_1_value: seq_hdr.seq;
+	
+	output_value: register_lo;
+	output_dst: seq_hdr.seq;
+}
+
+action set_and_get_savedseq() {
+	set_and_get_savedseq_alu.execute_stateful_alu(op_hdr.hashidx);
+}
+
+/*blackbox stateful_alu reset_savedseq_alu {
 	reg: savedseq_reg;
 
 	update_lo_1_value: 0;
@@ -66,17 +81,18 @@ blackbox stateful_alu reset_savedseq_alu {
 
 action reset_savedseq() {
 	reset_savedseq_alu.execute_stateful_alu(op_hdr.hashidx);
-}
+}*/
 
 table access_savedseq_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.isvalid: exact;
+		other_hdr.isvalid: exact;
 		meta.iskeymatch: exact;
 	}
 	actions {
 		try_update_savedseq;
-		reset_savedseq;
+		set_and_get_savedseq;
+		//reset_savedseq;
 		nop;
 	}
 	default_action: nop();

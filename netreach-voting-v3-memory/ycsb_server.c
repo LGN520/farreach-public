@@ -70,9 +70,10 @@ typedef GetResponsePOP<index_key_t, val_t> get_response_pop_t;
 typedef GetResponseNPOP<index_key_t, val_t> get_response_npop_t;
 typedef GetResponsePOPLarge<index_key_t, val_t> get_response_pop_lareg_t;
 typedef GetResponsePOPEvict<index_key_t, val_t> get_response_pop_evict_t;
+typedef PutRequestSeq<index_key_t, val_t> put_request_seq_t;
 typedef PutRequestPOPEvict<index_key_t, val_t> put_request_pop_evict_t;
 typedef PutRequestLarge<index_key_t, val_t> put_request_large_t;
-typedef PutRequestLargeEvict<index_key_t, val_t> put_request_large_evict_t;
+typedef PutRequestLargeEvict<index_key_t, val_t> put_rquest_large_evict_t;
 typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
 typedef DelRequestCase1<index_key_t, val_t> del_request_case1_t;
 typedef GetResponsePOPEvictCase2<index_key_t, val_t> get_response_pop_evict_case2_t;
@@ -140,7 +141,8 @@ void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expecte
 void rollback(backup_data_t *new_backup_data);
 backup_data_t * volatile backup_data = nullptr;
 uint32_t* volatile backup_rcu;
-std::map<unsigned short, special_case_t> **special_cases_list = nullptr; // per-thread special cases -> TODO: one-thread special cases for switch os simulator
+//std::map<unsigned short, special_case_t> **special_cases_list = nullptr; // per-thread special cases for each worker
+std::map<unsigned short, special_case_t> *special_cases = nullptr; // one-thread special cases for switch os simulator
 bool volatile isbackup = false; // TODO: it should be atomic
 std::atomic_flag is_kvsnapshot = ATOMIC_FLAG_INIT;
 void try_kvsnapshot(xindex_t *table);
@@ -196,11 +198,13 @@ int main(int argc, char **argv) {
   parse_args(argc, argv);
   //xindex::init_options(); // init options of rocksdb
 
-  // Prepare per-server special case
-  special_cases_list = new std::map<unsigned short, special_case_t> *[fg_n];
+  // Prepare per-server special cases
+  /*special_cases_list = new std::map<unsigned short, special_case_t> *[fg_n];
   for (size_t i = 0; i < fg_n; i++) {
 	special_cases_list[i] = new std::map<unsigned short, special_case_t>;
-  }
+  }*/
+  // Prepare one-thread special cases
+  special_cases = new std::map<unsigned short, special_case_t>; 
 
   // Prepare switch os simulator for packet loss
   prepare_for_pktloss();
@@ -932,8 +936,7 @@ void *run_backuper(void *param) {
 		}
 
 		if (!isbackup) {
-			isbackup = true; 
-			// Ensure that all other worker threads do not touch special_cases_list
+			isbackup = true; // Ensure that all other worker threads do not touch special_cases_list
 			// TODO: test periodic backup with background traffic
 			/*for (uint32_t i = 0; i < fg_n; i++) {
 				uint32_t prev_val = backup_rcu[i];
@@ -1026,7 +1029,8 @@ void *run_kvparser(void *param) {
 		old_backup_data = nullptr;
 	}
 	for (size_t i = 0; i < fg_n; i++) {
-		special_cases_list[i]->clear();
+		//special_cases_list[i]->clear();
+		special_cases->clear();
 	}
 
 	is_kvsnapshot.clear(std::memory_order_release);
@@ -1071,10 +1075,12 @@ void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expecte
 }
 
 void rollback(backup_data_t *new_backup_data) {
-	for (size_t i = 0; i < fg_n; i++) {
-		std::map<unsigned short, special_case_t> *cur_special_cases = special_cases_list[i];
-		for (std::map<unsigned short, special_case_t>::iterator iter = cur_special_cases->begin(); 
-				iter != cur_special_cases->end(); iter++) {
+	//for (size_t i = 0; i < fg_n; i++) {
+		//std::map<unsigned short, special_case_t> *cur_special_cases = special_cases_list[i];
+		//for (std::map<unsigned short, special_case_t>::iterator iter = cur_special_cases->begin(); 
+		//		iter != cur_special_cases->end(); iter++) {
+		for (std::map<unsigned short, special_case_t>::iterator iter = special_cases->begin(); 
+				iter != special_cases->end(); iter++) {
 			if (!iter->second._valid) { // Invalid case
 				std::map<unsigned short, index_key_t>::iterator tmpiter = new_backup_data->_idxmap.find(iter->first);
 				if (tmpiter != new_backup_data->_idxmap.end()) { // Remove the idx and kv
@@ -1082,7 +1088,7 @@ void rollback(backup_data_t *new_backup_data) {
 					new_backup_data->_idxmap.erase(tmpiter->first);
 				}
 			}
-			else { // Valid case
+			else { // Valid case (vallen could be zero)
 				std::map<unsigned short, index_key_t>::iterator tmpiter = new_backup_data->_idxmap.find(iter->first);
 				if (tmpiter != new_backup_data->_idxmap.end()) { // Has the idx
 					if (tmpiter->second == iter->second._key) { // Same key
@@ -1104,8 +1110,8 @@ void rollback(backup_data_t *new_backup_data) {
 					new_backup_data->_kvmap.insert(std::pair<index_key_t, val_t>(iter->second._key, iter->second._val)); // Insert new kv
 				}
 			}
-		}
-	}
+		} // End of current speical_cases
+	//} // End of special_cases_list
 }
 
 void try_kvsnapshot(xindex_t *table) {
@@ -1262,14 +1268,16 @@ void *run_switchos_simulator(void *param) {
 						COUT_THIS("PUT_REQ_CASE1")
 						if (!isbackup) {
 							put_request_case1_t req(buf, recv_size);
-							if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
-									== special_cases_list[thread_id]->end()) { // No such hashidx
+							//if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+							//		== special_cases_list[thread_id]->end()) { // No such hashidx
+							if (special_cases->find((unsigned short)req.hashidx()) == special_cases->end()) { // No such hashidx
 								SpecialCase tmpcase;
 								tmpcase._key = req.key();
 								tmpcase._val = req.val();
 								tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
-								special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-											(unsigned short)req.hashidx(), tmpcase));
+								//special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+								//			(unsigned short)req.hashidx(), tmpcase));
+								special_cases->insert(std::pair<unsigned short, SpecialCase>((unsigned short)req.hashidx(), tmpcase));
 							}
 							try_kvsnapshot(table);
 						}
@@ -1280,14 +1288,16 @@ void *run_switchos_simulator(void *param) {
 						COUT_THIS("DEL_REQ_CASE1")
 						del_request_case1_t req(buf, recv_size);
 						if (!isbackup) {
-							if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
-									== special_cases_list[thread_id]->end()) { // No such hashidx
+							//if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+							//		== special_cases_list[thread_id]->end()) { // No such hashidx
+							if (special_cases->find((unsigned short)req.hashidx()) == special_cases->end()) { // No such hashidx
 								SpecialCase tmpcase;
 								tmpcase._key = req.key();
 								tmpcase._val = req.val();
 								tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
-								special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-											(unsigned short)req.hashidx(), tmpcase));
+								//special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+								//			(unsigned short)req.hashidx(), tmpcase));
+								special_cases->insert(std::pair<unsigned short, SpecialCase>((unsigned short)req.hashidx(), tmpcase));
 							}
 							try_kvsnapshot(table);
 						}
@@ -1305,32 +1315,36 @@ void *run_switchos_simulator(void *param) {
 							COUT_THIS("GET_RES_POP_EVICT_CASE2_SWITCH")
 							get_response_pop_evict_case2_switch_t req(buf, recv_size);
 							if (!isbackup) {
-								if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
-										== special_cases_list[thread_id]->end()) { // No such hashidx
+								//if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+								//		== special_cases_list[thread_id]->end()) { // No such hashidx
+								if (special_cases->find((unsigned short)req.hashidx()) == special_cases->end()) { // No such hashidx
 									SpecialCase tmpcase;
 									tmpcase._key = req.key();
 									tmpcase._val = req.val();
-									tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
-									special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-												(unsigned short)req.hashidx(), tmpcase));
+									//tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
+									tmpcase._valid = req.valid();
+									//special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+									//			(unsigned short)req.hashidx(), tmpcase));
+									special_cases->insert(std::pair<unsigned short, SpecialCase>((unsigned short)req.hashidx(), tmpcase));
 								}
-								try_kvsnapshot(table);
 							}
 						}
 						else if (pkt_type == packet_type_t::PUT_REQ_POP_EVICT_CASE2_SWITCH) {
 							COUT_THIS("PUT_REQ_POP_EVICT_CASE2_SWITCH")
 							put_request_pop_evict_case2_switch_t req(buf, recv_size);
 							if (!isbackup) {
-								if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
-										== special_cases_list[thread_id]->end()) { // No such hashidx
+								//if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+								//		== special_cases_list[thread_id]->end()) { // No such hashidx
+								if (special_cases->find((unsigned short)req.hashidx()) == special_cases->end()) { // No such hashidx
 									SpecialCase tmpcase;
 									tmpcase._key = req.key();
 									tmpcase._val = req.val();
-									tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
-									special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-												(unsigned short)req.hashidx(), tmpcase));
+									//tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
+									tmpcase._valid = req.valid();
+									//special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+									//			(unsigned short)req.hashidx(), tmpcase));
+									special_cases->insert(std::pair<unsigned short, SpecialCase>((unsigned short)req.hashidx(), tmpcase));
 								}
-								try_kvsnapshot(table);
 							}
 						}
 						else if (pkt_type == packet_type_t::PUT_REQ_LARGE_EVICT_CASE2_SWITCH) {
@@ -1338,16 +1352,17 @@ void *run_switchos_simulator(void *param) {
 							put_request_large_evict_case2_switch_t req(buf, recv_size);
 							INVARIANT(req.val().val_length <= val_t.SWITCH_MAX_VALLEN);
 							if (!isbackup) { // Not receive backup data yet
-								if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
-										== special_cases_list[thread_id]->end()) { // No such hashidx
+								//if (special_cases_list[thread_id]->find((unsigned short)req.hashidx()) 
+								//		== special_cases_list[thread_id]->end()) { // No such hashidx
+								if (special_cases->find((unsigned short)req.hashidx()) == special_cases->end()) { // No such hashidx
 									SpecialCase tmpcase;
 									tmpcase._key = req.key();
 									tmpcase._val = req.val();
 									tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
-									special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
-												(unsigned short)req.hashidx(), tmpcase));
+									//special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
+									//			(unsigned short)req.hashidx(), tmpcase));
+									special_cases->insert(std::pair<unsigned short, SpecialCase>((unsigned short)req.hashidx(), tmpcase));
 								}
-								try_kvsnapshot(table);
 							}
 						}
 
@@ -1509,9 +1524,9 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::PUT_REQ:
+			case packet_type_t::PUT_REQ_SEQ:
 				{
-					put_request_t req(buf, recv_size);
+					put_request_seq_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
 					//COUT_THIS("[server] stat = " << tmp_stat)
@@ -1668,6 +1683,11 @@ static int run_sfg(void * param) {
 				{
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					get_response_pop_evict_case2_t req(buf, recv_size);
+
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
 					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
@@ -1683,6 +1703,11 @@ static int run_sfg(void * param) {
 				{
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_pop_evict_case2_t req(buf, recv_size);
+
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
 					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
@@ -1698,6 +1723,11 @@ static int run_sfg(void * param) {
 				{
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_large_evict_case2_t req(buf, recv_size);
+
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
 					INVARIANT(req.val().val_length <= val_t.SWITCH_MAX_VALLEN);
 					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
@@ -1834,6 +1864,11 @@ static int run_sfg(void * param) {
 				{
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					get_response_pop_evict_case2_switch_t req(buf, recv_size);
+
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
 					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
@@ -1849,6 +1884,11 @@ static int run_sfg(void * param) {
 				{
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_pop_evict_case2_switch_t req(buf, recv_size);
+
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
 					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
@@ -1864,6 +1904,11 @@ static int run_sfg(void * param) {
 				{
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_large_evict_case2_switch_t req(buf, recv_size);
+
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
 					INVARIANT(req.val().val_length <= val_t.SWITCH_MAX_VALLEN);
 					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq

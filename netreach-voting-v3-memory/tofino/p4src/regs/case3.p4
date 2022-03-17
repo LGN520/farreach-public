@@ -32,7 +32,7 @@ action try_case3() {
 table access_case3_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.isvalid: exact;
+		other_hdr.isvalid: exact;
 		meta.zerovote: exact;
 		meta.iskeymatch: exact;
 		meta.islock: exact;

@@ -74,8 +74,9 @@ header_type res_t {
 
 header_type other_t {
 	fields {
+		isvalid: 1; // if the entry is valid
 		iscase3: 1;
-		padding: 7;
+		padding: 6;
 	}
 }
 
@@ -87,7 +88,6 @@ header_type metadata_t {
 		ismatch_keylohi: 4; // predicate 
 		ismatch_keyhilo: 4; // predicate 
 		ismatch_keyhihi: 4; // predicate 
-		isvalid: 1; // if the entry is valid
 		iskeymatch: 1; // reduce MAT entries for ismatch_keyxxxx
 		canput: 4; // predicate for seq (update vallen and val only if with valid seq)
 		zerovote: 4; // predicate (if we need to trigger cache update)

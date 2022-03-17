@@ -7,9 +7,12 @@
 
 #include "helper.h"
 
+// mask for other_hdr
+#define VALID_MASK = 0x01
+
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
 	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_LARGE, GET_RES_POP_EVICT,
-	PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, PUT_REQ_LARGE, PUT_REQ_LARGE_RECIR, PUT_REQ_LARGE_EVICT,
+	PUT_REQ_SEQ, PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, PUT_REQ_LARGE, PUT_REQ_LARGE_RECIR, PUT_REQ_LARGE_EVICT,
 	DEL_REQ_RECIR, PUT_REQ_CASE1, DEL_REQ_CASE1, GET_RES_POP_EVICT_CASE2, PUT_REQ_POP_EVICT_CASE2, 
 	PUT_REQ_LARGE_EVICT_CASE2, PUT_REQ_MAY_CASE3, PUT_REQ_CASE3, DEL_REQ_MAY_CASE3, DEL_REQ_CASE3,
 	GET_RES_POP_EVICT_SWITCH, GET_RES_POP_EVICT_CASE2_SWITCH, PUT_REQ_POP_EVICT_SWITCH, PUT_REQ_POP_EVICT_CASE2_SWITCH,
@@ -174,12 +177,18 @@ class GetRequestPOP : public GetRequest<key_t> {
 };
 
 template<class key_t, class val_t>
-class GetResponsePOP : public GetResponse<key_t, val_t> {
+class GetResponsePOP : public GetResponse<key_t, val_t> { // seq
 	public: 
-		GetResponsePOP(uint16_t hashidx, key_t key, val_t val);
+		GetResponsePOP(uint16_t hashidx, key_t key, val_t val, int32_t seq);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+		int32_t seq() const;
 
 	protected:
+		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		int32_t _seq;
 };
 
 template<class key_t, class val_t>
@@ -201,7 +210,7 @@ class GetResponsePOPLarge : public GetResponse<key_t, val_t> {
 };
 
 template<class key_t, class val_t>
-class GetResponsePOPEvict : public PutRequest<key_t, val_t> {
+class GetResponsePOPEvict : public PutRequestSeq<key_t, val_t> { // seq
 	public:
 		GetResponsePOPEvict(const char * data, uint32_t recv_size);
 
@@ -209,7 +218,21 @@ class GetResponsePOPEvict : public PutRequest<key_t, val_t> {
 };
 
 template<class key_t, class val_t>
-class PutRequestPOPEvict : public PutRequest<key_t, val_t> {
+class PutRequestSeq : public PutRequest<key_t, val_t> { // seq
+	public:
+		PutRequestSeq(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+		int32_t seq() const;
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		int32_t _seq;
+};
+
+template<class key_t, class val_t>
+class PutRequestPOPEvict : public PutRequestSeq<key_t, val_t> { // seq
 	public:
 		PutRequestPOPEvict(const char * data, uint32_t recv_size);
 
@@ -248,7 +271,7 @@ class DelRequestCase1 : public PutRequest<key_t, val_t> {
 };
 
 template<class key_t, class val_t>
-class GetResponsePOPEvictCase2 : public PutRequest<key_t, val_t> {
+class GetResponsePOPEvictCase2 : public PutRequestPOPEvictCase2<key_t, val_t> { // seq + valid
 	public:
 		GetResponsePOPEvictCase2(const char * data, uint32_t recv_size);
 
@@ -256,11 +279,17 @@ class GetResponsePOPEvictCase2 : public PutRequest<key_t, val_t> {
 };
 
 template<class key_t, class val_t>
-class PutRequestPOPEvictCase2 : public PutRequest<key_t, val_t> {
+class PutRequestPOPEvictCase2 : public PutRequestPOPEvict<key_t, val_t> { // seq + valid
 	public:
 		PutRequestPOPEvictCase2(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+		bool valid() const;
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		bool _valid;
 };
 
 template<class key_t, class val_t>
@@ -305,7 +334,7 @@ class GetResponsePOPEvictCase2Switch : public PutRequest<key_t, val_t> {
 };
 
 template<class key_t, class val_t>
-class PutRequestPOPEvictSwitch : public PutRequest<key_t, val_t> {
+class PutRequestPOPEvictSwitch : public PutRequestSeq<key_t, val_t> { // seq
 	public:
 		PutRequestPOPEvictSwitch(const char * data, uint32_t recv_size);
 
@@ -313,7 +342,7 @@ class PutRequestPOPEvictSwitch : public PutRequest<key_t, val_t> {
 };
 
 template<class key_t, class val_t>
-class PutRequestPOPEvictCase2Switch : public PutRequest<key_t, val_t> {
+class PutRequestPOPEvictCase2Switch : public PutRequestEvictCase2<key_t, val_t> { // seq + valid
 	public:
 		PutRequestPOPEvictCase2Switch(const char * data, uint32_t recv_size);
 

@@ -292,23 +292,19 @@ table hash_partition_reverse_tbl {
 	size: 128;
 }
 
-action update_macaddr_s2c(tmp_srcmac, tmp_dstmac) {
-	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
-	modify_field(ethernet_hdr.srcAddr, tmp_dstmac);
+// Egress pipeline forwarding
+
+action forward_to_server_clone_for_pktloss(sid, port) {
+	modify_field(eg_intr_md.egress_port, port); // forward to server
+	clone_egress_pkt_to_egress(sid); // clone to switch os to cope with packet loss
 }
 
-action update_macaddr_c2s(tmp_srcmac, tmp_dstmac) {
-	modify_field(ethernet_hdr.srcAddr, tmp_srcmac);
-	modify_field(ethernet_hdr.dstAddr, tmp_dstmac);
-}
-
-table update_macaddr_tbl {
+table eg_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		update_macaddr_s2c;
-		update_macaddr_c2s;
+		forward_to_server_clone_for_pktloss;
 		nop;
 	}
 	default_action: nop();
@@ -320,10 +316,14 @@ action update_getres_udplen(aligned_vallen) {
 	add(udp_hdr.hdrLen, aligned_vallen, 29);
 }
 
-// For GETRES_POP_EVICT/_CASE2
 action update_getres_pop_evict_udplen(aligned_vallen) {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + [4(seq)]
-	add(udp_hdr.hdrLen, aligned_vallen, 29);
+	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq)
+	add(udp_hdr.hdrLen, aligned_vallen, 33);
+}
+
+action update_getres_pop_evict_case2_udplen(aligned_vallen) {
+	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq) + 1(other)
+	add(udp_hdr.hdrLen, aligned_vallen, 34);
 }
 
 action update_putres_udplen() {
@@ -332,8 +332,13 @@ action update_putres_udplen() {
 }
 
 action update_putreq_pop_evict_udplen() {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + [4(seq)]
-	add(udp_hdr.hdrLen, aligned_vallen, 29);
+	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq)
+	add(udp_hdr.hdrLen, aligned_vallen, 33);
+}
+
+action update_putreq_pop_evict_case2_udplen() {
+	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq) + 1(other)
+	add(udp_hdr.hdrLen, aligned_vallen, 34);
 }
 
 action update_putreq_case1_udplen() {
@@ -357,12 +362,37 @@ table update_udplen_tbl {
 	}
 	actions {
 		update_getres_udplen;
-		update_getres_pop_evict_udplen; // For GETRES_POP_EVICT/_CASE2
+		update_getres_pop_evict_udplen;
+		update_getres_pop_evict_case2_udplen;
 		update_putres_udplen;
-		update_putreq_pop_evict_udplen; // For PUTREQ_POP_EVICT/_CASE2
+		update_putreq_pop_evict_udplen;
+		update_putreq_pop_evict_case2_udplen;
 		update_putreq_case1_udplen;
 		update_delreq_case1_udplen;
 	}
 	default_action: nop(); // not change udp_hdr.hdrLen
 	size: 128;
+}
+
+action update_macaddr_s2c(tmp_srcmac, tmp_dstmac) {
+	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
+	modify_field(ethernet_hdr.srcAddr, tmp_dstmac);
+}
+
+action update_macaddr_c2s(tmp_srcmac, tmp_dstmac) {
+	modify_field(ethernet_hdr.srcAddr, tmp_srcmac);
+	modify_field(ethernet_hdr.dstAddr, tmp_dstmac);
+}
+
+table update_macaddr_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		update_macaddr_s2c;
+		update_macaddr_c2s;
+		nop;
+	}
+	default_action: nop();
+	size: 8;
 }

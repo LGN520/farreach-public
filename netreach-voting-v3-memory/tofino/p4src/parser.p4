@@ -35,6 +35,7 @@ parser parse_op {
 		GETRES_POP_TYPE: parse_vallen;
 		GETRES_NPOP_TYPE: parse_vallen;
 		GETRES_POP_EVICT_TYPE: parse_vallen;
+		PUTREQ_SEEQ_TYPE: parse_vallen;
 		PUTREQ_POP_TYPE: parse_vallen;
 		PUTREQ_RECIR_TYPE: parse_vallen;
 		PUTREQ_POP_EVICT_TYPE: parse_vallen;
@@ -47,6 +48,10 @@ parser parse_op {
 		PUTREQ_POP_EVICT_CASE2_TYPE: parse_vallen;
 		PUTREQ_LARGE_EVICT_CASE2_TYPE: parse_vallen;
 		//PUTREQ_CASE3_TYPE: parse_vallen;
+		GETRES_POP_EVICT_SWITCH_TYPE: parse_vallen;
+		GETRES_POP_EVICT_CASE2_SWITCH_TYPE: parse_vallen;
+		PUTREQ_POP_EVICT_SWITCH_TYPE: parse_vallen;
+		PUTREQ_POP_EVICT_CASE2_SWITCH_TYPE: parse_vallen;
 		default: ingress;
 	}
 }
@@ -93,11 +98,22 @@ parser parse_vallen {
 
 parser parse_val_len0 {
 	return select(op_hdr.optype) {
+		GETRES_POP_TYPE: parse_seq;
+		GETRES_POP_EVICT_TYPE: parse_seq;
+		GETRES_POP_EVICT_CASE2_TYPE: parse_seq;
+		PUTREQ_SEQ_TYPE: parse_seq;
+		PUTREQ_POP_TYPE: parse_seq;
+		PUTREQ_POP_EVICT_TYPE: parse_seq;
+		PUTREQ_POP_EVICT_CASE2_TYPE: parse_seq;
 		PUTREQ_RECIR_TYPE: parse_seq;
 		PUTREQ_LARGE_RECIR_TYPE: parse_seq;
 		DELREQ_RECIR_TYPE: parse_seq;
 		PUTREQ_MAY_CASE3_TYPE: parse_other;
 		DELREQ_MAY_CASE3_TYPE: parse_other;
+		GETRES_POP_EVICT_SWITCH_TYPE: parse_seq;
+		GETRES_POP_EVICT_CASE2_SWITCH_TYPE: parse_seq;
+		PUTREQ_POP_EVICT_SWITCH_TYPE: parse_seq;
+		PUTREQ_POP_EVICT_CASE2_SWITCH_TYPE: parse_seq;
 		default: ingress;
 	}
 }
@@ -184,7 +200,13 @@ parser parse_val_len16 {
 
 parser parse_seq {
 	extract(seq_hdr);
-	return ingress;
+	return select(op_hdr.optype) {
+		GETRES_POP_EVICT_CASE2_TYPE: parse_other;
+		GETRES_POP_EVICT_CASE2_SWITCH_TYPE: parse_other;
+		PUTREQ_POP_EVICT_CASE2_TYPE: parse_other;
+		PUTREQ_POP_EVICT_CASE2_SWITCH_TYPE: parse_other;
+		default: ingress;
+	}
 }
 
 parser parse_res {

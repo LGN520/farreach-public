@@ -32,7 +32,7 @@ action try_case12() {
 table access_case12_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.isvalid: exact;
+		other_hdr.isvalid: exact;
 		meta.iskeymatch: exact;
 		meta.canput: exact;
 		meta.isbackup: exact;

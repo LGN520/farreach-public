@@ -45,7 +45,7 @@ action reset_lock() {
 table access_lock_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.isvalid: exact;
+		other_hdr.isvalid: exact;
 		meta.zerovote: exact;
 	}
 	actions {

@@ -11,7 +11,7 @@ blackbox stateful_alu get_valid_alu {
 	update_lo_1_value: read_bit;
 
 	output_value: alu_lo;
-	output_dst: meta.isvalid;
+	output_dst: other_hdr.isvalid;
 }
 
 action get_valid() {
@@ -24,7 +24,7 @@ blackbox stateful_alu set_and_get_valid_alu {
 	update_lo_1_value: set_bit;
 
 	output_value: alu_lo;
-	output_dst: meta.isvalid;
+	output_dst: other_hdr.isvalid;
 }
 
 action set_and_get_valid() {
@@ -37,7 +37,7 @@ blackbox stateful_alu reset_and_get_valid_alu {
 	update_lo_1_value: clr_bit;
 
 	output_value: alu_lo;
-	output_dst: meta.isvalid;
+	output_dst: other_hdr.isvalid;
 }
 
 action reset_and_get_valid() {
