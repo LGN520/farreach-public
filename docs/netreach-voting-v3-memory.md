@@ -10,6 +10,38 @@
 	+ NOTE: must be PUTREQ_LARGE, GETRES, GETRES_POP_LARGE
 - TODO: in final test, we need to reset DEBUG_ASSERT as 0 
 - TODO: Increase MAX_BUFSIZE in helper.h for large value if necessary
+- NOTE: We focus on the consistency between in-switch cache and server, i.e., point-in-time consistency
+	+ Point-in-time consistency: if cache crashes, server can provide all data before a time point
+		+ NetCache uses write-through cache which holds the strictest consistency, i.e., no data loss of cache crashes
+		+ Write cache policy (FAST13) provides point-in-time consistency by two strategies, ordered/journaled eviction
+		+ Although we use out-of-order eviction between switch and server, we provide crash-consistent snapshot for switch; after collaborating with server-side snapshot, we can achieve point-in-time consistency
+	+ We do not consider replication consistency, e.g., linearzability, strong consistency, read-after-write/update/delete
+		+ Pegasus focuses on replication consistency as its switch stores replication repository information instead of key-value data
+			* It uses switch to manage the update of replications, which must provide replication consistency
+		+ However, NetCache and our work should be transparent with server-side replication
+			* We support server-side KVS without replication (we can use in-switch cache for load balance)
+			* If with replication for fault tolerance, to achieve linearizability
+				- For GET, as NetCache and our work block the subsequent writes for the to-be-cached key, both can wait for the complete of uncommitted writes before caching the key 
+				- For PUT in NetCache, it lets server to process it which can guarantee linearizablity 
+				- For PUT in our work, if it is applied to in-switch cache, we should treat it as committed
+					+ We can evict data to each replicaiton node (guaranteed by switch OS) for linearizability
+					+ As we may break linearizability during a bounded time, we may achieve weak linearizability or nearly strong consistency
+					+ However, as replication should be orthogonal with our design, we should refer to it as availability
+- NOTE: we put all register arrays related with availability (or read-after-write consistency) in the same ingress pipeline
+	+ Including key, vallen, value, and seq
+	+ Reason: RMT keeps FIFO ordering for packets in the same pipeline, yet packets may reorder when coming from ingress to egress
+	+ For packets with cache hit, we use the order arriving at the switch (i.e., ingress pipeline); while for those with cache miss, we use the order arriving at the server
+- Can we support exactly-once semantics? -> no (large throughput and traffic overhead)
+	+ Exactly-once belongs to linearizability which is replication consistency, while we focus on consistency between cache and server
+		+ Only Pegasus for replication and Concordia for cache coherence consider it, while both NetCache and DistCache do not 
+	+ Although server can store per-client latest req ID to avoid packet duplication for exactly-once semantics, it is hard for switch
+		* Clients are dynamically changing, thus we cannot statically allocate resources for them in switch
+		* We need to check whether the req has been processed at the beginning of ingress pipeline, while we can only mark the req being processed at the end of egress pipeline -> hard for pipeline programming model
+			- Note that before answering response, the client will never send a new req with larger req ID
+			- We can recirculate each packet with cache hit to set the req ID for the client at the beginning of ingress pipeline for exactly-once semantics; for the packet with cache miss, we can set the req ID in the ingress pipeline by the corresponding response
+			- Issues: (1) frequent recirculation means a half of max throughput; (2) if a duplicate req from the same client arrives at the switch before the recirculated/response packet set the req ID at the ingress pipeline, we still violate exactly-once semantics; (3) if the response packet is lost and duplicate packet has a cache hit, then it will still break exactly-once semantics
+				+ For second case, we can set a proper (relatively large) retry timeout to avoid it
+				+ For third case, server should maintain a retry mechanism to wait for the ACK from switch -> traffic overhead
 
 ## Overview
 
@@ -89,14 +121,10 @@
 				+ TODO: both GETRES_POP, PUTREQ_POP, and evicted packets needs to set savedseq correspondingly
 					* TODO: Note that for GETRES_POP which carries savedseq from server, if new PUT/DEL arrives at switch after GETRES_POP is applied into switch, the assigned seq must be larger than that carried from server
 				+ TODO: server also needs to save the seq number, which should be invisible to client
-				+ TODO: For PUTREQ_LARGE, assign seq to meta.seq instead of seq_hdr.seq
-				+ TODO: For PUTREQ_LARGE_RECIR, set meta.seq = seq_hdr.seq
 		* Stage 2: savedseq, lock 
 			- For PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, if iskeymatch=1, try_update_savedseq: if seq<=savedseq, directly send back response; otherwise, update vallen and value before sending back response
 			- TODO: For PUTREQ_POP/DELREQ_POP, set_and_get_savedseq: set savedseq=seq_hdr.seq, and get old savedseq into seq_hdr.seq
 				+ NOTE: original packet can use seq_hdr.seq (old) for eviction, yet cloned packet does not need seq due to for response 
-			- TODO: For PUTREQ_LARGE/_RECIR, if iskeymatch=1 and valid=1, get_savedseq_large: get savedseq to seq_hdr 
-				+ NOTE: PUTREQ_LARGE/_RECIR always evicts cached record if any even if seq<=savedseq due to stage limitation
 
 		* Stage 3: vallen, vallo1, valhi1, case12
 			- For vallen and val, we provide two operations: get, set_and_get
@@ -105,9 +133,8 @@
 		* Egress pipeline
 			- process_i2e_cloned_packet_tbl for cloned packet from ingress to egress
 				+ If PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, update as PUT/DELRES/PUTRES to client
-				+ If PUTREQ_LARGE/PUTREQ_LARGE_RECIR, update as PUTREQ_LARGE to server
-					* NOTE: for cloned PUTREQ_LARGE, we do not need to update op_hdr.optype
-					* TODO: Only PUTREQ_LARGE will aplly the following MATs in egress pipeline
+				+ If PUTREQ_LARGE/PUTREQ_LARGE_RECIR, set seq_hdr.seq=meta.seq_large, update as PUTREQ_LARGE_SEQ to server
+					* TODO: PUTREQ_LARGE_SEQ will aplly the following MATs in egress pipeline
 				+ If GETRES_POP (with new key-value), update it as GETRES to client
 				+ If PUTREQ_POP (with new key-value), update it as PUTRES to client
 			- process_e2e_cloned_packet_tbl for cloned packet from egress to egress
@@ -135,7 +162,7 @@
 				+ Access update_udplen_tbl (default: not change udp_hdr.hdrLen)
 					* NOTE: only match vallen <= 128B; udp_hdr.hdrLen = 6 + payloadsize
 						- Payloadsize: 1B optype + 2B hashidx + 16B key + 4B vallen + aligned vallen
-					* TODO: Including GETRES from server/switch, GETRES_POP_EVICT/_CASE2, PUTRES from server/switch, PUTREQ_POP_EVICT/_CASE2, PUTREQ_CASE1, DELREQ_CASE1
+					* Including GETRES from server/switch, GETRES_POP_EVICT/_CASE2, PUTRES from server/switch, PUTREQ_POP_EVICT/_CASE2, PUTREQ_CASE1, DELREQ_CASE1, PUTREQ_LARGE_EVICT/_CASE2
 					* TODO: check why we need parameter 0 when adding entry with range field
 				+ Access update_macaddr_tbl
 	+ GETREQ
@@ -202,8 +229,12 @@
 		* Stage 0: match key
 		* Stage 1
 			- Reset_and_get valid=0 if key matches
-			- Assign seq only for PUTREQ_LARGE not PUTREQ_LARGE_RECIR
+			- Assign seq to meta.seq_large only for PUTREQ_LARGE
+				+ Set meta.seq_large=seq_hdr.seq for PUTREQ_LARGE_RECIR
 			- Update iskeymatch
+		* Stage 2
+			- Get savedseq to seq_hdr.seq for eviction if valid=1 and iskeymatch=1
+				+ NOTE: PUTREQ_LARGE/_RECIR always evicts cached record if any even if seq<=savedseq due to stage limitation
 		* Stage 3-11
 			- Get vallen if iskeymatch=1 and isvalid=1; get val if iskeymatch=1
 				+ NOTE: if PUTREQ_LARGE/RECIR do not need EVICT, they should not change vallen_hdr which will be deparsed; but they can simply change val_hdr as it will not be deparsed due to vallen > 128
@@ -211,12 +242,15 @@
 		* Stage 11
 			- NOTE: PUTREQ_LARGE can trigger both case 2 and case 3
 			- Access port_forward_tbl
-				+ If iskeymatch=0 and lock=1, TODO: set seq_hdr.seq=meta.seq, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_RECIR (with seq_hdr, not need to assign seq again) and recirculate
+				+ If iskeymatch=0 and lock=1, set seq_hdr.seq=meta.seq_large, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_RECIR (with seq_hdr, not need to assign seq again) and recirculate
 				+ If iskeymatch=1 and isvalid=1
-					- If isbackup=1 and iscase12=0, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT_CASE2 to server (evict the value of the same key to cope with packet loss), clone_i2e for PUTREQ_LARGE/RECIR to server with meta.seq
+					- If isbackup=1 and iscase12=0, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT_CASE2 to server (evict the value of the same key to cope with packet loss), clone_i2e for PUTREQ_LARGE_SEQ to server with meta.seq_large
+						+ NOTE: PUTREQ_LARGE_EVICT_CASE2 does not need other_hdr.isvalid, which must be isvalid=1
+							* If isvalid=0, PUTREQ_LARGE/RECIR invalidates the entry -> no change on in-switch cache
+							* If iskeymatch=0, PUTREQ_LARGE/RECIR does not invalidate the entry -> no change on in-switch cache
 						+ PUTREQ_LARGE_EVICT_CASE2 -> hash_partition_tbl
-					- Otherwise, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT to server, clone_i2e for PUTREQ_LARGE/RECIR to server with meta.seq
-				+ Otherwise, TODO: set seq_hdr.seq=meta.seq, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE to server
+					- Otherwise, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT to server, clone_i2e for PUTREQ_LARGE/RECIR to server with meta.seq_large
+				+ Otherwise, set seq_hdr.seq=meta.seq_large, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_SEQ to server
 			- TODO: If lock=0 and isbackup=1, try_case3
 	+ PUTREQ_POP
 		* Stage 0: set_and_get key
@@ -420,7 +454,8 @@
 		* GETRES_POP (embedded seq) -> GETRES_POP_EVICT (old seq) and GETRES_POP_EVICT_CASE2 (old seq + valid)
 			- NOTE: GETRES, GETRES_NPOP, GETRES_POP_LARGE do not need seq / valid
 		* GETRES_POP_EVICT/GETRES_POP_EVICT_CASE2 -> GETRES_POP_EVICT_SWITCH (old seq) / GETRES_POP_EVICT_CASE2_SWITCH (old seq + valid)
-		* TODO: PUTREQ_LARGE -> PUTREQ_LARGE_RECIR (new seq), PUTREQ_LARGE_SEQ (new seq), PUTREQ_LARGE_EVICT (old seq), PUTREQ_LARGE_EVICT_CASE2 (old seq + valid)
+		* PUTREQ_LARGE/RECIR -> PUTREQ_LARGE_RECIR (new seq), PUTREQ_LARGE_SEQ (new seq), PUTREQ_LARGE_EVICT (old seq), PUTREQ_LARGE_EVICT_CASE2 (old seq)
+		* PUTREQ_LARGE_EVICT/PUTREQ_LARGE_EVICT_CASE2 -> PUTREQ_LARGE_EVICT_SWITCH (old seq) / PUTREQ_LARGE_EVICT_CASE2_SWITCH (old seq)
 		* TODO: use seq to update server-side KVS 
 + TODO: Check localtest
 + TODO: Check ycsb

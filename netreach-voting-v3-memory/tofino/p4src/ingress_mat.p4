@@ -105,9 +105,15 @@ action recirculate_getreq(port) {
 }
 
 // NOTE: clone field list cannot exceed 32 bytes
+// Only clone for RES needs original sport and dport
 field_list clone_field_list {
 	meta.tmp_sport;
 	meta.tmp_dport;
+}
+
+// Only for PUTREQ_LARGE/_RECIR
+field_list clone_field_list_large {
+	meta.seq_large;
 }
 
 action drop_getres_pop_clone_for_getres(sid) {
@@ -251,39 +257,49 @@ action update_putreq_recir_to_putreq_seq(port) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
+action update_putreq_large_to_putreq_large_seq(port) {
+	modify_field(op_hdr.optype, PUTREQ_LARGE_SEQ_TYPE);
+	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	add_header(seq_hdr);
+	modify_field(seq_hdr.seq, meta.seq_large);
+
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
 action update_putreq_large_to_putreq_large_recir(port) {
 	modify_field(op_hdr.optype, PUTREQ_LARGE_RECIR_TYPE);
 	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
 	add_header(seq_hdr);
+	modify_field(seq_hdr.seq, meta.seq_large);
 
 	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
 	recirculate(port);
 }
 
 action recirculate_putreq_large_recir(port) {
+	modify_field(seq_hdr.seq, meta.seq_large);
 	// It is equivalent to ig_intro_md_for_tm.ucast_egress_port = (port & 0x7f) | (ingress_port & ~0x7f)
 	recirculate(port);
 }
 
-action update_putreq_large_to_evict_clone_for_putreq_large(sid, port) {
+action update_putreq_large_to_evict_clone_for_putreq_large_seq(sid, port) {
 	modify_field(op_hdr.optype, PUTREQ_LARGE_EVICT_TYPE);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-	clone_ingress_pkt_to_egress(sid, clone_field_list);
-}
-
-action update_putreq_large_recir_to_evict_clone_for_putreq_large(sid, port) {
-	modify_field(op_hdr.optype, PUTREQ_LARGE_EVICT_TYPE);
-	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
-	remove_header(seq_hdr);
+	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	add_header(seq_hdr);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-	clone_ingress_pkt_to_egress(sid, clone_field_list);
+	clone_ingress_pkt_to_egress(sid, clone_field_list_large);
 }
 
-action update_putreq_large_recir_to_putreq_large(port) {
+action update_putreq_large_recir_to_evict_clone_for_putreq_large_seq(sid, port) {
+	modify_field(op_hdr.optype, PUTREQ_LARGE_EVICT_TYPE);
+
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+	clone_ingress_pkt_to_egress(sid, clone_field_list_large);
+}
+
+action update_putreq_large_recir_to_putreq_large_seq(port) {
 	modify_field(op_hdr.optype, PUTREQ_LARGE_TYPE);
-	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
-	remove_header(seq_hdr);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -419,19 +435,20 @@ action update_putreq_pop_to_case2_clone_for_putres(sid, port) {
 	clone_ingress_pkt_to_egress(sid, clone_field_list);
 }
 
-action update_putreq_large_to_case2_clone_for_putreq_large(sid, port) {
+action update_putreq_large_to_case2_clone_for_putreq_large_seq(sid, port) {
 	modify_field(op_hdr.optype, PUTREQ_LARGE_EVICT_CASE2_TYPE);
+	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	add_header(seq_hdr);
+
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-	clone_ingress_pkt_to_egress(sid, clone_field_list);
+	clone_ingress_pkt_to_egress(sid, clone_field_list_large);
 }
 
-action update_putreq_large_recir_to_case2_clone_for_putreq_large(sid, port) {
+action update_putreq_large_recir_to_case2_clone_for_putreq_large_seq(sid, port) {
 	modify_field(op_hdr.optype, PUTREQ_LARGE_EVICT_CASE2_TYPE);
-	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
-	remove_header(seq_hdr);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
-	clone_ingress_pkt_to_egress(sid, clone_field_list);
+	clone_ingress_pkt_to_egress(sid, clone_field_list_large);
 }
 
 action update_putreq_to_may_case3(port) {
@@ -501,11 +518,12 @@ table port_forward_tbl {
 		update_putreq_recir_to_putres;
 		recirculate_putreq_recir;
 		update_putreq_recir_to_putreq_seq;
+		update_putreq_large_to_putreq_large_seq;
 		update_putreq_large_to_putreq_large_recir;
 		recirculate_putreq_large_recir;
-		update_putreq_large_to_evict_clone_for_putreq_large;
-		update_putreq_large_recir_to_evict_clone_for_putreq_large;
-		update_putreq_large_recir_to_putreq_large;
+		update_putreq_large_to_evict_clone_for_putreq_large_seq;
+		update_putreq_large_recir_to_evict_clone_for_putreq_large_seq;
+		update_putreq_large_recir_to_putreq_large_seq;
 		update_delreq_to_delres;
 		update_delreq_to_delreq_recir;
 		update_delreq_recir_to_delres;
@@ -517,8 +535,8 @@ table port_forward_tbl {
 		update_delreq_recir_to_case1_clone_for_delres;
 		update_getres_pop_to_case2_clone_for_getres;
 		update_putreq_pop_to_case2_clone_for_putres;
-		update_putreq_large_to_case2_clone_for_putreq_large;
-		update_putreq_large_recir_to_case2_clone_for_putreq_large;
+		update_putreq_large_to_case2_clone_for_putreq_large_seq;
+		update_putreq_large_recir_to_case2_clone_for_putreq_large_seq;
 		update_putreq_to_may_case3;
 		update_putreq_recir_to_may_case3;
 		update_delreq_to_may_case3;

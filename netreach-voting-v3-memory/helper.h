@@ -143,14 +143,26 @@
 #endif
 
 #ifndef ORIGINAL_XINDEX
+
+// extended_xindex/xindex_util.h -> extended_xindex/xindex_util_v2.h
 // 1: use dynamic memory for variable-length value to save space by read-write locking
 // 0: use max memory for vaiable-length value to trade space for performance by optimistic locking
 #if 1
 #define DYNAMIC_MEMORY
 #endif
-#if 1
+
+// affect extended_xindex/xindex_group*.h + xindex_root*.h
+// 1: use bloom filter to optimize operation on newly inserted data in buffer
+#if 0
 #define BF_OPTIMIZATION
 #endif
+
+// affect extended_xindex/xindex + *.h and *_impl.h, and xindex_util_v2.h
+// 1: use seq mechanism for serizability under potential packet loss
+#if 1
+#define SEQ_MECHANISM
+#endif
+
 #endif
 
 #if defined(NDEBUGGING)

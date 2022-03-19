@@ -383,14 +383,22 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.client.access_vote_tbl_table_add_with_init_vote(
                                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table assign_seq_tbl (default: nop; 2)
-            # NOTE: PUTREQ_RECIR, DELREQ_RECIR, and PUTREQ_LARGE_RECIR do not need to assign seq
+            # Table assign_seq_tbl (default: nop; 3)
+            # NOTE: PUTREQ_RECIR, DELREQ_RECIR, and PUTREQ_LARGE_RECIR do not need to assign new seq
             print "Configuring assign_seq_tbl"
-            for tmpoptype in [PUTREQ_TYPE, DELREQ_TYPE, PUTREQ_LARGE_TYPE]:
+            for tmpoptype in [PUTREQ_TYPE, DELREQ_TYPE]:
                 matchspec0 = netbufferv3_assign_seq_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype)
-                self.client.assign_seq_tbl_table_add_with_assign_seq(\
+                self.client.assign_seq_tbl_table_add_with_assign_seq(\ # Assign seq to seq_hdr.seq
                         self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_assign_seq_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_LARGE_TYPE)
+            self.client.assign_seq_tbl_table_add_with_assign_seq_large(\ # Assign seq to meta.seq_large
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_assign_seq_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_LARGE_RECIR_TYPE)
+            self.client.assign_seq_tbl_table_add_with_copy_seq_large(\ # Copy seq_hdr.seq to meta.seq_large (not assign new seq) 
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table update_iskeymatch_tbl (default: update_iskeymatch(0); 1)
             print "Configuring update_iskeymatch_tbl"
@@ -425,6 +433,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         #        self.sess_hdl, self.dev_tgt, matchspec0)
                         self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
+            for tmpoptype in [PUTREQ_LARGE_TYPE, PUTREQ_LARGE_RECIR_TYPE]:
+                matchspec0 = netbufferv3_access_savedseq_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        other_hdr_isvalid = 1,
+                        meta_iskeymatch = 1)
+                self.client.access_savedseq_tbl_table_add_with_get_savedseq(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_lock_tbl (default: nop; 28)
             print "Configuring access_lock_tbl"
@@ -939,20 +954,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         elif iskeymatch == 1 and isvalid == 1:
                                             if isbackup == 1 and iscase12 == 0:
                                                 # Update PUTREQ_LARGE as PUTREQ_LARGE_EVICT_CASE2 to server, clone original packet as PUTREQ_LARGE to server
-                                                actnspec0 = netbufferv3_update_putreq_large_to_case2_clone_for_putreq_large_action_spec_t(\
+                                                actnspec0 = netbufferv3_update_putreq_large_to_case2_clone_for_putreq_large_seq_action_spec_t(\
                                                         self.sids[1], sefl.devPorts[1])
-                                                self.client.port_forward_tbl_table_add_with_update_putreq_large_to_case2_clone_for_putreq_large(\
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_large_to_case2_clone_for_putreq_large_seq(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             else:
                                                 # Update PUTREQ_LARGE as PUTREQ_LARGE_EVICT to server, clone original packet as PUTREQ_LARGE to server
-                                                actnspec0 = netbufferv3_update_putreq_large_to_evict_clone_for_putreq_large_action_spec_t(\
+                                                actnspec0 = netbufferv3_update_putreq_large_to_evict_clone_for_putreq_large_seq_action_spec_t(\
                                                         self.sids[1], sefl.devPorts[1])
-                                                self.client.port_forward_tbl_table_add_with_update_putreq_large_to_evict_clone_for_putreq_large(\
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_large_to_evict_clone_for_putreq_large_seq(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         else:
-                                            # Forward PUTREQ_LARGE to server
-                                            actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
-                                            self.client.port_forward_tbl_table_add_with_port_forward(\
+                                            # Update PUTREQ_LARGE as PUTREQ_LARGE_SEQ to server (forward)
+                                            actnspec0 = netbufferv3_update_putreq_large_to_putreq_large_seq_action_spec_t(self.devPorts[1]) 
+                                            self.client.port_forward_tbl_table_add_with_update_putreq_large_to_putreq_large_seq(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                                 op_hdr_optype = PUTREQ_LARGE_RECIR_TYPE,
@@ -971,20 +986,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         elif iskeymatch == 1 and isvalid == 1:
                                             if isbackup == 1 and iscase12 == 0:
                                                 # Update PUTREQ_LARGE_RECIR as PUTREQ_LARGE_EVICT_CASE2 to server, clone original packet as PUTREQ_LARGE to server
-                                                actnspec0 = netbufferv3_update_putreq_large_recir_to_case2_clone_for_putreq_large_action_spec_t(\
+                                                actnspec0 = netbufferv3_update_putreq_large_recir_to_case2_clone_for_putreq_large_seq_action_spec_t(\
                                                         self.sids[1], self.devPorts[1])
-                                                self.client.port_forward_tbl_table_add_with_update_putreq_large_recir_to_case2_clone_for_putreq_large(\
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_large_recir_to_case2_clone_for_putreq_large_seq(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             else:
                                                 # Update PUTREQ_LARGE_RECIR as PUTREQ_LARGE_EVICT to server, clone original packet as PUTREQ_LARGE to server
-                                                actnspec0 = netbufferv3_update_putreq_large_recir_to_evict_clone_for_putreq_large_action_spec_t(\
+                                                actnspec0 = netbufferv3_update_putreq_large_recir_to_evict_clone_for_putreq_large_seq_action_spec_t(\
                                                         self.sids[1], sefl.devPorts[1])
-                                                self.client.port_forward_tbl_table_add_with_update_putreq_large_recir_to_evict_clone_for_putreq_large(\
+                                                self.client.port_forward_tbl_table_add_with_update_putreq_large_recir_to_evict_clone_for_putreq_large_seq(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         else:
-                                            # Update PUTREQ_LARGE_RECIR as PUTREQ_LARGE to server
-                                            actnspec0 = netbufferv3_update_putreq_large_recir_to_putreq_large_action_spec_t(self.devPorts[1]) 
-                                            self.client.port_forward_tbl_table_add_with_update_putreq_large_recir_to_putreq_large(\
+                                            # Update PUTREQ_LARGE_RECIR as PUTREQ_LARGE_SEQ to server
+                                            actnspec0 = netbufferv3_update_putreq_large_recir_to_putreq_large_seq_action_spec_t(self.devPorts[1]) 
+                                            self.client.port_forward_tbl_table_add_with_update_putreq_large_recir_to_putreq_large_seq(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         matchspec0 = netbufferv3_port_forward_tbl_match_spec_t(\
                                                 op_hdr_optype = DELREQ_TYPE,
@@ -1116,6 +1131,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype = PUTREQ_POP_TYPE)
             self.client.process_i2e_cloned_packet_tbl_table_add_with_update_cloned_putreq_pop_to_putres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_i2e_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_LARGE_TYPE)
+            self.client.process_i2e_cloned_packet_tbl_table_add_with_update_cloned_putreq_large_to_putreq_large_seq(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv3_process_i2e_cloned_packet_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ_LARGE_RECIR_TYPE)
+            self.client.process_i2e_cloned_packet_tbl_table_add_with_update_cloned_putreq_large_recir_to_putreq_large_seq(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: process_e2e_cloned_packet_tbl 
             print "Configuring process_e2e_cloned_packet_tbl"
@@ -1218,7 +1241,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.eg_port_forward_tbl_table_add_with_forward_to_server_clone_for_pktloss(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-            # Table: update_udplen_tbl (default: nop; 120)
+            # Table: update_udplen_tbl (default: nop; 145)
             print "Configuring update_udplen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
@@ -1268,7 +1291,21 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         vallen_hdr_vallen_end=vallen_end)
                 actnspec0 = netbufferv3_update_putreq_pop_evict_case2_udplen_action_spec_t(\
                         aligned_vallen)
-                self.client.update_udplen_tbl_table_add_with_update_putreq_pop_evict_case2_udplen(\
+                matchspec0 = netbufferv3_update_udplen_tbl_match_spec_t(\
+                        op_hdr_optype=PUTREQ_LARGE_EVICT_TYPE,
+                        vallen_hdr_vallen_start=vallen_start,
+                        vallen_hdr_vallen_end=vallen_end)
+                actnspec0 = netbufferv3_update_putreq_large_evict_udplen_action_spec_t(\
+                        aligned_vallen)
+                self.client.update_udplen_tbl_table_add_with_update_putreq_large_evict_udplen(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                matchspec0 = netbufferv3_update_udplen_tbl_match_spec_t(\
+                        op_hdr_optype=PUTREQ_LARGE_EVICT_CASE2_TYPE,
+                        vallen_hdr_vallen_start=vallen_start,
+                        vallen_hdr_vallen_end=vallen_end)
+                actnspec0 = netbufferv3_update_putreq_large_evict_case2_udplen_action_spec_t(\
+                        aligned_vallen)
+                self.client.update_udplen_tbl_table_add_with_update_putreq_large_evict_case2_udplen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                 matchspec0 = netbufferv3_update_udplen_tbl_match_spec_t(\
                         op_hdr_optype=PUTREQ_CASE1_TYPE,

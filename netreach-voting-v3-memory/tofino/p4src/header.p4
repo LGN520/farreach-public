@@ -95,6 +95,7 @@ header_type metadata_t {
 		isbackup: 1; // backup flag
 		iscase12: 1; // case 1/2 of backup
 		hashidx: 16; // for hash partition in egress pipeline
+		seq_large: 32; // seq number for PUTREQ_LARGE/_RECIR/_SEQ
 	}
 }
 

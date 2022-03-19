@@ -12,7 +12,8 @@
 
 enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
 	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_LARGE, GET_RES_POP_EVICT,
-	PUT_REQ_SEQ, PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, PUT_REQ_LARGE, PUT_REQ_LARGE_RECIR, PUT_REQ_LARGE_EVICT,
+	PUT_REQ_SEQ, PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, PUT_REQ_LARGE, PUT_REQ_LARGE_SEQ, 
+	PUT_REQ_LARGE_RECIR, PUT_REQ_LARGE_EVICT,
 	DEL_REQ_RECIR, PUT_REQ_CASE1, DEL_REQ_CASE1, GET_RES_POP_EVICT_CASE2, PUT_REQ_POP_EVICT_CASE2, 
 	PUT_REQ_LARGE_EVICT_CASE2, PUT_REQ_MAY_CASE3, PUT_REQ_CASE3, DEL_REQ_MAY_CASE3, DEL_REQ_CASE3,
 	GET_RES_POP_EVICT_SWITCH, GET_RES_POP_EVICT_CASE2_SWITCH, PUT_REQ_POP_EVICT_SWITCH, PUT_REQ_POP_EVICT_CASE2_SWITCH,
@@ -242,12 +243,20 @@ class PutRequestPOPEvict : public PutRequestSeq<key_t, val_t> { // seq
 template<class key_t, class val_t>
 class PutRequestLarge : public PutRequest<key_t, val_t> {
 	public:
-		PutRequest(uint16_t hashidx, key_t key, val_t val);
+		PutRequestLarge(uint16_t hashidx, key_t key, val_t val, int32_t seq);
 		PutRequestLarge(const char * data, uint32_t recv_size);
 };
 
 template<class key_t, class val_t>
-class PutRequestLargeEvict : public PutRequest<key_t, val_t> {
+class PutRequestLargeSeq : public PutRequestSeq<key_t, val_t> { // seq
+	public:
+		PutRequestLargeSeq(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestLargeEvict : public PutRequestSeq<key_t, val_t> { // seq
 	public:
 		PutRequestLargeEvict(const char * data, uint32_t recv_size);
 
@@ -293,7 +302,7 @@ class PutRequestPOPEvictCase2 : public PutRequestPOPEvict<key_t, val_t> { // seq
 };
 
 template<class key_t, class val_t>
-class PutRequestLargeEvictCase2 : public PutRequest<key_t, val_t> {
+class PutRequestLargeEvictCase2 : public PutRequestSeq<key_t, val_t> { // seq
 	public:
 		PutRequestLargeEvictCase2(const char * data, uint32_t recv_size);
 
@@ -350,7 +359,7 @@ class PutRequestPOPEvictCase2Switch : public PutRequestEvictCase2<key_t, val_t> 
 };
 
 template<class key_t, class val_t>
-class PutRequestLargeEvictSwitch : public PutRequest<key_t, val_t> {
+class PutRequestLargeEvictSwitch : public PutRequestSeq<key_t, val_t> { // seq
 	public:
 		PutRequestLargeEvictSwitch(const char * data, uint32_t recv_size);
 
@@ -358,7 +367,7 @@ class PutRequestLargeEvictSwitch : public PutRequest<key_t, val_t> {
 };
 
 template<class key_t, class val_t>
-class PutRequestLargeEvictCase2Switch : public PutRequest<key_t, val_t> {
+class PutRequestLargeEvictCase2Switch : public PutRequestSeq<key_t, val_t> { // seq
 	public:
 		PutRequestLargeEvictCase2Switch(const char * data, uint32_t recv_size);
 

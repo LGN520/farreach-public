@@ -104,9 +104,15 @@ class alignas(CACHELINE_SIZE) Group {
   const key_t &get_pivot();
 
   inline result_t get(const key_t &key, val_t &val);
+#ifdef SEQ_MECHANISM
+  inline result_t put(const key_t &key, const val_t &val,
+                      const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum);
+  inline result_t remove(const key_t &key, int32_t snapshot_id, int32_t seq);
+#else
   inline result_t put(const key_t &key, const val_t &val,
                       const uint32_t worker_id, int32_t snapshot_id);
   inline result_t remove(const key_t &key, int32_t snapshot_id);
+#endif
   inline size_t scan(const key_t &begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
   inline size_t range_scan(const key_t &begin, const key_t &end,
@@ -130,8 +136,13 @@ class alignas(CACHELINE_SIZE) Group {
 
   inline bool get_from_array(const key_t &key, val_t &val);
 
+#ifdef SEQ_MECHANISM
+  inline result_t update_to_array(const key_t &key, const val_t &val,
+                                  const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum);
+#else
   inline result_t update_to_array(const key_t &key, const val_t &val,
                                   const uint32_t worker_id, int32_t snapshot_id);
+#endif
   inline bool remove_from_array(const key_t &key, int32_t snapshot_id);
 
   inline size_t get_pos_from_array(const key_t &key);

@@ -120,10 +120,16 @@ action update_cloned_putreq_pop_to_putres() {
 	add_header(res_hdr);
 }
 
-action update_cloned_putreq_large_recir_to_putreq_large() {
-	modify_field(op_hdr.optype, PUTREQ_LARGE_TYPE);
-	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
-	remove_header(seq_hdr);
+action update_cloned_putreq_large_to_putreq_large_seq() {
+	modify_field(op_hdr.optype, PUTREQ_LARGE_SEQ_TYPE);
+	add_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	add_header(seq_hdr);
+	modify_field(seq_hdr.seq, meta.seq_large);
+}
+
+action update_cloned_putreq_large_recir_to_putreq_large_seq() {
+	modify_field(op_hdr.optype, PUTREQ_LARGE_SEQ_TYPE);
+	modify_field(seq_hdr.seq, meta.seq_large);
 }
 
 table process_i2e_cloned_packet_tbl {
@@ -137,7 +143,8 @@ table process_i2e_cloned_packet_tbl {
 		update_cloned_delreq_recir_to_delres;
 		update_cloned_getres_pop_to_getres;
 		update_cloned_putreq_pop_to_putres;
-		update_cloned_putreq_large_recir_to_putreq_large;
+		update_cloned_putreq_large_to_putreq_large_seq;
+		update_cloned_putreq_large_recir_to_putreq_large_seq;
 		nop;
 	}
 	default_action: nop();
@@ -260,7 +267,8 @@ action update_dstport(port) {
 }
 
 action update_dstport_reverse(port) {
-	modify_field(udp_hdr.srcPort, meta.tmp_dport);
+	// NOTE: original packet does not have meta.tmp_dport, while server only cares about dstport instead of srcport
+	//modify_field(udp_hdr.srcPort, meta.tmp_dport);
 	modify_field(udp_hdr.dstPort, port);
 }
 
@@ -341,6 +349,17 @@ action update_putreq_pop_evict_case2_udplen() {
 	add(udp_hdr.hdrLen, aligned_vallen, 34);
 }
 
+action update_putreq_large_evict_udplen() {
+	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq)
+	add(udp_hdr.hdrLen, aligned_vallen, 33);
+}
+
+// NOTE: PUTREQ_LARGE_EVICT_CASE2 does not need other_hdr.isvalid
+action update_putreq_large_evict_case2_udplen() {
+	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq)
+	add(udp_hdr.hdrLen, aligned_vallen, 33);
+}
+
 action update_putreq_case1_udplen() {
 	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen
 	// NOTE: case 1 does not need seq, as it is sent from switch to switch OS in design without packet loss
@@ -367,11 +386,13 @@ table update_udplen_tbl {
 		update_putres_udplen;
 		update_putreq_pop_evict_udplen;
 		update_putreq_pop_evict_case2_udplen;
+		update_putreq_large_evict_udplen;
+		update_putreq_large_evict_case2_udplen;
 		update_putreq_case1_udplen;
 		update_delreq_case1_udplen;
 	}
 	default_action: nop(); // not change udp_hdr.hdrLen
-	size: 128;
+	size: 256;
 }
 
 action update_macaddr_s2c(tmp_srcmac, tmp_dstmac) {

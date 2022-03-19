@@ -21,12 +21,36 @@ action assign_seq() {
 	assign_seq_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
+blackbox stateful_alu assign_seq_large_alu {
+	reg: seq_reg;
+
+	condition_lo: register_lo == 0x7FFFFFFF;
+
+	update_lo_1_predicate: not condition_lo;
+	update_lo_1_value: register_lo + 1;
+	update_lo_2_predicate: condition_lo;
+	update_lo_2_value: 0;
+
+	output_value: alu_lo;
+	output_dst: meta.seq_large;
+}
+
+action assign_seq_large() {
+	assign_seq_large_alu.execute_stateful_alu(op_hdr.hashidx);
+}
+
+action copy_seq_large() {
+	modify_field(meta.seq_large, seq_hdr.seq);
+}
+
 table assign_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
 		assign_seq;
+		assign_seq_large;
+		copy_seq_large;
 		nop;
 	}
 	default_action: nop();
@@ -73,6 +97,18 @@ action set_and_get_savedseq() {
 	set_and_get_savedseq_alu.execute_stateful_alu(op_hdr.hashidx);
 }
 
+// key matches (for PUTREQ_LARGE/RECIR)
+blackbox stateful_alu get_savedseq_alu {
+	reg: savedseq_reg;
+
+	output_value: register_lo;
+	output_dst: seq_hdr.seq;
+}
+
+action get_savedseq() {
+	get_savedseq.execute_stateful_alu(op_hdr.hashidx);
+}
+
 /*blackbox stateful_alu reset_savedseq_alu {
 	reg: savedseq_reg;
 
@@ -92,6 +128,7 @@ table access_savedseq_tbl {
 	actions {
 		try_update_savedseq;
 		set_and_get_savedseq;
+		get_savedseq;
 		//reset_savedseq;
 		nop;
 	}

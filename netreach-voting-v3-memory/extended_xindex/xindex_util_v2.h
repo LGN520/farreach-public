@@ -201,6 +201,9 @@ struct AtomicVal {
   // Maintain one latest version and two versions for snapshot to support unfinished range query when making new snapshot
   // NOTE: the two snapshot versions may be in removed status due to merge_snapshot in compact
   int32_t latest_id = -1; // -1: impossible value; k: latest write happens at epoch k 
+#ifdef SEQ_MECHANISM
+  int32_t latest_seqnum = 0; // For serializability under potential packet loss
+#endif
   volatile val_t ss_val_0; // val_length = 0 and val_data = NULL
   volatile uint64_t ss_status_0 = 0; // only focus on removed w/o lock, is_ptr, and version
   int32_t ss_id_0 = -1; // -1: no snapshot; otherwise: snapshot of epoch k 
@@ -216,6 +219,9 @@ struct AtomicVal {
 	  ss_id_0 = -1;
 	  ss_id_1 = -1;
 	  latest_id = snapshot_id; 
+#ifdef SEQ_MECHANISM
+	  latest_seqnum = 0;
+#endif
   }
   AtomicVal(AtomicVal *ptr) : aval_ptr(ptr), status(0) { set_is_ptr(); }
   AtomicVal(const AtomicVal& other) {
@@ -223,6 +229,9 @@ struct AtomicVal {
   }
   AtomicVal & operator=(const AtomicVal& other) {
 	  latest_id = other.latest_id;
+#ifdef SEQ_MECHANISM
+	  latest_seqnum = other.latest_seqnum;
+#endif
 	  latest_val = other.latest_val;
 	  status = other.status;
 	  ss_val_0 = other.ss_val_0;
@@ -527,7 +536,7 @@ struct AtomicVal {
 	this->rwlock.unlock_shared();
 	return res;
   }
-  bool read_with_latestid(val_t &val, int32_t &id) {
+  bool read_with_latestid_seqnum(val_t &val, int32_t &id, int32_t &seqnum) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -541,6 +550,7 @@ struct AtomicVal {
 	}
 	else {
 		id = this->latest_id;
+		seqnum = this->latest_seqnum;
 		if (!removed(this->status)) {
 			val = this->latest_val;
 			res = true;
@@ -568,7 +578,7 @@ struct AtomicVal {
 	this->rwlock.unlock_shared();
 	return res;
   }
-  bool update(const val_t &val, int32_t snapshot_id) {
+  bool update(const val_t &val, int32_t snapshot_id, int32_t seqnum) {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
@@ -578,34 +588,40 @@ struct AtomicVal {
 	  assert(this->aval_ptr != nullptr);
       res = this->aval_ptr->update(val, snapshot_id);
     } else if (!removed(this->status)) { // do not make snapshot for removed latest version
-		if (this->latest_id == snapshot_id) {
-		  this->latest_val = val;
-		  res = true;
-		}
-		else {
-			// latest_id must > any ss_id
-			if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
-				this->ss_id_0 = this->latest_id;
-				this->ss_val_0 = this->latest_val;
-				this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
+#ifdef SEQ_MECHANISM
+		if (seqnum > this->latest_seqnum) {
+			this->latest_seqnum = seqnum;
+#else
+		if (1) {
+#endif
+			if (this->latest_id == snapshot_id) {
+				this->latest_val = val;
 			}
-			else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
-				this->ss_id_1 = this->latest_id;
-				this->ss_val_1 = this->latest_val;
-				this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
-			}
+			else {
+				// latest_id must > any ss_id
+				if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+					this->ss_id_0 = this->latest_id;
+					this->ss_val_0 = this->latest_val;
+					this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
+				}
+				else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+					this->ss_id_1 = this->latest_id;
+					this->ss_val_1 = this->latest_val;
+					this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
+				}
 
-			this->latest_id = snapshot_id;
-			this->latest_val = val;
-			res = true;
+				this->latest_id = snapshot_id;
+				this->latest_val = val;
+			}
 		}
+		res = true;
     } else { // if the latest version is removed, xindex should insert the val into buffer/buffer_temp as a new record
       res = false;
     }
     this->rwlock.unlock();
     return res;
   }
-  bool remove(int32_t snapshot_id) {
+  bool remove(int32_t snapshot_id, int32_t seqnum) {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
@@ -615,29 +631,35 @@ struct AtomicVal {
 	  assert(this->aval_ptr != nullptr);
       res = this->aval_ptr->remove(snapshot_id);
     } else if (!removed(this->status)) { // do not make snapshot for removed latest version
-		if (this->latest_id == snapshot_id) {
-		  set_removed();
-		  this->latest_val = val_t(); // val_length = 0 and val_data = NULL
-		  res = true;
-		}
-		else {
-			// latest_id must > any ss_id
-			if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
-				this->ss_id_0 = this->latest_id;
-				this->ss_val_0 = this->latest_val;
-				this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
+#ifdef SEQ_MECHANISM
+		if (seqnum > this->latest_seqnum) {
+			this->latest_seqnum = seqnum;
+#else
+		if (1) {
+#endif
+			if (this->latest_id == snapshot_id) {
+			  set_removed();
+			  this->latest_val = val_t(); // val_length = 0 and val_data = NULL
 			}
-			else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
-				this->ss_id_1 = this->latest_id;
-				this->ss_val_1 = this->latest_val;
-				this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
-			}
+			else {
+				// latest_id must > any ss_id
+				if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+					this->ss_id_0 = this->latest_id;
+					this->ss_val_0 = this->latest_val;
+					this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
+				}
+				else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+					this->ss_id_1 = this->latest_id;
+					this->ss_val_1 = this->latest_val;
+					this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
+				}
 
-			this->latest_id = snapshot_id;
-		    set_removed();
-		    this->latest_val = val_t(); // val_length = 0 and val_data = NULL
-		    res = true;
+				this->latest_id = snapshot_id;
+				set_removed();
+				this->latest_val = val_t(); // val_length = 0 and val_data = NULL
+			}
 		}
+		res = true;
     } else {
       res = false;
     }
@@ -656,11 +678,13 @@ struct AtomicVal {
 	assert(aval_ptr != nullptr);
 	val_t tmp_latestval;
 	int32_t tmp_latestid;
-    if (!aval_ptr->read_with_latestid(tmp_latestval, tmp_latestid)) {
+	int32_t tmp_seqnum;
+    if (!aval_ptr->read_with_latestid_seqnum(tmp_latestval, tmp_latestid, tmp_seqnum)) {
       set_removed();
     }
 	this->latest_val = tmp_latestval;
 	this->latest_id = tmp_latestid;
+	this->latest_seqnum = tmp_seqnum;
 	// Get snapshot value 0
 	val_t tmp_ssval_0;
 	int32_t tmp_ssid_0;
@@ -705,33 +729,39 @@ struct AtomicVal {
 	this->rwlock.unlock_shared();
 	return res;
   }
-  bool update_ignoring_ptr(const val_t &val, int32_t snapshot_id) {
+  bool update_ignoring_ptr(const val_t &val, int32_t snapshot_id, int32_t seqnum) {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
     bool res = false;
     if (!removed(this->status)) { // do not make snapshot for removed latest version
-		if (this->latest_id == snapshot_id) {
-		  this->latest_val = val;
-		  res = true;
-		}
-		else {
-			// latest_id must > any ss_id
-			if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
-				this->ss_id_0 = this->latest_id;
-				this->ss_val_0 = this->latest_val;
-				this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
+#ifdef SEQ_MECHANISM
+		if (seqnum > this->latest_seqnum) {
+			this->latest_seqnum = seqnum;
+#else
+		if (1) {
+#endif
+			if (this->latest_id == snapshot_id) {
+			  this->latest_val = val;
 			}
-			else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
-				this->ss_id_1 = this->latest_id;
-				this->ss_val_1 = this->latest_val;
-				this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
-			}
+			else {
+				// latest_id must > any ss_id
+				if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+					this->ss_id_0 = this->latest_id;
+					this->ss_val_0 = this->latest_val;
+					this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
+				}
+				else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+					this->ss_id_1 = this->latest_id;
+					this->ss_val_1 = this->latest_val;
+					this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
+				}
 
-			this->latest_id = snapshot_id;
-			this->latest_val = val;
-			res = true;
+				this->latest_id = snapshot_id;
+				this->latest_val = val;
+			}
 		}
+		res = true;
     } else { // if the latest version is removed, xindex should insert the val into buffer/buffer_temp as a new record
       res = false;
     }
@@ -744,29 +774,35 @@ struct AtomicVal {
 	}
     bool res = false;
     if (!removed(this->status)) { // do not make snapshot for removed latest version
-		if (this->latest_id == snapshot_id) {
-		  set_removed();
-		  this->latest_val = val_t(); // val_length = 0 and val_data = NULL
-		  res = true;
-		}
-		else {
-			// latest_id must > any ss_id
-			if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
-				this->ss_id_0 = this->latest_id;
-				this->ss_val_0 = this->latest_val;
-				this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
+#ifdef SEQ_MECHANISM
+		if (seqnum > this->latest_seqnum) {
+			this->latest_seqnum = seqnum;
+#else
+		if (1) {
+#endif
+			if (this->latest_id == snapshot_id) {
+			  set_removed();
+			  this->latest_val = val_t(); // val_length = 0 and val_data = NULL
 			}
-			else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
-				this->ss_id_1 = this->latest_id;
-				this->ss_val_1 = this->latest_val;
-				this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
-			}
+			else {
+				// latest_id must > any ss_id
+				if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+					this->ss_id_0 = this->latest_id;
+					this->ss_val_0 = this->latest_val;
+					this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
+				}
+				else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+					this->ss_id_1 = this->latest_id;
+					this->ss_val_1 = this->latest_val;
+					this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
+				}
 
-			this->latest_id = snapshot_id;
-		    set_removed();
-		    this->latest_val = val_t(); // val_length = 0 and val_data = NULL
-		    res = true;
+				this->latest_id = snapshot_id;
+				set_removed();
+				this->latest_val = val_t(); // val_length = 0 and val_data = NULL
+			}
 		}
+		res = true;
     } else {
       res = false;
     }

@@ -715,6 +715,20 @@ PutRequestLarge<key_t, val_t>::PutRequestLarge(const char * data, uint32_t recv_
 	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
 }
 
+// PutRequestLargeSeq (value must > 128B)
+
+template<class key_t, class val_t>
+PutRequestLargeSeq<key_t, val_t>::PutRequestLargeSeq(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ_LARGE_SEQ);
+	INVARIANT(this->_val.val_length > val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestLargeSeq<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestLargeSeq");
+}
+
 // PutRequestLargeEvict (value must <= 128B)
 
 template<class key_t, class val_t>

@@ -34,8 +34,8 @@
 #include "original_xindex/xindex.h"
 #include "original_xindex/xindex_impl.h"
 #else
-#include "extended_xindexplus/xindex.h"
-#include "extended_xindexplus/xindex_impl.h"
+#include "extended_xindex/xindex.h"
+#include "extended_xindex/xindex_impl.h"
 #include "val.h"
 #endif
 
@@ -73,6 +73,7 @@ typedef GetResponsePOPEvict<index_key_t, val_t> get_response_pop_evict_t;
 typedef PutRequestSeq<index_key_t, val_t> put_request_seq_t;
 typedef PutRequestPOPEvict<index_key_t, val_t> put_request_pop_evict_t;
 typedef PutRequestLarge<index_key_t, val_t> put_request_large_t;
+typedef PutRequestLargeSeq<index_key_t, val_t> put_request_large_seq_t;
 typedef PutRequestLargeEvict<index_key_t, val_t> put_rquest_large_evict_t;
 typedef PutRequestCase1<index_key_t, val_t> put_request_case1_t;
 typedef DelRequestCase1<index_key_t, val_t> del_request_case1_t;
@@ -1358,7 +1359,8 @@ void *run_switchos_simulator(void *param) {
 									SpecialCase tmpcase;
 									tmpcase._key = req.key();
 									tmpcase._val = req.val();
-									tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
+									//tmpcase._valid = (req.val().val_length > 0); // vallen = 0 means deleted
+									tmpcase._valid = 1; // valid must be 1 for PUTREQ_LARGE_EVICT_CASE2
 									//special_cases_list[thread_id]->insert(std::pair<unsigned short, SpecialCase>(\
 									//			(unsigned short)req.hashidx(), tmpcase));
 									special_cases->insert(std::pair<unsigned short, SpecialCase>((unsigned short)req.hashidx(), tmpcase));
@@ -1646,9 +1648,9 @@ static int run_sfg(void * param) {
 					}
 					break;
 				}
-			case packet_type_t::PUT_REQ_LARGE:
+			case packet_type_t::PUT_REQ_LARGE_SEQ:
 				{
-					put_request_large_t req(buf, recv_size);
+					put_request_large_seq_t req(buf, recv_size);
 					INVARIANT(req.val().val_length > val_t::SWITCH_MAX_VALLEN);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), thread_id);

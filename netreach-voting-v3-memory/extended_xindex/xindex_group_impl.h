@@ -102,19 +102,33 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t &key,
   return result_t::failed;
 }
 
+#ifdef SEQ_MECHANISM
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline result_t Group<key_t, val_t, seq, max_model_n>::put(
+    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum) {
+#else
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::put(
     const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id) {
+#endif
   result_t res;
 #ifdef BF_OPTIMIZATION
   if (bf->query(key) == true) { // may have false positive
+#ifdef SEQ_MECHANISM
+    res = update_to_array(key, val, worker_id, snapshot_id, seqnum);
+#else
     res = update_to_array(key, val, worker_id, snapshot_id);
+#endif
     if (res == result_t::ok || res == result_t::retry) {
       return res;
     }
   }
 #else
-  res = update_to_array(key, val, worker_id, snapshot_id);
+#ifdef SEQ_MECHANISM
+    res = update_to_array(key, val, worker_id, snapshot_id, seqnum);
+#else
+    res = update_to_array(key, val, worker_id, snapshot_id);
+#endif
   if (res == result_t::ok || res == result_t::retry) {
     return res;
   }
@@ -482,9 +496,16 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_array(
          data[pos].second.read(val);  // value is not removed
 }
 
+#ifdef SEQ_MECHANISM
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
+    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum) {
+#else
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
     const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id) {
+#endif
+	// TODO
   if (seq) {
     seq_lock();
     size_t pos = get_pos_from_array(key);

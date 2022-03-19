@@ -20,8 +20,8 @@
 #include "original_xindex/xindex.h"
 #include "original_xindex/xindex_impl.h"
 #else
-#include "extended_xindexplus/xindex.h"
-#include "extended_xindexplus/xindex_impl.h"
+#include "extended_xindex/xindex.h"
+#include "extended_xindex/xindex_impl.h"
 #include "val.h"
 #endif
 
