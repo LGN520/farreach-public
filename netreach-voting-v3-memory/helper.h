@@ -143,26 +143,28 @@
 #endif
 
 #ifndef ORIGINAL_XINDEX
+// v1: extended_xindex: max memory for varlen value + multi-versioning snapshot
 
-// extended_xindex/xindex_util.h -> extended_xindex/xindex_util_v2.h
+// v2: extended_xindex_dynamic: extended_xindex + dynamic memory for varlen value (xindex_util.h)
 // 1: use dynamic memory for variable-length value to save space by read-write locking
 // 0: use max memory for vaiable-length value to trade space for performance by optimistic locking
 #if 1
 #define DYNAMIC_MEMORY
 #endif
 
-// affect extended_xindex/xindex_group*.h + xindex_root*.h
+// v3: extended_xindex_dynamic_seq: extended_xindex_dynamic + seq mechanism for serializability (xindex*.h)
+// 1: use seq mechanism for serizability under potential packet loss
+#ifdef DYNAMIC_MEMORY
+#if 1
+#define SEQ_MECHANISM
+#endif
+#endif
+
+// For each version: affect extended_xindex/xindex_group*.h + xindex_root*.h
 // 1: use bloom filter to optimize operation on newly inserted data in buffer
 #if 0
 #define BF_OPTIMIZATION
 #endif
-
-// affect extended_xindex/xindex + *.h and *_impl.h, and xindex_util_v2.h
-// 1: use seq mechanism for serizability under potential packet loss
-#if 1
-#define SEQ_MECHANISM
-#endif
-
 #endif
 
 #if defined(NDEBUGGING)

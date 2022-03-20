@@ -743,6 +743,45 @@ uint32_t PutRequestLargeEvict<key_t, val_t>::serialize(char * const data, uint32
 	COUT_N_EXIT("Invalid invoke of serialize for PutRequestLargeEvict");
 }
 
+// DelRequestSeq
+
+template<class key_t, class val_t>
+DelRequestSeq<key_t, val_t>::DelRequestSeq(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DEL_REQ_SEQ);
+}
+
+template<class key_t, class val_t>
+uint32_t DelRequestSeq<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for DelRequestSeq");
+}
+
+template<class key_t, class val_t>
+int32_t DelRequestSeq<key_t, val_t>::seq() const {
+	return this->_seq;
+}
+
+template<class key_t, class val_t>
+uint32_t DelRequestSeq<key_t, val_t>::size() {
+	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(int32_t);
+}
+
+template<class key_t, class val_t>
+void DelRequestSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size <= recv_size);
+	const char *begin = data;
+	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
+	begin += sizeof(uint8_t);
+	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
+	this->_hashidx = ntohs(this->_hashidx); // Big-endian to small-endian
+	begin += sizeof(uint16_t);
+	memcpy((void *)&this->_key, begin, sizeof(key_t));
+	begin += sizeof(key_t);
+	memcpy((void *)&this->_seq, begin, sizeof(int32_t));
+	this->_seq = int32_t(ntohl(uint32_t(this->_seq))); // Big-endian -> little-endian
+}
+
 
 // PutRequestCase1 (value must <= 128B)
 

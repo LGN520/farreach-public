@@ -201,16 +201,16 @@ inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val) {
  */
 template <class key_t, class val_t, bool seq>
 inline result_t Root<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
-                                             const uint32_t worker_id, int32_t snapshot_id) {
-  return locate_group(key)->put(key, val, worker_id, snapshot_id);
+                                             const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum) {
+  return locate_group(key)->put(key, val, worker_id, snapshot_id, seqnum);
 }
 
 /*
  * Root::remove
  */
 template <class key_t, class val_t, bool seq>
-inline result_t Root<key_t, val_t, seq>::remove(const key_t &key, int32_t snapshot_id) {
-  return locate_group(key)->remove(key, snapshot_id);
+inline result_t Root<key_t, val_t, seq>::remove(const key_t &key, int32_t snapshot_id, int32_t seqnum) {
+  return locate_group(key)->remove(key, snapshot_id, seqnum);
 }
 
 template <class key_t, class val_t, bool seq>

@@ -326,6 +326,13 @@ action update_delreq_to_delreq_recir(port) {
 	recirculate(port);
 }
 
+action update_delreq_to_delreq_seq(port) {
+	modify_field(op_hdr.optype, DELREQ_SEQ_TYPE);
+	add_to_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	add_header(seq_hdr);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
+
 action update_delreq_recir_to_delres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
@@ -345,10 +352,8 @@ action recirculate_delreq_recir(port) {
 	recirculate(port);
 }
 
-action update_delreq_recir_to_delreq(port) {
-	modify_field(op_hdr.optype, DELREQ_TYPE);
-	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
-	remove_header(seq_hdr);
+action update_delreq_recir_to_delreq_seq(port) {
+	modify_field(op_hdr.optype, DELREQ_SEQ_TYPE);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
@@ -526,9 +531,10 @@ table port_forward_tbl {
 		update_putreq_large_recir_to_putreq_large_seq;
 		update_delreq_to_delres;
 		update_delreq_to_delreq_recir;
+		update_delreq_to_delreq_seq;
 		update_delreq_recir_to_delres;
 		recirculate_delreq_recir;
-		update_delreq_recir_to_delreq;
+		update_delreq_recir_to_delreq_seq;
 		update_putreq_to_case1_clone_for_putres;
 		update_putreq_recir_to_case1_clone_for_putres;
 		update_delreq_to_case1_clone_for_delres;

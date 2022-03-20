@@ -848,7 +848,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 	  // base_val must be not all_removed
       new_data[count].first = base_key;
       new_data[count].second = wrapped_val_t(&base_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
+#ifdef DYNAMIC_MEMORY
+      assert(new_data[count].second.aval_ptr->latest_val.val_length == base_val.latest_val.val_length);
+#else
       assert(new_data[count].second.aval_ptr->val_length == base_val.val_length);
+#endif
       array_source.advance_to_next_valid();
     } else if (base_key > buf_key) {
 	  // buf_val may be all_removed
@@ -856,7 +860,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 	  if (!buf_val.all_removed()) { // Ignore buf_val if it is all removed
 		  new_data[count].first = buf_key;
 		  new_data[count].second = wrapped_val_t(&buf_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
+#ifdef DYNAMIC_MEMORY
+		  assert(new_data[count].second.aval_ptr->latest_val.val_length == buf_val.latest_val.val_length);
+#else
 		  assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length);
+#endif
 	  }
       buffer_source.advance_to_next_valid();
 	} else { // Merge snapshot versions
@@ -887,7 +895,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
     new_data[count].first = base_key;
     new_data[count].second = wrapped_val_t(&base_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
+#ifdef DYNAMIC_MEMORY
+    assert(new_data[count].second.aval_ptr->latest_val.val_length == base_val.latest_val.val_length);
+#else
     assert(new_data[count].second.aval_ptr->val_length == base_val.val_length);
+#endif
 
     array_source.advance_to_next_valid();
     count++;
@@ -899,7 +911,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
     new_data[count].first = buf_key;
     new_data[count].second = wrapped_val_t(&buf_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
+#ifdef DYNAMIC_MEMORY
+    assert(new_data[count].second.aval_ptr->latest_val.val_length == buf_val.latest_val.val_length);
+#else
     assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length);
+#endif
 
     buffer_source.advance_to_next_valid();
     count++;

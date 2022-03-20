@@ -200,12 +200,13 @@
 	+ GETRES_POP_LARGE
 		* Stage 2: set lock=0
 		* Stage 11: port_forward -> update GETRES_LARGE as GETRES to client
-	+ PUTREQ
+	+ PUTREQ/RECIR
 		* Stage 0: match key
 		* Stage 1
 			- Get valid
 			- Update vote: if key matches, increase vote; otherwise, decrease vote
-			- Assign seq for each slot (no matter key matches or not)
+			- For PUTREQ, assign seq for each slot (no matter key matches or not)
+				+ For PUTREQ_REICR, do not need to assign seq as it has carried seq_hdr
 			- Update iskeymatch
 		* Stage 2
 			- If valid=1 and iskeymatch=1, try to update savedseq to update meta.canput
@@ -215,14 +216,14 @@
 			- Try_case12 if valid=1 and iskeymatch=1 and canput=2 and isbackup=1; otherwise, read_case12
 		* Stage 11: 
 			- Access port_forward_tbl
-				- If (valid=0 or zerovote=2) and lock=0, update PUTREQ to PUTREQ_POP and recirculate
+				- If (valid=0 or zerovote=2) and lock=0, update PUTREQ/RECIR to PUTREQ_POP and recirculate
 				- If valid=1 and iskeymatch=1
-					+ If canput=2 and isbackup=1 and iscase12=0, update PUTREQ as PUTREQ_CASE1 to server, clone_i2e for PUTRES to client
-					+ Otherwise, update PUTREQ to PUTRES
-					- NOTE: current PUTREQ has old key-value pair instead of new one, we must send original packet to egress pipeline
-				- If (valid=0 or iskeymatch=0) and lock=1, update PUTREQ as PUTREQ_RECIR (with seq_hdr, not need to assign seq again) and recirculate
+					+ If canput=2 and isbackup=1 and iscase12=0, update PUTREQ/RECIR as PUTREQ_CASE1 to server, clone_i2e for PUTRES to client
+						- NOTE: current PUTREQ/RECIR has old key-value pair, we must clone original packet to egress pipeline
+					+ Otherwise, update PUTREQ/RECIR to PUTRES
+				- If (valid=0 or iskeymatch=0) and lock=1, update PUTREQ/RECIR as PUTREQ_RECIR (with seq_hdr, not need to assign seq again) and recirculate
 				- Otherwise
-					+ If isbackup=0, update as PUTREQ_SEQ to server -> hash_partition_tbl
+					+ If isbackup=0, update PUTREQ/RECIR as PUTREQ_SEQ to server -> hash_partition_tbl
 					+ If isbackup=1, update PUTREQ as PUTREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
 			- If "otherwise" and isbackup=1, try_case3
 	+ PUTREQ_LARGE/RECIR
@@ -266,37 +267,13 @@
 			- If (isbackup=0 or iscase12=1) and valid=0, drop original packet (as key changes), clone_i2e for PUTRES to client
 			- If (isbackup=0 or iscase12=1) and valid=1, update PUTREQ_POP as PUTREQ_POP_EVICT to server, clone_i2e for PUTRES to client
 				+ PUTREQ_POP_EVICT -> hash_partition_tbl
-	+ PUTREQ_RECIR (carry seq_hdr already)
+	+ DELREQ/RECIR (as a speical PUTREQ)
 		* Stage 0: match key
 		* Stage 1
-			- Get valid
-			- Update vote: if key matches, increase vote; otherwise, decrease vote
-			- NOTE: do not assign seq 
-			- Update iskeymatch
-		* Stage 2
-			- If valid=1 and iskeymatch=1, try to update savedseq to update meta.canput
-			- Access lock: if valid=0 or zerovote=2, try_lock; otherwise, read_lock
-		* Stage 3-11: 
-			- Set_and_get vallen and value if valid=1 and canput=2 (valid=1, iskeymatch=1, and seq>savedseq)
-			- Try_case12 if valid=1 and iskeymatch=1 and canput=2 and isbackup=1; otherwise, read_case12
-		* Stage 11: 
-			- Access port_forward_tbl
-				- If (valid=0 or zerovote=2) and lock=0, update PUTREQ_RECIR to PUTREQ_POP and recirculate
-				- If valid=1 and iskeymatch=1
-					+ If canput=2 and isbackup=1 and iscase12=0, update PUTREQ as PUTREQ_CASE1 to server, clone_i2e for PUTRES to client
-					+ Otherwise, update PUTREQ to PUTRES
-					- NOTE: current PUTREQ_RECIR has old key-value pair instead of new one, we must send original packet to egress pipeline
-				- If (valid=0 or iskeymatch=0) and lock=1, recirculate PUTREQ_RECIR
-				- Otherwise
-					+ If isbackup=0, update PUTREQ_RECIR as PUTREQ_SEEQ to server -> hash_partition_tbl
-					+ If isbackup=1, update PUTREQ_RECIR as PUTREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
-			- If "otherwise" and isbackup=1, try_case3
-	+ DELREQ (as a speical PUTREQ)
-		* Stage 0: match key
-		* Stage 1
-			- Get valid (treat DELREQ as a special PUTREQ which does not need to reset valid bit)
+			- Get valid (treat DELREQ/RECIR as a special PUTREQ which does not need to reset valid bit)
 			- Not update vote now (TODO: maybe set vote=0 is better if popularity in the slot changes after DEL)
-			- Assign seq for each slot (no matter key matches or not)
+			- For DELREQ, assign seq for each slot (no matter key matches or not)
+				+ For DELREQ_RECIR, do not assign seq as it has carried seq_hdr
 			- Update iskeymatch
 		* Stage 2
 			- If valid=1 and iskeymatch=1, try to update savedseq to update meta.canput
@@ -307,37 +284,13 @@
 		* Stage 11: 
 			- Access port_forward_tbl
 				- If valid=1 and iskeymatch=1
-					+ If canput=2 and isbackup=1 and iscase12=0, update DELREQ as DELREQ_CASE1 to server, clone_i2e for DELRES to client
-					+ Otherwise, update DELREQ to DELRES
-					- NOTE: current DELREQ has old key-value pair instead of new one, we must send original packet to egress pipeline
-				- If (valid=0 or iskeymatch=0) and lock=1, update DELREQ as DELREQ_RECIR (with seq_hdr, not need to assign seq again) and recirculate
+					+ If canput=2 and isbackup=1 and iscase12=0, update DELREQ/RECIR as DELREQ_CASE1 to server, clone_i2e for DELRES to client
+						* NOTE: current DELREQ/RECIR has old key-value pair, we must clone original packet to egress pipeline
+					+ Otherwise, update DELREQ/RECIR to DELRES
+				- If (valid=0 or iskeymatch=0) and lock=1, update DELREQ/RECIR as DELREQ_RECIR (with seq_hdr, not need to assign seq again) and recirculate
 				- Otherwise
-					+ If isbackup=0, forward DELREQ to server -> hash_partition_tbl
+					+ If isbackup=0, update DELREQ/RECIR as DELREQ_SEQ to server -> hash_partition_tbl
 					+ If isbackup=1, update DELREQ as DELREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
-			- If "otherwise" and isbackup=1, try_case3
-	+ DELREQ_RECIR
-		* Stage 0: match key
-		* Stage 1
-			- Get valid (treat DELREQ_RECIR as a special PUTREQ which does not need to reset valid bit)
-			- Not update vote now (TODO: maybe set vote=0 is better if popularity in the slot changes after DEL)
-			- NOTE: do not assign seq 
-			- Update iskeymatch
-		* Stage 2
-			- If valid=1 and iskeymatch=1, try to update savedseq to update meta.canput
-			- Not access lock (DEL will not trigger eviction)
-		* Stage 3-11:
-			- Reset_and_get vallen, and get value if valid=1 and canput=2 (valid=1, iskeymatch=1, and seq>savedseq)
-			- Try_case12 if valid=1 and iskeymatch=1 and canput=2 and isbackup=1; otherwise, read_case12
-		* Stage 11: 
-			- Access port_forward_tbl
-				- If valid=1 and iskeymatch=1
-					+ If canput=2 and isbackup=1 and iscase12=0, update DELREQ as DELREQ_CASE1 to server, clone_i2e for DELRES to client
-					+ Otherwise, update DELREQ to DELRES
-					- NOTE: current DELREQ_RECIR has old key-value pair instead of new one, we must send original packet to egress pipeline
-				- If (valid=0 or iskeymatch=0) and lock=1, recirculate DELREQ_RECIR
-				- Otherwise
-					+ If isbackup=0, update DELREQ_RECIR as DELREQ to server -> hash_partition_tbl
-					+ If isbackup=1, update DELREQ_RECIR as DELREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
 			- If "otherwise" and isbackup=1, try_case3
 	+ TODO: Cope with packet loss
 		* For GETRES_POP_EVICT/PUTREQ_POP_EVICT: send to server as well as mirroringing to switch OS for timeout and retransmission
@@ -350,15 +303,15 @@
 			- If value <= 128B, sendback GETRES_POP
 			- If value > 128B, sendback GETRES_POP_LARGE
 		* Otherwise, sendback GETRES_NPOP
-	+ PUTREQ_SEQ: sendback PUTRES
+	+ PUTREQ_SEQ: put with seqnum and sendback PUTRES
 	+ GETRES_POP/PUTREQ_POP/PUTREQ_LARGE + EVICT/CASE2/EVICT_SWITCH/CASE2_SWITCH
 		* Check seq of recently-deleted record set: if evict.seq<=delete.seq, treat it as deleted; otherwise, perform the EVICT packet and remove it from the deleted set
-		* If vallen > 0, put evicted key-value pair into KVS without response
-		* Otherwise, delete evicted key from KVS without response
+		* If vallen > 0, put evicted key-value pair with seqnum into KVS without response
+		* Otherwise, delete evicted key with seqnum from KVS without response
 		* TODO: For CASE2/CASE2_SWITCH: make snapshot
-	+ PUTREQ_LARGE: sendback PUTRES
+	+ PUTREQ_LARGE: put with seqnum and sendback PUTRES
 	+ DELREQ:
-		* Update recently-deleted record set (within c*RTT time), and sendback DELRES
+		* TODO: Update recently-deleted record set with seqnum (within c*RTT time), and sendback DELRES
 	+ PUTREQ/DELREQ/PUTREQ_LARGE_CASE3:
 		* TODO: make snapshot
 		* For DELREQ_CASE3, it needs to update recently-deleted record set
@@ -441,9 +394,9 @@
 	+ Maintain one special case list is enough
 		* In design, switch os only writes the special case list before the end of current snapshot period, and it only reads the special case list after the end of current snapshot period
 		* In simulation: only switch os thread writes the special case list before receiving the snapshot data, and only backuper reads the special case list after receiving the snapshot data to perform rollback
-- TODO: Implement design for packet loss
+- Implement design for packet loss
 	+ Switch OS retry by tcp channel
-	+ TODO: Seq mechanism
+	+ Seq mechanism
 		* NOTE: seq is genreated by switch which is in big-endian
 		* PUTREQ/PUTREQ_RECIR -> PUTREQ_POP (new seq), PUTREQ_RECIR (new seq), PUTREQ_SEQ (new seq; PUTREQ forwarded to server)
 			- NOTE: PUTREQ_CASE1 and PUTRES do not need seq / valid
@@ -456,7 +409,10 @@
 		* GETRES_POP_EVICT/GETRES_POP_EVICT_CASE2 -> GETRES_POP_EVICT_SWITCH (old seq) / GETRES_POP_EVICT_CASE2_SWITCH (old seq + valid)
 		* PUTREQ_LARGE/RECIR -> PUTREQ_LARGE_RECIR (new seq), PUTREQ_LARGE_SEQ (new seq), PUTREQ_LARGE_EVICT (old seq), PUTREQ_LARGE_EVICT_CASE2 (old seq)
 		* PUTREQ_LARGE_EVICT/PUTREQ_LARGE_EVICT_CASE2 -> PUTREQ_LARGE_EVICT_SWITCH (old seq) / PUTREQ_LARGE_EVICT_CASE2_SWITCH (old seq)
-		* TODO: use seq to update server-side KVS 
+		* DELREQ/DELREQ_RECIR -> DELREQ_RECIR (new seq), DELREQ_SEQ (new seq)
+			- NOTE: DELREQ_CASE1 and DELRES do not need seq / valid
+			- TODO: DELREQ_CASE3
+		* Use seq to update server-side KVS 
 + TODO: Check localtest
 + TODO: Check ycsb
 - TODO: range query

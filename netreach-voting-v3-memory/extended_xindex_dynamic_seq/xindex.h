@@ -25,7 +25,11 @@
 #include "xindex_model.h"
 #include "xindex_root.h"
 #include "../helper.h"
+#ifdef DYNAMIC_MEMORY
+#include "xindex_util_v2.h"
+#else
 #include "xindex_util.h"
+#endif
 
 #include <atomic>
 
@@ -46,8 +50,8 @@ class XIndex {
   ~XIndex();
 
   inline bool get(const key_t &key, val_t &val, const uint32_t worker_id);
-  inline bool put(const key_t &key, const val_t &val, const uint32_t worker_id);
-  inline bool remove(const key_t &key, const uint32_t worker_id);
+  inline bool put(const key_t &key, const val_t &val, const uint32_t worker_id, int32_t seqnum);
+  inline bool remove(const key_t &key, const uint32_t worker_id, int32_t seqnum);
   inline size_t scan(const key_t &begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result,
                      const uint32_t worker_id);

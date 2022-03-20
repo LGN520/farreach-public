@@ -34,9 +34,18 @@
 #include "original_xindex/xindex.h"
 #include "original_xindex/xindex_impl.h"
 #else
+#include "val.h"
+#ifdef DYNAMIC_MEMORY
+#ifdef SEQ_MECHANISM
+#include "extended_xindex_dynamic_seq/xindex.h"
+#include "extended_xindex_dynamic_seq/xindex_impl.h"
+#else
+#include "extended_xindex_dynamic/xindex.h"
+#include "extended_xindex_dynamic/xindex_impl.h"
+#endif
+#else
 #include "extended_xindex/xindex.h"
 #include "extended_xindex/xindex_impl.h"
-#include "val.h"
 #endif
 
 #define MQ_SIZE 256
@@ -1530,7 +1539,7 @@ static int run_sfg(void * param) {
 				{
 					put_request_seq_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id, req.seq());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -1541,11 +1550,11 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::DEL_REQ:
+			case packet_type_t::DEL_REQ_SEQ:
 				{
-					del_request_t req(buf, recv_size);
+					del_request_seq_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
-					bool tmp_stat = table->remove(req.key(), thread_id);
+					bool tmp_stat = table->remove(req.key(), thread_id, req.seq());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.hashidx(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -1556,7 +1565,7 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 
 					// NOTE: no matter tmp_stat is true (key is deleted) or false (no such key or key has been deleted before), we should always treat the key does not exist (i.e., being deleted), so a reordered eviction will never overwrite this result for linearizability -> we should always update the corresponding deleted set
-					deleted_sets[thread_id].add(req.key(), 1); // TODO: seq
+					deleted_sets[thread_id].add(req.key(), req.seq());
 					break;
 				}
 			case packet_type_t::SCAN_REQ:
@@ -1621,13 +1630,13 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					get_response_pop_evict_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
@@ -1637,13 +1646,13 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					put_request_pop_evict_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
@@ -1653,7 +1662,7 @@ static int run_sfg(void * param) {
 					put_request_large_seq_t req(buf, recv_size);
 					INVARIANT(req.val().val_length > val_t::SWITCH_MAX_VALLEN);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id, req.seq());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -1670,13 +1679,13 @@ static int run_sfg(void * param) {
 					put_request_large_evict_t req(buf, recv_size);
 					INVARIANT(req.val().val_length <= val_t::SWITCH_MAX_VALLEN);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
@@ -1690,13 +1699,13 @@ static int run_sfg(void * param) {
 						try_kvsnapshot(table);
 					}
 
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
@@ -1710,13 +1719,13 @@ static int run_sfg(void * param) {
 						try_kvsnapshot(table);
 					}
 
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
@@ -1731,18 +1740,18 @@ static int run_sfg(void * param) {
 					}
 
 					INVARIANT(req.val().val_length <= val_t.SWITCH_MAX_VALLEN);
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
 				}
-			case packet_type_t::PUT_REQ_CASE3:
+			case packet_type_t::PUT_REQ_CASE3: // TODO: seq
 				{
 					COUT_THIS("PUT_REQ_CASE3")
 					put_request_case3_t req(buf, recv_size);
@@ -1761,7 +1770,7 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::DEL_REQ_CASE3:
+			case packet_type_t::DEL_REQ_CASE3: // TODO; seq
 				{
 					COUT_THIS("DEL_REQ_CASE3")
 					del_request_case3_t req(buf, recv_size);
@@ -1818,13 +1827,13 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					get_response_pop_evict_switch_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
@@ -1834,13 +1843,13 @@ static int run_sfg(void * param) {
 					// Put evicted data into key-value store
 					put_request_pop_evict_switch_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
@@ -1851,13 +1860,13 @@ static int run_sfg(void * param) {
 					put_request_large_evict_switch_t req(buf, recv_size);
 					INVARIANT(req.val().val_length <= val_t::SWITCH_MAX_VALLEN);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
@@ -1871,13 +1880,13 @@ static int run_sfg(void * param) {
 						try_kvsnapshot(table);
 					}
 
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
@@ -1891,13 +1900,13 @@ static int run_sfg(void * param) {
 						try_kvsnapshot(table);
 					}
 
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;
@@ -1912,13 +1921,13 @@ static int run_sfg(void * param) {
 					}
 
 					INVARIANT(req.val().val_length <= val_t.SWITCH_MAX_VALLEN);
-					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), 1); // TODO: seq
+					bool isdeleted = deleted_sets[thread_id].check_and_remove(req.key(), req.seq());
 					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
 						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), thread_id);
+							table->put(req.key(), req.val(), thread_id, req.seq());
 						}
 						else {
-							table->remove(req.key(), thread_id);
+							table->remove(req.key(), thread_id, req.seq());
 						}
 					}
 					break;

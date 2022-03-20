@@ -101,8 +101,8 @@ class alignas(CACHELINE_SIZE) Group {
 
   inline result_t get(const key_t &key, val_t &val);
   inline result_t put(const key_t &key, const val_t &val,
-                      const uint32_t worker_id, int32_t snapshot_id);
-  inline result_t remove(const key_t &key, int32_t snapshot_id);
+                      const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum);
+  inline result_t remove(const key_t &key, int32_t snapshot_id, int32_t seqnum);
   inline size_t scan(const key_t &begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
   inline size_t range_scan(const key_t &begin, const key_t &end,
@@ -127,8 +127,8 @@ class alignas(CACHELINE_SIZE) Group {
   inline bool get_from_array(const key_t &key, val_t &val);
 
   inline result_t update_to_array(const key_t &key, const val_t &val,
-                                  const uint32_t worker_id, int32_t snapshot_id);
-  inline bool remove_from_array(const key_t &key, int32_t snapshot_id);
+                                  const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum);
+  inline bool remove_from_array(const key_t &key, int32_t snapshot_id, int32_t seqnum);
 
   inline size_t get_pos_from_array(const key_t &key);
   inline size_t binary_search_key(const key_t &key, size_t pos_hint,
@@ -140,10 +140,10 @@ class alignas(CACHELINE_SIZE) Group {
 
   inline bool get_from_buffer(const key_t &key, val_t &val, buffer_t *buffer);
   inline bool update_to_buffer(const key_t &key, const val_t &val,
-                               buffer_t *buffer, int32_t snapshot_id);
+                               buffer_t *buffer, int32_t snapshot_id, int32_t seqnum);
   inline void insert_to_buffer(const key_t &key, const val_t &val,
-                               buffer_t *buffer, int32_t snapshot_id);
-  inline bool remove_from_buffer(const key_t &key, buffer_t *buffer, int32_t snapshot_id);
+                               buffer_t *buffer, int32_t snapshot_id, int32_t seqnum);
+  inline bool remove_from_buffer(const key_t &key, buffer_t *buffer, int32_t snapshot_id, int32_t seqnum);
 
   void init_models(uint32_t model_n);
   inline double train_model(size_t model_i, size_t begin, size_t end);

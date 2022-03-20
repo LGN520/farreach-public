@@ -1028,9 +1028,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         else:
                                             if isbackup == 0:
-                                                # Forwrad DELREQ to server 
-                                                actnspec0 = netbufferv3_port_forward_action_spec_t(self.devPorts[1]) 
-                                                self.client.port_forward_tbl_table_add_with_port_forward(\
+                                                # Update DELREQ as DELREQ_SEQ to server (forward)
+                                                actnspec0 = netbufferv3_update_delreq_to_delreq_seq_action_spec_t(self.devPorts[1]) 
+                                                self.client.port_forward_tbl_table_add_with_update_delerq_to_delreq_seq(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             else:
                                                 # Update DELREQ as DELREQ_MAY_CASE3 to server 
@@ -1064,9 +1064,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         else:
                                             if isbackup == 0:
-                                                # Forwrad DELREQ to server 
-                                                actnspec0 = netbufferv3_update_delreq_recir_to_delreq_action_spec_t(self.devPorts[1]) 
-                                                self.client.port_forward_tbl_table_add_with_update_delreq_recir_to_delreq(\
+                                                # Update DELREQ_RECIR as DELREQ_SEQ to server (forward)
+                                                actnspec0 = netbufferv3_update_delreq_recir_to_delreq_seq_action_spec_t(self.devPorts[1]) 
+                                                self.client.port_forward_tbl_table_add_with_update_delreq_recir_to_delreq_seq(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             else:
                                                 # Update DELREQ_RECIR as DELREQ_MAY_CASE3 to server 

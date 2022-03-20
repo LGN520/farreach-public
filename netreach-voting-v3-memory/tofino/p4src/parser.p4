@@ -43,6 +43,8 @@ parser parse_op {
 		PUTREQ_LARGE_SEQ_TYPE: parse_vallen; // must enter parse_val_len0
 		PUTREQ_LARGE_RECIR_TYPE: parse_vallen; // must enter parse_val_len0
 		PUTREQ_LARGE_EVICT:TYPE: parse_vallen;
+		DELREQ_RECIR_TYPE: parse_seq;
+		DELREQ_SEQ_TYPE: parse_seq;
 		PUTREQ_CASE1_TYPE: parse_vallen;
 		DELREQ_CASE1_TYPE: parse_vallen;
 		GETRES_POP_EVICT_CASE2_TYPE: parse_vallen;
@@ -113,7 +115,6 @@ parser parse_val_len0 {
 		PUTREQ_LARGE_RECIR_TYPE: parse_seq;
 		PUTREQ_LARGE_EVICT_TYPE: parse_seq;
 		PUTREQ_LARGE_EVICT_CASE2_TYPE: parse_seq; // no other_hdr
-		DELREQ_RECIR_TYPE: parse_seq;
 		PUTREQ_MAY_CASE3_TYPE: parse_other;
 		DELREQ_MAY_CASE3_TYPE: parse_other;
 		GETRES_POP_EVICT_SWITCH_TYPE: parse_seq;

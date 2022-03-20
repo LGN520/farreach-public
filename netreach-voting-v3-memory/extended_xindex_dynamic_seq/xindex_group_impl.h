@@ -56,7 +56,7 @@ void Group<key_t, val_t, seq, max_model_n>::init(
 
   for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
     data[rec_i].first = *(keys_begin + rec_i);
-    data[rec_i].second = wrapped_val_t(*(vals_begin + rec_i), snapshot_id);
+    data[rec_i].second = wrapped_val_t(*(vals_begin + rec_i), snapshot_id, 0); // seqnum in server starts from 0
   }
 
   for (size_t rec_i = 1; rec_i < array_size; rec_i++) {
@@ -104,17 +104,17 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t &key,
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::put(
-    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id) {
+    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum) {
   result_t res;
 #ifdef BF_OPTIMIZATION
   if (bf->query(key) == true) { // may have false positive
-    res = update_to_array(key, val, worker_id, snapshot_id);
+    res = update_to_array(key, val, worker_id, snapshot_id, seqnum);
     if (res == result_t::ok || res == result_t::retry) {
       return res;
     }
   }
 #else
-    res = update_to_array(key, val, worker_id, snapshot_id);
+    res = update_to_array(key, val, worker_id, snapshot_id, seqnum);
   if (res == result_t::ok || res == result_t::retry) {
     return res;
   }
@@ -124,13 +124,13 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
     if (buf_frozen) {
       return result_t::retry;
     }
-    insert_to_buffer(key, val, buffer, snapshot_id);
+    insert_to_buffer(key, val, buffer, snapshot_id, seqnum);
     return result_t::ok;
   } else {
-    if (update_to_buffer(key, val, buffer, snapshot_id)) {
+    if (update_to_buffer(key, val, buffer, snapshot_id, seqnum)) {
       return result_t::ok;
     }
-    insert_to_buffer(key, val, buffer_temp, snapshot_id);
+    insert_to_buffer(key, val, buffer_temp, snapshot_id, seqnum);
     return result_t::ok;
   }
   COUT_N_EXIT("put should not fail!");
@@ -138,22 +138,22 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::remove(
-    const key_t &key, int32_t snapshot_id) {
+    const key_t &key, int32_t snapshot_id, int32_t seqnum) {
 #ifdef BF_OPTIMIZATION
   if (bf->query(key) == true) { // may have false positive
-	  if (remove_from_array(key, snapshot_id)) {
+	  if (remove_from_array(key, snapshot_id, seqnum)) {
 		return result_t::ok;
 	  }
   }
 #else
-  if (remove_from_array(key, snapshot_id)) {
+  if (remove_from_array(key, snapshot_id, seqnum)) {
 	return result_t::ok;
   }
 #endif
-  if (remove_from_buffer(key, buffer, snapshot_id)) {
+  if (remove_from_buffer(key, buffer, snapshot_id, seqnum)) {
     return result_t::ok;
   }
-  if (buffer_temp && remove_from_buffer(key, buffer_temp, snapshot_id)) {
+  if (buffer_temp && remove_from_buffer(key, buffer_temp, snapshot_id, seqnum)) {
     return result_t::ok;
   }
   return result_t::failed;
@@ -484,14 +484,14 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_array(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
-    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id) {
+    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum) {
   if (seq) {
     seq_lock();
     size_t pos = get_pos_from_array(key);
     if (pos != array_size) {  // position is valid (not out-of-range)
       seq_unlock();
       return (/* key matches */ data[pos].first == key &&
-              /* record updated */ data[pos].second.update(val, snapshot_id))
+              /* record updated */ data[pos].second.update(val, snapshot_id, seqnum))
                  ? result_t::ok
                  : result_t::failed;
     } else {                      // might append
@@ -510,7 +510,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
           data = new_data;
 
           data[pos].first = key;
-          data[pos].second = wrapped_val_t(val, snapshot_id);
+          data[pos].second = wrapped_val_t(val, snapshot_id, seqnum);
           array_size++;
           seq_unlock();
 
@@ -520,7 +520,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
           return result_t::ok;
         } else {
           data[pos].first = key;
-          data[pos].second = wrapped_val_t(val, snapshot_id);
+          data[pos].second = wrapped_val_t(val, snapshot_id, seqnum);
           array_size++;
           seq_unlock();
           return result_t::ok;
@@ -533,7 +533,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
   } else {  // no seq
     size_t pos = get_pos_from_array(key);
     return pos != array_size && data[pos].first == key &&
-                   data[pos].second.update(val, snapshot_id)
+                   data[pos].second.update(val, snapshot_id, seqnum)
                ? result_t::ok
                : result_t::failed;
   }
@@ -541,11 +541,11 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_array(
-    const key_t &key, int32_t snapshot_id) {
+    const key_t &key, int32_t snapshot_id, int32_t seqnum) {
   size_t pos = get_pos_from_array(key);
   return pos != array_size &&        // position is valid (not out-of-range)
          data[pos].first == key &&   // key matches
-         data[pos].second.remove(snapshot_id);  // value is not removed and is updated
+         data[pos].second.remove(snapshot_id, seqnum);  // value is not removed and is updated
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
@@ -663,20 +663,20 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_buffer(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::update_to_buffer(
-    const key_t &key, const val_t &val, buffer_t *buffer, int32_t snapshot_id) {
-  return buffer->update(key, val, snapshot_id);
+    const key_t &key, const val_t &val, buffer_t *buffer, int32_t snapshot_id, int32_t seqnum) {
+  return buffer->update(key, val, snapshot_id, seqnum);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline void Group<key_t, val_t, seq, max_model_n>::insert_to_buffer(
-    const key_t &key, const val_t &val, buffer_t *buffer, int32_t snapshot_id) {
-  buffer->insert(key, val, snapshot_id);
+    const key_t &key, const val_t &val, buffer_t *buffer, int32_t snapshot_id, int32_t seqnum) {
+  buffer->insert(key, val, snapshot_id, seqnum);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_buffer(
-    const key_t &key, buffer_t *buffer, int32_t snapshot_id) {
-  return buffer->remove(key, snapshot_id);
+    const key_t &key, buffer_t *buffer, int32_t snapshot_id, int32_t seqnum) {
+  return buffer->remove(key, snapshot_id, seqnum);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
@@ -848,7 +848,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 	  // base_val must be not all_removed
       new_data[count].first = base_key;
       new_data[count].second = wrapped_val_t(&base_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
+#ifdef DYNAMIC_MEMORY
+      assert(new_data[count].second.aval_ptr->latest_val.val_length == base_val.latest_val.val_length);
+#else
       assert(new_data[count].second.aval_ptr->val_length == base_val.val_length);
+#endif
       array_source.advance_to_next_valid();
     } else if (base_key > buf_key) {
 	  // buf_val may be all_removed
@@ -856,7 +860,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 	  if (!buf_val.all_removed()) { // Ignore buf_val if it is all removed
 		  new_data[count].first = buf_key;
 		  new_data[count].second = wrapped_val_t(&buf_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
+#ifdef DYNAMIC_MEMORY
+		  assert(new_data[count].second.aval_ptr->latest_val.val_length == buf_val.latest_val.val_length);
+#else
 		  assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length);
+#endif
 	  }
       buffer_source.advance_to_next_valid();
 	} else { // Merge snapshot versions
@@ -887,7 +895,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
     new_data[count].first = base_key;
     new_data[count].second = wrapped_val_t(&base_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
+#ifdef DYNAMIC_MEMORY
+    assert(new_data[count].second.aval_ptr->latest_val.val_length == base_val.latest_val.val_length);
+#else
     assert(new_data[count].second.aval_ptr->val_length == base_val.val_length);
+#endif
 
     array_source.advance_to_next_valid();
     count++;
@@ -899,7 +911,11 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
     new_data[count].first = buf_key;
     new_data[count].second = wrapped_val_t(&buf_val); // put AtomicVal* into new_data; pointer-type atomic value does not need create_id
+#ifdef DYNAMIC_MEMORY
+    assert(new_data[count].second.aval_ptr->latest_val.val_length == buf_val.latest_val.val_length);
+#else
     assert(new_data[count].second.aval_ptr->val_length == buf_val.val_length);
+#endif
 
     buffer_source.advance_to_next_valid();
     count++;

@@ -20,9 +20,18 @@
 #include "original_xindex/xindex.h"
 #include "original_xindex/xindex_impl.h"
 #else
+#include "val.h"
+#ifdef DYNAMIC_MEMORY
+#ifdef SEQ_MECHANISM
+#include "extended_xindex_dynamic_seq/xindex.h"
+#include "extended_xindex_dynamic_seq/xindex_impl.h"
+#else
+#include "extended_xindex_dynamic/xindex.h"
+#include "extended_xindex_dynamic/xindex_impl.h"
+#endif
+#else
 #include "extended_xindex/xindex.h"
 #include "extended_xindex/xindex_impl.h"
-#include "val.h"
 #endif
 
 struct alignas(CACHELINE_SIZE) SFGParam;
@@ -388,6 +397,7 @@ void *run_sfg(void * param) {
 
 	int tmprun = 4;
 	UNUSED(tmprun);
+	int32_t seqnum = 1;
     if (d <= read_ratio) {  // get
     //if (tmprun == 0) {  // get
 	  /*val_t tmp_val;
@@ -414,7 +424,7 @@ void *run_sfg(void * param) {
       }
     } else if (d <= read_ratio + update_ratio) {  // update
     //} else if (tmprun == 1) {  // update
-	  bool tmp_stat = table->put(op_keys[(update_i + delete_i) % op_keys.size()], dummy_value, thread_id);
+	  bool tmp_stat = table->put(op_keys[(update_i + delete_i) % op_keys.size()], dummy_value, thread_id, seqnum);
 	  UNUSED(tmp_stat);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(update_i + delete_i) % op_keys.size()].to_string() << " val = " << dummy_value.to_string()
@@ -426,7 +436,7 @@ void *run_sfg(void * param) {
       }
     } else if (d <= read_ratio + update_ratio + insert_ratio) {  // insert
     //} else if (tmprun == 2) {  // insert
-	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id);
+	  bool tmp_stat = table->put(op_keys[insert_i], dummy_value, thread_id, seqnum);
 	  UNUSED(tmp_stat);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[insert_i].to_string() << " val = " << dummy_value.to_string()
@@ -438,7 +448,7 @@ void *run_sfg(void * param) {
       }
     } else if (d <= read_ratio + update_ratio + insert_ratio + delete_ratio) {  // remove
     //} else if (tmprun == 3) {  // remove
-	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id);
+	  bool tmp_stat = table->remove(op_keys[delete_i], thread_id, seqnum);
 	  UNUSED(tmp_stat);
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[delete_i].to_string() << " stat = " << tmp_stat);
@@ -511,6 +521,7 @@ void *run_sfg(void * param) {
       }
     } // END of SCAN
     thread_param.throughput++;
+	seqnum++;
   } // END of loop
 
   pthread_exit(nullptr);
