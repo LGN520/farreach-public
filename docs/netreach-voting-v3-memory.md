@@ -106,7 +106,7 @@
 			- If with invalidation/eviction (i.e., becoming PUTREQ_LARGE_EVICT and clone a PUTREQ_LARGE), PUTREQ_LARGE_EVICT will be mirrored to switch OS to cope with packet loss
 - In-switch processing
 	+ NOTE: clone_i2e clones the original packet to egress pipeline; clone_e2e clones the deparsed packet to egress pipeline
-	+ Overview
+	+ Ingress pipeline
 		* Stage 0: keylolo, keylohi, keyhilo, keyhihi, load_backup_tbl
 			- For key, we provide two operations: match, set_and_get
 		* Stage 1: valid, vote, seq (assign for each PUTREQ/DELREQ/PUTREQ_LARGE), update_iskeymatch_tbl
@@ -116,25 +116,24 @@
 				+ Another way is to use more bits and stages for seq (we do not use due to stage limitation)
 					* For example, we can use a 64-bit register array for seq (register_hi for highest 32 bits, while register_lo for lowest 32 bits)
 					* Due to lack of comparator within each ALU, we must maintain savedseq_hi and savedseq_lo in two 32-bit register arrays, which wastes stage
-				+ NOTE: the following packets have seq_hdr
-					* PUTREQ_POP
-				+ TODO: both GETRES_POP, PUTREQ_POP, and evicted packets needs to set savedseq correspondingly
-					* TODO: Note that for GETRES_POP which carries savedseq from server, if new PUT/DEL arrives at switch after GETRES_POP is applied into switch, the assigned seq must be larger than that carried from server
-				+ TODO: server also needs to save the seq number, which should be invisible to client
+				+ NOTE: most packets have seq_hdr except normal requests from client and normal responses from switch/server
+					+ Server also needs to save the seq number, which should be invisible to client
 		* Stage 2: savedseq, lock 
 			- For PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, if iskeymatch=1, try_update_savedseq: if seq<=savedseq, directly send back response; otherwise, update vallen and value before sending back response
-			- TODO: For PUTREQ_POP/DELREQ_POP, set_and_get_savedseq: set savedseq=seq_hdr.seq, and get old savedseq into seq_hdr.seq
+			- For PUTREQ_POP/DELREQ_POP, set_and_get_savedseq: set savedseq=seq_hdr.seq, and get old savedseq into seq_hdr.seq
 				+ NOTE: original packet can use seq_hdr.seq (old) for eviction, yet cloned packet does not need seq due to for response 
-
+			- For PUTREQ_LARGE/PUTREQ_LARGE_RECIR, get_savedseq: get old savedseq into seq_hdr.seq if iskeymatch=1 and isvalid=1
+				+ NOTE: original packet use seq_hdr.seq (old) for eviction, yet cloned packet has meta.seq (new) for large PUT to server
 		* Stage 3: vallen, vallo1, valhi1, case12
 			- For vallen and val, we provide two operations: get, set_and_get
 		* Stage 4-10: from val2 to val15
-		* Stage 11: vallo16, valhi16, ~~case3~~, port_forward_tbl
-		* Egress pipeline
+		* Stage 11: vallo16, valhi16, port_forward_tbl, ~~case3~~
+			+ TODO: For PUT/DELRES_CASE3, forward to client
+	+ Egress pipeline
+		* Stage 0
 			- process_i2e_cloned_packet_tbl for cloned packet from ingress to egress
 				+ If PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, update as PUT/DELRES/PUTRES to client
 				+ If PUTREQ_LARGE/PUTREQ_LARGE_RECIR, set seq_hdr.seq=meta.seq_large, update as PUTREQ_LARGE_SEQ to server
-					* TODO: PUTREQ_LARGE_SEQ will aplly the following MATs in egress pipeline
 				+ If GETRES_POP (with new key-value), update it as GETRES to client
 				+ If PUTREQ_POP (with new key-value), update it as PUTRES to client
 			- process_e2e_cloned_packet_tbl for cloned packet from egress to egress
@@ -142,29 +141,32 @@
 					* TODO: If split_idx == 1 (the last 2nd pkt has been sent), set split_idx=0 (send the last pkt) and send to next server (increase dst_port)
 					* TODO: Otherwise: decrease split_idx, send to next server, and clone_e2e
 				+ For mirrored EVICT and mirrored EVICT_CASE2, convert them as EVICT_SWITCH and EVICT_CASE2_SWITCH to switch OS
-			- TODO: switch-driven partition scheme (change udp port)
-				+ If no range query, hash parition for normal REQ packets
-				+ TODO: If with range query, range partition for normal REQ packets
-					* TODO: For SCANREQ, update it as SCANREQ_SPLIT to corresponding server (based on beginkey) with split_num (based on beginkey and endkey) and split_idx (always start from split_num-1), and clone_e2e
-					* TODO: Server needs to embed snapshot id into SCANRES for client to judge the consistency, and retry if not (snapshot and hence inconsistent SCANRES is rare)
-				+ TODO: Including cloned PUTREQ_LARGE, CASE1, EVICT_SWITCH, and EVICT_CASE2_SWITCH
-				+ TODO: try to move it at the same stage after eg_port_forward_tbl to reduce MAT entries and actions?
-			- TODO: Access per-server iscase3
-			- TODO: Access eg_port_forward_tbl
-				- TODO: For PUT/DELREQ, and PUT/DELREQ_RECIR
-					+ If iscase3=0, update it as PUT/DELREQ_CASE3 to server
-					+ Otherwise, update it as PUT/DELREQ to server
-				- If PUTREQ_POP/GETRES_POP/PUTREQ_LARGE + EVICT/EVICT_CASE2, forward to server, and clone_e2e for switchOS thread (simulate copy_to_cpu)
-					+ For CASE2, switch OS not only performs rollback for snapshot, but also sends to server by tcp for packet loss
-					+ For each packet received from switch OS, server can compare the carried seq with the saved one to avoid overwrite
-					+ Bandwidth overhead of switch OS is limited, as eviction is rare under skewed workload and packet loss is rare
-			- Same stage
-				+ Access update_udplen_tbl (default: not change udp_hdr.hdrLen)
-					* NOTE: only match vallen <= 128B; udp_hdr.hdrLen = 6 + payloadsize
-						- Payloadsize: 1B optype + 2B hashidx + 16B key + 4B vallen + aligned vallen
-					* Including GETRES from server/switch, GETRES_POP_EVICT/_CASE2, PUTRES from server/switch, PUTREQ_POP_EVICT/_CASE2, PUTREQ_CASE1, DELREQ_CASE1, PUTREQ_LARGE_EVICT/_CASE2
-					* TODO: check why we need parameter 0 when adding entry with range field
-				+ Access update_macaddr_tbl
+		+ NOTE: PUTREQ_LARGE_SEQ from cloned PUTREQ_LARGE/RECIR, EVICT/CASE2_SWITCH from cloned EVICT/CASE2 should access following MATs
+		* Stage 1: switch-driven partition scheme (change udp port)
+			+ If no range query, hash parition for normal REQ packets
+			+ TODO: If with range query, range partition for normal REQ packets
+				* TODO: For SCANREQ, update it as SCANREQ_SPLIT to corresponding server (based on beginkey) with split_num (based on beginkey and endkey) and split_idx (always start from split_num-1), and clone_e2e
+				* TODO: Server needs to embed snapshot id into SCANRES for client to judge the consistency, and retry if not (snapshot and hence inconsistent SCANRES is rare)
+			+ Set serveridx_hdr.server_idx for per-server case3 reg
+		* Stage 2: access per-server case3 if isbackup=1
+			+ For PUTREQ_SEQ/DELREQ_SEQ/PUTREQ_LARGE_SEQ, get case3 by serveridx_hdr.serveridx
+			+ For PUT/DELRES_CASE3 (embedded with serveridx_hdr.serveridx), set case3=1
+		- Stage 3: Access eg_port_forward_tbl
+			- For PUT/DELREQ_SEQ, and PUTREQ_LARGE_SEQ
+				+ If iscase3=0 and isbackup=1, update it as PUT/DELREQ_CASE3 or PUTREQ_LARGE_CASE3 to server
+				+ Otherwise, directly forward to server
+			+ For PUT/DELRES_CASE3, update as PUT/DELRES to client
+			- If PUTREQ_POP/GETRES_POP/PUTREQ_LARGE + EVICT/EVICT_CASE2, forward to server, and clone_e2e for switchOS thread (simulate copy_to_cpu)
+				+ For CASE2, switch OS not only performs rollback for snapshot, but also sends to server by tcp for packet loss
+				+ For each packet received from switch OS, server can compare the carried seq with the saved one to avoid overwrite
+				+ Bandwidth overhead of switch OS is limited, as eviction is rare under skewed workload and packet loss is rare
+		- Stage 4 
+			+ Access update_udplen_tbl (default: not change udp_hdr.hdrLen)
+				* NOTE: only match vallen <= 128B; udp_hdr.hdrLen = 6 + payloadsize
+					- Payloadsize: 1B optype + 2B hashidx + 16B key + 4B vallen + aligned vallen
+				* Including GETRES from server/switch, GETRES_POP_EVICT/_CASE2, PUTRES from server/switch, PUTREQ_POP_EVICT/_CASE2, PUTREQ_CASE1, DELREQ_CASE1, PUTREQ_LARGE_EVICT/_CASE2, DELRES from server/switch
+				* TODO: check why we need parameter 0 when adding entry with range field
+			+ Access update_macaddr_tbl
 	+ GETREQ
 		* Stage 0: match key 
 		* Stage 1
@@ -225,7 +227,7 @@
 				- Otherwise
 					+ If isbackup=0, update PUTREQ/RECIR as PUTREQ_SEQ to server -> hash_partition_tbl
 					+ If isbackup=1, update PUTREQ as PUTREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
-			- If "otherwise" and isbackup=1, try_case3
+			- ~~If "otherwise" and isbackup=1, try_case3~~
 	+ PUTREQ_LARGE/RECIR
 		* Stage 0: match key
 		* Stage 1
@@ -252,7 +254,8 @@
 						+ PUTREQ_LARGE_EVICT_CASE2 -> hash_partition_tbl
 					- Otherwise, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_EVICT to server, clone_i2e for PUTREQ_LARGE/RECIR to server with meta.seq_large
 				+ Otherwise, set seq_hdr.seq=meta.seq_large, update PUTREQ_LARGE/RECIR as PUTREQ_LARGE_SEQ to server
-			- TODO: If lock=0 and isbackup=1, try_case3
+					* NOTE: PUTREQ_LARGE_SEQ: op_hdr + vallen + seq + value (in payload)
+			- ~~If lock=0 and isbackup=1, try_case3~~
 	+ PUTREQ_POP
 		* Stage 0: set_and_get key
 		* Stage 1: set_and_get valid, vote=1
@@ -291,11 +294,13 @@
 				- Otherwise
 					+ If isbackup=0, update DELREQ/RECIR as DELREQ_SEQ to server -> hash_partition_tbl
 					+ If isbackup=1, update DELREQ as DELREQ_MAY_CASE3 (embedded with other_hdr.iscase3)
-			- If "otherwise" and isbackup=1, try_case3
-	+ TODO: Cope with packet loss
-		* For GETRES_POP_EVICT/PUTREQ_POP_EVICT: send to server as well as mirroringing to switch OS for timeout and retransmission
-		* For case1/case2: send to switch OS for local rollback, switch OS can handle packet loss (send to server and count those requests as bandwidth to switchOS for simulation)
-		* For case3: wait for PUT/DELRES_CASE3 (with server id to index case3) from server to set iscase3=1
+			- ~~If "otherwise" and isbackup=1, try_case3~~
+	+ NOTE: Cope with packet loss
+		* For GETRES_POP/PUTREQ_POP/PUTREQ_LARGE + EVICT/EVICT_CASE2
+			- For each packet, send to server as well as mirroringing to switch OS for timeout and retransmission
+			- FOr CASE2, switch OS also performs rollback
+		* For CASE1: send to switch OS for local rollback
+		* For CASE3: wait for PUT/DELRES_CASE3 (with serveridx to index case3) from server to set iscase3=1
 - Server-side processsing
 	+ GETREQ: sendback GETRES
 	+ GETREQ_POP:
@@ -303,17 +308,17 @@
 			- If value <= 128B, sendback GETRES_POP
 			- If value > 128B, sendback GETRES_POP_LARGE
 		* Otherwise, sendback GETRES_NPOP
-	+ PUTREQ_SEQ: put with seqnum and sendback PUTRES
+	+ PUTREQ_SEQ: put with seqnum, sendback PUTRES
 	+ GETRES_POP/PUTREQ_POP/PUTREQ_LARGE + EVICT/CASE2/EVICT_SWITCH/CASE2_SWITCH
 		* Check seq of recently-deleted record set: if evict.seq<=delete.seq, treat it as deleted; otherwise, perform the EVICT packet and remove it from the deleted set
 		* If vallen > 0, put evicted key-value pair with seqnum into KVS without response
 		* Otherwise, delete evicted key with seqnum from KVS without response
-		* TODO: For CASE2/CASE2_SWITCH: make snapshot
+		* For CASE2/CASE2_SWITCH: make snapshot
 	+ PUTREQ_LARGE: put with seqnum and sendback PUTRES
 	+ DELREQ:
-		* TODO: Update recently-deleted record set with seqnum (within c*RTT time), and sendback DELRES
+		* Delete with seqnum, update recently-deleted record set with seqnum (within c*RTT time), and sendback DELRES
 	+ PUTREQ/DELREQ/PUTREQ_LARGE_CASE3:
-		* TODO: make snapshot
+		* Make snapshot, put/delete with seqnum, sendback PUTRES/DELRES + CASE3 (serveridx) to set case3=1
 		* For DELREQ_CASE3, it needs to update recently-deleted record set
 	+ SCANREQ:
 		* TODO: Switch: split SCANREQ to the corresponding server based on key range
@@ -332,38 +337,27 @@
 			* Replace old backup data with new backup data
 			* RCU barrier (no other threads touching per-thread special cases and old backup data)
 			* Free old backup data and emptize per-thread special cases, set isbackup as false and is_kvsnapshot as false
-	+ TOOD: Remember missed seq2 numbers and largest seq2 of GETRES/PUTREQ_EVICT and PUTREQ_LARGE_INVALIDATE for packet loss
-		* If pkt.seq2 <= largest seq2
-			* If pkt.seq2 in missed seq2 numbers, remove it from missed set and perform operation
-			* Otherwise, ignore
-		* If pkt.seq2 > largest seq2
-			* Update missed set, update largest seq2, and perform operation
-		* When switchOS sends pkt' with seq2 to server
 - Controller-side processsing
 	+ Crash-consistent backup (two-phase backup)
 		* Phase 1
-			* Reset registers: case12_reg, case3_reg
+			* Reset registers: case12_reg, TODO: case3_reg
 			* Set flag
 		* Phase 2
 			* Read registers
+				- TODO: We may use data plane recirculation to read registers (recir pkts -> switch_os_thread_for_backup -> backup data -> server-side backuper -> rollback)?
 			* TODO: Load case3; if iscase3=0, notify the corresponding server to make snapshot and wait for ACK (need to count into bandwidth overhead of switch OS and servers)
+				- TODO: Notification for server-side snapshot should be counted into server (multiply # of case3=0)
 			* Reset flag -> no special optype from now on
-			* Optional: reset registers: case1_reg, case2_reg, case3_reg
+			* Optional: reset registers: case12_reg, case3_reg
 		* Send backup data by TCP
 - Switch-OS processing
 	+ PUTREQ_CASE1/DELREQ_CASE1:
+		* NOTE: Case1 is forwarded to switch OS thread
 		* Add into special case
 	+ GETRES_POP/PUTREQ_POP/PUTREQ_LARGE + EVICT_SWITCH/CASE2_SWITCH
+		* NOTE: EVICT/Case2 is forwarded to both the corresponding server thread and switch OS thread
 		* For EVICT_SWITCH: forward to corresponding server by tcp channel
 		* For CASE2_SWITCH: remember the special case for rollback at switch os, and forward to corresponding server by tcp channel
-- TODO: Simulation tricks
-	+ Snapshot
-		* Case1 should be forwarded to switch OS thread
-		* Case2 should be forwarded to both the corresponding server thread and switch OS thread
-		* Notification for server-side snapshot should be counted into server (multiply # of servers)
-	+ Packet loss issued by switch to server
-		* GETRES/PUTREQ_EVICT received by switch OS thread should be counted into server
-		* GETRES/PUTREQ_EVICT from switch or from switch OS thread should be counted into server
 
 
 ## Implementation log
@@ -376,15 +370,13 @@
 - Support value > 128B (TODO: apply to baseline?)
 	+ Add switch_max_vallen and max_vallen (use # of bytes instead of # of 8B) (config.ini, iniparser/iniparser_wrapper.\*, val.\*, localtest.c, ycsb_server.c, ycsb_local_client.c, ycsb_remote_client.c, ycsb/parser.c)
 	+ When serializing/deserializing value, if vallen <= 128B, we need to pad it with 8B alignment (val.\*)
-		* TODO: Introduce buflen when serializing/deserializing value for each packet with value (packet_format_impl.h)
+		* Introduce buflen when serializing/deserializing value for each packet with value (packet_format_impl.h)
 	+ Change vallen from 1B to 4B (note that vallen should be used in switch -> convert between little-endian and big-endian) (val.\*, packet_format_impl.h)
 	+ Dynamically calculate udp header length according to vallen in switch and update udp_hdr.hdrLen if necessary
 - Support normal packets (packet_format.\*, ycsb_remote_client.c, ycsb_server.c, iniparser_wrapper.\*, deleted_set.\*)
 	+ Suport 9 types of GET: GETREQ, GETREQ_RECIR, GETRES from server, GETREQ_POP, GETRES_POP, GETRES_NPOP, GETRES_POP_LARGE, GETRES from switch, GETRES_POP_EVICT, GETRES_POP_EVICT_CASE2
-	+ Support 13 types of PUT: PUTREQ, PUTREQ_RECIR, PUTRES from server, PUTREQ_POP, PUTREQ_POP_EVICT, PUTREQ_POP_EVICT_CASE2, PUTRES from switch, PUTREQ_CASE3, PUTREQ_LARGE, PUTREQ_LARGE_RECIR, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2
-		* TODO: PUTREQ_CASE1, PUTREQ_LARGE_CASE3
-	+ Support 5 types of DEL: DELREQ, DELRES from server, DELREQ_RECIR, DELRES from switch
-		* TODO: DELREQ_CASE1, DELREQ_CASE3
+	+ Support 13 types of PUT: PUTREQ, PUTREQ_RECIR, PUTRES from server, PUTREQ_POP, PUTREQ_POP_EVICT, PUTREQ_POP_EVICT_CASE2, PUTRES from switch, PUTREQ_CASE3, PUTREQ_LARGE, PUTREQ_LARGE_RECIR, PUTREQ_LARGE_EVICT, PUTREQ_LARGE_EVICT_CASE2, PUTREQ_CASE1, PUTREQ_LARGE_CASE3
+	+ Support 5 types of DEL: DELREQ, DELRES from server, DELREQ_RECIR, DELRES from switch, DELREQ_CASE1, DELREQ_CASE3
 		* Implement DELREQ in server-side
 	+ Support 8 types for switch OS: PUT/DELREQ_CASE1, GETRES_POP_EVICT/CASE2, PUTREQ_POP_EVICT/CASE2, PUTREQ_LARGE_EVICT/CASE2
 - Implement switch OS thread
@@ -398,20 +390,18 @@
 	+ Switch OS retry by tcp channel
 	+ Seq mechanism
 		* NOTE: seq is genreated by switch which is in big-endian
-		* PUTREQ/PUTREQ_RECIR -> PUTREQ_POP (new seq), PUTREQ_RECIR (new seq), PUTREQ_SEQ (new seq; PUTREQ forwarded to server)
+		* PUTREQ/PUTREQ_RECIR -> PUTREQ_POP (new seq), PUTREQ_RECIR (new seq), PUTREQ_SEQ (new seq; PUTREQ forwarded to server), PUTREQ_CASE3 (new seq)
 			- NOTE: PUTREQ_CASE1 and PUTRES do not need seq / valid
-			- TODO: PUTREQ_CASE3
 		* PUTREQ_POP -> PUTREQ_POP_EVICT (old seq) and PUTREQ_POP_EVICT_CASE2 (old seq + valid)
 			- NOTE: PUTRES does not need seq / valid
 		* PUTREQ_POP_EVICT/PUTREQ_POP_EVICT_CASE2 -> PUTREQ_POP_EVICT_SWITCH (old seq) / PUTREQ_POP_EVICT_CASE2_SWITCH (old seq + valid)
 		* GETRES_POP (embedded seq) -> GETRES_POP_EVICT (old seq) and GETRES_POP_EVICT_CASE2 (old seq + valid)
 			- NOTE: GETRES, GETRES_NPOP, GETRES_POP_LARGE do not need seq / valid
 		* GETRES_POP_EVICT/GETRES_POP_EVICT_CASE2 -> GETRES_POP_EVICT_SWITCH (old seq) / GETRES_POP_EVICT_CASE2_SWITCH (old seq + valid)
-		* PUTREQ_LARGE/RECIR -> PUTREQ_LARGE_RECIR (new seq), PUTREQ_LARGE_SEQ (new seq), PUTREQ_LARGE_EVICT (old seq), PUTREQ_LARGE_EVICT_CASE2 (old seq)
+		* PUTREQ_LARGE/RECIR -> PUTREQ_LARGE_RECIR (new seq), PUTREQ_LARGE_SEQ (new seq), PUTREQ_LARGE_EVICT (old seq), PUTREQ_LARGE_EVICT_CASE2 (old seq), PUTREQ_LARGE_CASE3 (new seq)
 		* PUTREQ_LARGE_EVICT/PUTREQ_LARGE_EVICT_CASE2 -> PUTREQ_LARGE_EVICT_SWITCH (old seq) / PUTREQ_LARGE_EVICT_CASE2_SWITCH (old seq)
-		* DELREQ/DELREQ_RECIR -> DELREQ_RECIR (new seq), DELREQ_SEQ (new seq)
+		* DELREQ/DELREQ_RECIR -> DELREQ_RECIR (new seq), DELREQ_SEQ (new seq), DELREQ_CASE3 (new seq)
 			- NOTE: DELREQ_CASE1 and DELRES do not need seq / valid
-			- TODO: DELREQ_CASE3
 		* Use seq to update server-side KVS 
 + TODO: Check localtest
 + TODO: Check ycsb

@@ -34,15 +34,16 @@ parser parse_op {
 		DELRES_TYPE: parse_res;
 		GETRES_POP_TYPE: parse_vallen;
 		GETRES_NPOP_TYPE: parse_vallen;
+		GETRES_POP_LARGE_TYPE: parse_vallen; // must enter parse_val_len0 (vallen + val payload)
 		GETRES_POP_EVICT_TYPE: parse_vallen;
 		PUTREQ_SEQ_TYPE: parse_vallen;
 		PUTREQ_POP_TYPE: parse_vallen;
 		PUTREQ_RECIR_TYPE: parse_vallen;
 		PUTREQ_POP_EVICT_TYPE: parse_vallen;
-		PUTREQ_LARGE_TYPE: parse_vallen; // must enter parse_val_len0
-		PUTREQ_LARGE_SEQ_TYPE: parse_vallen; // must enter parse_val_len0
-		PUTREQ_LARGE_RECIR_TYPE: parse_vallen; // must enter parse_val_len0
-		PUTREQ_LARGE_EVICT:TYPE: parse_vallen;
+		PUTREQ_LARGE_TYPE: parse_vallen; // must enter parse_val_len0 (vallen + val payload)
+		PUTREQ_LARGE_SEQ_TYPE: parse_vallen; // must enter parse_val_len0 (vallen + seq + val payload)
+		PUTREQ_LARGE_RECIR_TYPE: parse_vallen; // must enter parse_val_len0 (vallen + seq + val payload)
+		PUTREQ_LARGE_EVICT:TYPE: parse_vallen; // vallen + val header + seq + val payload (ignored by udp hdrlen)
 		DELREQ_RECIR_TYPE: parse_seq;
 		DELREQ_SEQ_TYPE: parse_seq;
 		PUTREQ_CASE1_TYPE: parse_vallen;
@@ -50,7 +51,11 @@ parser parse_op {
 		GETRES_POP_EVICT_CASE2_TYPE: parse_vallen;
 		PUTREQ_POP_EVICT_CASE2_TYPE: parse_vallen;
 		PUTREQ_LARGE_EVICT_CASE2_TYPE: parse_vallen;
-		//PUTREQ_CASE3_TYPE: parse_vallen;
+		PUTREQ_CASE3_TYPE: parse_vallen;
+		DELREQ_CASE3_TYPE: parse_seq;
+		PUTREQ_LARGE_CASE3_TYPE: parse_vallen; // must enter parse_val_len0 (vallen + seq + val payload)
+		PUTRES_CASE3_TYPE: parse_serveridx;
+		DELRES_CASE3_TYPE: parse_serveridx;
 		GETRES_POP_EVICT_SWITCH_TYPE: parse_vallen;
 		GETRES_POP_EVICT_CASE2_SWITCH_TYPE: parse_vallen;
 		PUTREQ_POP_EVICT_SWITCH_TYPE: parse_vallen;
@@ -115,8 +120,8 @@ parser parse_val_len0 {
 		PUTREQ_LARGE_RECIR_TYPE: parse_seq;
 		PUTREQ_LARGE_EVICT_TYPE: parse_seq;
 		PUTREQ_LARGE_EVICT_CASE2_TYPE: parse_seq; // no other_hdr
-		PUTREQ_MAY_CASE3_TYPE: parse_other;
-		DELREQ_MAY_CASE3_TYPE: parse_other;
+		PUTREQ_CASE3_TYPE: parse_seq;
+		PUTREQ_LARGE_CASE3_TYPE: parse_seq;
 		GETRES_POP_EVICT_SWITCH_TYPE: parse_seq;
 		GETRES_POP_EVICT_CASE2_SWITCH_TYPE: parse_seq;
 		PUTREQ_POP_EVICT_SWITCH_TYPE: parse_seq;
@@ -216,6 +221,12 @@ parser parse_seq {
 		PUTREQ_POP_EVICT_CASE2_SWITCH_TYPE: parse_other;
 		default: ingress;
 	}
+}
+
+// Only for PUTRES_CASE3 and DELRES_CASE3
+parser parser_serveridx {
+	extract(serveridx_hdr);
+	return parse_res;
 }
 
 parser parse_res {

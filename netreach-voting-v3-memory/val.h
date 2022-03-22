@@ -32,8 +32,10 @@ class Val {
   void from_string(std::string& str);
 
   // operation on packet buf (1B vallength + valdata)
-  uint32_t deserialize(const char *buf);
-  uint32_t serialize(char *buf);
+  uint32_t deserialize(const char *buf, uint32_t buflen);
+  uint32_t deserialize_vallen(const char *buf, uint32_t buflen)
+  uint32_t deserialize_val(const char *buf, uint32_t buflen)
+  uint32_t serialize(char *buf, uint32_t buflen);
 
   uint32_t get_bytesnum() const;
 

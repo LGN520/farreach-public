@@ -1,9 +1,9 @@
 
-action sendback_cloned_getres() {
+/*action sendback_cloned_getres() {
 	modify_field(udp_hdr.srcPort, meta.tmp_sport);
 	modify_field(udp_hdr.dstPort, meta.tmp_dport);
 	modify_field(op_hdr.optype, GETRES_TYPE);
-}
+}*/
 
 action update_cloned_delreq_to_delres() {
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
@@ -32,7 +32,7 @@ action update_cloned_putreq_to_putres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
-	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_STAT);
+	//subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_STAT);
 
 	modify_field(op_hdr.optype, PUTRES_TYPE);
 
@@ -61,7 +61,7 @@ action update_cloned_putreq_recir_to_putres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
-	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_STAT_PLUS_SEQ);
+	//subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_STAT_PLUS_SEQ);
 
 	modify_field(op_hdr.optype, PUTRES_TYPE);
 
@@ -89,13 +89,15 @@ action update_cloned_putreq_recir_to_putres() {
 
 action update_cloned_getres_pop_to_getres() {
 	modify_field(op_hdr.optype, GETRES_TYPE);
+	subtract_from_field(udp_hdr.hdrlen, SEQ_PKTLEN);
+	remove_header(seq_hdr);
 }
 
 action update_cloned_putreq_pop_to_putres() {
 	// Swap udp port
 	modify_field(udp_hdr.dstPort, meta.tmp_sport);
 	modify_field(udp_hdr.srcPort, meta.tmp_dport);
-	subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_STAT);
+	//subtract_from_field(udp_hdr.hdrlen, VAL_PKTLEN_MINUS_STAT);
 
 	modify_field(op_hdr.optype, PUTRES_TYPE);
 
@@ -116,6 +118,7 @@ action update_cloned_putreq_pop_to_putres() {
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
 	remove_header(val16_hdr);
+	remove_header(seq_hdr);
 	modify_field(res_hdr.stat, 1);
 	add_header(res_hdr);
 }
@@ -262,14 +265,17 @@ table eg_calculate_hash_tbl {
 	size: 1;
 }
 
-action update_dstport(port) {
+action update_dstport(port, serveridx) {
 	modify_field(udp_hdr.dstPort, port);
+	modify_field(serveridx_hdr.serveridx, serveridx);
 }
 
-action update_dstport_reverse(port) {
-	// NOTE: original packet does not have meta.tmp_dport, while server only cares about dstport instead of srcport
+// Only for GETRES_POP_EVICT/CASE2
+action update_dstport_reverse(port, serveridx) {
+	// NOTE: GETRES_POP_EVICT/CASE2 does not have meta.tmp_dport, while server only cares about dstport instead of srcport to process it in corresponding server; it does not need correct srcport to send response to client; the cloned GETRES_POP has correct dstport for GETRES to corresponding client
 	//modify_field(udp_hdr.srcPort, meta.tmp_dport);
 	modify_field(udp_hdr.dstPort, port);
+	modify_field(serveridx_hdr.serveridx, serveridx);
 }
 
 table hash_partition_tbl {
@@ -307,16 +313,52 @@ action forward_to_server_clone_for_pktloss(sid, port) {
 	clone_egress_pkt_to_egress(sid); // clone to switch os to cope with packet loss
 }
 
+action update_putreq_seq_to_putreq_case3(port) {
+	modify_field(op_hdr.optype, PUTREQ_CASE3_TYPE);
+	modify_field(eg_intr_md.egress_port, port); // forward to server
+}
+
+action update_delreq_seq_to_delreq_case3(port) {
+	modify_field(op_hdr.optype, DELREQ_CASE3_TYPE);
+	modify_field(eg_intr_md.egress_port, port); // forward to server
+}
+
+action update_putreq_large_seq_to_putreq_large_case3(port) {
+	modify_field(op_hdr.optype, PUTREQ_LARGE_CASE3_TYPE);
+	modify_field(eg_intr_md.egress_port, port); // forward to server
+}
+
+action udpate_putres_case3_to_putres(port) {
+	modify_field(op_hdr.optype, PUTRES_TYPE);
+	subtract_from_field(udp_hdr.hdrlen, SERVERIDX_PKTLEN);
+	remove_header(serveridx_hdr);
+	modify_field(eg_intr_md.egress_port, port); // forward to client
+}
+
+action udpate_delres_case3_to_delres(port) {
+	modify_field(op_hdr.optype, DELRES_TYPE);
+	subtract_from_field(udp_hdr.hdrlen, SERVERIDX_PKTLEN);
+	remove_header(serveridx_hdr);
+	modify_field(eg_intr_md.egress_port, port); // forward to client
+}
+
 table eg_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.iscase3: exact;
+		meta.isbackup: exact;
 	}
 	actions {
 		forward_to_server_clone_for_pktloss;
+		update_putreq_seq_to_putreq_case3;
+		update_delreq_seq_to_delreq_case3;
+		update_putreq_large_seq_to_putreq_large_case3;
+		update_putres_case3_to_putres;
+		update_delres_case3_to_delres;
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 64;
 }
 
 action update_getres_udplen(aligned_vallen) {
@@ -367,6 +409,11 @@ action update_putreq_case1_udplen() {
 	add(udp_hdr.hdrLen, aligned_vallen, 29);
 }
 
+action update_delres_udplen() {
+	// 6(udphdr) + 19(ophdr) + 1(stat)
+	modify_field(udp_hdr.hdrLen, 26);
+}
+
 action update_delreq_case1_udplen() {
 	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen
 	// NOTE: case 1 does not need seq, as it is sent from switch to switch OS in design without packet loss
@@ -389,6 +436,7 @@ table update_udplen_tbl {
 		update_putreq_large_evict_udplen;
 		update_putreq_large_evict_case2_udplen;
 		update_putreq_case1_udplen;
+		update_delreq_udplen;
 		update_delreq_case1_udplen;
 	}
 	default_action: nop(); // not change udp_hdr.hdrLen

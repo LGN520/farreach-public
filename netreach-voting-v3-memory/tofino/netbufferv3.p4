@@ -27,31 +27,31 @@
 #define GETRES_POP_LARGE_TYPE 0x0b
 #define GETRES_POP_EVICT_TYPE 0x0c
 #define PUTREQ_SEQ_TYPE 0x0d 
-// TODO: update macro value
-#define PUTREQ_POP_TYPE 0x0d
-#define PUTREQ_RECIR_TYPE 0x0e
-#define PUTREQ_POP_EVICT_TYPE 0x0f
-#define PUTREQ_LARGE_TYPE 0x10
-#define PUTREQ_LARGE_SEQ_TYPE 0x11
-#define PUTREQ_LARGE_RECIR_TYPE 0x11
-#define PUTREQ_LARGE_EVICT_TYPE 0x12
-#define DELREQ_SEQ_TYPE 0x13
-#define DELREQ_RECIR_TYPE 0x13
-#define PUTREQ_CASE1_TYPE 0x14
-#define DELREQ_CASE1_TYPE 0x15
-#define GETRES_POP_EVICT_CASE2_TYPE 0x16
-#define PUTREQ_POP_EVICT_CASE2_TYPE 0x17
-#define PUTREQ_LARGE_EVICT_CASE2_TYPE 0x18
-#define PUTREQ_MAY_CASE3_TYPE 0x19
-#define PUTREQ_CASE3_TYPE 0x1a
-#define DELREQ_MAY_CASE3_TYPE 0x1b
-#define DELREQ_CASE3_TYPE 0x1c
-#define GETRES_POP_EVICT_SWITCH_TYPE 0x1d
-#define GETRES_POP_EVICT_CASE2_SWITCH_TYPE 0x1e
-#define PUTREQ_POP_EVICT_SWITCH_TYPE 0x1f
-#define PUTREQ_POP_EVICT_CASE2_SWITCH_TYPE 0x20
-#define PUTREQ_LARGE_EVICT_SWITCH_TYPE 0x21
-#define PUTREQ_LARGE_EVICT_CASE2_SWITCH_TYPE 0x22
+#define PUTREQ_POP_TYPE 0x0e
+#define PUTREQ_RECIR_TYPE 0x0f
+#define PUTREQ_POP_EVICT_TYPE 0x10
+#define PUTREQ_LARGE_TYPE 0x11
+#define PUTREQ_LARGE_SEQ_TYPE 0x12
+#define PUTREQ_LARGE_RECIR_TYPE 0x13
+#define PUTREQ_LARGE_EVICT_TYPE 0x14
+#define DELREQ_SEQ_TYPE 0x15
+#define DELREQ_RECIR_TYPE 0x16
+#define PUTREQ_CASE1_TYPE 0x17
+#define DELREQ_CASE1_TYPE 0x18
+#define GETRES_POP_EVICT_CASE2_TYPE 0x19
+#define PUTREQ_POP_EVICT_CASE2_TYPE 0x1a
+#define PUTREQ_LARGE_EVICT_CASE2_TYPE 0x1b
+#define PUTREQ_CASE3_TYPE 0x1c
+#define DELREQ_CASE3_TYPE 0x1d
+#define PUTREQ_LARGE_CASE3_TYPE 0x1e
+#define PUTRES_CASE3_TYPE 0x1f
+#define DELRES_CASE3_TYPE 0x20
+#define GETRES_POP_EVICT_SWITCH_TYPE 0x21
+#define GETRES_POP_EVICT_CASE2_SWITCH_TYPE 0x22
+#define PUTREQ_POP_EVICT_SWITCH_TYPE 0x23
+#define PUTREQ_POP_EVICT_CASE2_SWITCH_TYPE 0x24
+#define PUTREQ_LARGE_EVICT_SWITCH_TYPE 0x25
+#define PUTREQ_LARGE_EVICT_CASE2_SWITCH_TYPE 0x26
 
 // NOTE: Here we use 8*2B keys, which occupies 2 stages
 // NOTE: we only have 7.5 stages for val (at most 30 register arrays -> 120B val)
@@ -61,6 +61,8 @@
 // 32K * (4*2B keylo + 4*2B keyhi + 96B val + 1bit valid)
 //#define KV_BUCKET_COUNT 32768
 #define KV_BUCKET_COUNT 1
+
+#define MAX_SERVERNUM 256
 
 // NOTE: you should change the two macros according to maximum val length
 // VAL_PKTLEN: sizeof(vallen) + sizeof(val), e.g., GETREQ -> GETRES
@@ -85,6 +87,7 @@
 #define SEQ_PKTLEN_MINUS_STAT 3
 #define OTHER_PKTLEN 1
 #define SEQ_PKTLEN_MINUS_OTHER 3
+#define SERVERIDX_PKTLEN 2
 
 //#define CPU_PORT 192
 
@@ -178,7 +181,6 @@ control ingress {
 	apply(update_valhi16_tbl);
 
 	// Stage 11
-	apply(access_case3_tbl);
 	apply(port_forward_tbl);
 }
 
@@ -194,10 +196,9 @@ control egress {
 		apply(process_e2e_cloned_packet_tbl);
 	}
 
-	// NOTE: the following MATs should be applied for PUTREQ_LARGE even if being cloned
+	// NOTE: PUTREQ_LARGE_SEQ from cloend PUTREQ_LARGE/RECIR and EVICT/CASE2_SWITCH from cloned EVICT/CASE2 should access following MATs
 
-	// TODO: optimize the following tables
-	apply(process_may_case3_tbl);
+	// Stage 1
 	// NOTE: for packets requring origin_hash, the key and value in packet header have already been set as origin_key/val
 	apply(eg_calculate_hash_tbl);
 	if (op_hdr.optype == GETRES_POP_EVICT_TYPE) {
@@ -210,10 +211,13 @@ control egress {
 		apply(hash_partition_tbl); // update dst port of UDP according to hash value of key, only if dst_port = 1111 and egress_port and server port
 	}
 
-	// Stage 1
+	// Stage 2
+	apply(access_case3_tbl);
+
+	// Stage 3
 	apply(eg_port_forward_tbl);
 
-	// Stage 2
+	// Stage 4
 	// The same stage
 	apply(update_udplen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
 	apply(update_macaddr_tbl); // Update mac addr for responses and PUTREQ_GS/GS_CASE2

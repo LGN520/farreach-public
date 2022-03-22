@@ -75,8 +75,13 @@ header_type res_t {
 header_type other_t {
 	fields {
 		isvalid: 1; // if the entry is valid
-		iscase3: 1;
-		padding: 6;
+		padding: 7;
+	}
+}
+
+header_type serveridx_t {
+	fields {
+		serveridx: 16; // used to index case3 reg
 	}
 }
 
@@ -94,6 +99,7 @@ header_type metadata_t {
 		islock: 1; // if the entry is locked before
 		isbackup: 1; // backup flag
 		iscase12: 1; // case 1/2 of backup
+		iscase3: 1; // case3 of backup
 		hashidx: 16; // for hash partition in egress pipeline
 		seq_large: 32; // seq number for PUTREQ_LARGE/_RECIR/_SEQ
 	}

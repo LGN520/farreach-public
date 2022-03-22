@@ -15,7 +15,7 @@ enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DE
 	PUT_REQ_SEQ, PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, 
 	PUT_REQ_LARGE, PUT_REQ_LARGE_SEQ, PUT_REQ_LARGE_RECIR, PUT_REQ_LARGE_EVICT,
 	DEL_REQ_SEQ, DEL_REQ_RECIR, PUT_REQ_CASE1, DEL_REQ_CASE1, GET_RES_POP_EVICT_CASE2, PUT_REQ_POP_EVICT_CASE2, 
-	PUT_REQ_LARGE_EVICT_CASE2, PUT_REQ_MAY_CASE3, PUT_REQ_CASE3, DEL_REQ_MAY_CASE3, DEL_REQ_CASE3,
+	PUT_REQ_LARGE_EVICT_CASE2, PUT_REQ_CASE3, DEL_REQ_CASE3, PUT_REQ_LARGE_CASE3, PUT_RES_CASE3, DEL_RES_CASE3,
 	GET_RES_POP_EVICT_SWITCH, GET_RES_POP_EVICT_CASE2_SWITCH, PUT_REQ_POP_EVICT_SWITCH, PUT_REQ_POP_EVICT_CASE2_SWITCH,
 	PUT_REQ_LARGE_POP_EVICT_SWITCH, PUT_REQ_LARGE_POP_EVICT_CASE2_SWITCH};
 typedef PacketType packet_type_t;
@@ -248,11 +248,13 @@ class PutRequestLarge : public PutRequest<key_t, val_t> {
 };
 
 template<class key_t, class val_t>
-class PutRequestLargeSeq : public PutRequestSeq<key_t, val_t> { // seq
+class PutRequestLargeSeq : public PutRequestSeq<key_t, val_t> { // ophdr + vallen + seq + value (in payload)
 	public:
 		PutRequestLargeSeq(const char * data, uint32_t recv_size);
 
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size); // NOTE: deserialize seq before value
+		virtual uint32_t serialize(char * const data, uint32_t max_size); // not support serialize
 };
 
 template<class key_t, class val_t>
@@ -324,7 +326,7 @@ class PutRequestLargeEvictCase2 : public PutRequestSeq<key_t, val_t> { // seq
 };
 
 template<class key_t, class val_t>
-class PutRequestCase3 : public PutRequest<key_t, val_t> {
+class PutRequestCase3 : public PutRequestSeq<key_t, val_t> { // seq
 	public:
 		PutRequestCase3(const char * data, uint32_t recv_size);
 
@@ -332,11 +334,46 @@ class PutRequestCase3 : public PutRequest<key_t, val_t> {
 };
 
 template<class key_t>
-class DelRequestCase3 : public DelRequest<key_t> {
+class DelRequestCase3 : public DelRequestSeq<key_t> { // seq
 	public:
 		DelRequestCase3(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestLargeCase3 : public PutRequestLargeSeq<key_t, val_t> { // ophdr + vallen + seq + value (in payload)
+	public:
+		PutRequestLargeCase3(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t>
+class PutResponseCase3 : public PutResponse<key_t> { // serveridx
+	public: 
+		PutResponseCase3(uint16_t hashidx, key_t key, bool stat);
+
+		int16_t serveridx() const;
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		int16_t _serveridx();
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+
+template<class key_t>
+class DelResponseCase3 : public DelResponse<key_t> { // serveridx
+	public: 
+		DelResponseCase3(uint16_t hashidx, key_t key, bool stat);
+
+		int16_t serveridx() const;
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		int16_t _serveridx();
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
 };
 
 

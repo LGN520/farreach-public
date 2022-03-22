@@ -194,14 +194,29 @@ uint32_t Val::get_bytesnum() const {
 uint32_t Val::deserialize(const char *buf, uint32_t buflen) {
 	INVARIANT(buf != nullptr);
 
+	uint32_t vallen_bytes = deserialize_vallen(buf, buflen); // sizeof(vallen)
+	buf += vallen_bytes;
+	buflen -= vallen_bytes;
+	uint32_t val_deserialize_size = deserialize_val(buf, buflen); // vallen + [padding size]
+
+	return vallen_bytes + val_deserialize_size; // sizeof(vallen) + vallen + [padding size]
+}
+
+uint32_t Val::deserialize_vallen(const char *buf, uint32_t buflen) {
+	INVARIANT(buf != nullptr);
+
 	INVARIANT(buflen >= sizeof(uint32_t));
 	val_length = *(const uint32_t*)buf; // # of bytes
 	val_length = ntohl(val_length); // Big-endian to little-endian
-	buf += sizeof(uint32_t);
 	INVARIANT(val_length <= MAX_VALLEN);
+	return sizeof(uint32_t); // sizeof(vallen)
+}
+
+uint32_t Val::deserialize_val(const char *buf, uint32_t buflen) {
+	INVARIANT(buf != nullptr);
 
 	uint32_t padding_size = 0;
-	uint32_t deserialize_size = sizeof(uint32_t) + val_length;
+	uint32_t deserialize_size = val_length;
 	if (val_length <= SWITCH_MAX_VALLEN) {
 		if (val_length % 8 != 0) {
 			padding_size = 8 - val_length % 8;
@@ -218,7 +233,7 @@ uint32_t Val::deserialize(const char *buf, uint32_t buflen) {
 	val_data = new char[val_length];
 	INVARIANT(val_data != nullptr);
 	memcpy(val_data, buf, val_length);
-	return deserialize_size; // sizeof(vallen) + vallen + [padding size]
+	return deserialize_size; // vallen + [padding size]
 }
 
 uint32_t Val::serialize(char *buf, uint32_t buflen) {

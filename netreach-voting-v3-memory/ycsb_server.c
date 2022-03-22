@@ -91,6 +91,9 @@ typedef PutRequestLargeEvictCase2<index_key_t, val_t> put_request_large_evict_ca
 typedef PutRequestPOPEvictCase2<index_key_t, val_t> put_request_pop_evict_case2_t;
 typedef PutRequestCase3<index_key_t, val_t> put_request_case3_t;
 typedef DelRequestCase3<index_key_t> del_request_case3_t;
+typedef PutRequestLargeCase3<index_key_t, val_t> put_request_large_case3_t;
+typedef PutResponseCase3<index_key_t> put_response_case3_t;
+typedef DelResponseCase3<index_key_t> del_response_case3_t;
 typedef GetResponsePOPEvictSwitch<index_key_t, val_t> get_response_pop_evict_switch_t;
 typedef PutRequestPOPEvictSwitch<index_key_t, val_t> put_request_pop_evict_switch_t;
 typedef PutRequestLargeEvictSwitch<index_key_t, val_t> put_request_large_evict_switch_t;
@@ -1272,7 +1275,7 @@ void *run_switchos_simulator(void *param) {
 
 			packet_type_t pkt_type = get_packet_type(buf, recv_size);
 			switch (pkt_type) {
-				// NOTE: switch os add special cases for rollback
+				// NOTE: switch os add special cases for rollback (case1 does not trigger server-side snapshot)
 				case packet_type_t::PUT_REQ_CASE1:
 					{
 						COUT_THIS("PUT_REQ_CASE1")
@@ -1289,7 +1292,6 @@ void *run_switchos_simulator(void *param) {
 								//			(unsigned short)req.hashidx(), tmpcase));
 								special_cases->insert(std::pair<unsigned short, SpecialCase>((unsigned short)req.hashidx(), tmpcase));
 							}
-							try_kvsnapshot(table);
 						}
 						break;
 					}
@@ -1309,7 +1311,6 @@ void *run_switchos_simulator(void *param) {
 								//			(unsigned short)req.hashidx(), tmpcase));
 								special_cases->insert(std::pair<unsigned short, SpecialCase>((unsigned short)req.hashidx(), tmpcase));
 							}
-							try_kvsnapshot(table);
 						}
 						break;
 					}
@@ -1751,7 +1752,7 @@ static int run_sfg(void * param) {
 					}
 					break;
 				}
-			case packet_type_t::PUT_REQ_CASE3: // TODO: seq
+			case packet_type_t::PUT_REQ_CASE3:
 				{
 					COUT_THIS("PUT_REQ_CASE3")
 					put_request_case3_t req(buf, recv_size);
@@ -1760,8 +1761,8 @@ static int run_sfg(void * param) {
 						try_kvsnapshot(table);
 					}
 
-					bool tmp_stat = table->put(req.key(), req.val(), thread_id);
-					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id, req.seq());
+					put_response_case3_t rsp(req.hashidx(), req.key(), thread_id, tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
@@ -1770,7 +1771,7 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::DEL_REQ_CASE3: // TODO; seq
+			case packet_type_t::DEL_REQ_CASE3:
 				{
 					COUT_THIS("DEL_REQ_CASE3")
 					del_request_case3_t req(buf, recv_size);
@@ -1779,8 +1780,8 @@ static int run_sfg(void * param) {
 						try_kvsnapshot(table);
 					}
 
-					bool tmp_stat = table->remove(req.key(), thread_id);
-					del_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+					bool tmp_stat = table->remove(req.key(), thread_id, req.seq());
+					del_response_case3_t rsp(req.hashidx(), req.key(), thread_id, tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
@@ -1789,7 +1790,26 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 
 					// NOTE: no matter tmp_stat is true (key is deleted) or false (no such key or key has been deleted before), we should always treat the key does not exist (i.e., being deleted), so a reordered eviction will never overwrite this result for linearizability -> we should always update the corresponding deleted set
-					deleted_sets[thread_id].add(req.key(), 1); // TODO: seq
+					deleted_sets[thread_id].add(req.key(), req.seq());
+					break;
+				}
+			case packet_type_t::PUT_REQ_LARGE_CASE3:
+				{
+					COUT_THIS("PUT_REQ_LARGE_CASE3")
+					put_request_large_case3_t req(buf, recv_size);
+
+					if (!isbackup) {
+						try_kvsnapshot(table);
+					}
+
+					bool tmp_stat = table->put(req.key(), req.val(), thread_id, req.seq());
+					put_response_case3_t rsp(req.hashidx(), req.key(), thread_id, tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
 					break;
 				}
 			default:
