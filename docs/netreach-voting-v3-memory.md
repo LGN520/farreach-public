@@ -148,6 +148,7 @@
 				* TODO: For SCANREQ, update it as SCANREQ_SPLIT to corresponding server (based on beginkey) with split_num (based on beginkey and endkey) and split_idx (always start from split_num-1), and clone_e2e
 				* TODO: Server needs to embed snapshot id into SCANRES for client to judge the consistency, and retry if not (snapshot and hence inconsistent SCANRES is rare)
 			+ Set serveridx_hdr.server_idx for per-server case3 reg
+			+ TODO: baseline should also introduce switch-driven partition scheme without client-side decision for fair comparison (we need to check NetCache and DistCache)
 		* Stage 2: access per-server case3 if isbackup=1
 			+ For PUTREQ_SEQ/DELREQ_SEQ/PUTREQ_LARGE_SEQ, get case3 by serveridx_hdr.serveridx
 			+ For PUT/DELRES_CASE3 (embedded with serveridx_hdr.serveridx), set case3=1
@@ -324,6 +325,9 @@
 		* TODO: Switch: split SCANREQ to the corresponding server based on key range
 		* TODO: Server: perform SCANREQ in snapshot of in-memory KVS and that of in-switch cache, and merge results
 		* TODO: Client: wait for all responses (each response carries # of splits)
+	+ Backuper: receive in-switch snapshot from switch OS and rollback
+		* NOTE: rollback is happened in switch OS for design, while we simulate it in server for implementation
+	+ Notified: receive notification for server-side snapshot
 	+ TODO: snapshot for range query
 		* Make a snapshot when init or open
 		* Ensure that in each period of backup, kv snapshot can only be performed once
@@ -340,16 +344,17 @@
 - Controller-side processsing
 	+ Crash-consistent backup (two-phase backup)
 		* Phase 1
-			* Reset registers: case12_reg, TODO: case3_reg
+			* Reset registers: case12_reg, case3_reg
 			* Set flag
 		* Phase 2
 			* Read registers
 				- TODO: We may use data plane recirculation to read registers (recir pkts -> switch_os_thread_for_backup -> backup data -> server-side backuper -> rollback)?
-			* TODO: Load case3; if iscase3=0, notify the corresponding server to make snapshot and wait for ACK (need to count into bandwidth overhead of switch OS and servers)
-				- TODO: Notification for server-side snapshot should be counted into server (multiply # of case3=0)
+			* Load case3; if iscase3=0, notify the corresponding server to make snapshot (count into bandwidth overhead of switch OS and servers)
+				- NOTE: Notification for server-side snapshot should be counted into bandwidth overhead of both switch OS and server
+				- NOTE: we need to count each notification with a factor of # of case3=0 within servernum
 			* Reset flag -> no special optype from now on
 			* Optional: reset registers: case12_reg, case3_reg
-		* Send backup data by TCP
+		* Filter valid data and send backup data by TCP
 - Switch-OS processing
 	+ PUTREQ_CASE1/DELREQ_CASE1:
 		* NOTE: Case1 is forwarded to switch OS thread

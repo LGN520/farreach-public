@@ -76,7 +76,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
     def runTest(self):
-        print "Reset case1_reg"
+        print "Reset case12_reg"
         self.client.register_reset_all_case12_reg(self.sess_hdl, self.dev_tgt)
         print "Reset case3_reg"
         self.client.register_reset_all_case3_reg(self.sess_hdl, self.dev_tgt)

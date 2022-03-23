@@ -160,6 +160,10 @@ bool volatile isbackup = false; // TODO: it should be atomic
 std::atomic_flag is_kvsnapshot = ATOMIC_FLAG_INIT;
 void try_kvsnapshot(xindex_t *table);
 
+// (2-1) Notified for processing explicit notification of server-side snapshot
+short notified_port;
+void *run_notified(void *param); // the notified
+
 // (3) Switch os simulator for processing special cases and packet loss handling (and tcp servers for workers)
 deleted_set_t *deleted_sets = NULL;
 //static int run_switchos_simulator(void *param);
@@ -282,6 +286,7 @@ inline void parse_ini(const char* config_file) {
 	backup_port = ini.get_server_backup_port();
 	pktloss_port_start = ini.get_server_pktloss_port();
 	per_server_range = std::numeric_limits<size_t>::max() / fg_n;
+	notified_port = ini.get_server_notified_port();
 
 	LOAD_SPLIT_DIR(output_dir, workload_name, split_n); // get the split directory for loading phase
 	struct stat dir_stat;
@@ -301,6 +306,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(backup_port);
 	COUT_VAR(pktloss_port_start);
 	COUT_VAR(per_server_range);
+	COUT_VAR(notified_port);
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -649,6 +655,8 @@ void run_server(xindex_t *table) {
 
 	running = false;
 
+	// TODO: add ready count for each thread
+
 	// Launch receiver (receiving normal packets)
 	//receiver_param_t receiver_param;
 	//receiver_param.overall_thpt = 0;
@@ -665,6 +673,13 @@ void run_server(xindex_t *table) {
 	ret = pthread_create(&backuper_thread, nullptr, run_backuper, (void *)table);
 	if (ret) {
 		COUT_N_EXIT("Error: unable to create backuper " << ret);
+	}
+
+	// Launch notified (processing explicit notification for server-side snapshot)
+	pthread_t notified_thread;
+	ret = pthread_create(&notified_thread, nullptr, run_notified, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: unable to create notified " << ret);
 	}
 
 	// Launch a tcp server for each worker (i.e., server) to receive mirrored packets
@@ -978,6 +993,7 @@ void *run_backuper(void *param) {
 		}
 	}
 
+	close(sock_fd);
 	pthread_exit(nullptr);
 }
 
@@ -1133,6 +1149,58 @@ void try_kvsnapshot(xindex_t *table) {
 		//table->make_snapshot();
 		table->make_snapshot(true);
 	}
+}
+
+/*
+ * The notified thread to receive explicit notification for server-side snapshot from practical switch
+ */
+
+void *run_notified(void *param) {
+	// prepare socket as udp server
+	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	INVARIANT(sockfd >= 0);
+	/*int disable = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+		perror("Disable udp checksum failed");
+	}*/
+	struct sockaddr_in server_sockaddr;
+	memset(&server_sockaddr, 0, sizeof(struct sockaddr_in));
+	server_sockaddr.sin_family = AF_INET;
+	server_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	server_sockaddr.sin_port = htons(notified_port);
+	res = bind(sockfd, (struct sockaddr *)&server_sockaddr, sizeof(struct sockaddr));
+	INVARIANT(res != -1);
+	uint32_t sockaddr_len = sizeof(struct sockaddr);
+
+	// Set timeout
+	struct timeval tv;
+	tv.tv_sec = 1;
+	tv.tv_usec =  0;
+	res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	INVARIANT(res >= 0);
+
+	char buf[128]; // payload size should <= 1 byte
+	while(running) {
+		recv_size = recvfrom(sockfd, buf, 128, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
+		if (recv_size == -1) {
+			if (errno == EWOULDBLOCK || errno == EINTR) {
+				continue; // timeout or interrupted system call
+			}
+			else {
+				COUT_THIS("[server] Error of recvfrom: errno = " << errno)
+				exit(-1);
+			}
+		}
+		INVARIANT(recv_size == 1);
+
+		// Make snapshot for the notification
+		if (!isbackup) {
+			try_kvsnapshot(table);
+		}
+	}
+
+	close(sockfd);
+	pthread_exit(nullptr);
 }
 
 /*
@@ -1409,6 +1477,9 @@ void *run_switchos_simulator(void *param) {
 		}
 	}
 
+	for (size_t i = 0; i < fg_n; i++) {
+		close(switchos_tcpsocks[i]);
+	}
 	COUT_THIS("switch os simulator exits")
 	pthread_exit(nullptr);
 }

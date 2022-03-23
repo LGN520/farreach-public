@@ -55,8 +55,12 @@ with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini")
 
 server_backup_ip = str(config.get("server", "server_backup_ip"))
 server_backup_port = int(config.get("server", "server_backup_port"))
+server_notified_port = int(config.get("server", "server_notified_port"))
 bucket_count = int(config.get("switch", "bucket_num"))
-max_val_len = int(config.get("global", "max_val_length"))
+switch_max_vallen = int(config.get("global", "switch_max_vallen"))
+server_num = int(config.get("server", "server_num"))
+ingress_pipeidx = int(config.get("switch", "ingress_pipeidx"))
+egress_pipeidx = int(config.get("switch", "egress_pipeidx"))
 
 fp_ports = ["2/0", "3/0"]
 
@@ -103,17 +107,34 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print "Reading reagisters"
         flags = netbufferv3_register_flags_t(read_hw_sync=True)
+        # Ingress
         keylolo_list = self.client.register_range_read_keylolo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         keylohi_list = self.client.register_range_read_keylohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         keyhilo_list = self.client.register_range_read_keyhilo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         keyhihi_list = self.client.register_range_read_keyhihi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         vallo_list_list = []
         valhi_list_list = []
-        for i in range(max_val_len):
+        for i in range(switch_max_vallen/8): # 128 bytes / 8 = 16 register arrays
             vallo_list_list.append(eval("self.client.register_range_read_vallo{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
             valhi_list_list.append(eval("self.client.register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags))
         vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         valid_list = self.client.register_range_read_valid_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
+        # Egress
+        case3_list = self.client.register_range_read_case3_reg(self.sess_hdl, self.dev_tgt, 0, server_num, flags)
+
+        # Send notification for server-side snapshot if necessary
+        notification_num = 0
+        for i in range(server_num): # Two pipelines
+            idx = i + egress_pipeidx * server_num
+            tmpcase3 = case3_list[idx]
+            if tmpcase3 == 0:
+                notification_num += 1
+        print "Notify server-side snapshot (#: {})".format(notification_num)
+        if notification_num > 0:
+            notify_sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            notify_buf = struct.pack("=c", 1) # 1 byte for notification
+            notify_sockfd.sendto(notify_buf, (server_backup_ip, server_notified_port))
+            notify_sockfd.close()
 
         print "Reset flag"
         actnspec0 = netbufferv3_load_backup_flag_action_spec_t(0)
@@ -125,19 +146,21 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Filtering data"
         count = 0
         buf = bytearray()
-        pipeidx = None
+        #pipeidx = None
         for i in range(bucket_count): # Two pipelines
-            if pipeidx is None:
-                tmpvalid0 = valid_list[i]
-                tmpvalid1 = valid_list[i+bucket_count]
-                if tmpvalid0 <= 0 and tmpvalid1 <= 0:
-                    continue
-                elif tmpvalid0 > 0:
-                    pipeidx = 0
-                else:
-                    pipeidx = 1
-            idx = i + pipeidx * bucket_count
+            #if pipeidx is None:
+            #    tmpvalid0 = valid_list[i]
+            #    tmpvalid1 = valid_list[i+bucket_count]
+            #    if tmpvalid0 <= 0 and tmpvalid1 <= 0:
+            #        continue
+            #    elif tmpvalid0 > 0:
+            #        pipeidx = 0
+            #    else:
+            #        pipeidx = 1
+            idx = i + ingress_pipeidx * bucket_count
             tmpvalid = valid_list[idx]
+            if tmpvalid <= 0:
+                continue
             # each tmpkeyxxxxxx is 2B
             tmpkeylolo = RegisterUpdate.get_reg16(keylolo_list, idx)
             tmpkeylohi = RegisterUpdate.get_reg16(keylohi_list, idx)
@@ -175,6 +198,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 break
             else:
                 startidx = sentnum
+        sockfd.close()
+
+
+
+
+
+
 
         #pktlen = 14 + 20 + 8 + 4 + 17 * bucket_count
         #pkt = simple_udp_packet(pktlen, eth_dst=server_mac, eth_src=switch_mac, 

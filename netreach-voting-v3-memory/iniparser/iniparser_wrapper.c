@@ -130,6 +130,15 @@ short IniparserWrapper::get_server_pktloss_port() {
 	return short(tmp);
 }
 
+short IniparserWrapper::get_server_notified_port() {
+	int tmp = iniparser_getint(ini, "server:server_notified_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:server_notified_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 uint32_t IniparserWrapper::get_bucket_num() {
 	int tmp = iniparser_getint(ini, "switch:bucket_num", -1);
 	if (tmp == -1) {
