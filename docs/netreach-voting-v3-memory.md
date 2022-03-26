@@ -42,6 +42,11 @@
 			- Issues: (1) frequent recirculation means a half of max throughput; (2) if a duplicate req from the same client arrives at the switch before the recirculated/response packet set the req ID at the ingress pipeline, we still violate exactly-once semantics; (3) if the response packet is lost and duplicate packet has a cache hit, then it will still break exactly-once semantics
 				+ For second case, we can set a proper (relatively large) retry timeout to avoid it
 				+ For third case, server should maintain a retry mechanism to wait for the ACK from switch -> traffic overhead
+- Concern: support pipeline scalability under data-plane-based population by placing everything into egress pipeline
+	+ Hint 1: res/req-before-evict for PUTREQ_LARGE/RECIR/GETRES_POP/PUTREQ_POP; case1-before-res for PUT/DELREQ/RECIR
+	+ Hint 2: place route_tbl in the ingress pipeline; place case3, partition_tbl, udplen_tbl, macaddr_tbl at the last stage of the egress pipeline
+		* NOTE: partition_tbl cannot be placed at ingress pipeline, as we need to partition for evicted data
+	+ Issue: copy-to-cpu is not allowed in the egress pipeline
 
 ## Overview
 
@@ -132,7 +137,7 @@
 	+ Egress pipeline
 		* Stage 0
 			- process_i2e_cloned_packet_tbl for cloned packet from ingress to egress
-				+ If PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, update as PUT/DELRES/PUTRES to client
+				+ If PUTREQ/DELREQ/PUTREQ_RECIR/DELREQ_RECIR, update as PUTRES/DELRES to client
 				+ If PUTREQ_LARGE/PUTREQ_LARGE_RECIR, set seq_hdr.seq=meta.seq_large, update as PUTREQ_LARGE_SEQ to server
 				+ If GETRES_POP (with new key-value), update it as GETRES to client
 				+ If PUTREQ_POP (with new key-value), update it as PUTRES to client
