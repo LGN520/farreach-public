@@ -44,9 +44,15 @@
 				+ For third case, server should maintain a retry mechanism to wait for the ACK from switch -> traffic overhead
 - Concern: support pipeline scalability under data-plane-based population by placing everything into egress pipeline
 	+ Hint 1: res/req-before-evict for PUTREQ_LARGE/RECIR/GETRES_POP/PUTREQ_POP; case1-before-res for PUT/DELREQ/RECIR
+		* GETRES_POP/PUTREQ_POP use clone_i2e, while others use clone_e2e
+		* Issue: copy-to-cpu is not allowed in the egress pipeline
 	+ Hint 2: place route_tbl in the ingress pipeline; place case3, partition_tbl, udplen_tbl, macaddr_tbl at the last stage of the egress pipeline
 		* NOTE: partition_tbl cannot be placed at ingress pipeline, as we need to partition for evicted data
-	+ Issue: copy-to-cpu is not allowed in the egress pipeline
+		* Issue: stage limitation
+			- The above MATs have a confliction on op_hdr.optype (ig_port_forward_tbl needs to modify this type, while others needs to read the modified value)
+			- If we merge them into a single MAT to break dependency -> exceed one-stage TCAM limitation
+				+ ig_port_forward_tbl has 2K entries; partition_tbl has 32 entries for key/hashidx; udplen_tbl has 17 entires for vallen
+				+ Merged table needs >= 2K*30*10 = 60W entries, which must exceed one-stage TCAM limitation (<= 65536)
 
 ## Overview
 
