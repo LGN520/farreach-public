@@ -456,10 +456,10 @@ static int run_fg(void *param) {
 		tmpkey = iter.key();
 		struct timespec req_t1, req_t2, req_t3, rsp_t1, rsp_t2, rsp_t3, final_t3;
 		struct timespec wait_t1, wait_t2, wait_t3;
-		if (iter.type() == uint8_t(packet_type_t::GET_REQ)) { // get
+		if (iter.type() == int8_t(packet_type_t::GETREQ)) { // get
 			CUR_TIME(req_t1);
-			uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
-			get_request_t req(hashidx, tmpkey);
+			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			get_request_t req(tmpkey);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
@@ -487,12 +487,12 @@ static int run_fg(void *param) {
 			INVARIANT(recv_size != -1);
 
 			packet_type_t pkt_type = get_packet_type(buf, recv_size);
-			INVARIANT(pkt_type == packet_type_t::GET_RES);
+			INVARIANT(pkt_type == packet_type_t::GETRES);
 			get_response_t rsp(buf, recv_size);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
 			CUR_TIME(rsp_t2);
 		}
-		else if (iter.type() == uint8_t(packet_type_t::PUT_REQ)) { // update or insert
+		else if (iter.type() == int8_t(packet_type_t::PUTREQ)) { // update or insert
 			tmpval = iter.val();
 
 			CUR_TIME(req_t1);
@@ -532,7 +532,7 @@ static int run_fg(void *param) {
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 			CUR_TIME(rsp_t2);
 		}
-		else if (iter.type() == uint8_t(packet_type_t::DEL_REQ)) {
+		else if (iter.type() == int8_t(packet_type_t::DELREQ)) {
 			CUR_TIME(req_t1);
 			uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
 			del_request_t req(hashidx, tmpkey);
@@ -563,7 +563,7 @@ static int run_fg(void *param) {
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 			CUR_TIME(rsp_t2);
 		}
-		else if (iter.type() == uint8_t(packet_type_t::SCAN_REQ)) {
+		else if (iter.type() == int8_t(packet_type_t::SCANREQ)) {
 			index_key_t endkey = generate_endkey(tmpkey);
 			size_t first_server_idx = get_server_idx(tmpkey);
 			size_t last_server_idx = get_server_idx(endkey);

@@ -27,7 +27,7 @@ class IniparserWrapper {
 		short get_server_pktlos_port();
 		short get_server_notified_port();
 
-		uint32_t get_bucket_num();
+		uint32_t get_kv_bucket_num();
 		uint32_t get_switch_max_vallen();
 
 		size_t get_split_num();

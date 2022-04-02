@@ -40,7 +40,7 @@ Val ParserIterator::val() {
 	return _val;
 }
 
-uint8_t ParserIterator::type() {
+int8_t ParserIterator::type() {
 	return _type;
 }
 
@@ -62,7 +62,7 @@ bool ParserIterator::next() {
 	while ((read_status = getline(&line, &len, fp)) != -1) {
 		INVARIANT(strlen(line) <= len);
 		if (strncmp(line, "INSERT", 6) == 0 || strncmp(line, "UPDATE", 6) == 0) {
-			_type = uint8_t(packet_type_t::PUT_REQ);
+			_type = int8_t(packet_type_t::PUTREQ);
 			if (!parsekv(line)) {
 				printf("No KV after INSERT: %s\n", line);
 				exit(-1);
@@ -71,7 +71,7 @@ bool ParserIterator::next() {
 			break;
 		}
 		else if (strncmp(line, "READ", 4) == 0) {
-			_type = uint8_t(packet_type_t::GET_REQ);
+			_type = int8_t(packet_type_t::GETREQ);
 			if (!parsekey(line)) {
 				printf("No key after READ: %s\n", line);
 				exit(-1);
@@ -80,7 +80,7 @@ bool ParserIterator::next() {
 			break;
 		}
 		else if (strncmp(line, "SCAN", 4) == 0) {
-			_type = uint8_t(packet_type_t::SCAN_REQ);
+			_type = int8_t(packet_type_t::SCANREQ);
 			if (!parsekey(line)) {
 				printf("No key after SCAN: %s\n", line);
 				exit(-1);
@@ -89,7 +89,7 @@ bool ParserIterator::next() {
 			break;
 		}
 		else if (strncmp(line, "DELETE", 6) == 0) {
-			_type = uint8_t(packet_type_t::DEL_REQ);
+			_type = int8_t(packet_type_t::DELREQ);
 			if (!parsekey(line)) {
 				printf("No key after DELETE: %s\n", line);
 				exit(-1);
@@ -129,9 +129,12 @@ bool ParserIterator::parsekv(const char* line) {
 	key_end = strchr(key_begin, ' '); // At the end of key
 	if (unlikely(key_end == nullptr)) return false;
 	std::string keystr(key_begin, key_end - key_begin);
-	uint64_t keylo = std::stoull(keystr);
-	uint64_t keyhi = 0;
-	_key = Key(keylo, keyhi);
+	uint64_t tmpkey = std::stoull(keystr);
+	int32_t keyhilo = 0;
+	int32_t keyhihi = 0;
+	memcpy((void *)&keyhilo, (void *)&tmpkey, sizeof(int32_t)); // lowest 4B -> keyhilo
+	memcpy((void *)&keyhihi, ((void *)&tmpkey)+4, sizeof(int32_t)); // highest 4B -> keyhihi
+	_key = Key(0, 0, keyhilo, keyhihi);
 
 	val_begin = strstr(line, "[ field0=");
 	if (unlikely(val_begin == nullptr)) return false;
@@ -162,9 +165,12 @@ bool ParserIterator::parsekey(const char* line) {
 	key_end = strchr(key_begin, ' '); // At the end of key
 	if (unlikely(key_end == nullptr)) return false;
 	std::string keystr(key_begin, key_end - key_begin);
-	uint64_t keylo = std::stoull(keystr);
-	uint64_t keyhi = 0;
-	_key = Key(keylo, keyhi);
+	uint64_t tmpkey = std::stoull(keystr);
+	int32_t keyhilo = 0;
+	int32_t keyhihi = 0;
+	memcpy((void *)&keyhilo, (void *)&tmpkey, sizeof(int32_t)); // lowest 4B -> keyhilo
+	memcpy((void *)&keyhihi, ((void *)&tmpkey)+4, sizeof(int32_t)); // highest 4B -> keyhihi
+	_key = Key(0, 0, keyhilo, keyhihi);
 
 	_val = Val();
 	_line = std::string(line, strlen(line));

@@ -38,7 +38,6 @@ header_type udp_t {
 header_type op_t {
 	fields {
 		optype: 8;
-		hashidx: 16;
 		keylolo: 32;
 		keylohi: 32;
 		keyhilo: 32;
@@ -49,7 +48,7 @@ header_type op_t {
 // Used by PUTREQ and GETRES to save PHV
 header_type vallen_t {
 	fields {
-		vallen: 8; // 0 - 16
+		vallen: 32;
 	}
 }
 
@@ -66,9 +65,19 @@ header_type seq_t {
 	}
 }
 
-header_type res_t {
+header_type result_t {
 	fields {
-		stat: 8;
+		result: 8;
+	}
+}
+
+header_type inswitch_t {
+	fields {
+		is_cached: 1;
+		is_sampled: 1;
+		padding: 6;
+		hashval: 16; // index for both partition and CM
+		idx: 16; // index for in-switch cache
 	}
 }
 
@@ -87,6 +96,7 @@ header_type serveridx_t {
 
 header_type metadata_t {
 	fields {
+
 		tmp_sport: 16;
 		tmp_dport: 16;
 		ismatch_keylolo: 4; // predicate 
@@ -130,5 +140,6 @@ header val_t val15_hdr;
 header val_t val16_hdr;
 header seq_t seq_hdr;
 header res_t res_hdr;
+header inswitch_t inswitch_hdr;
 header other_t other_hdr;
 metadata metadata_t meta;

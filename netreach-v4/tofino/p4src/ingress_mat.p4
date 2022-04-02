@@ -1,8 +1,123 @@
 /* Ingress Processing (Normal Operation) */
 
+action nop() {}
+
 // Stage 0
 
-action nop() {}
+action cached_action(idx) {
+	modify_field(inswitch_hdr.idx, idx);
+	modify_field(inswitch_hdr.is_cached, 1);
+}
+
+action uncached_action() {
+	modify_field(inswitch_hdr.is_cached, 0);
+}
+
+table cache_lookup_tbl {
+	reads {
+		op_hdr.optype: exact;
+		op_hdr.keylolo: exact;
+		op_hdr.keylohi: exact;
+		op_hdr.keyhilo: exact;
+		op_hdr.keyhihi: exact;
+	}
+	actions {
+		cached_action;
+		uncached_action;
+	}
+	default_action: uncached_action();
+	size: LOOKUP_ENTRY_COUNT;
+}
+
+field_list hash_fields {
+	op_hdr.keylolo;
+	op_hdr.keylohi;
+	op_hdr.keyhilo;
+	op_hdr.keyhihi;
+}
+
+field_list_calculation hash_calc {
+	input {
+		hash_fields;
+	}
+	algorithm: crc32;
+	output_width: 16;
+}
+
+field_list_calculation sample_calc {
+	input {
+		hash_fields;
+	}
+	algorithm: crc32;
+	output_width: 1;
+}
+
+action hash() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval, 0, hash_calc, CM_BUCKET_COUNT);
+}
+
+table hash_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash;
+		nop;
+	}
+	default_action: nop();
+	size: 0;
+}
+
+action sample() {
+	modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, sample_calc, 2);
+}
+
+table sample_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		sample;
+		nop;
+	}
+	default_action: nop();
+	size: 0;
+}
+
+action hash_partition(udpport, serveridx, eport) {
+	modify_field(udp_hdr.dstPort, udpport);
+	modify_field(serveridx_hdr.serveridx, serveridx);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+
+table hash_partition_tbl {
+	reads {
+		op_hdr.optype: exact;
+		inswitch_hdr.hashval: range;
+	}
+	actions {
+		hash_partition;
+		nop;
+	}
+	default_action: nop();
+	size: 128;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Stage 0
 
 action save_info() {
 	modify_field(meta.tmp_sport, udp_hdr.srcPort);

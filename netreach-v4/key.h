@@ -12,17 +12,17 @@
 
 class Key {
 #ifdef LARGE_KEY
-  typedef std::array<double, 2> model_key_t;
+  typedef std::array<double, 4> model_key_t;
 #else
-  typedef std::array<double, 1> model_key_t;
+  typedef std::array<double, 2> model_key_t;
 #endif
 
  public:
-  static constexpr size_t model_key_size() {
+  static constexpr size_t model_key_size() { // # of 4B doulbes
 #ifdef LARGE_KEY
-	return 2;
+	return 4;
 #else
-	return 1; 
+	return 2; 
 #endif
   }
   static Key max();
@@ -30,9 +30,9 @@ class Key {
 
   Key();
 #ifdef LARGE_KEY
-  Key(uint64_t keylo, uint64_t keyhi);
+  Key(int32_t keylolo, int32_t keylohi, int32_t keyhilo, int32_t keyhihi);
 #else
-  Key(uint64_t key);
+  Key(int32_t keylo, int32_t keyhi);
 #endif
   Key(const Key &other);
   Key &operator=(const Key &other);
@@ -42,7 +42,7 @@ class Key {
 
   model_key_t to_model_key() const;
 
-  uint64_t to_int() const; // For hash
+  int64_t to_int() const; // For hash
 
   std::string to_string() const; // For print
 
@@ -53,11 +53,18 @@ class Key {
   friend bool operator==(const Key &l, const Key &r);
   friend bool operator!=(const Key &l, const Key &r);
 
+  // operation on packet buf (16B key)
+  uint32_t deserialize(const char *buf, uint32_t buflen);
+  uint32_t serialize(char *buf, uint32_t buflen);
+
 #ifdef LARGE_KEY
-  uint64_t keylo;
-  uint64_t keyhi;
+  int32_t keylolo;
+  int32_t keylohi;
+  int32_t keyhilo;
+  int32_t keyhihi;
 #else
-  uint64_t key;
+  int32_t keylo;
+  int32_t keyhi;
 #endif
 } PACKED;
 

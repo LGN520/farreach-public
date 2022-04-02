@@ -10,30 +10,23 @@
 // mask for other_hdr
 #define VALID_MASK = 0x01
 
-enum class PacketType {GET_REQ, PUT_REQ, DEL_REQ, SCAN_REQ, GET_RES, PUT_RES, DEL_RES, SCAN_RES, 
-	GET_REQ_POP, GET_RES_POP, GET_RES_NPOP, GET_RES_POP_LARGE, GET_RES_POP_EVICT,
-	PUT_REQ_SEQ, PUT_REQ_POP, PUT_REQ_RECIR, PUT_REQ_POP_EVICT, 
-	PUT_REQ_LARGE, PUT_REQ_LARGE_SEQ, PUT_REQ_LARGE_RECIR, PUT_REQ_LARGE_EVICT,
-	DEL_REQ_SEQ, DEL_REQ_RECIR, PUT_REQ_CASE1, DEL_REQ_CASE1, GET_RES_POP_EVICT_CASE2, PUT_REQ_POP_EVICT_CASE2, 
-	PUT_REQ_LARGE_EVICT_CASE2, PUT_REQ_CASE3, DEL_REQ_CASE3, PUT_REQ_LARGE_CASE3, PUT_RES_CASE3, DEL_RES_CASE3,
-	GET_RES_POP_EVICT_SWITCH, GET_RES_POP_EVICT_CASE2_SWITCH, PUT_REQ_POP_EVICT_SWITCH, PUT_REQ_POP_EVICT_CASE2_SWITCH,
-	PUT_REQ_LARGE_POP_EVICT_SWITCH, PUT_REQ_LARGE_POP_EVICT_CASE2_SWITCH};
+enum class PacketType {
+	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES,
+};
 typedef PacketType packet_type_t;
 
 template<class key_t>
 class Packet {
 	public:
 		Packet();
-		Packet(packet_type_t type, uint16_t hashidx, key_t key);
+		Packet(packet_type_t type, key_t key);
 
 		packet_type_t type() const;
-		uint16_t hashidx() const;
 		key_t key() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size) = 0;
 	protected:
-		uint8_t _type;
-		uint16_t _hashidx;
+		int8_t _type;
 		key_t _key;
 
 		virtual uint32_t size() = 0;
@@ -44,7 +37,7 @@ template<class key_t>
 class GetRequest : public Packet<key_t> {
 	public: 
 		GetRequest();
-		GetRequest(uint16_t hashidx, key_t key);
+		GetRequest(key_t key);
 		GetRequest(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);

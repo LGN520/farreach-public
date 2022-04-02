@@ -28,7 +28,7 @@ import sys
 import time
 import unittest
 
-from netbufferv3.p4_pd_rpc.ttypes import *
+from netbufferv4.p4_pd_rpc.ttypes import *
 from pltfm_pm_rpc.ttypes import *
 from pal_rpc.ttypes import *
 from ptf import config
@@ -67,7 +67,7 @@ fp_ports = ["2/0", "3/0"]
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
-        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv3"])
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv4"])
 
     def setUp(self):
         print '\nSetup'
@@ -106,7 +106,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def runTest(self):
         print "Reading reagisters"
-        flags = netbufferv3_register_flags_t(read_hw_sync=True)
+        flags = netbufferv4_register_flags_t(read_hw_sync=True)
         # Ingress
         keylolo_list = self.client.register_range_read_keylolo_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
         keylohi_list = self.client.register_range_read_keylohi_reg(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)
@@ -137,7 +137,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             notify_sockfd.close()
 
         print "Reset flag"
-        actnspec0 = netbufferv3_load_backup_flag_action_spec_t(0)
+        actnspec0 = netbufferv4_load_backup_flag_action_spec_t(0)
         self.client.load_backup_flag_tbl_set_default_action_load_backup_flag(\
                 self.sess_hdl, self.dev_tgt, actnspec0)
 

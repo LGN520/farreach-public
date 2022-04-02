@@ -62,7 +62,7 @@ parser parse_op {
 		PUTREQ_POP_EVICT_CASE2_SWITCH_TYPE: parse_vallen;
 		PUTREQ_LARGE_EVICT_SWITCH_TYPE: parse_vallen;
 		PUTREQ_LARGE_EVICT_CASE2_SWITCH_TYPE: parse_vallen;
-		default: ingress;
+		default: ingress; // GETREQ
 	}
 }
 

@@ -3,59 +3,77 @@
 
 Key Key::max() {
 #ifdef LARGE_KEY
-    static Key max_key(std::numeric_limits<uint64_t>::max(),
-			std::numeric_limits<uint64_t>::max());
+    static Key max_key(std::numeric_limits<int32_t>::max(),
+			std::numeric_limits<int32_t>::max(),
+			std::numeric_limits<int32_t>::max(),
+			std::numeric_limits<int32_t>::max());
 #else
-    static Key max_key(std::numeric_limits<uint64_t>::max());
+    static Key max_key(std::numeric_limits<int32_t>::max(),
+			std::numeric_limits<int32_t>::max());
 #endif
     return max_key;
 }
 
 Key Key::min() {
 #ifdef LARGE_KEY
-    static Key min_key(std::numeric_limits<uint64_t>::min(),
-			std::numeric_limits<uint64_t>::min());
+    static Key min_key(std::numeric_limits<int32_t>::min(),
+			std::numeric_limits<int32_t>::min(),
+			std::numeric_limits<int32_t>::min(),
+			std::numeric_limits<int32_t>::min());
 #else
-    static Key min_key(std::numeric_limits<uint64_t>::min());
+    static Key min_key(std::numeric_limits<int32_t>::min(),
+			std::numeric_limits<int32_t>::min());
 #endif
     return min_key;
 }
 
 Key::Key() {
 #ifdef LARGE_KEY
+	keylolo = 0;
+	keylohi = 0;
+	keyhilo = 0;
+	keyhihi = 0;
+#else
 	keylo = 0;
 	keyhi = 0;
-#else
-	key = 0;
 #endif
 }
 
 #ifdef LARGE_KEY
-Key::Key(uint64_t keylo, uint64_t keyhi) {
-	this->keylo = keylo;
-	this->keyhi = keyhi;
+Key::Key(int32_t keylolo, int32_t keylohi, int32_t keyhilo, int32_t keyhihi) {
+	this->keylolo = keylolo;
+	this->keylohi = keylohi;
+	this->keyhilo = keyhilo;
+	this->keyhihi = keyhihi;
 }
 #else
-Key::Key(uint64_t key) {
-	this->key = key;
+Key::Key(int32_t keylo, int32_t keyhi) {
+	this->keylo = keylo;
+	this->keyhi = keyhi;
 }
 #endif
 
 Key::Key(const Key &other) {
 #ifdef LARGE_KEY
+	this->keylolo = other.keylolo;
+	this->keylohi = other.keylohi;
+	this->keyhilo = other.keyhilo;
+	this->keyhihi = other.keyhihi;
+#else
 	keylo = other.keylo;
 	keyhi = other.keyhi;
-#else
-	key = other.key;
 #endif
 }
 
 Key& Key::operator=(const Key &other) {
 #ifdef LARGE_KEY
+	this->keylolo = other.keylolo;
+	this->keylohi = other.keylohi;
+	this->keyhilo = other.keyhilo;
+	this->keyhihi = other.keyhihi;
+#else
 	keylo = other.keylo;
 	keyhi = other.keyhi;
-#else
-    key = other.key;
 #endif
 	return *this;
 }
@@ -68,17 +86,20 @@ rocksdb::Slice Key::to_slice() const {
 	// NOTE: addr of this = addr of keylo due to packed
 	rocksdb::Slice result((char *)this, 16); 
 #else
-	rocksdb::Slice result((char *)(&key), 8); // convert uint64_t to char[8]
+	rocksdb::Slice result((char *)(&key), 8); // convert int64_t to char[8]
 #endif
 	return result;
 }
 
 void Key::from_slice(rocksdb::Slice& slice) {
 #ifdef LARGE_KEY
-	keylo = *(uint64_t*)slice.data_;
-	keyhi = *(uint64_t*)(slice.data_+8);
+	keylolo = *(int32_t*)slice.data_;
+	keylohi = *(int32_t*)(slice.data_+4);
+	keyhilo = *(int32_t*)(slice.data_+8);
+	keyhihi = *(int32_t*)(slice.data_+12);
 #else
-	key = *(uint64_t*)slice.data_;
+	keylo = *(int32_t*)slice.data_;
+	keyhi = *(int32_t*)(slice.data_+4);
 #endif
 }
 */
@@ -86,76 +107,135 @@ void Key::from_slice(rocksdb::Slice& slice) {
 Key::model_key_t Key::to_model_key() const {
     Key::model_key_t model_key;
 #ifdef LARGE_KEY
-	model_key[0] = keylo;
-	model_key[1] = keyhi;
+	model_key[0] = keylolo;
+	model_key[1] = keylohi;
+	model_key[2] = keyhilo;
+	model_key[3] = keyhihi; // highest priority
 #else
-    model_key[0] = key;
+    model_key[0] = keylo;
+	model_key[1] = keyhi; // higher priority	
 #endif
     return model_key;
 }
 
-uint64_t Key::to_int() const {
+int64_t Key::to_int() const {
 #ifdef LARGE_KEY
-	return keylo ^ keyhi;
+	return (int64_t(keylohi<<32) | int64_t(keylolo)) ^ (int64_t(keyhihi<<32) | int64_t(keyhilo));
 #else
-	return key;
+	return int64_t(keyhi<<32) | int64_t(keylo);
 #endif
 }
 
 std::string Key::to_string() const {
 	std::stringstream ss;
 #ifdef LARGE_KEY
-	ss << keylo << "," << keyhi;
+	ss << keyhihi << "," << keyhilo << "," << keylohi << "," << keylolo;
 #else
-	ss << key;
+	ss << keyhi << "," << keylo;
 #endif
 	return ss.str();
 }
 
 bool operator<(const Key &l, const Key &r) { 
 #ifdef LARGE_KEY
-	return (l.keyhi < r.keyhi) || ((l.keyhi == r.keyhi) && (l.keylo < r.keylo));
+	return (l.keyhihi < r.keyhihi) || ((l.keyhihi == r.keyhihi) && (l.keyhilo < r.keyhilo)) || 
+		((l.keyhihi == r.keyhihi) && (l.keyhilo == r.keyhilo) && (l.keylohi < r.keylohi)) ||
+		((l.keyhihi == r.keyhihi) && (l.keyhilo == r.keyhilo) && (l.keylohi == r.keylohi) && (l.keylolo < r.keylolo));
 #else
-	return l.key < r.key; 
+	return (l.keyhi < r.keyhi) || ((l.keyhi == r.keyhi) && (l.keylo < r.keylo));
 #endif
 }
 
 bool operator>(const Key &l, const Key &r) {
 #ifdef LARGE_KEY
-	return (l.keyhi > r.keyhi) || ((l.keyhi == r.keyhi) && (l.keylo > r.keylo));
+	return (l.keyhihi > r.keyhihi) || ((l.keyhihi == r.keyhihi) && (l.keyhilo > r.keyhilo)) || 
+		((l.keyhihi == r.keyhihi) && (l.keyhilo == r.keyhilo) && (l.keylohi > r.keylohi)) ||
+		((l.keyhihi == r.keyhihi) && (l.keyhilo == r.keyhilo) && (l.keylohi == r.keylohi) && (l.keylolo > r.keylolo));
 #else
-	return l.key > r.key; 
+	return (l.keyhi > r.keyhi) || ((l.keyhi == r.keyhi) && (l.keylo > r.keylo));
 #endif
 }
 
 bool operator>=(const Key &l, const Key &r) {
 #ifdef LARGE_KEY
-	return (l.keyhi > r.keyhi) || ((l.keyhi == r.keyhi) && (l.keylo >= r.keylo));
+	return (l.keyhihi > r.keyhihi) || ((l.keyhihi == r.keyhihi) && (l.keyhilo > r.keyhilo)) || 
+		((l.keyhihi == r.keyhihi) && (l.keyhilo == r.keyhilo) && (l.keylohi > r.keylohi)) ||
+		((l.keyhihi == r.keyhihi) && (l.keyhilo == r.keyhilo) && (l.keylohi == r.keylohi) && (l.keylolo >= r.keylolo));
 #else
-	return l.key >= r.key; 
+	return (l.keyhi > r.keyhi) || ((l.keyhi == r.keyhi) && (l.keylo >= r.keylo));
 #endif
 }
 
 bool operator<=(const Key &l, const Key &r) {
 #ifdef LARGE_KEY
-	return (l.keyhi < r.keyhi) || ((l.keyhi == r.keyhi) && (l.keylo <= r.keylo));
+	return (l.keyhihi < r.keyhihi) || ((l.keyhihi == r.keyhihi) && (l.keyhilo < r.keyhilo)) || 
+		((l.keyhihi == r.keyhihi) && (l.keyhilo == r.keyhilo) && (l.keylohi < r.keylohi)) ||
+		((l.keyhihi == r.keyhihi) && (l.keyhilo == r.keyhilo) && (l.keylohi == r.keylohi) && (l.keylolo <= r.keylolo));
 #else
-	return l.key <= r.key; 
+	return (l.keyhi < r.keyhi) || ((l.keyhi == r.keyhi) && (l.keylo <= r.keylo));
 #endif
 }
 
 bool operator==(const Key &l, const Key &r) {
 #ifdef LARGE_KEY
-	return (l.keyhi == r.keyhi) && (l.keylo == r.keylo);
+	return (l.keyhihi == r.keyhihi) && (l.keyhilo == r.keyhilo) && (l.keylohi == r.keylohi) && (l.keylolo == r.keylolo);
 #else
-	return l.key == r.key;
+	return (l.keyhi == r.keyhi) && (l.keylo == r.keylo);
 #endif
 }
 
 bool operator!=(const Key &l, const Key &r) { 
 #ifdef LARGE_KEY
-	return (l.keyhi != r.keyhi) || (l.keylo != r.keylo);
+	return (l.keyhihi != r.keyhihi) || (l.keyhilo != r.keyhilo) || (l.keylohi != r.keylohi) || (l.keylolo != r.keylolo);
 #else
-	return l.key != r.key;
+	return (l.keyhi != r.keyhi) || (l.keylo != r.keylo);
+#endif
+}
+
+uint32_t Key::deserialize(const char* buf, uint32_t buflen) {
+#ifdef LARGE_KEY
+	INVARIANT(buf != nullptr && buflen >= 16);
+	memcpy((char *)&keylolo, buf, sizeof(int32_t));
+	memcpy((char *)&keylohi, buf+4, sizeof(int32_t));
+	memcpy((char *)&keyhilo, buf+8, sizeof(int32_t));
+	memcpy((char *)&keyhihi, buf+12, sizeof(int32_t));
+	// Big-endian to little-endian
+	keylolo = int32_t(ntohl(uint32_t(keylolo)));
+	keylohi = int32_t(ntohl(uint32_t(keylohi)));
+	keyhilo = int32_t(ntohl(uint32_t(keyhilo)));
+	keyhihi = int32_t(ntohl(uint32_t(keyhihi)));
+	return 16;
+#else
+	INVARIANT(buf != nullptr && buflen >= 8);
+	memcpy((char *)&keylo, buf, sizeof(int32_t));
+	memcpy((char *)&keyhi, buf+4, sizeof(int32_t));
+	// Big-endian to little-endian
+	keylo = int32_t(ntohl(uint32_t(keylo)));
+	keyhi = int32_t(ntohl(uint32_t(keyhi)));
+	return 8;
+#endif
+}
+
+uint32_t Key::serialize(char* buf, uint32_t buflen) {
+#ifdef LARGE_KEY
+	INVARIANT(buf != nullptr && buflen >= 16);
+	// Little-endian to big-endian
+	uint32_t bigendian_keylolo = htonl(uint32_t(keylolo));
+	uint32_t bigendian_keylohi = htonl(uint32_t(keylohi));
+	uint32_t bigendian_keyhilo = htonl(uint32_t(keyhilo));
+	uint32_t bigendian_keyhihi = htonl(uint32_t(keyhihi));
+	memcpy(buf, (char *)&bigendian_keylolo, sizeof(uint32_t));
+	memcpy(buf+4, (char *)&bigendian_keylohi, sizeof(uint32_t));
+	memcpy(buf+8, (char *)&bigendian_keyhilo, sizeof(uint32_t));
+	memcpy(buf+12, (char *)&bigendian_keyhihi, sizeof(uint32_t));
+	return 16;
+#else
+	INVARIANT(buf != nullptr && buflen >= 8);
+	// Little-endian to big-endian
+	uint32_t bigendian_keylo = htonl(uint32_t(keylo));
+	uint32_t bigendian_keyhi = htonl(uint32_t(keyhi));
+	memcpy(buf, (char *)&bigendian_keylo, sizeof(uint32_t));
+	memcpy(buf+4, (char *)&bigendian_keyhi, sizeof(uint32_t));
+	return 8;
 #endif
 }
