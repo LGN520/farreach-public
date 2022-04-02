@@ -340,6 +340,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.sample_tbl_table_add_with_sample(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
+            # Stage 1
+
             # Table: hash_partition_tbl (default: nop; server_num <= 128)
             print "Configuring hash_partition_tbl"
             hash_start = 0
@@ -361,6 +363,86 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.hash_partition_tbl_table_add_with_hash_partition(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                     hash_start = hash_end
+
+            # Stage 2
+
+            # Table: ig_port_forward_tbl (default: nop; size: ?)
+            print "Configuring ig_port_forward_tbl"
+            matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = GETREQ)
+            self.client.ig_port_forward_tbl_table_add_with_update_getreq_to_getreq_inswitch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Egress pipeline
+
+            # Stage 0
+
+            # Table: access_cm1_tbl (default: initialize_cm1_predicate; size: ?)
+            print "Configuring access_cm1_tbl"
+            for tmpoptype in [GETREQ_INSWITCH]:
+                matchspec0 = netbufferv4_access_cm1_tbl_match_spec_t(\
+                        op_hdr.optype = tmpoptype,
+                        inswitch_hdr_is_sampled = 1,
+                        inswitch_hdr_is_cached = 0)
+                self.client.access_cm1_tbl_table_add_with_update_cm1(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: access_cm2_tbl (default: initialize_cm2_predicate; size: ?)
+            print "Configuring access_cm2_tbl"
+            for tmpoptype in [GETREQ_INSWITCH]:
+                matchspec0 = netbufferv4_access_cm2_tbl_match_spec_t(\
+                        op_hdr.optype = tmpoptype,
+                        inswitch_hdr_is_sampled = 1,
+                        inswitch_hdr_is_cached = 0)
+                self.client.access_cm2_tbl_table_add_with_update_cm2(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: access_cm3_tbl (default: initialize_cm3_predicate; size: ?)
+            print "Configuring access_cm3_tbl"
+            for tmpoptype in [GETREQ_INSWITCH]:
+                matchspec0 = netbufferv4_access_cm3_tbl_match_spec_t(\
+                        op_hdr.optype = tmpoptype,
+                        inswitch_hdr_is_sampled = 1,
+                        inswitch_hdr_is_cached = 0)
+                self.client.access_cm3_tbl_table_add_with_update_cm3(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: access_cm4_tbl (default: initialize_cm4_predicate; size: ?)
+            print "Configuring access_cm4_tbl"
+            for tmpoptype in [GETREQ_INSWITCH]:
+                matchspec0 = netbufferv4_access_cm4_tbl_match_spec_t(\
+                        op_hdr.optype = tmpoptype,
+                        inswitch_hdr_is_sampled = 1,
+                        inswitch_hdr_is_cached = 0)
+                self.client.access_cm4_tbl_table_add_with_update_cm4(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Stgae 1
+
+            # Table: is_hot_tbl (default: not_hop; size: 1)
+            print "Configuring is_hot_tbl"
+            matchspec0 = netbufferv4_is_hot_tbl_match_spec_t(\
+                    meta_cm1_predicate = 2,
+                    meta_cm2_predicate = 2,
+                    meta_cm3_predicate = 2,
+                    meta_cm4_predicate = 2)
+            self.client.is_hot_tbl_table_add_with_is_hot(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: access_cache_frequency_tbl (default: nop; size: ?)
+            print "Configuring access_cache_frequency_tbl"
+            for tmpoptype in [GETREQ_INSWITCH]:
+                matchspec0 = netbufferv4_access_cache_frequency_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        inswitch_hdr_is_sampled = 1,
+                        inswitch_hdr_is_cached = 1)
+                self.client.access_cache_frequency_table_add_with_update_cache_frequency(\
+                        self.sess_hdl, self.dev_tgt, match_spec0)
+
+
+
+
+
 
 
 

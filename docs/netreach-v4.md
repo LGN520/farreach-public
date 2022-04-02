@@ -40,12 +40,16 @@
 			- TODO: range partition: (optype, key range -> udp.dstPort, egress_port)
 				+ TODO: We treat the most significant 4B of key as int32_t for range matching -> need conversion between little-endian and small-endian for the 4B of each key
 			- NOTE: we use udp.dstPort to simulate different egress ports
+		* Stage 2: ig_port_forward_tbl (op_hdr.optype -> op_hdr.optype)
+			- Add inswitch_hdr to FarReach packet
 	+ Egress pipeline
-		* TODO: Stage 0
-			- CM: 4 register arrays of 16b (optype, is_sampled, is_cached, hashval -> is_hot)
-		* TODO: Stage 1:
+		* Stage 0
+			- CM: 4 register arrays of 16b (optype, is_sampled, is_cached, hashval -> cm_predicates)
+		* Stage 1:
+			- is_hot_tbl (cm_predicates -> meta.is_hot)
+				+ Reduce 4 cm_predicates into 1 meta.is_hot to reduce TCAM usage
 			- cache_frequency_tbl (optype, is_sampled, is_cached, idx -> none)
-			- status_tbl (optype, is_cached, idx -> status)
+			- TODO: status_tbl (optype, is_cached, idx -> status)
 				+ 8b status (from highest to lowest): 5b padding, 1b deleted, 1b latest, 1b valid
 				+ Masks: valid (0x1); latest (0x2); deleted (0x4)
 				+ TODO: PUTREQ_LARGE should set status.valid=0 and status.latest=1 (status of large value in server is latest)
@@ -64,12 +68,12 @@
 
 - GETREQ
 	+ Client sends GETREQ
-	+ TODO: Ingress: GETREQ -> GETREQ_INSWITCH (is_sampled, is_cached, hashval, idx)
+	+ Ingress: GETREQ -> GETREQ_INSWITCH (is_sampled, is_cached, hashval, idx)
 	+ Egress
-		* TODO: If inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=0, update CM and forward GETREQ to server
-			- TODO: If any counter in CM >= HH_THRESHOLD, forward GETREQ_POP to server (processed as below)
+		* If inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=0, update CM and forward GETREQ to server
+			- TODO: If all counters in CM >= HH_THRESHOLD, forward GETREQ_POP to server (processed as below)
 			- NOTE: we resort to server to notify controller to avoid in-switch BF; NetCache directly reports to server yet with BF
-		- TOOD: If inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=1, update per-record frequency counter
+		- If inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=1, update per-record frequency counter
 		* TODO: If inswitch_hdr.is_cached=1
 			- TOOD: If status.valid=0, forward GETREQ to server
 			- If status.valid=1

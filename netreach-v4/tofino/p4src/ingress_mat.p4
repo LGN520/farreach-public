@@ -13,6 +13,7 @@ action uncached_action() {
 	modify_field(inswitch_hdr.is_cached, 0);
 }
 
+@pragma stage 0
 table cache_lookup_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -52,6 +53,7 @@ field_list_calculation sample_calc {
 	output_width: 1;
 }
 
+@pragma stage 0
 action hash() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval, 0, hash_calc, CM_BUCKET_COUNT);
 }
@@ -68,6 +70,7 @@ table hash_tbl {
 	size: 0;
 }
 
+@pragma stage 0
 action sample() {
 	modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, sample_calc, 2);
 }
@@ -84,12 +87,15 @@ table sample_tbl {
 	size: 0;
 }
 
+// Stage 1
+
 action hash_partition(udpport, serveridx, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(serveridx_hdr.serveridx, serveridx);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
+@pragma stage 1
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -103,8 +109,25 @@ table hash_partition_tbl {
 	size: 128;
 }
 
+// Stage 2
 
+action update_getreq_to_getreq_inswitch() {
+	modify_field(op_hdr.optype, GETREQ_INSWITCH);
+	add_header(inswitch_hdr);
+}
 
+@pragma stage 2
+table ig_port_forward_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		update_getreq_to_getreq_inswitch;
+		nop;
+	}
+	default_action: nop();
+	size: 0;
+}
 
 
 

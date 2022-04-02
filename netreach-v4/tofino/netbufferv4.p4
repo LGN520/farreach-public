@@ -17,18 +17,20 @@
 #define PUTRES 0x05
 #define DELRES 0x06
 #define SCANRES 0x07
+#define GETREQ_INSWITCH 0x08
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV)
 // (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)
 //#define KV_BUCKET_COUNT 32768
 #define KV_BUCKET_COUNT 1
-
+#
 // pipeline_num * kv_bucket_count
 #define LOOKUP_ENTRY_COUNT 65536
 
 // 64K * 2B counter
 #define CM_BUCKET_COUNT 65536
+#define HH_THRESHOLD 100
 
 #define MAX_SERVERNUM 256
 
@@ -53,13 +55,11 @@
 // parsers
 #include "p4src/parser.p4"
 
+#include "p4src/regs/cm.p4"
 #include "p4src/regs/seq.p4"
 #include "p4src/regs/lock.p4"
 #include "p4src/regs/case12.p4"
 #include "p4src/regs/case3.p4"
-
-// registers and MATs related with 16B key
-#include "p4src/regs/key.p4"
 
 // registers and MATs related with 1-bit valid
 #include "p4src/regs/valid.p4"
@@ -84,17 +84,35 @@ control ingress {
 
 	// Stage 1
 	apply(hash_partition_tbl);
+
+	// Stgae 2
+	apply(ig_port_forward_tbl);
 }
 
 /* Egress Processing */
 
 control egress {
 
+	// Stage 0
+	apply(access_cm1_tbl);
+	apply(access_cm2_tbl);
+	apply(access_cm3_tbl);
+	apply(access_cm4_tbl);
+
+	// Stage 1
+	apply(is_hot_tbl);
+	apply(access_cache_frequency_tbl);
+
+
+
+
+
+
+
+
+
+
 	// Stage 0 
-	apply(access_keylolo_tbl);
-	apply(access_keylohi_tbl);
-	apply(access_keyhilo_tbl);
-	apply(access_keyhihi_tbl);
 	apply(save_info_tbl);
 	apply(initialize_tbl);
 	apply(load_backup_flag_tbl);

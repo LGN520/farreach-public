@@ -1,3 +1,43 @@
+/* Ingress Processing (Normal Operation) */
+
+// Stage 0
+
+action is_hot() {
+	modify_field(meta.is_hot, 1);
+}
+
+action not_hot() {
+	modify_field(meta.is_hot, 0);
+}
+
+table is_hot_tbl {
+	reads {
+		meta.cm1_predicate: exact;
+		meta.cm2_predicate: exact;
+		meta.cm3_predicate: exact;
+		meta.cm4_predicate: exact;
+	}
+	actions {
+		is_hot;
+		not_hot;
+	}
+	default_action: not_hot();
+	size: 1;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*action sendback_cloned_getres() {
 	modify_field(udp_hdr.srcPort, meta.tmp_sport);
