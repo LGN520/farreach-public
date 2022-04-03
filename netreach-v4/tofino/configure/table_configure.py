@@ -439,6 +439,31 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.access_cache_frequency_table_add_with_update_cache_frequency(\
                         self.sess_hdl, self.dev_tgt, match_spec0)
 
+            # Table: access_valid_tbl (default: nop; size: ?)
+            print "Configuring access_valid_tbl"
+            matchspec0 = netbufferv4_access_valid_tbl_match_spec_t(\
+                    op_hdr_optype = GETREQ_INSWITCH,
+                    inswitch_hdr_is_cached = 1)
+            self.client,access_valid_tbl_table_add_with_get_valid(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Stgae 2
+
+            # Table: access_latest_tbl (default: nop; size: ?)
+            print "Configuring access_latest_tbl"
+            matchspec0 = netbufferv4_access_latest_tbl_match_spec_t(\
+                    op_hdr_optype = GETREQ_INSWITCH,
+                    inswitch_hdr_is_cached = 1)
+            self.client.access_latest_tbl_table_add_with_get_latest(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: access_deleted_tbl (default: nop; size: ?)
+            print "Configuring access_deleted_tbl"
+            matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
+                    op_hdr_optype = GETREQ_INSWITCH,
+                    inswitch_hdr_is_cached = 1)
+            self.client.access_deleted_tbl_table_add_with_get_deleted(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
 
 

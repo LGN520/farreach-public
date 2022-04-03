@@ -1,5 +1,10 @@
 /* Parser */
 
+#define ETHERTYPE_IPV4 0x0800
+#define ETHERTYPE_VLAN 0x8100
+#define PROTOTYPE_TCP 0x06
+#define PROTOTYPE_UDP 0x11
+
 parser start {
 	return parse_ethernet;
 }

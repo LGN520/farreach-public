@@ -3,11 +3,6 @@
 #include "tofino/stateful_alu_blackbox.p4"
 #include "tofino/primitives.p4"
 
-#define ETHERTYPE_IPV4 0x0800
-#define ETHERTYPE_VLAN 0x8100
-#define PROTOTYPE_TCP 0x06
-#define PROTOTYPE_UDP 0x11
-
 // 1B optype does not need endian conversion
 #define GETREQ 0x00
 #define PUTREQ 0x01
@@ -19,12 +14,10 @@
 #define SCANRES 0x07
 #define GETREQ_INSWITCH 0x08
 
-// NOTE: limited by 12 stages and 64*4B PHV (not T-PHV)
-// (fields in the same ALU must be in the same PHV group)
+// NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)
 //#define KV_BUCKET_COUNT 32768
 #define KV_BUCKET_COUNT 1
-#
 // pipeline_num * kv_bucket_count
 #define LOOKUP_ENTRY_COUNT 65536
 
@@ -55,14 +48,16 @@
 // parsers
 #include "p4src/parser.p4"
 
+// registers and MATs
 #include "p4src/regs/cm.p4"
+#include "p4src/regs/cache_frequency.p4"
+#include "p4src/regs/valid.p4"
+
+
 #include "p4src/regs/seq.p4"
 #include "p4src/regs/lock.p4"
 #include "p4src/regs/case12.p4"
 #include "p4src/regs/case3.p4"
-
-// registers and MATs related with 1-bit valid
-#include "p4src/regs/valid.p4"
 
 // registers and MATs related with 124B val
 #include "p4src/regs/val.p4"
@@ -102,6 +97,11 @@ control egress {
 	// Stage 1
 	apply(is_hot_tbl);
 	apply(access_cache_frequency_tbl);
+	apply(access_valid_tbl);
+
+	// Stage 2
+	apply(access_latest_tbl);
+	apply(access_deleted_tbl);
 
 
 

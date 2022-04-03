@@ -81,10 +81,12 @@ header_type inswitch_t {
 	}
 }
 
-header_type other_t {
+header_type status_t {
 	fields {
-		isvalid: 1; // if the entry is valid
-		padding: 7;
+		is_valid: 1; // if the entry is valid
+		is_latest: 1; // if the entry is latest
+		is_deleted: 1; // if the entry is deleted
+		padding: 5;
 	}
 }
 
@@ -146,5 +148,5 @@ header val_t val16_hdr;
 header seq_t seq_hdr;
 header res_t res_hdr;
 header inswitch_t inswitch_hdr;
-header other_t other_hdr;
+header status_t status_hdr;
 metadata metadata_t meta;
