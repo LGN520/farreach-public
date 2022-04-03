@@ -3,8 +3,11 @@
 - Copy from netreach-voting-v3-memory, refer to netreach-voting-v2
 - Ptf will configure MAT in all pipelines
 	+ To configure a specific pipeline, inject packet into data plane
+- Althought eviction or snapshot focus on latest=1, which may come from response of GETREQ_NLATEST
+	+ As savedseq of such a record must <= seq in server, no unnecessary overwrite for eviction and no incorrect result for range query
+	+ For the results with latest=1 from PUTREQ/DELREQ, savedseq can be either larger or smaller than seq in server -> seq comparison
 - For PUTREQ_LARGE
-	+ NOTE: PUTREQ_LARGE always reads savedseq, vallen1, and value1; while only evicts if valid=1 and latset=1
+	+ NOTE: PUTREQ_LARGE always reads savedseq, vallen1, and value1; while only evicts if valid=1 and latest=1
 	+ NOTE: In-switch cache snapshot should only store the records with valid=1 and latest=1
 		* If valid=0 or latest=0, server must have up-to-date record
 		* Case 1 scenarios
@@ -89,26 +92,28 @@
 			- cache_frequency_tbl (optype, is_sampled, is_cached, idx -> none)
 			- valid_tbl (optype, is_cached, idx -> is_valid)
 				+ NOTE: eviction triggerred by PUTREQ_LARGE belongs to case 1 (w/o key change, w/ value change to an inalid status)
+				+ NOTE: valid=1 means no large vaule in server
 				+ TODO: PUTREQ_LARGE_EVICT_CASE1 does not need to embed status_hdr.valid as valid must be 1 (w/o eviction if invalid)
 				+ TODO: PUTREQ_CASE1/DELREQ_CASE1 need to embed status_hdr.valid as valid count be 0
 			- TODO: seq (optype -> seq)
 				+ NOTE: SEQ_BUCKET_COUNT is independent with KV_BUCKET_COUNT
+				+ NOTE: we need seq mechaism to avoid unnecessary overwrite caused by eviction of PUTREQ_LARGE or cache update
 			- TODO: case1 (optype, is_cached, idx, is_snapshot -> is_case1)
 		* Stage 2 (4 ALU)
 			- latest_tbl, deleted_tbl (optype, is_cached, idx -> status)
 				+ NOTE: one register can provide at most 3 stateful APIs -> cannot aggregate valid and latest/deleted as a whole
 					* As latest/deleted relies on valid for GETRES_LATEST/DELETED, we place valid before latest/deleted
-				+ NOTE: we need seq mechaism to avoid unnecessary overwrite caused by eviction of PUTREQ_LARGE
-					* Even with seq mechanism, we still need latest_tbl for GETREQ_NLATEST (and PUTREQ_LARGE_EVICT)
+				+ NOTE: latest=0 means no PUTREQ/DELREQ or response of GETREQ_NLATEST arrive at switch
+				+ NOTE: even with seq mechanism, we still need latest_tbl for response of GETREQ_NLATEST (and PUTREQ_LARGE_EVICT)
 			- TODO: savedseq (optype, is_cached, idx, seq -> savedseq)
 				+ NOTE: we assume that there is no reordering between spine and leaf switch due to a single FIFO channel
-			- TODO: vallen (optype, is_cached, idx -> vallen_hdr and val_hdr)
+			- vallen (optype, is_cached, idx -> vallen_hdr and val_hdr)
 				+ TODO: vallen and value can be placed from stage 1 to save # of stages if necessary
-		* TODO: Stage 3-9 (4 ALU)
+		* Stage 3-9 (4 ALU)
 			- From vallo1 to valhi14 (optype, is_cached, idx -> vallen_hdr and val_hdr)
-		* TODO: Stage 10 (4 ALU)
+		* Stage 10 (4 ALU)
 			- vallo15, valhi15, vallo16, valhi16 (optype, is_cached, idx -> vallen_hdr and val_hdr)
-			- TODO: eg_port_forward_tbl
+			- TODO: eg_port_forward_tbl (optype, is_cached, is_hot, is_valid, is_latest, is_deleted)
 - Server
 - Controller
 - SwitchOS
@@ -122,19 +127,19 @@
 		* Stage 0: update CM if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=0; update CM
 		* Stage 1: update is_hot; update cache_frequency if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=1; get valid
 		* Stage 2: get latest and deleted
-		* TODO: Intermediate stages: get vallen and value
+		* Intermediate stages: get vallen and value
 		* Stage 10: eg_port_forward_tbl
-			* TODO: If inswitch_hdr.is_cached=0
-				- TODO: If is_hot=1, forward GETREQ_POP to server
-				- TOOD: Otherwise, forward GETREQ to server
-			* TODO: If inswitch_hdr.is_cached=1
-				- TOOD: If valid=0, forward GETREQ to server
+			* If inswitch_hdr.is_cached=0
+				- If is_hot=1, forward GETREQ_POP to server
+				- Otherwise, forward GETREQ to server
+			* If inswitch_hdr.is_cached=1
+				- If valid=0, forward GETREQ to server
 				- If valid=1
 					+ If latest=1 and deleted=1, set result_hdr.result=0 as deleted and send back GETRES
-					+ If latest=1 and deleted=0, read value, set result_hdr.result=1, and send back GETRES
-					+ If latest=0, forward GETREQ_NLATEST to server (processed as below)
+					+ If latest=1 and deleted=0, set result_hdr.result=1, and send back GETRES
+					+ If latest=0, forward GETREQ_NLATEST to server
 	+ Server
-		* TODO: GETREQ -> GETRES
+		* GETREQ -> GETRES
 		* GETREQ_POP
 			- TODO: If key not exist or vallen > 128B, send back GETRES and ignore cache population
 			- TODO: Otherwise, send back GETRES and notify controller for cache population
@@ -147,15 +152,15 @@
 	+ TODO: Ingress: GETRES_LATEST_SEQ -> GETRES_LATEST_SEQ_INSWITCH (is_cached, idx)
 	+ Egress
 		* TODO: If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
-			+ NOTE: valid=1 means no large value in server; latest=0 means no PUTREQ/PUTREQ_LARGE/DELREQ arrive at switch
 			+ Set latest=1, delete=0, update savedseq, update vallen and value, forward GETRES to client
 - GETRES_DELETED_SEQ
-	+ TODO: Server sends GETRES_DELETED
-	+ TODO: Ingress: GETRES_DELETED -> GETRES_DELETED_INSWITCH (is_cached, idx)
+	+ TODO: Server sends GETRES_DELETED_SEQ
+	+ TODO: Ingress: GETRES_DELETED_SEQ -> GETRES_DELETED_SEQ_INSWITCH (is_cached, idx)
 	+ Egress
 		* TODO: If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
-			+ NOTE: valid=1 means no large value in server; latest=0 means no PUTREQ/PUTREQ_LARGE/DELREQ arrive at switch
 			+ Set latest=1, deleted=1, update savedseq, update vallen and value, forward GETRES to client
+- TODO: Cache population also updates savedseq
+- TODO: If cache crashes, server should reset all seq as zero after recovery such that switch-assigned seq (>=1) must be larger
 
 ## Implementation log
 
@@ -167,9 +172,11 @@
 	+ TODO: test to_model_key in xindex_model_impl.h
 + Use int8_t instead of uint8_t for optype (packet_format.\*, ycsb/parser.\*)
 - Remove host-side hashidx (packet_format.\*)
-- TOOD: Implement basic modules in switch
 - Implement GET
-	+ Support GETREQ (packet_format.\*, ycsb_remote_client.c, TODO: \*.p4)
+	+ Support GETREQ in client, switch, and server (packet_format.\*, ycsb_remote_client.c, \*.p4)
+	+ TODO: Support GETREQ_NLATEST
+	+ TODO: Support GETRES_LATEST_SEQ
+	+ TODO: Support GETRES_DELETED_SEQ
 
 ## Simple test
 

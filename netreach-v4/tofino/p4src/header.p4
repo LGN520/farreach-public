@@ -106,11 +106,6 @@ header_type metadata_t {
 
 		tmp_sport: 16;
 		tmp_dport: 16;
-		ismatch_keylolo: 4; // predicate 
-		ismatch_keylohi: 4; // predicate 
-		ismatch_keyhilo: 4; // predicate 
-		ismatch_keyhihi: 4; // predicate 
-		iskeymatch: 1; // reduce MAT entries for ismatch_keyxxxx
 		canput: 4; // predicate for seq (update vallen and val only if with valid seq)
 		zerovote: 4; // predicate (if we need to trigger cache update)
 		islock: 1; // if the entry is locked before
@@ -145,8 +140,9 @@ header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
 header val_t val16_hdr;
-header seq_t seq_hdr;
-header res_t res_hdr;
 header inswitch_t inswitch_hdr;
+header res_t res_hdr;
+
+header seq_t seq_hdr;
 header status_t status_hdr;
 metadata metadata_t meta;

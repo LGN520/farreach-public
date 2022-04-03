@@ -34,6 +34,11 @@ parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
 		GETREQ_INSWITCH: parse_inswitch;
+		default: ingress; // GETREQ, GETREQ_POP, GETREQ_NLATEST
+
+
+
+
 
 		PUTREQ_TYPE: parse_vallen;
 		GETRES_TYPE: parse_vallen;

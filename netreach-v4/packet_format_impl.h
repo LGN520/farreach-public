@@ -249,7 +249,7 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 }
 
 
-// GetResponse (value must be any size)
+// GetResponse (value can be any size)
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse()
@@ -258,8 +258,8 @@ GetResponse<key_t, val_t>::GetResponse()
 }
 
 template<class key_t, class val_t>
-GetResponse<key_t, val_t>::GetResponse(uint16_t hashidx, key_t key, val_t val) 
-	: Packet<key_t>(PacketType::GET_RES, hashidx, key), _val(val)
+GetResponse<key_t, val_t>::GetResponse(key_t key, val_t val) 
+	: Packet<key_t>(PacketType::GET_RES, key), _val(val)
 {	
 }
 
@@ -276,7 +276,7 @@ val_t GetResponse<key_t, val_t>::val() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() { // unused
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN;
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t) + val_t::MAX_VALLEN;
 }
 
 template<class key_t, class val_t>
@@ -284,15 +284,12 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	//uint32_t my_size = this->size();
 	//INVARIANT(max_size >= my_size);
 	char *begin = data;
-	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	uint16_t bigendian_hashidx = htons(this->_hashidx);
-	memcpy(begin, (void *)&bigendian_hashidx, sizeof(uint16_t)); // Small-endian to big-endian
-	begin += sizeof(uint16_t);
-	memcpy(begin, (void *)&this->_key, sizeof(key_t));
-	begin += sizeof(key_t);
-	uint32_t tmpsize = this->_val.serialize(begin, max_size-sizeof(uint8_t)-sizeof(uint16_t)-sizeof(key_t));
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + tmpsize;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
+	return sizeof(int8_t) + tmp_keysize + tmp_valsize;
 }
 
 template<class key_t, class val_t>
@@ -300,14 +297,11 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	//uint32_t my_size = this->size();
 	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
-	this->_hashidx = ntohs(this->_hashidx); // Big-endian to small-endian
-	begin += sizeof(uint16_t);
-	memcpy((void *)&this->_key, begin, sizeof(key_t));
-	begin += sizeof(key_t);
-	uint32_t tmpsize = this->_val.deserialize(begin, recv_size-sizeof(uint8_t)-sizeof(uint16_t)-sizeof(key_t));
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.deseriaize(begin, recv_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
 }
 
 // PutResponse (value must be any size)

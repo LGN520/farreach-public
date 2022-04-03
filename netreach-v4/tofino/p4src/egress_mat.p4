@@ -25,6 +25,60 @@ table is_hot_tbl {
 	size: 1;
 }
 
+// Stage 10
+
+action update_getreq_inswitch_to_getreq(eport) {
+	modify_field(op_hdr.optype, GETREQ);
+	remove_header(inswitch_hdr);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+
+action update_getreq_inswitch_to_getreq_pop(eport) {
+	modify_field(op_hdr.optype, GETREQ_POP);
+	remove_header(inswitch_hdr);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+
+action update_getreq_inswitch_to_getres_for_deleted(eport) {
+	modify_field(op_hdr.optype, GETRES);
+	remove_header(inswitch_hdr);
+	modify_field(result_hdr.result, 0);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+
+action update_getreq_inswitch_to_getres(eport) {
+	modify_field(op_hdr.optype, GETRES);
+	remove_header(inswitch_hdr);
+	modify_field(result_hdr.result, 1);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+
+action update_getreq_inswitch_to_getreq_nlatest(eport) {
+	modify_field(op_hdr.optype, GETREQ_NLATEST);
+	remove_header(inswitch_hdr);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+
+table eg_port_forward_tbl {
+	reads {
+		op_hdr_optype: exact;
+		inswitch_hdr_is_cached: exact;
+		meta_is_hot: exact;
+		status_hdr_is_valid: exact;
+		status_hdr_is_latest: exact;
+		status_hdr_is_deleted: exact;
+	}
+	actions {
+		update_getreq_inswitch_to_getreq;
+		update_getreq_inswitch_to_getreq_pop;
+		update_getreq_inswitch_to_getres_for_deleted;
+		update_getreq_inswitch_to_getres;
+		update_getreq_inswitch_to_getreq_nlatest;
+		nop;
+	}
+	default_action: nop();
+	size: 0;
+}
 
 
 

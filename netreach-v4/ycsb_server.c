@@ -1598,7 +1598,7 @@ static int run_sfg(void * param) {
 					val_t tmp_val;
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
-					get_response_t rsp(req.hashidx(), req.key(), tmp_val);
+					get_response_t rsp(req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK

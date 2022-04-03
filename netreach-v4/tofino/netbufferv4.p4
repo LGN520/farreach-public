@@ -13,6 +13,8 @@
 #define DELRES 0x06
 #define SCANRES 0x07
 #define GETREQ_INSWITCH 0x08
+#define GETREQ_POP 0x09
+#define GETREQ_NLATEST 0x0a
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)
@@ -102,38 +104,9 @@ control egress {
 	// Stage 2
 	apply(access_latest_tbl);
 	apply(access_deleted_tbl);
-
-
-
-
-
-
-
-
-
-
-	// Stage 0 
-	apply(save_info_tbl);
-	apply(initialize_tbl);
-	apply(load_backup_flag_tbl);
-
-	// Stage 1
-	apply(access_valid_tbl); 
-	apply(access_vote_tbl);
-	apply(assign_seq_tbl);
-	apply(update_iskeymatch_tbl);
-
-	// Stage 2
-	apply(access_savedseq_tbl);
-	apply(access_lock_tbl);
-
-	// Stage 3
-	// Case 1 of backup: first matched PUT/DEL of this bucket
-	// Case 2 of backup: cache population by GETRES_POP or PUTREQ_POP
-	apply(access_case12_tbl); 
-
-	// Start from stage 3
 	apply(update_vallen_tbl);
+
+	// Stage 3-9
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
 	apply(update_vallo2_tbl);
@@ -162,10 +135,39 @@ control egress {
 	apply(update_valhi13_tbl);
 	apply(update_vallo14_tbl);
 	apply(update_valhi14_tbl);
+
+	// Stage 10
 	apply(update_vallo15_tbl);
 	apply(update_valhi15_tbl);
 	apply(update_vallo16_tbl);
 	apply(update_valhi16_tbl);
+	apply(eg_port_forward_tbl);
+
+
+
+
+
+
+
+
+
+
+	// Stage 0 
+	apply(save_info_tbl);
+	apply(load_backup_flag_tbl);
+
+	// Stage 1
+	apply(assign_seq_tbl);
+
+	// Stage 2
+	apply(access_savedseq_tbl);
+	apply(access_lock_tbl);
+
+	// Stage 3
+	// Case 1 of backup: first matched PUT/DEL of this bucket
+	// Case 2 of backup: cache population by GETRES_POP or PUTREQ_POP
+	apply(access_case12_tbl); 
+
 
 	// Stage 11
 	apply(port_forward_tbl);
@@ -196,9 +198,6 @@ control egress {
 
 	// Stage 2
 	apply(access_case3_tbl);
-
-	// Stage 3
-	apply(eg_port_forward_tbl);
 
 	// Stage 4
 	// The same stage

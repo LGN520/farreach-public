@@ -97,7 +97,7 @@ template<class key_t, class val_t>
 class GetResponse : public Packet<key_t> {
 	public:
 		GetResponse();
-		GetResponse(uint16_t hashidx, key_t key, val_t val);
+		GetResponse(key_t key, val_t val);
 		GetResponse(const char * data, uint32_t recv_size);
 
 		val_t val() const;

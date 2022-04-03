@@ -80,6 +80,12 @@ GETRES = 0x04
 PUTRES = 0x05
 DELRES = 0x06
 SCANRES = 0x07
+GETREQ_INSWITCH = 0x08
+GETREQ_POP = 0x09
+GETREQ_NLATEST = 0x0a
+
+
+
 GETREQ_POP_TYPE = 0x08
 GETRES_POP_TYPE = 0x09
 GETRES_NPOP_TYPE = 0x0a
@@ -112,7 +118,13 @@ PUTREQ_POP_EVICT_CASE2_SWITCH_TYPE = 0x24
 PUTREQ_LARGE_EVICT_SWITCH_TYPE = 0x25
 PUTREQ_LARGE_EVICT_CASE2_SWITCH_TYPE = 0x26
 
+cached_list = [0, 1]
+hot_list = [0, 1]
 valid_list = [0, 1]
+latest_list = [0, 1]
+deleted_lsit = [0, 1]
+
+
 keymatch_list = [0, 1]
 lock_list = [0, 1]
 predicate_list = [1, 2]
@@ -174,53 +186,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         # initialize the thrift data plane
         pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv4"])
 
-    def configure_access_key_tbl(self, keyname):
-        # 9
-        for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE, DELREQ_RECIR_TYPE, PUTREQ_LARGE_TYPE, PUTREQ_LARGE_RECIR]:
-            matchspec0 = eval("netbufferv4_access_key{}_tbl_match_spec_t".format(keyname))(\
-                    op_hdr_optype=tmpoptype)
-            eval("self.client.access_key{}_tbl_table_add_with_match_key{}".format(keyname, keyname))(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-        matchspec0 = eval("netbufferv4_access_key{}_tbl_match_spec_t".format(keyname))(\
-                op_hdr_optype=GETRES_POP_TYPE)
-        eval("self.client.access_key{}_tbl_table_add_with_set_and_get_key{}".format(keyname, keyname))(\
-                self.sess_hdl, self.dev_tgt, matchspec0)
-        matchspec0 = eval("netbufferv4_access_key{}_tbl_match_spec_t".format(keyname))(\
-                op_hdr_optype=PUTREQ_POP_TYPE)
-        eval("self.client.access_key{}_tbl_table_add_with_set_and_get_key{}".format(keyname, keyname))(\
-                self.sess_hdl, self.dev_tgt, matchspec0)
-
     def configure_update_val_tbl(self, valname):
-        # 16
-        # NOTE: we do not need isvalid here even for PUTREQ_LARGE/RECIR
-        for canput in predicate_list:
-            for tmpoptype in [GETREQ_TYPE, PUTREQ_LARGE_TYPE, PUTREQ_LARGE_RECIR_TYPE]:
-                matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                        op_hdr_optype=tmpoptype,
-                        meta_canput=canput,
-                        meta_iskeymatch=1)
-                eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-        for tmpoptype in [PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE, DELREQ_RECIR_TYPE]:
-            matchspec1 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                    op_hdr_optype=tmpoptype, 
-                    meta_canput=2,
-                    meta_iskeymatch=1)
-            if tmpoptype == PUTREQ_TYPE or tmpoptype == PUTREQ_RECIR_TYPE:
-                eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
-                        self.sess_hdl, self.dev_tgt, matchspec1)
-            else: # DELREQ gets value for CASE1
-                eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
-                        self.sess_hdl, self.dev_tgt, matchspec1)
-        for iskeymatch in keymatch_list:
-            for canput in predicate_list:
-                for tmpoptype in [GETRES_POP_TYPE, PUTREQ_POP_TYPE]:
-                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(\
-                            op_hdr_optype= tmpoptype,
-                            meta_canput=canput,
-                            meta_iskeymatch=iskeymatch)
-                    eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+        # size: ?
+        matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+                op_hdr_optype = GETREQ_INSWITCH,
+                inswitch_hdr_is_cached = 1)
+        eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
+                self.sess_hdl, self.dev_tgt, matchspec0)
 
     def setUp(self):
         print '\nSetup'
@@ -465,6 +437,194 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.access_deleted_tbl_table_add_with_get_deleted(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
+            # Table: update_vallen_tbl (default: nop; 24)
+            print "Configuring update_vallen_tbl"
+            matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
+                    op_hdr_optype = GETREQ_INSWITCH,
+                    inswitch_hdr_is_cached = 1)
+            self.client.update_vallen_tbl_table_add_with_get_vallen(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Stage 3-10
+
+            # Table: update_vallo1_tbl (default: nop; 14)
+            print "Configuring update_vallo1_tbl"
+            self.configure_update_val_tbl("lo1")
+
+            # Table: update_vallo2_tbl (default: nop; 14)
+            print "Configuring update_vallo2_tbl"
+            self.configure_update_val_tbl("lo2")
+
+            # Table: update_vallo3_tbl (default: nop; 14)
+            print "Configuring update_vallo3_tbl"
+            self.configure_update_val_tbl("lo3")
+
+            # Table: update_vallo4_tbl (default: nop; 14)
+            print "Configuring update_vallo4_tbl"
+            self.configure_update_val_tbl("lo4")
+
+            # Table: update_vallo5_tbl (default: nop; 14)
+            print "Configuring update_vallo5_tbl"
+            self.configure_update_val_tbl("lo5")
+
+            # Table: update_vallo6_tbl (default: nop; 14)
+            print "Configuring update_vallo6_tbl"
+            self.configure_update_val_tbl("lo6")
+
+            # Table: update_vallo7_tbl (default: nop; 14)
+            print "Configuring update_vallo7_tbl"
+            self.configure_update_val_tbl("lo7")
+
+            # Table: update_vallo8_tbl (default: nop; 14)
+            print "Configuring update_vallo8_tbl"
+            self.configure_update_val_tbl("lo8")
+
+            # Table: update_vallo9_tbl (default: nop; 14)
+            print "Configuring update_vallo9_tbl"
+            self.configure_update_val_tbl("lo9")
+
+            # Table: update_vallo10_tbl (default: nop; 14)
+            print "Configuring update_vallo10_tbl"
+            self.configure_update_val_tbl("lo10")
+
+            # Table: update_vallo11_tbl (default: nop; 14)
+            print "Configuring update_vallo11_tbl"
+            self.configure_update_val_tbl("lo11")
+
+            # Table: update_vallo12_tbl (default: nop; 14)
+            print "Configuring update_vallo12_tbl"
+            self.configure_update_val_tbl("lo12")
+
+            # Table: update_vallo13_tbl (default: nop; 14)
+            print "Configuring update_vallo13_tbl"
+            self.configure_update_val_tbl("lo13")
+
+            # Table: update_vallo14_tbl (default: nop; 14)
+            print "Configuring update_vallo14_tbl"
+            self.configure_update_val_tbl("lo14")
+
+            # Table: update_vallo15_tbl (default: nop; 14)
+            print "Configuring update_vallo15_tbl"
+            self.configure_update_val_tbl("lo15")
+
+            # Table: update_vallo16_tbl (default: nop; 14)
+            print "Configuring update_vallo16_tbl"
+            self.configure_update_val_tbl("lo16")
+
+            # Table: update_valhi1_tbl (default: nop; 14)
+            print "Configuring update_valhi1_tbl"
+            self.configure_update_val_tbl("hi1")
+
+            # Table: update_valhi2_tbl (default: nop; 14)
+            print "Configuring update_valhi2_tbl"
+            self.configure_update_val_tbl("hi2")
+
+            # Table: update_valhi3_tbl (default: nop; 14)
+            print "Configuring update_valhi3_tbl"
+            self.configure_update_val_tbl("hi3")
+
+            # Table: update_valhi4_tbl (default: nop; 14)
+            print "Configuring update_valhi4_tbl"
+            self.configure_update_val_tbl("hi4")
+
+            # Table: update_valhi5_tbl (default: nop; 14)
+            print "Configuring update_valhi5_tbl"
+            self.configure_update_val_tbl("hi5")
+
+            # Table: update_valhi6_tbl (default: nop; 14)
+            print "Configuring update_valhi6_tbl"
+            self.configure_update_val_tbl("hi6")
+
+            # Table: update_valhi7_tbl (default: nop; 14)
+            print "Configuring update_valhi7_tbl"
+            self.configure_update_val_tbl("hi7")
+
+            # Table: update_valhi8_tbl (default: nop; 14)
+            print "Configuring update_valhi8_tbl"
+            self.configure_update_val_tbl("hi8")
+
+            # Table: update_valhi9_tbl (default: nop; 14)
+            print "Configuring update_valhi9_tbl"
+            self.configure_update_val_tbl("hi9")
+
+            # Table: update_valhi10_tbl (default: nop; 14)
+            print "Configuring update_valhi10_tbl"
+            self.configure_update_val_tbl("hi10")
+
+            # Table: update_valhi11_tbl (default: nop; 14)
+            print "Configuring update_valhi11_tbl"
+            self.configure_update_val_tbl("hi11")
+
+            # Table: update_valhi12_tbl (default: nop; 14)
+            print "Configuring update_valhi12_tbl"
+            self.configure_update_val_tbl("hi12")
+
+            # Table: update_valhi13_tbl (default: nop; 14)
+            print "Configuring update_valhi13_tbl"
+            self.configure_update_val_tbl("hi13")
+
+            # Table: update_valhi14_tbl (default: nop; 14)
+            print "Configuring update_valhi14_tbl"
+            self.configure_update_val_tbl("hi14")
+
+            # Table: update_valhi15_tbl (default: nop; 14)
+            print "Configuring update_valhi15_tbl"
+            self.configure_update_val_tbl("hi15")
+
+            # Table: update_valhi16_tbl (default: nop; 14)
+            print "Configuring update_valhi16_tbl"
+            self.configure_update_val_tbl("hi16")
+
+            # Stage 10
+
+            # Table: eg_port_forward_tbl (default: nop; size: ?)
+            print "Configuring eg_port_forward_tbl")
+            for is_cached in cached_list:
+                for is_hot in hot_list:
+                    for is_valid in valid_list:
+                        for is_latest in latest_list:
+                            for is_deleted in deleted_list:
+                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                    op_hdr_optype = GETREQ_INSWITCH,
+                                    inswitch_hdr_is_cached = is_cached,
+                                    meta_is_hot = is_hot,
+                                    status_hdr_is_valid = is_valid,
+                                    status_hdr_is_latest = is_latest,
+                                    status_hdr_is_deleted = is_deleted)
+                                if is_cached == 0:
+                                    if is_hot == 1:
+                                        # Update GETREQ_INSWITCH as GETREQ_POP to server
+                                        actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_pop_action_spec_t(self.devPorts[1])
+                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_pop(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                    else:
+                                        # Update GETREQ_INSWITCH as GETREQ to server
+                                        actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
+                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                else:
+                                    if is_valid == 0:
+                                        # Update GETREQ_INSWITCH as GETREQ to server
+                                        actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
+                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                    else:
+                                        if is_latest == 0:
+                                            # Update GETREQ_INSWITCH as GETREQ_NLATEST to server
+                                            actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_nlatest_action_spec_t(self.devPorts[1])
+                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_nlatest(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        else:
+                                            if is_deleted == 1:
+                                                # Update GETREQ_INSWITCH as GETRES for deleted value to client
+                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_for_deleted_action_spec_t(self.devPorts[0])
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            else:
+                                                # Update GETREQ_INSWITCH as GETRES to client
+                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_action_spec_t(self.devPorts[0])
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
 
 
@@ -475,90 +635,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
 
 
-            # Stage 0
 
-            # Table: access_keylolo_tbl (default: initialize_ismatch_keylolo; 7)
-            print "Configuring match_keylolo_tbl"
-            self.configure_access_key_tbl("lolo")
-
-            # Table: access_keylohi_tbl (default: initialize_ismatch_keylohi; 7)
-            print "Configuring match_keylohi_tbl"
-            self.configure_access_key_tbl("lohi")
-
-            # Table: access_keyhilo_tbl (default: initialize_ismatch_keyhilo; 7)
-            print "Configuring match_keyhilo_tbl"
-            self.configure_access_key_tbl("hilo")
-
-            # Table: access_keyhihi_tbl (default: initialize_ismatch_keyhihi; 7)
-            print "Configuring match_keyhihi_tbl"
-            self.configure_access_key_tbl("hihi")
 
             # Stage 1
-
-            # Table: access_valid_tbl (default: nop; 104)
-            print "Configuring access_valid_tbl"
-            for ismatch_keylolo in predicate_list:
-                for ismatch_keylohi in predicate_list:
-                    for ismatch_keyhilo in predicate_list:
-                        for ismatch_keyhihi in predicate_list:
-                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE, DELREQ_RECIR_TYPE]:
-                                matchspec0 = netbufferv4_access_valid_tbl_match_spec_t(
-                                        op_hdr_optype=tmpoptype,
-                                        meta_ismatch_keylolo=ismatch_keylolo, 
-                                        meta_ismatch_keylohi=ismatch_keylohi, 
-                                        meta_ismatch_keyhilo=ismatch_keyhilo, 
-                                        meta_ismatch_keyhihi=ismatch_keyhihi)
-                                self.client.access_valid_tbl_table_add_with_get_valid(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                            # NOTE: Although GETRES_POP/PUTREQ_POP trigger set_and_get_key in access_key_tbl to set op_hdr.key in blackbox_alu, they also reset ismatch_key as 1 (default value) in action
-                            for tmpoptype in [GETRES_POP_TYPE, PUTREQ_POP_TYPE]:
-                                matchspec0 = netbufferv4_access_valid_tbl_match_spec_t(
-                                        op_hdr_optype=tmpoptype,
-                                        meta_ismatch_keylolo=ismatch_keylolo, 
-                                        meta_ismatch_keylohi=ismatch_keylohi, 
-                                        meta_ismatch_keyhilo=ismatch_keyhilo, 
-                                        meta_ismatch_keyhihi=ismatch_keyhihi)
-                                self.client.access_valid_tbl_table_add_with_set_and_get_valid(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0)
-            for tmpoptype in [PUTREQ_LARGE_TYPE, PUTREQ_LARGE_RECIR_TYPE]:
-                matchspec0 = netbufferv4_access_valid_tbl_match_spec_t(
-                        op_hdr_optype=tmpoptype,
-                        meta_ismatch_keylolo=2,
-                        meta_ismatch_keylohi=2,
-                        meta_ismatch_keyhilo=2,
-                        meta_ismatch_keyhihi=2)
-                self.client.access_valid_tbl_table_add_with_reset_and_get_valid(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: access_vote_tbl (default: nop; 80)
-            print "Configuring access_vote_tbl"
-            for ismatch_keylolo in predicate_list:
-                for ismatch_keylohi in predicate_list:
-                    for ismatch_keyhilo in predicate_list:
-                        for ismatch_keyhihi in predicate_list:
-                            for tmpoptype in [GETREQ_TYPE, PUTREQ_TYPE, PUTREQ_RECIR_TYPE]:
-                                matchspec0 = netbufferv4_access_vote_tbl_match_spec_t(
-                                        op_hdr_optype=tmpoptype, 
-                                        meta_ismatch_keylolo=ismatch_keylolo, 
-                                        meta_ismatch_keylohi=ismatch_keylohi, 
-                                        meta_ismatch_keyhilo=ismatch_keyhilo, 
-                                        meta_ismatch_keyhihi=ismatch_keyhihi)
-                                if (ismatch_keylolo == 2 and ismatch_keylohi == 2 and \
-                                        ismatch_keyhilo == 2 and ismatch_keyhihi == 2):
-                                    self.client.access_vote_tbl_table_add_with_increase_vote(
-                                            self.sess_hdl, self.dev_tgt, matchspec0)
-                                else:
-                                    self.client.access_vote_tbl_table_add_with_decrease_vote(
-                                            self.sess_hdl, self.dev_tgt, matchspec0)
-                            for tmpoptype in [GETRES_POP_TYPE, PUTREQ_POP_TYPE]:
-                                matchspec0 = netbufferv4_access_vote_tbl_match_spec_t(
-                                        op_hdr_optype=tmpoptype,
-                                        meta_ismatch_keylolo=ismatch_keylolo, 
-                                        meta_ismatch_keylohi=ismatch_keylohi, 
-                                        meta_ismatch_keyhilo=ismatch_keyhilo, 
-                                        meta_ismatch_keyhihi=ismatch_keyhihi)
-                                self.client.access_vote_tbl_table_add_with_init_vote(
-                                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table assign_seq_tbl (default: nop; 3)
             # NOTE: PUTREQ_RECIR, DELREQ_RECIR, and PUTREQ_LARGE_RECIR do not need to assign new seq
@@ -698,169 +777,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 else:
                                     self.client.access_case12_tbl_table_add_with_read_case12(\
                                             self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: update_vallen_tbl (default: nop; 24)
-            print "Configuring update_vallen_tbl"
-            for canput in predicate_list:
-                for tmpoptype in [GETREQ_TYPE, PUTREQ_LARGE_TYPE, PUTREQ_LARGE_RECIR_TYPE]:
-                    matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
-                            op_hdr_optype=tmpoptype,
-                            meta_canput=canput,
-                            meta_iskeymatch=1,
-                            other_hdr_isvalid=1)
-                    self.client.update_vallen_tbl_table_add_with_get_vallen(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
-            for tmpoptype in [PUTREQ_TYPE, PUTREQ_RECIR_TYPE, DELREQ_TYPE, DELREQ_RECIR_TYPE]:
-                matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
-                        op_hdr_optype=tmpoptype, 
-                        meta_canput=2, # canput means valid=1, iskeymatch=1, and seq>savedseq
-                        meta_iskeymatch=1,
-                        other_hdr_isvalid=1)
-                if (tmpoptype == PUTREQ_TYPE or tmpoptype == PUTREQ_RECIR_TYPE):
-                    self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
-                else: # DELREQ resets and gets vallen for CASE1
-                    self.client.update_vallen_tbl_table_add_with_reset_and_get_vallen(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
-            for iskeymatch in keymatch_list:
-                for canput in predicate_list:
-                    for isvalid in valid_list:
-                        for tmpoptype in [GETRES_POP_TYPE, PUTREQ_POP_TYPE]:
-                            matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
-                                    op_hdr_optype=tmpoptype, 
-                                    meta_canput=canput,
-                                    meta_iskeymatch=iskeymatch,
-                                    other_hdr_isvalid=isvalid)
-                            self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: update_vallo1_tbl (default: nop; 14)
-            print "Configuring update_vallo1_tbl"
-            self.configure_update_val_tbl("lo1")
-
-            # Table: update_vallo2_tbl (default: nop; 14)
-            print "Configuring update_vallo2_tbl"
-            self.configure_update_val_tbl("lo2")
-
-            # Table: update_vallo3_tbl (default: nop; 14)
-            print "Configuring update_vallo3_tbl"
-            self.configure_update_val_tbl("lo3")
-
-            # Table: update_vallo4_tbl (default: nop; 14)
-            print "Configuring update_vallo4_tbl"
-            self.configure_update_val_tbl("lo4")
-
-            # Table: update_vallo5_tbl (default: nop; 14)
-            print "Configuring update_vallo5_tbl"
-            self.configure_update_val_tbl("lo5")
-
-            # Table: update_vallo6_tbl (default: nop; 14)
-            print "Configuring update_vallo6_tbl"
-            self.configure_update_val_tbl("lo6")
-
-            # Table: update_vallo7_tbl (default: nop; 14)
-            print "Configuring update_vallo7_tbl"
-            self.configure_update_val_tbl("lo7")
-
-            # Table: update_vallo8_tbl (default: nop; 14)
-            print "Configuring update_vallo8_tbl"
-            self.configure_update_val_tbl("lo8")
-
-            # Table: update_vallo9_tbl (default: nop; 14)
-            print "Configuring update_vallo9_tbl"
-            self.configure_update_val_tbl("lo9")
-
-            # Table: update_vallo10_tbl (default: nop; 14)
-            print "Configuring update_vallo10_tbl"
-            self.configure_update_val_tbl("lo10")
-
-            # Table: update_vallo11_tbl (default: nop; 14)
-            print "Configuring update_vallo11_tbl"
-            self.configure_update_val_tbl("lo11")
-
-            # Table: update_vallo12_tbl (default: nop; 14)
-            print "Configuring update_vallo12_tbl"
-            self.configure_update_val_tbl("lo12")
-
-            # Table: update_vallo13_tbl (default: nop; 14)
-            print "Configuring update_vallo13_tbl"
-            self.configure_update_val_tbl("lo13")
-
-            # Table: update_vallo14_tbl (default: nop; 14)
-            print "Configuring update_vallo14_tbl"
-            self.configure_update_val_tbl("lo14")
-
-            # Table: update_vallo15_tbl (default: nop; 14)
-            print "Configuring update_vallo15_tbl"
-            self.configure_update_val_tbl("lo15")
-
-            # Table: update_vallo16_tbl (default: nop; 14)
-            print "Configuring update_vallo16_tbl"
-            self.configure_update_val_tbl("lo16")
-
-            # Table: update_valhi1_tbl (default: nop; 14)
-            print "Configuring update_valhi1_tbl"
-            self.configure_update_val_tbl("hi1")
-
-            # Table: update_valhi2_tbl (default: nop; 14)
-            print "Configuring update_valhi2_tbl"
-            self.configure_update_val_tbl("hi2")
-
-            # Table: update_valhi3_tbl (default: nop; 14)
-            print "Configuring update_valhi3_tbl"
-            self.configure_update_val_tbl("hi3")
-
-            # Table: update_valhi4_tbl (default: nop; 14)
-            print "Configuring update_valhi4_tbl"
-            self.configure_update_val_tbl("hi4")
-
-            # Table: update_valhi5_tbl (default: nop; 14)
-            print "Configuring update_valhi5_tbl"
-            self.configure_update_val_tbl("hi5")
-
-            # Table: update_valhi6_tbl (default: nop; 14)
-            print "Configuring update_valhi6_tbl"
-            self.configure_update_val_tbl("hi6")
-
-            # Table: update_valhi7_tbl (default: nop; 14)
-            print "Configuring update_valhi7_tbl"
-            self.configure_update_val_tbl("hi7")
-
-            # Table: update_valhi8_tbl (default: nop; 14)
-            print "Configuring update_valhi8_tbl"
-            self.configure_update_val_tbl("hi8")
-
-            # Table: update_valhi9_tbl (default: nop; 14)
-            print "Configuring update_valhi9_tbl"
-            self.configure_update_val_tbl("hi9")
-
-            # Table: update_valhi10_tbl (default: nop; 14)
-            print "Configuring update_valhi10_tbl"
-            self.configure_update_val_tbl("hi10")
-
-            # Table: update_valhi11_tbl (default: nop; 14)
-            print "Configuring update_valhi11_tbl"
-            self.configure_update_val_tbl("hi11")
-
-            # Table: update_valhi12_tbl (default: nop; 14)
-            print "Configuring update_valhi12_tbl"
-            self.configure_update_val_tbl("hi12")
-
-            # Table: update_valhi13_tbl (default: nop; 14)
-            print "Configuring update_valhi13_tbl"
-            self.configure_update_val_tbl("hi13")
-
-            # Table: update_valhi14_tbl (default: nop; 14)
-            print "Configuring update_valhi14_tbl"
-            self.configure_update_val_tbl("hi14")
-
-            # Table: update_valhi15_tbl (default: nop; 14)
-            print "Configuring update_valhi15_tbl"
-            self.configure_update_val_tbl("hi15")
-
-            # Table: update_valhi16_tbl (default: nop; 14)
-            print "Configuring update_valhi16_tbl"
-            self.configure_update_val_tbl("hi16")
 
             # Stage 11
 
