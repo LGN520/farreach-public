@@ -1596,7 +1596,8 @@ static int run_sfg(void * param) {
 					get_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
-					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
+					int32_t tmp_seq;
+					bool tmp_stat = table->get(req.key(), tmp_val, thread_id, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					get_response_t rsp(req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);

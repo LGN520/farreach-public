@@ -81,22 +81,22 @@ const key_t &Group<key_t, val_t, seq, max_model_n>::get_pivot() {
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t &key,
-                                                           val_t &val) {
+                                                           val_t &val, int32_t &seqnum) {
 #ifdef BF_OPTIMIZATION
   if (bf->query(key) == true) { // may have false positive
-    if (get_from_array(key, val)) {
+    if (get_from_array(key, val, seqnum)) {
       return result_t::ok;
     }
   }
 #else
-  if (get_from_array(key, val)) {
+  if (get_from_array(key, val, seqnum)) {
     return result_t::ok;
   }
 #endif
-  if (get_from_buffer(key, val, buffer)) {
+  if (get_from_buffer(key, val, buffer, seqnum)) {
     return result_t::ok;
   }
-  if (buffer_temp && get_from_buffer(key, val, buffer_temp)) {
+  if (buffer_temp && get_from_buffer(key, val, buffer_temp, seqnum)) {
     return result_t::ok;
   }
   return result_t::failed;
@@ -475,11 +475,11 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::locate_model(
 // return true on success
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::get_from_array(
-    const key_t &key, val_t &val) {
+    const key_t &key, val_t &val, int32_t &seqnum) {
   size_t pos = get_pos_from_array(key);
   return pos != array_size &&         // position is valid (not out-of-range)
          data[pos].first == key &&    // key matches
-         data[pos].second.read(val);  // value is not removed
+         data[pos].second.read(val, seqnum);  // value is not removed
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
@@ -657,8 +657,8 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::exponential_search_key(
 // return true on success
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::get_from_buffer(
-    const key_t &key, val_t &val, buffer_t *buffer) {
-  return buffer->get(key, val);
+    const key_t &key, val_t &val, buffer_t *buffer, int32_t &seqnum) {
+  return buffer->get(key, val, seqnum);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>

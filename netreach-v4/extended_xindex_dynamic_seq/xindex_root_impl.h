@@ -192,8 +192,8 @@ void Root<key_t, val_t, seq>::calculate_err(const std::vector<key_t> &keys,
  * Root::get
  */
 template <class key_t, class val_t, bool seq>
-inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val) {
-  return locate_group(key)->get(key, val);
+inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val, int32_t &seqnum) {
+  return locate_group(key)->get(key, val, seqnum);
 }
 
 /*

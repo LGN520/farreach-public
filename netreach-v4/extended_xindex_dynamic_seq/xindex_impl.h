@@ -66,9 +66,9 @@ XIndex<key_t, val_t, seq>::~XIndex() {
 
 template <class key_t, class val_t, bool seq>
 inline bool XIndex<key_t, val_t, seq>::get(const key_t &key, val_t &val,
-                                           const uint32_t worker_id) {
+                                           const uint32_t worker_id, int32_t &seqnum) {
   rcu_progress(worker_id);
-  return root->get(key, val) == result_t::ok;
+  return root->get(key, val, seqnum) == result_t::ok;
 }
 
 template <class key_t, class val_t, bool seq>

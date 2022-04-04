@@ -52,14 +52,14 @@ AltBtreeBuffer<key_t, val_t>::~AltBtreeBuffer() {
 }
 
 template <class key_t, class val_t>
-inline bool AltBtreeBuffer<key_t, val_t>::get(const key_t &key, val_t &val) {
+inline bool AltBtreeBuffer<key_t, val_t>::get(const key_t &key, val_t &val, int32_t &seqnum) {
   uint64_t leaf_ver;
   leaf_t *leaf_ptr = locate_leaf(key, leaf_ver);
 
   while (true) {
     int slot = leaf_ptr->find_first_larger_than_or_equal_to(key);
     bool res = (slot < leaf_ptr->key_n && leaf_ptr->keys[slot] == key)
-                   ? leaf_ptr->vals[slot].read_ignoring_ptr(val)
+                   ? leaf_ptr->vals[slot].read_ignoring_ptr(val, seqnum)
                    : false;
     memory_fence();
     bool locked = leaf_ptr->locked == 1;

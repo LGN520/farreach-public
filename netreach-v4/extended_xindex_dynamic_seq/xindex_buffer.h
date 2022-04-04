@@ -143,7 +143,7 @@ class AltBtreeBuffer {
   AltBtreeBuffer();
   ~AltBtreeBuffer();
 
-  inline bool get(const key_t &key, val_t &val);
+  inline bool get(const key_t &key, val_t &val, int32_t &seqnum);
   inline bool update(const key_t &key, const val_t &val, int32_t snapshot_id, int32_t seqnum);
   inline void insert(const key_t &key, const val_t &val, int32_t snapshot_id, int32_t seqnum);
   inline bool remove(const key_t &key, int32_t snapshot_id, int32_t seqnum);

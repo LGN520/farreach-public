@@ -509,7 +509,7 @@ struct AtomicVal {
   }
 
   // semantics: atomically read the value and the `removed` flag
-  bool read(val_t &val) {
+  bool read(val_t &val, int32_t &seqnum) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -519,11 +519,12 @@ struct AtomicVal {
 	  assert(!removed(this->status)); // check removed of pointer-type atomic value
 	  assert(this->aval_ptr != nullptr);
 	  // AtomicVal pointed by aval_ptr will not be freed before finishing this read_snapshot() due to RCU during compact
-	  res = this->aval_ptr->read(val);
+	  res = this->aval_ptr->read(val, seqnum);
 	}
 	else {
 		if (!removed(this->status)) {
 			val = this->latest_val;
+			seqnum = this->latest_seqnum;
 			res = true;
 		}
 	}
@@ -691,7 +692,7 @@ struct AtomicVal {
     memory_fence();
     this->rwlock.unlock();
   }
-  bool read_ignoring_ptr(val_t &val) {
+  bool read_ignoring_ptr(val_t &val, int32_t &seqnum) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -699,6 +700,7 @@ struct AtomicVal {
 	bool res = false;
 	if (!removed(this->status)) {
 		val = this->latest_val;
+		seqnum = this->latest_seqnum;
 		res = true;
 	}
 	this->rwlock.unlock_shared();

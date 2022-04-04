@@ -99,7 +99,7 @@ class alignas(CACHELINE_SIZE) Group {
             uint32_t model_n, uint32_t array_size, int32_t snapshot_id);
   const key_t &get_pivot();
 
-  inline result_t get(const key_t &key, val_t &val);
+  inline result_t get(const key_t &key, val_t &val, int32_t &seqnum);
   inline result_t put(const key_t &key, const val_t &val,
                       const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum);
   inline result_t remove(const key_t &key, int32_t snapshot_id, int32_t seqnum);
@@ -124,7 +124,7 @@ class alignas(CACHELINE_SIZE) Group {
  private:
   inline size_t locate_model(const key_t &key);
 
-  inline bool get_from_array(const key_t &key, val_t &val);
+  inline bool get_from_array(const key_t &key, val_t &val, int32_t &seqnum);
 
   inline result_t update_to_array(const key_t &key, const val_t &val,
                                   const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum);
@@ -138,7 +138,7 @@ class alignas(CACHELINE_SIZE) Group {
                                        uint32_t array_size, const key_t &key,
                                        size_t pos_hint) const;
 
-  inline bool get_from_buffer(const key_t &key, val_t &val, buffer_t *buffer);
+  inline bool get_from_buffer(const key_t &key, val_t &val, buffer_t *buffer, int32_t &seqnum);
   inline bool update_to_buffer(const key_t &key, const val_t &val,
                                buffer_t *buffer, int32_t snapshot_id, int32_t seqnum);
   inline void insert_to_buffer(const key_t &key, const val_t &val,
