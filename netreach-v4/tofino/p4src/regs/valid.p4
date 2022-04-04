@@ -1,41 +1,53 @@
 register valid_reg {
-	width: 1;
+	width: 8;
 	instance_count: KV_BUCKET_COUNT;
 }
 
 blackbox stateful_alu get_valid_alu {
 	reg: valid_reg;
 
-	update_lo_1_value: read_bit;
+	update_lo_1_value: register_lo;
 
-	output_value: alu_lo;
-	output_dst: status_hdr.is_valid;
+	output_value: register_lo;
+	output_dst: status_hdr.valid;
 }
 
 action get_valid() {
 	get_valid_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+# TODO: only used by PUTREQ/DELREQ if with PUTREQ_LARGE
 blackbox stateful_alu set_and_get_valid_alu {
 	reg: valid_reg;
 
-	update_lo_1_value: set_bit;
+	condition_lo: register_lo == 2;
 
-	output_value: alu_lo;
-	output_dst: status_hdr.is_valid;
+	update_lo_1_predicate: condition_lo;
+	update_lo_1_value: 1;
+	update_lo_2_predicate: not condition_lo; // 0/1/3
+	update_lo_2_value: register_lo;
+
+	output_value: register_lo; // 0/1/3: keep original; 2: change to 1
+	output_dst: status_hdr.valid;
 }
 
 action set_and_get_valid() {
 	set_and_get_valid_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+# TODO: only used by PUTREQ_LARGE
 blackbox stateful_alu reset_and_get_valid_alu {
 	reg: valid_reg;
 
-	update_lo_1_value: clr_bit;
+	condition_lo: register_lo == 1;
 
-	output_value: alu_lo;
-	output_dst: status_hdr.is_valid;
+	update_lo_1_predicate: condition_lo;
+	update_lo_1_value: 2;
+	update_lo_2_predicate: not condition_lo; // 0/2/3
+	update_lo_2_value: register_lo;
+
+	output_value: register_lo; // 0/2/3: keep original; 1: change to 2
+	output_dst: status_hdr.valid;
 }
 
 action reset_and_get_valid() {

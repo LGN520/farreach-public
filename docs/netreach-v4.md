@@ -6,29 +6,6 @@
 - Althought eviction or snapshot focus on latest=1, which may come from response of GETREQ_NLATEST
 	+ As savedseq of such a record must <= seq in server, no unnecessary overwrite for eviction and no incorrect result for range query
 	+ For the results with latest=1 from PUTREQ/DELREQ, savedseq can be either larger or smaller than seq in server -> seq comparison
-- For PUTREQ_LARGE
-	+ NOTE: PUTREQ_LARGE always reads savedseq, vallen1, and value1; while only evicts if valid=1 and latest=1
-	+ NOTE: In-switch cache snapshot should only store the records with valid=1 and latest=1
-		* If valid=0 or latest=0, server must have up-to-date record
-		* Case 1 scenarios
-			- valid=0 or latest=0 (not store) -> valid=1 and latest=1 (store): PUTREQ and DELREQ
-			- valid=1 and latest=1 (store) -> valid=0 or latest=0 (not store): PUTREQ_LARGE_EVICT
-			- valid=1 and latest=1 (w/ old deleted/value) -> valid=1 and latest=1 (w/ new deleted/value): PUTREQ and DELREQ
-			- Therefore, PUTREQ and DELREQ always trigger case1, while PUTREQ_LARGE only triggers case1 if with eviction
-	+ TODO: PUTREQ_LARGE_SEQ: op_hdr + seq + vallen + value (not parse vallen)
-	+ TODO: PUTREQ_LARGE_EVICT_SEQ: op_hdr + vallen1 + value1 + status_hdr + savedseq + seq + vallen + value
-		+ TODO: If with parser limitation, place seq and savedseq into status_hdr 
-	+ TODO: PUTREQ_LARGE_EVICT_SEQ_CASE1: op_hdr + vallen1 + value1 + status_hdr + savedseq + seq + vallen + value
-	+ TODO: We use clone_e2e to notify controller for evicted data or case 1
-		+ TODO: PUTREQ_LARGE_EVICT_SEQ_CLONE: op_hdr + vallen1 + value1 + status_hdr + savedseq + seq + vallen + value
-		+ TODO: PUTREQ_LARGE_EVICT_SEQ_CASE1_CLONE: op_hdr + vallen1 + value1 + status_hdr + savedseq + seq + vallen + value
-	+ TODO: Correctly calculate udp_hdr.hdrlen
-	+ TODO: Server-side processing
-		+ TODO: For non-cloned packet, server only processes seq, vallen, and value
-		+ TODO: For cloned packet (i.e., from controller), server only processes savedseq, vallen1, value1, and status_hdr
-	+ TODO: Simulate a controller in one end-host (co-located with server yet not accessing server-side info)
-		* TODO: For EVICT_CLONE, controller simply forwards it to server
-		* TODO: For EVICT_CASE1_CLONE, controller remembers the special case (vallen1 + value1 + status_hdr) and forwards it to server
 - For crash-consistent snapshot
 	+ NOTE: we do not need case3 as it does not save bandwidth, while explict notification for server-side snapshot is acceptable as snapshot is not frequent and dominated by register loading
 	+ TODO: Controller
@@ -50,11 +27,13 @@
 	+ Value header: 4B vallen, variable length value (8B padding if vallen <= 128B)
 	+ Result header: 1B result
 		* NOTE: success flag for PUTRES/DELRES; deleted flag for GETRES; SCANRES does not need it
-	+ Inswitch header: 1b is_cached, 1b is_sampled, 6b padding, 2B hashval, 2B serveridx (for case3), 2B idx
+	+ Inswitch header: 1b is_cached, 1b is_sampled, 9b sid, 5b padding, 2B hashval, 2B serveridx (for case3), 2B idx
 - Client
 - Switch
 	+ Ingress pipeline
 		* Stage 0
+			- TODO: sid_tbl (optype, ingress port -> sid)
+				+ sid: used by egress pipeline to generate response by packet mirroring
 			- cache_lookup_tbl (optype, key -> idx, is_cached)
 				+ idx: index for in-switch cache (assigned by controller)
 			- hash_tbl (optype, key -> hashval)
@@ -91,20 +70,34 @@
 				+ Reduce 4 cm_predicates into 1 meta.is_hot to reduce TCAM usage
 			- cache_frequency_tbl (optype, is_sampled, is_cached, idx -> none)
 			- valid_tbl (optype, is_cached, idx -> is_valid)
-				+ NOTE: eviction triggerred by PUTREQ_LARGE belongs to case 1 (w/o key change, w/ value change to an inalid status)
-				+ NOTE: valid=1 means no large vaule in server
-				+ TODO: PUTREQ_LARGE_EVICT_CASE1 does not need to embed status_hdr.valid as valid must be 1 (w/o eviction if invalid)
-				+ TODO: PUTREQ_CASE1/DELREQ_CASE1 need to embed status_hdr.valid as valid count be 0
+				+ NOTE: valid for cache population/eviction atomicity
+					* TODO: valid=0 (invalid: newly-populated entry yet not all lookup tables are updated)
+					* TODO: valid=1 (valid: cached entry with all lookup tables being updated)
+					* TODO: valid=3 (being evicted: cached entry being evicted to server)
+					* Control plane changes valid from 0 to 1 or from 1/2 to 3
+						- TODO: Cache population: controller sends a packet to update vallen and value (latest=0, valid=0) and waits for ACK -> switch OS sets lookup tables and then sets valid=1
+						- TODO: Cache eviction: controller notifies switch OS -> switch OS sets valid=3, evicts data to server, removes lookup tables, and then acks controller -> cache population
+					* Data plane only considers valid=1/3
+						- TODO: valid=0: ignore the entry (treat it as uncached)
+						- TODO: valid=1: conservative get, cached get, put/del, evict, snapshot
+						- TODO: valid=3: cached get only if latest=1, put/del set latest=0 and forward to server (maybe case3)
+					* TODOTODO: Snapshot
+						- TODO: Controller atomically loads cached key
+						- TODO: Controller only stores records with valid=1 and latest=1 into snapshot
+						- TODO: For valid=0/3, the record is managed by controller
+							+ valid=0: if being snapshoted, remove the newly populated record from snapshot if any
+							+ valid=3: if being evicted, keep the original cached record in snapshot and remove the newly populated record from snapshot if any
+				+ TODO: PUTREQ_CASE1/DELREQ_CASE1 need to embed status_hdr.valid as valid could be 0
 			- TODO: seq (optype -> seq)
 				+ NOTE: SEQ_BUCKET_COUNT is independent with KV_BUCKET_COUNT
-				+ NOTE: we need seq mechaism to avoid unnecessary overwrite caused by eviction of PUTREQ_LARGE or cache update
+				+ NOTE: we need seq mechaism to avoid unnecessary overwrite caused by cache eviction
 			- TODO: case1 (optype, is_cached, idx, is_snapshot -> is_case1)
 		* Stage 2 (4 ALU)
 			- latest_tbl, deleted_tbl (optype, is_cached, idx -> status)
 				+ NOTE: one register can provide at most 3 stateful APIs -> cannot aggregate valid and latest/deleted as a whole
 					* As latest/deleted relies on valid for GETRES_LATEST/DELETED, we place valid before latest/deleted
 				+ NOTE: latest=0 means no PUTREQ/DELREQ or response of GETREQ_NLATEST arrive at switch
-				+ NOTE: even with seq mechanism, we still need latest_tbl for response of GETREQ_NLATEST (and PUTREQ_LARGE_EVICT)
+				+ NOTE: even with seq mechanism, we still need latest_tbl for response of GETREQ_NLATEST/DELETED
 			- TODO: savedseq (optype, is_cached, idx, seq -> savedseq)
 				+ NOTE: we assume that there is no reordering between spine and leaf switch due to a single FIFO channel
 			- vallen (optype, is_cached, idx -> vallen_hdr and val_hdr)
@@ -122,7 +115,7 @@
 
 - GETREQ
 	+ Client sends GETREQ
-	+ Ingress: GETREQ -> GETREQ_INSWITCH (is_sampled, is_cached, hashval, idx)
+	+ Ingress: GETREQ -> GETREQ_INSWITCH (is_sampled, is_cached, sid, hashval, idx)
 	+ Egress
 		* Stage 0: update CM if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=0; update CM
 		* Stage 1: update is_hot; update cache_frequency if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=1; get valid
@@ -135,9 +128,13 @@
 			* If inswitch_hdr.is_cached=1
 				- If valid=0, forward GETREQ to server
 				- If valid=1
-					+ If latest=1 and deleted=1, set result_hdr.result=0 as deleted and send back GETRES
-					+ If latest=1 and deleted=0, set result_hdr.result=1, and send back GETRES
 					+ If latest=0, forward GETREQ_NLATEST to server
+					+ If latest=1 and deleted=1, set result_hdr.result=0 as deleted and send back GETRES by packet mirroring
+					+ If latest=1 and deleted=0, set result_hdr.result=1, and send back GETRES by packet mirroring
+				- If valid=3
+					+ If latest=0, forward GETREQ to server
+					+ If latest=1 and deleted=1, set result_hdr.result=0 as deleted and send back GETRES by packet mirroring
+					+ If latest=1 and deleted=0, set result_hdr.result=1, and send back GETRES by packet mirroring
 	+ Server
 		* GETREQ -> GETRES
 		* GETREQ_POP
@@ -181,3 +178,48 @@
 ## Simple test
 
 ## Fixed issues
+
+## Future work
+
+- For PUTREQ_LARGE
+	+ NOTE: PUTREQ_LARGE always reads savedseq, vallen1, and value1; while only evicts if valid=1 and latest=1
+	+ NOTE: In-switch cache snapshot should only store the records with valid=1 and latest=1
+		* If valid=0 or latest=0, server must have up-to-date record
+		* Case 1 scenarios
+			- valid=0 or latest=0 (not store) -> valid=1 and latest=1 (store): PUTREQ and DELREQ
+			- valid=1 and latest=1 (store) -> valid=0 or latest=0 (not store): PUTREQ_LARGE_EVICT
+			- valid=1 and latest=1 (w/ old deleted/value) -> valid=1 and latest=1 (w/ new deleted/value): PUTREQ and DELREQ
+			- Therefore, PUTREQ and DELREQ always trigger case1, while PUTREQ_LARGE only triggers case1 if with eviction
+	+ TODO: PUTREQ_LARGE_SEQ: op_hdr + seq + vallen + value (not parse vallen)
+	+ TODO: PUTREQ_LARGE_EVICT_SEQ: op_hdr + vallen1 + value1 + status_hdr + savedseq + seq + vallen + value
+		+ TODO: If with parser limitation, place seq and savedseq into status_hdr 
+	+ TODO: PUTREQ_LARGE_EVICT_SEQ_CASE1: op_hdr + vallen1 + value1 + status_hdr + savedseq + seq + vallen + value
+	+ TODO: We use clone_e2e to notify controller for evicted data or case 1
+		+ TODO: PUTREQ_LARGE_EVICT_SEQ_CLONE: op_hdr + vallen1 + value1 + status_hdr + savedseq + seq + vallen + value
+		+ TODO: PUTREQ_LARGE_EVICT_SEQ_CASE1_CLONE: op_hdr + vallen1 + value1 + status_hdr + savedseq + seq + vallen + value
+	+ TODO: Correctly calculate udp_hdr.hdrlen
+	+ TODO: Server-side processing
+		+ TODO: For non-cloned packet, server only processes seq, vallen, and value
+		+ TODO: For cloned packet (i.e., from controller), server only processes savedseq, vallen1, value1, and status_hdr
+	+ TODO: Simulate a controller in one end-host (co-located with server yet not accessing server-side info)
+		* TODO: For EVICT_CLONE, controller simply forwards it to server
+		* TODO: For EVICT_CASE1_CLONE, controller remembers the special case (vallen1 + value1 + status_hdr) and forwards it to server
+- Switch
+	+ Egress pipeline
+		* Stage 1 (4 ALU)
+			- valid_tbl
+				+ NOTE: eviction triggerred by PUTREQ_LARGE belongs to case 1 (w/o key change, w/ value change to an inalid status)
+				+ NOTE: valid for both cache population/eviction atomicity and large PUT
+					* TODO: valid=1 (valid: cached entry with all lookup tables being updated w/o large values in server)
+					* TODO: valid=2 (temporarily invalid: cached entry with all lookup tables being updated w/ large values in server)
+					* Data plane only changes valid between 1 and 2 and only considers valid=1/2/3
+						- TODO: valid=2: put/del, snapshot only if packet loss
+						- TODO: valid=3: cached get only if latest=1, put/del/largeput set latest=0 and forward to server (maybe case3)
+					* Snapshot
+						- TODO: For those with valid=2, controller remembers the records recently evicted by PUTREQ_LARGE; if server does not have a large value with larger seq (due to packet loss), place the records back into in-switch snapshot
+				+ FUTURE: PUTREQ_LARGE_EVICT_CASE1 does not need to embed status_hdr.valid as valid must be 1 (w/o eviction if invalid); but embed is also ok if limited by parser
+			- seq (optype -> seq)
+				+ TODO: we need seq mechaism to avoid unnecessary overwrite caused by eviction of PUTREQ_LARGE or cache eviction
+		* Stage 2 (4 ALU)
+			- latest_tbl, deleted_tbl (optype, is_cached, idx -> status)
+				+ TODO: even with seq mechanism, we still need latest_tbl for response of GETRES_NLATEST/DELETED (and PUTREQ_LARGE_EVICT)

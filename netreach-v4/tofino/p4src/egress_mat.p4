@@ -30,33 +30,40 @@ table is_hot_tbl {
 action update_getreq_inswitch_to_getreq(eport) {
 	modify_field(op_hdr.optype, GETREQ);
 	remove_header(inswitch_hdr);
+
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
 action update_getreq_inswitch_to_getreq_pop(eport) {
 	modify_field(op_hdr.optype, GETREQ_POP);
 	remove_header(inswitch_hdr);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
 
-action update_getreq_inswitch_to_getres_for_deleted(eport) {
-	modify_field(op_hdr.optype, GETRES);
-	remove_header(inswitch_hdr);
-	modify_field(result_hdr.result, 0);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-
-action update_getreq_inswitch_to_getres(eport) {
-	modify_field(op_hdr.optype, GETRES);
-	remove_header(inswitch_hdr);
-	modify_field(result_hdr.result, 1);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
 action update_getreq_inswitch_to_getreq_nlatest(eport) {
 	modify_field(op_hdr.optype, GETREQ_NLATEST);
 	remove_header(inswitch_hdr);
+
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+
+action update_getreq_inswitch_to_getres_for_deleted_by_mirroring() {
+	modify_field(op_hdr.optype, GETRES);
+	remove_header(inswitch_hdr);
+	modify_field(result_hdr.result, 0);
+
+	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
+}
+
+action update_getreq_inswitch_to_getres_by_mirroring() {
+	modify_field(op_hdr.optype, GETRES);
+	remove_header(inswitch_hdr);
+	modify_field(result_hdr.result, 1);
+
+	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
 }
 
 table eg_port_forward_tbl {
@@ -71,9 +78,9 @@ table eg_port_forward_tbl {
 	actions {
 		update_getreq_inswitch_to_getreq;
 		update_getreq_inswitch_to_getreq_pop;
-		update_getreq_inswitch_to_getres_for_deleted;
-		update_getreq_inswitch_to_getres;
 		update_getreq_inswitch_to_getreq_nlatest;
+		update_getreq_inswitch_to_getres_for_deleted_by_mirroring;
+		update_getreq_inswitch_to_getres_by_mirroring;
 		nop;
 	}
 	default_action: nop();

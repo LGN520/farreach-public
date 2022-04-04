@@ -75,7 +75,8 @@ header_type inswitch_t {
 	fields {
 		is_cached: 1;
 		is_sampled: 1;
-		padding: 6;
+		sid: 9;
+		padding: 5;
 		hashval: 16; // index for both partition and CM
 		idx: 16; // index for in-switch cache
 	}
@@ -83,10 +84,10 @@ header_type inswitch_t {
 
 header_type status_t {
 	fields {
-		is_valid: 1; // if the entry is valid
+		valid: 8; // if the entry is valid
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
-		padding: 5;
+		padding: 6;
 	}
 }
 

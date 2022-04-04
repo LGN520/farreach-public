@@ -120,7 +120,8 @@ PUTREQ_LARGE_EVICT_CASE2_SWITCH_TYPE = 0x26
 
 cached_list = [0, 1]
 hot_list = [0, 1]
-valid_list = [0, 1]
+valid_list = [0, 1, 3]
+#valid_list = [0, 1, 2, 3] # If with PUTREQ_LARGE
 latest_list = [0, 1]
 deleted_lsit = [0, 1]
 
@@ -292,6 +293,23 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Ingress pipeline
 
             # Stage 0
+
+            # Table: sid_tbl (default: nop; size: ?)
+            print "Configuring sid_tbl"
+            for tmpoptype in [GETREQ]:
+                matchspec0 = netbufferv4_sid_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ig_intr_md_ingress_port = self.devPorts[0])
+                actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0])
+                self.client.sid_tbl_table_add_with_set_sid(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                # Should not used: no req from server
+                matchspec0 = netbufferv4_sid_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ig_intr_md_ingress_port = self.devPorts[1])
+                actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1])
+                self.client.sid_tbl_table_add_with_set_sid(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: cache_lookup_tbl (default: uncached_action; size: 64K)
             print "Leave cache_lookup_tbl managed by controller in runtime"
@@ -581,14 +599,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring eg_port_forward_tbl")
             for is_cached in cached_list:
                 for is_hot in hot_list:
-                    for is_valid in valid_list:
+                    for valid in valid_list:
                         for is_latest in latest_list:
                             for is_deleted in deleted_list:
                                 matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                     op_hdr_optype = GETREQ_INSWITCH,
                                     inswitch_hdr_is_cached = is_cached,
                                     meta_is_hot = is_hot,
-                                    status_hdr_is_valid = is_valid,
+                                    status_hdr_valid = valid,
                                     status_hdr_is_latest = is_latest,
                                     status_hdr_is_deleted = is_deleted)
                                 if is_cached == 0:
@@ -603,12 +621,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                 else:
-                                    if is_valid == 0:
+                                    if valid == 0:
                                         # Update GETREQ_INSWITCH as GETREQ to server
                                         actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                    else:
+                                    elif valid == 1:
                                         if is_latest == 0:
                                             # Update GETREQ_INSWITCH as GETREQ_NLATEST to server
                                             actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_nlatest_action_spec_t(self.devPorts[1])
@@ -616,12 +634,29 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         else:
                                             if is_deleted == 1:
-                                                # Update GETREQ_INSWITCH as GETRES for deleted value to client
+                                                # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
                                                 actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_for_deleted_action_spec_t(self.devPorts[0])
                                                 self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             else:
-                                                # Update GETREQ_INSWITCH as GETRES to client
+                                                # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_action_spec_t(self.devPorts[0])
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                    elif valid == 3:
+                                        if is_latest == 0:
+                                            # Update GETREQ_INSWITCH as GETREQ to server
+                                            actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
+                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        else:
+                                            if is_deleted == 1:
+                                                # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
+                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_for_deleted_action_spec_t(self.devPorts[0])
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            else:
+                                                # Update GETREQ_INSWITCH as GETRES to client by mirroring
                                                 actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_action_spec_t(self.devPorts[0])
                                                 self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)

@@ -4,6 +4,23 @@ action nop() {}
 
 // Stage 0
 
+action set_sid(sid) {
+	modify_field(inswitch_hdr.sid, sid);
+}
+
+@pragma stage 0
+table sid_tbl {
+	reads {
+		ig_intr_md.ingress_port: exact;
+	}
+	actions {
+		set_sid;
+		nop;
+	}
+	default_action: nop();
+	size: 0;
+}
+
 action cached_action(idx) {
 	modify_field(inswitch_hdr.idx, idx);
 	modify_field(inswitch_hdr.is_cached, 1);
@@ -113,6 +130,7 @@ table hash_partition_tbl {
 
 action update_getreq_to_getreq_inswitch() {
 	modify_field(op_hdr.optype, GETREQ_INSWITCH);
+	modify_field(inswitch_hdr.ingress_port, ig_intr_md.ingress_port);
 	add_header(inswitch_hdr);
 }
 

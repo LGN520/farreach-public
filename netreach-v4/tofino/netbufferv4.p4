@@ -75,6 +75,7 @@
 control ingress {
 
 	// Stage 0
+	apply(sid_tbl); // set sid corresponding to ingress port
 	apply(cache_lookup_tbl); // managed by controller
 	apply(hash_tbl); // for both partition and CM
 	apply(sample_tbl); // for CM and cache_frequency
