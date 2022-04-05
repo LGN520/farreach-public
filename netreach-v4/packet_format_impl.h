@@ -253,13 +253,13 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse()
-	: Packet<key_t>(), _val()
+	: Packet<key_t>(), _val(), _stat(false)
 {
 }
 
 template<class key_t, class val_t>
-GetResponse<key_t, val_t>::GetResponse(key_t key, val_t val) 
-	: Packet<key_t>(PacketType::GETRES, key), _val(val)
+GetResponse<key_t, val_t>::GetResponse(key_t key, val_t val, bool stat) 
+	: Packet<key_t>(PacketType::GETRES, key), _val(val), _stat(stat)
 {	
 }
 
@@ -275,8 +275,13 @@ val_t GetResponse<key_t, val_t>::val() const {
 }
 
 template<class key_t, class val_t>
+bool GetResponse<key_t, val_t>::stat() const {
+	return _stat;
+}
+
+template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() { // unused
-	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t) + val_t::MAX_VALLEN;
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t) + val_t::MAX_VALLEN + sizeof(bool);
 }
 
 template<class key_t, class val_t>
@@ -289,7 +294,9 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
-	return sizeof(int8_t) + tmp_keysize + tmp_valsize;
+	begin += tmp_valsize;
+	memcpy(begin, (void *)&this->_stat, sizeof(bool));
+	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(bool);
 }
 
 template<class key_t, class val_t>
@@ -302,6 +309,8 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	uint32_t tmp_keysize = this->_key.deseriaize(begin, recv_size - sizeof(int8_t));
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
+	begin += tmp_valsize;
+	memcpy((void *)&this->_stat, begin, sizeof(bool));
 }
 
 // PutResponse (value must be any size)
@@ -552,8 +561,8 @@ uint32_t GetRequestNLatest<key_t>::serialize(char * const data, uint32_t max_siz
 // GetResponseLatestSeq (value must <= 128B)
 
 template<class key_t, class val_t>
-GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key_t key, val_t val, int32_t seq)
-	: GetResponse<key_t, val_t>::GetResponse(key, val), _seq(seq)
+GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key_t key, val_t val, bool, stat, int32_t seq)
+	: GetResponse<key_t, val_t>::GetResponse(key, val, stat), _seq(seq)
 {
 	this->_type = static_cast<uint8_t>(PacketType::GETRES_LATEST_SEQ);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -570,9 +579,11 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::serialize(char * const data, uint32
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
 	begin += tmp_valsize;
+	memcpy(begin, (void *)&this->_stat, sizeof(bool));
+	begin += sizeof(bool);
 	uint32_t bigendian_seq = htonl(uint32_t(this->_seq));
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
-	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(uint32_t);
+	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(bool) + sizeof(uint32_t);
 }
 
 template<class key_t, class val_t>
@@ -582,7 +593,7 @@ int32_t GetResponseLatestSeq<key_t, val_t>::seq() {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeq<key_t, val_t>::size() { // unused
-	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t) + val_t::MAX_VALLEN + sizeof(int32_t);
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t) + val_t::MAX_VALLEN + sizeof(bool) + sizeof(int32_t);
 }
 
 template<class key_t, class val_t>
@@ -594,8 +605,8 @@ void GetResponseLatestSeq<key_t, val_t>::deserialize(const char * data, uint32_t
 // GetResponseDeletedSeq (value must = 0B)
 
 template<class key_t, class val_t>
-GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(key_t key, val_t val, int32_t seq)
-	: GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key, val, seq)
+GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(key_t key, val_t val, bool stat, int32_t seq)
+	: GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key, val, stat, seq)
 {
 	this->_type = static_cast<uint8_t>(PacketType::GETRES_DELETED_SEQ);
 	INVARIANT(this->_val.val_length == 0);

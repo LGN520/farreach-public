@@ -98,10 +98,11 @@ template<class key_t, class val_t>
 class GetResponse : public Packet<key_t> {
 	public:
 		GetResponse();
-		GetResponse(key_t key, val_t val);
+		GetResponse(key_t key, val_t val, bool stat);
 		GetResponse(const char * data, uint32_t recv_size);
 
 		val_t val() const;
+		bool stat() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -109,6 +110,7 @@ class GetResponse : public Packet<key_t> {
 		virtual void deserialize(const char * data, uint32_t recv_size);
 	private:
 		val_t _val;
+		bool _stat;
 };
 
 template<class key_t>
@@ -182,7 +184,7 @@ class GetRequestNLatest : public GetRequest<key_t> {
 template<class key_t, class val_t>
 class GetResponseLatestSeq : public GetResponse<key_t, val_t> { // seq
 	public: 
-		GetResponseLatestSeq(key_t key, val_t val, int32_t seq);
+		GetResponseLatestSeq(key_t key, val_t val, bool stat, int32_t seq);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -197,7 +199,7 @@ class GetResponseLatestSeq : public GetResponse<key_t, val_t> { // seq
 template<class key_t, class val_t>
 class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // seq
 	public: 
-		GetResponseLatestSeq(key_t key, val_t val, int32_t seq);
+		GetResponseLatestSeq(key_t key, val_t val, bool stat, int32_t seq);
 
 	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);

@@ -141,9 +141,8 @@ header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
 header val_t val16_hdr;
-header inswitch_t inswitch_hdr;
 header result_t result_hdr;
-
 header seq_t seq_hdr;
+header inswitch_t inswitch_hdr;
 header status_t status_hdr;
 metadata metadata_t meta;

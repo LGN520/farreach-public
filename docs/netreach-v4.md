@@ -185,7 +185,7 @@
 	+ Server sends GETRES_LATEST_SEQ
 	+ Ingress
 		* GETRES_LATEST_SEQ -> GETRES_LATEST_SEQ_INSWITCH (is_cached, idx)
-		* ipv4_forward_tbl -> egress port of server (ingress port), eport_for_res, sid, is_wrong_pipeline
+		* ipv4_forward_tbl -> forward GETRES_LATEST_SEQ_INSWITCH to pipeline of ingress port; clone GETRES_LATEST_SEQ to pipeline of client for GETRES 
 	+ Egress
 		* If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
 			+ Set latest=1, delete=0, update savedseq (TODO), update vallen and value
@@ -194,13 +194,16 @@
 - GETRES_DELETED_SEQ
 	+ Server sends GETRES_DELETED_SEQ
 	+ Ingress: 
-		* TODO: GETRES_DELETED_SEQ -> GETRES_DELETED_SEQ_INSWITCH (is_cached, is_wrong_pipeline, sid, eport_for_res, idx)
-		* TODO: ipv4_forward_tbl -> egress port of server (ingress port), eport_for_res, sid, is_wrong_pipeline
+		* GETRES_DELETED_SEQ -> GETRES_DELETED_SEQ_INSWITCH (is_cached, idx)
+		* ipv4_forward_tbl -> forward GETRES_DELETED_SEQ_INSWITCH to pipeline of ingress port; clone GETRES_DELETED_SEQ to pipeline of client for GETRES 
 	+ Egress
-		* TODO: If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
-			+ Set latest=1, deleted=1, update savedseq, update vallen and value, forward GETRES to client
+		* If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
+			+ Set latest=1, deleted=1, update savedseq (TODO), update vallen and value
+		* Drop original packet, forwrad cloned packet (i2e) to client
+			+ TODO: Check if we need to set eg_intr_md.egress_port for cloned packet (i2e)
 - TODO: Cache population also updates savedseq
 - TODO: If cache crashes, server should reset all seq as zero after recovery such that switch-assigned seq (>=1) must be larger
+- TODO: If with parser limitation, we can introduce hint of next header in the previous header
 
 ## Implementation log
 
@@ -215,8 +218,8 @@
 - Implement GET (packet_format.\*, ycsb_remote_client.c, ycsb_server.c, \*.p4)
 	+ Support GETREQ and GETRES in client, switch, and server
 	+ Support GETREQ_NLATEST in switch and server 
-	+ Support GETRES_LATEST_SEQ in server and switch
-	+ TODO: Support GETRES_DELETED_SEQ
+	+ Support GETRES_LATEST_SEQ and GETRES_DELETED_SEQ in server and switch
+	+ Add result header for GETERS, GETRES_LATEST_SEQ and GETRES_DELETED_SEQ
 
 ## Simple test
 

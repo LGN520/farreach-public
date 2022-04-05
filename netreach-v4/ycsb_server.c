@@ -1605,7 +1605,7 @@ static int run_sfg(void * param) {
 					int32_t tmp_seq = 0;
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
-					get_response_t rsp(req.key(), tmp_val);
+					get_response_t rsp(req.key(), tmp_val, tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
@@ -1623,11 +1623,11 @@ static int run_sfg(void * param) {
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					if (tmp_stat) { // key exists
-						get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_seq);
+						get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_stat, tmp_seq);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
 					else { // key not exist
-						get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq);
+						get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_stat, tmp_seq);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
 					

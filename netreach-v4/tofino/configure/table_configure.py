@@ -209,14 +209,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         status_hdr_is_latest = is_latest)
                 eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
-                if valid == 1 and is_latest == 0:
-                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                            op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
-                            inswitch_hdr_is_cached = 1,
-                            status_hdr_valid = valid,
-                            status_hdr_is_latest = is_latest)
-                    eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+                for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
+                    if valid == 1 and is_latest == 0:
+                        matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+                                op_hdr_optype = tmpoptype,
+                                inswitch_hdr_is_cached = 1,
+                                status_hdr_valid = valid,
+                                status_hdr_is_latest = is_latest)
+                        eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
     def setUp(self):
         print '\nSetup'
@@ -402,6 +403,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype = GETRES_LATEST_SEQ)
             self.client.ig_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres_latest_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = GETRES_DELETED_SEQ)
+            self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres_deleted_seq_inswitch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 3
 
@@ -415,13 +420,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             actnspec0 = netbufferv4_forward_normal_response_action_spec_t(self.devPorts[0])
             self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
-                    ipv4_hdr_dstAddr = ipv4addr0,
-                    ipv4_hdr_dstAddr_prefix_length = 32)
-            actnspec0 = netbufferv4_ipv4_forward_special_get_response_action_spec_t(self.sids[0])
-            self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
+                matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ipv4_hdr_dstAddr = ipv4addr0,
+                        ipv4_hdr_dstAddr_prefix_length = 32)
+                actnspec0 = netbufferv4_ipv4_forward_special_get_response_action_spec_t(self.sids[0])
+                self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Egress pipeline
 
@@ -491,7 +497,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_valid_tbl (default: nop; size: ?)
             print "Configuring access_valid_tbl"
-            for tmpoptype in [GETREQ_INSWITCH, GETREQ_LATEST_SEQ_INSWITCH]:
+            for tmpoptype in [GETREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
                 matchspec0 = netbufferv4_access_valid_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         inswitch_hdr_is_cached = 1)
@@ -509,13 +515,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         status_hdr_valid = valid)
                 self.client.access_latest_tbl_table_add_with_get_latest(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
-                if valid == 1:
-                    matchspec0 = netbufferv4_access_latest_tbl_match_spec_t(\
-                            op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
-                            inswitch_hdr_is_cached = 1,
-                            status_hdr_valid = valid)
-                    self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+                for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
+                    if valid == 1:
+                        matchspec0 = netbufferv4_access_latest_tbl_match_spec_t(\
+                                op_hdr_optype = tmpoptype,
+                                inswitch_hdr_is_cached = 1,
+                                status_hdr_valid = valid)
+                        self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 3
 
@@ -538,6 +545,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 status_hdr_is_latest = is_latest)
                         self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
+                        matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
+                                op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH,
+                                inswitch_hdr_is_cached = 1,
+                                status_hdr_valid = valid,
+                                status_hdr_is_latest = is_latest)
+                        self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: update_vallen_tbl (default: nop; 24)
             print "Configuring update_vallen_tbl"
@@ -550,14 +564,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             status_hdr_is_latest = is_latest)
                     self.client.update_vallen_tbl_table_add_with_get_vallen(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
-                    if valid == 1 and is_latest == 0:
-                        matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
-                                op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
-                                inswitch_hdr_is_cached = 1,
-                                status_hdr_valid = valid,
-                                status_hdr_is_latest = is_latest)
-                        self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
+                    for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
+                        if valid == 1 and is_latest == 0:
+                            matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
+                                    op_hdr_optype = tmpoptype,
+                                    inswitch_hdr_is_cached = 1,
+                                    status_hdr_valid = valid,
+                                    status_hdr_is_latest = is_latest)
+                            self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 4-11
 
@@ -794,6 +809,27 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         status_hdr_is_deleted = is_deleted,
                                         inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline)
                                     self.client.eg_port_forward_tbl_table_drop_getres_latest_seq_inswitch(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                        op_hdr_optype = GETRES_DELETED_SEQ,
+                                        inswitch_hdr_is_cached = is_cached,
+                                        meta_is_hot = is_hot,
+                                        status_hdr_valid = valid,
+                                        status_hdr_is_latest = is_latest,
+                                        status_hdr_is_deleted = is_deleted,
+                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline)
+                                    # TODO: check if we need to set egress port for packet cloned by clone_i2e
+                                    self.client.eg_port_forward_tbl_table_update_getres_deleted_seq_to_getres(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                        op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH,
+                                        inswitch_hdr_is_cached = is_cached,
+                                        meta_is_hot = is_hot,
+                                        status_hdr_valid = valid,
+                                        status_hdr_is_latest = is_latest,
+                                        status_hdr_is_deleted = is_deleted,
+                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline)
+                                    self.client.eg_port_forward_tbl_table_drop_getres_deleted_seq_inswitch(\
                                             self.sess_hdl, self.dev_tgt, matchspec0)
 
 

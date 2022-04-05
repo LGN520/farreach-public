@@ -171,6 +171,16 @@ action drop_getres_latest_seq_inswitch() {
 	drop();
 }
 
+action update_getres_deleted_seq_to_getres() {
+	modify_field(op_hdr.optype, GETRES);
+
+	remove_header(seq_hdr);
+}
+
+action drop_getres_deleted_seq_inswitch() {
+	drop();
+}
+
 table eg_port_forward_tbl {
 	reads {
 		op_hdr_optype: exact;
@@ -191,6 +201,8 @@ table eg_port_forward_tbl {
 		update_getreq_inswitch_to_getres_by_mirroring;
 		update_getres_latest_seq_to_getres; // GETRES_LATEST_SEQ must be cloned from ingress to egress
 		drop_getres_latest_seq_inswitch; // original packet of GETRES_LATEST_SEQ
+		update_getres_deleted_seq_to_getres; // GETRES_DELETED_SEQ must be cloned from ingress to egress
+		drop_getres_deleted_seq_inswitch; // original packet of GETRES_DELETED_SEQ
 		nop;
 	}
 	default_action: nop();
