@@ -7,7 +7,7 @@
 	+ As savedseq of such a record must <= seq in server, no unnecessary overwrite for eviction and no incorrect result for range query
 	+ For the results with latest=1 from PUTREQ/DELREQ, savedseq can be either larger or smaller than seq in server -> seq comparison
 - For crash-consistent snapshot
-	+ NOTE: we do not need case3 as it does not save bandwidth, while explict notification for server-side snapshot is acceptable as snapshot is not frequent and dominated by register loading
+	+ NOTE: we need case3 packet but not need case3 reg, as it does not save bandwidth, while explict notification for server-side snapshot is acceptable as snapshot is not frequent and dominated by register loading
 	+ TODO: Controller
 		* Prologue: send prepare messages to servers to enable current server-side snapshot; notify each switch OS to reset case1
 		* Execution: set backup flag as true -> load in-switch cache -> set backup flag as false
@@ -18,6 +18,7 @@
 		* Set snapshot flag = false only if receiving a prepare message of current period
 		* When receiving case3 packet from data plane or explicit notification from controller, make server-side snapshot only if snapshot flag = false -> set snapshot flag = true
 	+ NOTE: it guarantees that each server must make a server-side snapshot for each snapshot period exactly once!
+- NOTE: one register can provide at most 3 stateful APIs -> we cannot aggregate valid and latest/deleted as a whole
 
 ## Overview
 
@@ -27,49 +28,67 @@
 	+ Value header: 4B vallen, variable length value (8B padding if vallen <= 128B)
 	+ Result header: 1B result
 		* NOTE: success flag for PUTRES/DELRES; deleted flag for GETRES; SCANRES does not need it
-	+ Inswitch header: 1b is_cached, 1b is_sampled, 9b sid, 5b padding, 2B hashval, 2B serveridx (for case3), 2B idx
+	+ Inswitch header: 1b is_cached, 1b is_sampled, 1b is_wrong_pipeline, 9 bit eport_for_res, 9b sid, 3b padding, 2B hashval, 2B idx
 - Client
 - Switch
 	+ Ingress pipeline
 		* Stage 0
-			- TODO: sid_tbl (optype, ingress port -> sid)
+			- sid_tbl (optype, ingress port -> eport_for_res, sid)
+				+ optype: GETREQ, PUTREQ, DELREQ
 				+ sid: used by egress pipeline to generate response by packet mirroring
-			- cache_lookup_tbl (optype, key -> idx, is_cached)
+			- cache_lookup_tbl (key -> idx, is_cached)
 				+ idx: index for in-switch cache (assigned by controller)
+				+ NOTE: even if the packet is not FarReach packet, set inswitch_hdr does not affect their PHVs
 			- hash_tbl (optype, key -> hashval)
+				+ optype: GETREQ, PUTREQ, DELREQ
 				- hash_for_partition_tbl (optype, key -> hash_partitionidx)
 					+ Hash_partitionidx: partition across servers
 				- hash_for_CM_tbl (optype, key -> hash_cmidx)
 					+ hash_cmidx: index for CM
 				- In implementation, we use hashval = hash_partitionidx = hash_cmidx to save PHV
 			- sample_tbl (optype, key -> is_sampled)
+				+ optype: GETREQ, PUTREQ, DELREQ
 			- TODO: In distributed extension, spine/leaf switch uses idx to access the bucket in the corresponding virtual switch (controller has considered partition across virtual spine/leaf switches when assigning idx)
 				+ TODO: Only leaf switch needs to perform hash_for_partition_tbl for partition across servers
 				+ TODO; Only spine switch needs to assign seq
-
 				+ NOTE: we enforce spine-leaf path for each key to ensure serializability and availability, which can be statically configured into switches (no hash operation in client); however, DistCache uses dynamic mechanism (power-of-two-choices) for load balance, client needs to perform hash-based sampling
 					* TODO: In DistCache, client calculates a hash value to introduce sampling overhead
 					* TODO: But not need to embed the sampling result; instead, we can use in-switch sample to choose spine or leaf;
 			- NOTE: SCANREQ does not access all above tables
-		* Stage 1: hash_partition_tbl or range_partition_tbl
-			- Hash partition: (optype, hashval range -> udp.dstPort, egress_port)
-				+ TODO: Check why we need the param of 0 for MAT with range matching
-			- TODO: range partition: (optype, key range -> udp.dstPort, egress_port)
-				+ TODO: We treat the most significant 4B of key as int32_t for range matching -> need conversion between little-endian and small-endian for the 4B of each key
-			- NOTE: we use udp.dstPort to simulate different egress ports
+		* Stage 1
+			- hash_partition_tbl or range_partition_tbl
+				- Hash partition: (optype, hashval range, ingress port -> udp.dstPort, egress port, is_wrong_pipeline)
+					+ optype: GETREQ, PUTREQ, DELREQ
+					+ TODO: Check why we need the param of 0 for MAT with range matching
+				- TODO: range partition: (optype, key range, ingress port -> udp.dstPort, egress port)
+					+ optype: GETREQ, PUTREQ, DELREQ, SCANREQ
+					+ TODO: We treat the most significant 4B of key as int32_t for range matching -> need conversion between little-endian and small-endian for the 4B of each key
+				- NOTE: we use different udp.dstPort under the same egress port to simulate different egress ports
 		* Stage 2: ig_port_forward_tbl (op_hdr.optype -> op_hdr.optype)
+			- optype: GETREQ, PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ
 			- Add inswitch_hdr to FarReach packet
+		* Stage 3: ipv4_forward_tbl (optype, ingress port, dstip -> egress port)
+			- optype: GETRES, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH
+			- For normal responses from server: set egress port to corresponding client
+			- For GETRES_LATEST_SEQ/GETRES_DELETED_SEQ + INSWITCH from server	
+				- Set egress port as ingress port to forward original packet to the same egress pipeline
+				- Clone the original packet to corresponding client by clone_i2e for normal GETRES
+			- NOTE: responses in ingress pipeline must come from server; switch-issues responses must in egress pipeline
 	+ Egress pipeline
 		* Stage 0 (4 ALU)
 			- CM: 4 register arrays of 16b (optype, is_sampled, is_cached, hashval -> cm_predicates)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
 				+ NOTE: CM_BUCKET_COUNT is independent with KV_BUCKET_COUNT
 				+ NOTE: we resort to server to notify controller to avoid in-switch BF; NetCache directly reports to server yet with BF
 			- TODO: is_snapshot_tbl (optype -> is_snapshot)
 		* Stage 1 (4 ALU)
 			- is_hot_tbl (cm_predicates -> meta.is_hot)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
 				+ Reduce 4 cm_predicates into 1 meta.is_hot to reduce TCAM usage
 			- cache_frequency_tbl (optype, is_sampled, is_cached, idx -> none)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
 			- valid_tbl (optype, is_cached, idx -> is_valid)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH
 				+ NOTE: valid for cache population/eviction atomicity
 					* TODO: valid=0 (invalid: newly-populated entry yet not all lookup tables are updated)
 					* TODO: valid=1 (valid: cached entry with all lookup tables being updated)
@@ -87,35 +106,54 @@
 						- TODO: For valid=0/3, the record is managed by controller
 							+ valid=0: if being snapshoted, remove the newly populated record from snapshot if any
 							+ valid=3: if being evicted, keep the original cached record in snapshot and remove the newly populated record from snapshot if any
+						- TODO; GETRES_LATEST_SEQ and GETRES_DELETED_SEQ can also trigger case1
 				+ TODO: PUTREQ_CASE1/DELREQ_CASE1 need to embed status_hdr.valid as valid could be 0
 			- TODO: seq (optype -> seq)
+				+ optype: PUTREQ_INSIWTCH, DELREQ_INSWITCH
 				+ NOTE: SEQ_BUCKET_COUNT is independent with KV_BUCKET_COUNT
 				+ NOTE: we need seq mechaism to avoid unnecessary overwrite caused by cache eviction
 			- TODO: case1 (optype, is_cached, idx, is_snapshot -> is_case1)
-		* Stage 2 (4 ALU)
-			- latest_tbl, deleted_tbl (optype, is_cached, idx -> status)
-				+ NOTE: one register can provide at most 3 stateful APIs -> cannot aggregate valid and latest/deleted as a whole
-					* As latest/deleted relies on valid for GETRES_LATEST/DELETED, we place valid before latest/deleted
-				+ NOTE: latest=0 means no PUTREQ/DELREQ or response of GETREQ_NLATEST arrive at switch
-				+ NOTE: even with seq mechanism, we still need latest_tbl for response of GETREQ_NLATEST/DELETED
-			- TODO: savedseq (optype, is_cached, idx, seq -> savedseq)
-				+ NOTE: we assume that there is no reordering between spine and leaf switch due to a single FIFO channel
-			- vallen (optype, is_cached, idx -> vallen_hdr and val_hdr)
+		* Stage 2 (1 ALU)
+			- latest_tbl (optype, is_cached, idx, valid -> is_latest)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH
+				+ NOTE: latest=0 means no PUTREQ/DELREQ/GETRES_LATEST_SEQ/GETRES_DELETED_SEQ arrive at switch
+				+ NOTE: even with seq mechanism, we still need latest_tbl for GETRES_LATEST_SEQ/GETRES_DELETED_SEQ 
+		* Stage 3 (3 ALU)
+			- deleted_tbl (optype, is_cached, idx, valid, is_latest -> is_deleted)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH
+			- vallen (optype, is_cached, idx, valid, is_latest -> vallen_hdr)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH
 				+ TODO: vallen and value can be placed from stage 1 to save # of stages if necessary
-		* Stage 3-9 (4 ALU)
-			- From vallo1 to valhi14 (optype, is_cached, idx -> vallen_hdr and val_hdr)
+			- TODO: savedseq (optype, is_cached, idx, seq, valid, is_latest -> savedseq)
+				+ TODO: optype: PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH
+				+ NOTE: we assume that there is no reordering between spine and leaf switch due to a single FIFO channel
+		* Stage 4-9 (4 ALU)
+			- From vallo1 to valhi12 (optype, is_cached, idx, valid, is_latest -> val_hdr)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
 		* Stage 10 (4 ALU)
-			- vallo15, valhi15, vallo16, valhi16 (optype, is_cached, idx -> vallen_hdr and val_hdr)
-			- TODO: eg_port_forward_tbl (optype, is_cached, is_hot, is_valid, is_latest, is_deleted)
+			- vallo13, valhi13, vallo14, valhi14 (optype, is_cached, idx, valid, is_latest -> val_hdr)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
+			- eg_port_forward_tbl (optype, is_cached, is_hot, is_valid, is_latest, is_deleted, is_wrong_pipeline -> optype)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_LATEST_SEQ
+				+ TODO: If TCAM of single stage is not enough, we can assume the value of each matched key field is initialized
+		* Stage 11 (4 ALU)
+			- vallo15, valhi15, vallo16, valhi16 (optype, is_cached, idx, valid, is_latest -> val_hdr)
+				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
+			- TODO: udphdr.hdrlen, ehterhdr.macaddr
 - Server
 - Controller
 - SwitchOS
 
 ## Details 
 
+- NOTE: For each RES directly answered by switch
+	+ If is_wrong_pipeline=0, set eg_intr_md.egress_port as inswitch_hdr.eport_for_res
+	+ Otherwise, use packet mirroring (drop original packet + clone_e2e to corresponding egress port by inswitch_hdr.sid)
+- NOTE: For each RES from server
+	+ See ipv4_forward_tbl for details
 - GETREQ
 	+ Client sends GETREQ
-	+ Ingress: GETREQ -> GETREQ_INSWITCH (is_sampled, is_cached, sid, hashval, idx)
+	+ Ingress: GETREQ -> GETREQ_INSWITCH (is_sampled, is_cached, is_wrong_pipeline, sid, hashval, idx)
 	+ Egress
 		* Stage 0: update CM if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=0; update CM
 		* Stage 1: update is_hot; update cache_frequency if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=1; get valid
@@ -129,30 +167,35 @@
 				- If valid=0, forward GETREQ to server
 				- If valid=1
 					+ If latest=0, forward GETREQ_NLATEST to server
-					+ If latest=1 and deleted=1, set result_hdr.result=0 as deleted and send back GETRES by packet mirroring
-					+ If latest=1 and deleted=0, set result_hdr.result=1, and send back GETRES by packet mirroring
+					+ If latest=1 and deleted=1, set result_hdr.result=0 as deleted and send back GETRES directly/mirrorly
+					+ If latest=1 and deleted=0, set result_hdr.result=1, and send back GETRES directly/mirrorly
 				- If valid=3
 					+ If latest=0, forward GETREQ to server
-					+ If latest=1 and deleted=1, set result_hdr.result=0 as deleted and send back GETRES by packet mirroring
-					+ If latest=1 and deleted=0, set result_hdr.result=1, and send back GETRES by packet mirroring
+					+ If latest=1 and deleted=1, set result_hdr.result=0 as deleted and send back GETRES directly/mirrorly
+					+ If latest=1 and deleted=0, set result_hdr.result=1, and send back GETRES directly/mirrorly
 	+ Server
 		* GETREQ -> GETRES
 		* GETREQ_POP
-			- TODO: If key not exist or vallen > 128B, send back GETRES and ignore cache population
+			- TODO: If key not exist, send back GETRES and ignore cache population
 			- TODO: Otherwise, send back GETRES and notify controller for cache population
 		* GETREQ_NLATEST
-			- TODO: If key exists and vallen > 128B, send back GETRES
-			- TODO: If key exists and vallen <= 128B, send back GETRES_LATEST
-			- TODO: If key not exist, send back GETRES_DELETED
+			- If key exists, send back GETRES_LATEST_SEQ
+			- If key not exist, send back GETRES_DELETED_SEQ
 - GETRES_LATEST_SEQ
-	+ TODO: Server sends GETRES_LATEST_SEQ
-	+ TODO: Ingress: GETRES_LATEST_SEQ -> GETRES_LATEST_SEQ_INSWITCH (is_cached, idx)
+	+ Server sends GETRES_LATEST_SEQ
+	+ Ingress
+		* GETRES_LATEST_SEQ -> GETRES_LATEST_SEQ_INSWITCH (is_cached, idx)
+		* ipv4_forward_tbl -> egress port of server (ingress port), eport_for_res, sid, is_wrong_pipeline
 	+ Egress
-		* TODO: If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
-			+ Set latest=1, delete=0, update savedseq, update vallen and value, forward GETRES to client
+		* If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
+			+ Set latest=1, delete=0, update savedseq (TODO), update vallen and value
+		* Drop original packet, forwrad cloned packet (i2e) to client
+			+ TODO: Check if we need to set eg_intr_md.egress_port for cloned packet (i2e)
 - GETRES_DELETED_SEQ
-	+ TODO: Server sends GETRES_DELETED_SEQ
-	+ TODO: Ingress: GETRES_DELETED_SEQ -> GETRES_DELETED_SEQ_INSWITCH (is_cached, idx)
+	+ Server sends GETRES_DELETED_SEQ
+	+ Ingress: 
+		* TODO: GETRES_DELETED_SEQ -> GETRES_DELETED_SEQ_INSWITCH (is_cached, is_wrong_pipeline, sid, eport_for_res, idx)
+		* TODO: ipv4_forward_tbl -> egress port of server (ingress port), eport_for_res, sid, is_wrong_pipeline
 	+ Egress
 		* TODO: If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
 			+ Set latest=1, deleted=1, update savedseq, update vallen and value, forward GETRES to client
@@ -169,10 +212,10 @@
 	+ TODO: test to_model_key in xindex_model_impl.h
 + Use int8_t instead of uint8_t for optype (packet_format.\*, ycsb/parser.\*)
 - Remove host-side hashidx (packet_format.\*)
-- Implement GET
-	+ Support GETREQ in client, switch, and server (packet_format.\*, ycsb_remote_client.c, \*.p4)
-	+ TODO: Support GETREQ_NLATEST
-	+ TODO: Support GETRES_LATEST_SEQ
+- Implement GET (packet_format.\*, ycsb_remote_client.c, ycsb_server.c, \*.p4)
+	+ Support GETREQ and GETRES in client, switch, and server
+	+ Support GETREQ_NLATEST in switch and server 
+	+ Support GETRES_LATEST_SEQ in server and switch
 	+ TODO: Support GETRES_DELETED_SEQ
 
 ## Simple test
@@ -223,3 +266,9 @@
 		* Stage 2 (4 ALU)
 			- latest_tbl, deleted_tbl (optype, is_cached, idx -> status)
 				+ TODO: even with seq mechanism, we still need latest_tbl for response of GETRES_NLATEST/DELETED (and PUTREQ_LARGE_EVICT)
++ Server
+	* GETREQ_POP
+		- TODO: If key not exist or vallen > 128B, send back GETRES and ignore cache population
+	* GETREQ_NLATEST
+		- TODO: If key exists and vallen > 128B, send back GETRES
+		- TODO: If key exists and vallen <= 128B, send back GETRES_LATEST

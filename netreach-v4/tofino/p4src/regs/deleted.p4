@@ -42,11 +42,13 @@ action reset_and_get_deleted() {
 	reset_and_get_deleted_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
-@pragma stage 2
+@pragma stage 3
 table access_deleted_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_deleted;

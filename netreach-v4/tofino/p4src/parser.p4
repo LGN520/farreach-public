@@ -34,6 +34,9 @@ parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
 		GETREQ_INSWITCH: parse_inswitch;
+		GETRES: parse_vallen;
+		GETRES_LATEST_SEQ: parse_vallen;
+		GETRES_LATEST_SEQ_INSWITCH: parse_vallen;
 		default: ingress; // GETREQ, GETREQ_POP, GETREQ_NLATEST
 
 
@@ -120,6 +123,11 @@ parser parse_vallen {
 
 parser parse_val_len0 {
 	return select(op_hdr.optype) {
+		GETRES_LATEST_SEQ: parse_seq;
+		GETRES_LATEST_SEQ_INSWITCH: parse_seq;
+		default: ingress; // GETRES
+
+
 		GETRES_POP_TYPE: parse_seq;
 		GETRES_POP_EVICT_TYPE: parse_seq;
 		GETRES_POP_EVICT_CASE2_TYPE: parse_seq;
@@ -227,28 +235,26 @@ parser parse_val_len16 {
 parser parse_seq {
 	extract(seq_hdr);
 	return select(op_hdr.optype) {
+		GETRES_LATEST_SEQ_INSWITCH: parse_inswitch;
+		default: ingress; // GETRES_LATEST_SEQ
+		
+
+
 		GETRES_POP_EVICT_CASE2_TYPE: parse_other;
 		GETRES_POP_EVICT_CASE2_SWITCH_TYPE: parse_other;
 		PUTREQ_POP_EVICT_CASE2_TYPE: parse_other;
 		PUTREQ_POP_EVICT_CASE2_SWITCH_TYPE: parse_other;
-		default: ingress;
 	}
 }
 
-// Only for PUTRES_CASE3 and DELRES_CASE3
-parser parser_serveridx {
-	extract(serveridx_hdr);
-	return parse_res;
-}
-
-parser parse_res {
-	extract(res_hdr);
+parser parse_result {
+	extract(result_hdr);
 	return ingress;
 }
 
 parser parse_inswitch {
 	extract(inswitch_hdr);
-	return ingress;
+	return ingress; // GETRES_LATEST_SEQ_INSWITCH
 }
 
 parser parse_other {

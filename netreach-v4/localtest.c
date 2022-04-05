@@ -410,7 +410,7 @@ void *run_sfg(void * param) {
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << tmp_key.to_string() << " val = " << tmp_val);*/
 
 	  val_t tmp_val;
-	  int32_t tmp_seq;
+	  int32_t tmp_seq = 0;
 #ifndef ORIGINAL_XINDEX
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << op_keys[(query_i + delete_i) % op_keys.size()].to_string());
 #endif

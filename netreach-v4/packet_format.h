@@ -12,6 +12,7 @@
 
 enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES,
+	GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ,
 };
 typedef PacketType packet_type_t;
 
@@ -169,6 +170,54 @@ class GetRequestPOP : public GetRequest<key_t> {
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
+
+template<class key_t>
+class GetRequestNLatest : public GetRequest<key_t> {
+	public: 
+		GetRequestNLatest(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+template<class key_t, class val_t>
+class GetResponseLatestSeq : public GetResponse<key_t, val_t> { // seq
+	public: 
+		GetResponseLatestSeq(key_t key, val_t val, int32_t seq);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+		int32_t seq() const;
+
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		int32_t _seq;
+};
+
+template<class key_t, class val_t>
+class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // seq
+	public: 
+		GetResponseLatestSeq(key_t key, val_t val, int32_t seq);
+
+	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 template<class key_t, class val_t>
 class GetResponsePOP : public GetResponse<key_t, val_t> { // seq

@@ -6,6 +6,7 @@ action nop() {}
 
 action set_sid(sid) {
 	modify_field(inswitch_hdr.sid, sid);
+	modify_field(inswitch_hdr.eport_for_res, ig_intr_md.ingress_port);
 }
 
 @pragma stage 0
@@ -33,7 +34,6 @@ action uncached_action() {
 @pragma stage 0
 table cache_lookup_tbl {
 	reads {
-		op_hdr.optype: exact;
 		op_hdr.keylolo: exact;
 		op_hdr.keylohi: exact;
 		op_hdr.keyhilo: exact;
@@ -106,10 +106,10 @@ table sample_tbl {
 
 // Stage 1
 
-action hash_partition(udpport, serveridx, eport) {
+action hash_partition(udpport, eport, is_wrong_pipeline) {
 	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(serveridx_hdr.serveridx, serveridx);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
 }
 
 @pragma stage 1
@@ -117,6 +117,7 @@ table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.hashval: range;
+		ig_intr_md.ingress_port: exact;
 	}
 	actions {
 		hash_partition;
@@ -130,7 +131,11 @@ table hash_partition_tbl {
 
 action update_getreq_to_getreq_inswitch() {
 	modify_field(op_hdr.optype, GETREQ_INSWITCH);
-	modify_field(inswitch_hdr.ingress_port, ig_intr_md.ingress_port);
+	add_header(inswitch_hdr);
+}
+
+action update_getres_latest_seq_to_getres_latest_seq_inswitch() {
+	modify_field(op_hdr.optype, GETRES_LATEST_SEQ_INSWITCH);
 	add_header(inswitch_hdr);
 }
 
@@ -141,6 +146,33 @@ table ig_port_forward_tbl {
 	}
 	actions {
 		update_getreq_to_getreq_inswitch;
+		update_getres_latest_seq_to_getres_latest_seq_inswitch;
+		nop;
+	}
+	default_action: nop();
+	size: 0;
+}
+
+// Stage 3
+
+action forward_normal_response(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_ingress_port, eport);
+}
+
+action forward_special_get_response(sid) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
+	clone_ingress_to_egress(sid); // Cloned packet enter the egress pipeline to corresponding client
+}
+
+@pragma stage 3
+table ipv4_forward_tbl {
+	reads {
+		op_hdr.optype: exact;
+		ipv4_hdr.dstAddr: lpm;
+	}
+	actions {
+		forward_normal_response;
+		forward_special_get_response;
 		nop;
 	}
 	default_action: nop();

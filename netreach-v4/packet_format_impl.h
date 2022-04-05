@@ -259,14 +259,14 @@ GetResponse<key_t, val_t>::GetResponse()
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse(key_t key, val_t val) 
-	: Packet<key_t>(PacketType::GET_RES, key), _val(val)
+	: Packet<key_t>(PacketType::GETRES, key), _val(val)
 {	
 }
 
 template<class key_t, class val_t>
 GetResponse<key_t, val_t>::GetResponse(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_RES);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES);
 }
 
 template<class key_t, class val_t>
@@ -533,6 +533,91 @@ uint32_t GetRequestPOP<key_t>::serialize(char * const data, uint32_t max_size)
 {
 	COUT_N_EXIT("Invalid invoke of serialize for GetRequestPOP");
 }
+
+// GetRequestNLatest
+
+template<class key_t>
+GetRequestNLatest<key_t>::GetRequestNLatest(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETREQ_NLATEST);
+}
+
+template<class key_t>
+uint32_t GetRequestNLatest<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for GetRequestNLatest");
+}
+
+// GetResponseLatestSeq (value must <= 128B)
+
+template<class key_t, class val_t>
+GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key_t key, val_t val, int32_t seq)
+	: GetResponse<key_t, val_t>::GetResponse(key, val), _seq(seq)
+{
+	this->_type = static_cast<uint8_t>(PacketType::GETRES_LATEST_SEQ);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+uint32_t GetResponseLatestSeq<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	//uint32_t my_size = this->size();
+	//INVARIANT(max_size >= my_size);
+	char *begin = data;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
+	begin += tmp_valsize;
+	uint32_t bigendian_seq = htonl(uint32_t(this->_seq));
+	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
+	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(uint32_t);
+}
+
+template<class key_t, class val_t>
+int32_t GetResponseLatestSeq<key_t, val_t>::seq() {
+	return this->_seq;
+}
+
+template<class key_t, class val_t>
+uint32_t GetResponseLatestSeq<key_t, val_t>::size() { // unused
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t) + val_t::MAX_VALLEN + sizeof(int32_t);
+}
+
+template<class key_t, class val_t>
+void GetResponseLatestSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
+{
+	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseLatestSeq");
+}
+
+// GetResponseDeletedSeq (value must = 0B)
+
+template<class key_t, class val_t>
+GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(key_t key, val_t val, int32_t seq)
+	: GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key, val, seq)
+{
+	this->_type = static_cast<uint8_t>(PacketType::GETRES_DELETED_SEQ);
+	INVARIANT(this->_val.val_length == 0);
+}
+
+template<class key_t, class val_t>
+void GetResponseDeletedSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
+{
+	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseDeletedSeq");
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 // GetResponsePOP (value must <= 128B)
 

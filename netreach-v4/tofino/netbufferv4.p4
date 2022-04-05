@@ -15,6 +15,10 @@
 #define GETREQ_INSWITCH 0x08
 #define GETREQ_POP 0x09
 #define GETREQ_NLATEST 0x0a
+#define GETRES_LATEST_SEQ 0x0b
+#define GETRES_DELETED_SEQ 0x0c
+#define GETRES_LATEST_SEQ_INSWITCH 0x0d
+#define GETRES_DELETED_SEQ_INSWITCH 0x0e
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)
@@ -27,8 +31,6 @@
 #define CM_BUCKET_COUNT 65536
 #define HH_THRESHOLD 100
 
-#define MAX_SERVERNUM 256
-
 // NOTE: you should change the two macros according to maximum val length
 // SEQ_PKTLEN: sizeof(seq_hdr), e.g., PUTREQ -> PUTREQ_RECIR, PUTREQ_RECIR -> PUTREQ_POP/PUTREQ
 // STAT_PKTLEN: sizeof(stat), e.g., DELREQ -> DELRES
@@ -40,7 +42,6 @@
 #define SEQ_PKTLEN_MINUS_STAT 3
 #define OTHER_PKTLEN 1
 #define SEQ_PKTLEN_MINUS_OTHER 3
-#define SERVERIDX_PKTLEN 2
 
 //#define CPU_PORT 192
 
@@ -85,6 +86,9 @@ control ingress {
 
 	// Stgae 2
 	apply(ig_port_forward_tbl);
+
+	// Stage 3
+	apply(ipv4_forward_tbl);
 }
 
 /* Egress Processing */
@@ -104,10 +108,12 @@ control egress {
 
 	// Stage 2
 	apply(access_latest_tbl);
+
+	// Stage 3
 	apply(access_deleted_tbl);
 	apply(update_vallen_tbl);
 
-	// Stage 3-9
+	// Stage 4-9
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
 	apply(update_vallo2_tbl);
@@ -132,17 +138,19 @@ control egress {
 	apply(update_valhi11_tbl);
 	apply(update_vallo12_tbl);
 	apply(update_valhi12_tbl);
+
+	// Stage 10
 	apply(update_vallo13_tbl);
 	apply(update_valhi13_tbl);
 	apply(update_vallo14_tbl);
 	apply(update_valhi14_tbl);
+	apply(eg_port_forward_tbl);
 
-	// Stage 10
+	// Stage 11
 	apply(update_vallo15_tbl);
 	apply(update_valhi15_tbl);
 	apply(update_vallo16_tbl);
 	apply(update_valhi16_tbl);
-	apply(eg_port_forward_tbl);
 
 
 

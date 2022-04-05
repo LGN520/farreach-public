@@ -75,6 +75,12 @@ typedef PutResponse<index_key_t> put_response_t;
 typedef DelResponse<index_key_t> del_response_t;
 typedef ScanResponse<index_key_t, val_t> scan_response_t;
 typedef GetRequestPOP<index_key_t> get_request_pop_t;
+typedef GetRequestNLatest<index_key_t> get_request_nlatest_t;
+typedef GetResponseLatestSeq<index_key_t, val_t> get_response_latest_seq_t;
+typedef GetResponseDeletedSeq<index_key_t, val_t> get_response_deleted_seq_t;
+
+
+
 typedef GetResponsePOP<index_key_t, val_t> get_response_pop_t;
 typedef GetResponseNPOP<index_key_t, val_t> get_response_npop_t;
 typedef GetResponsePOPLarge<index_key_t, val_t> get_response_pop_lareg_t;
@@ -1591,16 +1597,39 @@ static int run_sfg(void * param) {
 
 		packet_type_t pkt_type = get_packet_type(buf, recv_size);
 		switch (pkt_type) {
-			case packet_type_t::GET_REQ: 
+			case packet_type_t::GETREQ: 
 				{
 					get_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
-					int32_t tmp_seq;
+					int32_t tmp_seq = 0;
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					get_response_t rsp(req.key(), tmp_val);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::GETREQ_NLATEST:
+				{
+					get_request_nlatest_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					val_t tmp_val;
+					int32_t tmp_seq = 0;
+					bool tmp_stat = table->get(req.key(), tmp_val, thread_id, tmp_seq);
+					//COUT_THIS("[server] val = " << tmp_val.to_string())
+					if (tmp_stat) { // key exists
+						get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_seq);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					}
+					else { // key not exist
+						get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					}
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);

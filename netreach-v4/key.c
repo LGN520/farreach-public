@@ -239,3 +239,10 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) {
 	return 8;
 #endif
 }
+
+/*uint32_t Key::size() const {
+#ifdef LARGE_KEY
+	return 16;
+#else
+	return 8;
+}*/

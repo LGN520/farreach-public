@@ -42,11 +42,13 @@ action reset_and_get_vallen() {
 	reset_and_get_vallen_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
-@pragma stage 2
+@pragma stage 3
 table update_vallen_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallen;
@@ -93,6 +95,8 @@ table update_vallo1_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo1;
@@ -138,6 +142,8 @@ table update_valhi1_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi1;
@@ -183,6 +189,8 @@ table update_vallo2_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo2;
@@ -228,6 +236,8 @@ table update_valhi2_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi2;
@@ -273,6 +283,8 @@ table update_vallo3_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo3;
@@ -318,6 +330,8 @@ table update_valhi3_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi3;
@@ -363,6 +377,8 @@ table update_vallo4_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo4;
@@ -408,6 +424,8 @@ table update_valhi4_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi4;
@@ -453,6 +471,8 @@ table update_vallo5_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo5;
@@ -498,6 +518,8 @@ table update_valhi5_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi5;
@@ -543,6 +565,8 @@ table update_vallo6_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo6;
@@ -588,6 +612,8 @@ table update_valhi6_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi6;
@@ -633,6 +659,8 @@ table update_vallo7_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo7;
@@ -678,6 +706,8 @@ table update_valhi7_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi7;
@@ -723,6 +753,8 @@ table update_vallo8_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo8;
@@ -768,6 +800,8 @@ table update_valhi8_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi8;
@@ -813,6 +847,8 @@ table update_vallo9_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo9;
@@ -858,6 +894,8 @@ table update_valhi9_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi9;
@@ -903,6 +941,8 @@ table update_vallo10_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo10;
@@ -948,6 +988,8 @@ table update_valhi10_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi10;
@@ -993,6 +1035,8 @@ table update_vallo11_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo11;
@@ -1038,6 +1082,8 @@ table update_valhi11_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi11;
@@ -1083,6 +1129,8 @@ table update_vallo12_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo12;
@@ -1128,6 +1176,8 @@ table update_valhi12_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi12;
@@ -1173,6 +1223,8 @@ table update_vallo13_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo13;
@@ -1218,6 +1270,8 @@ table update_valhi13_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi13;
@@ -1263,6 +1317,8 @@ table update_vallo14_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo14;
@@ -1308,6 +1364,8 @@ table update_valhi14_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi14;
@@ -1353,6 +1411,8 @@ table update_vallo15_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo15;
@@ -1398,6 +1458,8 @@ table update_valhi15_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi15;
@@ -1443,6 +1505,8 @@ table update_vallo16_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_vallo16;
@@ -1488,6 +1552,8 @@ table update_valhi16_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
 	}
 	actions {
 		get_valhi16;

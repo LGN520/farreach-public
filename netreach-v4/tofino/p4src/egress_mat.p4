@@ -29,6 +29,7 @@ table is_hot_tbl {
 
 action update_getreq_inswitch_to_getreq(eport) {
 	modify_field(op_hdr.optype, GETREQ);
+
 	remove_header(inswitch_hdr);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
@@ -36,6 +37,7 @@ action update_getreq_inswitch_to_getreq(eport) {
 
 action update_getreq_inswitch_to_getreq_pop(eport) {
 	modify_field(op_hdr.optype, GETREQ_POP);
+
 	remove_header(inswitch_hdr);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
@@ -43,44 +45,152 @@ action update_getreq_inswitch_to_getreq_pop(eport) {
 
 action update_getreq_inswitch_to_getreq_nlatest(eport) {
 	modify_field(op_hdr.optype, GETREQ_NLATEST);
+
 	remove_header(inswitch_hdr);
 
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
+action update_getreq_inswitch_to_getres_for_deleted() {
+	modify_field(op_hdr.optype, GETRES);
+	modify_field(result_hdr.result, 0);
+
+	remove_header(inswitch_hdr);
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	add_header(val16_hdr);
+	add_header(result_hdr);
+
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, inswitch_hdr.eport_for_res);
+}
+
 action update_getreq_inswitch_to_getres_for_deleted_by_mirroring() {
 	modify_field(op_hdr.optype, GETRES);
-	remove_header(inswitch_hdr);
 	modify_field(result_hdr.result, 0);
+
+	remove_header(inswitch_hdr);
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	add_header(val16_hdr);
+	add_header(result_hdr);
 
 	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
 }
 
+action update_getreq_inswitch_to_getres() {
+	modify_field(op_hdr.optype, GETRES);
+	modify_field(result_hdr.result, 1);
+
+	remove_header(inswitch_hdr);
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	add_header(val16_hdr);
+	add_header(result_hdr);
+
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, inswitch_hdr.eport_for_res);
+}
+
 action update_getreq_inswitch_to_getres_by_mirroring() {
 	modify_field(op_hdr.optype, GETRES);
-	remove_header(inswitch_hdr);
 	modify_field(result_hdr.result, 1);
+
+	remove_header(inswitch_hdr);
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	add_header(val16_hdr);
+	add_header(result_hdr);
 
 	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
+}
+
+action update_getres_latest_seq_to_getres() {
+	modify_field(op_hdr.optype, GETRES);
+
+	remove_header(seq_hdr);
+}
+
+action drop_getres_latest_seq_inswitch() {
+	drop();
 }
 
 table eg_port_forward_tbl {
 	reads {
 		op_hdr_optype: exact;
-		inswitch_hdr_is_cached: exact;
-		meta_is_hot: exact;
-		status_hdr_is_valid: exact;
-		status_hdr_is_latest: exact;
-		status_hdr_is_deleted: exact;
+		inswitch_hdr.is_cached: exact;
+		meta.is_hot: exact;
+		status_hdr.valid: exact;
+		status_hdr.is_latest: exact;
+		status_hdr.is_deleted: exact;
+		inswitch_hdr.is_wrong_pipeline: exact;
 	}
 	actions {
 		update_getreq_inswitch_to_getreq;
 		update_getreq_inswitch_to_getreq_pop;
 		update_getreq_inswitch_to_getreq_nlatest;
+		update_getreq_inswitch_to_getres_for_deleted;
 		update_getreq_inswitch_to_getres_for_deleted_by_mirroring;
+		update_getreq_inswitch_to_getres;
 		update_getreq_inswitch_to_getres_by_mirroring;
+		update_getres_latest_seq_to_getres; // GETRES_LATEST_SEQ must be cloned from ingress to egress
+		drop_getres_latest_seq_inswitch; // original packet of GETRES_LATEST_SEQ
 		nop;
 	}
 	default_action: nop();

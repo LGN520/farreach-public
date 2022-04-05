@@ -59,6 +59,23 @@ header_type val_t {
 	}
 }
 
+header_type inswitch_t {
+	fields {
+		is_cached: 1;
+		is_sampled: 1;
+		is_wrong_pipeline: 1;
+		eport_for_res: 9;
+		sid: 9;
+		padding: 3;
+		hashval: 16; // index for both partition and CM
+		idx: 16; // index for in-switch cache
+	}
+}
+
+
+
+
+
 header_type seq_t {
 	fields {
 		seq: 32;
@@ -71,29 +88,12 @@ header_type result_t {
 	}
 }
 
-header_type inswitch_t {
-	fields {
-		is_cached: 1;
-		is_sampled: 1;
-		sid: 9;
-		padding: 5;
-		hashval: 16; // index for both partition and CM
-		idx: 16; // index for in-switch cache
-	}
-}
-
 header_type status_t {
 	fields {
 		valid: 8; // if the entry is valid
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		padding: 6;
-	}
-}
-
-header_type serveridx_t {
-	fields {
-		serveridx: 16; // used to index case3 reg
 	}
 }
 
@@ -142,7 +142,7 @@ header val_t val14_hdr;
 header val_t val15_hdr;
 header val_t val16_hdr;
 header inswitch_t inswitch_hdr;
-header res_t res_hdr;
+header result_t result_hdr;
 
 header seq_t seq_hdr;
 header status_t status_hdr;
