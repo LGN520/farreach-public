@@ -21,7 +21,6 @@
 #include <map>
 
 #include "helper.h"
-#include "packet_format_impl.h"
 #include "dpdk_helper.h"
 #include "key.h"
 #include "iniparser/iniparser_wrapper.h"
@@ -64,20 +63,6 @@ typedef Val val_t;
 typedef LoadSFGParam load_sfg_param_t;
 typedef SFGParam sfg_param_t;
 //typedef ReceiverParam receiver_param_t;
-typedef TcpServerParam tcpserver_param_t
-typedef xindex::XIndex<index_key_t, val_t> xindex_t;
-typedef GetRequest<index_key_t> get_request_t;
-typedef PutRequest<index_key_t, val_t> put_request_t;
-typedef DelRequest<index_key_t> del_request_t;
-typedef ScanRequest<index_key_t> scan_request_t;
-typedef GetResponse<index_key_t, val_t> get_response_t;
-typedef PutResponse<index_key_t> put_response_t;
-typedef DelResponse<index_key_t> del_response_t;
-typedef ScanResponse<index_key_t, val_t> scan_response_t;
-typedef GetRequestPOP<index_key_t> get_request_pop_t;
-typedef GetRequestNLatest<index_key_t> get_request_nlatest_t;
-typedef GetResponseLatestSeq<index_key_t, val_t> get_response_latest_seq_t;
-typedef GetResponseDeletedSeq<index_key_t, val_t> get_response_deleted_seq_t;
 
 
 
@@ -107,9 +92,7 @@ typedef GetResponsePOPEvictCase2Switch<index_key_t, val_t> get_response_pop_evic
 typedef PutRequestPOPEvictCase2Switch<index_key_t, val_t> put_request_pop_evict_case2_switch_t;
 typedef PutRequestLargeEvictCase2Switch<index_key_t, val_t> put_request_large_evict_case2_switch_t;
 
-// Get configuration
-inline void parse_ini(const char * config_file);
-inline void parse_args(int, char **);
+#include "common_impl.h"
 
 // Prepare data structures
 void preprae_for_pktloss();
@@ -117,9 +100,6 @@ void prepare_dpdk();
 void prepare_receiver();
 
 // loading phase
-size_t split_n;
-size_t load_n;
-char output_dir[256];
 volatile bool load_running = false;
 std::atomic<size_t> load_ready_threads(0);
 void run_load_server(xindex_t *table); // loading phase
@@ -153,7 +133,6 @@ uint32_t* volatile tails_for_pktloss;
 };*/
 
 // (2) Backuper for processing in-switch snapshot
-short backup_port;
 void *run_backuper(void *param); // backuper
 void *run_kvparser(void *param); // KV parser 
 void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expected_count, backup_data_t *new_backup_data); // Helper to process backup data
@@ -167,31 +146,22 @@ std::atomic_flag is_kvsnapshot = ATOMIC_FLAG_INIT;
 void try_kvsnapshot(xindex_t *table);
 
 // (2-1) Notified for processing explicit notification of server-side snapshot
-short notified_port;
 void *run_notified(void *param); // the notified
+
 
 // (3) Switch os simulator for processing special cases and packet loss handling (and tcp servers for workers)
 deleted_set_t *deleted_sets = NULL;
 //static int run_switchos_simulator(void *param);
 void *run_switchos_simulator(void *param);
-short pktloss_port_start = 2222;
 int * volatile server_tcpsocks = NULL; // tcp socket in server to receive mirrored pkt from switch os
 int * volatile switchos_tcpsocks = NULL; // tcp socket in switch os to send mirrored pkt to server
 std::atomic<size_t> ready_tcpserver_threads(0);
 void *run_tcpserver_for_pktloss(void *param);
-struct alignas(CACHELINE_SIZE) TcpServerParam {
-	uint8_t thread_id;
-};
 
 // (4) Worker for processing pkts
 static int run_sfg(void *param); // workers in runing phase
 //void *run_sfg(void *param);
 void kill(int signum);
-size_t fg_n = 1;
-size_t bg_n = 1;
-short dst_port_start = 1111;
-const char *workload_name = nullptr;
-uint32_t kv_bucket_num;
 struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
   uint8_t thread_id;
@@ -202,7 +172,6 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 };
 
 
-size_t per_server_range;
 size_t get_server_idx(index_key_t key) {
 	size_t server_idx = key.keylo / per_server_range;
 	if (server_idx >= fg_n) {
@@ -231,6 +200,7 @@ int main(int argc, char **argv) {
 
   // Prepare switch os simulator for packet loss
   prepare_for_pktloss();
+  prepare_controller();
 
   // prepare xindex
   std::vector<index_key_t> keys;
@@ -256,6 +226,8 @@ int main(int argc, char **argv) {
   run_server(tab_xi); // running phase
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
 
+  close_controller();
+
   // Free DPDK mbufs
   for (size_t i = 0; i < fg_n; i++) {
 	//rte_pktmbuf_free((struct rte_mbuf *)pkts[i]);
@@ -268,116 +240,6 @@ int main(int argc, char **argv) {
 
   COUT_THIS("[server] Exit successfully")
   exit(0);
-}
-
-/*
- * Get configuration
- */
-
-inline void parse_ini(const char* config_file) {
-	IniparserWrapper ini;
-	ini.load(config_file);
-
-	split_n = ini.get_split_num();
-	INVARIANT(split_n >= 2);
-	load_n = split_n - 1;
-
-	fg_n = ini.get_server_num();
-	INVARIANT(fg_n >= load_n);
-	dst_port_start = ini.get_server_port();
-	workload_name = ini.get_workload_name();
-	kv_bucket_num = ini.get_bucket_num();
-	val_t::MAX_VALLEN = ini.get_max_vallen();
-	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
-	backup_port = ini.get_server_backup_port();
-	pktloss_port_start = ini.get_server_pktloss_port();
-	per_server_range = std::numeric_limits<size_t>::max() / fg_n;
-	notified_port = ini.get_server_notified_port();
-
-	LOAD_SPLIT_DIR(output_dir, workload_name, split_n); // get the split directory for loading phase
-	struct stat dir_stat;
-	if (!(stat(output_dir, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
-		printf("Output directory does not exist: %s\n", output_dir);
-		exit(-1);
-	}
-
-	COUT_VAR(split_n);
-	COUT_VAR(load_n);
-	COUT_VAR(fg_n);
-	COUT_VAR(dst_port_start);
-	printf("workload_name: %s\n", workload_name);
-	COUT_VAR(kv_bucket_num);
-	COUT_VAR(val_t::MAX_VALLEN);
-	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
-	COUT_VAR(backup_port);
-	COUT_VAR(pktloss_port_start);
-	COUT_VAR(per_server_range);
-	COUT_VAR(notified_port);
-}
-
-inline void parse_args(int argc, char **argv) {
-  struct option long_options[] = {
-      {"bg", required_argument, 0, 'i'},
-      {"xindex-root-err-bound", required_argument, 0, 'j'},
-      {"xindex-root-memory", required_argument, 0, 'k'},
-      {"xindex-group-err-bound", required_argument, 0, 'l'},
-      {"xindex-group-err-tolerance", required_argument, 0, 'm'},
-      {"xindex-buf-size-bound", required_argument, 0, 'n'},
-      {"xindex-buf-compact-threshold", required_argument, 0, 'o'},
-      {0, 0, 0, 0}};
-  std::string ops = "i:j:k:l:m:n:o:";
-  int option_index = 0;
-
-  while (1) {
-    int c = getopt_long(argc, argv, ops.c_str(), long_options, &option_index);
-    if (c == -1) break;
-
-    switch (c) {
-      case 0:
-        if (long_options[option_index].flag != 0) break;
-        abort();
-        break;
-      case 'i':
-        bg_n = strtoul(optarg, NULL, 10);
-        break;
-      case 'j':
-        xindex::config.root_error_bound = strtol(optarg, NULL, 10);
-        INVARIANT(xindex::config.root_error_bound > 0);
-        break;
-      case 'k':
-        xindex::config.root_memory_constraint =
-            strtol(optarg, NULL, 10) * 1024 * 1024;
-        INVARIANT(xindex::config.root_memory_constraint > 0);
-        break;
-      case 'l':
-        xindex::config.group_error_bound = strtol(optarg, NULL, 10);
-        INVARIANT(xindex::config.group_error_bound > 0);
-        break;
-      case 'm':
-        xindex::config.group_error_tolerance = strtol(optarg, NULL, 10);
-        INVARIANT(xindex::config.group_error_tolerance > 0);
-        break;
-      case 'n':
-        xindex::config.buffer_size_bound = strtol(optarg, NULL, 10);
-        INVARIANT(xindex::config.buffer_size_bound > 0);
-        break;
-      case 'o':
-        xindex::config.buffer_compact_threshold = strtol(optarg, NULL, 10);
-        INVARIANT(xindex::config.buffer_compact_threshold > 0);
-        break;
-      default:
-        abort();
-    }
-  }
-
-  COUT_VAR(bg_n);
-  COUT_VAR(xindex::config.root_error_bound);
-  COUT_VAR(xindex::config.root_memory_constraint);
-  COUT_VAR(xindex::config.group_error_bound);
-  COUT_VAR(xindex::config.group_error_tolerance);
-  COUT_VAR(xindex::config.buffer_size_bound);
-  COUT_VAR(xindex::config.buffer_size_tolerance);
-  COUT_VAR(xindex::config.buffer_compact_threshold);
 }
 
 /*
@@ -1462,7 +1324,7 @@ void *run_switchos_simulator(void *param) {
 						const char *ptr = buf;
 						while (send_size > 0) {
 							int tmpsize = send(switchos_socks[idx], ptr, send_size, 0);
-							f (tmpsize < 0) {
+							if (tmpsize < 0) {
 								// Errno 32 means broken pipe, i.e., remote TCP connection is closed
 								error("TCP send returns %d, errno: %d\n", tmpsize, errno);
 								break;
@@ -1500,6 +1362,15 @@ static int run_sfg(void * param) {
   sfg_param_t &thread_param = *(sfg_param_t *)param;
   uint8_t thread_id = thread_param.thread_id;
   xindex_t *table = thread_param.table;
+
+  sockaddr_in controller_addr;
+  memset(&controller_addr, 0, sizeof(controller_addr));
+  controller_addr.sin_family = AF_INET;
+  controller_addr.sin_addr.s_addr = inet_addr(controller_ip); // enforce the packet to go through NIC 
+  controller_addr.sin_port = htons(controller_popserver_pop_start + thread_id);
+  if (connect(server_popclient_tcpsock_list[thread_id], (struct sockaddr*)&controller_addr, sizeof(controller_addr)) != 0) {
+	  error("Fail to connect controller.popserver %ld at %s:%hu, errno: %d!\n", thread_id, controller_ip, controller_popserver_pop_start + thread_id, errno);
+  }
 
   int res = 0;
 
@@ -1698,33 +1569,38 @@ static int run_sfg(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::GET_REQ_POP: 
+			case packet_type_t::GETREQ_POP: 
 				{
 					get_request_pop_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
-					bool tmp_stat = table->get(req.key(), tmp_val, thread_id);
+					int32_t tmp_seq;
+					bool tmp_stat = table->get(req.key(), tmp_val, thread_id, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
-					if (tmp_stat && tmp_val.val_length > 0) {
-						get_response_pop_t rsp(req.hashidx(), req.key(), tmp_val);
-						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-					}
-					else {
-						if (tmp_val.val_length > val_t::SWITCH_MAX_VALLEN) {
-							get_response_pop_large_t rsp(req.hashidx(), req.key(), tmp_val);
-							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-						}
-						else {
-							get_response_npop_t rsp(req.hashidx(), req.key(), tmp_val);
-							rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-						}
-					}
+					get_response_pop_t rsp(req.key(), tmp_val, tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
 					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
+
+					// Trigger cache population if necessary (send CACHE_POP to controller)
+					cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_stat, tmp_seq);
+					uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+					int send_size = popsize;
+					const char *ptr = buf;
+					while (send_size > 0) {
+						int tmpsize = send(server_popclient_tcpsock_list[thread_id], ptr, send_size, 0);
+						if (tmpsize < 0) {
+							// Errno 32 means broken pipe, i.e., remote TCP connection is closed
+							printf("TCP send returns %d, errno: %d\n", tmpsize, errno);
+							break;
+						}
+						ptr += tmpsize;
+						send_size -= tmpsize;
+					}
 					break;
 				}
 			case packet_type_t::GET_RES_POP_EVICT:
@@ -2072,6 +1948,7 @@ static int run_sfg(void * param) {
   }
 
   //close(sockfd);
+  close(server_popclient_tcpsock_list[thread_id]);
   COUT_THIS("[thread" << uint32_t(thread_id) << "] exits")
   //pthread_exit(nullptr);
   return 0;

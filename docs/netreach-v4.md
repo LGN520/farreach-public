@@ -30,6 +30,7 @@
 		* NOTE: success flag for PUTRES/DELRES; deleted flag for GETRES; SCANRES does not need it
 	+ Inswitch header: 1b is_cached, 1b is_sampled, 1b is_wrong_pipeline, 9 bit eport_for_res, 9b sid, 3b padding, 2B hashval, 2B idx
 - Client
+	+ Send GETREQ and wait for GETRES
 - Switch
 	+ Ingress pipeline
 		* Stage 0
@@ -75,6 +76,7 @@
 				- Clone the original packet to corresponding client by clone_i2e for normal GETRES
 			- NOTE: responses in ingress pipeline must come from server; switch-issues responses must in egress pipeline
 	+ Egress pipeline
+		* TODO: If with stage limitation, CM and cache_frequency can be placed into any stage
 		* Stage 0 (4 ALU)
 			- CM: 4 register arrays of 16b (optype, is_sampled, is_cached, hashval -> cm_predicates)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
@@ -93,20 +95,18 @@
 					* TODO: valid=0 (invalid: newly-populated entry yet not all lookup tables are updated)
 					* TODO: valid=1 (valid: cached entry with all lookup tables being updated)
 					* TODO: valid=3 (being evicted: cached entry being evicted to server)
-					* Control plane changes valid from 0 to 1 or from 1/2 to 3
-						- TODO: Cache population: controller sends a packet to update vallen and value (latest=0, valid=0) and waits for ACK -> switch OS sets lookup tables and then sets valid=1
-						- TODO: Cache eviction: controller notifies switch OS -> switch OS sets valid=3, evicts data to server, removes lookup tables, and then acks controller -> cache population
-					* Data plane only considers valid=1/3
-						- TODO: valid=0: ignore the entry (treat it as uncached)
-						- TODO: valid=1: conservative get, cached get, put/del, evict, snapshot
-						- TODO: valid=3: cached get only if latest=1, put/del set latest=0 and forward to server (maybe case3)
-					* TODOTODO: Snapshot
-						- TODO: Controller atomically loads cached key
-						- TODO: Controller only stores records with valid=1 and latest=1 into snapshot
-						- TODO: For valid=0/3, the record is managed by controller
-							+ valid=0: if being snapshoted, remove the newly populated record from snapshot if any
-							+ valid=3: if being evicted, keep the original cached record in snapshot and remove the newly populated record from snapshot if any
-						- TODO; GETRES_LATEST_SEQ and GETRES_DELETED_SEQ can also trigger case1
+					* NOTE: Data plane does not change valid, while control plane changes valid: 0->1 or 0/1->3 or 3->0
+				+ For data plane
+					- TODO: valid=0: ignore the entry (treat it as uncached)
+					- TODO: valid=1: conservative get, cached get, put/del, evict, snapshot
+					- TODO: valid=3: get cache only if latest=1, put/del set latest=0 and forward to server (maybe case3)
+				* TODOTODO: Snapshot
+					- TODO: Controller atomically loads cached key
+					- TODO: Controller only stores records with valid=1 and latest=1 into snapshot
+					- TODO: For valid=0/3, the record is managed by controller
+						+ valid=0: if being snapshoted, remove the newly populated record from snapshot if any
+						+ valid=3: if being evicted, keep the original cached record in snapshot and remove the newly populated record from snapshot if any
+					- TODO; GETRES_LATEST_SEQ and GETRES_DELETED_SEQ can also trigger case1
 				+ TODO: PUTREQ_CASE1/DELREQ_CASE1 need to embed status_hdr.valid as valid could be 0
 			- TODO: seq (optype -> seq)
 				+ optype: PUTREQ_INSIWTCH, DELREQ_INSWITCH
@@ -141,8 +141,56 @@
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
 			- TODO: udphdr.hdrlen, ehterhdr.macaddr
 - Server
+	+ For GET: process GETREQ, GETREQ_POP, GETREQ_NLATEST -> GETRES, GETRES w/ cache population, GETRES_LATEST/DELETED_SEQ
+	+ TODO: Each server maintains a set of keys being cached to avoid duplicate population
+		* TODO: If GETREQ_POP triggers a cache population, server adds the key into cached key set
+		* TODO: If server receives CACHE_EVICT, it removes the evicted key from cached key set
+- NOTE: In the host colocated with server
+	+ TODO: We use controller thread to simulate controller for cache management
+	+ TODO: We use reflector thread to simulate the extra link for connection between data plane and switch OS
 - Controller
-- SwitchOS
+	+ Cache population/eviction
+		* TODO: Receive CACHE_POP <key, value, stat, seq> from server by tcp channel
+		* TODO: Add key into per-server cached key set
+		* TODO: Send CACHE_POP to corresponding switchOS
+	+ Eviction handler
+		* TODO: Receive CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq>
+		* TODO: Check per-server cached key set to find the corresponding server
+		* TODO: Send CACHE_EVICT to the correpsonding server, and wait for CACHE_EVICT_ACK <victim.key>
+		* TODO: Send CACHE_EVICT_ACK to the switch OS
+- Switch OS
+	+ Cache population/eviction
+		* TODO: Cache update thread: perform cache population/eviction
+		* TODO: Maintain in-memory multi-level array: switch -> egress pipeline -> <idx, key>
+		* TODO: Receive a CACHE_POP from controller -> check whether there exists free idx to assign
+			- If with free idx (cache population)
+				+ TODO: Set valid[idx] = 0 for atomicity
+				+ TODO: Send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane, and wait for CACHE_POP_INSWITCH_ACK
+				+ Data plane (for the given idx)
+					* TODO: Reset cache_frequency=0, latest=0, deleted=0
+					* TODO: Update vallen, savedseq, value
+					* TODO: Send CACHE_POP_INSWITCH_ACK <key> to switch OS
+					* NOTE: valid is reset by switch OS; case1 is reset by snapshot thread;
+				+ TODO: Add a new entry <key, idx> into cache_lookup_tbl of all ingress pipelines (must by ptf)
+				+ TODO: Set valid[idx] = 1 to enable the cache entry
+			- Otherwise (cache eviction)
+				+ TODO: Sample idxes and load corresponding cache_frequency counters
+				+ TODO: Choose the idx with the minimum frequency as the victim (approximate LRF)	
+				+ TODO: Set valid[victim.idx] = 3 for atomicity (then only latest can be changed by data plane)
+				+ TODO: Load deleted, vallen, val, and savedseq of victim
+				+ TODO: Report CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq> to controller, and wait for CACHE_EVICT_ACK
+					* NOTE: we do not need to load latest
+						- Even if latest=0, the value could still be latest <- PUT/DEL (lost later) w/ valid=3 resets latest from 1 to 0
+						- No matter value is latest or not, we can always compare savedseq with server.seq for availability
+					* NOTE: CACHE_EVICT reported by switch OS instead of data plane -> no need <key, value, seq, inswitch_hdr.is_deleted>
+				+ TODO: Remove existing entry <victim.key, victim.idx> from cache_lookup_tbl of all ingress pipelines
+				+ TODO: Invoke cache population for new CACHE_POP
+	+ Snapshot
+		* TODO: Snapshot thread: perform crash-consistent snapshot
+		* TODO: Maintain an in-memory snapshot flag
+		* TODO: If with ptf session limitation, we can place snapshot flag in SRAM; load values and reset registers by data plane;
+	+ TODO: Periodically reset CM
+		* TODO: If with ptf session limitation, we can reset it in data plane
 
 ## Details 
 
@@ -176,8 +224,8 @@
 	+ Server
 		* GETREQ -> GETRES
 		* GETREQ_POP
-			- TODO: If key not exist, send back GETRES and ignore cache population
-			- TODO: Otherwise, send back GETRES and notify controller for cache population
+			- If key not exist, send back GETRES and ignore cache population
+			- Otherwise, send back GETRES and notify controller for cache population
 		* GETREQ_NLATEST
 			- If key exists, send back GETRES_LATEST_SEQ
 			- If key not exist, send back GETRES_DELETED_SEQ
@@ -220,6 +268,9 @@
 	+ Support GETREQ_NLATEST in switch and server 
 	+ Support GETRES_LATEST_SEQ and GETRES_DELETED_SEQ in server and switch
 	+ Add result header for GETERS, GETRES_LATEST_SEQ and GETRES_DELETED_SEQ
+- Implement cache population
+	+ Support GETREQ_POP in server
+	+ Support CACHE_POP in server, controller, TODO: switch OS
 
 ## Simple test
 

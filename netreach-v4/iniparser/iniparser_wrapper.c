@@ -13,6 +13,8 @@ void IniparserWrapper::load(const char* filename) {
 	}
 }
 
+// Global
+
 const char *IniparserWrapper::get_workload_name() {
 	const char *workload_name = iniparser_getstring(ini, "global:workload_name", nullptr);
 	if (workload_name == nullptr) {
@@ -30,6 +32,8 @@ uint32_t IniparserWrapper::get_max_vallen() {
 	}
 	return uint32_t(tmp);
 }
+
+// Client
 
 size_t IniparserWrapper::get_client_num() {
 	int tmp = iniparser_getint(ini, "client:client_num", -1);
@@ -66,6 +70,8 @@ void IniparserWrapper::get_client_mac(uint8_t *macaddr) {
 	}
 	parse_mac(macaddr, client_mac);
 }
+
+// Server
 
 size_t IniparserWrapper::get_server_num() {
 	int tmp = iniparser_getint(ini, "server:server_num", -1);
@@ -139,6 +145,8 @@ short IniparserWrapper::get_server_notified_port() {
 	return short(tmp);
 }
 
+// Switch
+
 uint32_t IniparserWrapper::get_kv_bucket_num() {
 	int tmp = iniparser_getint(ini, "switch:kv_bucket_num", -1);
 	if (tmp == -1) {
@@ -156,6 +164,28 @@ uint32_t IniparserWrapper::get_switch_max_vallen() {
 	}
 	return uint32_t(tmp);
 }
+
+// Controller
+
+const char* IniparserWrapper::get_controller_ip() {
+	const char *controller_ip = iniparser_getstring(ini, "controller:controller_ip", nullptr);
+	if (controller_ip == nullptr) {
+		printf("Invalid entry of [controller:controller_ip]\n");
+		exit(-1);
+	}
+	return controller_ip;
+}
+
+short IniparserWrapper::get_controller_popserver_port() {
+	int tmp = iniparser_getint(ini, "controller:controller_popserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [controller:controller_popserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+// Other
 
 size_t IniparserWrapper::get_split_num() {
 	int tmp = iniparser_getint(ini, "other:split_num", -1);

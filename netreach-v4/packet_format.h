@@ -13,6 +13,8 @@
 enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES,
 	GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ,
+
+	CACHE_POP
 };
 typedef PacketType packet_type_t;
 
@@ -200,6 +202,15 @@ template<class key_t, class val_t>
 class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // seq
 	public: 
 		GetResponseLatestSeq(key_t key, val_t val, bool stat, int32_t seq);
+
+	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t, class val_t>
+class CachePop : public GetResponseLatestSeq<key_t, val_t> { // seq
+	public: 
+		CachePop(key_t key, val_t val, bool stat, int32_t seq);
 
 	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);

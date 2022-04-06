@@ -10,14 +10,17 @@ class IniparserWrapper {
 		
 		void load(const char* filename);
 
+		// global
 		const char *get_workload_name();
 		uint32_t get_max_vallen();
 
+		// client
 		size_t get_client_num();
 		short get_client_port();
 		const char *get_client_ip();
 		void get_client_mac(uint8_t* macaddr);
 		
+		// server
 		size_t get_server_num();
 		short get_server_port();
 		const char *get_server_ip();
@@ -27,6 +30,11 @@ class IniparserWrapper {
 		short get_server_pktlos_port();
 		short get_server_notified_port();
 
+		// controller
+		const char *get_controller_ip();
+		short get_controller_popserver_oprt();
+
+		// switch
 		uint32_t get_kv_bucket_num();
 		uint32_t get_switch_max_vallen();
 

@@ -534,7 +534,7 @@ template<class key_t>
 GetRequestPOP<key_t>::GetRequestPOP(const char *data, uint32_t recv_size)
 {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GET_REQ_POP);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETREQ_POP);
 }
 
 template<class key_t>
@@ -618,6 +618,21 @@ void GetResponseDeletedSeq<key_t, val_t>::deserialize(const char * data, uint32_
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseDeletedSeq");
 }
 
+// CachePop (valud must <= 128B)
+
+template<class key_t, class val_t>
+CachePop<key_t, val_t>::CachePop(key_t key, val_t val, bool, stat, int32_t seq)
+	: GetResponse<key_t, val_t>::GetResponse(key, val, stat), _seq(seq)
+{
+	this->_type = static_cast<uint8_t>(PacketType::CACHE_POP);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+}
+
+template<class key_t, class val_t>
+void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
+{
+	COUT_N_EXIT("Invalid invoke of deserialize for CachePop");
+}
 
 
 

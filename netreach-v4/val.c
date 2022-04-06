@@ -4,6 +4,16 @@
 uint32_t Val::MAX_VALLEN = 128;
 uint32_t Val::SWITCH_MAX_VALLEN = 256;
 
+uint32_t Val::get_padding_size(int32_t vallen) {
+	uint32_t padding_size = 0;
+	if (val_length <= SWITCH_MAX_VALLEN) {
+		if (val_length % 8 != 0) {
+			padding_size = 8 - val_length % 8;
+		}
+	}
+	return padding_size;
+}
+
 Val::Val() {
 	val_length = 0;
 	val_data = nullptr;
@@ -215,14 +225,8 @@ uint32_t Val::deserialize_vallen(const char *buf, uint32_t buflen) {
 uint32_t Val::deserialize_val(const char *buf, uint32_t buflen) {
 	INVARIANT(buf != nullptr);
 
-	uint32_t padding_size = 0;
-	uint32_t deserialize_size = val_length;
-	if (val_length <= SWITCH_MAX_VALLEN) {
-		if (val_length % 8 != 0) {
-			padding_size = 8 - val_length % 8;
-		}
-		deserialize_size += padding_size; // padding for value <= 128B 
-	}
+	uint32_t padding_size = get_padding_size(val_length); // padding for value <= 128B 
+	uint32_t deserialize_size = val_length + padding_size;
 	INVARIANT(buflen >= deserialize_size);
 
 	if (val_data != nullptr) {
@@ -239,14 +243,8 @@ uint32_t Val::deserialize_val(const char *buf, uint32_t buflen) {
 uint32_t Val::serialize(char *buf, uint32_t buflen) {
 	INVARIANT(val_data != nullptr);
 
-	uint32_t padding_size = 0;
-	uint32_t serialize_size = sizeof(uint32_t) + val_length;
-	if (val_length <= SWITCH_MAX_VALLEN) {
-		if (val_length % 8 != 0) {
-			padding_size = 8 - val_length % 8;
-		}
-		serialize_size += padding_size; // padding for value <= 128B 
-	}
+	uint32_t padding_size = get_padding_size(val_length); // padding for value <= 128B 
+	uint32_t serialize_size = sizeof(uint32_t) + val_length + padding_size;
 	INVARIANT(buflen >= serialize_size);
 
 	uint32_t bigendian_vallen = htonl(val_length); // Little-endian to big-endian

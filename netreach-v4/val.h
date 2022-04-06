@@ -13,6 +13,7 @@ class Val {
 
   static uint32_t MAX_VALLEN; // max # of bytes
   static uint32_t SWITCH_MAX_VALLEN; // max # of bytes in switch
+  static uint32_t get_padding_size(int32_t vallen);
 
   Val();
   ~Val();
