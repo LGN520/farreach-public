@@ -142,17 +142,18 @@
 			- TODO: udphdr.hdrlen, ehterhdr.macaddr
 - Server
 	+ For GET: process GETREQ, GETREQ_POP, GETREQ_NLATEST -> GETRES, GETRES w/ cache population, GETRES_LATEST/DELETED_SEQ
-	+ TODO: Each server maintains a set of keys being cached to avoid duplicate population
-		* TODO: If GETREQ_POP triggers a cache population, server adds the key into cached key set
+	+ Each server maintains a set of keys being cached to avoid duplicate population
+		* If GETREQ_POP triggers a cache population (i.e., key exists), server adds the key into cached key set
 		* TODO: If server receives CACHE_EVICT, it removes the evicted key from cached key set
 - NOTE: In the host colocated with server
 	+ TODO: We use controller thread to simulate controller for cache management
 	+ TODO: We use reflector thread to simulate the extra link for connection between data plane and switch OS
 - Controller
 	+ Cache population/eviction
-		* TODO: Receive CACHE_POP <key, value, stat, seq> from server by tcp channel
-		* TODO: Add key into per-server cached key set
-		* TODO: Send CACHE_POP to corresponding switchOS
+		* Receive CACHE_POP <key, value, stat, seq, serveridx> from server by tcp channel
+		* CANCELED: Add key into per-server cached key set (comment it if server.cached_keyset works well)
+		* Add key into key-server map (we need it to send CACHE_EVICT to the corresponding server)
+		* Send CACHE_POP to corresponding switchOS
 	+ Eviction handler
 		* TODO: Receive CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq>
 		* TODO: Check per-server cached key set to find the corresponding server
@@ -160,9 +161,10 @@
 		* TODO: Send CACHE_EVICT_ACK to the switch OS
 - Switch OS
 	+ Cache population/eviction
-		* TODO: Cache update thread: perform cache population/eviction
+		* Cache update thread (switchos.popworker): perform cache population/eviction
 		* TODO: Maintain in-memory multi-level array: switch -> egress pipeline -> <idx, key>
 		* TODO: Receive a CACHE_POP from controller -> check whether there exists free idx to assign
+			- CANCELED: Add key into cached key set (comment it if server.cached_keyset works well)
 			- If with free idx (cache population)
 				+ TODO: Set valid[idx] = 0 for atomicity
 				+ TODO: Send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane, and wait for CACHE_POP_INSWITCH_ACK

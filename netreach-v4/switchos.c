@@ -21,6 +21,10 @@
 #include <map>
 
 #include "helper.h"
+#include "key.h"
+#include "val.h"
+
+typedef Key index_key_t;
 
 // Parameters
 short switchos_popserver_port = 0;
@@ -29,6 +33,7 @@ short switchos_popserver_port = 0;
 
 // controller.popclient <-> switchos.popserver
 int volatile switchos_popserver_tcpsock = -1;
+//std::set<index_key_t> switchos_cached_keyset; // TODO: Comment it after checking server.cached_keyset_list
 // message queue between switchos.popserver and switchos.popworker
 cache_pop_t ** volatile switchos_cache_pop_ptrs = NULL;
 uint32_t switchos_head_for_pop;
@@ -87,14 +92,124 @@ void prepare_switchos() {
 		exit(-1);
 	}
 
+	//switchos_cached_keyset.clear();
 	switchos_cache_pop_ptrs = new cache_pop_t*[MQ_SIZE];
 	switchos_head_for_pop = 0;
 	switchos_tail_for_pop = 0;
 }
 
-// TODO
-void *run_switchos_popserver(void *param);
-void *run_switchos_popworker(void *param);
+void *run_switchos_popserver(void *param) {
+	// Not used
+	struct sockaddr_in controller_addr;
+	unsigned int controller_addr_len;
+
+	int connfd = accept(switchos_popserver_tcpsock, NULL, NULL);
+	if (connfd == -1) {
+		/*if (errno == EWOULDBLOCK || errno == EINTR) {
+			continue; // timeout or interrupted system call
+		}
+		else {
+			COUT_N_EXIT("[Switch os] Error of accept: errno = " << std::string(strerror(errno)));
+		}*/
+		COUT_N_EXIT("[Switch os] Error of accept: errno = " << std::string(strerror(errno)));
+	}
+
+	// Process CACHE_POP packet <optype, key, vallen, value, stat, seq>
+	char buf[MAX_BUFSIZE];
+	int cur_recv_bytes = -1;
+	int8_t optype = -1;
+	int32_t vallen = -1;
+	int arrive_serveridx_bytes = -1;
+	bool is_cached_before = false;
+	//index_key_t tmpkey(0, 0, 0, 0);
+	const int arrive_optype_bytes = sizeof(int8_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(int32_t);
+	while (true) {
+		int tmpsize = recv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0);
+		if (tmpsize < 0) {
+			// Errno 32 means broken pipe, i.e., server.popclient is closed
+			if (errno == 32) {
+				printf("[Switch os] remote controller.popclient is closed");
+				break;
+			}
+			else {
+				COUT_N_EXIT("[Switch os] popserver recv fails: " << tmpsize << " errno = " << std::string(strerror(errno)));
+			}
+		}
+		cur_recv_bytes += tmpsize;
+		if (cur_recv_bytes >= MAX_BUFSIZE) {
+			printf("[Switch os] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
+            exit(-1);
+		}
+
+		// Get optype
+		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
+			optype = *((int8_t *)buf);
+			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_POP);
+		}
+
+		// Get vallen
+		if (optype != -1 && vallen == -1 && cur_recv_bytes >= arrive_vallen_bytes) {
+			//tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
+			vallen = *((int32_t *)(buf + arrive_vallen_bytes - sizeof(int32_t)));
+			INVARIANT(vallen >= 0);
+			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(bool) + sizeof(int32_t) + sizeof(int16_t);
+		}
+
+		// Get one complete CACHE_POP
+		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_serveridx_bytes) {
+			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by switchos.popworker
+
+			//is_cached_before = (switchos_cached_keyset.find(tmp_cache_pop_ptr->key()) != switchos_cached_keyset.end());
+			if (!is_cached_before) {
+				// Add key into cached keyset
+				//switchos_cached_keyset.insert(tmp_cache_pop_ptr->key());
+
+				if ((switchos_head_for_pop+1)%MQ_SIZE != switchos_tail_for_pop) {
+					switchos_cache_pop_ptrs[switchos_head_for_pop] = tmp_cache_pop_ptr;
+					switchos_head_for_pop = (switchos_head_for_pop + 1) % MQ_SIZE;
+				}
+				else {
+					printf("[Switch os] message queue overflow of switchos.switchos_cache_pop_ptrs!");
+				}
+			}
+
+			// Move remaining bytes and reset metadata
+			if (cur_recv_bytes > arrive_seq_bytes) {
+				memcpy(buf, buf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
+				cur_recv_bytes = cur_recv_bytes - arrive_serveridx_byets;
+				optype = -1;
+				vallen = -1;
+				arrive_serveridx_bytes = -1;
+				is_cached_before = false;
+			}
+			else {
+				cur_recv_bytes = 0;
+				optype = -1;
+				vallen = -1;
+				arrive_serveridx_bytes = -1;
+				is_cached_before = false;
+			}
+		}
+	}
+
+	close(connfd);
+	close(switchos_popserver_tcpsock);
+	pthread_exit(nullptr);
+}
+
+void *run_switchos_popworker(void *param) {
+	while (running) {
+		char buf[MAX_BUFSIZE];
+		if (switchos_tail_for_pop != switchos_head_for_pop) {
+			cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptrs[switchos_tail_for_pop];
+			// Manage data plane to perform cache population
+			// 
+			// TODO: free CACHE_POP
+		}
+	}
+}
 
 void close_switchos() {
 	if (switchos_cache_pop_ptrs != NULL) {

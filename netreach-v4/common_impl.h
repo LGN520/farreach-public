@@ -54,7 +54,8 @@ short pktloss_port_start = -1;
 
 // cache update (population and eviction)
 const char *controller_ip = nullptr;
-short controller_popserver_port_start = -1;
+//short controller_popserver_port_start = -1;
+short controller_popserver_port = -1;
 
 /*
  * Get configuration
@@ -91,7 +92,8 @@ inline void parse_ini(const char* config_file) {
 	}
 
 	controller_ip = ini.get_controller_ip();
-	controller_popserver_port_start = ini.get_controller_popserver_port();
+	//controller_popserver_port_start = ini.get_controller_popserver_port();
+	controller_popserver_port = ini.get_controller_popserver_port();
 
 	COUT_VAR(split_n);
 	COUT_VAR(load_n);
@@ -106,7 +108,8 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(per_server_range);
 	COUT_VAR(notified_port);
 	COUT_VAR(controller_ip);
-	COUT_VAR(controller_popserver_port_start);
+	//COUT_VAR(controller_popserver_port_start);
+	COUT_VAR(controller_popserver_port);
 }
 
 inline void parse_args(int argc, char **argv) {

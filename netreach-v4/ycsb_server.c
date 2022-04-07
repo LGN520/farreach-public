@@ -1368,9 +1368,11 @@ static int run_sfg(void * param) {
   memset(&controller_addr, 0, sizeof(controller_addr));
   controller_addr.sin_family = AF_INET;
   controller_addr.sin_addr.s_addr = inet_addr(controller_ip); // enforce the packet to go through NIC 
-  controller_addr.sin_port = htons(controller_popserver_pop_start + thread_id);
+  //controller_addr.sin_port = htons(controller_popserver_port_start + thread_id);
+  controller_addr.sin_port = htons(controller_popserver_port);
   if (connect(server_popclient_tcpsock_list[thread_id], (struct sockaddr*)&controller_addr, sizeof(controller_addr)) != 0) {
-	  error("Fail to connect controller.popserver %ld at %s:%hu, errno: %d!\n", thread_id, controller_ip, controller_popserver_pop_start + thread_id, errno);
+	  //error("Fail to connect controller.popserver %ld at %s:%hu, errno: %d!\n", thread_id, controller_ip, controller_popserver_port_start + thread_id, errno);
+	  error("Fail to connect controller.popserver %ld at %s:%hu, errno: %d!\n", thread_id, controller_ip, controller_popserver_port, errno);
   }
 
   int res = 0;
@@ -1593,7 +1595,7 @@ static int run_sfg(void * param) {
 						if (!is_cached_before) {
 							server_cached_keyset_listp[thread_id].insert(req.key());
 							// Send CACHE_POP to controller.popserver
-							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_stat, tmp_seq);
+							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_stat, tmp_seq, thread_id);
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 							int send_size = popsize;
 							const char *ptr = buf;

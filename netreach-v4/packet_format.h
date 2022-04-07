@@ -208,12 +208,18 @@ class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // seq
 };
 
 template<class key_t, class val_t>
-class CachePop : public GetResponseLatestSeq<key_t, val_t> { // seq
+class CachePop : public GetResponseLatestSeq<key_t, val_t> { // seq + serveridx
 	public: 
-		CachePop(key_t key, val_t val, bool stat, int32_t seq);
+		CachePop(key_t key, val_t val, bool stat, int32_t seq, int16_t serveridx);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+		int16_t serveridx() const;
 
 	protected:
+		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		int16_t _serveridx;
 };
 
 
