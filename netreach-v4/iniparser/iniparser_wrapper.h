@@ -37,6 +37,7 @@ class IniparserWrapper {
 		// switch
 		uint32_t get_kv_bucket_num();
 		uint32_t get_switch_max_vallen();
+		short get_switchos_popserver_port();
 
 		size_t get_split_num();
 

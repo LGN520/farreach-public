@@ -157,12 +157,21 @@ uint32_t IniparserWrapper::get_kv_bucket_num() {
 }
 
 uint32_t IniparserWrapper::get_switch_max_vallen() {
-	int tmp = iniparser_getint(ini, "global:switch_max_vallen", -1);
+	int tmp = iniparser_getint(ini, "switch:switch_max_vallen", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [global:switch_max_vallen]: %d\n", tmp);
+		printf("Invalid entry of [switch:switch_max_vallen]: %d\n", tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);
+}
+
+short get_switchos_popserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_popserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_popserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
 }
 
 // Controller

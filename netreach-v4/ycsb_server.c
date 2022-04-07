@@ -47,7 +47,6 @@
 #include "extended_xindex/xindex_impl.h"
 #endif
 
-#define MQ_SIZE 256
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
 struct alignas(CACHELINE_SIZE) LoadSFGParam;
@@ -93,6 +92,8 @@ typedef PutRequestPOPEvictCase2Switch<index_key_t, val_t> put_request_pop_evict_
 typedef PutRequestLargeEvictCase2Switch<index_key_t, val_t> put_request_large_evict_case2_switch_t;
 
 #include "common_impl.h"
+#include "controller_impl.h"
+#include "server_impl.h"
 
 // Prepare data structures
 void preprae_for_pktloss();
@@ -1578,7 +1579,7 @@ static int run_sfg(void * param) {
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
-					get_response_pop_t rsp(req.key(), tmp_val, tmp_stat);
+					get_response_t rsp(req.key(), tmp_val, tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
@@ -1586,20 +1587,27 @@ static int run_sfg(void * param) {
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 
-					// Trigger cache population if necessary (send CACHE_POP to controller)
-					cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_stat, tmp_seq);
-					uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-					int send_size = popsize;
-					const char *ptr = buf;
-					while (send_size > 0) {
-						int tmpsize = send(server_popclient_tcpsock_list[thread_id], ptr, send_size, 0);
-						if (tmpsize < 0) {
-							// Errno 32 means broken pipe, i.e., remote TCP connection is closed
-							printf("TCP send returns %d, errno: %d\n", tmpsize, errno);
-							break;
+					// Trigger cache population if necessary (key exist and not being cached)
+					if (tmp_stat) {
+						bool is_cached_before = (server_cached_keyset_list[thread_id].find(req.key()) != server_cached_keyset_list.end());
+						if (!is_cached_before) {
+							server_cached_keyset_listp[thread_id].insert(req.key());
+							// Send CACHE_POP to controller.popserver
+							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_stat, tmp_seq);
+							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+							int send_size = popsize;
+							const char *ptr = buf;
+							while (send_size > 0) {
+								int tmpsize = send(server_popclient_tcpsock_list[thread_id], ptr, send_size, 0);
+								if (tmpsize < 0) {
+									// Errno 32 means broken pipe, i.e., remote TCP connection is closed
+									printf("TCP send returns %d, errno: %d\n", tmpsize, errno);
+									break;
+								}
+								ptr += tmpsize;
+								send_size -= tmpsize;
+							}
 						}
-						ptr += tmpsize;
-						send_size -= tmpsize;
 					}
 					break;
 				}

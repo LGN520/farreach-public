@@ -191,6 +191,8 @@
 #define MAX_BUFSIZE 4096 // TODO: increase for large value
 #define MAX_LCORE_NUM 72
 
+#define MQ_SIZE 256 // in-memory message queue
+
 inline void memory_fence() { asm volatile("mfence" : : : "memory"); }
 
 /** @brief Compiler fence.

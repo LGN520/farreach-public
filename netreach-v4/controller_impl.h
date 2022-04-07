@@ -3,19 +3,28 @@
 
 // Per-server popclient <-> one popserver in controller
 int * volatile controller_popserver_tcpsock_list = NULL;
-std::set<index_key_t> * volatile controller_cached_keyset_list = NULL;
+std::set<index_key_t> * volatile controller_cached_keyset_list = NULL; // TODO: Comment it after checking server.cached_keyset_list
+// Message queue between controller.popservers with controller.popclient (connected with switchos.popserver)
+cache_pop_t ** volatile controller_cache_pop_ptrs = NULL;
+uint32_t volatile controller_head_for_pop = 0;
+uint32_t volatile controller_tail_for_popt = 0;
+std::mutex mutex_for_pop;
+// controller.popclient <-> switchos.popserver
+int volatile controller_popclient_tcpsock = -1;
 
 // Per-server evictserver <-> one evictclient in controller
 int * volatile controller_evictclient_tcpsock_list = NULL;
 
 void prepare_controller();
-void *run_controller_popserver(void *param);
+void *run_controller_popserver(void *param); // Receive CACHE_POPs from corresponding server
+void *run_controller_popclient(void *param); // Send CACHE_POPs to switch os
 void close_controller();
 
 void prepare_controller() {
 	// Prepare for cache population
 	controller_popserver_tcpsock_list = new int[fg_n];
 	controller_cached_keyset_list = new std::set<index_key_t>[fg_n];
+	controller_cache_pop_ptrs = new cache_pop_t*[MQ_SIZE];
 	for (size_t i = 0; i < fg_n; i++) {
 		// Set popserver socket
 		controller_popserver_tcpsock_list[i] = socket(AF_INET, SOCK_STREAM, 0);
@@ -46,16 +55,20 @@ void prepare_controller() {
 		listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 		listen_addr.sin_port = htons(controller_popserver_port_start+i);
 		if ((bind(controller_popserver_tcpsock_list[i], (struct sockaddr*)&listen_addr, sizeof(listen_addr))) != 0) {
-			printf("[Controller] Fail to bind socket on %s:%hu of popserver %ld, errno: %d!\n", controller_ip, controller_popserver_port_start+i, i, errno);
+			printf("[Controller] Fail to bind socket on port %hu for popserver %ld, errno: %d!\n", controller_popserver_port_start+i, i, errno);
 			exit(-1);
 		}
 		if ((listen(controller_popserver_tcpsock_list[i], fg_n)) != 0) { // MAX_PENDING_CONNECTION = server num
-			printf("[Controller] Fail to listen on %s:%hu of popserver %ld, errno: %d!\n", controller_ip, controller_popserver_port_start+i, i, errno);
+			printf("[Controller] Fail to listen on port %hu for popserver %ld, errno: %d!\n", controller_popserver_port_start+i, i, errno);
 			exit(-1);
 		}
 
 		controller_cached_keyset_list[i].clear();
+		controller_cache_pop_ptrs[i] = NULL;
 	}
+	controller_head_for_pop = 0;
+	controller_tail_for_popt = 0;
+	controller_popclient_tcpsock = socket(AF_INET, SOCK_STREAM, 0);
 }
 
 void *run_controller_popserver(void *param) {
@@ -128,7 +141,16 @@ void *run_controller_popserver(void *param) {
 		// Get one complete CACHE_POP
 		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_seq_bytes) {
 			if (!is_cached_before) {
-				// TODO: Send bytes of CACHE_POP to switch OS
+				cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_seq_bytes); // freed by controller.popclient
+				mutex_for_pop.lock();
+				if ((controller_head_for_pop+1)%MQ_SIZE != controller_tail_for_popt) {
+					controller_cache_pop_ptrs[controller_head_for_pop] = tmp_cache_pop_ptr;
+					controller_head_for_pop = (controller_head_for_pop + 1) % MQ_SIZE;
+				}
+				else {
+					printf("[Controller] message queue overflow of controller.controller_cache_pop_ptrs!");
+				}
+				mutex_for_pop.unlock();
 			}
 
 			// Move remaining bytes and reset metadata
@@ -155,6 +177,16 @@ void *run_controller_popserver(void *param) {
 	pthread_exit(nullptr);
 }
 
+void run_controller_popclient(void *param) {
+	while (running) {
+		char buf[MAX_BUFSIZE];
+		if (controller_tail_for_popt != controller_head_for_pop) {
+			cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptrs[controller_tail_for_popt];
+			// TODO: serialize CACHE_POP, send to switch os, and free CACHE_POP
+		}
+	}
+}
+
 void close_controller() {
 	if (controller_popserver_tcpsock_list != NULL) {
 		delete [] controller_popserver_tcpsock_list;
@@ -163,6 +195,16 @@ void close_controller() {
 	if (controller_cached_keyset_list != NULL) {
 		delete [] controller_cached_keyset_list;
 		controller_cached_keyset_list = NULL;
+	}
+	if (controller_cache_pop_ptrs != NULL) {
+		for (size_t i = 0; i < MQ_SIZE; i++) {
+			if (controller_cache_pop_ptrs[i] != NULL) {
+				delete controller_cache_pop_ptrs[i];
+				controller_cache_pop_ptrs[i] = NULL;
+			}
+		}
+		delete [] controller_cache_pop_ptrs;
+		controller_cache_pop_ptrs = NULL;
 	}
 	if (controller_evictclient_tcpsock_list != NULL) {
 		delete [] controller_evictclient_tcpsock_list;

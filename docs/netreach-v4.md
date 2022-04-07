@@ -272,6 +272,13 @@
 	+ Support GETREQ_POP in server
 	+ Support CACHE_POP in server, controller, TODO: switch OS
 
+## Run
+
+- Software
+	+ Launch switchos in local control plane of Tofino
+	+ Launch controller in end host
+	+ Launch servers in end host
+
 ## Simple test
 
 ## Fixed issues
