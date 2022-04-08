@@ -126,10 +126,10 @@ parser parse_vallen {
 parser parse_val_len0 {
 	return select(op_hdr.optype) {
 		GETRES: parse_result;
-		GETRES_LATEST_SEQ: parse_result;
-		GETRES_LATEST_SEQ_INSWITCH: parse_result;
-		GETRES_DELETED_SEQ: parse_result;
-		GETRES_DELETED_SEQ_INSWITCH: parse_result;
+		GETRES_LATEST_SEQ: parse_seq;
+		GETRES_LATEST_SEQ_INSWITCH: parse_seq;
+		GETRES_DELETED_SEQ: parse_seq;
+		GETRES_DELETED_SEQ_INSWITCH: parse_seq;
 		default: ingress;
 
 
@@ -239,13 +239,7 @@ parser parse_val_len16 {
 
 parser parse_result {
 	extract(result_hdr);
-	return select(op_hdr.optype) {
-		GETRES_LATEST_SEQ: parse_seq;
-		GETRES_LATEST_SEQ_INSWITCH: parse_seq;
-		GETRES_DELETED_SEQ: parse_seq;
-		GETRES_DELETED_SEQ_INSWITCH: parse_seq;
-		default: ingress; // GETRES
-	}
+	return ingress;
 }
 
 parser parse_seq {

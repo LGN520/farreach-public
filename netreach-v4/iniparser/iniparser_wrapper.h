@@ -21,6 +21,7 @@ class IniparserWrapper {
 		void get_client_mac(uint8_t* macaddr);
 		
 		// server
+		size_t get_split_num();
 		size_t get_server_num();
 		short get_server_port();
 		const char *get_server_ip();
@@ -32,15 +33,18 @@ class IniparserWrapper {
 
 		// controller
 		const char *get_controller_ip();
-		short get_controller_popserver_oprt();
+		short get_controller_popserver_port();
+
+		// reflector
+		const char *get_reflector_ip();
+		short get_reflector_port();
 
 		// switch
 		uint32_t get_kv_bucket_num();
 		uint32_t get_switch_max_vallen();
 		short get_switchos_popserver_port();
 		short get_switchos_paramserver_port();
-
-		size_t get_split_num();
+		const char *get_switchos_ip();
 
 	private:
 		dictionary *ini = nullptr;

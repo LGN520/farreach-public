@@ -73,6 +73,15 @@ void IniparserWrapper::get_client_mac(uint8_t *macaddr) {
 
 // Server
 
+size_t IniparserWrapper::get_split_num() {
+	int tmp = iniparser_getint(ini, "other:split_num", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [other:split_num]: %d\n", tmp);
+		exit(-1);
+	}
+	return size_t(tmp);
+}
+
 size_t IniparserWrapper::get_server_num() {
 	int tmp = iniparser_getint(ini, "server:server_num", -1);
 	if (tmp == -1) {
@@ -183,6 +192,15 @@ short get_switchos_paramserver_port() {
 	return short(tmp);
 }
 
+const char* IniparserWrapper::get_switchos_ip() {
+	const char *switchos_ip = iniparser_getstring(ini, "switchos:switchos_ip", nullptr);
+	if (controller_ip == nullptr) {
+		printf("Invalid entry of [switchos:switchos_ip]\n");
+		exit(-1);
+	}
+	return switchos_ip;
+}
+
 // Controller
 
 const char* IniparserWrapper::get_controller_ip() {
@@ -203,16 +221,27 @@ short IniparserWrapper::get_controller_popserver_port() {
 	return short(tmp);
 }
 
-// Other
+// Reflector
 
-size_t IniparserWrapper::get_split_num() {
-	int tmp = iniparser_getint(ini, "other:split_num", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [other:split_num]: %d\n", tmp);
+const char* IniparserWrapper::get_reflector_ip() {
+	const char *reflector_ip = iniparser_getstring(ini, "reflector:reflector_ip", nullptr);
+	if (reflector_ip == nullptr) {
+		printf("Invalid entry of [reflector:reflector_ip]\n");
 		exit(-1);
 	}
-	return size_t(tmp);
+	return reflector_ip;
 }
+
+short IniparserWrapper::get_reflector_port() {
+	int tmp = iniparser_getint(ini, "reflector:reflector_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [reflector:reflector_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+// Helper func
 
 void IniparserWrapper::parse_mac(uint8_t *macaddr, const char* macstr) {
 	const char *curpos = macstr;

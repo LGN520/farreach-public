@@ -25,28 +25,12 @@
 #include "iniparser/iniparser_wrapper.h"
 #include "crc32.h"
 
-#define MQ_SIZE 256
-
-const double dpdk_polling_time = 21.82; // Test by enabling TEST_DPDK_POLLING, and only transmit packets between client and switch
-const size_t max_sending_rate = size_t(1.2 * 1024 * 1024); // 1.2 MQPS; limit sending rate to x (e.g., the aggregate rate of servers)
-const size_t rate_limit_period = 10 * 1000; // 10 * 1000us
+#include "common_impl.h"
 
 struct alignas(CACHELINE_SIZE) FGParam;
 
 typedef FGParam fg_param_t;
-typedef Key index_key_t;
-typedef Val val_t;
-typedef GetRequest<index_key_t> get_request_t;
-typedef PutRequest<index_key_t, val_t> put_request_t;
-typedef PutRequestLarge<index_key_t, val_t> put_request_large_t;
-typedef DelRequest<index_key_t> del_request_t;
-typedef ScanRequest<index_key_t> scan_request_t;
-typedef GetResponse<index_key_t, val_t> get_response_t;
-typedef PutResponse<index_key_t> put_response_t;
-typedef DelResponse<index_key_t> del_response_t;
-typedef ScanResponse<index_key_t, val_t> scan_response_t;
 
-inline void parse_ini(const char * config_file);
 void load();
 void run_benchmark();
 //void *run_fg(void *param); // sender
@@ -63,23 +47,8 @@ struct rte_mbuf*** volatile pkts_list;
 uint32_t* volatile heads;
 uint32_t* volatile tails;
 
-// parameters
-uint8_t src_macaddr[6];
-uint8_t dst_macaddr[6];
-const char *src_ipaddr;
-const char *server_addr;
-short src_port_start;
-size_t fg_n; // client num
-//short dst_port_start = 1111;
-short dst_port;
-const char *workload_name;
-char output_dir[256];
-size_t per_client_per_period_max_sending_rate;
-uint32_t kv_bucket_num;
 
 // SCAN split
-size_t server_num;
-size_t per_server_range;
 size_t get_server_idx(index_key_t key) {
 	size_t server_idx = key.keylo / per_server_range;
 	if (server_idx >= server_num) {
@@ -130,7 +99,7 @@ int main(int argc, char **argv) {
 	run_benchmark();
 
 	// Free DPDK mbufs
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < client_num; i++) {
 		while (heads[i] != tails[i]) {
 			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[i][tails[i]]);
 			tails[i] += 1;
@@ -139,52 +108,6 @@ int main(int argc, char **argv) {
 	dpdk_free();
 
 	exit(0);
-}
-
-inline void parse_ini(const char* config_file) {
-	IniparserWrapper ini;
-	ini.load(config_file);
-
-	ini.get_client_mac(src_macaddr);
-	ini.get_server_mac(dst_macaddr);
-	src_ipaddr = ini.get_client_ip();
-	server_addr = ini.get_server_ip();
-	src_port_start = ini.get_client_port();
-	fg_n = ini.get_client_num();
-	dst_port = ini.get_server_port();
-	workload_name = ini.get_workload_name();
-	RUN_SPLIT_DIR(output_dir, workload_name, fg_n);
-	server_num = ini.get_server_num();
-	per_server_range = std::numeric_limits<size_t>::max() / server_num;
-	per_client_per_period_max_sending_rate = max_sending_rate / fg_n / (1 * 1000 * 1000 / rate_limit_period);
-	kv_bucket_num = ini.get_bucket_num();
-	val_t::MAX_VALLEN = ini.get_max_vallen();
-	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
-
-	printf("src_macaddr: ");
-	for (size_t i = 0; i < 6; i++) {
-		printf("%02x", src_macaddr[i]);
-		if (i != 5) printf(":");
-		else printf("\n");
-	}
-	printf("dst_macaddr: ");
-	for (size_t i = 0; i < 6; i++) {
-		printf("%02x", dst_macaddr[i]);
-		if (i != 5) printf(":");
-		else printf("\n");
-	}
-	printf("src_ipaddr: %s\n", src_ipaddr);
-	printf("server_addr: %s\n", server_addr);
-	COUT_VAR(src_port_start);
-	COUT_VAR(fg_n);
-	COUT_VAR(dst_port);
-	COUT_VAR(workload_name);
-	printf("output_dir: %s\n", output_dir);
-	COUT_VAR(server_num);
-	COUT_VAR(per_server_range);
-	COUT_VAR(kv_bucket_num);
-	COUT_VAR(val_t::MAX_VALLEN);
-	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 }
 
 void prepare_dpdk() {
@@ -210,24 +133,24 @@ void prepare_dpdk() {
 	//memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
 	//memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
 	rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
-	dpdk_init(&mbuf_pool, fg_n, 1);
+	dpdk_init(&mbuf_pool, client_num, 1);
 }
 
 void prepare_receiver() {
-	//pkts = new volatile struct rte_mbuf*[fg_n];
-	//stats = new volatile bool[fg_n];
-	//memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
-	//memset((void *)stats, 0, sizeof(bool)*fg_n);
-	//for (size_t i = 0; i < fg_n; i++) {
+	//pkts = new volatile struct rte_mbuf*[client_num];
+	//stats = new volatile bool[client_num];
+	//memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*client_num);
+	//memset((void *)stats, 0, sizeof(bool)*client_num);
+	//for (size_t i = 0; i < client_num; i++) {
 	//	pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
 	//}
-	pkts_list = new struct rte_mbuf**[fg_n];
-	heads = new uint32_t[fg_n];
-	tails = new uint32_t[fg_n];
-	memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
-	memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
+	pkts_list = new struct rte_mbuf**[client_num];
+	heads = new uint32_t[client_num];
+	tails = new uint32_t[client_num];
+	memset((void*)heads, 0, sizeof(uint32_t)*client_num);
+	memset((void*)tails, 0, sizeof(uint32_t)*client_num);
 	//int res = 0;
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < client_num; i++) {
 		pkts_list[i] = new struct rte_mbuf*[MQ_SIZE];
 		for (size_t j = 0; j < MQ_SIZE; j++) {
 			pkts_list[i][j] = nullptr;
@@ -251,17 +174,17 @@ void run_benchmark() {
 	lcoreid++;
 
 	// Prepare fg params
-	//pthread_t threads[fg_n];
-	fg_param_t fg_params[fg_n];
+	//pthread_t threads[client_num];
+	fg_param_t fg_params[client_num];
 	// check if parameters are cacheline aligned
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < client_num; i++) {
 		if ((uint64_t)(&(fg_params[i])) % CACHELINE_SIZE != 0) {
 			COUT_N_EXIT("wrong parameter address: " << &(fg_params[i]));
 		}
 	}
 
 	// Launch workers
-	for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
+	for (uint8_t worker_i = 0; worker_i < client_num; worker_i++) {
 		fg_params[worker_i].thread_id = worker_i;
 		fg_params[worker_i].latency_list.clear();
 #ifdef TEST_DPDK_POLLING
@@ -282,10 +205,10 @@ void run_benchmark() {
 	}
 
 	COUT_THIS("[client] prepare workers ...");
-	while (ready_threads < fg_n) sleep(1);
+	while (ready_threads < client_num) sleep(1);
 
 	running = true;
-	while (finish_threads < fg_n) sleep(1);
+	while (finish_threads < client_num) sleep(1);
 	COUT_THIS("[client] all workers finish!");
 
 	/* Process statistics */
@@ -297,7 +220,7 @@ void run_benchmark() {
 	std::vector<double> wait_list; // TMPTMP
 #endif
 	double sum_latency;
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < client_num; i++) {
 		latency_list.insert(latency_list.end(), fg_params[i].latency_list.begin(), fg_params[i].latency_list.end());
 #ifdef TEST_DPDK_POLLING
 		wait_list.insert(wait_list.end(), fg_params[i].wait_list.begin(), fg_params[i].wait_list.end()); // TMPTMP
@@ -337,7 +260,7 @@ void run_benchmark() {
 	running = false; // After processing statistics
 	COUT_THIS("Finish dumping statistics!")
 	/*void *status;
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < client_num; i++) {
 		int rc = pthread_join(threads[i], &status);
 		if (rc) {
 			COUT_N_EXIT("Error:unable to join," << rc);
@@ -369,8 +292,8 @@ static int run_receiver(void *param) {
 			}
 			else {
 				uint16_t received_port = (uint16_t)ret;
-				int idx = received_port - src_port_start;
-				if (unlikely(idx < 0 || unsigned(idx) >= fg_n)) {
+				int idx = received_port - client_port_start;
+				if (unlikely(idx < 0 || unsigned(idx) >= client_num)) {
 					COUT_THIS("Invalid dst port received by client: %u" << received_port)
 					continue;
 				}
@@ -409,7 +332,7 @@ static int run_fg(void *param) {
 
 	char load_filename[256];
 	memset(load_filename, '\0', 256);
-	GET_SPLIT_WORKLOAD(load_filename, output_dir, thread_id);
+	GET_SPLIT_WORKLOAD(load_filename, client_workload_dir, thread_id);
 
 	Parser parser(load_filename);
 	ParserIterator iter = parser.begin();
@@ -419,8 +342,8 @@ static int run_fg(void *param) {
 	int res = 0;
 
 	// DPDK
-	short src_port = src_port_start + thread_id;
-	//short dst_port = dst_port_start + thread_id;
+	short src_port = client_port_start + thread_id;
+	//short server_port = server_port_start + thread_id;
 	// Optimize mbuf allocation
 	uint16_t burst_size = 256;
 	struct rte_mbuf *sent_pkts[burst_size];
@@ -464,7 +387,7 @@ static int run_fg(void *param) {
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
 			// DPDK
-			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+			encode_mbuf(sent_pkt, client_macaddr, server_macaddr, client_ip, server_ip, src_port, server_port_start, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
 			CUR_TIME(req_t2);
@@ -509,7 +432,7 @@ static int run_fg(void *param) {
 			}
 
 			// DPDK
-			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+			encode_mbuf(sent_pkt, client_macaddr, server_macaddr, client_ip, server_ip, src_port, server_port_start, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
 			CUR_TIME(req_t2);
@@ -540,7 +463,7 @@ static int run_fg(void *param) {
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 
 			// DPDK
-			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+			encode_mbuf(sent_pkt, client_macaddr, server_macaddr, client_ip, server_ip, src_port, server_port_start, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
 			CUR_TIME(req_t2);
@@ -575,7 +498,7 @@ static int run_fg(void *param) {
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
 					<< "endkey = " << endkey.to_string() << " num = " << range_num);
 			req_size = req.serialize(buf, MAX_BUFSIZE);
-			encode_mbuf(sent_pkt, src_macaddr, dst_macaddr, src_ipaddr, server_addr, src_port, dst_port, buf, req_size);
+			encode_mbuf(sent_pkt, client_macaddr, server_macaddr, client_ip, server_ip, src_port, server_port_start, buf, req_size);
 			res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 			INVARIANT(res == 1);
 			CUR_TIME(req_t2);

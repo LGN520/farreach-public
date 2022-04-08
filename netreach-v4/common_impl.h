@@ -12,6 +12,8 @@ struct alignas(CACHELINE_SIZE) TcpServerParam {
 };
 typedef TcpServerParam tcpserver_param_t;
 
+typedef Key index_key_t;
+typedef Val val_t;
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
 typedef PutRequest<index_key_t, val_t> put_request_t;
@@ -26,93 +28,174 @@ typedef GetRequestNLatest<index_key_t> get_request_nlatest_t;
 typedef GetResponseLatestSeq<index_key_t, val_t> get_response_latest_seq_t;
 typedef GetResponseDeletedSeq<index_key_t, val_t> get_response_deleted_seq_t;
 typedef CachePop<index_key_t, val_t> cache_pop_t;
+typedef CachePopInSwitch<index_key_t, val_t> cache_pop_inswitch_t;
+
+/*
+ * Constants
+ */
+
+const double dpdk_polling_time = 21.82; // Test by enabling TEST_DPDK_POLLING, and only transmit packets between client and switch
+const size_t max_sending_rate = size_t(1.2 * 1024 * 1024); // 1.2 MQPS; limit sending rate to x (e.g., the aggregate rate of servers)
+const size_t rate_limit_period = 10 * 1000; // 10 * 1000us
 
 /*
  * Parameters
  */
 
-// loading phase
+// global
+const char *workload_name = nullptr;
+val_t::MAX_VALLEN = 128;
+
+// client
+size_t client_num;
+short client_port_start;
+const char *client_ip;
+uint8_t client_macaddr[6];
+char client_workload_dir[256];
+size_t per_client_per_period_max_sending_rate;
+
+// server: loading phase
 size_t split_n;
 size_t load_n;
-char output_dir[256];
+char server_load_workload_dir[256];
 
-// normal worker
-size_t fg_n = 1;
-short dst_port_start = -1;
-const char *workload_name = nullptr;
-uint32_t kv_bucket_num;
-size_t per_server_range;
-size_t bg_n = 1;
-
+// server: transaction phase
+size_t server_num = 1;
+short server_port_start = -1;
+// switch os simulator for processing special cases and packet loss handling (and tcp servers for workers)
+short pktloss_port_start = -1;
+const char* server_ip = nullptr;
+uint8_t server_macaddr[6];
 // backuper for processing in-switch snapshot
+const char* backup_ip = nullptr;
 short backup_port;
 // notified for processing explicit notification of server-side snapshot
 short notified_port;
+size_t per_server_range;
 
-// switch os simulator for processing special cases and packet loss handling (and tcp servers for workers)
-short pktloss_port_start = -1;
-
-// cache update (population and eviction)
+// controller
 const char *controller_ip = nullptr;
 //short controller_popserver_port_start = -1;
 short controller_popserver_port = -1;
+
+// switch
+uint32_t kv_bucket_num;
+val_t::SWITCH_MAX_VALLEN = 128;
+short switchos_popserver_port = -1;
+short switchos_paramserver_port = -1;
+const char *switchos_ip = nullptr;
+
+// reflector
+const char *reflector_ip = nullptr;
+short reflector_port = -1;
+
+// others
+size_t bg_n = 1;
+
 
 /*
  * Get configuration
  */
 
 inline void parse_ini(const char * config_file);
-inline void parse_args(int, char **);
+//inline void parse_args(int, char **);
 
 inline void parse_ini(const char* config_file) {
 	IniparserWrapper ini;
 	ini.load(config_file);
 
+	// global
+	workload_name = ini.get_workload_name();
+	val_t::MAX_VALLEN = ini.get_max_vallen();
+	printf("workload_name: %s\n", workload_name);
+	COUT_VAR(val_t::MAX_VALLEN);
+
+	// client
+	client_num = ini.get_client_num();
+	client_port_start = ini.get_client_port();
+	client_ip = ini.get_client_ip();
+	ini.get_client_mac(client_macaddr);
+	RUN_SPLIT_DIR(client_workload_dir, workload_name, client_num);
+	per_client_per_period_max_sending_rate = max_sending_rate / client_num / (1 * 1000 * 1000 / rate_limit_period);
+	COUT_VAR(client_num);
+	COUT_VAR(client_port_start);
+	printf("client_ip: %s\n", client_ip);
+	printf("client_macaddr: ");
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", client_macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+	printf("client_workload_dir: %s\n", client_workload_dir);
+
+	// server: loading phase
 	split_n = ini.get_split_num();
 	INVARIANT(split_n >= 2);
 	load_n = split_n - 1;
-
-	fg_n = ini.get_server_num();
-	INVARIANT(fg_n >= load_n);
-	dst_port_start = ini.get_server_port();
-	workload_name = ini.get_workload_name();
-	kv_bucket_num = ini.get_bucket_num();
-	val_t::MAX_VALLEN = ini.get_max_vallen();
-	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
-	backup_port = ini.get_server_backup_port();
-	pktloss_port_start = ini.get_server_pktloss_port();
-	per_server_range = std::numeric_limits<size_t>::max() / fg_n;
-	notified_port = ini.get_server_notified_port();
-
-	LOAD_SPLIT_DIR(output_dir, workload_name, split_n); // get the split directory for loading phase
+	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, split_n); // get the split directory for loading phase
 	struct stat dir_stat;
-	if (!(stat(output_dir, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
-		printf("Output directory does not exist: %s\n", output_dir);
+	if (!(stat(server_load_workload_dir, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
+		printf("Output directory does not exist: %s\n", server_load_workload_dir);
 		exit(-1);
 	}
+	COUT_VAR(split_n);
+	COUT_VAR(load_n);
+	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);
 
+	// server: transaction phase
+	server_num = ini.get_server_num();
+	INVARIANT(server_num >= load_n);
+	server_port_start = ini.get_server_port();
+	pktloss_port_start = ini.get_server_pktloss_port();
+	server_ip = ini.get_server_ip();
+	ini.get_server_mac(server_macaddr);
+	backup_ip = ini.get_server_backup_ip();
+	backup_port = ini.get_server_backup_port();
+	notified_port = ini.get_server_notified_port();
+	per_server_range = std::numeric_limits<size_t>::max() / server_num;
+	COUT_VAR(server_num);
+	COUT_VAR(server_port_start);
+	COUT_VAR(pktloss_port_start);
+	printf("server_ip: %s\n", server_ip);
+	printf("server_macaddr: ");
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", server_macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+	printf("backup_ip: %s\n", backup_ip);
+	COUT_VAR(backup_port);
+	COUT_VAR(notified_port);
+	COUT_VAR(per_server_range);
+
+	// controller
 	controller_ip = ini.get_controller_ip();
 	//controller_popserver_port_start = ini.get_controller_popserver_port();
 	controller_popserver_port = ini.get_controller_popserver_port();
-
-	COUT_VAR(split_n);
-	COUT_VAR(load_n);
-	COUT_VAR(fg_n);
-	COUT_VAR(dst_port_start);
-	printf("workload_name: %s\n", workload_name);
-	COUT_VAR(kv_bucket_num);
-	COUT_VAR(val_t::MAX_VALLEN);
-	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
-	COUT_VAR(backup_port);
-	COUT_VAR(pktloss_port_start);
-	COUT_VAR(per_server_range);
-	COUT_VAR(notified_port);
-	COUT_VAR(controller_ip);
+	printf("controller ip: %s\n", controller_ip);
 	//COUT_VAR(controller_popserver_port_start);
 	COUT_VAR(controller_popserver_port);
+	
+	// switch
+	kv_bucket_num = ini.get_bucket_num();
+	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
+	switchos_popserver_port = ini.get_switchos_popserver_port();
+	switchos_paramserver_port = ini.get_switchos_paramserver_port();
+	switchos_ip = ini.get_switchos_ip();
+	COUT_VAR(kv_bucket_num);
+	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
+	COUR_VAR(switchos_popserver_port);
+	COUT_VAR(switchos_paramserver_port);
+	printf("switchos ip: %s\n", switchos_ip);
+
+	// reflector
+	reflector_ip = ini.get_reflector_ip();
+	reflector_port = ini.get_reflector_port();
+	printf("reflector ip: %s\n", reflector_ip);
+	COUT_VAR(reflector_port);
 }
 
-inline void parse_args(int argc, char **argv) {
+/*inline void parse_args(int argc, char **argv) {
   struct option long_options[] = {
       {"bg", required_argument, 0, 'i'},
       {"xindex-root-err-bound", required_argument, 0, 'j'},
@@ -175,6 +258,6 @@ inline void parse_args(int argc, char **argv) {
   COUT_VAR(xindex::config.buffer_size_bound);
   COUT_VAR(xindex::config.buffer_size_tolerance);
   COUT_VAR(xindex::config.buffer_compact_threshold);
-}
+}*/
 
 #endif

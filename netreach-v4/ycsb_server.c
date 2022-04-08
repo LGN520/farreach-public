@@ -57,8 +57,6 @@ struct alignas((CACHELINE_SIZE)) TcpServerParam;
 typedef BackupData backup_data_t;
 typedef SpecialCase special_case_t;
 typedef DeletedSet deleted_set_t;
-typedef Key index_key_t;
-typedef Val val_t;
 typedef LoadSFGParam load_sfg_param_t;
 typedef SFGParam sfg_param_t;
 //typedef ReceiverParam receiver_param_t;
@@ -94,6 +92,7 @@ typedef PutRequestLargeEvictCase2Switch<index_key_t, val_t> put_request_large_ev
 #include "common_impl.h"
 #include "controller_impl.h"
 #include "server_impl.h"
+#include "reflector_impl.h"
 
 // Prepare data structures
 void preprae_for_pktloss();
@@ -175,8 +174,8 @@ struct alignas(CACHELINE_SIZE) SFGParam {
 
 size_t get_server_idx(index_key_t key) {
 	size_t server_idx = key.keylo / per_server_range;
-	if (server_idx >= fg_n) {
-		server_idx = fg_n - 1;
+	if (server_idx >= server_num) {
+		server_idx = server_num - 1;
 	}
 	return server_idx;
 }
@@ -188,12 +187,12 @@ std::atomic<size_t> ready_threads(0);
 
 int main(int argc, char **argv) {
   parse_ini("config.ini");
-  parse_args(argc, argv);
+  //parse_args(argc, argv);
   //xindex::init_options(); // init options of rocksdb
 
   // Prepare per-server special cases
-  /*special_cases_list = new std::map<unsigned short, special_case_t> *[fg_n];
-  for (size_t i = 0; i < fg_n; i++) {
+  /*special_cases_list = new std::map<unsigned short, special_case_t> *[server_num];
+  for (size_t i = 0; i < server_num; i++) {
 	special_cases_list[i] = new std::map<unsigned short, special_case_t>;
   }*/
   // Prepare one-thread special cases
@@ -207,7 +206,7 @@ int main(int argc, char **argv) {
   std::vector<index_key_t> keys;
   std::vector<val_t> vals;
   load(keys, vals); // Use the last split workload to initialize the XIndex
-  xindex_t *tab_xi = new xindex_t(keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
+  xindex_t *tab_xi = new xindex_t(keys, vals, server_num, bg_n); // server_num to create array of RCU status; bg_n background threads have been launched
 
   run_load_server(tab_xi); // loading phase
 
@@ -218,8 +217,8 @@ int main(int argc, char **argv) {
   prepare_receiver();
 
   // RCU for backup data (NOTE: necessary only if SCAN needs to access backup data)
-  backup_rcu = new uint32_t[fg_n];
-  memset((void *)backup_rcu, 0, fg_n * sizeof(uint32_t));
+  backup_rcu = new uint32_t[server_num];
+  memset((void *)backup_rcu, 0, server_num * sizeof(uint32_t));
 
   // register signal handler
   signal(SIGTERM, SIG_IGN); // Ignore SIGTERM for subthreads
@@ -230,7 +229,7 @@ int main(int argc, char **argv) {
   close_controller();
 
   // Free DPDK mbufs
-  for (size_t i = 0; i < fg_n; i++) {
+  for (size_t i = 0; i < server_num; i++) {
 	//rte_pktmbuf_free((struct rte_mbuf *)pkts[i]);
 	  while (heads[i] != tails[i]) {
 		  rte_pktmbuf_free((struct rte_mbuf*)pkts_list[i][tails[i]]);
@@ -249,12 +248,12 @@ int main(int argc, char **argv) {
 
 void prepare_for_pktloss() {
 	// From switch os to each server
-	pkts_list_for_pktloss = new struct rte_mbuf**[fg_n];
-	heads_for_pktloss = new uint32_t[fg_n];
-	tails_for_pktloss = new uint32_t[fg_n];
-	memset((void*)heads_for_pktloss, 0, sizeof(uint32_t)*fg_n);
-	memset((void*)tails_for_pktloss, 0, sizeof(uint32_t)*fg_n);
-	for (size_t i = 0; i < fg_n; i++) {
+	pkts_list_for_pktloss = new struct rte_mbuf**[server_num];
+	heads_for_pktloss = new uint32_t[server_num];
+	tails_for_pktloss = new uint32_t[server_num];
+	memset((void*)heads_for_pktloss, 0, sizeof(uint32_t)*server_num);
+	memset((void*)tails_for_pktloss, 0, sizeof(uint32_t)*server_num);
+	for (size_t i = 0; i < server_num; i++) {
 		pkts_list_for_pktloss[i] = new struct rte_mbuf*[MQ_SIZE];
 		for (size_t j = 0; j < MQ_SIZE; j++) {
 			pkts_list_for_pktloss[i][j] = nullptr;
@@ -262,14 +261,14 @@ void prepare_for_pktloss() {
 	}
 
 	// For linearizability under packet loss
-	for (size_t i = 0; i < fg_n; i++) { // per-server deleted set
+	for (size_t i = 0; i < server_num; i++) { // per-server deleted set
 		deleted_sets[i] = new deleted_set_t();
 	}
 
 	// Tcp channels between switch os and servers
-	server_tcpsocks = new int[fg_n];
-	switchos_tcpsocks = new int[fg_n];
-	for (size_t i = 0; i < fg_n; i++) {
+	server_tcpsocks = new int[server_num];
+	switchos_tcpsocks = new int[server_num];
+	for (size_t i = 0; i < server_num; i++) {
 		// Set server sockets
 		server_tcpsocks[i] = socket(AF_INET, SOCK_STREAM, 0);
 		if (server_tcpsocks[i] == -1) {
@@ -330,25 +329,25 @@ void prepare_dpdk() {
   //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
   //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
   rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
-  dpdk_init(&mbuf_pool, fg_n, 1);
+  dpdk_init(&mbuf_pool, server_num+1, 1); // tx: server_num server.workers + one reflector; rx: one receiver
 }
 
 void prepare_receiver() {
   // From receiver to each server
-  //pkts = new volatile struct rte_mbuf*[fg_n];
-  //stats = new volatile bool[fg_n];
-  //memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*fg_n);
-  //memset((void *)stats, 0, sizeof(bool)*fg_n);
-  //for (size_t i = 0; i < fg_n; i++) {
+  //pkts = new volatile struct rte_mbuf*[server_num];
+  //stats = new volatile bool[server_num];
+  //memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*server_num);
+  //memset((void *)stats, 0, sizeof(bool)*server_num);
+  //for (size_t i = 0; i < server_num; i++) {
   //  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
   //}
-  pkts_list = new struct rte_mbuf**[fg_n];
-  heads = new uint32_t[fg_n];
-  tails = new uint32_t[fg_n];
-  memset((void*)heads, 0, sizeof(uint32_t)*fg_n);
-  memset((void*)tails, 0, sizeof(uint32_t)*fg_n);
+  pkts_list = new struct rte_mbuf**[server_num];
+  heads = new uint32_t[server_num];
+  tails = new uint32_t[server_num];
+  memset((void*)heads, 0, sizeof(uint32_t)*server_num);
+  memset((void*)tails, 0, sizeof(uint32_t)*server_num);
   //int res = 0;
-  for (size_t i = 0; i < fg_n; i++) {
+  for (size_t i = 0; i < server_num; i++) {
 	  pkts_list[i] = new struct rte_mbuf*[MQ_SIZE];
 	  for (size_t j = 0; j < MQ_SIZE; j++) {
 		  pkts_list[i][j] = nullptr;
@@ -372,7 +371,7 @@ void prepare_receiver() {
 void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {
 	char load_filename[256];
 	memset(load_filename, '\0', 256);
-	GET_SPLIT_WORKLOAD(load_filename, output_dir, split_n-1);
+	GET_SPLIT_WORKLOAD(load_filename, server_load_workload_dir, split_n-1);
 
 	Parser parser(load_filename);
 	ParserIterator iter = parser.begin();
@@ -450,7 +449,7 @@ void run_load_server(xindex_t *table) {
 	COUT_THIS("[local client] start running...")
 
 	void *status;
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		int rc = pthread_join(threads[i], &status);
 		if (rc) {
 			COUT_N_EXIT("Error:unable to join," << rc);
@@ -467,7 +466,7 @@ void *run_load_sfg(void * param) {
 
 	char load_filename[256];
 	memset(load_filename, '\0', 256);
-	GET_SPLIT_WORKLOAD(load_filename, output_dir, thread_id);
+	GET_SPLIT_WORKLOAD(load_filename, server_load_workload_dir, thread_id);
 
 	Parser parser(load_filename);
 	ParserIterator iter = parser.begin();
@@ -552,14 +551,14 @@ void run_server(xindex_t *table) {
 	}
 
 	// Launch a tcp server for each worker (i.e., server) to receive mirrored packets
-	tcpserver_param_t tcpserver_params[fg_n];
-	for (size_t i = 0; i < fg_n; i++) {
+	tcpserver_param_t tcpserver_params[server_num];
+	for (size_t i = 0; i < server_num; i++) {
 		if ((uint64_t)(&(tcpserver_params[i])) % CACHELINE_SIZE != 0) {
 			COUT_N_EXIT("wrong parameter address: " << &(tcpserver_params[i]));
 		}
 	}
-	pthread_t tcpserver_threads[fg_n];
-	for (size_t i = 0; i < fg_n; i++) {
+	pthread_t tcpserver_threads[server_num];
+	for (size_t i = 0; i < server_num; i++) {
 		tcpserver_params[i].thread_id = uint8_t(i);
 		ret = pthread_create(&tcpserver_threads[i], nullptr, run_tcpserver_for_pktloss, (void *)&tcpserver_params[i]);
 		if (ret) {
@@ -568,7 +567,7 @@ void run_server(xindex_t *table) {
 	}
 
 	// Wait for tcpservers, as switch os simulator needs to connect each tcpserver to build reliable channel for mirroring
-	while (ready_tcpserver_threads < fg_n) sleep(1);
+	while (ready_tcpserver_threads < server_num) sleep(1);
 	sleep(1); // Ensure that all tcpservers enter accept status
 
 	// Launch switch OS simulator (processing rollback messages (case1 and case2) and mirrored evicted data)
@@ -579,15 +578,15 @@ void run_server(xindex_t *table) {
 	}
 
 	// Launch workers (processing normal packets)
-	//pthread_t threads[fg_n];
-	sfg_param_t sfg_params[fg_n];
+	//pthread_t threads[server_num];
+	sfg_param_t sfg_params[server_num];
 	// check if parameters are cacheline aligned
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		if ((uint64_t)(&(sfg_params[i])) % CACHELINE_SIZE != 0) {
 			COUT_N_EXIT("wrong parameter address: " << &(sfg_params[i]));
 		}
 	}
-	for (uint8_t worker_i = 0; worker_i < fg_n; worker_i++) {
+	for (uint8_t worker_i = 0; worker_i < server_num; worker_i++) {
 		sfg_params[worker_i].table = table;
 		sfg_params[worker_i].thread_id = worker_i;
 		sfg_params[worker_i].throughput = 0;
@@ -606,7 +605,7 @@ void run_server(xindex_t *table) {
 	}
 
 	COUT_THIS("[server] prepare server foreground threads...")
-	while (ready_threads < fg_n) sleep(1);
+	while (ready_threads < server_num) sleep(1);
 
 	signal(SIGTERM, kill); // Set for main thread (kill -15)
 
@@ -621,12 +620,12 @@ void run_server(xindex_t *table) {
 	//COUT_THIS("Server-side aggregate throughput: " << receiver_param.overall_thpt);
 	size_t overall_thpt = 0;
 	std::vector<double> load_balance_ratio_list;
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		overall_thpt += sfg_params[i].throughput;
 	}
 	COUT_THIS("Server-side overall throughput: " << overall_thpt);
-	double avg_per_server_thpt = double(overall_thpt) / double(fg_n);
-	for (size_t i = 0; i < fg_n; i++) {
+	double avg_per_server_thpt = double(overall_thpt) / double(server_num);
+	for (size_t i = 0; i < server_num; i++) {
 		load_balance_ratio_list.push_back(double(sfg_params[i].throughput) / avg_per_server_thpt);
 	}
 	for (size_t i = 0; i < load_balance_ratio_list.size(); i++) {
@@ -634,7 +633,7 @@ void run_server(xindex_t *table) {
 	}
 #ifdef TEST_AGG_THPT
 	double max_agg_thpt = 0.0;
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		max_agg_thpt += (double(sfg_params[i].throughput) / sfg_params[i].sum_latency * 1000 * 1000);
 	}
 	max_agg_thpt /= double(1024 * 1024);
@@ -643,7 +642,7 @@ void run_server(xindex_t *table) {
 
 	running = false;
 	/*void *status;
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		int rc = pthread_join(threads[i], &status);
 		if (rc) {
 		  COUT_N_EXIT("Error:unable to join," << rc);
@@ -658,7 +657,7 @@ void run_server(xindex_t *table) {
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join simulator: " << rc);
 	}
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		rc = pthread_join(tcpserver_threads[i], &status);
 		if (rc) {
 			COUT_N_EXIT("Error: unable to join tcpserver " << i << ": " << rc);
@@ -750,8 +749,8 @@ static int run_receiver(void *param) {
 						}
 					}
 					else { // normal packets
-						int idx = received_port - dst_port_start;
-						if (idx < 0 || unsigned(idx) >= fg_n) {
+						int idx = received_port - server_port_start;
+						if (idx < 0 || unsigned(idx) >= server_num) {
 							COUT_THIS("Invalid dst port received by server: " << received_port)
 							continue;
 						}
@@ -835,7 +834,7 @@ void *run_backuper(void *param) {
 		if (!isbackup) {
 			isbackup = true; // Ensure that all other worker threads do not touch special_cases_list
 			// TODO: test periodic backup with background traffic
-			/*for (uint32_t i = 0; i < fg_n; i++) {
+			/*for (uint32_t i = 0; i < server_num; i++) {
 				uint32_t prev_val = backup_rcu[i];
 				while (running && backup_rcu[i] == prev_val) {}
 			}*/
@@ -917,7 +916,7 @@ void *run_kvparser(void *param) {
 
 	// peace period of RCU (may not need if we do not use them in SCAN)
 	// TODO: test periodic backup with background traffic
-	/*for (uint32_t i = 0; i < fg_n; i++) {
+	/*for (uint32_t i = 0; i < server_num; i++) {
 		uint32_t prev_val = backup_rcu[i];
 		while (running && backup_rcu[i] == prev_val) {}
 	}*/
@@ -926,7 +925,7 @@ void *run_kvparser(void *param) {
 		delete old_backup_data;
 		old_backup_data = nullptr;
 	}
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		//special_cases_list[i]->clear();
 		special_cases->clear();
 	}
@@ -973,7 +972,7 @@ void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expecte
 }
 
 void rollback(backup_data_t *new_backup_data) {
-	//for (size_t i = 0; i < fg_n; i++) {
+	//for (size_t i = 0; i < server_num; i++) {
 		//std::map<unsigned short, special_case_t> *cur_special_cases = special_cases_list[i];
 		//for (std::map<unsigned short, special_case_t>::iterator iter = cur_special_cases->begin(); 
 		//		iter != cur_special_cases->end(); iter++) {
@@ -1183,8 +1182,8 @@ void *run_tcpserver_for_pktloss(void *param) {
 void *run_switchos_simulator(void *param) {
 	// (1) Switch OS simulator does not need mbufs to send DPDK packets; instead, it uses tcp packets to communicate with servers if necessary; (2) it also does not need to decode metadata of client; instead, it only needs to get the payload; (3) we simulate practical latency (pcie latency of copy to switch os + transmission latency from switch os to server -> transmission latency of copy to switch os + pcie latency from switch os to server); what's more, it is irrelevant of normal pkt latency and very rare on skewed workload;
 	
-	// Create fg_n tcp channels
-	for (size_t i = 0; i < fg_n; i++) {
+	// Create server_num tcp channels
+	for (size_t i = 0; i < server_num; i++) {
 		sockaddr_in server_addr;
 		memset(&server_addr, 0, sizeof(server_addr));
 		server_addr.sin_family = AF_INET;
@@ -1316,8 +1315,8 @@ void *run_switchos_simulator(void *param) {
 						}
 
 						// Forward to corresponding server by tcp channel
-						int idx = received_port - dst_port_start;
-						if (idx < 0 || unsigned(idx) >= fg_n) {
+						int idx = received_port - server_port_start;
+						if (idx < 0 || unsigned(idx) >= server_num) {
 							COUT_THIS("Invalid dst port received by switch os: " << received_port)
 							continue;
 						}
@@ -1346,7 +1345,7 @@ void *run_switchos_simulator(void *param) {
 		}
 	}
 
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		close(switchos_tcpsocks[i]);
 	}
 	COUT_THIS("switch os simulator exits")
@@ -1372,7 +1371,7 @@ static int run_sfg(void * param) {
   controller_addr.sin_port = htons(controller_popserver_port);
   if (connect(server_popclient_tcpsock_list[thread_id], (struct sockaddr*)&controller_addr, sizeof(controller_addr)) != 0) {
 	  //error("Fail to connect controller.popserver %ld at %s:%hu, errno: %d!\n", thread_id, controller_ip, controller_popserver_port_start + thread_id, errno);
-	  error("Fail to connect controller.popserver %ld at %s:%hu, errno: %d!\n", thread_id, controller_ip, controller_popserver_port, errno);
+	  error("Server.popclient %ld fails to connect controller.popserver at %s:%hu, errno: %d!\n", thread_id, controller_ip, controller_popserver_port, errno);
   }
 
   int res = 0;
@@ -1395,7 +1394,7 @@ static int run_sfg(void * param) {
   if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
 	perror("Disable udp checksum failed");
   }
-  short dst_port = dst_port_start + thread_id;
+  short dst_port = server_port_start + thread_id;
   struct sockaddr_in server_sockaddr;
   memset(&server_sockaddr, 0, sizeof(struct sockaddr_in));
   server_sockaddr.sin_family = AF_INET;
@@ -1422,7 +1421,7 @@ static int run_sfg(void * param) {
   char srcip[16];
   char dstip[16];
   uint16_t srcport;
-  uint16_t unused_dstport; // we use dst_port_start instead of received dstport to hide server-side partition for client
+  uint16_t unused_dstport; // we use server_port_start instead of received dstport to hide server-side partition for client
 
   ready_threads++;
 
@@ -1483,7 +1482,7 @@ static int run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -1497,16 +1496,16 @@ static int run_sfg(void * param) {
 					bool tmp_stat = table->get(req.key(), tmp_val, thread_id, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					if (tmp_stat) { // key exists
-						get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_stat, tmp_seq);
+						get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_seq);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
 					else { // key not exist
-						get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_stat, tmp_seq);
+						get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -1521,7 +1520,7 @@ static int run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -1536,7 +1535,7 @@ static int run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 
@@ -1567,7 +1566,7 @@ static int run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -1585,7 +1584,7 @@ static int run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 
@@ -1595,7 +1594,7 @@ static int run_sfg(void * param) {
 						if (!is_cached_before) {
 							server_cached_keyset_listp[thread_id].insert(req.key());
 							// Send CACHE_POP to controller.popserver
-							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_stat, tmp_seq, thread_id);
+							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, thread_id);
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 							int send_size = popsize;
 							const char *ptr = buf;
@@ -1656,7 +1655,7 @@ static int run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -1753,7 +1752,7 @@ static int run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;
@@ -1772,7 +1771,7 @@ static int run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 
@@ -1794,7 +1793,7 @@ static int run_sfg(void * param) {
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
-					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, dst_port_start, srcport, buf, rsp_size);
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
 					res = rte_eth_tx_burst(0, thread_id, &sent_pkt, 1);
 					sent_pkt_idx++;
 					break;

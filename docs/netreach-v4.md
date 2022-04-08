@@ -150,7 +150,7 @@
 	+ TODO: We use reflector thread to simulate the extra link for connection between data plane and switch OS
 - Controller
 	+ Cache population/eviction
-		* Receive CACHE_POP <key, value, stat, seq, serveridx> from server by tcp channel
+		* Receive CACHE_POP <key, value, seq, serveridx> from server by tcp channel
 			- Per-server popclient -> one controller.popserver (with multiple subthreads = # of servers)
 		* CANCELED: Add key into per-server cached key set (comment it if server.cached_keyset works well)
 		* CANCELED: Add key into key-server map (comment it as CACHE_EVICT embeds serveridx towards corresponding server)
@@ -171,7 +171,9 @@
 			- CANCELED: Add key into cached key set (comment it if server.cached_keyset works well)
 			- If with free idx (cache population)
 				+ Set valid[idx] = 0 for atomicity
-				+ TODO: Send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane, and wait for CACHE_POP_INSWITCH_ACK
+				+ TODO: Send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane, and wait for CACHE_POP_INSWITCH_ACK <key>
+					* NOTE: we use reflector to simulate extra link
+					* TODO: try internal pcie port
 				+ Data plane (for the given idx)
 					* TODO: Reset cache_frequency=0, latest=0, deleted=0
 					* TODO: Update vallen, savedseq, value
@@ -278,9 +280,11 @@
 - Implement cache population
 	+ Support GETREQ_POP in server
 	+ Support CACHE_POP in server, controller, TODO: switch OS
-		* TODO: controller.popclient
+		* controller.popclient
 		* TODO: server.reflector
 		* TODO: switchos.popworker
+	+ TODO: Support CACHE_POP_INSWITCH in switchos, reflector, switch
+	+ TODO: Support CACHE_POP_INSWITCH_ACK in switchos, reflector, switch
 
 ## Run
 

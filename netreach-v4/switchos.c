@@ -306,10 +306,13 @@ void *run_switchos_popworker(void *param) {
 
 			// TODO: cache population for new record
 			system("bash tofino/setvalid0.sh"); // set valid=0 for atomicity
+			// TODO: send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
 
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;
 			tmp_cache_pop_ptr = NULL;
+			switchos_cache_pop_ptrs[switchos_tail_for_pop] = NULL;
+			switchos_tail_for_pop = (switchos_tail_for_pop + 1) % MQ_SIZE;
 		}
 	}
 }

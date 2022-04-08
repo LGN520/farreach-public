@@ -19,7 +19,7 @@ std::map<int32_t, uint32_t> volatile controller_serveridx_subthreadidx_map;
 // Message queue between controller.popservers with controller.popclient (connected with switchos.popserver)
 cache_pop_t ** volatile controller_cache_pop_ptrs = NULL;
 uint32_t volatile controller_head_for_pop = 0;
-uint32_t volatile controller_tail_for_popt = 0;
+uint32_t volatile controller_tail_for_pop = 0;
 
 // controller.popclient <-> switchos.popserver
 int volatile controller_popclient_tcpsock = -1;
@@ -88,7 +88,7 @@ void prepare_controller() {
 	//controller_cachedkey_serveridx_map.clear();
 	controller_serveridx_subthreadidx_map.clear();
 	controller_head_for_pop = 0;
-	controller_tail_for_popt = 0;
+	controller_tail_for_pop = 0;
 	controller_popclient_tcpsock = socket(AF_INET, SOCK_STREAM, 0);
 }
 
@@ -141,7 +141,7 @@ void run_controller_popserver_subthread(void *param) {
 	int connfd = curparam->connfd;
 	uint32_t subthreadidx = curparam->subthreadidx;
 
-	// Process CACHE_POP packet <optype, key, vallen, value, stat, seq, serveridx>
+	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = -1;
 	int8_t optype = -1;
@@ -242,12 +242,38 @@ void run_controller_popserver_subthread(void *param) {
 }
 
 void run_controller_popclient(void *param) {
+	sockaddr_in switchos_addr;
+	memset(&switchos_addr, 0, sizeof(switchos_addr));
+	switchos_addr.sin_family = AF_INET;
+	switchos_addr.sin_addr.s_addr = inet_addr(switchos_ip);
+	switchos_addr.sin_port = htons(switchos_popserver_port);
+	if (connect(controller_popclient_tcpsock, (struct sockaddr*)&switchos_addr, sizeof(switchos_addr)) != 0) {
+		error("Fail to connect switchos.popserver at %s:%hu, errno: %d!\n", switchos_ip, switchos_popserver_port, errno);
+	}
+
 	while (running) {
 		char buf[MAX_BUFSIZE];
 		if (controller_tail_for_pop != controller_head_for_pop) {
 			cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptrs[controller_tail_for_pop];
-			// TODO: send CACHE_POPs to switch os
-			// TODO: free CACHE_POP
+			// send CACHE_POP to switch os
+			uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
+			int send_size = popsize;
+			const char *ptr = buf;
+			while (send_size > 0) {
+				int tmpsize = send(controller_popclient_tcpsock, ptr, send_size, 0);
+				if (tmpsize < 0) {
+					// Errno 32 means broken pipe, i.e., remote TCP connection is closed
+					printf("TCP send returns %d, errno: %d\n", tmpsize, errno);
+					break;
+				}
+				ptr += tmpsize;
+				send_size -= tmpsize;
+			}
+			// free CACHE_POP
+			delete tmp_cache_pop_ptr;
+			tmp_cache_pop_ptr = NULL;
+			controller_cache_pop_ptrs[controller_tail_for_pop] = NULL;
+			controller_tail_for_pop = (controller_tail_for_pop + 1) % MQ_SIZE;
 		}
 	}
 }

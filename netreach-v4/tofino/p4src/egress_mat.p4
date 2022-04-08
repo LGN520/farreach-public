@@ -163,8 +163,10 @@ action update_getreq_inswitch_to_getres_by_mirroring() {
 
 action update_getres_latest_seq_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
+	modify_field(result_hdr.result, 1);
 
 	remove_header(seq_hdr);
+	add_header(result_hdr);
 }
 
 action drop_getres_latest_seq_inswitch() {
@@ -173,8 +175,10 @@ action drop_getres_latest_seq_inswitch() {
 
 action update_getres_deleted_seq_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
+	modify_field(result_hdr.result, 0);
 
 	remove_header(seq_hdr);
+	add_header(result_hdr);
 }
 
 action drop_getres_deleted_seq_inswitch() {
