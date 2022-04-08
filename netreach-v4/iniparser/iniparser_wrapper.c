@@ -174,6 +174,15 @@ short get_switchos_popserver_port() {
 	return short(tmp);
 }
 
+short get_switchos_paramserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_paramserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_paramserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 // Controller
 
 const char* IniparserWrapper::get_controller_ip() {

@@ -151,22 +151,26 @@
 - Controller
 	+ Cache population/eviction
 		* Receive CACHE_POP <key, value, stat, seq, serveridx> from server by tcp channel
+			- Per-server popclient -> one controller.popserver (with multiple subthreads = # of servers)
 		* CANCELED: Add key into per-server cached key set (comment it if server.cached_keyset works well)
-		* Add key into key-server map (we need it to send CACHE_EVICT to the corresponding server)
+		* CANCELED: Add key into key-server map (comment it as CACHE_EVICT embeds serveridx towards corresponding server)
+		* Maintain a map between serveridx and controller.popserver.subthreadidx
 		* Send CACHE_POP to corresponding switchOS
 	+ Eviction handler
-		* TODO: Receive CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq>
+		* TODO: Receive CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx>
 		* TODO: Check per-server cached key set to find the corresponding server
 		* TODO: Send CACHE_EVICT to the correpsonding server, and wait for CACHE_EVICT_ACK <victim.key>
 		* TODO: Send CACHE_EVICT_ACK to the switch OS
 - Switch OS
 	+ Cache population/eviction
 		* Cache update thread (switchos.popworker): perform cache population/eviction
-		* TODO: Maintain in-memory multi-level array: switch -> egress pipeline -> <idx, key>
-		* TODO: Receive a CACHE_POP from controller -> check whether there exists free idx to assign
+		* Maintain in-memory multi-level array: switch (TODO: different switches under distributed extension) -> egress pipeline (fixed due to testbed limitation) -> <idx, key>
+		* TODO: Maintain a paramserver to pass parameters to ptf framework
+		* Receive a CACHE_POP from controller -> check whether there exists free idx to assign
+			- One controller.popclient -> one switchos.popserver
 			- CANCELED: Add key into cached key set (comment it if server.cached_keyset works well)
 			- If with free idx (cache population)
-				+ TODO: Set valid[idx] = 0 for atomicity
+				+ Set valid[idx] = 0 for atomicity
 				+ TODO: Send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane, and wait for CACHE_POP_INSWITCH_ACK
 				+ Data plane (for the given idx)
 					* TODO: Reset cache_frequency=0, latest=0, deleted=0
@@ -180,7 +184,7 @@
 				+ TODO: Choose the idx with the minimum frequency as the victim (approximate LRF)	
 				+ TODO: Set valid[victim.idx] = 3 for atomicity (then only latest can be changed by data plane)
 				+ TODO: Load deleted, vallen, val, and savedseq of victim
-				+ TODO: Report CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq> to controller, and wait for CACHE_EVICT_ACK
+				+ TODO: Report CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx> to controller, and wait for CACHE_EVICT_ACK
 					* NOTE: we do not need to load latest
 						- Even if latest=0, the value could still be latest <- PUT/DEL (lost later) w/ valid=3 resets latest from 1 to 0
 						- No matter value is latest or not, we can always compare savedseq with server.seq for availability
@@ -254,6 +258,7 @@
 - TODO: Cache population also updates savedseq
 - TODO: If cache crashes, server should reset all seq as zero after recovery such that switch-assigned seq (>=1) must be larger
 - TODO: If with parser limitation, we can introduce hint of next header in the previous header
+- TODO: Check APIs of register access 
 
 ## Implementation log
 
@@ -273,6 +278,9 @@
 - Implement cache population
 	+ Support GETREQ_POP in server
 	+ Support CACHE_POP in server, controller, TODO: switch OS
+		* TODO: controller.popclient
+		* TODO: server.reflector
+		* TODO: switchos.popworker
 
 ## Run
 

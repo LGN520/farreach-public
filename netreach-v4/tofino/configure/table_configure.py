@@ -1755,7 +1755,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec4, actnspec1)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
-            self.conn_mgr.client_cleanup(self.sess_hdl)
+            self.conn_mgr.client_cleanup(self.sess_hdl) # close session
 
     #def tearDown(self):
     #    if test_param_get('cleanup') == True:

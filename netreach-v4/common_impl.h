@@ -10,7 +10,7 @@
 struct alignas(CACHELINE_SIZE) TcpServerParam {
 	uint8_t thread_id;
 };
-typedef TcpServerParam tcpserver_param_t
+typedef TcpServerParam tcpserver_param_t;
 
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
