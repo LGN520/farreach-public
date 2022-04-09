@@ -19,6 +19,9 @@
 #define GETRES_DELETED_SEQ 0x0c
 #define GETRES_LATEST_SEQ_INSWITCH 0x0d
 #define GETRES_DELETED_SEQ_INSWITCH 0x0e
+#define CACHE_POP 0x0f
+#define CACHE_POP_INSWITCH 0x10
+#define CACHE_POP_INSWITCH_ACK 0x11
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)
@@ -138,6 +141,9 @@ control egress {
 	apply(update_valhi11_tbl);
 	apply(update_vallo12_tbl);
 	apply(update_valhi12_tbl);
+
+	// Stage 9
+	apply(lastclone_tbl);
 
 	// Stage 10
 	apply(update_vallo13_tbl);

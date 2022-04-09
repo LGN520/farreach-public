@@ -104,6 +104,8 @@ header_type metadata_t {
 		cm3_predicate: 4;
 		cm4_predicate: 4;
 		is_hot: 1;
+		clonenum_for_pktloss: 8;
+		is_lastclone_for_pktloss: 1;
 
 		tmp_sport: 16;
 		tmp_dport: 16;

@@ -25,6 +25,30 @@ table is_hot_tbl {
 	size: 1;
 }
 
+// Stage 9
+
+action is_lastclone_action() {
+	modify_field(meta.is_lastclone_for_pktloss, 1);
+}
+
+action not_lastclone_action() {
+	modify_field(meta.is_lastclone_for_pktloss, 0);
+}
+
+@pragma stage 9
+table lastclone_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.clonenum_for_pktloss: exact;
+	}
+	actions {
+		is_lastclone_action;
+		not_lastclone_action;
+	}
+	default_action: not_lastclone_action();
+	size: 1;
+}
+
 // Stage 10
 
 action update_getreq_inswitch_to_getreq(eport) {
@@ -185,6 +209,46 @@ action drop_getres_deleted_seq_inswitch() {
 	drop();
 }
 
+field_list clone_field_list {
+	meta.clonenum_for_pktloss: exact;
+}
+
+action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(sid) {
+	modify_field(op_hdr.optype, CACHE_POP_INSWITCH_ACK);
+	modify_field(meta.clonenum_for_pktloss, 1); // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone)
+
+	remove_header(vallen_hdr);
+	remove_header(val1_hdr);
+	remove_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+	remove_header(seq_hdr);
+	remove_header(inswitch_hdr);
+
+	clone_egress_pkt_to_egress(sid, clone_field_list);
+}
+
+action forward_cache_pop_inswitch_ack_clone_for_pktloss(sid) {
+	subtract_from_field(meta.clonenum_for_pktloss, 1);
+
+	clone_egress_pkt_to_egress(sid, clone_field_list);
+}
+
+action forward_cache_pop_inswitch_ack() {
+}
+
 table eg_port_forward_tbl {
 	reads {
 		op_hdr_optype: exact;
@@ -194,6 +258,7 @@ table eg_port_forward_tbl {
 		status_hdr.is_latest: exact;
 		status_hdr.is_deleted: exact;
 		inswitch_hdr.is_wrong_pipeline: exact;
+		meta.is_lastclone_for_pktloss: exact;
 	}
 	actions {
 		update_getreq_inswitch_to_getreq;
@@ -207,6 +272,9 @@ table eg_port_forward_tbl {
 		drop_getres_latest_seq_inswitch; // original packet of GETRES_LATEST_SEQ
 		update_getres_deleted_seq_to_getres; // GETRES_DELETED_SEQ must be cloned from ingress to egress
 		drop_getres_deleted_seq_inswitch; // original packet of GETRES_DELETED_SEQ
+		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss; // first CACHE_POP_INSWITCH_ACK
+		forward_cache_pop_inswitch_ack_clone_for_pktloss; // not last clone of CACHE_POP_INSWITCH_ACK
+		forward_cache_pop_inswitch_ack; // last clone of CACHE_POP_INSWITCH_ACK
 		nop;
 	}
 	default_action: nop();

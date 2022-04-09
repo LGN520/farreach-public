@@ -1,8 +1,8 @@
 #ifndef REFLECTOR_H
 #define REFLECTOR_H
 
-// switchos.popworker -> one reflector.udpserver -> data plane
-// data plane -> receiver -> reflector.udpserver -> switchos.popworker
+// switchos.popworker -> (udp channel) -> one reflector.udpserver -> data plane
+// data plane -> receiver -> (message) -> reflector.dpdkserver -> switchos.popworker
 int volatile reflector_udpsock = -1;
 
 void prepare_reflector();
@@ -77,8 +77,9 @@ void *run_reflector(void *param) {
 		sent_pkt_idx++;
 
 		// wait for CACHE_POP_INSWITCH_ACK from data plane
-		// TODO: receiver receives duplicate ACK; only save once into a message
-		// TODO: reflector gets ACK from the message; use while(running) to avoid deadlock
+		// TODO: use a new dpdkserver to send ACKs to switchos.popworker
+		// TODO: receiver insert each ACK into a message queue
+		// TODO: reflector gets all ACKs from message queue; use while(running) to avoid deadlock
 		// TODO: reflector sends ACK to switchos.popworker, and clear the message
 
 		if (sent_pkt_idx >= burst_size) {

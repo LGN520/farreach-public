@@ -130,6 +130,8 @@
 		* Stage 4-9 (4 ALU)
 			- From vallo1 to valhi12 (optype, is_cached, idx, valid, is_latest -> val_hdr)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
+			- lastclone_tbl (optype, clonenum_for_pktloss -> is_lastclone_for_pktloss)
+				+ optype: CACHE_POP_INSWITCH_ACK
 		* Stage 10 (4 ALU)
 			- vallo13, valhi13, vallo14, valhi14 (optype, is_cached, idx, valid, is_latest -> val_hdr)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
@@ -171,14 +173,10 @@
 			- CANCELED: Add key into cached key set (comment it if server.cached_keyset works well)
 			- If with free idx (cache population)
 				+ Set valid[idx] = 0 for atomicity
-				+ TODO: Send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane, and wait for CACHE_POP_INSWITCH_ACK <key>
-					* NOTE: we use reflector to simulate extra link
-					* TODO: try internal pcie port
-				+ Data plane (for the given idx)
-					* TODO: Reset cache_frequency=0, latest=0, deleted=0
-					* TODO: Update vallen, savedseq, value
-					* TODO: Send CACHE_POP_INSWITCH_ACK <key> to switch OS
-					* NOTE: valid is reset by switch OS; case1 is reset by snapshot thread;
+				+ Send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane
+					* NOTE: we use reflector to simulate extra link, which is stateless and does not deduplicate ACKs
+					* TODO: try internal pcie port to inject pkt into specific pipeline
+				+ TODO: Wait for CACHE_POP_INSWITCH_ACK <key>, where switchos.popworker deduplicates ACKs
 				+ TODO: Add a new entry <key, idx> into cache_lookup_tbl of all ingress pipelines (must by ptf)
 				+ TODO: Set valid[idx] = 1 to enable the cache entry
 			- Otherwise (cache eviction)
@@ -257,6 +255,31 @@
 			+ Set latest=1, deleted=1, update savedseq (TODO), update vallen and value
 		* Drop original packet, forwrad cloned packet (i2e) to client
 			+ TODO: Check if we need to set eg_intr_md.egress_port for cloned packet (i2e)
+- CACHE_POP_INSWITCH
+	+ Ingress pipeline (hashval for partition, idx)
+		* Access
+			* hash_tbl: access to get hashval for partition in case that switch os cannot specify ingress pipeline
+				- TODO: If switch os can specify ingress pieline, we can directly set egress port as ingress port
+			* hash_partition_tbl: access to set egress port (not care about udphdr.dstport and is_wrong_pipeline)
+				- TODO: range_partition_tbl for range partition
+		* Not access
+			* sid_tbl: NOT access as not need to clone to ingress port for response
+			* cache_lookup_tbl.uncached_action does NOT change inswitch_hdr.idx, only sets iscached=0
+			* sample_tbl: NOT access as not need to update CM and always reset frequency counter
+			* ig_port_forward_tbl: NOT access as we already have inswitch_hdr
+			* ipv4_forward_tbl: NOT access as not need to route/clone according to ipv4_hdr.dstip
+	+ Egress pipeline (for the given idx)
+		* Reset cache_frequency=0, latest=0, deleted=0
+			- NOTE: we reset valid=0 by switchos.ptf, as we do not have extra valid.ALU in data plane
+				* At most 3 ALUs: get valid, set valid from 1 to 2 and from 2 to 1 (TODO: prepared for PUTREQ_LARGE w/ cache hit)
+		* Update vallen, value, TODO: savedseq
+		* Send sufficient duplicate CACHE_POP_INSWITCH_ACKs <key> to switch OS to avoid packet loss
+		* NOTE: valid is reset by switch OS; case1 is reset by snapshot thread;
+- CACHE_POP_INSWITCH_ACK
+	+ Egress pipeline
+		* Access lastclone_tbl to update is_lastclone_for_pktloss
+		* If is_lastclone_for_pktloss = 0, decrease clonenum_for_pktloss, forward to reflector, and clone again
+		* Otherwise, only forward to reflector
 - TODO: Cache population also updates savedseq
 - TODO: If cache crashes, server should reset all seq as zero after recovery such that switch-assigned seq (>=1) must be larger
 - TODO: If with parser limitation, we can introduce hint of next header in the previous header
@@ -283,8 +306,8 @@
 		* controller.popclient
 		* TODO: server.reflector
 		* TODO: switchos.popworker
-	+ TODO: Support CACHE_POP_INSWITCH in switchos, reflector, switch
-	+ TODO: Support CACHE_POP_INSWITCH_ACK in switchos, reflector, switch
+	+ Support CACHE_POP_INSWITCH in switchos, reflector, switch
+	+ Support CACHE_POP_INSWITCH_ACK in switch, TODO: reflector, switchos 
 
 ## Run
 

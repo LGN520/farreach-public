@@ -29,7 +29,7 @@ action set_and_get_latest() {
 	set_and_get_latest_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
-// Not used
+// CACHE_POP_INSWITCH 
 blackbox stateful_alu reset_and_get_latest_alu {
 	reg: latest_reg;
 

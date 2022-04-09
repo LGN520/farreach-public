@@ -39,6 +39,7 @@ parser parse_op {
 		GETRES_LATEST_SEQ_INSWITCH: parse_vallen;
 		GETRES_DELETED_SEQ: parse_vallen;
 		GETRES_DELETED_SEQ_INSWITCH: parse_vallen;
+		CACHE_POP_INSWITCH: parse_vallen;
 		default: ingress; // GETREQ, GETREQ_POP, GETREQ_NLATEST
 
 
@@ -130,6 +131,7 @@ parser parse_val_len0 {
 		GETRES_LATEST_SEQ_INSWITCH: parse_seq;
 		GETRES_DELETED_SEQ: parse_seq;
 		GETRES_DELETED_SEQ_INSWITCH: parse_seq;
+		CACHE_POP_INSWITCH: parse_seq;
 		default: ingress;
 
 
@@ -247,6 +249,7 @@ parser parse_seq {
 	return select(op_hdr.optype) {
 		GETRES_LATEST_SEQ_INSWITCH: parse_inswitch;
 		GETRES_DELETED_SEQ_INSWITCH: parse_inswitch;
+		CACHE_POP_INSWITCH: parse_inswitch;
 		default: ingress; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ
 		
 

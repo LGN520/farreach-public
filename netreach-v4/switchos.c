@@ -307,6 +307,7 @@ void *run_switchos_popworker(void *param) {
 			// TODO: cache population for new record
 			system("bash tofino/setvalid0.sh"); // set valid=0 for atomicity
 			// TODO: send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
+			// TODO: loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
 
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;
