@@ -1,5 +1,37 @@
-#ifndef CONTROLLER_IMPL_H
-#define CONTROLLER_IMPL_H
+#include <getopt.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <algorithm>
+#include <atomic>
+#include <memory>
+#include <random>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <errno.h>
+#include <set>
+#include <signal.h> // for signal and raise
+#include <sys/socket.h> // socket API
+#include <netinet/in.h> // struct sockaddr_in
+#include <arpa/inet.h> // inetaddr conversion
+#include <sys/time.h> // struct timeval
+#include <string.h>
+#include <map>
+
+#include "helper.h"
+#include "key.h"
+#include "val.h"
+
+#include "common_impl.h"
+
+typedef Key index_key_t;
+typedef Val val_t;
+
+bool volatile controller_running = false;
+std::atomic<size_t> controller_ready_threads(0);
+const size_t controller_expected_ready_threads = 2;
 
 struct alignas(CACHELINE_SIZE) ControllerPopserverSubthreadParam {
 	int connfd;
@@ -10,6 +42,8 @@ typedef ControllerPopserverSubthreadParam controller_popserver_subthread_param_t
 // Per-server popclient <-> one popserver.subthread in controller
 int volatile controller_popserver_tcpsock = -1;
 pthread_t *volatile controller_popserver_subthreads = NULL;
+std::atomic<size_t> controller_finish_subthreads(0);
+size_t controller_expected_finish_subthreads = -1;
 
 // Keep atomicity for the following variables
 std::mutex mutex_for_pop;
@@ -33,9 +67,49 @@ void *run_controller_popserver_subthread(void *param); // Receive CACHE_POPs fro
 void *run_controller_popclient(void *param); // Send CACHE_POPs to switch os
 void close_controller();
 
+int main(int argc, char **argv) {
+	parse_ini("config.ini");
+
+	prepare_controller();
+
+	pthread_t popserver_thread;
+	int ret = pthread_create(&popserver_thread, nullptr, run_controller_popserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
+	pthread_t popclient_thread;
+	int ret = pthread_create(&popclient_thread, nullptr, run_controller_popclient, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
+	while (controller_ready_threads < controller_expected_ready_threads) sleep(1);
+
+	controller_running = true;
+
+	while (controller_finish_subthreads < controller_expected_finishs_subthreads) sleep(1);
+
+	controller_running = false;
+
+	int rc = pthread_join(popsever_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
+	rc = pthread_join(popclient_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
+
+	close_controller();
+}
+
 void prepare_controller() {
+	controller_running =false;
+
 	// Prepare for cache population
-	controller_popserver_subthreads = new pthread_t[fg_n];
+	controller_popserver_subthreads = new pthread_t[server_num];
+	controller_expected_finish_subthreads = server_num;
 
 	// Set popserver socket
 	controller_popserver_tcpsock = socket(AF_INET, SOCK_STREAM, 0);
@@ -70,13 +144,13 @@ void prepare_controller() {
 		printf("[controller] Fail to bind socket on port %hu for popserver, errno: %d!\n", controller_popserver_port, errno);
 		exit(-1);
 	}
-	if ((listen(controller_popserver_tcpsock, fg_n)) != 0) { // MAX_PENDING_CONNECTION = server num
+	if ((listen(controller_popserver_tcpsock, server_num)) != 0) { // MAX_PENDING_CONNECTION = server num
 		printf("[controller] Fail to listen on port %hu for popserver, errno: %d!\n", controller_popserver_port, errno);
 		exit(-1);
 	}
 
-	/*controller_cached_keyset_list = new std::set<index_key_t>[fg_n];
-	for (size_t i = 0; i < fg_n; i++) {
+	/*controller_cached_keyset_list = new std::set<index_key_t>[server_num];
+	for (size_t i = 0; i < server_num; i++) {
 		controller_cached_keyset_list[i].clear();
 	}*/
 
@@ -93,8 +167,12 @@ void prepare_controller() {
 }
 
 void *run_controller_popserver(void *param) {
-	uint32_t subthreadidx = 0
-	while (running) {
+	uint32_t subthreadidx = 0;
+	controller_ready_threads++;
+
+	while (!controller_running) {}
+
+	while (controller_running) {
 		// Not used
 		struct sockaddr_in server_addr;
 		unsigned int server_addr_len = sizeof(struct sockaddr);
@@ -118,11 +196,12 @@ void *run_controller_popserver(void *param) {
 		if (ret) {
 			COUT_N_EXIT("Error: unable to create controller.popserver.subthread " << ret);
 		}
+		controller_popserver_subthreads_runnings[subthreadidx] = true;
 		subthreadidx += 1;
-		INVARIANT(subthreadidx <= fg_n);
+		INVARIANT(subthreadidx <= server_num);
 	}
 	uint32_t real_servernum = subthreadidx;
-	INVARIANT(real_servernum <= fg_n);
+	INVARIANT(real_servernum == server_num);
 
 	for (size_t i = 0; i < real_servernum; i++) {
 		void * status;
@@ -237,6 +316,7 @@ void run_controller_popserver_subthread(void *param) {
 		}
 	}
 
+	controller_finish_subthreads++;
 	close(connfd);
 	pthread_exit(nullptr);
 }
@@ -250,8 +330,11 @@ void run_controller_popclient(void *param) {
 	if (connect(controller_popclient_tcpsock, (struct sockaddr*)&switchos_addr, sizeof(switchos_addr)) != 0) {
 		error("Fail to connect switchos.popserver at %s:%hu, errno: %d!\n", switchos_ip, switchos_popserver_port, errno);
 	}
+	controller_ready_threads++;
 
-	while (running) {
+	while (!controller_running) {}
+
+	while (controller_running) {
 		char buf[MAX_BUFSIZE];
 		if (controller_tail_for_pop != controller_head_for_pop) {
 			cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptrs[controller_tail_for_pop];
@@ -298,5 +381,3 @@ void close_controller() {
 		controller_evictclient_tcpsock_list = NULL;
 	}
 }
-
-#endif

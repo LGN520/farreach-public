@@ -25,6 +25,12 @@
 #include "val.h"
 
 typedef Key index_key_t;
+typedef Val val_t;
+
+bool volatile switchos_running = false;
+std::atomic<size_t> switchos_ready_threads(0);
+const size_t switchos_expected_ready_threads = 3;
+bool volatile switchos_popserver_finish = false;
 
 // Parameters
 short switchos_popserver_port = 0;
@@ -41,13 +47,18 @@ int volatile switchos_paramserver_udpsock = -1;
 cache_pop_t ** volatile switchos_cache_pop_ptrs = NULL;
 uint32_t switchos_head_for_pop;
 uint32_t switchos_tail_for_pop;
+
+// switchos.popworker
 index_key_t * volatile switchos_cached_keyarray = NULL; // idx (of inswitch KV) -> key (TODO: different switches for distributed case)
 uint32_t switchos_cached_keyarray_empty_index = 0; // [empty index, kv_bucket_num-1] is empty
+int volatile switchos_popworker_udpsock = -1;
 
 // Used by switchos.paramserer <-> ptf framework
 uint32_t switchos_freeidx = 0; // switchos.popworker write -> launch ptf.population -> switchos.paramserver read (no contention)
-const int switchos_poptype = 1; // ptf get switchos_freeidx from paramserver
-const int switchos_evicttype = 2; // ptf get evictidx from paramserver
+index_key_t switchos_newkey = index_key_t();
+const int switchos_get_freeidx = 1; // ptf get freeidx from paramserver
+const int switchos_get_key_freeidx = 2; // ptf get key and freeidx from paramserver
+const int switchos_get_evictidx = 3; // ptf get evictidx from paramserver
 
 inline void parse_ini(const char *config_file);
 void prepare_switchos();
@@ -55,6 +66,53 @@ void *run_switchos_popserver(void *param);
 void *run_switchos_paramserver(void *param);
 void *run_switchos_popworker(void *param);
 void close_switchis();
+
+int main(int argc, char **argv) {
+	parse_ini("config.ini");
+
+	prepare_switchos();
+
+	pthread_t popserver_thread;
+	int ret = pthread_create(&popserver_thread, nullptr, run_switchos_popserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
+	pthread_t paramserver_thread;
+	int ret = pthread_create(&paramserver_thread, nullptr, run_switchos_paramserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
+	pthread_t popworker_thread;
+	int ret = pthread_create(&popworker_thread, nullptr, run_switchos_popworker, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
+	while (switchos_ready_threads < switchos_expected_ready_threads) sleep(1);
+
+	switchos_running = true;
+
+	while (!switchos_popserver_finish) {}
+
+	switchos_running = false;
+
+	int rc = pthread_join(popsever_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
+	rc = pthread_join(paramserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
+	rc = pthread_join(popworker_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
+
+	close_switchos();
+}
 
 inline void parse_ini(const char* config_file) {
 	IniparserWrapper ini;
@@ -146,6 +204,8 @@ void prepare_switchos() {
 	switchos_cache_pop_ptrs = new cache_pop_t*[MQ_SIZE];
 	switchos_head_for_pop = 0;
 	switchos_tail_for_pop = 0;
+
+	switchos_popworker_udpsock = socket(AF_INET, SOCK_DGRAM, 0);
 	switchos_cached_keyarray = new index_key_t[kv_bucket_num];
 	switchos_cached_keyarray_empty_index = 0;
 }
@@ -154,6 +214,9 @@ void *run_switchos_popserver(void *param) {
 	// Not used
 	struct sockaddr_in controller_addr;
 	unsigned int controller_addr_len = sizeof(struct sockaddr);
+	switchos_ready_threads++;
+
+	while (!switchos_running) {}
 
 	int connfd = accept(switchos_popserver_tcpsock, NULL, NULL);
 	if (connfd == -1) {
@@ -246,6 +309,7 @@ void *run_switchos_popserver(void *param) {
 		}
 	}
 
+	switchos_popserver_finish = true;
 	close(connfd);
 	close(switchos_popserver_tcpsock);
 	pthread_exit(nullptr);
@@ -253,12 +317,15 @@ void *run_switchos_popserver(void *param) {
 
 void *run_switchos_paramserver(void *param) {
 	char buf[MAX_BUFSIZE];
-	while (running) {
+	switchos_ready_threads++;
+	while (!switchos_running) {}
+
+	while (switchos_running) {
 		// ptf framework is in the same device of switch os
 		struct sockaddr_in ptf_addr;
 		unsigned int ptf_addr_len = sizeof(struct sockaddr);
 
-		recv_size = recvfrom(switchos_paramserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&ptf_addr, &ptf_addr_len);
+		int recv_size = recvfrom(switchos_paramserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&ptf_addr, &ptf_addr_len);
 		if (recv_size == -1) {
 			if (errno == EWOULDBLOCK || errno == EINTR) {
 				continue; // timeout or interrupted system call
@@ -271,13 +338,20 @@ void *run_switchos_paramserver(void *param) {
 		INVARIANT(recv_size > 0);
 
 		tmp_type = *((int *)buf);
-		if (tmp_type == switchos_poptype) {
+		if (tmp_type == switchos_get_freeidx) {
 			// send switchos_freeidx to ptf framework
 			memset(buf, 0, MAX_BUFSIZE);
 			memcpy(buf, (void *)&switchos_freeidx, sizeof(uint32_t));
 			sendto(switchos_paramserver_udpsock, buf, sizeof(uint32_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len);
 		}
-		else if (tmp_type == switchos_evicttype) {
+		else if (tmp_type == switchos_get_key_freeidx) {
+			// send key and switchos_freeidx to ptf framework
+			memset(buf, 0, MAX_BUFSIZE);
+			uint32_t tmp_keysize = switchos_newkey.serialize(buf, MAX_BUFSIZE);
+			memcpy(buf + tmp_keysize, (void *)&switchos_freeidx, sizeof(uint32_t));
+			sendto(switchos_paramserver_udpsock, buf, tmp_keysize + sizeof(uint32_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len);
+		}
+		else if (tmp_type == switchos_get_evictidx) {
 			// TODO: send switchos_evictidx to ptf framework
 		}
 		else {
@@ -289,11 +363,23 @@ void *run_switchos_paramserver(void *param) {
 }
 
 void *run_switchos_popworker(void *param) {
-	while (running) {
+	sockaddr_in reflector_udpserver_addr;
+	memset(&reflector_udpserver_addr, 0, sizeof(reflector_udpserver_addr));
+	reflector_udpserver_addr.sin_family = AF_INET;
+	reflector_udpserver_addr.sin_addr.s_addr = inet_addr(reflector_ip);
+	reflector_udpserver_addr.sin_port = htons(reflector_udpserver_port);
+	int reflector_udpserver_addr_len = sizeof(struct sockaddr);
+	switchos_ready_threads++;
+
+	while (!switchos_running) {}
+
+	while (switchos_running) {
 		char buf[MAX_BUFSIZE];
+		uint32_t tmpsize = 0;
 		if (switchos_tail_for_pop != switchos_head_for_pop) {
 			cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptrs[switchos_tail_for_pop];
 			INVARIANT(tmp_cache_pop_ptr != NULL);
+			switchos_newkey = tmp_cache_pop_ptr->key();
 
 			// assign switchos_freeidx for new record 
 			if (switchos_cached_keyarray_empty_index < switch_kv_bucket_num) { // With free idx
@@ -304,16 +390,37 @@ void *run_switchos_popworker(void *param) {
 				// TODO: set switchos_freeidx after cache eviction for old record
 			}
 
-			// TODO: cache population for new record
-			system("bash tofino/setvalid0.sh"); // set valid=0 for atomicity
-			// TODO: send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
-			// TODO: loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
+			/* cache population for new record */
+
+			// set valid=0 for atomicity
+			system("bash tofino/setvalid0.sh");
+			// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
+			tmpsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
+			sendto(switchos_popworker_udpsock, buf, tmpsize, 0, (struct sockaddr *)&reflector_udpserver_addr, reflector_udpserver_addr_len);
+			// loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
+			while (true) {
+				int recv_size = recvfrom(switchos_popworker_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL);
+				if (recv_size < 0) {
+					COUT_THIS("[switch os] Error of recvfrom: errno = " << errno)
+					exit(-1);
+				}
+				cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(buf, recv_size);
+				if (tmp_cache_pop_inswitch_ack.key() == tmp_cache_pop_ptr->key()) {
+					break;
+				}
+			}
+			// Add new <key, value> pair into cache_lookup_tbl
+			system("bash add_cache_lookup.sh");
+			// set valid=1 to enable the entry
+			system("bash tofino/setvalid1.sh");
 
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;
 			tmp_cache_pop_ptr = NULL;
 			switchos_cache_pop_ptrs[switchos_tail_for_pop] = NULL;
 			switchos_tail_for_pop = (switchos_tail_for_pop + 1) % MQ_SIZE;
+
+			switchos_cached_keyarray[freeidx] = tmp_cache_pop_ptr->key();
 		}
 	}
 }

@@ -176,9 +176,9 @@
 				+ Send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane
 					* NOTE: we use reflector to simulate extra link, which is stateless and does not deduplicate ACKs
 					* TODO: try internal pcie port to inject pkt into specific pipeline
-				+ TODO: Wait for CACHE_POP_INSWITCH_ACK <key>, where switchos.popworker deduplicates ACKs
-				+ TODO: Add a new entry <key, idx> into cache_lookup_tbl of all ingress pipelines (must by ptf)
-				+ TODO: Set valid[idx] = 1 to enable the cache entry
+				+ Wait for CACHE_POP_INSWITCH_ACK <key>, where switchos.popworker deduplicates ACKs
+				+ Add a new entry <key, idx> into cache_lookup_tbl of all ingress pipelines (must by ptf)
+				+ Set valid[idx] = 1 to enable the cache entry
 			- Otherwise (cache eviction)
 				+ TODO: Sample idxes and load corresponding cache_frequency counters
 				+ TODO: Choose the idx with the minimum frequency as the victim (approximate LRF)	
@@ -302,12 +302,12 @@
 	+ Add result header for GETERS, GETRES_LATEST_SEQ and GETRES_DELETED_SEQ
 - Implement cache population
 	+ Support GETREQ_POP in server
-	+ Support CACHE_POP in server, controller, TODO: switch OS
+	+ Support CACHE_POP in server, controller, switch OS
 		* controller.popclient
-		* TODO: server.reflector
-		* TODO: switchos.popworker
+		* server.reflector
+		* switchos.popworker
 	+ Support CACHE_POP_INSWITCH in switchos, reflector, switch
-	+ Support CACHE_POP_INSWITCH_ACK in switch, TODO: reflector, switchos 
+	+ Support CACHE_POP_INSWITCH_ACK in switch, reflector, switchos 
 
 ## Run
 

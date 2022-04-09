@@ -29,6 +29,7 @@ typedef GetResponseLatestSeq<index_key_t, val_t> get_response_latest_seq_t;
 typedef GetResponseDeletedSeq<index_key_t, val_t> get_response_deleted_seq_t;
 typedef CachePop<index_key_t, val_t> cache_pop_t;
 typedef CachePopInSwitch<index_key_t, val_t> cache_pop_inswitch_t;
+typedef CachePopInSwitchAck<index_key_t, val_t> cache_pop_inswitch_ack_t;
 
 /*
  * Constants

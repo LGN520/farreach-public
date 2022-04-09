@@ -909,7 +909,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                             meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss)
                                         # Update CACHE_POP_INSWITCH as CACHE_POP_INSWITCH_ACK to reflector (w/ clone)
-                                        actnspec0 = update_cache_pop_inswitch_to_cache_pop_inswitch_ack_action_spec_t(self.sids[1])
+                                        actnspec0 = netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_action_spec_t(self.sids[1])
                                         self.client.eg_port_forward_tbl_table_add_with_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(\
                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
@@ -924,7 +924,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         # TODO: check if we need to set egress port for packet cloned by clone_e2e
                                         if is_lastclone_for_pktloss == 0:
                                             # Forward CACHE_POP_INSWITCH_ACK (by clone_e2e) to reflector (w/ clone)
-                                            actnspec0 = forward_cache_pop_inswitch_ack_clone_for_pktloss_action_spec_t(self.sids[1])
+                                            actnspec0 = netbufferv4_forward_cache_pop_inswitch_ack_clone_for_pktloss_action_spec_t(self.sids[1])
                                             self.client.eg_port_forward_tbl_table_add_with_forward_cache_pop_inswitch_ack_clone_for_pktloss(\
                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         elif is_lastclone_for_pktloss == 1:

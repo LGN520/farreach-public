@@ -37,7 +37,7 @@ class IniparserWrapper {
 
 		// reflector
 		const char *get_reflector_ip();
-		short get_reflector_port();
+		short get_reflector_udpserver_port();
 
 		// switch
 		uint32_t get_kv_bucket_num();

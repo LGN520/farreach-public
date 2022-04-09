@@ -87,9 +87,9 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         freeidx = struct.unpack("=I", recvbuf)[0]
 
         # TODO: check API of register set
-        print "Set valid_reg as 0"
+        print "Set valid_reg as 1"
         index = freeidx
-        value = 0
+        value = 1
         flags = netbufferv4_register_flags_t(read_hw_sync=True)
         self.client.register_set_valid_reg(self.sess_hdl, self.dev_tgt, index, value, flags)
 

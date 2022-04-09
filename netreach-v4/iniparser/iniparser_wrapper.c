@@ -232,10 +232,10 @@ const char* IniparserWrapper::get_reflector_ip() {
 	return reflector_ip;
 }
 
-short IniparserWrapper::get_reflector_port() {
-	int tmp = iniparser_getint(ini, "reflector:reflector_port", -1);
+short IniparserWrapper::get_reflector_udpserver_port() {
+	int tmp = iniparser_getint(ini, "reflector:reflector_udpserver_port", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [reflector:reflector_port]: %d\n", tmp);
+		printf("Invalid entry of [reflector:reflector_udpserver_port]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);

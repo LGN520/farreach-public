@@ -227,7 +227,7 @@ class CachePop : public GetResponseLatestSeq<key_t, val_t> { // no stat + seq + 
 template<class key_t, class val_t>
 class CachePopInSwitch : public GetResponseLatestSeq<key_t, val_t> { // no stat + seq + inswitch_hdr
 	public: 
-		CachePop(key_t key, val_t val, int32_t seq, int16_t freeidx);
+		CachePopInSwitch(key_t key, val_t val, int32_t seq, int16_t freeidx);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -237,6 +237,14 @@ class CachePopInSwitch : public GetResponseLatestSeq<key_t, val_t> { // no stat 
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		int16_t _freeidx;
+};
+
+template<class key_t>
+class CachePopInSwitchAck : public GetRequest<key_t> {
+	public: 
+		CachePopInswitchAck(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
 
