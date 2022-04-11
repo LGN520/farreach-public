@@ -23,6 +23,7 @@
 #include "helper.h"
 #include "key.h"
 #include "val.h"
+#include "tcp_helper.h"
 
 typedef Key index_key_t;
 typedef Val val_t;
@@ -51,13 +52,19 @@ uint32_t switchos_tail_for_pop;
 
 // switchos.popworker
 index_key_t * volatile switchos_cached_keyarray = NULL; // idx (of inswitch KV) -> key (TODO: different switches for distributed case)
-uint32_t * volatile switchos_cached_serveridxarray = NULL; // idx (of inswitch KV) -> serveridx of the key
+int16_t * volatile switchos_cached_serveridxarray = NULL; // idx (of inswitch KV) -> serveridx of the key
 uint32_t switchos_cached_keyarray_empty_index = 0; // [empty index, kv_bucket_num-1] is empty
 int volatile switchos_popworker_udpsock = -1;
 
 // Used by switchos.paramserer <-> ptf framework
 int16_t volatile switchos_freeidx = 0; // switchos.popworker write -> launch ptf.population -> switchos.paramserver read (no contention)
 index_key_t volatile switchos_newkey = index_key_t();
+
+// Cache eviction
+
+int volatile switchos_evictclient_tcpsock = -1;
+
+// Used by switchos.paramserer <-> ptf framework
 // launch ptf.eviction -> ptf sets evicted information -> switchos.paramserver read
 bool volatile switchos_with_evictdata = false;
 int16_t volatile switchos_evictidx = 0;
@@ -223,9 +230,10 @@ void prepare_switchos() {
 
 	switchos_popworker_udpsock = socket(AF_INET, SOCK_DGRAM, 0);
 	switchos_cached_keyarray = new index_key_t[switch_kv_bucket_num];
-	switchos_cached_serveridxarray = new uint32_t[switch_kv_bucket_num];
+	switchos_cached_serveridxarray = new int16_t[switch_kv_bucket_num];
 	switchos_cached_keyarray_empty_index = 0;
 
+	switchos_evictclient_tcpsock = socket(AF_INET, SOCK_STREAM, 0);
 	switchos_evictvalbytes = new char[val_t::MAX_VALLEN];
 	INVARIANT(switchos_evictvalbytes != NULL);
 	memset(switchos_evictvalbytes, 0, val_t::MAX_VALLEN);
@@ -400,6 +408,9 @@ void *run_switchos_paramserver(void *param) {
 		}
 
 	}
+
+	close(switchos_paramserver_udpsock);
+	pthread_exit(nullptr);
 }
 
 void *run_switchos_popworker(void *param) {
@@ -409,6 +420,9 @@ void *run_switchos_popworker(void *param) {
 	reflector_udpserver_addr.sin_addr.s_addr = inet_addr(reflector_ip);
 	reflector_udpserver_addr.sin_port = htons(reflector_udpserver_port);
 	int reflector_udpserver_addr_len = sizeof(struct sockaddr);
+
+	// TODO: connect switchos.evictclient to controller.evictserver
+
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
@@ -433,13 +447,13 @@ void *run_switchos_popworker(void *param) {
 				// wait for paramserver to get evictdata
 				while (!switchos_with_evictdata) {}
 
-				// send CACHE_EVICT to controller -> server
+				// switchos_evictclient_tcpsock sends CACHE_EVICT to controller.evictserver.connfd
 				INVARIANT(switchos_evictidx >= 0 && switchos_evictidx < switchos_kv_bucket_num);
-				// TODO: implement CACHE_EVICT in packet format
 				cache_evict_t tmp_cache_evict(switchos_cached_keyarray(switchos_evictidx), \
 						val_t(switchos_evictvalbytes, switchos_evictvallen), \
 						switchos_evictstat, switchos_evictseq, \
 						switchos_cached_serveridxarray(switchos_evictidx))
+				tmpsize = tmp_cache_evict.serialize(buf, MAX_BUFSIZE);
 
 				// TODO: switchos.evictclient sends CACHE_EVICT to controller.evictserver
 
@@ -455,7 +469,8 @@ void *run_switchos_popworker(void *param) {
 			// set valid=0 for atomicity
 			system("bash tofino/setvalid0.sh");
 			// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
-			tmpsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
+			cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx);
+			tmpsize = tmp_cahe_pop_inswitch.serialize(buf, MAX_BUF_SIZE);
 			sendto(switchos_popworker_udpsock, buf, tmpsize, 0, (struct sockaddr *)&reflector_udpserver_addr, reflector_udpserver_addr_len);
 			// loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
 			while (true) {
@@ -484,6 +499,9 @@ void *run_switchos_popworker(void *param) {
 			// TODO: reset intermediate data
 		}
 	}
+
+	close(switchos_popworker_udpsock);
+	pthread_exit(nullptr);
 }
 
 void close_switchos() {

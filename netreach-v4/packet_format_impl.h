@@ -566,6 +566,7 @@ GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key_t key, val_t val, i
 {
 	this->_type = static_cast<uint8_t>(PacketType::GETRES_LATEST_SEQ);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(seq >= 0);
 }
 
 template<class key_t, class val_t>
@@ -613,6 +614,7 @@ GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(key_t key, val_t val,
 {
 	this->_type = static_cast<uint8_t>(PacketType::GETRES_DELETED_SEQ);
 	INVARIANT(this->_val.val_length == 0);
+	INVARIANT(seq >= 0);
 }
 
 template<class key_t, class val_t>
@@ -629,6 +631,17 @@ CachePop<key_t, val_t>::CachePop(key_t key, val_t val, int32_t seq, int16_t serv
 {
 	this->_type = static_cast<uint8_t>(PacketType::CACHE_POP);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(seq >= 0);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t, class val_t>
+CachePop<key_t, val_t>::CachePop(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_POP);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(seq >= 0);
+	INVARIANT(serveridx >= 0);
 }
 
 template<class key_t, class val_t>
@@ -687,6 +700,8 @@ CachePopInSwitch<key_t, val_t>::CachePopInSwitch(key_t key, val_t val, int32_t s
 {
 	this->_type = static_cast<uint8_t>(PacketType::CACHE_POP_INSWITCH);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(seq >= 0);
+	INVARIANT(freeidx >= 0);
 }
 
 template<class key_t, class val_t>
@@ -739,6 +754,83 @@ template<class key_t>
 uint32_t CachePopInSwitchAck<key_t>::serialize(char * const data, uint32_t max_size)
 {
 	COUT_N_EXIT("Invalid invoke of serialize for CachePopInSwitchAck");
+}
+
+// CacheEvict (value must <= 128B)
+
+template<class key_t, class val_t>
+CacheEvict<key_t, val_t>::CacheEvict(key_t key, val_t val, bool stat, int32_t seq, int16_t serveridx) 
+	: GetResponse<key_t, val_t>::GetResponse(key, val, stat), _seq(seq), _serveridx(serveridx)
+{
+	this->_type = static_cast<uint8_t>(PacketType::CACHE_EVICT);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(seq >= 0);
+	INVARIANT(serveridx >= 0);
+}
+}
+
+template<class key_t, class val_t>
+CacheEvict<key_t, val_t>::CacheEvict(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_EVICT);
+	INVARIANT(seq >= 0);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t, class val_t>
+int32_t CacheEvict<key_t, val_t>::seq() const {
+	return _seq;
+}
+
+template<class key_t, class val_t>
+int16_t CacheEvict<key_t, val_t>::serveridx() const {
+	return _serveridx;
+}
+
+template<class key_t, class val_t>
+uint32_t CacheEvict<key_t, val_t>::size() { // unused
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t) + val_t::MAX_VALLEN + sizeof(bool) + sizeof(int32_t) + sizeof(int16_t);
+}
+
+template<class key_t, class val_t>
+uint32_t CachePop<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	//uint32_t my_size = this->size();
+	//INVARIANT(max_size >= my_size);
+	char *begin = data;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
+	begin += tmp_valsize;
+	memcpy(begin, (void *)&this->_stat, sizeof(bool));
+	begin += sizeof(bool);
+	uint32_t bigendian_seq = htonl(uint32_t(this->_seq));
+	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t));
+	begin += sizeof(uint32_t);
+	uint16_t bigendian_serveridx = htons(uint16_t(this->_serveridx));
+	memcpy(begin, (void *)&bigendian_serveridx, sizeof(uint16_t));
+	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(bool) + sizeof(int32_t) + sizeof(int16_t);
+}
+
+template<class key_t, class val_t>
+void CacheEvict<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	//uint32_t my_size = this->size();
+	//INVARIANT(my_size == recv_size);
+	const char *begin = data;
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
+	begin += tmp_valsize;
+	memcpy((void *)&this->_stat, begin, sizeof(bool));
+	begin += sizeof(bool);
+	memcpy((void *)&this->_seq, begin, sizeof(int32_t));
+	this->_seq = int32_t(ntohl(uint32_t(this->seq)));
+	begin += sizeof(int32_t);
+	memcpy((void *)&this->_serveridx, begin, sizeof(int16_t));
+	this->_serveridx = int16_t(ntohs(uint16_t(this->serveridx)));
 }
 
 

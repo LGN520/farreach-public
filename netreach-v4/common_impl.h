@@ -2,6 +2,7 @@
 #define COMMON_IMPL_H
 
 #include "packet_format_impl.h"
+#include "tcp_helper.h"
 
 /*
  * Class and alias

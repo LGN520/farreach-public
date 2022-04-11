@@ -284,22 +284,11 @@ static int run_sfg(void * param) {
 					if (tmp_stat) {
 						bool is_cached_before = (server_cached_keyset_list[thread_id].find(req.key()) != server_cached_keyset_list.end());
 						if (!is_cached_before) {
-							server_cached_keyset_listp[thread_id].insert(req.key());
+							server_cached_keyset_list[thread_id].insert(req.key());
 							// Send CACHE_POP to controller.popserver
-							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, thread_id);
+							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, int16_t(thread_id));
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-							int send_size = popsize;
-							const char *ptr = buf;
-							while (send_size > 0) {
-								int tmpsize = send(server_popclient_tcpsock_list[thread_id], ptr, send_size, 0);
-								if (tmpsize < 0) {
-									// Errno 32 means broken pipe, i.e., remote TCP connection is closed
-									printf("TCP send returns %d, errno: %d\n", tmpsize, errno);
-									break;
-								}
-								ptr += tmpsize;
-								send_size -= tmpsize;
-							}
+							tcpsend(server_popclient_tcpsock_list[thread_id], buf, popsize);
 						}
 					}
 					break;

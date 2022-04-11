@@ -19,6 +19,10 @@
 		* When receiving case3 packet from data plane or explicit notification from controller, make server-side snapshot only if snapshot flag = false -> set snapshot flag = true
 	+ NOTE: it guarantees that each server must make a server-side snapshot for each snapshot period exactly once!
 - NOTE: one register can provide at most 3 stateful APIs -> we cannot aggregate valid and latest/deleted as a whole
+- NOTE
+	+ Egress pipeline recirculation issue is ok
+	+ We provide weak-form durability -> data is durable before a certain snapshot timepoint -> bounded-error reliability
+	+ Limited recirculation for atomicity in snapshot is ok
 
 ## Overview
 
@@ -165,11 +169,13 @@
 		* TODO: Send CACHE_EVICT_ACK to the switch OS
 - Switch OS
 	+ Cache population/eviction
-		* Cache update thread (switchos.popworker): perform cache population/eviction
-		* Maintain in-memory multi-level array: switch (TODO: different switches under distributed extension) -> egress pipeline (fixed due to testbed limitation) -> <idx, key>
-		* TODO: Maintain a paramserver to pass parameters to ptf framework
-		* Receive a CACHE_POP from controller -> check whether there exists free idx to assign
-			- One controller.popclient -> one switchos.popserver
+		* Workflow
+			- Cache population: servers.popclients -> controller.popserver.subthreads -> controller.popclient -> switchos.popserver.connfd -> switchos.popworker -> ptf <-> switchos.paramserver
+			- TODO: Cache eviction: switchos.popworker notify -> ptf -> switchos.paramserver -> switchos.popworker.evictclient_tcpsock <-> controller.evictserver.connfd <-> controller.evictserver.evictclient_tcpsock <-> server.evictserver.connfd <-> server.normal_worker
+			- NOTE: switchos.popworker performs cache population/eviction; switchos.paramserver communicates with ptf for parameters
+		* Data structure
+			- Maintain in-memory multi-level array: switch (TODO: different switches under distributed extension) -> egress pipeline (fixed due to testbed limitation) -> <idx, key and serveridx>
+		* Detail: after receiving a CACHE_POP from controller -> check whether there exists free idx to assign
 			- CANCELED: Add key into cached key set (comment it if server.cached_keyset works well)
 			- If with free idx (cache population)
 				+ Ptf: set valid[idx] = 0 for atomicity
@@ -188,11 +194,12 @@
 					+ NOTE: we do not consider latest here as latest=0 can still imply new value under valid=3
 					+ FUTURE: consider valid if with PUTREQ_LARGE
 				+ Switch os: get serveridx and key according to evictidx
-				+ TODO: Swith os: report CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx> to controller, and wait for CACHE_EVICT_ACK
+				+ TODO: Switch os: report CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx> to controller
 					* NOTE: we do not need to load latest
 						- Even if latest=0, the value could still be latest <- PUT/DEL (lost later) w/ valid=3 resets latest from 1 to 0
 						- No matter value is latest or not, we can always compare savedseq with server.seq for availability
 					* NOTE: CACHE_EVICT reported by switch OS instead of data plane -> no need <key, value, seq, inswitch_hdr.is_deleted>
+				+ TODO: Switch os: wait for CACHE_EVICT_ACK
 				+ TODO: Remove existing entry <victim.key, victim.idx> from cache_lookup_tbl of all ingress pipelines
 				+ TODO: Invoke cache population for new CACHE_POP
 		* TODO: Swithc os: popworker resets intermediate data of paramserver after population/eviction

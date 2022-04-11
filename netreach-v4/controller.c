@@ -23,6 +23,7 @@
 #include "helper.h"
 #include "key.h"
 #include "val.h"
+#include "tcp_helper.h"
 
 #include "common_impl.h"
 
@@ -48,8 +49,8 @@ size_t controller_expected_finish_subthreads = -1;
 // Keep atomicity for the following variables
 std::mutex mutex_for_pop;
 //std::set<index_key_t> * volatile controller_cached_keyset_list = NULL; // TODO: Comment it after checking server.cached_keyset_list
-//std::map<index_key_t, uint32_t> volatile controller_cachedkey_serveridx_map; // TODO: Evict removes the corresponding kv pair
-std::map<int32_t, uint32_t> volatile controller_serveridx_subthreadidx_map;
+//std::map<index_key_t, int16_t> volatile controller_cachedkey_serveridx_map; // TODO: Evict removes the corresponding kv pair
+std::map<int16_t, uint32_t> volatile controller_serveridx_subthreadidx_map;
 // Message queue between controller.popservers with controller.popclient (connected with switchos.popserver)
 cache_pop_t ** volatile controller_cache_pop_ptrs = NULL;
 uint32_t volatile controller_head_for_pop = 0;
@@ -59,12 +60,14 @@ uint32_t volatile controller_tail_for_pop = 0;
 int volatile controller_popclient_tcpsock = -1;
 
 // Per-server evictserver <-> one evictclient in controller
+int volatile controller_evictserver_tcpsock = -1;
 int * volatile controller_evictclient_tcpsock_list = NULL;
 
 void prepare_controller();
 void *run_controller_popserver(void *param); // Accept connections from servers
 void *run_controller_popserver_subthread(void *param); // Receive CACHE_POPs from one server
 void *run_controller_popclient(void *param); // Send CACHE_POPs to switch os
+void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
 void close_controller();
 
 int main(int argc, char **argv) {
@@ -282,7 +285,7 @@ void run_controller_popserver_subthread(void *param) {
 				// Serialize CACHE_POPs
 				mutex_for_pop.lock();
 				if (controller_serveridx_subthreadidx_map.find(tmp_cache_pop_ptr->serveridx()) == controller_serveridx_subthreadidx_map.end()) {
-					controller_serveridx_subthreadidx_map.insert(std::pair<int32_t, uint32_t>(tmp_cache_pop_ptr->serveridx(), subthreadidx));
+					controller_serveridx_subthreadidx_map.insert(std::pair<int16_t, uint32_t>(tmp_cache_pop_ptr->serveridx(), subthreadidx));
 				}
 				else {
 					INVARIANT(controller_serveridx_subthreadidx_map[tmp_cache_pop_ptr->serveridx()] == subthreadidx);
@@ -340,18 +343,7 @@ void run_controller_popclient(void *param) {
 			cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptrs[controller_tail_for_pop];
 			// send CACHE_POP to switch os
 			uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
-			int send_size = popsize;
-			const char *ptr = buf;
-			while (send_size > 0) {
-				int tmpsize = send(controller_popclient_tcpsock, ptr, send_size, 0);
-				if (tmpsize < 0) {
-					// Errno 32 means broken pipe, i.e., remote TCP connection is closed
-					printf("TCP send returns %d, errno: %d\n", tmpsize, errno);
-					break;
-				}
-				ptr += tmpsize;
-				send_size -= tmpsize;
-			}
+			tcpsend(controller_popclient_tcpsock, buf, popsize);
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;
 			tmp_cache_pop_ptr = NULL;

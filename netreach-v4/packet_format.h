@@ -14,7 +14,7 @@ enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES,
 	GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH,
 
-	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK
+	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT
 };
 typedef PacketType packet_type_t;
 
@@ -184,7 +184,7 @@ class GetRequestNLatest : public GetRequest<key_t> {
 };
 
 template<class key_t, class val_t>
-class GetResponseLatestSeq : public Packet<key_t> { // seq w/o stat
+class GetResponseLatestSeq : public Packet<key_t> { // no stat + seq
 	public: 
 		GetResponseLatestSeq(key_t key, val_t val, int32_t seq);
 
@@ -213,6 +213,7 @@ template<class key_t, class val_t>
 class CachePop : public GetResponseLatestSeq<key_t, val_t> { // no stat + seq + serveridx
 	public: 
 		CachePop(key_t key, val_t val, int32_t seq, int16_t serveridx);
+		CachePop(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -245,6 +246,24 @@ class CachePopInSwitchAck : public GetRequest<key_t> {
 		CachePopInswitchAck(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+};
+
+
+template<class key_t, class val_t>
+class CacheEvict : public GetResponse<key_t, val_t> { // stat + seq + serveridx
+	public: 
+		CacheEvict(key_t key, val_t val, bool stat, int32_t seq, int16_t serveridx);
+		CacheEvict(const char * data, uint32_t recv_size);
+
+		int32_t seq() const;
+		int16_t serveridx() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		int32_t _seq;
+		int16_t _serveridx;
 };
 
 
