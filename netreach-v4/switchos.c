@@ -36,6 +36,7 @@ bool volatile switchos_popserver_finish = false;
 short switchos_popserver_port = 0;
 short switchos_paramserver_port = 0;
 uint32_t switch_kv_bucket_num = 0;
+//uint32_t switchos_sample_cnt = 0; // sample_cnt is only used by ptf (transparent for switchos)
 
 // Cache population
 
@@ -50,15 +51,24 @@ uint32_t switchos_tail_for_pop;
 
 // switchos.popworker
 index_key_t * volatile switchos_cached_keyarray = NULL; // idx (of inswitch KV) -> key (TODO: different switches for distributed case)
+uint32_t * volatile switchos_cached_serveridxarray = NULL; // idx (of inswitch KV) -> serveridx of the key
 uint32_t switchos_cached_keyarray_empty_index = 0; // [empty index, kv_bucket_num-1] is empty
 int volatile switchos_popworker_udpsock = -1;
 
 // Used by switchos.paramserer <-> ptf framework
-uint32_t switchos_freeidx = 0; // switchos.popworker write -> launch ptf.population -> switchos.paramserver read (no contention)
-index_key_t switchos_newkey = index_key_t();
+int16_t volatile switchos_freeidx = 0; // switchos.popworker write -> launch ptf.population -> switchos.paramserver read (no contention)
+index_key_t volatile switchos_newkey = index_key_t();
+// launch ptf.eviction -> ptf sets evicted information -> switchos.paramserver read
+bool volatile switchos_with_evictdata = false;
+int16_t volatile switchos_evictidx = 0;
+int32_t volatile switchos_evictvallen = 0;
+char * volatile switchos_evictvalbytes = NULL;
+bool volatile switchos_evictstat = false;
+int32_t volatile switchos_evictseq = 0;
+
 const int switchos_get_freeidx = 1; // ptf get freeidx from paramserver
 const int switchos_get_key_freeidx = 2; // ptf get key and freeidx from paramserver
-const int switchos_get_evictidx = 3; // ptf get evictidx from paramserver
+const int switchos_set_evictinfo = 3; // ptf set evictidx, evictvallen, evictval, evictstat, and evictseq to paramserver
 
 inline void parse_ini(const char *config_file);
 void prepare_switchos();
@@ -121,10 +131,16 @@ inline void parse_ini(const char* config_file) {
 	switchos_popserver_port = ini.get_switchos_popserver_port();
 	switchos_paramserver_port = ini.get_switchos_paramserver_port();
 	switch_kv_bucket_num = ini.get_switch_kv_bucket_num();
+	switchos_sample_cnt = ini.get_switchos_sample_cnt();
+	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
+	val_t::MAX_VALLEN = ini.get_max_vallen();
 	
 	COUT_VAR(switchos_popserver_port);
 	COUT_VAR(switchos_paramserver_port);
 	COUT_VAR(switch_kv_bucket_num);
+	COUT_VAR(switchos_sample_cnt);
+	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
+	COUT_VAR(val_t::MAX_VALLEN);
 }
 
 void prepare_switchos() {
@@ -206,8 +222,13 @@ void prepare_switchos() {
 	switchos_tail_for_pop = 0;
 
 	switchos_popworker_udpsock = socket(AF_INET, SOCK_DGRAM, 0);
-	switchos_cached_keyarray = new index_key_t[kv_bucket_num];
+	switchos_cached_keyarray = new index_key_t[switch_kv_bucket_num];
+	switchos_cached_serveridxarray = new uint32_t[switch_kv_bucket_num];
 	switchos_cached_keyarray_empty_index = 0;
+
+	switchos_evictvalbytes = new char[val_t::MAX_VALLEN];
+	INVARIANT(switchos_evictvalbytes != NULL);
+	memset(switchos_evictvalbytes, 0, val_t::MAX_VALLEN);
 }
 
 void *run_switchos_popserver(void *param) {
@@ -321,6 +342,8 @@ void *run_switchos_paramserver(void *param) {
 	while (!switchos_running) {}
 
 	while (switchos_running) {
+		memset(buf, 0, MAX_BUFSIZE);
+
 		// ptf framework is in the same device of switch os
 		struct sockaddr_in ptf_addr;
 		unsigned int ptf_addr_len = sizeof(struct sockaddr);
@@ -339,20 +362,37 @@ void *run_switchos_paramserver(void *param) {
 
 		tmp_type = *((int *)buf);
 		if (tmp_type == switchos_get_freeidx) {
-			// send switchos_freeidx to ptf framework
-			memset(buf, 0, MAX_BUFSIZE);
-			memcpy(buf, (void *)&switchos_freeidx, sizeof(uint32_t));
-			sendto(switchos_paramserver_udpsock, buf, sizeof(uint32_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len);
+			memset(buf, 0, MAX_BUFSIZE); // use buf as sendbuf
+
+			// ptf get freeidx -> send switchos_freeidx to ptf framework
+			memcpy(buf, (void *)&switchos_freeidx, sizeof(int16_t));
+			sendto(switchos_paramserver_udpsock, buf, sizeof(int16_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len);
 		}
 		else if (tmp_type == switchos_get_key_freeidx) {
-			// send key and switchos_freeidx to ptf framework
-			memset(buf, 0, MAX_BUFSIZE);
+			memset(buf, 0, MAX_BUFSIZE); // use buf as sendbuf
+
+			// ptf get key and freeidx -> send key and switchos_freeidx to ptf framework
 			uint32_t tmp_keysize = switchos_newkey.serialize(buf, MAX_BUFSIZE);
-			memcpy(buf + tmp_keysize, (void *)&switchos_freeidx, sizeof(uint32_t));
-			sendto(switchos_paramserver_udpsock, buf, tmp_keysize + sizeof(uint32_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len);
+			memcpy(buf + tmp_keysize, (void *)&switchos_freeidx, sizeof(int16_t));
+			sendto(switchos_paramserver_udpsock, buf, tmp_keysize + sizeof(int16_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len);
 		}
-		else if (tmp_type == switchos_get_evictidx) {
-			// TODO: send switchos_evictidx to ptf framework
+		else if (tmp_type == switchos_set_evictdata) {
+			char *curptr = buf; // continue to use buf as recvbuf
+			curptr += sizeof(int); // skip tmp_type
+
+			// ptf set evict data -> get evictdata from ptf framework
+			switchos_evictidx = *((int16_t *)curptr);
+			curptr += sizeof(int16_t);
+			switchos_evictvallen = *((int32_t *)curptr);
+			curptr += sizeof(int32_t);
+			int32_t tmp_valbytesnum = switchos_evictvallen + val_t::get_padding_size(switchos_evictvallen);
+			memcpy(switchos_evictvalbytes, curptr, tmp_valbytesnum);
+			curptr += tmp_valbytesnum;
+			switchos_evictstat = *((bool *)curptr);
+			curptr += sizeof(bool);
+			switchos_evictseq = *((int32_t *)curptr);
+
+			switchos_with_evictdata = true;
 		}
 		else {
 			printf("[switch os] invalid requset type from ptf to paramserver: %d\n", tmp_type);
@@ -383,14 +423,34 @@ void *run_switchos_popworker(void *param) {
 
 			// assign switchos_freeidx for new record 
 			if (switchos_cached_keyarray_empty_index < switch_kv_bucket_num) { // With free idx
-				switchos_freeidx = switchos_cached_keyarray_empty_index;
+				switchos_freeidx = int16_t(switchos_cached_keyarray_empty_index);
 				switchos_cached_keyarray_empty_index += 1;
 			}
 			else { // Without free idx
-				// TODO: set switchos_freeidx after cache eviction for old record
+				// get evictdata from ptf framework 
+				system("bash tofino/get_evictdata.sh");
+
+				// wait for paramserver to get evictdata
+				while (!switchos_with_evictdata) {}
+
+				// send CACHE_EVICT to controller -> server
+				INVARIANT(switchos_evictidx >= 0 && switchos_evictidx < switchos_kv_bucket_num);
+				// TODO: implement CACHE_EVICT in packet format
+				cache_evict_t tmp_cache_evict(switchos_cached_keyarray(switchos_evictidx), \
+						val_t(switchos_evictvalbytes, switchos_evictvallen), \
+						switchos_evictstat, switchos_evictseq, \
+						switchos_cached_serveridxarray(switchos_evictidx))
+
+				// TODO: switchos.evictclient sends CACHE_EVICT to controller.evictserver
+
+				// TODO: wait for ACK
+				
+				// TODO: remove keyarray and serveridxarray at evictidx
 			}
 
 			/* cache population for new record */
+
+			INVARIANT(freeidx >= 0 && freeidx < switch_kv_bucket_num);
 
 			// set valid=0 for atomicity
 			system("bash tofino/setvalid0.sh");
@@ -409,10 +469,8 @@ void *run_switchos_popworker(void *param) {
 					break;
 				}
 			}
-			// Add new <key, value> pair into cache_lookup_tbl
-			system("bash add_cache_lookup.sh");
-			// set valid=1 to enable the entry
-			system("bash tofino/setvalid1.sh");
+			// (1) add new <key, value> pair into cache_lookup_tbl; (2) and set valid=1 to enable the entry
+			system("bash add_cache_lookup_set_valid1.sh");
 
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;
@@ -421,6 +479,9 @@ void *run_switchos_popworker(void *param) {
 			switchos_tail_for_pop = (switchos_tail_for_pop + 1) % MQ_SIZE;
 
 			switchos_cached_keyarray[freeidx] = tmp_cache_pop_ptr->key();
+			switchos_cached_serveridxarray[freeidx] = tmp_cache_pop_ptr->serveridx();
+
+			// TODO: reset intermediate data
 		}
 	}
 }
@@ -439,5 +500,13 @@ void close_switchos() {
 	if (switchos_cached_keyarray != NULL) {
 		delete [] switchos_cached_keyarray;
 		switchos_cached_keyarray = NULL;
+	}
+	if (switchos_cached_serveridxarray != NULL) {
+		delete [] switchos_cached_serveridxarray;
+		switchos_cached_serveridxarray = NULL;
+	}
+	if (switchos_evictvalbytes != NULL) {
+		delete [] switchos_evictvalbytes;
+		switchos_evictvalbytes = NULL;
 	}
 }

@@ -85,6 +85,7 @@ val_t::SWITCH_MAX_VALLEN = 128;
 short switchos_popserver_port = -1;
 short switchos_paramserver_port = -1;
 const char *switchos_ip = nullptr;
+uint32_t switchos_sample_cnt = 0;
 
 // reflector
 const char *reflector_ip = nullptr;
@@ -183,11 +184,13 @@ inline void parse_ini(const char* config_file) {
 	switchos_popserver_port = ini.get_switchos_popserver_port();
 	switchos_paramserver_port = ini.get_switchos_paramserver_port();
 	switchos_ip = ini.get_switchos_ip();
+	switchos_sample_cnt = ini.get_switchos_sample_cnt();
 	COUT_VAR(kv_bucket_num);
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 	COUR_VAR(switchos_popserver_port);
 	COUT_VAR(switchos_paramserver_port);
 	printf("switchos ip: %s\n", switchos_ip);
+	COUT_VAR(switchos_sample_cnt);
 
 	// reflector
 	reflector_ip = ini.get_reflector_ip();

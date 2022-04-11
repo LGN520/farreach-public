@@ -174,7 +174,7 @@ uint32_t IniparserWrapper::get_switch_max_vallen() {
 	return uint32_t(tmp);
 }
 
-short get_switchos_popserver_port() {
+short IniparserWrapper::get_switchos_popserver_port() {
 	int tmp = iniparser_getint(ini, "switch:switchos_popserver_port", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switch:switchos_popserver_port]: %d\n", tmp);
@@ -183,7 +183,7 @@ short get_switchos_popserver_port() {
 	return short(tmp);
 }
 
-short get_switchos_paramserver_port() {
+short IniparserWrapper::get_switchos_paramserver_port() {
 	int tmp = iniparser_getint(ini, "switch:switchos_paramserver_port", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switch:switchos_paramserver_port]: %d\n", tmp);
@@ -199,6 +199,15 @@ const char* IniparserWrapper::get_switchos_ip() {
 		exit(-1);
 	}
 	return switchos_ip;
+}
+
+uint32_t IniparserWrapper::get_switchos_sample_cnt() {
+	int tmp = iniparser_getint(ini, "switch:switchos_sample_cnt", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_sample_cnt]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
 }
 
 // Controller

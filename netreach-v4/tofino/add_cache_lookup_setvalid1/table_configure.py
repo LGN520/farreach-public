@@ -49,7 +49,7 @@ with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini")
 switchos_paramserver_port = int(config.get("switch", "switchos_paramserver_port"))
 switchos_get_freeidx = 1
 switchos_get_key_freeidx = 2
-switchos_get_evictidx = 3
+switchos_set_evictdata = 3
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
@@ -85,7 +85,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
         recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
         # TODO: Check correctness of key
-        keylolo, keylohi, keyhilo, keyhihi, freeidx = struct,unpack("!4I=I", recvbuf)
+        keylolo, keylohi, keyhilo, keyhihi, freeidx = struct,unpack("!4I=h", recvbuf)
 
         print "Add {},{},{},{} {} into cache_lookup_tbl".format(keyhihi, keyhilo, keylohi, keylolo, freeidx)
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
@@ -96,6 +96,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         actnspec0 = netbufferv4_cached_action_action_spec_t(freeidx)
         self.client.cache_lookup_tbl_table_add_with_cached_action(\
                 self.sess_hdl, self.dev_tgt, matchspec0)
+
+        # TODO: check API of register set
+        print "Set valid_reg as 1"
+        index = freeidx
+        value = 1
+        flags = netbufferv4_register_flags_t(read_hw_sync=True)
+        self.client.register_set_valid_reg(self.sess_hdl, self.dev_tgt, index, value, flags)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
         self.conn_mgr.client_cleanup(self.sess_hdl) # close session

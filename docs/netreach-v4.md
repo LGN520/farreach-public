@@ -172,26 +172,36 @@
 			- One controller.popclient -> one switchos.popserver
 			- CANCELED: Add key into cached key set (comment it if server.cached_keyset works well)
 			- If with free idx (cache population)
-				+ Set valid[idx] = 0 for atomicity
-				+ Send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane
+				+ Ptf: set valid[idx] = 0 for atomicity
+				+ Switch os: send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane
 					* NOTE: we use reflector to simulate extra link, which is stateless and does not deduplicate ACKs
 					* TODO: try internal pcie port to inject pkt into specific pipeline
-				+ Wait for CACHE_POP_INSWITCH_ACK <key>, where switchos.popworker deduplicates ACKs
-				+ Add a new entry <key, idx> into cache_lookup_tbl of all ingress pipelines (must by ptf)
-				+ Set valid[idx] = 1 to enable the cache entry
+				+ Switch os: wait for CACHE_POP_INSWITCH_ACK <key>, where switchos.popworker deduplicates ACKs
+				+ Ptf: (1) add a new entry <key, idx> into cache_lookup_tbl of all ingress pipelines; (2) and set valid[idx] = 1 to enable the cache entry
 			- Otherwise (cache eviction)
-				+ TODO: Sample idxes and load corresponding cache_frequency counters
-				+ TODO: Choose the idx with the minimum frequency as the victim (approximate LRF)	
-				+ TODO: Set valid[victim.idx] = 3 for atomicity (then only latest can be changed by data plane)
-				+ TODO: Load deleted, vallen, val, and savedseq of victim
-				+ TODO: Report CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx> to controller, and wait for CACHE_EVICT_ACK
+				+ Switchos gets evictidx -> ptf:
+					+ Sample idxes and load corresponding cache_frequency counters
+					+ Choose the idx with the minimum frequency as the victim (approximate LRF)	
+					+ Set valid[victim.idx] = 3 for atomicity (then only latest can be changed by data plane)
+					+ Load deleted, vallen, val, TODO: and savedseq of victim
+					+ Report evictidx, vallen, valbytes, deleted, TODO: and savedseq to switchos.paramserver
+					+ NOTE: we do not consider latest here as latest=0 can still imply new value under valid=3
+					+ FUTURE: consider valid if with PUTREQ_LARGE
+				+ Switch os: get serveridx and key according to evictidx
+				+ TODO: Swith os: report CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx> to controller, and wait for CACHE_EVICT_ACK
 					* NOTE: we do not need to load latest
 						- Even if latest=0, the value could still be latest <- PUT/DEL (lost later) w/ valid=3 resets latest from 1 to 0
 						- No matter value is latest or not, we can always compare savedseq with server.seq for availability
 					* NOTE: CACHE_EVICT reported by switch OS instead of data plane -> no need <key, value, seq, inswitch_hdr.is_deleted>
 				+ TODO: Remove existing entry <victim.key, victim.idx> from cache_lookup_tbl of all ingress pipelines
 				+ TODO: Invoke cache population for new CACHE_POP
+		* TODO: Swithc os: popworker resets intermediate data of paramserver after population/eviction
 	+ Snapshot
+		* TODO: set flag=true needs atomicity, while reset flag=false does not need atomicity
+			- TODO: For atomicity, we enfore all traffic enter ingress 0 -> set flag=true -> disable the enforement
+			- TODO: As the duration for atomicity is very small compared with snapshot period, it should be acceptable
+			- TODO: Test the duration based on time difference between comment and uncomment
+		* TODO: send CACHE_EVICT_CASE2 to server for server-side snapshot if making in-switch snapshot 
 		* TODO: Snapshot thread: perform crash-consistent snapshot
 		* TODO: Maintain an in-memory snapshot flag
 		* TODO: If with ptf session limitation, we can place snapshot flag in SRAM; load values and reset registers by data plane;
@@ -308,6 +318,11 @@
 		* switchos.popworker
 	+ Support CACHE_POP_INSWITCH in switchos, reflector, switch
 	+ Support CACHE_POP_INSWITCH_ACK in switch, reflector, switchos 
+- Implement cache eviction
+	+ switchos: choose victim -> TODO: send CACHE_EVICT to controller -> wait for ACK -> cache population
+	+ TODO: controller: forward CACHE_EVICT to corresponding server -> wait for ACK -> update metadata -> send ACK to switchos
+	+ TODO: server: store evicted data if necessary -> update metadata -> send back ACK
+- Use int32_t for vallen (val.c, val.h)
 
 ## Run
 

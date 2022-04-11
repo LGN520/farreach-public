@@ -1,16 +1,17 @@
 #include "val.h"
 #include <sstream>
 
-uint32_t Val::MAX_VALLEN = 128;
-uint32_t Val::SWITCH_MAX_VALLEN = 256;
+int32_t Val::MAX_VALLEN = 128;
+int32_t Val::SWITCH_MAX_VALLEN = 256;
 
-uint32_t Val::get_padding_size(int32_t vallen) {
-	uint32_t padding_size = 0;
+int32_t Val::get_padding_size(int32_t vallen) {
+	int32_t padding_size = 0;
 	if (val_length <= SWITCH_MAX_VALLEN) {
 		if (val_length % 8 != 0) {
 			padding_size = 8 - val_length % 8;
 		}
 	}
+	INVARIANT(padding_size >= 0 && padding_size < 8);
 	return padding_size;
 }
 
@@ -26,7 +27,7 @@ Val::~Val() {
 	}
 }
 
-Val::Val(const char* buf, uint32_t length) {
+Val::Val(const char* buf, int32_t length) {
 	INVARIANT(buf != nullptr);
 	INVARIANT(length >= 0 && length <= MAX_VALLEN);
 
@@ -161,7 +162,7 @@ void Val::from_slice(rocksdb::Slice& slice) {
 		INVARIANT(val_data != nullptr);
 		memcpy((char *)val_data, slice.data_, slice.size_);
 
-		val_length = uint32_t(slice.size_);
+		val_length = int32_t(slice.size_);
 	}
 	else {
 		val_length = 0;
@@ -178,7 +179,7 @@ void Val::from_string(std::string& str) {
 		INVARIANT(val_data != nullptr);
 		memcpy((char *)val_data, str.data(), str.length());
 
-		val_length = uint32_t(str.length());
+		val_length = int32_t(str.length());
 	}
 	else {
 		val_length = 0;
@@ -188,7 +189,7 @@ void Val::from_string(std::string& str) {
 
 std::string Val::to_string() const { // For print
 	std::stringstream ss;
-	for (uint32_t i = 0; i < val_length; i++) {
+	for (int32_t i = 0; i < val_length; i++) {
 		ss << uint8_t(val_data[i]);
 		if (i != val_length-1) {
 			ss << ":";
@@ -198,7 +199,7 @@ std::string Val::to_string() const { // For print
 }
 
 uint32_t Val::get_bytesnum() const {
-	return val_length;
+	return uint32_t(val_length);
 }
 
 uint32_t Val::deserialize(const char *buf, uint32_t buflen) {
@@ -215,19 +216,19 @@ uint32_t Val::deserialize(const char *buf, uint32_t buflen) {
 uint32_t Val::deserialize_vallen(const char *buf, uint32_t buflen) {
 	INVARIANT(buf != nullptr);
 
-	INVARIANT(buflen >= sizeof(uint32_t));
-	val_length = *(const uint32_t*)buf; // # of bytes
-	val_length = ntohl(val_length); // Big-endian to little-endian
-	INVARIANT(val_length <= MAX_VALLEN);
-	return sizeof(uint32_t); // sizeof(vallen)
+	INVARIANT(buflen >= sizeof(int32_t));
+	val_length = *(const int32_t*)buf; // # of bytes
+	val_length = int32_t(ntohl(uint32_t(val_length))); // Big-endian to little-endian
+	INVARIANT(val_length >= 0 && val_length <= MAX_VALLEN);
+	return sizeof(int32_t); // sizeof(vallen)
 }
 
 uint32_t Val::deserialize_val(const char *buf, uint32_t buflen) {
 	INVARIANT(buf != nullptr);
 
-	uint32_t padding_size = get_padding_size(val_length); // padding for value <= 128B 
-	uint32_t deserialize_size = val_length + padding_size;
-	INVARIANT(buflen >= deserialize_size);
+	int32_t padding_size = get_padding_size(val_length); // padding for value <= 128B 
+	int32_t deserialize_size = val_length + padding_size;
+	INVARIANT(deserialize_size >= 0 && buflen >= uint32_t(deserialize_size));
 
 	if (val_data != nullptr) {
 		delete [] val_data;
@@ -243,15 +244,15 @@ uint32_t Val::deserialize_val(const char *buf, uint32_t buflen) {
 uint32_t Val::serialize(char *buf, uint32_t buflen) {
 	INVARIANT(val_data != nullptr);
 
-	uint32_t padding_size = get_padding_size(val_length); // padding for value <= 128B 
-	uint32_t serialize_size = sizeof(uint32_t) + val_length + padding_size;
-	INVARIANT(buflen >= serialize_size);
+	int32_t padding_size = get_padding_size(val_length); // padding for value <= 128B 
+	int32_t serialize_size = sizeof(int32_t) + val_length + padding_size;
+	INVARIANT(serialize_size >= 0 && buflen >= uint32_t(serialize_size));
 
-	uint32_t bigendian_vallen = htonl(val_length); // Little-endian to big-endian
-	memcpy(buf, (char *)&bigendian_vallen, sizeof(uint32_t)); // Switch needs to use vallen
-	memcpy(buf + sizeof(uint32_t), val_data, val_length);
+	int32_t bigendian_vallen = int32_t(htonl(uint32_t(val_length))); // Little-endian to big-endian
+	memcpy(buf, (char *)&bigendian_vallen, sizeof(int32_t)); // Switch needs to use vallen
+	memcpy(buf + sizeof(int32_t), val_data, val_length);
 	if (padding_size > 0) { // vallen <= 128B and vallen % 8 != 0
-		memset(buf + sizeof(uint32_t) + val_length, 0, padding_size);
+		memset(buf + sizeof(int32_t) + val_length, 0, padding_size);
 	}
 	return serialize_size; // sizeof(vallen) + vallen + [padding size]
 }

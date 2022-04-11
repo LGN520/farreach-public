@@ -49,7 +49,7 @@ with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini")
 switchos_paramserver_port = int(config.get("switch", "switchos_paramserver_port"))
 switchos_get_freeidx = 1
 switchos_get_key_freeidx = 2
-switchos_get_evictidx = 3
+switchos_set_evictdata = 3
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
@@ -84,7 +84,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         sendbuf = struct.pack("=i", switchos_get_freeidx) # 4-byte int
         ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
         recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
-        freeidx = struct.unpack("=I", recvbuf)[0]
+        freeidx = struct.unpack("=h", recvbuf)[0]
 
         # TODO: check API of register set
         print "Set valid_reg as 0"
