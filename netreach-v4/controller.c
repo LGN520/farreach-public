@@ -114,43 +114,8 @@ void prepare_controller() {
 	controller_popserver_subthreads = new pthread_t[server_num];
 	controller_expected_finish_subthreads = server_num;
 
-	// Set popserver socket
-	controller_popserver_tcpsock = socket(AF_INET, SOCK_STREAM, 0);
-	if (controller_popserver_tcpsock == -1) {
-		printf("[controller] Fail to create tcp socket of popserver: errno: %d!\n", errno);
-		exit(-1);
-	}
-	// reuse the occupied port for the last created socket instead of being crashed
-	const int trueFlag = 1;
-	if (setsockopt(controller_popserver_tcpsock, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
-		printf("[controller] Fail to setsockopt of of popserver: errno: %d!\n", errno);
-		exit(-1);
-	}
-	// Disable udp/tcp check
-	int disable = 1;
-	if (setsockopt(controller_popserver_tcpsock, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-		COUT_N_EXIT("[controller] Disable tcp checksum failed");
-	}
-	// Set timeout for recvfrom/accept of udp/tcp
-	struct timeval tv;
-	tv.tv_sec = 1;
-	tv.tv_usec =  0;
-	int res = setsockopt(controller_popserver_tcpsock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-	INVARIANT(res >= 0);
-	// Set listen address
-	sockaddr_in listen_addr;
-	memset(&listen_addr, 0, sizeof(listen_addr));
-	listen_addr.sin_family = AF_INET;
-	listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	listen_addr.sin_port = htons(controller_popserver_port);
-	if ((bind(controller_popserver_tcpsock, (struct sockaddr*)&listen_addr, sizeof(listen_addr))) != 0) {
-		printf("[controller] Fail to bind socket on port %hu for popserver, errno: %d!\n", controller_popserver_port, errno);
-		exit(-1);
-	}
-	if ((listen(controller_popserver_tcpsock, server_num)) != 0) { // MAX_PENDING_CONNECTION = server num
-		printf("[controller] Fail to listen on port %hu for popserver, errno: %d!\n", controller_popserver_port, errno);
-		exit(-1);
-	}
+	// prepare popserver socket
+	prepare_tcpserver(controller_popserver_tcpsock, true, controller_popserver_port, server_num, "controller.popserver"); // MAX_PENDING_CONNECTION = server num
 
 	/*controller_cached_keyset_list = new std::set<index_key_t>[server_num];
 	for (size_t i = 0; i < server_num; i++) {
@@ -166,7 +131,7 @@ void prepare_controller() {
 	controller_serveridx_subthreadidx_map.clear();
 	controller_head_for_pop = 0;
 	controller_tail_for_pop = 0;
-	controller_popclient_tcpsock = socket(AF_INET, SOCK_STREAM, 0);
+	create_tcpsock(controller_popclient_tcpsock, "controller.popclient");
 }
 
 void *run_controller_popserver(void *param) {
@@ -180,15 +145,9 @@ void *run_controller_popserver(void *param) {
 		struct sockaddr_in server_addr;
 		unsigned int server_addr_len = sizeof(struct sockaddr);
 
-		int connfd = accept(controller_popserver_tcpsock, NULL, NULL);
-		if (connfd == -1) {
-			if (errno == EWOULDBLOCK || errno == EINTR) {
-				continue; // timeout or interrupted system call
-			}
-			else {
-				COUT_N_EXIT("[controller] Error of accept: errno = " << std::string(strerror(errno)));
-			}
-			COUT_N_EXIT("[controller] Error of accept: errno = " << std::string(strerror(errno)));
+		bool is_timeout = tcpaccept(controller_popserver_tcpsock, NULL, NULL, "controller.popserver");
+		if (is_timeout) {
+			continue; // timeout or interrupted system call
 		}
 
 		// NOTE: subthreadidx != serveridx
@@ -199,7 +158,6 @@ void *run_controller_popserver(void *param) {
 		if (ret) {
 			COUT_N_EXIT("Error: unable to create controller.popserver.subthread " << ret);
 		}
-		controller_popserver_subthreads_runnings[subthreadidx] = true;
 		subthreadidx += 1;
 		INVARIANT(subthreadidx <= server_num);
 	}
@@ -234,18 +192,13 @@ void run_controller_popserver_subthread(void *param) {
 	const int arrive_optype_bytes = sizeof(int8_t);
 	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(int32_t);
 	while (true) {
-		int tmpsize = recv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0);
-		if (tmpsize < 0) {
-			// Errno 32 means broken pipe, i.e., server.popclient is closed
-			if (errno == 32) {
-				printf("[controller] remote server.popclient %ld is closed", thread_id);
-				break;
-			}
-			else {
-				COUT_N_EXIT("[controller] popserver recv fails: " << tmpsize << " errno = " << std::string(strerror(errno)));
-			}
+		int recvsize = 0;
+		bool is_broken = tcprecv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "controller.popserver.subthread");
+		if (is_broken) {
+			break;
 		}
-		cur_recv_bytes += tmpsize;
+
+		cur_recv_bytes += recvsize;
 		if (cur_recv_bytes >= MAX_BUFSIZE) {
 			printf("[controller] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
             exit(-1);
@@ -325,14 +278,7 @@ void run_controller_popserver_subthread(void *param) {
 }
 
 void run_controller_popclient(void *param) {
-	sockaddr_in switchos_addr;
-	memset(&switchos_addr, 0, sizeof(switchos_addr));
-	switchos_addr.sin_family = AF_INET;
-	switchos_addr.sin_addr.s_addr = inet_addr(switchos_ip);
-	switchos_addr.sin_port = htons(switchos_popserver_port);
-	if (connect(controller_popclient_tcpsock, (struct sockaddr*)&switchos_addr, sizeof(switchos_addr)) != 0) {
-		error("Fail to connect switchos.popserver at %s:%hu, errno: %d!\n", switchos_ip, switchos_popserver_port, errno);
-	}
+	tcpconnect(controller_popclient_tcpsock, switchos_ip, switchos_popserver_port, "controller.popoclient", "switchos.popserver");
 	controller_ready_threads++;
 
 	while (!controller_running) {}
@@ -343,7 +289,7 @@ void run_controller_popclient(void *param) {
 			cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptrs[controller_tail_for_pop];
 			// send CACHE_POP to switch os
 			uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
-			tcpsend(controller_popclient_tcpsock, buf, popsize);
+			tcpsend(controller_popclient_tcpsock, buf, popsize, "controller.popclient");
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;
 			tmp_cache_pop_ptr = NULL;

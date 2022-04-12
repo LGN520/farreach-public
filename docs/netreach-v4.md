@@ -330,6 +330,7 @@
 	+ TODO: controller: forward CACHE_EVICT to corresponding server -> wait for ACK -> update metadata -> send ACK to switchos
 	+ TODO: server: store evicted data if necessary -> update metadata -> send back ACK
 - Use int32_t for vallen (val.c, val.h)
+- Reorganize socket API
 
 ## Run
 

@@ -23,11 +23,7 @@ void prepare_server() {
 	server_popclient_tcpsock_list = new int[fg_n];
 	server_cached_keyset_list = new std::set<index_key_t>[fg_n];
 	for (size_t i = 0; i < fg_n; i++) {
-		server_popclient_tcpsock_list[i] = socket(AF_INET, SOCK_STREAM, 0);
-		if (server_popclient_tcpsock_list[i] == -1) {
-			printf("Fail to create tcp socket for server.popclient %ld: errno: %d!\n", i, errno);
-			exit(-1);
-		}
+		create_tcpsock(server_popclient_tcpsock_list[i], "server.popclient");
 
 		server_cached_keyset_list[i].clear();
 	}
@@ -55,16 +51,8 @@ static int run_sfg(void * param) {
   uint8_t thread_id = thread_param.thread_id;
   xindex_t *table = thread_param.table;
 
-  sockaddr_in controller_addr;
-  memset(&controller_addr, 0, sizeof(controller_addr));
-  controller_addr.sin_family = AF_INET;
-  controller_addr.sin_addr.s_addr = inet_addr(controller_ip); // enforce the packet to go through NIC 
-  //controller_addr.sin_port = htons(controller_popserver_port_start + thread_id);
-  controller_addr.sin_port = htons(controller_popserver_port);
-  if (connect(server_popclient_tcpsock_list[thread_id], (struct sockaddr*)&controller_addr, sizeof(controller_addr)) != 0) {
-	  //error("Fail to connect controller.popserver %ld at %s:%hu, errno: %d!\n", thread_id, controller_ip, controller_popserver_port_start + thread_id, errno);
-	  error("Server.popclient %ld fails to connect controller.popserver at %s:%hu, errno: %d!\n", thread_id, controller_ip, controller_popserver_port, errno);
-  }
+  tcpconnect(server_popclient_tcpsock_list[thread_id], controller_ip, controller_popserver_port, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
+  //tcpconnect(server_popclient_tcpsock_list[thread_id], controller_ip, controller_popserver_port_start + thread_id, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
 
   int res = 0;
 
@@ -288,7 +276,7 @@ static int run_sfg(void * param) {
 							// Send CACHE_POP to controller.popserver
 							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, int16_t(thread_id));
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-							tcpsend(server_popclient_tcpsock_list[thread_id], buf, popsize);
+							tcpsend(server_popclient_tcpsock_list[thread_id], buf, popsize, "server.popclient");
 						}
 					}
 					break;

@@ -10,11 +10,8 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include <errno.h>
 #include <set>
 #include <signal.h> // for signal and raise
-#include <sys/socket.h> // socket API
-#include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // inetaddr conversion
 #include <sys/time.h> // struct timeval
 #include <string.h>
@@ -23,7 +20,7 @@
 #include "helper.h"
 #include "key.h"
 #include "val.h"
-#include "tcp_helper.h"
+#include "socket_helper.h"
 
 typedef Key index_key_t;
 typedef Val val_t;
@@ -151,84 +148,18 @@ inline void parse_ini(const char* config_file) {
 }
 
 void prepare_switchos() {
-	// Set popserver socket
-	switchos_popserver_tcpsock = socket(AF_INET, SOCK_STREAM, 0);
-	if (switchos_popserver_tcpsock == -1) {
-		printf("[switch os] Fail to create tcp socket of popserver: errno: %d!\n", errno);
-		exit(-1);
-	}
-	// reuse the occupied port for the last created socket instead of being crashed
-	const int trueFlag = 1;
-	if (setsockopt(switchos_popserver_tcpsock, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
-		printf("[switch os] Fail to setsockopt of popserver: errno: %d!\n", errno);
-		exit(-1);
-	}
-	// Disable udp/tcp check
-	int disable = 1;
-	if (setsockopt(switchos_popserver_tcpsock, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-		COUT_N_EXIT("[switch os] Disable tcp checksum failed");
-	}
-	// Set timeout for recvfrom/accept of udp/tcp
-	/*struct timeval tv;
-	tv.tv_sec = 1;
-	tv.tv_usec =  0;
-	int res = setsockopt(switchos_popserver_tcpsock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-	INVARIANT(res >= 0);*/
-	// Set listen address
-	sockaddr_in listen_addr;
-	memset(&listen_addr, 0, sizeof(listen_addr));
-	listen_addr.sin_family = AF_INET;
-	listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	listen_addr.sin_port = htons(switchos_popserver_port);
-	if ((bind(switchos_popserver_tcpsock, (struct sockaddr*)&listen_addr, sizeof(listen_addr))) != 0) {
-		printf("[switch os] Fail to bind socket on port %hu for popserver, errno: %d!\n", switchos_popserver_port, errno);
-		exit(-1);
-	}
-	if ((listen(switchos_popserver_tcpsock, 1)) != 0) { // MAX_PENDING_CONNECTION = 1
-		printf("[switch os] Fail to listen on port %hu for popserver, errno: %d!\n", switchos_popserver_port, errno);
-		exit(-1);
-	}
+	// prepare popserver socket
+	prepare_tcpserver(switchos_popserver_tcpsock, false, switchos_popserver_port, 1, "switchos.popserver"); // MAX_PENDING_CONNECTION = 1
 
-	// Set paramserver socket
-	switchos_paramserver_udpsock = socket(AF_INET, SOCK_DGRAM, 0);
-	if (switchos_paramserver_udpsock == -1) {
-		printf("[switch os] Fail to create udp socket of paramserver: errno: %d!\n", errno);
-		exit(-1);
-	}
-	// reuse the occupied port for the last created socket instead of being crashed
-	const int trueFlag = 1;
-	if (setsockopt(switchos_paramserver_udpsock, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
-		printf("[switch os] Fail to setsockopt of paramserver: errno: %d!\n", errno);
-		exit(-1);
-	}
-	// Disable udp/tcp check
-	int disable = 1;
-	if (setsockopt(switchos_paramserver_udpsock, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-		COUT_N_EXIT("[switch os] Disable udp checksum failed");
-	}
-	// Set timeout for recvfrom/accept of udp/tcp
-	struct timeval tv;
-	tv.tv_sec = 1;
-	tv.tv_usec =  0;
-	int res = setsockopt(switchos_paramserver_udpsock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-	INVARIANT(res >= 0);
-	// Set listen address
-	//sockaddr_in listen_addr;
-	memset(&listen_addr, 0, sizeof(listen_addr));
-	listen_addr.sin_family = AF_INET;
-	listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	listen_addr.sin_port = htons(switchos_paramserver_port);
-	if ((bind(switchos_paramserver_udpsock, (struct sockaddr*)&listen_addr, sizeof(listen_addr))) != 0) {
-		printf("[switch os] Fail to bind socket on port %hu for paramserver, errno: %d!\n", switchos_paramserver_port, errno);
-		exit(-1);
-	}
+	// prepare paramserver socket
+	prepare_udpserver(switchos_paramserver_udpsock, true, switchos_paramserver_port, "switchos.paramserver");
 
 	//switchos_cached_keyset.clear();
 	switchos_cache_pop_ptrs = new cache_pop_t*[MQ_SIZE];
 	switchos_head_for_pop = 0;
 	switchos_tail_for_pop = 0;
 
-	switchos_popworker_udpsock = socket(AF_INET, SOCK_DGRAM, 0);
+	create_udpsock(switchos_popworker_udpsock, "switchos.popworker");
 	switchos_cached_keyarray = new index_key_t[switch_kv_bucket_num];
 	switchos_cached_serveridxarray = new int16_t[switch_kv_bucket_num];
 	switchos_cached_keyarray_empty_index = 0;
@@ -247,16 +178,7 @@ void *run_switchos_popserver(void *param) {
 
 	while (!switchos_running) {}
 
-	int connfd = accept(switchos_popserver_tcpsock, NULL, NULL);
-	if (connfd == -1) {
-		/*if (errno == EWOULDBLOCK || errno == EINTR) {
-			continue; // timeout or interrupted system call
-		}
-		else {
-			COUT_N_EXIT("[switch os] Error of accept: errno = " << std::string(strerror(errno)));
-		}*/
-		COUT_N_EXIT("[switch os] Error of accept: errno = " << std::string(strerror(errno)));
-	}
+	tcpaccept(switchos_popserver_tcpsock, NULL, NULL, "switchos.popserver");
 
 	// Process CACHE_POP packet <optype, key, vallen, value, stat, seq, serveridx>
 	char buf[MAX_BUFSIZE];
@@ -269,18 +191,13 @@ void *run_switchos_popserver(void *param) {
 	const int arrive_optype_bytes = sizeof(int8_t);
 	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(int32_t);
 	while (true) {
-		int tmpsize = recv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0);
-		if (tmpsize < 0) {
-			// Errno 32 means broken pipe, i.e., server.popclient is closed
-			if (errno == 32) {
-				printf("[switch os] remote controller.popclient is closed");
-				break;
-			}
-			else {
-				COUT_N_EXIT("[switch os] popserver recv fails: " << tmpsize << " errno = " << std::string(strerror(errno)));
-			}
+		int recvsize = 0;
+		bool is_broken = tcprecv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "switchos.popserver");
+		if (is_broken) {
+			break;
 		}
-		cur_recv_bytes += tmpsize;
+
+		cur_recv_bytes += recvsize;
 		if (cur_recv_bytes >= MAX_BUFSIZE) {
 			printf("[switch os] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
             exit(-1);
@@ -356,17 +273,11 @@ void *run_switchos_paramserver(void *param) {
 		struct sockaddr_in ptf_addr;
 		unsigned int ptf_addr_len = sizeof(struct sockaddr);
 
-		int recv_size = recvfrom(switchos_paramserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&ptf_addr, &ptf_addr_len);
-		if (recv_size == -1) {
-			if (errno == EWOULDBLOCK || errno == EINTR) {
-				continue; // timeout or interrupted system call
-			}
-			else {
-				COUT_THIS("[switch os] Error of recvfrom: errno = " << errno)
-				exit(-1);
-			}
+		int recv_size = 0;
+		bool is_timeout = udprecvfrom(switchos_paramserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&ptf_addr, &ptf_addr_len, recv_size, "switchos.paramserver");
+		if (is_timeout) {
+			break;
 		}
-		INVARIANT(recv_size > 0);
 
 		tmp_type = *((int *)buf);
 		if (tmp_type == switchos_get_freeidx) {
@@ -374,7 +285,7 @@ void *run_switchos_paramserver(void *param) {
 
 			// ptf get freeidx -> send switchos_freeidx to ptf framework
 			memcpy(buf, (void *)&switchos_freeidx, sizeof(int16_t));
-			sendto(switchos_paramserver_udpsock, buf, sizeof(int16_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len);
+			udpsendto(switchos_paramserver_udpsock, buf, sizeof(int16_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len, "switchos.paramserver");
 		}
 		else if (tmp_type == switchos_get_key_freeidx) {
 			memset(buf, 0, MAX_BUFSIZE); // use buf as sendbuf
@@ -382,7 +293,7 @@ void *run_switchos_paramserver(void *param) {
 			// ptf get key and freeidx -> send key and switchos_freeidx to ptf framework
 			uint32_t tmp_keysize = switchos_newkey.serialize(buf, MAX_BUFSIZE);
 			memcpy(buf + tmp_keysize, (void *)&switchos_freeidx, sizeof(int16_t));
-			sendto(switchos_paramserver_udpsock, buf, tmp_keysize + sizeof(int16_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len);
+			udpsendto(switchos_paramserver_udpsock, buf, tmp_keysize + sizeof(int16_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len, "switchos.paramserver");
 		}
 		else if (tmp_type == switchos_set_evictdata) {
 			char *curptr = buf; // continue to use buf as recvbuf
@@ -414,11 +325,9 @@ void *run_switchos_paramserver(void *param) {
 }
 
 void *run_switchos_popworker(void *param) {
+	// used by udp socket
 	sockaddr_in reflector_udpserver_addr;
-	memset(&reflector_udpserver_addr, 0, sizeof(reflector_udpserver_addr));
-	reflector_udpserver_addr.sin_family = AF_INET;
-	reflector_udpserver_addr.sin_addr.s_addr = inet_addr(reflector_ip);
-	reflector_udpserver_addr.sin_port = htons(reflector_udpserver_port);
+	set_sockaddr(reflector_udpserver_addr, inet_addr(reflector_ip), reflector_udpserver_port);
 	int reflector_udpserver_addr_len = sizeof(struct sockaddr);
 
 	// TODO: connect switchos.evictclient to controller.evictserver
@@ -429,7 +338,7 @@ void *run_switchos_popworker(void *param) {
 
 	while (switchos_running) {
 		char buf[MAX_BUFSIZE];
-		uint32_t tmpsize = 0;
+		uint32_t pktsize = 0;
 		if (switchos_tail_for_pop != switchos_head_for_pop) {
 			cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptrs[switchos_tail_for_pop];
 			INVARIANT(tmp_cache_pop_ptr != NULL);
@@ -453,7 +362,7 @@ void *run_switchos_popworker(void *param) {
 						val_t(switchos_evictvalbytes, switchos_evictvallen), \
 						switchos_evictstat, switchos_evictseq, \
 						switchos_cached_serveridxarray(switchos_evictidx))
-				tmpsize = tmp_cache_evict.serialize(buf, MAX_BUFSIZE);
+				pktsize = tmp_cache_evict.serialize(buf, MAX_BUFSIZE);
 
 				// TODO: switchos.evictclient sends CACHE_EVICT to controller.evictserver
 
@@ -470,15 +379,12 @@ void *run_switchos_popworker(void *param) {
 			system("bash tofino/setvalid0.sh");
 			// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
 			cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx);
-			tmpsize = tmp_cahe_pop_inswitch.serialize(buf, MAX_BUF_SIZE);
-			sendto(switchos_popworker_udpsock, buf, tmpsize, 0, (struct sockaddr *)&reflector_udpserver_addr, reflector_udpserver_addr_len);
+			pktsize = tmp_cache_pop_inswitch.serialize(buf, MAX_BUF_SIZE);
+			udpsendto(switchos_popworker_udpsock, buf, pktsize, 0, (struct sockaddr *)&reflector_udpserver_addr, reflector_udpserver_addr_len, "switchos.popworker.udpsock");
 			// loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
 			while (true) {
-				int recv_size = recvfrom(switchos_popworker_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL);
-				if (recv_size < 0) {
-					COUT_THIS("[switch os] Error of recvfrom: errno = " << errno)
-					exit(-1);
-				}
+				int recv_size = 0;
+				udprecvfrom(switchos_popworker_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "switchos.popworker.udpsock");
 				cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(buf, recv_size);
 				if (tmp_cache_pop_inswitch_ack.key() == tmp_cache_pop_ptr->key()) {
 					break;
