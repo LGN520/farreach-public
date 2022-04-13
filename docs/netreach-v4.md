@@ -33,6 +33,8 @@
 	+ Result header: 1B result
 		* NOTE: success flag for PUTRES/DELRES; deleted flag for GETRES; SCANRES does not need it
 	+ Inswitch header: 1b is_cached, 1b is_sampled, 1b is_wrong_pipeline, 9 bit eport_for_res, 9b sid, 3b padding, 2B hashval, 2B idx
+	+ CACHE_POP: key, value, seq, serveridx
+	+ CACHE_EVICT: key, value, result, seq, serveridx
 - Client
 	+ Send GETREQ and wait for GETRES
 - Switch
@@ -150,28 +152,27 @@
 	+ For GET: process GETREQ, GETREQ_POP, GETREQ_NLATEST -> GETRES, GETRES w/ cache population, GETRES_LATEST/DELETED_SEQ
 	+ Each server maintains a set of keys being cached to avoid duplicate population
 		* If GETREQ_POP triggers a cache population (i.e., key exists), server adds the key into cached key set
-		* TODO: If server receives CACHE_EVICT, it removes the evicted key from cached key set
-- NOTE: In the host colocated with server
-	+ TODO: We use controller thread to simulate controller for cache management
-	+ TODO: We use reflector thread to simulate the extra link for connection between data plane and switch OS
+		* If server receives CACHE_EVICT, it removes the evicted key from cached key set
 - Controller
 	+ Cache population/eviction
-		* Receive CACHE_POP <key, value, seq, serveridx> from server by tcp channel
+		* Receive CACHE_POP from server by tcp channel
 			- Per-server popclient -> one controller.popserver (with multiple subthreads = # of servers)
 		* CANCELED: Add key into per-server cached key set (comment it if server.cached_keyset works well)
 		* CANCELED: Add key into key-server map (comment it as CACHE_EVICT embeds serveridx towards corresponding server)
 		* Maintain a map between serveridx and controller.popserver.subthreadidx
 		* Send CACHE_POP to corresponding switchOS
 	+ Eviction handler
-		* TODO: Receive CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx>
-		* TODO: Check per-server cached key set to find the corresponding server
-		* TODO: Send CACHE_EVICT to the correpsonding server, and wait for CACHE_EVICT_ACK <victim.key>
+		* Receive CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx>
+		* CANCELED: Check per-server cached key set to find the corresponding server
+		* Send CACHE_EVICT to the correpsonding server, TODO: and wait for CACHE_EVICT_ACK <victim.key>
 		* TODO: Send CACHE_EVICT_ACK to the switch OS
 - Switch OS
 	+ Cache population/eviction
-		* Workflow
+		* IMPORTANT: Workflow
 			- Cache population: servers.popclients -> controller.popserver.subthreads -> controller.popclient -> switchos.popserver.connfd -> switchos.popworker -> ptf <-> switchos.paramserver
-			- TODO: Cache eviction: switchos.popworker notify -> ptf -> switchos.paramserver -> switchos.popworker.evictclient_tcpsock <-> controller.evictserver.connfd <-> controller.evictserver.evictclient_tcpsock <-> server.evictserver.connfd <-> server.normal_worker
+				+ NOTE: controller.popserver.subthreadidx != server.serveridx
+			- Cache eviction: switchos.popworker notify -> ptf -> switchos.paramserver -> switchos.popworker.evictclient <-> controller.evictserver <-> controller.evictserver.evictclient <-> server.evictserver <-> server.normal_worker
+				+ TODO: ACK
 			- NOTE: switchos.popworker performs cache population/eviction; switchos.paramserver communicates with ptf for parameters
 		* Data structure
 			- Maintain in-memory multi-level array: switch (TODO: different switches under distributed extension) -> egress pipeline (fixed due to testbed limitation) -> <idx, key and serveridx>
@@ -179,7 +180,7 @@
 			- CANCELED: Add key into cached key set (comment it if server.cached_keyset works well)
 			- If with free idx (cache population)
 				+ Ptf: set valid[idx] = 0 for atomicity
-				+ Switch os: send CACHE_POP_INSWITCH <key, value, seq, inswitch_hdr.idx> to data plane
+				+ Switch os: send CACHE_POP_INSWITCH to data plane
 					* NOTE: we use reflector to simulate extra link, which is stateless and does not deduplicate ACKs
 					* TODO: try internal pcie port to inject pkt into specific pipeline
 				+ Switch os: wait for CACHE_POP_INSWITCH_ACK <key>, where switchos.popworker deduplicates ACKs
@@ -194,7 +195,7 @@
 					+ NOTE: we do not consider latest here as latest=0 can still imply new value under valid=3
 					+ FUTURE: consider valid if with PUTREQ_LARGE
 				+ Switch os: get serveridx and key according to evictidx
-				+ TODO: Switch os: report CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx> to controller
+				+ Switch os: report CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx> to controller
 					* NOTE: we do not need to load latest
 						- Even if latest=0, the value could still be latest <- PUT/DEL (lost later) w/ valid=3 resets latest from 1 to 0
 						- No matter value is latest or not, we can always compare savedseq with server.seq for availability
@@ -214,6 +215,9 @@
 		* TODO: If with ptf session limitation, we can place snapshot flag in SRAM; load values and reset registers by data plane;
 	+ TODO: Periodically reset CM
 		* TODO: If with ptf session limitation, we can reset it in data plane
+- NOTE: In the host colocated with server
+	+ TODO: We use controller thread to simulate controller for cache management
+	+ TODO: We use reflector thread to simulate the extra link for connection between data plane and switch OS
 
 ## Details 
 

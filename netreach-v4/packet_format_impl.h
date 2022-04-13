@@ -623,7 +623,7 @@ void GetResponseDeletedSeq<key_t, val_t>::deserialize(const char * data, uint32_
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseDeletedSeq");
 }
 
-// CachePop (value must <= 128B)
+// CachePop (value must <= 128B; only used by end-hosts)
 
 template<class key_t, class val_t>
 CachePop<key_t, val_t>::CachePop(key_t key, val_t val, int32_t seq, int16_t serveridx)
@@ -756,7 +756,7 @@ uint32_t CachePopInSwitchAck<key_t>::serialize(char * const data, uint32_t max_s
 	COUT_N_EXIT("Invalid invoke of serialize for CachePopInSwitchAck");
 }
 
-// CacheEvict (value must <= 128B)
+// CacheEvict (value must <= 128B; only used by end-hosts)
 
 template<class key_t, class val_t>
 CacheEvict<key_t, val_t>::CacheEvict(key_t key, val_t val, bool stat, int32_t seq, int16_t serveridx) 
@@ -793,7 +793,7 @@ uint32_t CacheEvict<key_t, val_t>::size() { // unused
 }
 
 template<class key_t, class val_t>
-uint32_t CachePop<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+uint32_t CacheEvict<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	//uint32_t my_size = this->size();
 	//INVARIANT(max_size >= my_size);
 	char *begin = data;

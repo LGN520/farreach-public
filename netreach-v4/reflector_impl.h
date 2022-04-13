@@ -1,28 +1,28 @@
 #ifndef REFLECTOR_H
 #define REFLECTOR_H
 
-// shared by reflector.udpserver and reflector.dpdkserver, but no contention
+// shared by reflector.popserver and reflector.dpdkserver, but no contention
 bool volatile reflector_with_switchos_popworker_addr = false;
 struct sockaddr_in volatile reflector_switchos_popworker_addr;
 unsigned int volatile reflector_switchos_popworker_addr_len = sizeof(struct sockaddr);
 
-// switchos.popworker -> (udp channel) -> one reflector.udpserver -> data plane
-int volatile reflector_udpserver_udpsock = -1;
+// switchos.popworker -> (udp channel) -> one reflector.popserver -> data plane
+int volatile reflector_popserver_udpsock = -1;
 
 // data plane -> receiver -> (message) -> reflector.dpdkserver -> switchos.popworker
 struct rte_mbuf** volatile reflector_pkts_for_popack; // pkts from receiver to reflector.dpdkserver
 volatile uint32_t reflector_head_for_popack;
 volatile uint32_t reflector_tail_for_popack;
-int volatile reflector_dpdkserver_udpsock = -1;
+int volatile reflector_dpdkserver_popclient_udpsock = -1;
 
 void prepare_reflector();
-void *run_reflector_udpserver(void *param);
+void *run_reflector_popserver(void *param);
 void *run_reflector_dpdkserver(void *param);
 void close_reflector();
 
 void prepare_reflector() {
-	// prepare udpserver socket
-	prepare_udpserver(reflector_udpserver_udpsock, true, reflector_port, "reflector.udpserver");
+	// prepare popserver socket
+	prepare_udpserver(reflector_popserver_udpsock, true, reflector_popserver_port, "reflector.popserver");
 
 	// From receiver to reflector.dpdkserver
 	reflector_pkts_for_popack = new struct rte_mbuf*[MQ_SIZE];
@@ -31,10 +31,10 @@ void prepare_reflector() {
 	}
 	reflector_head_for_popack = 0;
 	reflector_tail_for_popack = 0;
-	create_udpsock(reflector_dpdkserver_udpsock, "reflector.dpdkserver.udpsock");
+	create_udpsock(reflector_dpdkserver_popclient_udpsock, "reflector.dpdkserver.popclient");
 }
 
-void *run_reflector_udpserver(void *param) {
+void *run_reflector_popserver(void *param) {
 	// DPDK
 	uint16_t burst_size = 256;
 	struct rte_mbuf *sent_pkts[burst_size];
@@ -52,10 +52,10 @@ void *run_reflector_udpserver(void *param) {
 		unsigned int tmp_switchos_popworker_addr_len = sizeof(struct sockaddr);
 		int recvsize = 0;
 		if (!reflector_with_switchos_popworker_addr) {
-			udprecvfrom(reflector_udpserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&tmp_switchos_popworker_addr, &tmp_switchos_popworker_addr_len, recvsize, "reflector.udpserver");
+			udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&tmp_switchos_popworker_addr, &tmp_switchos_popworker_addr_len, recvsize, "reflector.popserver");
 		}
 		else {
-			udprecvfrom(reflector_udpserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.udpserver");
+			udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.popserver");
 		}
 
 		if (!reflector_with_switchos_popworker_addr) {
@@ -83,7 +83,7 @@ void *run_reflector_udpserver(void *param) {
 		}
 	}
 
-	close(reflector_udpserver_udpsock);
+	close(reflector_popserver_udpsock);
 	pthread_exit(nullptr);
 }
 
@@ -100,13 +100,15 @@ void *run_reflector_dpdkserver() {
 			recvsize = get_payload(reflector_pkts_for_popack[reflector_tail_for_popack], buf);
 			// send CACHE_POP_INSWITCH_ACK to switchos.popworker
 			int sendsize = 0;
-			udpsendto(reflector_dpdkserver_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, sendsize, "reflector.dpdkserver.udpsock");
+			udpsendto(reflector_dpdkserver_popclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, sendsize, "reflector.dpdkserver.popclient");
 
 			rte_pktmbuf_free(reflector_pkts_for_popack[reflector_tail_for_popack]);
 			reflector_pkts_for_popack[reflector_tail_for_popack] = nullptr;
 			reflector_tail_for_popack = (reflector_tail_for_popack + 1) % MQ_SIZE;
 		}
 	}
+
+	close(reflector_dpdkserver_popclient_udpsock);
 	pthread_exit(nullptr);
 }
 

@@ -154,6 +154,15 @@ short IniparserWrapper::get_server_notified_port() {
 	return short(tmp);
 }
 
+short IniparserWrapper::get_server_evictserver_port() {
+	int tmp = iniparser_getint(ini, "server:server_evictserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:server_evictserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 // Switch
 
 uint32_t IniparserWrapper::get_kv_bucket_num() {
@@ -212,13 +221,22 @@ uint32_t IniparserWrapper::get_switchos_sample_cnt() {
 
 // Controller
 
-const char* IniparserWrapper::get_controller_ip() {
-	const char *controller_ip = iniparser_getstring(ini, "controller:controller_ip", nullptr);
-	if (controller_ip == nullptr) {
-		printf("Invalid entry of [controller:controller_ip]\n");
+const char* IniparserWrapper::get_controller_ip_for_server() {
+	const char *controller_ip_for_server = iniparser_getstring(ini, "controller:controller_ip_for_server", nullptr);
+	if (controller_ip_for_server == nullptr) {
+		printf("Invalid entry of [controller:controller_ip_for_server]\n");
 		exit(-1);
 	}
-	return controller_ip;
+	return controller_ip_for_server;
+}
+
+const char* IniparserWrapper::get_controller_ip_for_switchos() {
+	const char *controller_ip_for_switchos = iniparser_getstring(ini, "controller:controller_ip_for_switchos", nullptr);
+	if (controller_ip_for_switchos == nullptr) {
+		printf("Invalid entry of [controller:controller_ip_for_switchos]\n");
+		exit(-1);
+	}
+	return controller_ip_for_switchos;
 }
 
 short IniparserWrapper::get_controller_popserver_port() {
@@ -230,21 +248,30 @@ short IniparserWrapper::get_controller_popserver_port() {
 	return short(tmp);
 }
 
-// Reflector
-
-const char* IniparserWrapper::get_reflector_ip() {
-	const char *reflector_ip = iniparser_getstring(ini, "reflector:reflector_ip", nullptr);
-	if (reflector_ip == nullptr) {
-		printf("Invalid entry of [reflector:reflector_ip]\n");
+short IniparserWrapper::get_controller_evictserver_port() {
+	int tmp = iniparser_getint(ini, "controller:controller_evictserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [controller:controller_evictserver_port]: %d\n", tmp);
 		exit(-1);
 	}
-	return reflector_ip;
+	return short(tmp);
 }
 
-short IniparserWrapper::get_reflector_udpserver_port() {
-	int tmp = iniparser_getint(ini, "reflector:reflector_udpserver_port", -1);
+// Reflector
+
+const char* IniparserWrapper::get_reflector_ip_for_switchos() {
+	const char *reflector_ip_for_switchos = iniparser_getstring(ini, "reflector:reflector_ip_for_switchos", nullptr);
+	if (reflector_ip_for_switchos == nullptr) {
+		printf("Invalid entry of [reflector:reflector_ip_for_switchos]\n");
+		exit(-1);
+	}
+	return reflector_ip_for_switchos;
+}
+
+short IniparserWrapper::get_reflector_popserver_port() {
+	int tmp = iniparser_getint(ini, "reflector:reflector_popserver_port", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [reflector:reflector_udpserver_port]: %d\n", tmp);
+		printf("Invalid entry of [reflector:reflector_popserver_port]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);

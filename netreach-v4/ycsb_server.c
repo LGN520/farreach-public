@@ -28,6 +28,7 @@
 #include "backup_data.h"
 #include "special_case.h"
 #include "deleted_set_impl.h"
+#include "socket_helper.h"
 
 #ifdef ORIGINAL_XINDEX
 #include "original_xindex/xindex.h"
@@ -49,15 +50,10 @@
 
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
-struct alignas(CACHELINE_SIZE) SFGParam {
-  xindex_t *table;
-  uint8_t thread_id;
-  size_t throughput;
-#ifdef TEST_AGG_THPT
-  double sum_latency;
-#endif
+struct alignas(CACHELINE_SIZE) TcpServerParam {
+	uint8_t thread_id;
 };
-typedef SFGParam sfg_param_t;
+typedef TcpServerParam tcpserver_param_t;
 
 
 typedef BackupData backup_data_t;
@@ -544,22 +540,22 @@ void run_server(xindex_t *table) {
 
 	// Launch workers (processing normal packets)
 	//pthread_t threads[server_num];
-	sfg_param_t sfg_params[server_num];
+	server_worker_param_t server_worker_params[server_num];
 	// check if parameters are cacheline aligned
 	for (size_t i = 0; i < server_num; i++) {
-		if ((uint64_t)(&(sfg_params[i])) % CACHELINE_SIZE != 0) {
-			COUT_N_EXIT("wrong parameter address: " << &(sfg_params[i]));
+		if ((uint64_t)(&(server_worker_params[i])) % CACHELINE_SIZE != 0) {
+			COUT_N_EXIT("wrong parameter address: " << &(server_worker_params[i]));
 		}
 	}
 	for (uint8_t worker_i = 0; worker_i < server_num; worker_i++) {
-		sfg_params[worker_i].table = table;
-		sfg_params[worker_i].thread_id = worker_i;
-		sfg_params[worker_i].throughput = 0;
+		server_worker_params[worker_i].table = table;
+		server_worker_params[worker_i].thread_id = worker_i;
+		server_worker_params[worker_i].throughput = 0;
 #ifdef TEST_AGG_THPT
-		sfg_params[worker_i].sum_latency = 0.0;
+		server_worker_params[worker_i].sum_latency = 0.0;
 #endif
-		//int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
-		ret = rte_eal_remote_launch(run_sfg, (void *)&sfg_params[worker_i], lcoreid);
+		//int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&server_worker_params[worker_i]);
+		ret = rte_eal_remote_launch(run_server_worker, (void *)&server_worker_params[worker_i], lcoreid);
 		if (ret) {
 		  COUT_N_EXIT("Error:" << ret);
 		}
@@ -586,12 +582,12 @@ void run_server(xindex_t *table) {
 	size_t overall_thpt = 0;
 	std::vector<double> load_balance_ratio_list;
 	for (size_t i = 0; i < server_num; i++) {
-		overall_thpt += sfg_params[i].throughput;
+		overall_thpt += server_worker_params[i].throughput;
 	}
 	COUT_THIS("Server-side overall throughput: " << overall_thpt);
 	double avg_per_server_thpt = double(overall_thpt) / double(server_num);
 	for (size_t i = 0; i < server_num; i++) {
-		load_balance_ratio_list.push_back(double(sfg_params[i].throughput) / avg_per_server_thpt);
+		load_balance_ratio_list.push_back(double(server_worker_params[i].throughput) / avg_per_server_thpt);
 	}
 	for (size_t i = 0; i < load_balance_ratio_list.size(); i++) {
 		COUT_THIS("Load balance ratio of server " << i << ": " << load_balance_ratio_list[i]);
@@ -599,7 +595,7 @@ void run_server(xindex_t *table) {
 #ifdef TEST_AGG_THPT
 	double max_agg_thpt = 0.0;
 	for (size_t i = 0; i < server_num; i++) {
-		max_agg_thpt += (double(sfg_params[i].throughput) / sfg_params[i].sum_latency * 1000 * 1000);
+		max_agg_thpt += (double(server_worker_params[i].throughput) / server_worker_params[i].sum_latency * 1000 * 1000);
 	}
 	max_agg_thpt /= double(1024 * 1024);
 	COUT_THIS("Max server-side aggregate throughput: " << max_agg_thpt << " MQPS");

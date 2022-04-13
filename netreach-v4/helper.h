@@ -192,6 +192,7 @@
 #define MAX_LCORE_NUM 72
 
 #define MQ_SIZE 256 // in-memory message queue
+#define SINGLE_MQ_SIZE 2 // single-message message queue
 
 inline void memory_fence() { asm volatile("mfence" : : : "memory"); }
 

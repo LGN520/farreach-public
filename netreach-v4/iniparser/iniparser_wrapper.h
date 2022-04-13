@@ -30,14 +30,17 @@ class IniparserWrapper {
 		short get_server_backup_port();
 		short get_server_pktlos_port();
 		short get_server_notified_port();
+		short get_server_evictserver_port();
 
 		// controller
-		const char *get_controller_ip();
+		const char *get_controller_ip_for_server();
+		const char *get_controller_ip_for_switchos();
 		short get_controller_popserver_port();
+		short get_controller_evictserver_port();
 
 		// reflector
-		const char *get_reflector_ip();
-		short get_reflector_udpserver_port();
+		const char *get_reflector_ip_for_switchos();
+		short get_reflector_popserver_port();
 
 		// switch
 		uint32_t get_kv_bucket_num();

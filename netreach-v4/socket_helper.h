@@ -25,7 +25,7 @@ void create_tcpsock(int &sockfd, const char* role = "sockethelper.tcpsock");
 void tcpconnect(int sockfd, const char* ip, short port, const char *srcrole = "sockhelper.tcpclient", const char* dstrole = "sockethelper.tcpserver");
 void tcpsend(char *buf, int size, const char *role = "sockethelper.tcpsend");
 void prepare_tcpserver(int &sockfd, bool need_timeout, short server_port, int max_pending_num, const char *role = "sockethelper.tcpserver");
-bool tcpaccept(int sockfd, struct sockaddr *addr, socklen_t *addrrlen, const char* role = "sockethelper.tcpaccept");
+bool tcpaccept(int sockfd, struct sockaddr *addr, socklen_t *addrrlen, int &connfd, const char* role = "sockethelper.tcpaccept");
 bool tcprecv(int sockfd, void *buf, size_t len, int flags, int &recvsize, const char* role = "sockethelper.tcprecv");
 
 #endif

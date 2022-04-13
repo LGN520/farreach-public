@@ -158,7 +158,7 @@ void prepare_tcpserver(int &sockfd, bool need_timeout, short server_port, int ma
 	}
 }
 
-bool tcpaccept(int sockfd, struct sockaddr *addr, socklen_t *addrrlen, const char* role) {
+bool tcpaccept(int sockfd, struct sockaddr *addr, socklen_t *addrrlen, int &connfd, const char* role) {
 	bool need_timeout = false;
 	struct timeval tv;
 	tv.tv_sec = 0;
@@ -170,7 +170,7 @@ bool tcpaccept(int sockfd, struct sockaddr *addr, socklen_t *addrrlen, const cha
 
 	bool is_timeout = false;
 
-	int connfd = accept(sockfd, addr, addrlen);
+	connfd = accept(sockfd, addr, addrlen);
 	if (connfd == -1) {
 		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR)) {
 			is_timeout = true;

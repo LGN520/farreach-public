@@ -2,16 +2,12 @@
 #define COMMON_IMPL_H
 
 #include "packet_format_impl.h"
-#include "tcp_helper.h"
+#include "socket_helper.h"
+#include "message_queue_impl.h"
 
 /*
  * Class and alias
  */
-
-struct alignas(CACHELINE_SIZE) TcpServerParam {
-	uint8_t thread_id;
-};
-typedef TcpServerParam tcpserver_param_t;
 
 typedef Key index_key_t;
 typedef Val val_t;
@@ -73,12 +69,15 @@ const char* backup_ip = nullptr;
 short backup_port;
 // notified for processing explicit notification of server-side snapshot
 short notified_port;
+short server_evictserver_port_start = -1;
 size_t per_server_range;
 
 // controller
-const char *controller_ip = nullptr;
+const char *controller_ip_for_server = nullptr;
+const char *controller_ip_for_switchos = nullptr;
 //short controller_popserver_port_start = -1;
 short controller_popserver_port = -1;
+short controller_evictserver_port = -1;
 
 // switch
 uint32_t kv_bucket_num;
@@ -89,8 +88,8 @@ const char *switchos_ip = nullptr;
 uint32_t switchos_sample_cnt = 0;
 
 // reflector
-const char *reflector_ip = nullptr;
-short reflector_port = -1;
+const char *reflector_ip_for_switchos = nullptr;
+short reflector_popserver_port = -1;
 
 // others
 size_t bg_n = 1;
@@ -155,6 +154,7 @@ inline void parse_ini(const char* config_file) {
 	backup_ip = ini.get_server_backup_ip();
 	backup_port = ini.get_server_backup_port();
 	notified_port = ini.get_server_notified_port();
+	server_evictserver_port_start = ini,get_server_evictserver_port();
 	per_server_range = std::numeric_limits<size_t>::max() / server_num;
 	COUT_VAR(server_num);
 	COUT_VAR(server_port_start);
@@ -169,15 +169,20 @@ inline void parse_ini(const char* config_file) {
 	printf("backup_ip: %s\n", backup_ip);
 	COUT_VAR(backup_port);
 	COUT_VAR(notified_port);
+	COUT_VAR(server_evictserver_port_start);
 	COUT_VAR(per_server_range);
 
 	// controller
-	controller_ip = ini.get_controller_ip();
+	controller_ip_for_server = ini.get_controller_ip_for_server();
+	controller_ip_for_switchos = ini.get_controller_ip_for_switchos();
 	//controller_popserver_port_start = ini.get_controller_popserver_port();
 	controller_popserver_port = ini.get_controller_popserver_port();
-	printf("controller ip: %s\n", controller_ip);
+	controller_evictserver_port = ini.get_controller_evictserver_port();
+	printf("controller ip for server: %s\n", controller_ip_for_server);
+	printf("controller ip for switchos: %s\n", controller_ip_for_switchos);
 	//COUT_VAR(controller_popserver_port_start);
 	COUT_VAR(controller_popserver_port);
+	COUT_VAR(controller_evictserver_port);
 	
 	// switch
 	kv_bucket_num = ini.get_bucket_num();
@@ -194,10 +199,10 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(switchos_sample_cnt);
 
 	// reflector
-	reflector_ip = ini.get_reflector_ip();
-	reflector_port = ini.get_reflector_port();
-	printf("reflector ip: %s\n", reflector_ip);
-	COUT_VAR(reflector_port);
+	reflector_ip_for_switchos = ini.get_reflector_ip_for_switchos();
+	reflector_popserver_port = ini.get_reflector_popserver_port();
+	printf("reflector ip for switchos: %s\n", reflector_ip_for_switchos);
+	COUT_VAR(reflector_popserver_port);
 }
 
 /*inline void parse_args(int argc, char **argv) {
