@@ -25,7 +25,7 @@ void udpsendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 	}
 }
 
-bool is_timeout udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role) {
+bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role) {
 	bool need_timeout = false;
 	struct timeval tv;
 	tv.tv_sec = 0;

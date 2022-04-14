@@ -50,6 +50,7 @@ switchos_paramserver_port = int(config.get("switch", "switchos_paramserver_port"
 switchos_get_freeidx = 1
 switchos_get_key_freeidx = 2
 switchos_set_evictdata = 3
+switchos_get_evictkey = 4
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
@@ -79,30 +80,24 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
     def runTest(self):
-        print "Get key and freeidx from paramserver"
+        print "Get evictkey from paramserver"
         ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sendbuf = struct.pack("=i", switchos_get_key_freeidx) # 4-byte int
+        sendbuf = struct.pack("=i", switchos_get_evictkey) # 4-byte int
         ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
         recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
         # TODO: Check correctness of key
-        keylolo, keylohi, keyhilo, keyhihi, freeidx = struct,unpack("!4I=h", recvbuf)
+        keylolo, keylohi, keyhilo, keyhihi = struct,unpack("!4I", recvbuf)
+        #keylolo, keylohi, keyhilo, keyhihi, evictidx = struct,unpack("!4I=h", recvbuf)
 
-        print "Add {},{},{},{} {} into cache_lookup_tbl".format(keyhihi, keyhilo, keylohi, keylolo, freeidx)
+        print "Remove {},{},{},{} from cache_lookup_tbl".format(keyhihi, keyhilo, keylohi, keylolo, freeidx)
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = keylolo,
                 op_hdr_keylohi = keylohi,
                 op_hdr_keyhilo = keyhilo,
                 op_hdr_keyhihi = keyhihi)
-        actnspec0 = netbufferv4_cached_action_action_spec_t(freeidx)
-        self.client.cache_lookup_tbl_table_add_with_cached_action(\
-                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-
-        # TODO: check API of register set
-        print "Set valid_reg as 1"
-        index = freeidx
-        value = 1
-        flags = netbufferv4_register_flags_t(read_hw_sync=True)
-        self.client.register_set_valid_reg(self.sess_hdl, self.dev_tgt, index, value, flags)
+        #actnspec0 = netbufferv4_cached_action_action_spec_t(evictidx)
+        self.client.cache_lookup_tbl_table_delete_by_match_spec(\
+                self.sess_hdl, self.dev_tgt, matchspec0)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
         self.conn_mgr.client_cleanup(self.sess_hdl) # close session

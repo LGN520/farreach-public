@@ -14,7 +14,7 @@ enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES,
 	GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH,
 
-	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT
+	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT, CACHE_EVICT_ACK
 };
 typedef PacketType packet_type_t;
 
@@ -248,7 +248,6 @@ class CachePopInSwitchAck : public GetRequest<key_t> {
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
-
 template<class key_t, class val_t>
 class CacheEvict : public GetResponse<key_t, val_t> { // stat + seq + serveridx
 	public: 
@@ -264,6 +263,13 @@ class CacheEvict : public GetResponse<key_t, val_t> { // stat + seq + serveridx
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		int32_t _seq;
 		int16_t _serveridx;
+};
+
+template<class key_t>
+class CacheEvictAck : public GetRequest<key_t> {
+	public: 
+		CacheEvictAck(key_t key);
+		CacheEvictAck(const char * data, uint32_t recv_size);
 };
 
 

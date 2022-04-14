@@ -34,7 +34,9 @@
 		* NOTE: success flag for PUTRES/DELRES; deleted flag for GETRES; SCANRES does not need it
 	+ Inswitch header: 1b is_cached, 1b is_sampled, 1b is_wrong_pipeline, 9 bit eport_for_res, 9b sid, 3b padding, 2B hashval, 2B idx
 	+ CACHE_POP: key, value, seq, serveridx
+	+ CACHE_POP_INSWITCH: key, value, seq, inswitch_hdr.freeidx
 	+ CACHE_EVICT: key, value, result, seq, serveridx
+	+ CACHE_EVICT_ACK: key
 - Client
 	+ Send GETREQ and wait for GETRES
 - Switch
@@ -164,15 +166,14 @@
 	+ Eviction handler
 		* Receive CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx>
 		* CANCELED: Check per-server cached key set to find the corresponding server
-		* Send CACHE_EVICT to the correpsonding server, TODO: and wait for CACHE_EVICT_ACK <victim.key>
-		* TODO: Send CACHE_EVICT_ACK to the switch OS
+		* Send CACHE_EVICT to the correpsonding server, and wait for CACHE_EVICT_ACK <victim.key>
+		* Send CACHE_EVICT_ACK to the switch OS
 - Switch OS
 	+ Cache population/eviction
 		* IMPORTANT: Workflow
 			- Cache population: servers.popclients -> controller.popserver.subthreads -> controller.popclient -> switchos.popserver.connfd -> switchos.popworker -> ptf <-> switchos.paramserver
 				+ NOTE: controller.popserver.subthreadidx != server.serveridx
 			- Cache eviction: switchos.popworker notify -> ptf -> switchos.paramserver -> switchos.popworker.evictclient <-> controller.evictserver <-> controller.evictserver.evictclient <-> server.evictserver <-> server.normal_worker
-				+ TODO: ACK
 			- NOTE: switchos.popworker performs cache population/eviction; switchos.paramserver communicates with ptf for parameters
 		* Data structure
 			- Maintain in-memory multi-level array: switch (TODO: different switches under distributed extension) -> egress pipeline (fixed due to testbed limitation) -> <idx, key and serveridx>
@@ -200,10 +201,10 @@
 						- Even if latest=0, the value could still be latest <- PUT/DEL (lost later) w/ valid=3 resets latest from 1 to 0
 						- No matter value is latest or not, we can always compare savedseq with server.seq for availability
 					* NOTE: CACHE_EVICT reported by switch OS instead of data plane -> no need <key, value, seq, inswitch_hdr.is_deleted>
-				+ TODO: Switch os: wait for CACHE_EVICT_ACK
-				+ TODO: Remove existing entry <victim.key, victim.idx> from cache_lookup_tbl of all ingress pipelines
-				+ TODO: Invoke cache population for new CACHE_POP
-		* TODO: Swithc os: popworker resets intermediate data of paramserver after population/eviction
+				+ Switch os: wait for CACHE_EVICT_ACK
+				+ Remove existing entry <victim.key, victim.idx> from cache_lookup_tbl of all ingress pipelines
+				+ Invoke cache population for new CACHE_POP
+		* Switch os: popworker resets intermediate data of paramserver after population/eviction
 	+ Snapshot
 		* TODO: set flag=true needs atomicity, while reset flag=false does not need atomicity
 			- TODO: For atomicity, we enfore all traffic enter ingress 0 -> set flag=true -> disable the enforement
@@ -330,9 +331,9 @@
 	+ Support CACHE_POP_INSWITCH in switchos, reflector, switch
 	+ Support CACHE_POP_INSWITCH_ACK in switch, reflector, switchos 
 - Implement cache eviction
-	+ switchos: choose victim -> TODO: send CACHE_EVICT to controller -> wait for ACK -> cache population
-	+ TODO: controller: forward CACHE_EVICT to corresponding server -> wait for ACK -> update metadata -> send ACK to switchos
-	+ TODO: server: store evicted data if necessary -> update metadata -> send back ACK
+	+ switchos: choose victim -> send CACHE_EVICT to controller -> wait for ACK -> remove cache_lookup_tbl -> cache population -> reset intermediate metadata for paramserver
+	+ controller: forward CACHE_EVICT to corresponding server -> wait for ACK -> update metadata (no metadata now) -> send ACK to switchos
+	+ server: store evicted data if necessary -> update cached keyset -> send back ACK
 - Use int32_t for vallen (val.c, val.h)
 - Reorganize socket API
 

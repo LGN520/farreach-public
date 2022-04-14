@@ -767,7 +767,6 @@ CacheEvict<key_t, val_t>::CacheEvict(key_t key, val_t val, bool stat, int32_t se
 	INVARIANT(seq >= 0);
 	INVARIANT(serveridx >= 0);
 }
-}
 
 template<class key_t, class val_t>
 CacheEvict<key_t, val_t>::CacheEvict(const char * data, uint32_t recv_size) {
@@ -831,6 +830,21 @@ void CacheEvict<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	begin += sizeof(int32_t);
 	memcpy((void *)&this->_serveridx, begin, sizeof(int16_t));
 	this->_serveridx = int16_t(ntohs(uint16_t(this->serveridx)));
+}
+
+// CacheEvictAck
+
+template<class key_t>
+CacheEvictAck<key_t>::CacheEvictAck(key_t key) 
+	: GetRequest<key_t>::GetRequest(key)
+{
+	this->_type = static_cast<uint8_t>(PacketType::CACHE_EVICT_ACK);
+}
+
+template<class key_t>
+CacheEvict<key_t>::CacheEvict(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_EVICT_ACK);
 }
 
 

@@ -19,6 +19,7 @@ std::set<index_key_t> * volatile server_cached_keyset_list = NULL;
 int * volatile server_evictserver_tcpsock_list = NULL;
 // single-message queues is sufficient between server.evictclients and server.workers
 message_ptr_queue_t<cache_evict_t> * volatile server_cache_evict_ptr_queue_list = NULL;
+message_ptr_queue_t<cache_evict_ack_t> * volatile server_cache_evict_ack_ptr_queue_list = NULL;
 /*cache_evict_ack_t *** volatile cache_evict_ack_ptrs_list = NULL;
 uint32_t *volatile server_heads_for_evict_ack = NULL;
 uint32_t *volatile tails_for_evict_ack = NULL;*/
@@ -46,10 +47,8 @@ void prepare_server() {
 	for (size_t i = 0; i < server_num; i++) {
 		prepare_tcpserver(server_evictserver_tcpksock_list[i], false, server_evictserver_port_start+i, 1, "server.evictserver"); // MAX_PENDING_NUM = 1
 	}
-	server_cache_evict_ptr_queue_list = new message_ptr_queue_t<cache_evict_t>[server_num];
-	for (size_t i = 0; i < server_num; i++) {
-		server_cache_evict_ptr_queue_list[i] = new message_ptr_queue_t<cache_evict_t>(SINGLE_MQ_SIZE);
-	}
+	server_cache_evict_ptr_queue_list = new message_ptr_queue_t<cache_evict_t>[server_num](SINGLE_MQ_SIZE);
+	server_cache_evict_ack_ptr_queue_list = new message_ptr_queue_t<cache_evict_ack_t>[server_num](SINGLE_MQ_SIZE);
 }
 
 void close_server() {
@@ -66,14 +65,12 @@ void close_server() {
 		server_evictserver_tcpsock_list = NULL;
 	}
 	if (server_cache_evict_ptr_queue_list != NULL) {
-		for (size_t i = 0; i < server_num; i++) {
-			if (server_cache_evict_ptr_queue_list[i] != NULL) {
-				delete server_cache_evict_ptr_queue_list[i];
-				server_cache_evict_ptr_queue_list[i] = NULL;
-			}
-		}
 		delete [] server_cache_evict_ptr_queue_list;
 		server_cache_evict_ptr_queue_list = NULL;
+	}
+	if (server_cache_evict_ack_ptr_queue_list != NULL) {
+		delete [] server_cache_evict_ack_ptr_queue_list;
+		server_cache_evict_ack_ptr_queue_list = NULL;
 	}
 }
 
@@ -668,9 +665,13 @@ static int run_server_worker(void * param) {
 			table->remove(tmp_cache_evict_ptr->key(), serveridx, tmp_cache_evict_ptr->seq());
 		}
 
-		// sendback CACHE_EVICT_ACK
+		// send CACHE_EVICT_ACK to server.evictserver
 		cachr_evict_ack_t *tmp_cache_evict_ack_ptr = new cache_evict_ack(tmp_cache_evict_ptr->key()); // freed by server.evictserver
-		// TODO: place into message queue
+		bool res = server_cache_evict_ack_ptr_queue_list[serveridx].write(tmp_cache_evict_ack_ptr);
+		if (!res) {
+			printf("[server.worker] error: more than one CACHE_EVICT_ACK!\n");
+			exit(-1);
+		}
 
 		// free CACHE_EVIT
 		delete tmp_cache_evict_ptr;
@@ -706,16 +707,18 @@ void run_server_evictserver(void *param) {
 	tcpaccept(server_evictserver_tcpsock_list[serveridx], NULL, NULL, connfd, "server.evictserver");
 
 	// process CACHE_EVICT packet <optype, key, vallen, value, result, seq, serveridx>
-	char buf[MAX_BUFSIZE];
-	int cur_recv_bytes = -1;
+	char recvbuf[MAX_BUFSIZE];
+	int cur_recv_bytes = 0;
 	int8_t optype = -1;
+	index_key_t tmpkey = index_key_t();
 	int32_t vallen = -1;
-	int16_t serveridx = -1;
+	bool is_waitack = false;
 	const int arrive_optype_bytes = sizeof(int8_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(int32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(int32_t);
+	int arrive_serveridx_bytes = -1;
 	while (server_running) {
 		int recvsize = 0;
-		bool is_broken = tcprecv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.evictserver");
+		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.evictserver");
 		if (is_broken) {
 			break;
 		}
@@ -728,14 +731,14 @@ void run_server_evictserver(void *param) {
 
 		// Get optype
 		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
-			optype = *((int8_t *)buf);
+			optype = *((int8_t *)recvbuf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_EVICT);
 		}
 
-		// Get vallen
+		// Get key and vallen
 		if (optype != -1 && vallen == -1 && cur_recv_bytes >= arrive_vallen_bytes) {
-			//tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
-			vallen = *((int32_t *)(buf + arrive_vallen_bytes - sizeof(int32_t)));
+			tmpkey.deserialize(recvbuf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
+			vallen = *((int32_t *)(recvbuf + arrive_vallen_bytes - sizeof(int32_t)));
 			vallen = int32_t(ntohl(uint32_t(vallen)));
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
@@ -743,21 +746,50 @@ void run_server_evictserver(void *param) {
 		}
 
 		// Get one complete CACHE_EVICT (only need serveridx here)
-		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_serveridx_bytes) {
-			cache_evict_t *tmp_cache_evict_ptr = new cache_evict_t(buf, arrive_serveridx_bytes); // freed by server.worker
+		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
+			cache_evict_t *tmp_cache_evict_ptr = new cache_evict_t(recvbuf, arrive_serveridx_bytes); // freed by server.worker
 			INVARIANT(tmp_cache_evict_ptr->serveridx() == serveridx);
 			
-			// add into single-message queue
+			// send CACHE_EVICT to server.worker 
 			bool res = server_cache_evict_ptr_queue_list[serveridx].write(tmp_cache_evict_ptr);
 			if (!res) {
 				printf("[server.evictserver] error: more than one CACHE_EVICT!\n");
 				exit(-1);
 			}
+
+			is_waitack = true;
 		}
 
-		// TODO: wait for ACK
+		// wait for CACHE_EVICT_ACK from server.worker
+		if (is_waitack) {
+			cache_evict_ack_t *tmp_cache_evict_ack_ptr = server_cache_evict_ack_ptr_queue_list[serveridx].read();
+			if (tmp_cache_evict_ack_ptr != NULL) {
+				INVARIANT(tmp_cache_evict_ack_ptr->key() == tmpkey);
 
-		// TODO: reset metadata
+				// send CACHE_EVICT_ACK to controller.evictserver.evictclient
+				char sendbuf[MAX_BUFSIZE];
+				int sendsize = tmp_cache_evict_ack_ptr.serialize(sendbuf, MAX_BUF_SIZE);
+				tcpsend(connfd, sendbuf, sendsize, "server.evictserver");
+
+				// move remaining bytes and reset metadata
+				if (cur_recv_bytes > arrive_serveridx_bytes) {
+					memcpy(buf, buf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
+					cur_recv_bytes = cur_recv_bytes - arrive_serveridx_byets;
+				}
+				else {
+					cur_recv_bytes = 0;
+				}
+				optype = -1;
+				tmpkey = index_key_t();
+				vallen = -1;
+				is_waitack = false;
+				arrive_serveridx_bytes = -1;
+
+				// free CACHE_EVIT_ACK
+				delete tmp_cache_evict_ack_ptr;
+				tmp_cache_evict_ack_ptr = NULL;
+			}
+		}
 	}
 
 
