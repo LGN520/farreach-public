@@ -419,17 +419,20 @@ static int run_fg(void *param) {
 			tmpval = iter.val();
 
 			CUR_TIME(req_t1);
-			uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
 
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
-			if (tmpval.val_length <= val_t::SWITCH_MAX_VALLEN) {
+			INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
+			put_request_t req(tmpkey, tmpval);
+			req_size = req.serialize(buf, MAX_BUFSIZE);
+			/*if (tmpval.val_length <= val_t::SWITCH_MAX_VALLEN) {
 				put_request_t req(hashidx, tmpkey, tmpval);
 				req_size = req.serialize(buf, MAX_BUFSIZE);
 			}
 			else {
 				put_request_large_t req(hashidx, tmpkey, tmpval);
 				req_size = req.serialize(buf, MAX_BUFSIZE);
-			}
+			}*/
 
 			// DPDK
 			encode_mbuf(sent_pkt, client_macaddr, server_macaddr, client_ip, server_ip, src_port, server_port_start, buf, req_size);

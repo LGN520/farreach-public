@@ -13,6 +13,7 @@
 enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES,
 	GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH,
+	PUTREQ_INSWITCH, PUTREQ_SEQ, PUTREQ_POP_SEQ
 
 	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT, CACHE_EVICT_ACK
 };
@@ -53,7 +54,7 @@ template<class key_t, class val_t>
 class PutRequest : public Packet<key_t> {
 	public:
 		PutRequest();
-		PutRequest(uint16_t hashidx, key_t key, val_t val);
+		PutRequest(key_t key, val_t val);
 		PutRequest(const char * data, uint32_t recv_size);
 
 		val_t val() const;
@@ -118,7 +119,7 @@ class GetResponse : public Packet<key_t> {
 template<class key_t>
 class PutResponse : public Packet<key_t> {
 	public: 
-		PutResponse(uint16_t hashidx, key_t key, bool stat);
+		PutResponse(key_t key, bool stat);
 		PutResponse(const char * data, uint32_t recv_size);
 
 		bool stat() const;
@@ -207,6 +208,25 @@ class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // no 
 
 	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestSeq : public GetResponseLatestSeq<key_t, val_t> { // no stat + seq
+	public: 
+		PutRequestSeq(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+	protected:
+		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t, class val_t>
+class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // no stat + seq
+	public: 
+		PutRequestPopSeq(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
 template<class key_t, class val_t>

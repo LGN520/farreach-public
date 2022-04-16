@@ -229,11 +229,12 @@
 	+ See ipv4_forward_tbl for details
 - GETREQ
 	+ Client sends GETREQ
-	+ Ingress: GETREQ -> GETREQ_INSWITCH (is_sampled, is_cached, is_wrong_pipeline, sid, hashval, idx)
+	+ Ingress: GETREQ -> GETREQ_INSWITCH (is_sampled, is_cached, is_wrong_pipeline, sid, eport_for_res, hashval, idx)
 	+ Egress
-		* Stage 0: update CM if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=0; update CM
+		* Stage 0: update CM if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=0;
 		* Stage 1: update is_hot; update cache_frequency if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=1; get valid
-		* Stage 2: get latest and deleted
+		* Stage 2: get latest
+		* Stage 3: get deleted
 		* Intermediate stages: get vallen and value
 		* Stage 10: eg_port_forward_tbl
 			* If inswitch_hdr.is_cached=0
@@ -302,6 +303,37 @@
 		* Access lastclone_tbl to update is_lastclone_for_pktloss
 		* If is_lastclone_for_pktloss = 0, decrease clonenum_for_pktloss, forward to reflector, and clone again
 		* Otherwise, only forward to reflector
+- PUTREQ
+	+ Client sends PUTREQ
+	+ Ingress: PUTREQ -> PUTREQ_INSWITCH (is_sampled, is_cached, is_wrong_pipeline, sid, eport_for_res, hashval, idx)
+	+ Egress
+		* Stage 0: update CM if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=0;
+		* Stage 1: 
+			+ update is_hot; update cache_frequency if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=1; get valid
+			+ assign seq
+		* Stage 2: latest_tbl
+			+ If valid=0, skip latest_tbl
+			+ If iscached=1 and valid=1, set latest=1
+			+ If iscached=1 and valid=3, set latest=0
+		* Stage 3:
+			+ deleted_tbl
+				* If valid=0/3, skip deleted_tbl (keep the original deleted)
+				* If iscached=1 and valid=1, set deleted=0
+			+ savedseq_tbl
+				* If valid=0/3, skip savedseq_tbl (keep the original savedseq)
+				* If iscached=1 and valid=1, set savedseq=seq
+		* Intermediate stages: if iscached=1 and valid=1, set vallen and value
+		* Stage 10: eg_port_forward_tbl
+			* If inswitch_hdr.is_cached=0
+				- If is_hot=1, forward PUTREQ_POP_SEQ to server
+				- Otherwise, forward PUTREQ_SEQ to server
+			* If inswitch_hdr.is_cached=1
+				- If valid=0, forward PUTREQ_SEQ to server
+				- If valid=1, set result_hdr.result=1, and send back PUTRES directly/mirrorly
+				- If valid=3, forward PUTREQ_SEQ to server
+	+ Server
+		* PUTREQ_SEQ -> sendback PUTRES
+		* PUTREQ_POP_SEQ -> sendback PUTRES, and trigger cache population
 - TODO: Cache population also updates savedseq
 - TODO: If cache crashes, server should reset all seq as zero after recovery such that switch-assigned seq (>=1) must be larger
 - TODO: If with parser limitation, we can introduce hint of next header in the previous header

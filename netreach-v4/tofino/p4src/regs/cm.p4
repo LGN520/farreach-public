@@ -16,7 +16,7 @@ blackbox stateful_alu update_cm1_alu {
 }
 
 action update_cm1() {
-	update_cm1_alu.execute_stateful_alu(inswitch_hdr.hashval);
+	update_cm1_alu.execute_stateful_alu(inswitch_hdr.hashval_for_cm);
 }
 
 action initialize_cm1_predicate() {
@@ -56,7 +56,7 @@ blackbox stateful_alu update_cm2_alu {
 }
 
 action udpate_cm2() {
-	update_cm2_alu.execute_stateful_alu(inswitch_hdr.hashval);
+	update_cm2_alu.execute_stateful_alu(inswitch_hdr.hashval_for_cm);
 }
 
 action initialize_cm2_predicate() {
@@ -96,7 +96,7 @@ blackbox stateful_alu update_cm3_alu {
 }
 
 action udpate_cm3() {
-	update_cm3_alu.execute_stateful_alu(inswitch_hdr.hashval);
+	update_cm3_alu.execute_stateful_alu(inswitch_hdr.hashval_for_cm);
 }
 
 action initialize_cm3_predicate() {
@@ -136,7 +136,7 @@ blackbox stateful_alu update_cm4_alu {
 }
 
 action udpate_cm4() {
-	update_cm4_alu.execute_stateful_alu(inswitch_hdr.hashval);
+	update_cm4_alu.execute_stateful_alu(inswitch_hdr.hashval_for_cm);
 }
 
 action initialize_cm4_predicate() {

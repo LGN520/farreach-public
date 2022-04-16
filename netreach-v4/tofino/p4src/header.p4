@@ -59,6 +59,7 @@ header_type val_t {
 	}
 }
 
+// NOTE: inswicth_t affects CACHE_POP_INSWITCH in end-hosts
 header_type inswitch_t {
 	fields {
 		is_cached: 1;
@@ -66,8 +67,10 @@ header_type inswitch_t {
 		is_wrong_pipeline: 1;
 		eport_for_res: 9;
 		sid: 9;
-		padding: 3;
-		hashval: 16; // index for both partition and CM
+		hashval_for_cm: 17; // at most 64K
+		padding: 2;
+		hashval_for_partition: 16; // at most 32K
+		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
 	}
 }

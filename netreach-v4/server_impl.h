@@ -224,13 +224,13 @@ static int run_server_worker(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::PUT_REQ_SEQ:
+			case packet_type_t::PUTREQ_SEQ:
 				{
 					put_request_seq_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
 					//COUT_THIS("[server] stat = " << tmp_stat)
-					put_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+					put_response_t rsp(req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK
@@ -309,6 +309,34 @@ static int run_server_worker(void * param) {
 							server_cached_keyset_list[serveridx].insert(req.key());
 							// Send CACHE_POP to controller.popserver
 							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, int16_t(serveridx));
+							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+						}
+					}
+					break;
+				}
+			case packet_type_t::PUTREQ_POP_SEQ: 
+				{
+					put_request_pop_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
+					//COUT_THIS("[server] val = " << tmp_val.to_string())
+					
+					put_response_t rsp(req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
+
+					// Trigger cache population if necessary (key exist and not being cached)
+					if (tmp_stat) { // successful put
+						bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list.end());
+						if (!is_cached_before) {
+							server_cached_keyset_list[serveridx].insert(req.key());
+							// Send CACHE_POP to controller.popserver
+							cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), int16_t(serveridx));
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
 						}

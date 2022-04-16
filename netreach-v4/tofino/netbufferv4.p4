@@ -19,20 +19,30 @@
 #define GETRES_DELETED_SEQ 0x0c
 #define GETRES_LATEST_SEQ_INSWITCH 0x0d
 #define GETRES_DELETED_SEQ_INSWITCH 0x0e
-#define CACHE_POP 0x0f
-#define CACHE_POP_INSWITCH 0x10
-#define CACHE_POP_INSWITCH_ACK 0x11
+#define PUTREQ_INSWITCH 0x0f
+#define PUTREQ_SEQ 0x10
+#define PUTREQ_POP_SEQ 0x11
+#define CACHE_POP 0x12
+#define CACHE_POP_INSWITCH 0x13
+#define CACHE_POP_INSWITCH_ACK 0x14
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)
 //#define KV_BUCKET_COUNT 32768
 #define KV_BUCKET_COUNT 1
+
 // pipeline_num * kv_bucket_count
 #define LOOKUP_ENTRY_COUNT 65536
 
 // 64K * 2B counter
 #define CM_BUCKET_COUNT 65536
 #define HH_THRESHOLD 100
+
+// partition range
+#define PARTITION_COUNT 32768
+
+// 32K * 4B counter
+#define SEQ_BUCKET_COUNT 32768
 
 // NOTE: you should change the two macros according to maximum val length
 // SEQ_PKTLEN: sizeof(seq_hdr), e.g., PUTREQ -> PUTREQ_RECIR, PUTREQ_RECIR -> PUTREQ_POP/PUTREQ
@@ -58,9 +68,9 @@
 #include "p4src/regs/cm.p4"
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/valid.p4"
-
-
 #include "p4src/regs/seq.p4"
+
+
 #include "p4src/regs/lock.p4"
 #include "p4src/regs/case12.p4"
 #include "p4src/regs/case3.p4"
@@ -81,7 +91,9 @@ control ingress {
 	// Stage 0
 	apply(sid_tbl); // set sid corresponding to ingress port
 	apply(cache_lookup_tbl); // managed by controller
-	apply(hash_tbl); // for both partition and CM
+	apply(hash_for_partition_tbl); // for partition
+	apply(hash_for_cm_tbl); // for CM
+	apply(hash_for_seq_tbl); // for seq
 	apply(sample_tbl); // for CM and cache_frequency
 
 	// Stage 1
@@ -108,6 +120,7 @@ control egress {
 	apply(is_hot_tbl);
 	apply(access_cache_frequency_tbl);
 	apply(access_valid_tbl);
+	apply(apply_seq_tbl);
 
 	// Stage 2
 	apply(access_latest_tbl);
@@ -115,6 +128,7 @@ control egress {
 	// Stage 3
 	apply(access_deleted_tbl);
 	apply(update_vallen_tbl);
+	apply(access_savedseq_tbl);
 
 	// Stage 4-9
 	apply(update_vallo1_tbl);

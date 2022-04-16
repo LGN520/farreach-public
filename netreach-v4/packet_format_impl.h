@@ -79,17 +79,17 @@ PutRequest<key_t, val_t>::PutRequest()
 }
 
 template<class key_t, class val_t>
-PutRequest<key_t, val_t>::PutRequest(uint16_t hashidx, key_t key, val_t val) 
-	: Packet<key_t>(PacketType::PUT_REQ, hashidx, key), _val(val)
+PutRequest<key_t, val_t>::PutRequest(key_t key, val_t val) 
+	: Packet<key_t>(PacketType::PUTREQ, key), _val(val)
 {	
-	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
 PutRequest<key_t, val_t>::PutRequest(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_REQ);
-	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 }
 
 template<class key_t, class val_t>
@@ -98,8 +98,8 @@ val_t PutRequest<key_t, val_t>::val() const {
 }
 
 template<class key_t, class val_t>
-uint32_t PutRequest<key_t, val_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::max_bytesnum();
+uint32_t PutRequest<key_t, val_t>::size() { // not used
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::max_bytesnum();
 }
 
 template<class key_t, class val_t>
@@ -107,15 +107,12 @@ uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 	//uint32_t my_size = this->size();
 	//INVARIANT(max_size >= my_size);
 	char *begin = data;
-	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	uint16_t bigendian_hashidx = htons(this->_hashidx);
-	memcpy(begin, (void *)&bigendian_hashidx, sizeof(uint16_t)); // Small-endian to big-endian
-	begin += sizeof(uint16_t);
-	memcpy(begin, (void *)&this->_key, sizeof(key_t));
-	begin += sizeof(key_t);
-	uint32_t tmpsize = this->_val.serialize(begin, max_size-sizeof(uint8_t)-sizeof(uint16_t)-sizeof(key_t));
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + tmpsize;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
+	return sizeof(int8_t) + tmp_keysize + tmp_valsize;
 }
 
 template<class key_t, class val_t>
@@ -123,14 +120,11 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	//uint32_t my_size = this->size();
 	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
-	this->_hashidx = ntohs(this->_hashidx); // Big-endian to small-endian
-	begin += sizeof(uint16_t);
-	memcpy((void *)&this->_key, begin, sizeof(key_t));
-	begin += sizeof(key_t);
-	uint32_t tmpsize = this->_val.deserialize(begin, recv_size-sizeof(uint8_t)-sizeof(uint16_t)-sizeof(key_t));
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size-sizeof(int8_t)-tmp_keysize);
 }
 
 // DelRequest
@@ -316,15 +310,15 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 // PutResponse (value must be any size)
 
 template<class key_t>
-PutResponse<key_t>::PutResponse(uint16_t hashidx, key_t key, bool stat) 
-	: Packet<key_t>(PacketType::PUT_RES, hashidx, key), _stat(stat)
+PutResponse<key_t>::PutResponse(key_t key, bool stat) 
+	: Packet<key_t>(PacketType::PUTRES, key), _stat(stat)
 {	
 }
 
 template<class key_t>
 PutResponse<key_t>::PutResponse(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUT_RES);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTRES);
 }
 
 template<class key_t>
@@ -334,7 +328,7 @@ bool PutResponse<key_t>::stat() const {
 
 template<class key_t>
 uint32_t PutResponse<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(bool);
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(bool);
 }
 
 template<class key_t>
@@ -342,13 +336,10 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(max_size >= my_size);
 	char *begin = data;
-	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	uint16_t bigendian_hashidx = htons(this->_hashidx);
-	memcpy(begin, (void *)&bigendian_hashidx, sizeof(uint16_t)); // Small-endian to big-endian
-	begin += sizeof(uint16_t);
-	memcpy(begin, (void *)&this->_key, sizeof(key_t));
-	begin += sizeof(key_t);
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
+	begin += tmp_keysize; 
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	return my_size;
 }
@@ -358,13 +349,10 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size >= recv_size);
 	const char *begin = data;
-	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
-	this->_hashidx = ntohs(this->_hashidx); // Big-endian to small-endian
-	begin += sizeof(uint16_t);
-	memcpy((void *)&this->_key, begin, sizeof(key_t));
-	begin += sizeof(key_t);
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
+	begin += tmp_keysize;
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 }
 
@@ -564,7 +552,7 @@ template<class key_t, class val_t>
 GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key_t key, val_t val, int32_t seq)
 	: Packet<key_t>::Packet(key), _val(val), _seq(seq)
 {
-	this->_type = static_cast<uint8_t>(PacketType::GETRES_LATEST_SEQ);
+	this->_type = static_cast<int8_t>(PacketType::GETRES_LATEST_SEQ);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(seq >= 0);
 }
@@ -612,7 +600,7 @@ template<class key_t, class val_t>
 GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(key_t key, val_t val, int32_t seq)
 	: GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key, val, seq)
 {
-	this->_type = static_cast<uint8_t>(PacketType::GETRES_DELETED_SEQ);
+	this->_type = static_cast<int8_t>(PacketType::GETRES_DELETED_SEQ);
 	INVARIANT(this->_val.val_length == 0);
 	INVARIANT(seq >= 0);
 }
@@ -623,13 +611,63 @@ void GetResponseDeletedSeq<key_t, val_t>::deserialize(const char * data, uint32_
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseDeletedSeq");
 }
 
+// PutRequestSeq (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestSeq<key_t, val_t>::PutRequestSeq(const char * data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_SEQ);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(seq >= 0);
+}
+
+template<class key_t, class val_t>
+void PutRequestSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
+{
+	//uint32_t my_size = this->size();
+	//INVARIANT(my_size == recv_size);
+	const char *begin = data;
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
+	begin += tmp_valsize;
+	memcpy((void *)&this->_seq, begin, sizeof(int32_t));
+	this->_seq = int32_t(ntohl(uint32_t(this->seq))); // Big-endian to little-endian
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestSeq<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestSeq");
+}
+
+// PutRequestPopSeq (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestPopSeq<key_t, val_t>::PutRequestPopSeq(const char * data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_POP_SEQ);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(seq >= 0);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestPopSeq<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPopSeq");
+}
+
 // CachePop (value must <= 128B; only used by end-hosts)
 
 template<class key_t, class val_t>
 CachePop<key_t, val_t>::CachePop(key_t key, val_t val, int32_t seq, int16_t serveridx)
 	: GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key, val, seq), _serveridx(serveridx)
 {
-	this->_type = static_cast<uint8_t>(PacketType::CACHE_POP);
+	this->_type = static_cast<int8_t>(PacketType::CACHE_POP);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(seq >= 0);
 	INVARIANT(serveridx >= 0);
@@ -718,7 +756,7 @@ uint32_t CachePopInSwitch<key_t, val_t>::serialize(char * const data, uint32_t m
 	uint32_t bigendian_seq = htonl(uint32_t(this->_seq));
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
 	begin += sizeof(uint32_t);
-	memset(begin, 0, 5); // the first 5 bytes of inswitch_hdr
+	memset(begin, 0, 9); // the first 9 bytes of inswitch_hdr
 	begin += 5;
 	uint16_t bigendian_freeidx = htons(uint16_t(this->_freeidx));
 	memcpy(begin, (void *)&bigendian_freeidx, sizeof(uint16_t)); // little-endian to big-endian

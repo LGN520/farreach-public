@@ -40,13 +40,16 @@ parser parse_op {
 		GETRES_DELETED_SEQ: parse_vallen;
 		GETRES_DELETED_SEQ_INSWITCH: parse_vallen;
 		CACHE_POP_INSWITCH: parse_vallen;
+		PUTREQ: parse_vallen;
+		PUTREQ_INSWITCH: parse_vallen;
+		PUTREQ_SEQ: parse_vallen;
+		PUTREQ_POP_SEQ: parse_vallen;
 		default: ingress; // GETREQ, GETREQ_POP, GETREQ_NLATEST
 
 
 
 
 
-		PUTREQ_TYPE: parse_vallen;
 		GETRES_TYPE: parse_vallen;
 		PUTRES_TYPE: parse_res;
 		DELRES_TYPE: parse_res;
@@ -132,7 +135,10 @@ parser parse_val_len0 {
 		GETRES_DELETED_SEQ: parse_seq;
 		GETRES_DELETED_SEQ_INSWITCH: parse_seq;
 		CACHE_POP_INSWITCH: parse_seq;
-		default: ingress;
+		PUTREQ_INSWITCH: parse_inswitch;
+		PUTREQ_SEQ: parse_seq;
+		PUTREQ_POP_SEQ: parse_seq;
+		default: ingress; // PUTREQ
 
 
 		GETRES_POP_TYPE: parse_seq;
@@ -250,7 +256,7 @@ parser parse_seq {
 		GETRES_LATEST_SEQ_INSWITCH: parse_inswitch;
 		GETRES_DELETED_SEQ_INSWITCH: parse_inswitch;
 		CACHE_POP_INSWITCH: parse_inswitch;
-		default: ingress; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ
+		default: ingress; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ
 		
 
 

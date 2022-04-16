@@ -59,23 +59,58 @@ field_list_calculation hash_calc {
 		hash_fields;
 	}
 	algorithm: crc32;
-	output_width: 16;
+	//output_width: 16;
+	output_width: 32;
 }
 
-field_list_calculation sample_calc {
+/*field_list_calculation sample_calc {
 	input {
 		hash_fields;
 	}
 	algorithm: crc32;
 	output_width: 1;
+}*/
+
+@pragma stage 0
+action hash_for_partition() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_partition, 0, hash_calc, PARTITION_COUNT);
+}
+
+table hash_for_partition_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash;
+		nop;
+	}
+	default_action: nop();
+	size: 0;
 }
 
 @pragma stage 0
-action hash() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval, 0, hash_calc, CM_BUCKET_COUNT);
+action hash_for_cm() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm, 0, hash_calc, CM_BUCKET_COUNT);
 }
 
-table hash_tbl {
+table hash_for_cm_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash;
+		nop;
+	}
+	default_action: nop();
+	size: 0;
+}
+
+@pragma stage 0
+action hash_for_seq() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_seq, 0, hash_calc, SEQ_BUCKET_COUNT);
+}
+
+table hash_for_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
@@ -89,7 +124,8 @@ table hash_tbl {
 
 @pragma stage 0
 action sample() {
-	modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, sample_calc, 2);
+	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, sample_calc, 2);
+	modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2);
 }
 
 table sample_tbl {
@@ -116,7 +152,7 @@ action hash_partition(udpport, eport, is_wrong_pipeline) {
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.hashval: range;
+		inswitch_hdr.hashval_for_partition: range;
 		ig_intr_md.ingress_port: exact;
 	}
 	actions {
@@ -144,6 +180,11 @@ action update_getres_deleted_seq_to_getres_deleted_seq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
+
+action update_getreq_to_getreq_inswitch() {
+	modify_field(op_hdr.optype, PUTREQ_INSWITCH);
+	add_header(inswitch_hdr);
+}
 @pragma stage 2
 table ig_port_forward_tbl {
 	reads {
@@ -153,6 +194,7 @@ table ig_port_forward_tbl {
 		update_getreq_to_getreq_inswitch;
 		update_getres_latest_seq_to_getres_latest_seq_inswitch;
 		update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
+		update_putreq_to_putreq_inswitch;
 		nop;
 	}
 	default_action: nop();

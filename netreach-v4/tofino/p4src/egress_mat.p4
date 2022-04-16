@@ -51,28 +51,28 @@ table lastclone_tbl {
 
 // Stage 10
 
-action update_getreq_inswitch_to_getreq(eport) {
+action update_getreq_inswitch_to_getreq() {
 	modify_field(op_hdr.optype, GETREQ);
 
 	remove_header(inswitch_hdr);
 
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_getreq_inswitch_to_getreq_pop(eport) {
+action update_getreq_inswitch_to_getreq_pop() {
 	modify_field(op_hdr.optype, GETREQ_POP);
 
 	remove_header(inswitch_hdr);
 
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_getreq_inswitch_to_getreq_nlatest(eport) {
+action update_getreq_inswitch_to_getreq_nlatest() {
 	modify_field(op_hdr.optype, GETREQ_NLATEST);
 
 	remove_header(inswitch_hdr);
 
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	//modify_field(eg_intr_md.egress_port, eport);
 }
 
 action update_getreq_inswitch_to_getres_for_deleted() {
@@ -99,7 +99,7 @@ action update_getreq_inswitch_to_getres_for_deleted() {
 	add_header(val16_hdr);
 	add_header(result_hdr);
 
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, inswitch_hdr.eport_for_res);
+	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
 }
 
 action update_getreq_inswitch_to_getres_for_deleted_by_mirroring() {
@@ -154,7 +154,7 @@ action update_getreq_inswitch_to_getres() {
 	add_header(val16_hdr);
 	add_header(result_hdr);
 
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, inswitch_hdr.eport_for_res);
+	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
 }
 
 action update_getreq_inswitch_to_getres_by_mirroring() {
@@ -249,6 +249,79 @@ action forward_cache_pop_inswitch_ack_clone_for_pktloss(sid) {
 action forward_cache_pop_inswitch_ack() {
 }
 
+action update_putreq_inswitch_to_putreq_seq() {
+	modify_field(op_hdr.optype, PUTREQ_SEQ);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+
+	//modify_field(eg_intr_md.egress_port, eport);
+}
+
+action update_putreq_inswitch_to_putreq_pop_seq() {
+	modify_field(op_hdr.optype, PUTREQ_POP_SEQ);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+
+	//modify_field(eg_intr_md.egress_port, eport);
+}
+
+action update_putreq_inswitch_to_putres() {
+	modify_field(op_hdr.optype, PUTRES);
+	modify_field(result_hdr.result, 1);
+
+	remove_header(inswitch_hdr);
+	remove_header(vallen_hdr);
+	remove_header(val1_hdr);
+	remove_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+	add_header(result_hdr);
+
+	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
+}
+
+action update_putreq_inswitch_to_putres_by_mirroring() {
+	modify_field(op_hdr.optype, PUTRES);
+	modify_field(result_hdr.result, 1);
+
+	remove_header(inswitch_hdr);
+	remove_header(vallen_hdr);
+	remove_header(val1_hdr);
+	remove_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+	add_header(result_hdr);
+
+	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
+}
+
 table eg_port_forward_tbl {
 	reads {
 		op_hdr_optype: exact;
@@ -275,6 +348,10 @@ table eg_port_forward_tbl {
 		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss; // first CACHE_POP_INSWITCH_ACK
 		forward_cache_pop_inswitch_ack_clone_for_pktloss; // not last clone of CACHE_POP_INSWITCH_ACK
 		forward_cache_pop_inswitch_ack; // last clone of CACHE_POP_INSWITCH_ACK
+		update_putreq_inswitch_to_putreq_seq;
+		update_putreq_inswitch_to_putreq_pop_seq;
+		update_putreq_inswitch_to_putres;
+		update_putreq_inswitch_to_putres_by_mirroring;
 		nop;
 	}
 	default_action: nop();

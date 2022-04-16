@@ -24,6 +24,8 @@ typedef GetRequestPOP<index_key_t> get_request_pop_t;
 typedef GetRequestNLatest<index_key_t> get_request_nlatest_t;
 typedef GetResponseLatestSeq<index_key_t, val_t> get_response_latest_seq_t;
 typedef GetResponseDeletedSeq<index_key_t, val_t> get_response_deleted_seq_t;
+typedef PutRequestSeq<index_key_t, val_t> put_request_seq_t;
+typedef PutRequestPopSeq<index_key_t, val_t> put_request_pop_seq_t;
 typedef CachePop<index_key_t, val_t> cache_pop_t;
 typedef CachePopInSwitch<index_key_t, val_t> cache_pop_inswitch_t;
 typedef CachePopInSwitchAck<index_key_t, val_t> cache_pop_inswitch_ack_t;
