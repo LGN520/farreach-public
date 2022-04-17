@@ -132,8 +132,8 @@
 			- vallen (optype, is_cached, idx, valid, is_latest -> vallen_hdr)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH
 				+ TODO: vallen and value can be placed from stage 1 to save # of stages if necessary
-			- TODO: savedseq (optype, is_cached, idx, seq, valid, is_latest -> savedseq)
-				+ TODO: optype: PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH
+			- savedseq (optype, is_cached, idx, seq, valid, is_latest -> savedseq)
+				+ optype: PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH
 				+ NOTE: we assume that there is no reordering between spine and leaf switch due to a single FIFO channel
 		* Stage 4-9 (4 ALU)
 			- From vallo1 to valhi12 (optype, is_cached, idx, valid, is_latest -> val_hdr)
@@ -265,7 +265,7 @@
 		* ipv4_forward_tbl -> forward GETRES_LATEST_SEQ_INSWITCH to pipeline of ingress port; clone GETRES_LATEST_SEQ to pipeline of client for GETRES 
 	+ Egress
 		* If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
-			+ Set latest=1, delete=0, update savedseq (TODO), update vallen and value
+			+ Set latest=1, delete=0, update savedseq, update vallen and value
 		* Drop original packet, forwrad cloned packet (i2e) to client
 			+ TODO: Check if we need to set eg_intr_md.egress_port for cloned packet (i2e)
 - GETRES_DELETED_SEQ
@@ -275,7 +275,7 @@
 		* ipv4_forward_tbl -> forward GETRES_DELETED_SEQ_INSWITCH to pipeline of ingress port; clone GETRES_DELETED_SEQ to pipeline of client for GETRES 
 	+ Egress
 		* If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
-			+ Set latest=1, deleted=1, update savedseq (TODO), update vallen and value
+			+ Set latest=1, deleted=1, update savedseq, update vallen and value
 		* Drop original packet, forwrad cloned packet (i2e) to client
 			+ TODO: Check if we need to set eg_intr_md.egress_port for cloned packet (i2e)
 - CACHE_POP_INSWITCH
@@ -295,7 +295,7 @@
 		* Reset cache_frequency=0, latest=0, deleted=0
 			- NOTE: we reset valid=0 by switchos.ptf, as we do not have extra valid.ALU in data plane
 				* At most 3 ALUs: get valid, set valid from 1 to 2 and from 2 to 1 (TODO: prepared for PUTREQ_LARGE w/ cache hit)
-		* Update vallen, value, TODO: savedseq
+		* Update vallen, value, savedseq
 		* Send sufficient duplicate CACHE_POP_INSWITCH_ACKs <key> to switch OS to avoid packet loss
 		* NOTE: valid is reset by switch OS; case1 is reset by snapshot thread;
 - CACHE_POP_INSWITCH_ACK
@@ -334,7 +334,6 @@
 	+ Server
 		* PUTREQ_SEQ -> sendback PUTRES
 		* PUTREQ_POP_SEQ -> sendback PUTRES, and trigger cache population
-- TODO: Cache population also updates savedseq
 - TODO: If cache crashes, server should reset all seq as zero after recovery such that switch-assigned seq (>=1) must be larger
 - TODO: If with parser limitation, we can introduce hint of next header in the previous header
 - TODO: Check APIs of register access 

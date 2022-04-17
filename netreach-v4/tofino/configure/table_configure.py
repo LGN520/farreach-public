@@ -660,12 +660,33 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_savedseq_tbl (default: nop; size: ?)
             print "Configuring access_savedseq_tbl"
-            matchspec0 = netbufferv4_access_savedseq_tbl_match_spec_t(\
-                    op_hdr_optype = PUTREQ_INSWITCH,
-                    inswitch_hdr_is_cached = 1,
-                    status_hdr_valid = 1)
-            self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            for is_cached in cached_list:
+                for valid in valid_list:
+                    for is_latest in latest_list:
+                        matchspec0 = netbufferv4_access_savedseq_tbl_match_spec_t(\
+                                op_hdr_optype = PUTREQ_INSWITCH,
+                                inswitch_hdr_is_cached = is_cached,
+                                status_hdr_valid = valid,
+                                status_hdr_is_latest = is_latest)
+                        if is_cached == 1 and valid == 1:
+                            self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                        for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
+                            matchspec0 = netbufferv4_access_savedseq_tbl_match_spec_t(\
+                                    op_hdr_optype = tmpoptype.
+                                    inswitch_hdr_is_cached = is_cached,
+                                    status_hdr_valid = valid,
+                                    status_hdr_is_latest = is_latest)
+                            if is_cached == 1 and valid == 1 and is_latest == 0:
+                                self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                        matchspec0 = netbufferv4_access_savedseq_tbl_match_spec_t(\
+                                op_hdr_optype = CACHE_POP_INSWITCH,
+                                inswitch_hdr_is_cached = is_cached,
+                                status_hdr_valid = valid,
+                                status_hdr_is_latest = is_latest)
+                        self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 4-11
 
