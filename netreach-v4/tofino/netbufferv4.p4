@@ -22,9 +22,11 @@
 #define PUTREQ_INSWITCH 0x0f
 #define PUTREQ_SEQ 0x10
 #define PUTREQ_POP_SEQ 0x11
-#define CACHE_POP 0x12
-#define CACHE_POP_INSWITCH 0x13
-#define CACHE_POP_INSWITCH_ACK 0x14
+#define DELREQ_INSWITCH 0x12
+#define DELREQ_SEQ 0x13
+#define CACHE_POP 0x14
+#define CACHE_POP_INSWITCH 0x15
+#define CACHE_POP_INSWITCH_ACK 0x16
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)

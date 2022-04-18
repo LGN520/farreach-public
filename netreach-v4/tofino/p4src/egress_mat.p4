@@ -322,6 +322,36 @@ action update_putreq_inswitch_to_putres_by_mirroring() {
 	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
 }
 
+action update_delreq_inswitch_to_delreq_seq() {
+	modify_field(op_hdr.optype, DELREQ_SEQ);
+
+	remove_header(inswitch_hdr);
+	add_header(seq_hdr);
+
+	//modify_field(eg_intr_md.egress_port, eport);
+}
+
+action update_delreq_inswitch_to_delres() {
+	modify_field(op_hdr.optype, DELRES);
+	modify_field(result_hdr.result, 1);
+
+	remove_header(inswitch_hdr);
+	add_header(result_hdr);
+
+	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
+}
+
+action update_delreq_inswitch_to_delres_by_mirroring() {
+	modify_field(op_hdr.optype, DELRES);
+	modify_field(result_hdr.result, 1);
+
+	remove_header(inswitch_hdr);
+	add_header(result_hdr);
+
+	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
+}
+
 table eg_port_forward_tbl {
 	reads {
 		op_hdr_optype: exact;
@@ -352,6 +382,9 @@ table eg_port_forward_tbl {
 		update_putreq_inswitch_to_putreq_pop_seq;
 		update_putreq_inswitch_to_putres;
 		update_putreq_inswitch_to_putres_by_mirroring;
+		update_delreq_inswitch_to_delreq_seq;
+		update_delreq_inswitch_to_delres;
+		update_delreq_inswitch_to_delres_by_mirroring;
 		nop;
 	}
 	default_action: nop();

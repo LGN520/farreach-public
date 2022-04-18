@@ -181,10 +181,16 @@ action update_getres_deleted_seq_to_getres_deleted_seq_inswitch() {
 }
 
 
-action update_getreq_to_getreq_inswitch() {
+action update_putreq_to_putreq_inswitch() {
 	modify_field(op_hdr.optype, PUTREQ_INSWITCH);
 	add_header(inswitch_hdr);
 }
+
+action update_delreq_to_delreq_inswitch() {
+	modify_field(op_hdr.optype, DELREQ_INSWITCH);
+	add_header(inswitch_hdr);
+}
+
 @pragma stage 2
 table ig_port_forward_tbl {
 	reads {
@@ -195,6 +201,7 @@ table ig_port_forward_tbl {
 		update_getres_latest_seq_to_getres_latest_seq_inswitch;
 		update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
 		update_putreq_to_putreq_inswitch;
+		update_delreq_to_delreq_inswitch;
 		nop;
 	}
 	default_action: nop();

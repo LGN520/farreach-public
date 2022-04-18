@@ -44,7 +44,11 @@ parser parse_op {
 		PUTREQ_INSWITCH: parse_vallen;
 		PUTREQ_SEQ: parse_vallen;
 		PUTREQ_POP_SEQ: parse_vallen;
-		default: ingress; // GETREQ, GETREQ_POP, GETREQ_NLATEST
+		PUTRES: parse_result;
+		DELREQ_INSWITCH: parse_inswitch;
+		DELREQ_SEQ: parse_seq;
+		DELRES: parse_result;
+		default: ingress; // GETREQ, GETREQ_POP, GETREQ_NLATEST, DELREQ
 
 
 
@@ -247,7 +251,7 @@ parser parse_val_len16 {
 
 parser parse_result {
 	extract(result_hdr);
-	return ingress;
+	return ingress; // GETRES, PUTRES, DELRES
 }
 
 parser parse_seq {
@@ -256,7 +260,7 @@ parser parse_seq {
 		GETRES_LATEST_SEQ_INSWITCH: parse_inswitch;
 		GETRES_DELETED_SEQ_INSWITCH: parse_inswitch;
 		CACHE_POP_INSWITCH: parse_inswitch;
-		default: ingress; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ
+		default: ingress; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, DELREQ_SEQ
 		
 
 
@@ -269,7 +273,7 @@ parser parse_seq {
 
 parser parse_inswitch {
 	extract(inswitch_hdr);
-	return ingress; // GETRES_LATEST_SEQ_INSWITCH
+	return ingress; // GETRES_LATEST_SEQ_INSWITCH, DELREQ_INSWITCH
 }
 
 parser parse_other {

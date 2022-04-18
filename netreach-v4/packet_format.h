@@ -13,7 +13,7 @@
 enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES,
 	GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH,
-	PUTREQ_INSWITCH, PUTREQ_SEQ, PUTREQ_POP_SEQ
+	PUTREQ_INSWITCH, PUTREQ_SEQ, PUTREQ_POP_SEQ, DELREQ_INSWITCH, DELREQ_SEQ
 
 	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT, CACHE_EVICT_ACK
 };
@@ -70,7 +70,7 @@ template<class key_t>
 class DelRequest : public Packet<key_t> {
 	public: 
 		DelRequest();
-		DelRequest(uint16_t hashidx, key_t key);
+		DelRequest(key_t key);
 		DelRequest(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -135,7 +135,7 @@ class PutResponse : public Packet<key_t> {
 template<class key_t>
 class DelResponse : public Packet<key_t> {
 	public: 
-		DelResponse(uint16_t hashidx, key_t key, bool stat);
+		DelResponse(key_t key, bool stat);
 		DelResponse(const char * data, uint32_t recv_size);
 
 		bool stat() const;

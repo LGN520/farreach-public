@@ -48,15 +48,14 @@
 			- cache_lookup_tbl (key -> idx, is_cached)
 				+ idx: index for in-switch cache (assigned by controller)
 				+ NOTE: even if the packet is not FarReach packet, set inswitch_hdr does not affect their PHVs
-			- hash_tbl (optype, key -> hashval)
+			- hash_for_partition_tbl (optype, key -> hashval_for_partition)
 				+ optype: GETREQ, PUTREQ, DELREQ
-				- hash_for_partition_tbl (optype, key -> hash_partitionidx)
-					+ Hash_partitionidx: partition across servers
-				- hash_for_CM_tbl (optype, key -> hash_cmidx)
-					+ hash_cmidx: index for CM
-				- In implementation, we use hashval = hash_partitionidx = hash_cmidx to save PHV
+			- hash_for_cm_tbl (optype, key -> hashval_for_cm)
+				+ optype: GETREQ, PUTREQ
+			- hash_for_seq_tbl (optype, key -> hashval_for_seq)
+				+ optype: PUTREQ, DELREQ
 			- sample_tbl (optype, key -> is_sampled)
-				+ optype: GETREQ, PUTREQ, DELREQ
+				+ optype: GETREQ, PUTREQ
 			- TODO: In distributed extension, spine/leaf switch uses idx to access the bucket in the corresponding virtual switch (controller has considered partition across virtual spine/leaf switches when assigning idx)
 				+ TODO: Only leaf switch needs to perform hash_for_partition_tbl for partition across servers
 				+ TODO; Only spine switch needs to assign seq
@@ -229,7 +228,7 @@
 	+ See ipv4_forward_tbl for details
 - GETREQ
 	+ Client sends GETREQ
-	+ Ingress: GETREQ -> GETREQ_INSWITCH (is_sampled, is_cached, is_wrong_pipeline, sid, eport_for_res, hashval, idx)
+	+ Ingress: GETREQ -> GETREQ_INSWITCH (is_sampled, is_cached, is_wrong_pipeline, sid, eport_for_res, hashval_for_partition, hashval_for_cm, idx)
 	+ Egress
 		* Stage 0: update CM if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=0;
 		* Stage 1: update is_hot; update cache_frequency if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=1; get valid
@@ -279,7 +278,7 @@
 		* Drop original packet, forwrad cloned packet (i2e) to client
 			+ TODO: Check if we need to set eg_intr_md.egress_port for cloned packet (i2e)
 - CACHE_POP_INSWITCH
-	+ Ingress pipeline (hashval for partition, idx)
+	+ Ingress pipeline (hashval_for_partition, idx)
 		* Access
 			* hash_tbl: access to get hashval for partition in case that switch os cannot specify ingress pipeline
 				- TODO: If switch os can specify ingress pieline, we can directly set egress port as ingress port
@@ -305,7 +304,7 @@
 		* Otherwise, only forward to reflector
 - PUTREQ
 	+ Client sends PUTREQ
-	+ Ingress: PUTREQ -> PUTREQ_INSWITCH (is_sampled, is_cached, is_wrong_pipeline, sid, eport_for_res, hashval, idx)
+	+ Ingress: PUTREQ -> PUTREQ_INSWITCH (is_sampled, is_cached, is_wrong_pipeline, sid, eport_for_res, hashval_for_partition, hashval_for_cm, hashval_for_seq, idx)
 	+ Egress
 		* Stage 0: update CM if inswitch_hdr.is_sampled=1 and inswitch_hdr.is_cached=0;
 		* Stage 1: 
@@ -334,6 +333,35 @@
 	+ Server
 		* PUTREQ_SEQ -> sendback PUTRES
 		* PUTREQ_POP_SEQ -> sendback PUTRES, and trigger cache population
+- DELREQ
+	+ Client sends DELREQ
+	+ Ingress: DELREQ -> DELREQ_INSWITCH (is_sampled, is_cached, is_wrong_pipeline, sid, eport_for_res, hashval_for_partition, hashval_for_seq, idx)
+	+ Egress
+		* Stage 0: not touch access_cm_tbl 
+		* Stage 1: 
+			+ not care about is_hot_tbl; not touch cache_frequency_tbl; get valid
+			+ assign seq
+		* Stage 2: latest_tbl
+			+ If valid=0, skip latest_tbl
+			+ If iscached=1 and valid=1, set latest=1
+			+ If iscached=1 and valid=3, set latest=0
+		* Stage 3:
+			+ deleted_tbl
+				* If valid=0/3, skip deleted_tbl (keep the original deleted)
+				* If iscached=1 and valid=1, set deleted=1
+			+ savedseq_tbl
+				* If valid=0/3, skip savedseq_tbl (keep the original savedseq)
+				* If iscached=1 and valid=1, set savedseq=seq
+		* Intermediate stages: reset vallen = 0 (save bandwidth), not access value 
+		* Stage 10: eg_port_forward_tbl
+			* If inswitch_hdr.is_cached=0
+				- Forward DELREQ_SEQ to server
+			* If inswitch_hdr.is_cached=1
+				- If valid=0, forward DELREQ_SEQ to server
+				- If valid=1, set result_hdr.result=1, and send back DELRES directly/mirrorly
+				- If valid=3, forward DELREQ_SEQ to server
+	+ Server
+		* DELREQ_SEQ -> sendback DELRES
 - TODO: If cache crashes, server should reset all seq as zero after recovery such that switch-assigned seq (>=1) must be larger
 - TODO: If with parser limitation, we can introduce hint of next header in the previous header
 - TODO: Check APIs of register access 
@@ -367,6 +395,7 @@
 	+ server: store evicted data if necessary -> update cached keyset -> send back ACK
 - Use int32_t for vallen (val.c, val.h)
 - Reorganize socket API
+- Implement for PUTREQ and DELREQ
 
 ## Run
 

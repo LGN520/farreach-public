@@ -460,8 +460,8 @@ static int run_fg(void *param) {
 		}
 		else if (iter.type() == int8_t(packet_type_t::DELREQ)) {
 			CUR_TIME(req_t1);
-			uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
-			del_request_t req(hashidx, tmpkey);
+			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			del_request_t req(tmpkey);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 

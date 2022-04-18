@@ -239,13 +239,13 @@ static int run_server_worker(void * param) {
 					sent_pkt_idx++;
 					break;
 				}
-			case packet_type_t::DEL_REQ_SEQ:
+			case packet_type_t::DELREQ_SEQ:
 				{
 					del_request_seq_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					bool tmp_stat = table->remove(req.key(), serveridx, req.seq());
 					//COUT_THIS("[server] stat = " << tmp_stat)
-					del_response_t rsp(req.hashidx(), req.key(), tmp_stat);
+					del_response_t rsp(req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK

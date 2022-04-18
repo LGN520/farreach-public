@@ -136,20 +136,20 @@ DelRequest<key_t>::DelRequest()
 }
 
 template<class key_t>
-DelRequest<key_t>::DelRequest(uint16_t hashidx, key_t key)
-	: Packet<key_t>(packet_type_t::DEL_REQ, hashidx, key)
+DelRequest<key_t>::DelRequest(key_t key)
+	: Packet<key_t>(packet_type_t::DELREQ, key)
 {
 }
 
 template<class key_t>
 DelRequest<key_t>::DelRequest(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::DEL_REQ);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::DELREQ);
 }
 
 template<class key_t>
 uint32_t DelRequest<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t);
+	return sizeof(int8_t) + sizeof(key_t);
 }
 
 template<class key_t>
@@ -157,13 +157,10 @@ uint32_t DelRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(max_size >= my_size);
 	char *begin = data;
-	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	uint16_t bigendian_hashidx = htons(this->_hashidx);
-	memcpy(begin, (void *)&bigendian_hashidx, sizeof(uint16_t)); // Small-endian to big-endian
-	begin += sizeof(uint16_t);
-	memcpy(begin, (void *)&this->_key, sizeof(key_t));
-	return my_size;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
+	return sizeof(int8_t) + tmp_keysize;
 }
 
 template<class key_t>
@@ -171,11 +168,8 @@ void DelRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
-	this->_hashidx = ntohs(this->_hashidx); // Big-endian to small-endian
-	begin += sizeof(uint16_t);
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
 	memcpy((void *)&this->_key, begin, sizeof(key_t));
 }
 
@@ -359,15 +353,15 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 // DelResponse
 
 template<class key_t>
-DelResponse<key_t>::DelResponse(uint16_t hashidx, key_t key, bool stat) 
-	: Packet<key_t>(PacketType::DEL_RES, hashidx, key), _stat(stat)
+DelResponse<key_t>::DelResponse(key_t key, bool stat) 
+	: Packet<key_t>(PacketType::DELRES, key), _stat(stat)
 {	
 }
 
 template<class key_t>
 DelResponse<key_t>::DelResponse(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DEL_RES);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DELRES);
 }
 
 template<class key_t>
@@ -377,7 +371,7 @@ bool DelResponse<key_t>::stat() const {
 
 template<class key_t>
 uint32_t DelResponse<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(bool);
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(bool);
 }
 
 template<class key_t>
@@ -385,15 +379,12 @@ uint32_t DelResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(max_size >= my_size);
 	char *begin = data;
-	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	uint16_t bigendian_hashidx = htons(this->_hashidx);
-	memcpy(begin, (void *)&bigendian_hashidx, sizeof(uint16_t)); // Small-endian to big-endian
-	begin += sizeof(uint16_t);
-	memcpy(begin, (void *)&this->_key, sizeof(key_t));
-	begin += sizeof(key_t);
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
+	begin += tmp_keysize;
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
-	return my_size;
+	return sizeof(int8_t) + tmp_keysize + sizeof(bool);
 }
 
 template<class key_t>
@@ -401,13 +392,10 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
-	this->_hashidx = ntohs(this->_hashidx); // Big-endian to small-endian
-	begin += sizeof(uint16_t);
-	memcpy((void *)&this->_key, begin, sizeof(key_t));
-	begin += sizeof(key_t);
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
+	begin += tmp_keysize;
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 }
 
