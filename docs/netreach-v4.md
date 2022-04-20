@@ -107,14 +107,6 @@
 					- TODO: valid=0: ignore the entry (treat it as uncached)
 					- TODO: valid=1: conservative get, cached get, put/del, evict, snapshot
 					- TODO: valid=3: get cache only if latest=1, put/del set latest=0 and forward to server (maybe case3)
-				* TODOTODO: Snapshot
-					- TODO: Controller atomically loads cached key
-					- TODO: Controller only stores records with valid=1 and latest=1 into snapshot
-					- TODO: For valid=0/3, the record is managed by controller
-						+ valid=0: if being snapshoted, remove the newly populated record from snapshot if any
-						+ valid=3: if being evicted, keep the original cached record in snapshot and remove the newly populated record from snapshot if any
-					- TODO; GETRES_LATEST_SEQ and GETRES_DELETED_SEQ can also trigger case1
-				+ TODO: PUTREQ_CASE1/DELREQ_CASE1 need to embed status_hdr.valid as valid could be 0
 			- TODO: seq (optype -> seq)
 				+ optype: PUTREQ_INSIWTCH, DELREQ_INSWITCH
 				+ NOTE: SEQ_BUCKET_COUNT is independent with KV_BUCKET_COUNT
@@ -155,18 +147,20 @@
 		* If GETREQ_POP triggers a cache population (i.e., key exists), server adds the key into cached key set
 		* If server receives CACHE_EVICT, it removes the evicted key from cached key set
 - Controller
-	+ Cache population/eviction
+	+ Cache population
 		* Receive CACHE_POP from server by tcp channel
 			- Per-server popclient -> one controller.popserver (with multiple subthreads = # of servers)
 		* CANCELED: Add key into per-server cached key set (comment it if server.cached_keyset works well)
 		* CANCELED: Add key into key-server map (comment it as CACHE_EVICT embeds serveridx towards corresponding server)
 		* Maintain a map between serveridx and controller.popserver.subthreadidx
 		* Send CACHE_POP to corresponding switchOS
-	+ Eviction handler
+	+ Cache eviction
 		* Receive CACHE_EVICT <victim.key, vicktim.value, victim.result, victim.seq, victim.serveridx>
 		* CANCELED: Check per-server cached key set to find the corresponding server
 		* Send CACHE_EVICT to the correpsonding server, and wait for CACHE_EVICT_ACK <victim.key>
 		* Send CACHE_EVICT_ACK to the switch OS
+	+ Snapshot
+		* TODO: Receive per-switch snapshot, and send key-value records to each corresponding server
 - Switch OS
 	+ Cache population/eviction
 		* IMPORTANT: Workflow
@@ -205,14 +199,60 @@
 				+ Invoke cache population for new CACHE_POP
 		* Switch os: popworker resets intermediate data of paramserver after population/eviction
 	+ Snapshot
-		* TODO: set flag=true needs atomicity, while reset flag=false does not need atomicity
-			- TODO: For atomicity, we enfore all traffic enter ingress 0 -> set flag=true -> disable the enforement
-			- TODO: As the duration for atomicity is very small compared with snapshot period, it should be acceptable
-			- TODO: Test the duration based on time difference between comment and uncomment
-		* TODO: send CACHE_EVICT_CASE2 to server for server-side snapshot if making in-switch snapshot 
-		* TODO: Snapshot thread: perform crash-consistent snapshot
-		* TODO: Maintain an in-memory snapshot flag
-		* TODO: If with ptf session limitation, we can place snapshot flag in SRAM; load values and reset registers by data plane;
+		* TODO: Each switch makes snapshot periodically
+			- TODO: Distributed snapshot algorithm can guarantee causal consistency
+		* snapshotworker stops cache population/eviction
+			* TODO: snapshotworker sets is_snapshot_prepare=true such that popworker will be stopped temporarily
+			* TODO: popworker sets know_snapshot_prepare=true if is_snapshot_prepare=true and know_snapshot_prepare=false
+				- TODO: If is_snapshot_prepare=false w/ cache population from controller.popclient, popworker performs cache population
+			* TODO: snapshotworker waits until know_snapshot_prepare=true
+			* NOTE: all cached records at the snapshot timepoint should have valid=1
+		* snapshotworker.ptf sets snapshot_flag=true w/ atomicity
+			* TODO: snapshotworker.ptf sets need_recirculate=true to enforce all traffic enter the same ingress pipeline
+			* TODO: snapshotworker.ptf sets snapshot_flag=true to notify data plane the beginning of snapshot
+			* TODO: snapshotworker.ptf sets need_recirculate=false to disable recirculation asap to mitigate thpt degradation
+				- As the duration for atomicity is very small compared with snapshot period, it should be acceptable
+				- TODO: Test the duration based on time difference between comment and uncomment
+				- NOTE: snapshot timepoint is that of setting the snapshot_flag of the enforced ingress pipeline as true
+			* Data plane reports case1 to switchos for in-switch value update
+				* TODO: GETRES_LATEST_SEQ_CASE1, GETRES_DELETED_SEQ_CASE1, PUTREQ_CASE1, DELREQ_CASE1
+				* FUTURE: PUTREQ_CASE1/DELREQ_CASE1 need to embed status_hdr.valid as valid could be 2 (temporarilly invalid for PUTREQ_LARGE); GETRES_LATEST/DELETED_SEQ_CASE1 do not need as valid must be 1 if with value update
+		* TODO: snapshotworker backups metadata, i.e., key and serveridx for each cache entry
+			- It is atomic as cache population/eviction is temporarily stopped now
+			- NOTE: each entry should appear in the final crash-consistent snapshot with the correct key
+		* TODO: snapshotworker resumes cache population/eviction
+			- TODO: snapshotworker sets is_snapshot=true to remember cache eviction as case2 for snapshot
+			- TODO: snapshotworker sets is_snapshot_prepare=false to resume cache population and eviction
+				+ NOTE: now popworker knows is_snapshot=true, which will report case2 for snapshot
+			- TODO: snapshotworker sets know_snapshot_prepare=false to reset for next snapshot
+			- Cache population will insert a new key-vaule record into an empty entry (valid=0/1)
+				+ TODO: snapshotworker ignores valid=0, or valid=1 yet idx is not used in backup metadata
+			- Cache eviction will evict an old key-value record (valid=1/3/0/1)
+				+ TODO: snapshot worker ignores valid=3/0
+				+ NOTE: if valid=1, as idx is used in backup metadata and we can only load value instead of key from data plane, we cannot simply distigunish the loaded value belongs to the evicted key (correct one) or the newly populated key
+				+ To solve the issue, snapshotworker needs to determine the cached record
+					* TODO: popworker reports the evicted data as case2 for snapshotworker
+					* TODO: popworker checks the key of case1/case2, and ignores the special case with incorrect key
+						- TODO: If without case1 and case2, popworker directly uses the loaded value
+						- TODO: If with case1 or case2, popworker directly uses the value of special case
+						- TODO: If with both case 1 and case2, popworker uses the value of case1
+							+ NOTE: when valid=3/0, data plane cannot update the value -> case1 must be generated when valid=1 for evicted key or newly populated key -> the former caes1 must be more close to snapshot timepoint than case2 (valid=3), while the latter case1 will be ignored by checking the key
+					* TODO: popworker also reports evicted data as case2 to server for server-side snapshot
+		* TODO: snapshotworker.ptf loads idx, valid, latest, vallen, value, deleted, and savedseq
+			- NOTE: ptf directly ignores valid=0/3, and valid=1 yet idx exceeds backup empty idx -> snapshotworker will rollback the snapshot with special cases if any
+			- TODO: For records with latest=0, we also store them into snapshow now, which does not break point-in-time consistency; it is just a duplication which can be solved by seq comparison
+		* TODO: snapshotworker.ptf resets snapshot_flag=false which does not need atomicity, and reset special case regs
+			- Some ingress pipelines see snapshot_flag=true and report special cases, which must be the same as loaded data
+			- Others see snapshot_flag=false and directly update in-switch value w/o special cases, which does not change loaded data
+		* snapshotworker ensures that popworker knows the end of snapshot (all case2 have been collected)
+			- TODO: snapshotworker resets is_snapshot=false such that no subsequent evicted data as case2
+			- TODO: snapshotworker sets is_snapshot_end=true
+			- TODO: popworker sets know_snapshot_end=true if is_snapshot_end=true and know_snapshot_end=false (at the end of loop)
+			- TODO: snapshotworker waits until know_snapshot_end=true
+			- TODO: snapshotworker resets is_snapshot_end=false -> know_snapshot_end=true
+		* TODO: snapshotworker performs rollback to get a crash-consistent snapshot
+		* TODO: snapshotworker sends each cached record to corresponding server based on serveridx
+		* TODOTODO: If with ptf session limitation, we can place snapshot flag in SRAM; load values and reset registers by data plane;
 	+ TODO: Periodically reset CM
 		* TODO: If with ptf session limitation, we can reset it in data plane
 - NOTE: In the host colocated with server
