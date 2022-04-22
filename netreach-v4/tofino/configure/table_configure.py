@@ -57,6 +57,8 @@ dst_mac = str(config.get("server", "server_mac"))
 src_ip = str(config.get("client", "client_ip"))
 dst_ip = str(config.get("server", "server_ip"))
 switch_max_vallen = int(config.get("switch", "switch_max_vallen"))
+ingress_pipeidx = int(config.get("hardware", "ingress_pipeidx"))
+egress_pipeidx = int(config.get("hardware", "egress_pipeidx"))
 #gthreshold = int(config.get("switch", "gthreshold"))
 #pthreshold = int(config.get("switch", "pthreshold"))
 
@@ -73,7 +75,8 @@ dst_fpport = str(config.get("switch", "dst_fpport"))
 fp_ports.append(dst_fpport)
 #fp_ports = ["2/0", "3/0"]
 
-iport_eports_map = {} # mapping between iport and eports in the same pipeline
+port_pipeidx_map = {} # mapping between port and pipeline
+pipeidx_ports_map = {} # mapping between pipeline and ports
 
 GETREQ = 0x00
 PUTREQ = 0x01
@@ -265,10 +268,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             devPort = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
             self.devPorts.append(devPort)
 
-        for iport in self.devPorts:
-            iport_eports_map[iport] = []
-            for eport in self.devPorts:
-                iport_eports_map[iport].append(eport)
+        port_pipeidx_map[self.devPorts[0]] = ingress_pipeidx
+        port_pipeidx_map[self.devPorts[1]] = egress_pipeidx
+        pipeidx_ports_map[ingress_pipeidx] = [self.devPorts[0]]
+        if egress_pipeidx not in pipeidx_ports_map:
+            pipeidx_ports_map[egress_pipeidx] = [self.devPorts[1]]
+        else:
+            if self.devPorts[1] not in pipeidx_ports_map[egress_pipeidx]:
+                pipeidx_ports_map[egress_pipeidx].append(self.devPorts[1])
 
         self.recirPorts = [64, 192]
 
@@ -346,13 +353,39 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Ingress pipeline
 
             # Stage 0
+            
+            # Table: need_recirculate_tbl (default: nop; size: ?)
+            print "Configuring need_recirculate_tbl"
+            for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
+                for iport in self.devPorts:
+                    matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
+                            op_hdr_optype = tmpoptype,
+                            ig_intr_md_ingress_port = iport)
+                    if (tmpoptype == GETREQ) or (iport in pipeidx_ports_map[ingress_pipeidx]):
+                        self.client.need_recirculate_tbl_table_add_with_reset_need_recirculate(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Stage 1
+
+            # Table: recirculate_tbl (default: nop; size: ?)
+            print "Configuring recirculate_tbl"
+            for tmpoptype in [PUTREQ, DELREQ]:
+                matchspec0 = netbufferv4_recirculate_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 1)
+                actnspec0 = netbufferv4_recirculate_pkt_action_spec_t(self.recirPorts[ingress_pipeidx])
+                self.client.recirculate_tbl_table_add_with_recirculate_pkt(\
+                        self.sess_hdl, self.dev_tgt, matchpsec0, actnspec0)
+
+            # Stage 1
 
             # Table: sid_tbl (default: nop; size: ?)
             print "Configuring sid_tbl"
             for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
                 matchspec0 = netbufferv4_sid_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
-                        ig_intr_md_ingress_port = self.devPorts[0])
+                        ig_intr_md_ingress_port = self.devPorts[0],
+                        meta_need_recirculate = 0)
                 actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0])
                 self.client.sid_tbl_table_add_with_set_sid(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -371,7 +404,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring hash_for_partition_tbl"
             for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
                 matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype)
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 0)
                 self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -379,7 +413,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring hash_for_cm_tbl"
             for tmpoptype in [GETREQ, PUTREQ]:
                 matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype)
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 0)
                 self.client.hash_for_cm_tbl_table_add_with_hash_for_cm(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -387,7 +422,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring hash_for_seq_tbl"
             for tmpoptype in [PUTREQ, DELREQ]:
                 matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype)
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 0)
                 self.client.hash_for_seq_tbl_table_add_with_hash_for_seq(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -395,11 +431,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring sample_tbl"
             for tmpoptype in [GETREQ, PUTREQ]:
                 matchspec0 = netbufferv4_sample_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype)
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 0)
                 self.client.sample_tbl_table_add_with_sample(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Stage 1
+            # Stage 2
 
             # Table: hash_partition_tbl (default: nop; server_num <= 128)
             print "Configuring hash_partition_tbl"
@@ -417,11 +454,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 op_hdr_optype = tmpoptype,
                                 inswitch_hdr_hashval_for_partition_start = hash_start,
                                 inswitch_hdr_hashval_for_partition_end = hash_end,
-                                ig_intr_md_ingress_port = iport)
+                                ig_intr_md_ingress_port = iport,
+                                meta_need_recirculate = 0)
                         # Forward to the egress pipeline of server
                         # serveridx = i
                         eport = self.devPorts[1]
-                        if eport in iport_eports_map[iport]: # in correct pipeline
+                        if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
                             actnspec0 = netbufferv4_hash_partition_action_spec_t(\
                                     server_port + i, self.devPorts[1], 0)
                         else: # in wrong pipeline
@@ -431,32 +469,37 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                         hash_start = hash_end
 
-            # Stage 2
+            # Stage 3
 
             # Table: ig_port_forward_tbl (default: nop; size: ?)
             print "Configuring ig_port_forward_tbl"
             matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETREQ)
+                    op_hdr_optype = GETREQ,
+                    meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_getreq_to_getreq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_LATEST_SEQ)
+                    op_hdr_optype = GETRES_LATEST_SEQ,
+                    meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres_latest_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_DELETED_SEQ)
+                    op_hdr_optype = GETRES_DELETED_SEQ,
+                    meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres_deleted_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = PUTREQ)
+                    op_hdr_optype = PUTREQ,
+                    meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_putreq_to_putreq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = DELREQ)
+                    op_hdr_optype = DELREQ,
+                    meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_delreq_to_delreq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Stage 3
+            # Stage 4
 
             # Table: ipv4_forward_tbl (default: nop; size: ?)
             print "Configuring ipv4_forward_tbl"
@@ -465,7 +508,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ipv4_hdr_dstAddr = ipv4addr0,
-                        ipv4_hdr_dstAddr_prefix_length = 32)
+                        ipv4_hdr_dstAddr_prefix_length = 32,
+                        meta_need_recirculate = 0)
                 actnspec0 = netbufferv4_forward_normal_response_action_spec_t(self.devPorts[0])
                 self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -473,7 +517,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ipv4_hdr_dstAddr = ipv4addr0,
-                        ipv4_hdr_dstAddr_prefix_length = 32)
+                        ipv4_hdr_dstAddr_prefix_length = 32,
+                        meta_need_recirculate = 0)
                 actnspec0 = netbufferv4_ipv4_forward_special_get_response_action_spec_t(self.sids[0])
                 self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)

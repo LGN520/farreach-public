@@ -91,6 +91,16 @@
 control ingress {
 
 	// Stage 0
+	apply(need_recirculate_tbl); // set meta.need_recirculate
+
+	/* if meta.need_recirculate == 1 */
+
+	// Stage 1
+	apply(recirculate_tbl); // recirculate for atomic snapshot
+
+	/* else if meta.need_recirculate == 0 */
+
+	// Stage 1
 	apply(sid_tbl); // set sid corresponding to ingress port
 	apply(cache_lookup_tbl); // managed by controller
 	apply(hash_for_partition_tbl); // for partition
@@ -98,13 +108,13 @@ control ingress {
 	apply(hash_for_seq_tbl); // for seq
 	apply(sample_tbl); // for CM and cache_frequency
 
-	// Stage 1
+	// Stage 2
 	apply(hash_partition_tbl);
 
-	// Stgae 2
+	// Stgae 3
 	apply(ig_port_forward_tbl);
 
-	// Stage 3
+	// Stage 4
 	apply(ipv4_forward_tbl);
 }
 

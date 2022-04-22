@@ -50,9 +50,10 @@ switchos_paramserver_port = int(config.get("switch", "switchos_paramserver_port"
 switchos_sample_cnt = int(config.get("switch", "switchos_sample_cnt"))
 kv_bucket_num = int(config.get("switch", "kv_bucket_num"))
 egress_pipeidx = int(config.get("hardware", "egress_pipeidx"))
-switchos_get_freeidx = 1
-switchos_get_key_freeidx = 2
-switchos_set_evictdata = 3
+SWITCHOS_GET_FREEIDX = 1
+SWITCHOS_GET_KEY_FREEIDX = 2
+SWITCHOS_SET_EVICTDATA = 3
+SWITCHOS_GET_EVICTKEY = 4
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
@@ -132,13 +133,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         for i in range(val_list):
             # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
             evictvalbytes = evictvalbytes + struct.pack("!I", val_list[i])
-        # TODO: load savedseq
-        evictseq = 0
+        # load savedseq
+        evictseq = self.client.register_read_savedseq_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
 
         print "Set evictdata to paramserver"
         ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # <int type, int16_t evictidx, int32_t vallen, valbytes, bool status, int32_t savedseq>
-        sendbuf = struct.pack("=ihi{}c?i".format(len(evictvalbytes)), switchos_set_evictdata, evictidx, evictvallen, evictvalbytes, evictstat, evictseq)
+        sendbuf = struct.pack("=ihi{}c?i".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictstat, evictseq)
         ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
 
         self.conn_mgr.complete_operations(self.sess_hdl)

@@ -4,15 +4,62 @@ action nop() {}
 
 // Stage 0
 
+action set_need_recirculate() {
+	modify_field(meta.need_recirculate, 1);
+}
+
+action reset_need_recirculate() {
+	modify_field(meta.need_recirculate, 0);
+}
+
+@pragma stage 0
+table need_recirculate_tbl {
+	reads {
+		op_hdr.optype: exact;
+		ig_intr_md.ingress_port: exact;
+	}
+	actions {
+		set_need_recirculate;
+		reset_need_recirculate;
+		nop;
+	}
+	default_action: nop();
+	size: 16;
+}
+
+// Stage 1
+
+action recirculate_pkt(port) {
+	recirculate(port);
+}
+
+@pragma stage 1
+table recirculate_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		recirculate_pkt;
+		nop;
+	}
+	default_action: nop();
+	size: 16;
+}
+
+// Stage 1
+
 action set_sid(sid) {
 	modify_field(inswitch_hdr.sid, sid);
 	modify_field(inswitch_hdr.eport_for_res, ig_intr_md.ingress_port);
 }
 
-@pragma stage 0
+@pragma stage 1
 table sid_tbl {
 	reads {
+		op_hdr.optype: exact;
 		ig_intr_md.ingress_port: exact;
+		meta.need_recirculate: exact;
 	}
 	actions {
 		set_sid;
@@ -31,13 +78,14 @@ action uncached_action() {
 	modify_field(inswitch_hdr.is_cached, 0);
 }
 
-@pragma stage 0
+@pragma stage 1
 table cache_lookup_tbl {
 	reads {
 		op_hdr.keylolo: exact;
 		op_hdr.keylohi: exact;
 		op_hdr.keyhilo: exact;
 		op_hdr.keyhihi: exact;
+		meta.need_reirculate: exact;
 	}
 	actions {
 		cached_action;
@@ -71,14 +119,15 @@ field_list_calculation hash_calc {
 	output_width: 1;
 }*/
 
-@pragma stage 0
 action hash_for_partition() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_partition, 0, hash_calc, PARTITION_COUNT);
 }
 
+@pragma stage 1
 table hash_for_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.need_reirculate: exact;
 	}
 	actions {
 		hash;
@@ -88,14 +137,15 @@ table hash_for_partition_tbl {
 	size: 0;
 }
 
-@pragma stage 0
 action hash_for_cm() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm, 0, hash_calc, CM_BUCKET_COUNT);
 }
 
+@pragma stage 1
 table hash_for_cm_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.need_reirculate: exact;
 	}
 	actions {
 		hash;
@@ -105,14 +155,15 @@ table hash_for_cm_tbl {
 	size: 0;
 }
 
-@pragma stage 0
 action hash_for_seq() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_seq, 0, hash_calc, SEQ_BUCKET_COUNT);
 }
 
+@pragma stage 1
 table hash_for_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.need_reirculate: exact;
 	}
 	actions {
 		hash;
@@ -122,15 +173,16 @@ table hash_for_seq_tbl {
 	size: 0;
 }
 
-@pragma stage 0
 action sample() {
 	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, sample_calc, 2);
 	modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2);
 }
 
+@pragma stage 1
 table sample_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.need_reirculate: exact;
 	}
 	actions {
 		sample;
@@ -140,7 +192,7 @@ table sample_tbl {
 	size: 0;
 }
 
-// Stage 1
+// Stage 2
 
 action hash_partition(udpport, eport, is_wrong_pipeline) {
 	modify_field(udp_hdr.dstPort, udpport);
@@ -148,12 +200,13 @@ action hash_partition(udpport, eport, is_wrong_pipeline) {
 	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
 }
 
-@pragma stage 1
+@pragma stage 2
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.hashval_for_partition: range;
 		ig_intr_md.ingress_port: exact;
+		meta.need_reirculate: exact;
 	}
 	actions {
 		hash_partition;
@@ -163,7 +216,7 @@ table hash_partition_tbl {
 	size: 128;
 }
 
-// Stage 2
+// Stage 3
 
 action update_getreq_to_getreq_inswitch() {
 	modify_field(op_hdr.optype, GETREQ_INSWITCH);
@@ -191,10 +244,11 @@ action update_delreq_to_delreq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
-@pragma stage 2
+@pragma stage 3
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
+		meta.need_reirculate: exact;
 	}
 	actions {
 		update_getreq_to_getreq_inswitch;
@@ -208,7 +262,7 @@ table ig_port_forward_tbl {
 	size: 0;
 }
 
-// Stage 3
+// Stage 4
 
 action forward_normal_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_ingress_port, eport);
@@ -219,11 +273,12 @@ action forward_special_get_response(sid) {
 	clone_ingress_to_egress(sid); // Cloned packet enter the egress pipeline to corresponding client
 }
 
-@pragma stage 3
+@pragma stage 4
 table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 		ipv4_hdr.dstAddr: lpm;
+		meta.need_reirculate: exact;
 	}
 	actions {
 		forward_normal_response;

@@ -25,6 +25,7 @@
 #include "val.h"
 #include "socket_helper.h"
 #include "message_queue_impl.h"
+#include "snapshot_helper.h"
 
 #include "common_impl.h"
 
@@ -33,7 +34,7 @@ typedef Val val_t;
 
 bool volatile controller_running = false;
 std::atomic<size_t> controller_ready_threads(0);
-const size_t controller_expected_ready_threads = 3;
+const size_t controller_expected_ready_threads = 4;
 
 struct alignas(CACHELINE_SIZE) ControllerPopserverSubthreadParam {
 	int connfd;
@@ -70,11 +71,16 @@ int volatile controller_evictserver_tcpsock = -1;
 bool volatile is_controller_evictserver_evictclients_connected = false;
 int * volatile controller_evictserver_evictclient_tcpsock_list = NULL;
 
+// controller.snapshotclient <-> switchos.snapshotserver
+bool volatile is_controller_snapshotclient_connected = false;
+int volatile controller_snapshotclient_tcpsock = -1;
+
 void prepare_controller();
 void *run_controller_popserver(void *param); // Accept connections from servers
 void *run_controller_popserver_subthread(void *param); // Receive CACHE_POPs from one server
 void *run_controller_popclient(void *param); // Send CACHE_POPs to switch os
 void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
+void *run_controller_snapshotclient(void *param); // Periodically notify switch os to launch snapshot
 void close_controller();
 
 int main(int argc, char **argv) {
@@ -94,11 +100,23 @@ int main(int argc, char **argv) {
 		COUT_N_EXIT("Error: " << ret);
 	}
 
+	pthread_t evictserver_thread;
+	int ret = pthread_create(&evictserver_thread, nullptr, run_controller_evictserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
+	pthread_t snapshotclient_thread;
+	int ret = pthread_create(&snapshotclient_thread, nullptr, run_controller_snapshotclient, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
 	while (controller_ready_threads < controller_expected_ready_threads) sleep(1);
 
 	controller_running = true;
 
-	while (controller_finish_subthreads < controller_expected_finishs_subthreads) sleep(1);
+	while (controller_finish_subthreads < controller_expected_finish_subthreads) sleep(1);
 
 	controller_running = false;
 
@@ -148,6 +166,9 @@ void prepare_controller() {
 	for (size_t i = 0; i < server_num; i++) {
 		create_tcpsock(controller_evictserver_evictclient_tcpsock_list[i], "controller.evictserver.evictclient");
 	}
+
+	// prepare snapshot
+	create_tcpsock(controller_snapshotclient_tcpsock, "controller.snapshotclient");
 }
 
 void *run_controller_popserver(void *param) {
@@ -454,6 +475,39 @@ void run_controller_evictserver(void *param) {
 		}
 	}
 
+	close(controller_evictserver_tcpsock);
+	pthread_exit(nullptr);
+}
+
+void *run_controller_snapshotclient(void *param) {
+	controller_ready_threads++;
+
+	while (!controller_running) {}
+
+	// NOTE: as messages are sent among end-hosts (controller, switchos, and server), we do not perform endian conversion
+	uint32_t last_duration = 0; // ms
+	char sendbuf[MAX_BUFSIZE];
+	while (controller_running) {
+		INVARIANT(controller_snapshot_period > last_duration);
+		usleep((controller_snapshot_period - last_duration) * 1000); // ms -> us
+
+		// TODO: count time for last_duration
+
+		// connect switchos.snapshotserver
+		if (!is_controller_snapshotclient_connected) {
+			tcpconnect(controller_snapshotclient_tcpsock, switchos_ip, switchos_snapshotserver_port, "controller.snapshotclient", "switchos.snapshotserver");
+			is_controller_snapshotclient_connected = true;
+		}
+
+		memset(sendbuf, 0, MAX_BUFSIZE);
+
+		// send SNAPSHOT_START to switchos
+		memcpy(sendbuf, &SNAPSHOT_START, sizeof(int)); // little-endian
+		tcpsend(controller_snapshotclient_tcpsock, sendbuf, sizeof(int), "controlelr.snapshotclient");
+	}
+
+	close(controller_snapshotclient_tcpsock);
+	pthread_exit(nullptr);
 }
 
 void close_controller() {

@@ -23,12 +23,17 @@
 #include "socket_helper.h"
 #include "message_queue_impl.h"
 
+// ptf scripts used by switchos
+// cache eviction: get_evictdata_setvalid3.sh, remove_cache_lookup.sh
+// cache population: setvalid0.sh, add_cache_lookup_setvalid1.sh
+// snapshot: set_snapshot_flag.sh
+
 typedef Key index_key_t;
 typedef Val val_t;
 
 bool volatile switchos_running = false;
 std::atomic<size_t> switchos_ready_threads(0);
-const size_t switchos_expected_ready_threads = 3;
+const size_t switchos_expected_ready_threads = 4;
 bool volatile switchos_popserver_finish = false;
 
 // Parameters
@@ -40,6 +45,7 @@ const char *reflector_ip_for_switchos = nullptr;
 short reflector_popserver_port = -1;
 const char *controller_ip_for_switchos = nullptr;
 short controller_evictserver_port = -1;
+short switchos_snapshotserver_port = -1;
 
 // Cache population
 
@@ -77,17 +83,28 @@ char * volatile switchos_evictvalbytes = NULL;
 bool volatile switchos_evictstat = false;
 int32_t volatile switchos_evictseq = -1;
 
-const int switchos_get_freeidx = 1; // ptf get freeidx from paramserver
-const int switchos_get_key_freeidx = 2; // ptf get key and freeidx from paramserver
-const int switchos_set_evictinfo = 3; // ptf set evictidx, evictvallen, evictval, evictstat, and evictseq to paramserver
-const int switchos_get_evictkey = 4; // ptf get evictkey
-//const int switchos_get_evictkey_evictidx = 4; // ptf get evictkey and evictidx
+// Packet types used by switchos.paramserver and ptf framework
+const int SWITCHOS_GET_FREEIDX = 1; // ptf get freeidx from paramserver
+const int SWITCHOS_GET_KEY_FREEIDX = 2; // ptf get key and freeidx from paramserver
+const int SWITCHOS_SET_EVICTDATA = 3; // ptf set evictidx, evictvallen, evictval, evictstat, and evictseq to paramserver
+const int SWITCHOS_GET_EVICTKEY = 4; // ptf get evictkey
+//const int SWITCHOS_GET_EVICTKEY_EVICTIDX = 4; // ptf get evictkey and evictidx
+
+// Snapshot
+
+// snapshotserver socket
+int volatile switchos_snapshotserver_tcpsock = -1;
+
+// load cached keyset with atomicity
+bool volatile is_snapshot_prepare = false;
+bool volatile know_snapshot_prepare = false;
 
 inline void parse_ini(const char *config_file);
 void prepare_switchos();
 void *run_switchos_popserver(void *param);
 void *run_switchos_paramserver(void *param);
 void *run_switchos_popworker(void *param);
+void *run_switchos_snapshotserver(void *param);
 void close_switchis();
 
 int main(int argc, char **argv) {
@@ -152,6 +169,7 @@ inline void parse_ini(const char* config_file) {
 	reflector_popserver_port = ini.get_reflector_popserver_port();
 	controller_ip_for_switchos = ini.get_controller_ip_for_switchos();
 	controller_evictserver_port = ini.get_controller_evictserver_port();
+	switchos_snapshotserver_port = ini.get_controller_snapshotserver_port();
 	
 	COUT_VAR(switchos_popserver_port);
 	COUT_VAR(switchos_paramserver_port);
@@ -163,6 +181,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(reflector_popserver_port);
 	printf("controller ip for switchos: %s\n", controller_ip_for_switchos);
 	COUT_VAR(controller_evictserver_port);
+	COUT_VAR(switchos_snapshotserver_port);
 }
 
 void prepare_switchos() {
@@ -186,6 +205,9 @@ void prepare_switchos() {
 	switchos_evictvalbytes = new char[val_t::MAX_VALLEN];
 	INVARIANT(switchos_evictvalbytes != NULL);
 	memset(switchos_evictvalbytes, 0, val_t::MAX_VALLEN);
+
+	// prepare snapshotserver socket
+	prepare_tcpserver(switchos_snapshotserver_tcpsock, false, switchos_snapshotserver_port, 1, "switchos.snapshotserver"); // MAX_PENDING_CONNECTION = 1
 }
 
 void *run_switchos_popserver(void *param) {
@@ -301,14 +323,14 @@ void *run_switchos_paramserver(void *param) {
 		}
 
 		tmp_type = *((int *)buf);
-		if (tmp_type == switchos_get_freeidx) {
+		if (tmp_type == SWITCHOS_GET_FREEIDX) {
 			memset(buf, 0, MAX_BUFSIZE); // use buf as sendbuf
 
 			// ptf get freeidx -> popworker send switchos_freeidx to ptf framework
 			memcpy(buf, (void *)&switchos_freeidx, sizeof(int16_t));
 			udpsendto(switchos_paramserver_udpsock, buf, sizeof(int16_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len, "switchos.paramserver");
 		}
-		else if (tmp_type == switchos_get_key_freeidx) {
+		else if (tmp_type == SWITCHOS_GET_KEY_FREEIDX) {
 			memset(buf, 0, MAX_BUFSIZE); // use buf as sendbuf
 
 			// ptf get key and freeidx -> popworker send key and switchos_freeidx to ptf framework
@@ -316,7 +338,7 @@ void *run_switchos_paramserver(void *param) {
 			memcpy(buf + tmp_keysize, (void *)&switchos_freeidx, sizeof(int16_t));
 			udpsendto(switchos_paramserver_udpsock, buf, tmp_keysize + sizeof(int16_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len, "switchos.paramserver");
 		}
-		else if (tmp_type == switchos_set_evictdata) {
+		else if (tmp_type == SWITCHOS_SET_EVICTDATA) {
 			char *curptr = buf; // continue to use buf as recvbuf
 			curptr += sizeof(int); // skip tmp_type
 
@@ -334,7 +356,7 @@ void *run_switchos_paramserver(void *param) {
 
 			switchos_with_evictdata = true;
 		}
-		else if (tmp_type == switchos_get_evictkey) {
+		else if (tmp_type == SWITCHOS_GET_EVICTKEY) {
 			memset(buf, 0, MAX_BUFSIZE); // use buf as sendbuf
 
 			// ptf get evictkey to remove evicted data from cache_lookup_tbl -> popworker send evictkey to ptf framework
@@ -372,7 +394,10 @@ void *run_switchos_popworker(void *param) {
 		int evictclient_cur_recv_bytes = 0;
 		const int evictclient_arrive_key_bytes = sizeof(int8_t) + sizeof(key_t);
 		cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptr_queue.read();
-		if (tmp_cache_pop_ptr != NULL) {
+		if (is_snapshot_prepare && !know_snapshot_prepare) {
+			know_snapshot_prepare = true;
+		}
+		else if (!is_snapshot_prepare && tmp_cache_pop_ptr != NULL) {
 		//if (switchos_tail_for_pop != switchos_head_for_pop) {
 			if (!is_switchos_popworker_evictclient_connected) {
 				// used by tcp socket for cache eviction
@@ -391,7 +416,7 @@ void *run_switchos_popworker(void *param) {
 			}
 			else { // Without free idx
 				// get evictdata from ptf framework 
-				system("bash tofino/get_evictdata.sh");
+				system("bash tofino/get_evictdata_setvalid3.sh");
 
 				// wait for paramserver to get evictdata
 				while (!switchos_with_evictdata) {}
@@ -466,7 +491,7 @@ void *run_switchos_popworker(void *param) {
 				}
 			}
 			// (1) add new <key, value> pair into cache_lookup_tbl; (2) and set valid=1 to enable the entry
-			system("bash add_cache_lookup_set_valid1.sh");
+			system("bash add_cache_lookup_setvalid1.sh");
 
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;
@@ -493,6 +518,61 @@ void *run_switchos_popworker(void *param) {
 
 	close(switchos_popworker_popclient_udpsock);
 	close(switchos_popworker_evictclient_tcpsock);
+	pthread_exit(nullptr);
+}
+
+void *run_switchos_snapshotserver(void *param) {
+	// Not used
+	struct sockaddr_in controller_addr;
+	unsigned int controller_addr_len = sizeof(struct sockaddr);
+	switchos_ready_threads++;
+
+	while (!switchos_running) {}
+
+	// accept connection from controller.snapshotclient
+	int connfd = -1;
+	tcpaccept(switchos_snapshotserver_tcpsock, NULL, NULL, connfd, "switchos.snapshotserver");
+
+	char recvbuf[MAX_BUFSIZE];
+	int cur_recv_bytes = 0;
+	int phase = 0;
+	int tmptype = -1;
+	// TODO: a large sendbuf
+	while (switchos_running) {
+		int recvsize = 0;
+		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "switchos.snapshotserver");
+		if (is_broken) {
+			break;
+		}
+
+		cur_recv_bytes += recvsize;
+		if (cur_recv_bytes >= MAX_BUFSIZE) {
+			printf("[switchos.snapshotserver] overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
+            exit(-1);
+		}
+
+		if (phase == 0) { // wait for SNAPSHOT_START
+			// Get packet type related with snapshot
+			if (tmptype == -1 && cur_recv_bytes >= sizeof(int)) {
+				tmptype = *((int *)buf);
+				INVARIANT(tmptype == SNAPSHOT_START);
+			}
+
+			// stop cache population/eviction
+			is_snapshot_prepare = true;
+
+			// wait until know_snapshot_prepare = true
+			while (!know_snapshot_prepare) {}
+			// by now, cache population/eviction is temporarily stopped -> snapshotserver can backup cache metadata atomically
+
+			// ptf sets snapshot flag as true atomically
+			system("bash tofino/set_snapshot_flag.sh");
+
+			// TODO: reset metadata for next phase
+		}
+	}
+
+	close(switchos_snapshotserver_tcpsock);
 	pthread_exit(nullptr);
 }
 

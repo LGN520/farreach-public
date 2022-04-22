@@ -37,6 +37,7 @@ class IniparserWrapper {
 		const char *get_controller_ip_for_switchos();
 		short get_controller_popserver_port();
 		short get_controller_evictserver_port();
+		uint32_t get_controller_snapshot_period();
 
 		// reflector
 		const char *get_reflector_ip_for_switchos();
@@ -49,6 +50,7 @@ class IniparserWrapper {
 		short get_switchos_paramserver_port();
 		const char *get_switchos_ip();
 		uint32_t get_switchos_sample_cnt();
+		short get_switchos_snapshotserver_port();
 
 	private:
 		dictionary *ini = nullptr;

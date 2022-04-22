@@ -46,11 +46,20 @@ config = ConfigParser.ConfigParser()
 with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
     config.readfp(f)
 
-switchos_paramserver_port = int(config.get("switch", "switchos_paramserver_port"))
-SWITCHOS_GET_FREEIDX = 1
-SWITCHOS_GET_KEY_FREEIDX = 2
-SWITCHOS_SET_EVICTDATA = 3
-SWITCHOS_GET_EVICTKEY = 4
+ingress_pipeidx = int(config.get("hardware", "ingress_pipeidx"))
+egress_pipeidx = int(config.get("hardware", "egress_pipeidx"))
+
+fp_ports = []
+src_fpport = str(config.get("switch", "src_fpport"))
+fp_ports.append(src_fpport)
+dst_fpport = str(config.get("switch", "dst_fpport"))
+fp_ports.append(dst_fpport)
+
+port_pipeidx_map = {} # mapping between port and pipeline
+pipeidx_ports_map = {} # mapping between pipeline and ports
+
+PUTREQ = 0x01
+DELREQ = 0x02
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
@@ -79,31 +88,35 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         elif re.search("0x2234|0x3234", hex(board_type)):
             self.platform_type = "montara"
 
+        # get the device ports from front panel ports
+        for fpPort in fp_ports:
+            port, chnl = fpPort.split("/")
+            devPort = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+            self.devPorts.append(devPort)
+
+        port_pipeidx_map[self.devPorts[0]] = ingress_pipeidx
+        port_pipeidx_map[self.devPorts[1]] = egress_pipeidx
+        pipeidx_ports_map[ingress_pipeidx] = [self.devPorts[0]]
+        if egress_pipeidx not in pipeidx_ports_map:
+            pipeidx_ports_map[egress_pipeidx] = [self.devPorts[1]]
+        else:
+            if self.devPorts[1] not in pipeidx_ports_map[egress_pipeidx]:
+                pipeidx_ports_map[egress_pipeidx].append(self.devPorts[1])
+
     def runTest(self):
-        print "Get key and freeidx from paramserver"
-        ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sendbuf = struct.pack("=i", SWITCHOS_GET_KEY_FREEIDX) # 4-byte int
-        ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
-        recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
-        # TODO: Check correctness of key
-        keylolo, keylohi, keyhilo, keyhihi, freeidx = struct,unpack("!4I=h", recvbuf)
+        print "Set need_recirculate=1 for iports in different ingress pipelines"
+        for tmppipeidx in pipeidx_ports_map.keys():
+            if tmppipeidx != ingress_pipeidx:
+                tmpports = pipeidx_ports_map[tmppipeidx]
+                for tmpoptype in [PUTREQ, DELREQ]:
+                    for iport in tmpports:
+                        matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
+                                op_hdr_optype = tmpoptype,
+                                ig_intr_md_ingress_port = iport)
+                        self.client.need_recirculate_tbl_table_add_with_set_need_recirculate(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
-        print "Add {},{},{},{} {} into cache_lookup_tbl".format(keyhihi, keyhilo, keylohi, keylolo, freeidx)
-        matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
-                op_hdr_keylolo = keylolo,
-                op_hdr_keylohi = keylohi,
-                op_hdr_keyhilo = keyhilo,
-                op_hdr_keyhihi = keyhihi)
-        actnspec0 = netbufferv4_cached_action_action_spec_t(freeidx)
-        self.client.cache_lookup_tbl_table_add_with_cached_action(\
-                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-
-        # TODO: check API of register set
-        print "Set valid_reg as 1"
-        index = freeidx
-        value = 1
-        flags = netbufferv4_register_flags_t(read_hw_sync=True)
-        self.client.register_set_valid_reg(self.sess_hdl, self.dev_tgt, index, value, flags)
+        # TODO: set snapshot_flag = 1
 
         self.conn_mgr.complete_operations(self.sess_hdl)
         self.conn_mgr.client_cleanup(self.sess_hdl) # close session

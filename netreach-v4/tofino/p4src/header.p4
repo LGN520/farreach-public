@@ -75,10 +75,6 @@ header_type inswitch_t {
 	}
 }
 
-
-
-
-
 header_type seq_t {
 	fields {
 		seq: 32;
@@ -109,6 +105,7 @@ header_type metadata_t {
 		is_hot: 1;
 		clonenum_for_pktloss: 8;
 		is_lastclone_for_pktloss: 1;
+		need_recirculate: 1;
 
 		tmp_sport: 16;
 		tmp_dport: 16;
