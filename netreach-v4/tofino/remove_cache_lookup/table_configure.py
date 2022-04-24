@@ -94,7 +94,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 op_hdr_keylolo = keylolo,
                 op_hdr_keylohi = keylohi,
                 op_hdr_keyhilo = keyhilo,
-                op_hdr_keyhihi = keyhihi)
+                op_hdr_keyhihi = keyhihi,
+                meta_need_recirculate = 0)
         #actnspec0 = netbufferv4_cached_action_action_spec_t(evictidx)
         self.client.cache_lookup_tbl_table_delete_by_match_spec(\
                 self.sess_hdl, self.dev_tgt, matchspec0)

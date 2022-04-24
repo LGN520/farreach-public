@@ -9,11 +9,11 @@ blackbox stateful_alu read_case1_alu {
 	update_lo_1_value: read_bit;
 
 	output_value: alu_lo;
-	output_dst: meta.iscase1;
+	output_dst: meta.is_case1;
 }
 
 action read_case1() {
-	read_case1_alu.execute_stateful_alu(op_hdr.hashidx);
+	read_case1_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
 blackbox stateful_alu try_case1_alu {
@@ -22,27 +22,21 @@ blackbox stateful_alu try_case1_alu {
 	update_lo_1_value: set_bit;
 
 	output_value: alu_lo;
-	output_dst: meta.iscase1;
+	output_dst: meta.is_case1;
 }
 
 action try_case1() {
-	try_case1_alu.execute_stateful_alu(op_hdr.hashidx);
+	try_case1_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
-@pragma stage 8
+@pragma stage 3
 table access_case1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.isvalid: exact;
-		meta.ismatch_keylololo: exact;
-		meta.ismatch_keylolohi: exact;
-		meta.ismatch_keylohilo: exact;
-		meta.ismatch_keylohihi: exact;
-		meta.ismatch_keyhilolo: exact;
-		meta.ismatch_keyhilohi: exact;
-		meta.ismatch_keyhihilo: exact;
-		meta.ismatch_keyhihihi: exact;
-		meta.isbackup: exact;
+		inswitch_hdr.is_cached: exact;
+		meta.valid: exact;
+		meta.is_latest: exact;
+		inswitch_hdr.snapshot_flag: exact;
 	}
 	actions {
 		try_case1;
@@ -50,5 +44,5 @@ table access_case1_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2048;
+	size: 0;
 }

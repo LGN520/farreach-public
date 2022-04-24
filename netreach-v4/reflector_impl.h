@@ -10,9 +10,10 @@ unsigned int volatile reflector_switchos_popworker_addr_len = sizeof(struct sock
 int volatile reflector_popserver_udpsock = -1;
 
 // data plane -> receiver -> (message) -> reflector.dpdkserver -> switchos.popworker
-struct rte_mbuf** volatile reflector_pkts_for_popack; // pkts from receiver to reflector.dpdkserver
-volatile uint32_t reflector_head_for_popack;
-volatile uint32_t reflector_tail_for_popack;
+// for cache population ack and special cases of snapshot
+struct rte_mbuf** volatile reflector_pkts_for_popack_snapshot; // pkts from receiver to reflector.dpdkserver
+volatile uint32_t reflector_head_for_popack_snapshot;
+volatile uint32_t reflector_tail_for_popack_snapshot;
 int volatile reflector_dpdkserver_popclient_udpsock = -1;
 
 void prepare_reflector();
@@ -25,12 +26,12 @@ void prepare_reflector() {
 	prepare_udpserver(reflector_popserver_udpsock, true, reflector_popserver_port, "reflector.popserver");
 
 	// From receiver to reflector.dpdkserver
-	reflector_pkts_for_popack = new struct rte_mbuf*[MQ_SIZE];
+	reflector_pkts_for_popack_snapshot = new struct rte_mbuf*[MQ_SIZE];
 	for (size_t j = 0; j < MQ_SIZE; j++) {
-		reflector_pkts_for_popack[i][j] = nullptr;
+		reflector_pkts_for_popack_snapshot[i][j] = nullptr;
 	}
-	reflector_head_for_popack = 0;
-	reflector_tail_for_popack = 0;
+	reflector_head_for_popack_snapshot = 0;
+	reflector_tail_for_popack_snapshot = 0;
 	create_udpsock(reflector_dpdkserver_popclient_udpsock, "reflector.dpdkserver.popclient");
 }
 
@@ -95,16 +96,29 @@ void *run_reflector_dpdkserver() {
 	}
 
 	while(running) {
-		if (reflector_tail_for_popack != reflector_head_for_popack) {
+		if (reflector_tail_for_popack_snapshot != reflector_head_for_popack_snapshot) {
 			INVARIANT(reflector_with_switchos_popworker_addr);
-			recvsize = get_payload(reflector_pkts_for_popack[reflector_tail_for_popack], buf);
-			// send CACHE_POP_INSWITCH_ACK to switchos.popworker
-			int sendsize = 0;
-			udpsendto(reflector_dpdkserver_popclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, sendsize, "reflector.dpdkserver.popclient");
+			recvsize = get_payload(reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot], buf);
 
-			rte_pktmbuf_free(reflector_pkts_for_popack[reflector_tail_for_popack]);
-			reflector_pkts_for_popack[reflector_tail_for_popack] = nullptr;
-			reflector_tail_for_popack = (reflector_tail_for_popack + 1) % MQ_SIZE;
+			packet_type_t pkt_type = get_packet_type(buf, recv_size);
+			switch (pkt_type) {
+				case packet_type_t::CACHE_POP_INSWITCH_ACK:
+					{
+						// send CACHE_POP_INSWITCH_ACK to switchos.popworker
+						// NOTE: not use popserver.popclient due to duplicate packets for packet loss issued by switch
+						udpsendto(reflector_dpdkserver_popclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, "reflector.dpdkserver.popclient");
+						break;
+					}
+				case packet_type_t::GETRES_LATEST_SEQ_CASE1:
+				case packet_type_t::GETRES_DELETED_SEQ_CASE1:
+					{
+						// TODO: send CASE1 to switchos.specialcaseserver
+					}
+			}
+
+			rte_pktmbuf_free(reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot]);
+			reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot] = nullptr;
+			reflector_tail_for_popack_snapshot = (reflector_tail_for_popack_snapshot + 1) % MQ_SIZE;
 		}
 	}
 
@@ -114,9 +128,9 @@ void *run_reflector_dpdkserver() {
 
 void close_reflector() {
 	for (size_t i = 0; i < MQ_SIZE; i++) {
-		if (reflector_pkts_for_popack[i] != nullptr) {
-			rte_pktmbuf_free(reflector_pkts_for_popack[i]);
-			reflector_pkts_for_popack[i] = nullptr;
+		if (reflector_pkts_for_popack_snapshot[i] != nullptr) {
+			rte_pktmbuf_free(reflector_pkts_for_popack_snapshot[i]);
+			reflector_pkts_for_popack_snapshot[i] = nullptr;
 		}
 	}
 }

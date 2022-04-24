@@ -48,6 +48,7 @@
 			- recirculate_tbl (optype, need_recirculate; recirculate to the same ingress pipeline)
 				+ optype: PUTREQ, DELREQ
 		* Stage 1 (need_recirculate == 0)
+			- snapshot_flag_Tbl (optype -> snapshot_flag)
 			- sid_tbl (optype, ingress port -> eport_for_res, sid)
 				+ optype: GETREQ, PUTREQ, DELREQ
 				+ sid: used by egress pipeline to generate response by packet mirroring
@@ -73,6 +74,7 @@
 			- hash_partition_tbl or range_partition_tbl
 				- Hash partition: (optype, hashval range, ingress port -> udp.dstPort, egress port, is_wrong_pipeline)
 					+ optype: GETREQ, PUTREQ, DELREQ
+					+ NOTE: PARTITION_COUNT (for consistent hashing) is independent with KV_BUCKET_COUNT
 					+ TODO: Check why we need the param of 0 for MAT with range matching
 				- TODO: range partition: (optype, key range, ingress port -> udp.dstPort, egress port)
 					+ optype: GETREQ, PUTREQ, DELREQ, SCANREQ
@@ -98,7 +100,7 @@
 				+ NOTE: CM_BUCKET_COUNT is independent with KV_BUCKET_COUNT
 				+ NOTE: we resort to server to notify controller to avoid in-switch BF; NetCache directly reports to server yet with BF
 			- TODO: is_snapshot_tbl (optype -> is_snapshot)
-		* Stage 1 (4 ALU)
+		* Stage 1 (3 ALU)
 			- is_hot_tbl (cm_predicates -> meta.is_hot)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
 				+ Reduce 4 cm_predicates into 1 meta.is_hot to reduce TCAM usage
@@ -115,17 +117,16 @@
 					- TODO: valid=0: ignore the entry (treat it as uncached)
 					- TODO: valid=1: conservative get, cached get, put/del, evict, snapshot
 					- TODO: valid=3: get cache only if latest=1, put/del set latest=0 and forward to server (maybe case3)
-			- TODO: seq (optype -> seq)
+			- seq (optype -> seq)
 				+ optype: PUTREQ_INSIWTCH, DELREQ_INSWITCH
 				+ NOTE: SEQ_BUCKET_COUNT is independent with KV_BUCKET_COUNT
 				+ NOTE: we need seq mechaism to avoid unnecessary overwrite caused by cache eviction
-			- TODO: case1 (optype, is_cached, idx, is_snapshot -> is_case1)
 		* Stage 2 (1 ALU)
 			- latest_tbl (optype, is_cached, idx, valid -> is_latest)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH
 				+ NOTE: latest=0 means no PUTREQ/DELREQ/GETRES_LATEST_SEQ/GETRES_DELETED_SEQ arrive at switch
 				+ NOTE: even with seq mechanism, we still need latest_tbl for GETRES_LATEST_SEQ/GETRES_DELETED_SEQ 
-		* Stage 3 (3 ALU)
+		* Stage 3 (4 ALU)
 			- deleted_tbl (optype, is_cached, idx, valid, is_latest -> is_deleted)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH
 			- vallen (optype, is_cached, idx, valid, is_latest -> vallen_hdr)
@@ -134,6 +135,8 @@
 			- savedseq (optype, is_cached, idx, seq, valid, is_latest -> savedseq)
 				+ optype: PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH
 				+ NOTE: we assume that there is no reordering between spine and leaf switch due to a single FIFO channel
+			- TODO: case1 (optype, is_cached, valid, is_latest, snapshot_flag, idx -> is_case1)
+				+ optype: PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH
 		* Stage 4-9 (4 ALU)
 			- From vallo1 to valhi12 (optype, is_cached, idx, valid, is_latest -> val_hdr)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
@@ -231,14 +234,17 @@
 			* NOTE: all cached records at the snapshot timepoint should have valid=1
 		* snapshotserver.ptf sets snapshot_flag=true w/ atomicity
 			* snapshotserver.ptf sets need_recirculate=true to enforce all traffic of other pipelines to enter the same ingress pipeline
-			* TODO: snapshotserver.ptf sets snapshot_flag=true to notify data plane the beginning of snapshot
-			* TODO: snapshotserver.ptf sets need_recirculate=false to disable recirculation asap to mitigate thpt degradation
+			* snapshotserver.ptf sets snapshot_flag=true to notify data plane the beginning of snapshot
+			* snapshotserver.ptf sets need_recirculate=false to disable recirculation asap to mitigate thpt degradation
 				- As the duration for atomicity is very small compared with snapshot period, it should be acceptable
 				- TODO: Test the duration based on time difference between comment and uncomment
 				- NOTE: snapshot timepoint is that of setting the snapshot_flag of the enforced ingress pipeline as true
 			* Data plane reports case1 to switchos for in-switch value update
-				* TODO: GETRES_LATEST_SEQ_CASE1, GETRES_DELETED_SEQ_CASE1, PUTREQ_CASE1, DELREQ_CASE1
-				* FUTURE: PUTREQ_CASE1/DELREQ_CASE1 need to embed status_hdr.valid as valid could be 2 (temporarilly invalid for PUTREQ_LARGE); GETRES_LATEST/DELETED_SEQ_CASE1 do not need as valid must be 1 if with value update
+				* GETRES_LATEST_SEQ_CASE1, TODO: GETRES_DELETED_SEQ_CASE1, PUTREQ_CASE1, DELREQ_CASE1
+				* FUTURE: PUTREQ_CASE1/DELREQ_CASE1 need to embed meta.valid as valid could be 2 (temporarilly invalid for PUTREQ_LARGE); GETRES_LATEST/DELETED_SEQ_CASE1 do not need as valid must be 1 if with value update
+			* Data plane reports case3 to server for in-memory snapshot
+				* TODO: PUTREQ_SEQ_CASE3, DELREQ_SEQ_CASE3
+				* FUTURE: PUTREQ_LARGE_SEQ_CASE3
 		* TODO: snapshotserver backups metadata, i.e., key and serveridx for each cache entry
 			- It is atomic as cache population/eviction is temporarily stopped now
 			- NOTE: each entry should appear in the final crash-consistent snapshot with the correct key
@@ -327,10 +333,19 @@
 		* GETRES_LATEST_SEQ -> GETRES_LATEST_SEQ_INSWITCH (is_cached, idx)
 		* ipv4_forward_tbl -> forward GETRES_LATEST_SEQ_INSWITCH to pipeline of ingress port; clone GETRES_LATEST_SEQ to pipeline of client for GETRES 
 	+ Egress
-		* If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
+		* If inswitch_hdr.is_cached=1 and meta.valid=1 and meta.is_latest=0
 			+ Set latest=1, delete=0, update savedseq, update vallen and value
-		* Drop original packet, forwrad cloned packet (i2e) to client
+			+ If snapshot_flag=1, try to set case1 and load original case1 into is_case1
+		* For original packet
+			+ If is_cached=1, valid=1, is_latest=0, snapshot_flag=1, and is_case1=0, send duplicate GETRES_LATEST_SEQ_CASE1 to switch os by reflector
+			+ Otherwise, drop the original packet
+		* For cloned packet (i2e), forward it to client
 			+ TODO: Check if we need to set eg_intr_md.egress_port for cloned packet (i2e)
+- GETRES_LATEST_SEQ_CASE1
+	+ Egress pipeline
+		* Access lastclone_tbl to update is_lastclone_for_pktloss
+		* If is_lastclone_for_pktloss = 0, decrease clonenum_for_pktloss, forward to reflector, and clone again
+		* Otherwise, only forward to reflector
 - GETRES_DELETED_SEQ
 	+ Server sends GETRES_DELETED_SEQ
 	+ Ingress: 
@@ -510,7 +525,7 @@
 						- TODO: valid=3: cached get only if latest=1, put/del/largeput set latest=0 and forward to server (maybe case3)
 					* Snapshot
 						- TODO: For those with valid=2, controller remembers the records recently evicted by PUTREQ_LARGE; if server does not have a large value with larger seq (due to packet loss), place the records back into in-switch snapshot
-				+ FUTURE: PUTREQ_LARGE_EVICT_CASE1 does not need to embed status_hdr.valid as valid must be 1 (w/o eviction if invalid); but embed is also ok if limited by parser
+				+ FUTURE: PUTREQ_LARGE_EVICT_CASE1 does not need to embed meta.valid as valid must be 1 (w/o eviction if invalid); but embed is also ok if limited by parser
 			- seq (optype -> seq)
 				+ TODO: we need seq mechaism to avoid unnecessary overwrite caused by eviction of PUTREQ_LARGE or cache eviction
 		* Stage 2 (4 ALU)

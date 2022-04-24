@@ -116,7 +116,28 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.need_recirculate_tbl_table_add_with_set_need_recirculate(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-        # TODO: set snapshot_flag = 1
+        print "Set snapshot_flag=1 for all ingress pipelines"
+        for tmpoptype in [PUTREQ, DELREQ]:
+            matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
+                    op_hdr_optype = tmpoptype,
+                    meta_need_recirculate = 0)
+            #self.client.snapshot_flag_tbl_table_delete_by_match_spec(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0)
+            self.client.snapshot_flag_tbl_table_add_with_set_snapshot_flag(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+
+        # TODO: check API for delete_all_entries or modify_by_match_spec 
+        print "Reset need_recirculate=0 for iports in different ingress pipelines"
+        for tmppipeidx in pipeidx_ports_map.keys():
+            if tmppipeidx != ingress_pipeidx:
+                tmpports = pipeidx_ports_map[tmppipeidx]
+                for tmpoptype in [PUTREQ, DELREQ]:
+                    for iport in tmpports:
+                        matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
+                                op_hdr_optype = tmpoptype,
+                                ig_intr_md_ingress_port = iport)
+                        self.client.need_recirculate_tbl_table_delete_by_match_spec(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
         self.conn_mgr.client_cleanup(self.sess_hdl) # close session

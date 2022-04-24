@@ -9,7 +9,7 @@ blackbox stateful_alu get_deleted_alu {
 	update_lo_1_value: read_bit;
 
 	output_value: alu_lo;
-	output_dst: status_hdr.is_deleted;
+	output_dst: meta.is_deleted;
 }
 
 action get_deleted() {
@@ -22,7 +22,7 @@ blackbox stateful_alu set_and_get_deleted_alu {
 	update_lo_1_value: set_bit;
 
 	output_value: alu_lo;
-	output_dst: status_hdr.is_deleted;
+	output_dst: meta.is_deleted;
 }
 
 action set_and_get_deleted() {
@@ -35,7 +35,7 @@ blackbox stateful_alu reset_and_get_deleted_alu {
 	update_lo_1_value: clr_bit;
 
 	output_value: alu_lo;
-	output_dst: status_hdr.is_deleted;
+	output_dst: meta.is_deleted;
 }
 
 action reset_and_get_deleted() {
@@ -47,8 +47,8 @@ table access_deleted_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		status_hdr.valid: exact;
-		status_hdr.is_latest: exact;
+		meta.valid: exact;
+		meta.is_latest: exact;
 	}
 	actions {
 		get_deleted;

@@ -9,7 +9,7 @@ blackbox stateful_alu get_latest_alu {
 	update_lo_1_value: read_bit;
 
 	output_value: alu_lo;
-	output_dst: status_hdr.is_latest;
+	output_dst: meta.is_latest;
 }
 
 action get_latest() {
@@ -22,7 +22,7 @@ blackbox stateful_alu set_and_get_latest_alu {
 	update_lo_1_value: set_bit;
 
 	output_value: alu_lo;
-	output_dst: status_hdr.is_latest;
+	output_dst: meta.is_latest;
 }
 
 action set_and_get_latest() {
@@ -36,7 +36,7 @@ blackbox stateful_alu reset_and_get_latest_alu {
 	update_lo_1_value: clr_bit;
 
 	output_value: alu_lo;
-	output_dst: status_hdr.is_latest;
+	output_dst: meta.is_latest;
 }
 
 action reset_and_get_latest() {
@@ -48,7 +48,7 @@ table access_latest_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		status_hdr.valid: exact;
+		meta.valid: exact;
 	}
 	actions {
 		get_latest;

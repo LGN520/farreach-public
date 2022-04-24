@@ -62,13 +62,14 @@ header_type val_t {
 // NOTE: inswicth_t affects CACHE_POP_INSWITCH in end-hosts
 header_type inswitch_t {
 	fields {
+		snapshot_flag: 1;
 		is_cached: 1;
 		is_sampled: 1;
 		is_wrong_pipeline: 1;
 		eport_for_res: 9;
 		sid: 9;
 		hashval_for_cm: 17; // at most 64K
-		padding: 2;
+		padding: 1;
 		hashval_for_partition: 16; // at most 32K
 		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
@@ -87,25 +88,29 @@ header_type result_t {
 	}
 }
 
-header_type status_t {
+/*header_type status_t {
 	fields {
 		valid: 8; // if the entry is valid
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		padding: 6;
 	}
-}
+}*/
 
 header_type metadata_t {
 	fields {
+		need_recirculate: 1;
 		cm1_predicate: 4;
 		cm2_predicate: 4;
 		cm3_predicate: 4;
 		cm4_predicate: 4;
 		is_hot: 1;
+		valid: 8; // if the entry is valid
+		is_latest: 1; // if the entry is latest
+		is_deleted: 1; // if the entry is deleted
+		is_case1: 1;
 		clonenum_for_pktloss: 8;
 		is_lastclone_for_pktloss: 1;
-		need_recirculate: 1;
 
 		tmp_sport: 16;
 		tmp_dport: 16;
@@ -146,5 +151,5 @@ header val_t val16_hdr;
 header result_t result_hdr;
 header seq_t seq_hdr;
 header inswitch_t inswitch_hdr;
-header status_t status_hdr;
+//header status_t status_hdr;
 metadata metadata_t meta;

@@ -696,10 +696,10 @@ static int run_receiver(void *param) {
 				}
 				else {
 					packet_type_t optype = packet_type_t(get_optype(received_pkts[i]));
-					if (optype == packet_type_t::CACHE_POP_INSWITCH_ACK) {
-						if (((reflector_head_for_popack + 1) % MQ_SIZE) != reflector_tail_for_popack) {
-							reflector_pkts_for_popack[reflector_head_for_popack] = received_pkts[i];
-							reflector_head_for_popack = (reflector_head_for_popack + 1) % MQ_SIZE;
+					if (optype == packet_type_t::CACHE_POP_INSWITCH_ACK || optype == packet_type_t::GETRES_LATEST_SEQ_CASE1) {
+						if (((reflector_head_for_popack_snapshot + 1) % MQ_SIZE) != reflector_tail_for_popack_snapshot) {
+							reflector_pkts_for_popack_snapshot[reflector_head_for_popack_snapshot] = received_pkts[i];
+							reflector_head_for_popack_snapshot = (reflector_head_for_popack_snapshot + 1) % MQ_SIZE;
 						}
 					}
 

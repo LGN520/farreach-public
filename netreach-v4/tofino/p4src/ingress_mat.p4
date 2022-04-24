@@ -21,9 +21,8 @@ table need_recirculate_tbl {
 	actions {
 		set_need_recirculate;
 		reset_need_recirculate;
-		nop;
 	}
-	default_action: nop();
+	default_action: reset_need_recirculate();
 	size: 16;
 }
 
@@ -48,6 +47,28 @@ table recirculate_tbl {
 }
 
 // Stage 1
+
+action set_snapshot_flag() {
+	modify_field(inswitch_hdr.snapshot_flag, 1);
+}
+
+action reset_snapshot_flag() {
+	modify_field(inswitch_hdr.snapshot_flag, 0);
+}
+
+@pragma stage 1
+table snapshot_flag_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		set_snapshot_flag;
+		reset_snapshot_flag;
+	}
+	default_action: reset_snapshot_flag();
+	size: 2;
+}
 
 action set_sid(sid) {
 	modify_field(inswitch_hdr.sid, sid);

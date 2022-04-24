@@ -193,6 +193,30 @@ action update_getres_latest_seq_to_getres() {
 	add_header(result_hdr);
 }
 
+field_list clone_field_list {
+	meta.clonenum_for_pktloss: exact;
+}
+
+action update_getres_latest_seq_inswitch_to_getres_latest_seq_case1_clone_for_pktloss(sid, port) {
+	modify_field(op_hdr.optype, GETRES_LATEST_SEQ_CASE1);
+	modify_field(result_hdr.result, status_hdr.is_deleted);
+	modify_field(meta.clonenum_for_pktloss, 1); // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone)
+
+	add_header(result_hdr);
+
+	modify_field(eg_intr_md.egress_port, port); // set eport to switchos
+	clone_egress_pkt_to_egress(sid, clone_field_list);
+}
+
+action forward_getres_latest_seq_case1_clone_for_pktloss(sid) {
+	subtract_from_field(meta.clonenum_for_pktloss, 1);
+
+	clone_egress_pkt_to_egress(sid, clone_field_list);
+}
+
+action forward_getres_latest_seq_case1() {
+}
+
 action drop_getres_latest_seq_inswitch() {
 	drop();
 }
@@ -207,10 +231,6 @@ action update_getres_deleted_seq_to_getres() {
 
 action drop_getres_deleted_seq_inswitch() {
 	drop();
-}
-
-field_list clone_field_list {
-	meta.clonenum_for_pktloss: exact;
 }
 
 action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(sid) {
@@ -237,6 +257,7 @@ action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(sid
 	remove_header(seq_hdr);
 	remove_header(inswitch_hdr);
 
+	modify_field(eg_intr_md.egress_port, port); // set eport to switchos
 	clone_egress_pkt_to_egress(sid, clone_field_list);
 }
 
@@ -357,11 +378,13 @@ table eg_port_forward_tbl {
 		op_hdr_optype: exact;
 		inswitch_hdr.is_cached: exact;
 		meta.is_hot: exact;
-		status_hdr.valid: exact;
-		status_hdr.is_latest: exact;
-		status_hdr.is_deleted: exact;
+		meta.valid: exact;
+		meta.is_latest: exact;
+		meta.is_deleted: exact;
 		inswitch_hdr.is_wrong_pipeline: exact;
 		meta.is_lastclone_for_pktloss: exact;
+		meta.snapshot_flag: exact;
+		meta.is_case1: exact;
 	}
 	actions {
 		update_getreq_inswitch_to_getreq;
@@ -372,7 +395,10 @@ table eg_port_forward_tbl {
 		update_getreq_inswitch_to_getres;
 		update_getreq_inswitch_to_getres_by_mirroring;
 		update_getres_latest_seq_to_getres; // GETRES_LATEST_SEQ must be cloned from ingress to egress
-		drop_getres_latest_seq_inswitch; // original packet of GETRES_LATEST_SEQ
+		update_getres_latest_seq_inswitch_to_getres_latest_seq_case1_clone_for_pktloss; // original packet of GETRES_LATEST_SEQ -> first GETRES_LATEST_SEQ_CASE1
+		drop_getres_latest_seq_inswitch; // drop original packet of GETRES_LATEST_SEQ
+		forward_getres_latest_seq_case1_clone_for_pktloss; // not last clone of GETRES_LATEST_SEQ_CASE1
+		forward_getres_latest_seq_case1; // last clone of GETRES_LATEST_SEQ_CASE1
 		update_getres_deleted_seq_to_getres; // GETRES_DELETED_SEQ must be cloned from ingress to egress
 		drop_getres_deleted_seq_inswitch; // original packet of GETRES_DELETED_SEQ
 		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss; // first CACHE_POP_INSWITCH_ACK

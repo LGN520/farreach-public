@@ -9,7 +9,7 @@ blackbox stateful_alu get_valid_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: status_hdr.valid;
+	output_dst: meta.valid;
 }
 
 action get_valid() {
@@ -28,7 +28,7 @@ blackbox stateful_alu set_and_get_valid_alu {
 	update_lo_2_value: register_lo;
 
 	output_value: register_lo; // 0/1/3: keep original; 2: change to 1
-	output_dst: status_hdr.valid;
+	output_dst: meta.valid;
 }
 
 action set_and_get_valid() {
@@ -47,7 +47,7 @@ blackbox stateful_alu reset_and_get_valid_alu {
 	update_lo_2_value: register_lo;
 
 	output_value: register_lo; // 0/2/3: keep original; 1: change to 2
-	output_dst: status_hdr.valid;
+	output_dst: meta.valid;
 }
 
 action reset_and_get_valid() {

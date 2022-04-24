@@ -425,7 +425,7 @@ void *run_switchos_popworker(void *param) {
 				INVARIANT(switchos_evictidx >= 0 && switchos_evictidx < switchos_kv_bucket_num);
 				cache_evict_t tmp_cache_evict(switchos_cached_keyarray(switchos_evictidx), \
 						val_t(switchos_evictvalbytes, switchos_evictvallen), \
-						switchos_evictstat, switchos_evictseq, \
+						switchos_evictseq, switchos_evictstat, \
 						switchos_cached_serveridxarray(switchos_evictidx))
 				pktsize = tmp_cache_evict.serialize(pktbuf, MAX_BUFSIZE);
 				tcpsend(switchos_popworker_evictclient_tcpsock, pktbuf, pktsize, "switchos.popworker.evictclient");

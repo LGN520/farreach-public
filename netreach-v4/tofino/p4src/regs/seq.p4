@@ -58,8 +58,8 @@ table access_savedseq_tbl {
 	reads {
 		op_hdr_optype: exact;
 		inswitch_hdr.is_cached: exact;
-		status_hdr.valid: exact;
-		status_hdr.is_latest: exact;
+		meta.valid: exact;
+		meta.is_latest: exact;
 	}
 	actions {
 		set_and_get_savedseq;

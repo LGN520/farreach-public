@@ -16,17 +16,19 @@
 #define GETREQ_POP 0x09
 #define GETREQ_NLATEST 0x0a
 #define GETRES_LATEST_SEQ 0x0b
-#define GETRES_DELETED_SEQ 0x0c
-#define GETRES_LATEST_SEQ_INSWITCH 0x0d
-#define GETRES_DELETED_SEQ_INSWITCH 0x0e
-#define PUTREQ_INSWITCH 0x0f
-#define PUTREQ_SEQ 0x10
-#define PUTREQ_POP_SEQ 0x11
-#define DELREQ_INSWITCH 0x12
-#define DELREQ_SEQ 0x13
-#define CACHE_POP 0x14
-#define CACHE_POP_INSWITCH 0x15
-#define CACHE_POP_INSWITCH_ACK 0x16
+#define GETRES_LATEST_SEQ_INSWITCH 0x0c
+#define GETRES_LATEST_SEQ_CASE1 0x0d
+#define GETRES_DELETED_SEQ 0x0e
+#define GETRES_DELETED_SEQ_INSWITCH 0x0f
+#define GETRES_DELETED_SEQ_CASE1 0x10
+#define PUTREQ_INSWITCH 0x11
+#define PUTREQ_SEQ 0x12
+#define PUTREQ_POP_SEQ 0x13
+#define DELREQ_INSWITCH 0x14
+#define DELREQ_SEQ 0x15
+#define CACHE_POP 0x16
+#define CACHE_POP_INSWITCH 0x17
+#define CACHE_POP_INSWITCH_ACK 0x18
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)
@@ -101,6 +103,7 @@ control ingress {
 	/* else if meta.need_recirculate == 0 */
 
 	// Stage 1
+	apply(snapshot_flag_tbl); // update snapshot_flag
 	apply(sid_tbl); // set sid corresponding to ingress port
 	apply(cache_lookup_tbl); // managed by controller
 	apply(hash_for_partition_tbl); // for partition
@@ -141,6 +144,7 @@ control egress {
 	apply(access_deleted_tbl);
 	apply(update_vallen_tbl);
 	apply(access_savedseq_tbl);
+	apply(access_case1_tbl);
 
 	// Stage 4-9
 	apply(update_vallo1_tbl);
