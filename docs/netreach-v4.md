@@ -225,12 +225,16 @@
 				+ Invoke cache population for new CACHE_POP
 		* Switch os: popworker resets intermediate data of paramserver after population/eviction
 	+ Snapshot
+		* NOTE
+			- We need to finish current cache population/eviction before backuping cache metadata -> popworker_know_snapshot_prepare
+			- We need to finish case1 & case2 before rollback -> popworker_know_snapshot_end & specialcaseserver_know_snapshot_end
+				+ case1 between is_snapshot_prepare=true and is_snapshot=false are cached into udp recv buffer
 		* Receive SNAPSHOT_START from controller 
 		* snapshotserver stops cache population/eviction
 			* snapshotserver sets is_snapshot_prepare=true such that popworker will be stopped temporarily
-			* popworker sets know_snapshot_prepare=true if is_snapshot_prepare=true and know_snapshot_prepare=false
+			* popworker sets popworker_know_snapshot_prepare=true if is_snapshot_prepare=true and popworker_know_snapshot_prepare=false
 				- If is_snapshot_prepare=false w/ cache population from controller.popclient, popworker performs cache population
-			* snapshotserver waits until know_snapshot_prepare=true
+			* snapshotserver waits until popworker_know_snapshot_prepare=true
 			* NOTE: all cached records at the snapshot timepoint should have valid=1
 		* snapshotserver.ptf sets snapshot_flag=true w/ atomicity
 			* snapshotserver.ptf sets need_recirculate=true to enforce all traffic of other pipelines to enter the same ingress pipeline
@@ -252,7 +256,7 @@
 			- TODO: snapshotserver sets is_snapshot=true to remember cache eviction as case2 for snapshot
 			- TODO: snapshotserver sets is_snapshot_prepare=false to resume cache population and eviction
 				+ NOTE: now popworker knows is_snapshot=true, which will report case2 for snapshot
-			- TODO: snapshotserver sets know_snapshot_prepare=false to reset for next snapshot
+			- TODO: snapshotserver sets popworker_know_snapshot_prepare=false to reset for next snapshot
 			- Cache population will insert a new key-vaule record into an empty entry (valid=0/1)
 				+ TODO: snapshotserver ignores valid=0, or valid=1 yet idx is not used in backup metadata
 			- Cache eviction will evict an old key-value record (valid=1/3/0/1)
@@ -276,10 +280,11 @@
 		* snapshotserver ensures that popworker knows the end of snapshot (all case2 have been collected)
 			- TODO: snapshotserver resets is_snapshot=false such that no subsequent evicted data as case2
 			- TODO: snapshotserver sets is_snapshot_end=true
-			- TODO: popworker sets know_snapshot_end=true if is_snapshot_end=true and know_snapshot_end=false (at the end of loop)
-			- TODO: snapshotserver waits until know_snapshot_end=true
-			- TODO: snapshotserver resets is_snapshot_end=false -> know_snapshot_end=true
-		* TODO: snapshotserver performs rollback to get a crash-consistent snapshot
+			- TODO: popworker sets popworkerknow_snapshot_end=true if is_snapshot_end=true and popworker_know_snapshot_end=false (at the end of loop)
+			- specialcaseserver sets specialcaseserver_know_snapshot_end=true if is_snapshot_end=true and specialcaseserver_know_snapshot_end=false
+			- TODO: snapshotserver waits until popworker_know_snapshot_end=true and specialcasesever_know_snapshot_end=true
+			- TODO: snapshotserver resets is_snapshot_end=false -> popworker_know_snapshot_end=false and specialcaseserver_know_snapshot_end=false
+		* TODO: snapshotserver performs rollback to get a crash-consistent snapshot, and resets specialcases
 		* TODO: snapshotserver sends each cached record to corresponding server based on serveridx
 		* TODO: snapshotserver acknowledges controller.snapshotclient
 		* TODOTODO: If with ptf session limitation, we can place snapshot flag in SRAM; load values and reset registers by data plane;

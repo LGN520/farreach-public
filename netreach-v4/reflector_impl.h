@@ -16,6 +16,9 @@ volatile uint32_t reflector_head_for_popack_snapshot;
 volatile uint32_t reflector_tail_for_popack_snapshot;
 int volatile reflector_dpdkserver_popclient_udpsock = -1;
 
+// reflector.dpdkserver -> switchos.specialcaseserver
+int volatile reflector_dpdkserver_specialcaseclient_udpsock = -1;
+
 void prepare_reflector();
 void *run_reflector_popserver(void *param);
 void *run_reflector_dpdkserver(void *param);
@@ -33,6 +36,8 @@ void prepare_reflector() {
 	reflector_head_for_popack_snapshot = 0;
 	reflector_tail_for_popack_snapshot = 0;
 	create_udpsock(reflector_dpdkserver_popclient_udpsock, "reflector.dpdkserver.popclient");
+
+	create_udpsock(reflector_dpdkserver_specialcaseclient_udpsock, "reflector.dpdkserver.specialcaseclient");
 }
 
 void *run_reflector_popserver(void *param) {
@@ -92,6 +97,10 @@ void *run_reflector_dpdkserver() {
 	char buf[MAX_BUFSIZE];
 	uint32_t recvsize = 0;
 
+	struct sockaddr_in volatile reflector_switchos_specialcaseserver_addr;
+	set_sockaddr(reflector_switchos_specialcaseserver_addr, inet_addr(switchos_ip), switchos_specialcaseserver_port);
+	unsigned int volatile reflector_switchos_specialcaseserver_addr_len = sizeof(struct sockaddr);
+
 	while (!running) {
 	}
 
@@ -112,7 +121,9 @@ void *run_reflector_dpdkserver() {
 				case packet_type_t::GETRES_LATEST_SEQ_CASE1:
 				case packet_type_t::GETRES_DELETED_SEQ_CASE1:
 					{
-						// TODO: send CASE1 to switchos.specialcaseserver
+						// send CASE1 to switchos.specialcaseserver
+						udpsendto(reflector_dpdkserver_specialcaseclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_specialcaseserver_addr, reflector_switchos_specialcaseserver_addr_len, "reflector.dpdkserver.specialcaseclient");
+						break;
 					}
 			}
 

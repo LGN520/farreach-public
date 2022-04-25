@@ -51,6 +51,7 @@ class IniparserWrapper {
 		const char *get_switchos_ip();
 		uint32_t get_switchos_sample_cnt();
 		short get_switchos_snapshotserver_port();
+		short get_switchos_specialcaseserver_port();
 
 	private:
 		dictionary *ini = nullptr;

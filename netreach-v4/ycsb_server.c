@@ -26,7 +26,6 @@
 #include "iniparser/iniparser_wrapper.h"
 #include "ycsb/parser.h"
 #include "backup_data.h"
-#include "special_case.h"
 #include "deleted_set_impl.h"
 #include "socket_helper.h"
 
@@ -57,7 +56,6 @@ typedef TcpServerParam tcpserver_param_t;
 
 
 typedef BackupData backup_data_t;
-typedef SpecialCase special_case_t;
 typedef DeletedSet deleted_set_t;
 typedef LoadSFGParam load_sfg_param_t;
 //typedef ReceiverParam receiver_param_t;
@@ -111,8 +109,6 @@ void parse_kv(const char* data_buf, unsigned int data_size, unsigned int expecte
 void rollback(backup_data_t *new_backup_data);
 backup_data_t * volatile backup_data = nullptr;
 uint32_t* volatile backup_rcu;
-//std::map<unsigned short, special_case_t> **special_cases_list = nullptr; // per-thread special cases for each worker
-std::map<unsigned short, special_case_t> *special_cases = nullptr; // one-thread special cases for switch os simulator
 bool volatile isbackup = false; // TODO: it should be atomic
 std::atomic_flag is_kvsnapshot = ATOMIC_FLAG_INIT;
 void try_kvsnapshot(xindex_t *table);
@@ -151,14 +147,6 @@ int main(int argc, char **argv) {
   parse_ini("config.ini");
   //parse_args(argc, argv);
   //xindex::init_options(); // init options of rocksdb
-
-  // Prepare per-server special cases
-  /*special_cases_list = new std::map<unsigned short, special_case_t> *[server_num];
-  for (size_t i = 0; i < server_num; i++) {
-	special_cases_list[i] = new std::map<unsigned short, special_case_t>;
-  }*/
-  // Prepare one-thread special cases
-  special_cases = new std::map<unsigned short, special_case_t>; 
 
   // Prepare switch os simulator for packet loss
   prepare_for_pktloss();
