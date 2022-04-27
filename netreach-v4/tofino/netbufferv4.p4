@@ -17,18 +17,23 @@
 #define GETREQ_NLATEST 0x0a
 #define GETRES_LATEST_SEQ 0x0b
 #define GETRES_LATEST_SEQ_INSWITCH 0x0c
-#define GETRES_LATEST_SEQ_CASE1 0x0d
+#define GETRES_LATEST_SEQ_INSWITCH_CASE1 0x0d
 #define GETRES_DELETED_SEQ 0x0e
 #define GETRES_DELETED_SEQ_INSWITCH 0x0f
-#define GETRES_DELETED_SEQ_CASE1 0x10
+#define GETRES_DELETED_SEQ_INSWITCH_CASE1 0x10
 #define PUTREQ_INSWITCH 0x11
 #define PUTREQ_SEQ 0x12
 #define PUTREQ_POP_SEQ 0x13
-#define DELREQ_INSWITCH 0x14
-#define DELREQ_SEQ 0x15
-#define CACHE_POP 0x16
-#define CACHE_POP_INSWITCH 0x17
-#define CACHE_POP_INSWITCH_ACK 0x18
+#define PUTREQ_SEQ_INSWITCH_CASE1 0x14
+#define PUTREQ_SEQ_CASE3 0x15
+#define PUTREQ_POP_SEQ_CASE3 0x16
+#define DELREQ_INSWITCH 0x17
+#define DELREQ_SEQ 0x18
+#define DELREQ_SEQ_INSWITCH_CASE1 0x19
+#define DELREQ_SEQ_CASE3 0x1a
+#define CACHE_POP 0x1b
+#define CACHE_POP_INSWITCH 0x1c
+#define CACHE_POP_INSWITCH_ACK 0x1d
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)
@@ -73,6 +78,10 @@
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/valid.p4"
 #include "p4src/regs/seq.p4"
+
+
+
+
 
 
 #include "p4src/regs/lock.p4"

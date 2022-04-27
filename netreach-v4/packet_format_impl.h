@@ -170,7 +170,7 @@ void DelRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(int8_t));
 	begin += sizeof(int8_t);
-	memcpy((void *)&this->_key, begin, sizeof(key_t));
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
 }
 
 // ScanRequest
@@ -582,37 +582,44 @@ void GetResponseLatestSeq<key_t, val_t>::deserialize(const char * data, uint32_t
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseLatestSeq");
 }
 
-// GetResponseLatestSeqCase1 (value must <= 128B; only used by end-hosts)
+// GetResponseLatestSeqInswitchCase1 (value must <= 128B; only used by end-hosts)
 
 template<class key_t, class val_t>
-GetResponseLatestSeqCase1<key_t, val_t>::GetResponseLatestSeqCase1(key_t key, val_t val, int32_t seq, bool stat) 
-	: GetResponseLatestSeq<key_t, val_t>::GetResponse(key, val, seq), _stat(stat)
+GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat) 
+	: GetResponseLatestSeq<key_t, val_t>::GetResponse(key, val, seq), _idx(idx), _stat(stat)
 {
-	this->_type = static_cast<uint8_t>(PacketType::CACHE_EVICT);
+	this->_type = static_cast<uint8_t>(PacketType::GETRES_LATEST_SEQ_INSWITCH_CASE1);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(seq >= 0);
+	INVARIANT(idx >= 0);
 }
 
 template<class key_t, class val_t>
-GetResponseLatestSeqCase1<key_t, val_t>::GetResponseLatestSeqCase1(const char * data, uint32_t recv_size) {
+GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_LATEST_SEQ_CASE1);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_LATEST_SEQ_INSWITCH_CASE1);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
-	INVARIANT(seq >= 0);
+	INVARIANT(this->_seq >= 0);
+	INVARIANT(this->_idx >= 0);
 }
 
 template<class key_t, class val_t>
-int16_t GetResponseLatestSeqCase1<key_t, val_t>::stat() const {
+int16_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::idx() const {
+	return _idx;
+}
+
+template<class key_t, class val_t>
+bool GetResponseLatestSeqInswitchCase1<key_t, val_t>::stat() const {
 	return _stat;
 }
 
 template<class key_t, class val_t>
-uint32_t GetResponseLatestSeqCase1<key_t, val_t>::size() { // unused
-	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t) + val_t::MAX_VALLEN + sizeof(int32_t) + sizeof(bool);
+uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::size() { // unused
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t) + val_t::MAX_VALLEN + sizeof(int32_t) + sizeof(int16_t) + sizeof(bool);
 }
 
 template<class key_t, class val_t>
-uint32_t GetResponseLatestSeqCase1<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	//uint32_t my_size = this->size();
 	//INVARIANT(max_size >= my_size);
 	char *begin = data;
@@ -625,13 +632,18 @@ uint32_t GetResponseLatestSeqCase1<key_t, val_t>::serialize(char * const data, u
 	uint32_t bigendian_seq = htonl(uint32_t(this->_seq));
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
+	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
+	begin += INSWITCH_PREV_BYTES;
+	uint16_t bigendian_idx = htons(uint16_t(this->_idx));
+	memcpy(begin, (void *)&bigendian_idx, sizeof(uint16_t)); // little-endian to big-endian
+	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
-	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(int32_t) + sizeof(bool);
+	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(int32_t) + sizeof(int16_t) + sizeof(bool);
 }
 
 template<class key_t, class val_t>
-void GetResponseLatestSeqCase1<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
 	//uint32_t my_size = this->size();
 	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
@@ -644,6 +656,10 @@ void GetResponseLatestSeqCase1<key_t, val_t>::deserialize(const char * data, uin
 	memcpy((void *)&this->_seq, begin, sizeof(int32_t));
 	this->_seq = int32_t(ntohl(uint32_t(this->seq)));
 	begin += sizeof(int32_t);
+	begin += INSWITCH_PREV_BYTES; // the first bytes of inswitch_hdr
+	memcpy((void *)&this->_idx, begin, sizeof(int16_t));
+	this->_idx = int16_t(ntohs(uint16_t(this->_idx))); // big-endian to little-endian
+	begin += sizeof(int16_t);
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 	begin += sizeof(bool);
 }
@@ -663,6 +679,27 @@ template<class key_t, class val_t>
 void GetResponseDeletedSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 {
 	COUT_N_EXIT("Invalid invoke of deserialize for GetResponseDeletedSeq");
+}
+
+// GetResponseDeletedSeqInswitchCase1 (value must <= 128B; only used by end-hosts)
+
+template<class key_t, class val_t>
+GetResponseDeletedSeqInswitchCase1<key_t, val_t>::GetResponseDeletedSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat) 
+	: GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(key, val, seq, idx, stat)
+{
+	this->_type = static_cast<uint8_t>(PacketType::GETRES_DELETED_SEQ_INSWITCH_CASE1);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(seq >= 0);
+	INVARIANT(idx >= 0);
+}
+
+template<class key_t, class val_t>
+GetResponseDeletedSeqInswitchCase1<key_t, val_t>::GetResponseDeletedSeqInswitchCase1(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::GETRES_DELETED_SEQ_INSWITCH_CASE1);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(this->_seq >= 0);
+	INVARIANT(this->_idx >= 0);
 }
 
 // PutRequestSeq (value must <= 128B)
@@ -713,6 +750,113 @@ template<class key_t, class val_t>
 uint32_t PutRequestPopSeq<key_t, val_t>::serialize(char * const data, uint32_t max_size)
 {
 	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPopSeq");
+}
+
+// PutRequestSeqInswitchCase1 (value must <= 128B; only used by end-hosts)
+
+template<class key_t, class val_t>
+PutRequestSeqInswitchCase1<key_t, val_t>::PutRequestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat) 
+	: GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(key, val, seq, idx, stat)
+{
+	this->_type = static_cast<uint8_t>(PacketType::PUTREQ_SEQ_INSWITCH_CASE1);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(seq >= 0);
+	INVARIANT(idx >= 0);
+}
+
+template<class key_t, class val_t>
+PutRequestSeqInswitchCase1<key_t, val_t>::PutRequestSeqInswitchCase1(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_SEQ_INSWITCH_CASE1);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(this->_seq >= 0);
+	INVARIANT(this->_idx >= 0);
+}
+
+// PutRequestSeqCase3 (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestSeqCase3<key_t, val_t>::PutRequestSeqCase3(const char * data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_SEQ_CASE3);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(seq >= 0);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestSeqCase3<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestSeqCase3");
+}
+
+// PutRequestPopSeqCase3 (value must <= 128B)
+
+template<class key_t, class val_t>
+PutRequestPopSeqCase3<key_t, val_t>::PutRequestPopSeqCase3(const char * data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_POP_SEQ_CASE3);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(seq >= 0);
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestPopSeqCase3<key_t, val_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for PutRequestPopSeqCase3");
+}
+
+// DelRequestSeq
+
+template<class key_t>
+DelRequestSeq<key_t>::DelRequestSeq(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::DELREQ_SEQ);
+}
+
+template<class key_t>
+uint32_t DelRequestSeq<key_t>::size() {
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t);
+}
+
+template<class key_t>
+uint32_t DelRequestSeq<key_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for DelRequestSeq");
+}
+
+template<class key_t>
+void DelRequestSeq<key_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size == recv_size);
+	const char *begin = data;
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	memcpy((void *)&this->_seq, begin, sizeof(int32_t));
+	this->_seq = int32_t(ntohl(uint32_t(this->_seq)));
+}
+
+// DelRequestSeqInswitchCase1 (value must <= 128B; only used by end-hosts)
+
+template<class key_t, class val_t>
+DelRequestSeqInswitchCase1<key_t, val_t>::DelRequestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat) 
+	: GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(key, val, seq, idx, stat)
+{
+	this->_type = static_cast<uint8_t>(PacketType::DELREQ_SEQ_INSWITCH_CASE1);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(seq >= 0);
+	INVARIANT(idx >= 0);
+}
+
+template<class key_t, class val_t>
+DelRequestSeqInswitchCase1<key_t, val_t>::DelRequestSeqInswitchCase1(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::DELREQ_SEQ_INSWITCH_CASE1);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(this->_seq >= 0);
+	INVARIANT(this->_idx >= 0);
 }
 
 // CachePop (value must <= 128B; only used by end-hosts)
@@ -810,8 +954,8 @@ uint32_t CachePopInSwitch<key_t, val_t>::serialize(char * const data, uint32_t m
 	uint32_t bigendian_seq = htonl(uint32_t(this->_seq));
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
 	begin += sizeof(uint32_t);
-	memset(begin, 0, 9); // the first 9 bytes of inswitch_hdr
-	begin += 5;
+	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
+	begin += INSWITCH_PREV_BYTES;
 	uint16_t bigendian_freeidx = htons(uint16_t(this->_freeidx));
 	memcpy(begin, (void *)&bigendian_freeidx, sizeof(uint16_t)); // little-endian to big-endian
 	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(bool) + sizeof(uint32_t) + 5 + sizeof(uint16_t);
@@ -851,8 +995,8 @@ uint32_t CachePopInSwitchAck<key_t>::serialize(char * const data, uint32_t max_s
 // CacheEvict (value must <= 128B; only used by end-hosts)
 
 template<class key_t, class val_t>
-CacheEvict<key_t, val_t>::CacheEvict(key_t key, val_t val, bool stat, int32_t seq, int16_t serveridx) 
-	: GetResponse<key_t, val_t>::GetResponseLatestSeqCase1(key, val, stat, seq), _serveridx(serveridx)
+CacheEvict<key_t, val_t>::CacheEvict(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx) 
+	: GetResponse<key_t, val_t>::GetResponseLatestSeq(key, val, seq), _stat(stat), _serveridx(serveridx)
 {
 	this->_type = static_cast<uint8_t>(PacketType::CACHE_EVICT);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -864,8 +1008,13 @@ template<class key_t, class val_t>
 CacheEvict<key_t, val_t>::CacheEvict(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_EVICT);
-	INVARIANT(seq >= 0);
-	INVARIANT(serveridx >= 0);
+	INVARIANT(this->_seq >= 0);
+	INVARIANT(this->_serveridx >= 0);
+}
+
+template<class key_t, class val_t>
+bool CacheEvict<key_t, val_t>::stat() const {
+	return _stat;
 }
 
 template<class key_t, class val_t>

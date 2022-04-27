@@ -118,8 +118,10 @@ void *run_reflector_dpdkserver() {
 						udpsendto(reflector_dpdkserver_popclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, "reflector.dpdkserver.popclient");
 						break;
 					}
-				case packet_type_t::GETRES_LATEST_SEQ_CASE1:
-				case packet_type_t::GETRES_DELETED_SEQ_CASE1:
+				case packet_type_t::GETRES_LATEST_SEQ_INSWITCH_CASE1:
+				case packet_type_t::GETRES_DELETED_SEQ_INSWITCH_CASE1:
+				case packet_type_t::PUTREQ_SEQ_INSWITCH_CASE1:
+				case packet_type_t::DELREQ_SEQ_INSWITCH_CASE1:
 					{
 						// send CASE1 to switchos.specialcaseserver
 						udpsendto(reflector_dpdkserver_specialcaseclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_specialcaseserver_addr, reflector_switchos_specialcaseserver_addr_len, "reflector.dpdkserver.specialcaseclient");

@@ -141,7 +141,7 @@ field_list_calculation hash_calc {
 }*/
 
 action hash_for_partition() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_partition, 0, hash_calc, PARTITION_COUNT);
+	modify_field_with_hash_based_offset(meta.hashval_for_partition, 0, hash_calc, PARTITION_COUNT);
 }
 
 @pragma stage 1
@@ -225,7 +225,7 @@ action hash_partition(udpport, eport, is_wrong_pipeline) {
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.hashval_for_partition: range;
+		meta.hashval_for_partition: range;
 		ig_intr_md.ingress_port: exact;
 		meta.need_reirculate: exact;
 	}

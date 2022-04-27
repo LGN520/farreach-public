@@ -59,7 +59,7 @@ header_type val_t {
 	}
 }
 
-// NOTE: inswicth_t affects CACHE_POP_INSWITCH in end-hosts
+// NOTE: inswicth_t affects CACHE_POP_INSWITCH and CASE1 in end-hosts
 header_type inswitch_t {
 	fields {
 		snapshot_flag: 1;
@@ -70,7 +70,6 @@ header_type inswitch_t {
 		sid: 9;
 		hashval_for_cm: 17; // at most 64K
 		padding: 1;
-		hashval_for_partition: 16; // at most 32K
 		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
 	}
@@ -100,6 +99,7 @@ header_type result_t {
 header_type metadata_t {
 	fields {
 		need_recirculate: 1;
+		hashval_for_partition: 16; // at most 32K
 		cm1_predicate: 4;
 		cm2_predicate: 4;
 		cm3_predicate: 4;
@@ -111,6 +111,10 @@ header_type metadata_t {
 		is_case1: 1;
 		clonenum_for_pktloss: 8;
 		is_lastclone_for_pktloss: 1;
+
+
+
+
 
 		tmp_sport: 16;
 		tmp_dport: 16;

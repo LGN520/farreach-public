@@ -243,34 +243,34 @@
 				- As the duration for atomicity is very small compared with snapshot period, it should be acceptable
 				- TODO: Test the duration based on time difference between comment and uncomment
 				- NOTE: snapshot timepoint is that of setting the snapshot_flag of the enforced ingress pipeline as true
-			* Data plane reports case1 to switchos for in-switch value update
-				* GETRES_LATEST_SEQ_CASE1, TODO: GETRES_DELETED_SEQ_CASE1, PUTREQ_CASE1, DELREQ_CASE1
+			* Data plane reports case1 to switchos for in-switch value update (w/ inswitch_hdr.idx)
+				* GETRES_LATEST_SEQ_CASE1, GETRES_DELETED_SEQ_CASE1, PUTREQ_CASE1, DELREQ_CASE1
 				* FUTURE: PUTREQ_CASE1/DELREQ_CASE1 need to embed meta.valid as valid could be 2 (temporarilly invalid for PUTREQ_LARGE); GETRES_LATEST/DELETED_SEQ_CASE1 do not need as valid must be 1 if with value update
+				* NOTE: only if case1.key = cached_keyarray_backup[idx].key, specialcaseserver stores case1 after seq comparison (use smaller one)
 			* Data plane reports case3 to server for in-memory snapshot
-				* TODO: PUTREQ_SEQ_CASE3, DELREQ_SEQ_CASE3
+				* PUTREQ_SEQ_CASE3, DELREQ_SEQ_CASE3
 				* FUTURE: PUTREQ_LARGE_SEQ_CASE3
-		* TODO: snapshotserver backups metadata, i.e., key and serveridx for each cache entry
+		* snapshotserver backups metadata, i.e., key and serveridx for each cache entry
 			- It is atomic as cache population/eviction is temporarily stopped now
 			- NOTE: each entry should appear in the final crash-consistent snapshot with the correct key
-		* TODO: snapshotserver resumes cache population/eviction
-			- TODO: snapshotserver sets is_snapshot=true to remember cache eviction as case2 for snapshot
-			- TODO: snapshotserver sets is_snapshot_prepare=false to resume cache population and eviction
+		* snapshotserver resumes cache population/eviction
+			- snapshotserver sets is_snapshot=true to remember cache eviction as case2 for snapshot
+			- snapshotserver sets is_snapshot_prepare=false to resume cache population and eviction
 				+ NOTE: now popworker knows is_snapshot=true, which will report case2 for snapshot
-			- TODO: snapshotserver sets popworker_know_snapshot_prepare=false to reset for next snapshot
-			- Cache population will insert a new key-vaule record into an empty entry (valid=0/1)
-				+ TODO: snapshotserver ignores valid=0, or valid=1 yet idx is not used in backup metadata
+			- snapshotserver resets popworker_know_snapshot_prepare=false to reset for next snapshot
+			- Cache population will insert a new key-value record into an empty entry (valid=0/1)
+				+ NOTE: snapshotserver only loads values from 0 to empty_index-1; new key-value records from empty_index to kv_bucketnum-1 do not affect the snapshot -> no special case for cache population
 			- Cache eviction will evict an old key-value record (valid=1/3/0/1)
-				+ TODO: snapshot worker ignores valid=3/0
+				+ TODO: NOTE: only if victim.key = cached_keyarray_backup[idx].key, popworker stores case2 after seq comparison (use smaller one)
 				+ NOTE: if valid=1, as idx is used in backup metadata and we can only load value instead of key from data plane, we cannot simply distigunish the loaded value belongs to the evicted key (correct one) or the newly populated key
 				+ To solve the issue, snapshotserver needs to determine the cached record
-					* TODO: popworker reports the evicted data as case2 for snapshotserver
 					* TODO: popworker checks the key of case1/case2, and ignores the special case with incorrect key
 						- TODO: If without case1 and case2, popworker directly uses the loaded value
 						- TODO: If with case1 or case2, popworker directly uses the value of special case
 						- TODO: If with both case 1 and case2, popworker uses the value of case1
 							+ NOTE: when valid=3/0, data plane cannot update the value -> case1 must be generated when valid=1 for evicted key or newly populated key -> the former caes1 must be more close to snapshot timepoint than case2 (valid=3), while the latter case1 will be ignored by checking the key
 					* TODO: popworker also reports evicted data as case2 to server for server-side snapshot
-		* TODO: snapshotserver.ptf loads idx, valid, latest, vallen, value, deleted, and savedseq
+		* TODO: if empty_index > 0, snapshotserver.ptf loads idx (0 ~ empty_index-1), valid, latest, vallen, value, deleted, and savedseq
 			- NOTE: ptf directly ignores valid=0/3, and valid=1 yet idx exceeds backup empty idx -> snapshotserver will rollback the snapshot with special cases if any
 			- TODO: For records with latest=0, we also store them into snapshow now, which does not break point-in-time consistency; it is just a duplication which can be solved by seq comparison
 		* TODO: snapshotserver notifies controller -> servers to make server-side snapshot, and waits for ACKs
@@ -340,9 +340,9 @@
 	+ Egress
 		* If inswitch_hdr.is_cached=1 and meta.valid=1 and meta.is_latest=0
 			+ Set latest=1, delete=0, update savedseq, update vallen and value
-			+ If snapshot_flag=1, try to set case1 and load original case1 into is_case1
+		* access_case1_tbl: if is_cached=1, valid=1, is_latest=0, and snapshot_flag=1, set and get case1
 		* For original packet
-			+ If is_cached=1, valid=1, is_latest=0, snapshot_flag=1, and is_case1=0, send duplicate GETRES_LATEST_SEQ_CASE1 to switch os by reflector
+			+ If is_cached=1, valid=1, is_latest=0, snapshot_flag=1, and is_case1=0, send duplicate GETRES_LATEST_SEQ_CASE1 to switch os by reflector (clone_field_list: clonenum_for_pktloss)
 			+ Otherwise, drop the original packet
 		* For cloned packet (i2e), forward it to client
 			+ TODO: Check if we need to set eg_intr_md.egress_port for cloned packet (i2e)
@@ -359,8 +359,17 @@
 	+ Egress
 		* If inswitch_hdr.is_cached=1 and inswitch_hdr.valid=1 and latest=0
 			+ Set latest=1, deleted=1, update savedseq, update vallen and value
-		* Drop original packet, forwrad cloned packet (i2e) to client
+		* access_case1_tbl: if is_cached=1, valid=1, is_latest=0, and snapshot_flag=1, set and get case1
+		* For original packet
+			+ If is_cached=1, valid=1, is_latest=0, snapshot_flag=1, and is_case1=0, send duplicate GETRES_DELETED_SEQ_CASE1 to switch os by reflector (clone_field_list: clonenum_for_pktloss)
+			+ Otherwise, drop the original packet
+		* For cloned packet (i2e), forward it to client
 			+ TODO: Check if we need to set eg_intr_md.egress_port for cloned packet (i2e)
+- GETRES_DELETED_SEQ_CASE1
+	+ Egress pipeline
+		* Access lastclone_tbl to update is_lastclone_for_pktloss
+		* If is_lastclone_for_pktloss = 0, decrease clonenum_for_pktloss, forward to reflector, and clone again
+		* Otherwise, only forward to reflector
 - CACHE_POP_INSWITCH
 	+ Ingress pipeline (hashval_for_partition, idx)
 		* Access
@@ -405,18 +414,39 @@
 			+ savedseq_tbl
 				* If valid=0/3, skip savedseq_tbl (keep the original savedseq)
 				* If iscached=1 and valid=1, set savedseq=seq
+			+ access_case1_tbl: if is_cached=1, valid=1, snapshot_flag=1, set and get case1
 		* Intermediate stages: if iscached=1 and valid=1, set vallen and value
 		* Stage 10: eg_port_forward_tbl
 			* If inswitch_hdr.is_cached=0
-				- If is_hot=1, forward PUTREQ_POP_SEQ to server
-				- Otherwise, forward PUTREQ_SEQ to server
+				- If snapshot_flag=1
+					+ If is_hot=1, forward PUTREQ_POP_SEQ_CASE3 to server
+					+ Otherwise, forward PUTREQ_SEQ_CASE3 to server
+				- If snapshot_flag=0
+					+ If is_hot=1, forward PUTREQ_POP_SEQ to server
+					+ Otherwise, forward PUTREQ_SEQ to server
 			* If inswitch_hdr.is_cached=1
-				- If valid=0, forward PUTREQ_SEQ to server
-				- If valid=1, set result_hdr.result=1, and send back PUTRES directly/mirrorly
-				- If valid=3, forward PUTREQ_SEQ to server
+				- If valid=0
+					+ If snapshot_flag=1, forward PUTREQ_SEQ_CASE3 to server
+					+ If snapshot_flag=0, forward PUTREQ_SEQ to server
+				- If valid=1
+					+ If snapshot_flag=1, and is_case1=0, send duplicate PUTREQ_SEQ_CASE1 to switchos by reflector (clone_field_list: clonenum_for_pktloss, is_wrong_pipeline, sid, eport_for_res)
+						* NOTE: the last clone of PUTREQ_SEQ_CASE1 will be updated as PUTRES to client instead of forwarding PUTREQ_SEQ_CACASE1, so we need to set clonenum_for_pktloss=2 if we need 3 duplicate packets (GETRES_LATEST/DELETED_SEQ_CASE1 set clonenum=1)
+						* TODOTODO: If clone_field_list violates limitation, we should embed inswitch_hdr as PUTREQ_INSWITCH_SEQ_CASE1
+					+ Otherwise, set result_hdr.result=1, and send back PUTRES directly/mirrorly
+				- If valid=3
+					+ If snapshot_flag=1, forward PUTREQ_SEQ_CASE3 to server
+					+ If snapshot_flag=0, forward PUTREQ_SEQ to server
 	+ Server
-		* PUTREQ_SEQ -> sendback PUTRES
-		* PUTREQ_POP_SEQ -> sendback PUTRES, and trigger cache population
+		* PUTREQ_SEQ -> update KVS, and sendback PUTRES
+		* PUTREQ_POP_SEQ -> update KVS, sendback PUTRES, and trigger cache population
+		* PUTREQ_CAES3 -> make in-memory snapshot, update KVS, and sendback PUTRES
+		* PUTREQ_POP_CAES3 -> make in-memory snapshot, update KVS, sendback PUTRES, and trigger cache population
+		* NOTE: as we do not maintain case3_reg in switch, we do not need to sendback PUTRES_CASE3 w/ serveridx
+- PUTREQ_SEQ_CASE1
+	+ Egress pipeline
+		* Access lastclone_tbl to update is_lastclone_for_pktloss
+		* If is_lastclone_for_pktloss = 0, decrease clonenum_for_pktloss, forward to reflector, and clone again
+		* Otherwise, send back PUTRES directly/mirrorly
 - DELREQ
 	+ Client sends DELREQ
 	+ Ingress: DELREQ -> DELREQ_INSWITCH (is_sampled, is_cached, is_wrong_pipeline, sid, eport_for_res, hashval_for_partition, hashval_for_seq, idx)
@@ -436,16 +466,50 @@
 			+ savedseq_tbl
 				* If valid=0/3, skip savedseq_tbl (keep the original savedseq)
 				* If iscached=1 and valid=1, set savedseq=seq
+			+ access_case1_tbl: if is_cached=1, valid=1, snapshot_flag=1, set and get case1
 		* Intermediate stages: reset vallen = 0 (save bandwidth), not access value 
 		* Stage 10: eg_port_forward_tbl
 			* If inswitch_hdr.is_cached=0
-				- Forward DELREQ_SEQ to server
+				- If snapshot_flag=1, forward DELREQ_SEQ_CASE3 to server
+				- If snapshot_flag=0, forward DELREQ_SEQ to server
 			* If inswitch_hdr.is_cached=1
-				- If valid=0, forward DELREQ_SEQ to server
-				- If valid=1, set result_hdr.result=1, and send back DELRES directly/mirrorly
-				- If valid=3, forward DELREQ_SEQ to server
+				- If valid=0
+					+ If snapshot_flag=1, forward DELREQ_SEQ_CASE3 to server
+					+ If snapshot_flag=0, forward DELREQ_SEQ to server
+				- If valid=1
+					+ If snapshot_flag=1, and is_case1=0, send duplicate DELREQ_SEQ_CASE1 to switchos by reflector (clone_field_list: clonenum_for_pktloss, is_wrong_pipeline, sid, eport_for_res)
+						* NOTE: the last clone of DELREQ_SEQ_CASE1 will be updated as DELRES to client instead of forwarding DELREQ_SEQ_CACASE1, so we need to set clonenum_for_pktloss=2 if we need 3 duplicate packets (GETRES_LATEST/DELETED_SEQ_CASE1 set clonenum=1)
+						* TODOTODO: If clone_field_list violates limitation, we should embed inswitch_hdr as DELREQ_INSWITCH_SEQ_CASE1
+					+ Otherwise, set result_hdr.result=1, and send back DELRES directly/mirrorly
+				- If valid=3
+					+ If snapshot_flag=1, forward DELREQ_SEQ_CASE3 to server
+					+ If snapshot_flag=0, forward DELREQ_SEQ to server
 	+ Server
-		* DELREQ_SEQ -> sendback DELRES
+		* DELREQ_SEQ -> update KVS, and sendback DELRES
+		* DELREQ_SEQ_CASE3 -> make in-memory snapshot, update KVS, and sendback DELRES
+		* NOTE: as we do not maintain case3_reg in switch, we do not need to sendback DELRES_CASE3 w/ serveridx
+- DELREQ_SEQ_CASE1
+	+ Egress pipeline
+		* Access lastclone_tbl to update is_lastclone_for_pktloss
+		* If is_lastclone_for_pktloss = 0, decrease clonenum_for_pktloss, forward to reflector, and clone again
+		* Otherwise, send back DELRES directly/mirrorly
+- TODO: Treat DELREQ as a speical PUTREQ in server
+	+ TODO: Check code of xindex_buffer that whether buffer directly frees atomic value instead of marking it as deleted
+		* NOTE: If so, it may delete in-memory snapshot version for the key and hence give incorrect answer for SCANREQ
+	+ TODO: Implement DELREQ by in-place update in xindex_util, xindex_group_impl (data), and xindex_buffer (buffer/temp_buffer) instead of being freed -> not need deleted_set
+	+ TODO: For memory efficiency, during merge, if the latest status is deleted and the latest snapshot ID is older enough than the current snapshot ID (e.g., k-2 vs. k), we free the entry in the final merged data array
+		* NOTE: original xindex can directly free the entry whose status is deleted during merge, while extended xindex cannot
+			- If we find the entry whose status is deleted from old data/buffer, original xindex ignores the entry and processes request in temp_buffer; however, extended xindex directly processes request on the entry
+			- If we find no corresponding entry from new merged data, both original and extended xindex process request in temp_buffer
+			- Therefore, extended xindex could lose results of concurrent PUTREQ/DELREQ, which arrive at server before replacing data pointer as final merged one
+		* TODO: We invoke an atomic primitive try_to_free (protected by mutex lock) for each entry in data/buffer
+			- TODO: If latest status and snapshot ID suffice above requirement, set is_free = true
+			- TODO: If is_free = true, the entry does not serve any request (including GETREQ, PUTREQ, DELREQ, SCANREQ)
+				+ PUTREQ/DELREQ will be served by buffer/temp_buffer
+				+ GETREQ/SCANREQ will read from buffer/temp_buffer
+					* NOTE: if w/o new entry in buffer/temp_buffer, the result is the same as w/ an old entry whose status is deleted in data/buffer for both GETREQ (due to latest status = deleted) and SCANREQ (due to very small latest snapshot ID)
+			- NOTE: if PUTREQ/DELREQ arrive before try_to_free, is_free must be false; otherwise, they must be served by buffer/temp_buffer
+		* TODO: We free each entry in the final merged data array if try_to_free returns true (i.e., is_free = true)
 - TODO: If cache crashes, server should reset all seq as zero after recovery such that switch-assigned seq (>=1) must be larger
 - TODO: If with parser limitation, we can introduce hint of next header in the previous header
 - TODO: Check APIs of register access 
@@ -480,6 +544,11 @@
 - Use int32_t for vallen (val.c, val.h)
 - Reorganize socket API
 - Implement for PUTREQ and DELREQ
+- Implement crash-consistent snapshot
+	+ Implement case1
+		* Add inswitch_hdr to case1 in data plane for inswitch_hdr.idx
+	+ Implement case3
+	+ Implement case2
 
 ## Run
 

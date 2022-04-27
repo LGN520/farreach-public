@@ -30,6 +30,8 @@ parser parse_udp {
 	return parse_op;
 }
 
+// op_hdr -> vallen_hdr -> val_hdr -> seq_hdr -> inswitch_hdr -> result_hdr
+
 parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
@@ -37,17 +39,23 @@ parser parse_op {
 		GETRES: parse_vallen;
 		GETRES_LATEST_SEQ: parse_vallen;
 		GETRES_LATEST_SEQ_INSWITCH: parse_vallen;
-		GETRES_LATEST_SEQ_CASE1: parse_vallen;
+		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_vallen;
 		GETRES_DELETED_SEQ: parse_vallen;
 		GETRES_DELETED_SEQ_INSWITCH: parse_vallen;
+		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_vallen;
 		CACHE_POP_INSWITCH: parse_vallen;
 		PUTREQ: parse_vallen;
 		PUTREQ_INSWITCH: parse_vallen;
 		PUTREQ_SEQ: parse_vallen;
 		PUTREQ_POP_SEQ: parse_vallen;
+		PUTREQ_SEQ_INSWITCH_CASE1: parse_vallen;
+		PUTREQ_SEQ_CASE3: parse_vallen;
+		PUTREQ_POP_SEQ_CASE3: parse_vallen;
 		PUTRES: parse_result;
 		DELREQ_INSWITCH: parse_inswitch;
 		DELREQ_SEQ: parse_seq;
+		DELREQ_SEQ_INSWITCH_CASE1: parse_vallen;
+		DELREQ_SEQ_CASE3: parse_seq;
 		DELRES: parse_result;
 		default: ingress; // GETREQ, GETREQ_POP, GETREQ_NLATEST, DELREQ
 
@@ -72,8 +80,8 @@ parser parse_op {
 		PUTREQ_LARGE_EVICT:TYPE: parse_vallen; // vallen + val header + seq + val payload (ignored by udp hdrlen)
 		DELREQ_RECIR_TYPE: parse_seq;
 		DELREQ_SEQ_TYPE: parse_seq;
-		PUTREQ_CASE1_TYPE: parse_vallen;
-		DELREQ_CASE1_TYPE: parse_vallen;
+		PUTREQ_INSWITCH_CASE1_TYPE: parse_vallen;
+		DELREQ_INSWITCH_CASE1_TYPE: parse_vallen;
 		GETRES_POP_EVICT_CASE2_TYPE: parse_vallen;
 		PUTREQ_POP_EVICT_CASE2_TYPE: parse_vallen;
 		PUTREQ_LARGE_EVICT_CASE2_TYPE: parse_vallen;
@@ -137,13 +145,19 @@ parser parse_val_len0 {
 		GETRES: parse_result;
 		GETRES_LATEST_SEQ: parse_seq;
 		GETRES_LATEST_SEQ_INSWITCH: parse_seq;
-		GETRES_LATEST_SEQ_CASE1: parse_seq;
+		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_seq;
 		GETRES_DELETED_SEQ: parse_seq;
 		GETRES_DELETED_SEQ_INSWITCH: parse_seq;
+		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_seq;
 		CACHE_POP_INSWITCH: parse_seq;
 		PUTREQ_INSWITCH: parse_inswitch;
 		PUTREQ_SEQ: parse_seq;
 		PUTREQ_POP_SEQ: parse_seq;
+		PUTREQ_SEQ_INSWITCH_CASE1: parse_seq;
+		PUTREQ_SEQ_CASE3: parse_seq;
+		PUTREQ_POP_SEQ_CASE3: parse_seq;
+		DELREQ_INSWITCH: parse_inswitch;
+		DELREQ_SEQ_INSWITCH_CASE1: parse_seq;
 		default: ingress; // PUTREQ
 
 
@@ -251,19 +265,17 @@ parser parse_val_len16 {
 	return parse_val_len15;
 }
 
-parser parse_result {
-	extract(result_hdr);
-	return ingress; // GETRES, PUTRES, DELRES, GETRES_LATEST_SEQ_CASE1
-}
-
 parser parse_seq {
 	extract(seq_hdr);
 	return select(op_hdr.optype) {
 		GETRES_LATEST_SEQ_INSWITCH: parse_inswitch;
-		GETRES_LATEST_SEQ_CASE1: parse_result;
+		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_inswitch;
 		GETRES_DELETED_SEQ_INSWITCH: parse_inswitch;
-		CACHE_POP_INSWITCH: parse_inswitch;
-		default: ingress; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, DELREQ_SEQ
+		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_inswitch;
+		CACHE_POP_INSWITCH: parse_inswitch; // inswitch_hdr is set by switchos
+		PUTREQ_SEQ_INSWITCH_CASE1: parse_inswitch;
+		DELREQ_SEQ_INSWITCH_CASE1: parse_inswitch;
+		default: ingress; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ, DELREQ_SEQ_CASE3
 		
 
 
@@ -276,7 +288,18 @@ parser parse_seq {
 
 parser parse_inswitch {
 	extract(inswitch_hdr);
-	return ingress; // GETRES_LATEST_SEQ_INSWITCH, DELREQ_INSWITCH
+	return select(op_hdr.optype) {
+		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_result;
+		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_result;
+		PUTREQ_SEQ_INSWITCH_CASE1: parse_result;
+		DELREQ_SEQ_INSWITCH_CASE1: parse_result;
+		default: ingress; // GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH, CACHE_POP_INSWITCH
+	}
+}
+
+parser parse_result {
+	extract(result_hdr);
+	return ingress; // GETRES, PUTRES, DELRES, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 }
 
 parser parse_other {
