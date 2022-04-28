@@ -805,15 +805,17 @@ void run_server_evictserver(void *param) {
 			vallen = int32_t(ntohl(uint32_t(vallen)));
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
-			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(bool) + sizeof(int32_t) + sizeof(int16_t);
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(int32_t) + sizeof(bool) + sizeof(int16_t);
 		}
 
-		// Get one complete CACHE_EVICT (only need serveridx here)
+		// Get one complete CACHE_EVICT/_CASE2 (only need serveridx here)
 		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
+			// TODO: END HERE for CACHE_EVICT_CASE2
 			cache_evict_t *tmp_cache_evict_ptr = new cache_evict_t(recvbuf, arrive_serveridx_bytes); // freed by server.worker
 			INVARIANT(tmp_cache_evict_ptr->serveridx() == serveridx);
 			
-			// send CACHE_EVICT to server.worker 
+			// send CACHE_EVICT/_CASE2 to server.worker 
+			// TODO: server_cache_evict_or_case2_ptr_queue_list
 			bool res = server_cache_evict_ptr_queue_list[serveridx].write(tmp_cache_evict_ptr);
 			if (!res) {
 				printf("[server.evictserver] error: more than one CACHE_EVICT!\n");

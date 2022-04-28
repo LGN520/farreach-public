@@ -158,7 +158,8 @@
 		* If GETREQ_POP triggers a cache population (i.e., key exists), server adds the key into cached key set
 		* If server receives CACHE_EVICT, it removes the evicted key from cached key set
 	+ TODO: Snapshot
-		* TODO: Receive notification from controller.snapshotclient to make server-side snapshot if necessary
+		* Make server-side snapshot if necessary
+			- optype: PUTREQ_SEQ_CASE3, DELREQ_SEQ_CASE3, TODO: CACHE_EVICT_CASE2, explicit server-side snapshot notification from controller.snapshotclient
 		* TODO: Each server receives in-switch snapshot, and deduplicate by seq comparison
 			* TODO: Treat DELREQ as a special write request -> do not ignore and free deleted atomic value, and remove deleted set (extended_xindex_dynamic_seq_del)
 			* TODO: Provide getseq API for seq comparison
@@ -261,16 +262,9 @@
 			- Cache population will insert a new key-value record into an empty entry (valid=0/1)
 				+ NOTE: snapshotserver only loads values from 0 to empty_index-1; new key-value records from empty_index to kv_bucketnum-1 do not affect the snapshot -> no special case for cache population
 			- Cache eviction will evict an old key-value record (valid=1/3/0/1)
-				+ TODO: NOTE: only if victim.key = cached_keyarray_backup[idx].key, popworker stores case2 after seq comparison (use smaller one)
-				+ NOTE: if valid=1, as idx is used in backup metadata and we can only load value instead of key from data plane, we cannot simply distigunish the loaded value belongs to the evicted key (correct one) or the newly populated key
-				+ To solve the issue, snapshotserver needs to determine the cached record
-					* TODO: popworker checks the key of case1/case2, and ignores the special case with incorrect key
-						- TODO: If without case1 and case2, popworker directly uses the loaded value
-						- TODO: If with case1 or case2, popworker directly uses the value of special case
-						- TODO: If with both case 1 and case2, popworker uses the value of case1
-							+ NOTE: when valid=3/0, data plane cannot update the value -> case1 must be generated when valid=1 for evicted key or newly populated key -> the former caes1 must be more close to snapshot timepoint than case2 (valid=3), while the latter case1 will be ignored by checking the key
-					* TODO: popworker also reports evicted data as case2 to server for server-side snapshot
-		* TODO: if empty_index > 0, snapshotserver.ptf loads idx (0 ~ empty_index-1), valid, latest, vallen, value, deleted, and savedseq
+				+ NOTE: only if victim.key = cached_keyarray_backup[idx].key, popworker stores case2 after seq comparison (use smaller one)
+				+ popworker sends CACHE_EVICT_CASE2 instead of CACHE_EVICT to server for server-side snapshot
+		* TODO: if empty_index > 0, snapshotserver.ptf loads idx (0 ~ empty_index-1), vallen, value, deleted, and savedseq
 			- NOTE: ptf directly ignores valid=0/3, and valid=1 yet idx exceeds backup empty idx -> snapshotserver will rollback the snapshot with special cases if any
 			- TODO: For records with latest=0, we also store them into snapshow now, which does not break point-in-time consistency; it is just a duplication which can be solved by seq comparison
 		* TODO: snapshotserver notifies controller -> servers to make server-side snapshot, and waits for ACKs
@@ -285,7 +279,7 @@
 			- TODO: snapshotserver waits until popworker_know_snapshot_end=true and specialcasesever_know_snapshot_end=true
 			- TODO: snapshotserver resets is_snapshot_end=false -> popworker_know_snapshot_end=false and specialcaseserver_know_snapshot_end=false
 		* TODO: snapshotserver performs rollback to get a crash-consistent snapshot, and resets specialcases
-		* TODO: snapshotserver sends each cached record to corresponding server based on serveridx
+		* TODO: snapshotserver sends each cached record to corresponding server based on serveridx by controller
 		* TODO: snapshotserver acknowledges controller.snapshotclient
 		* TODOTODO: If with ptf session limitation, we can place snapshot flag in SRAM; load values and reset registers by data plane;
 	+ TODO: Periodically reset CM

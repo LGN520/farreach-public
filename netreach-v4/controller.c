@@ -360,7 +360,7 @@ void run_controller_evictserver(void *param) {
 	int connfd = -1;
 	tcpaccept(controller_evictserver_tcpsock, NULL, NULL, connfd, "controller.evictserver");
 
-	// process CACHE_EVICT packet <optype, key, vallen, value, result, seq, serveridx>
+	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
 	int8_t optype = -1;
@@ -407,10 +407,10 @@ void run_controller_evictserver(void *param) {
 			vallen = int32_t(ntohl(uint32_t(vallen)));
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
-			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(bool) + sizeof(int32_t) + sizeof(int16_t);
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(int32_t) + sizeof(bool) + sizeof(int16_t);
 		}
 
-		// Get one complete CACHE_EVICT (only need serveridx here)
+		// Get one complete CACHE_EVICT/_CASE2 (only need serveridx here)
 		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
 			//cache_evict_t *tmp_cache_evict_ptr = new cache_evict_t(buf, arrive_serveridx_bytes);
 

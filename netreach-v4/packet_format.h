@@ -20,7 +20,7 @@ enum class PacketType {
 	PUTREQ_INSWITCH, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3,
 	DELREQ_INSWITCH, DELREQ_SEQ, DELREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_CASE3,
 
-	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT, CACHE_EVICT_ACK
+	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2
 };
 typedef PacketType packet_type_t;
 
@@ -367,6 +367,14 @@ class CacheEvictAck : public GetRequest<key_t> {
 	public: 
 		CacheEvictAck(key_t key);
 		CacheEvictAck(const char * data, uint32_t recv_size);
+};
+
+// NOTE: only used in end-hosts
+template<class key_t, class val_t>
+class CacheEvictCase2 : public CacheEvict<key_t, val_t> { // seq + stat + serveridx
+	public: 
+		CacheEvictCase2(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx);
+		CacheEvictCase2(const char * data, uint32_t recv_size);
 };
 
 
