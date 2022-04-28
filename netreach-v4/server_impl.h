@@ -18,7 +18,7 @@ std::set<index_key_t> * volatile server_cached_keyset_list = NULL;
 // Per-server evictserver <-> one evictclient in controller
 int * volatile server_evictserver_tcpsock_list = NULL;
 // single-message queues is sufficient between server.evictclients and server.workers
-message_ptr_queue_t<cache_evict_t> * volatile server_cache_evict_ptr_queue_list = NULL;
+message_ptr_queue_t<cache_evict_t> * volatile server_cache_evict_or_case2_ptr_queue_list = NULL;
 message_ptr_queue_t<cache_evict_ack_t> * volatile server_cache_evict_ack_ptr_queue_list = NULL;
 /*cache_evict_ack_t *** volatile cache_evict_ack_ptrs_list = NULL;
 uint32_t *volatile server_heads_for_evict_ack = NULL;
@@ -47,7 +47,7 @@ void prepare_server() {
 	for (size_t i = 0; i < server_num; i++) {
 		prepare_tcpserver(server_evictserver_tcpksock_list[i], false, server_evictserver_port_start+i, 1, "server.evictserver"); // MAX_PENDING_NUM = 1
 	}
-	server_cache_evict_ptr_queue_list = new message_ptr_queue_t<cache_evict_t>[server_num](SINGLE_MQ_SIZE);
+	server_cache_evict_or_case2_ptr_queue_list = new message_ptr_queue_t<cache_evict_t>[server_num](SINGLE_MQ_SIZE);
 	server_cache_evict_ack_ptr_queue_list = new message_ptr_queue_t<cache_evict_ack_t>[server_num](SINGLE_MQ_SIZE);
 }
 
@@ -64,9 +64,9 @@ void close_server() {
 		delete [] server_evictserver_tcpsock_list;
 		server_evictserver_tcpsock_list = NULL;
 	}
-	if (server_cache_evict_ptr_queue_list != NULL) {
-		delete [] server_cache_evict_ptr_queue_list;
-		server_cache_evict_ptr_queue_list = NULL;
+	if (server_cache_evict_or_case2_ptr_queue_list != NULL) {
+		delete [] server_cache_evict_or_case2_ptr_queue_list;
+		server_cache_evict_or_case2_ptr_queue_list = NULL;
 	}
 	if (server_cache_evict_ack_ptr_queue_list != NULL) {
 		delete [] server_cache_evict_ack_ptr_queue_list;
@@ -419,6 +419,19 @@ static int run_server_worker(void * param) {
 					deleted_sets[serveridx].add(req.key(), req.seq());
 					break;
 				}
+
+
+
+
+
+
+
+
+
+
+
+
+
 			case packet_type_t::GET_RES_POP_EVICT:
 				{
 					// Put evicted data into key-value store
@@ -712,10 +725,31 @@ static int run_server_worker(void * param) {
 				}
 		}
 	} // End for mbuf from switch os (and tcp server) to server 
-	cache_evict_t *tmp_cache_evict_ptr = server_cache_evict_ptr_queue_list[serveridx].read();
+
+
+
+
+
+
+
+
+
+
+
+
+
+	cache_evict_t *tmp_cache_evict_ptr = server_cache_evict_or_case2_ptr_queue_list[serveridx].read();
 	if (tmp_cache_evict_ptr != NULL) {
 		INVARIANT(tmp_cache_evict_ptr->serveridx() == serveridx);
 		INVARIANT(server_cached_keyset_list[serveridx].find(tmp_cache_evict_ptr->key()) != server_cached_keyset_list.end());
+
+		// make server-side snapshot for CACHE_EVICT_CASE2
+		if (tmp_cache_evict_ptr->_type == packet_type_t::CACHE_EVICT_CASE2) {
+			printf("CACHE_EVICT_CASE2!\n");
+			if (!isbackup) {
+				try_kvsnapshot(table);
+			}
+		}
 
 		// remove from cached keyset
 		server_cached_keysetlist[serveridx].erase(tmp_cache_evict_ptr->key()); // NOTE: no contention
@@ -769,7 +803,7 @@ void run_server_evictserver(void *param) {
 	int connfd = -1;
 	tcpaccept(server_evictserver_tcpsock_list[serveridx], NULL, NULL, connfd, "server.evictserver");
 
-	// process CACHE_EVICT packet <optype, key, vallen, value, result, seq, serveridx>
+	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
 	char recvbuf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
 	int8_t optype = -1;
@@ -795,7 +829,7 @@ void run_server_evictserver(void *param) {
 		// Get optype
 		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
 			optype = *((int8_t *)recvbuf);
-			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_EVICT);
+			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_EVICT || packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2);
 		}
 
 		// Get key and vallen
@@ -810,15 +844,25 @@ void run_server_evictserver(void *param) {
 
 		// Get one complete CACHE_EVICT/_CASE2 (only need serveridx here)
 		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
-			// TODO: END HERE for CACHE_EVICT_CASE2
-			cache_evict_t *tmp_cache_evict_ptr = new cache_evict_t(recvbuf, arrive_serveridx_bytes); // freed by server.worker
-			INVARIANT(tmp_cache_evict_ptr->serveridx() == serveridx);
+			bool res = false;
+			// send CACHE_EVICT to server.worker 
+			if (packet_type_t(optype) == packet_type_t::CACHE_EVICT) {
+				cache_evict_t *tmp_cache_evict_ptr = new cache_evict_t(recvbuf, arrive_serveridx_bytes); // freed by server.worker
+				INVARIANT(tmp_cache_evict_ptr->serveridx() == serveridx);
+				res = server_cache_evict_or_case2_ptr_queue_list[serveridx].write(tmp_cache_evict_ptr);
+			}
+			else if (packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2) {
+				cache_evict_case2_t *tmp_cache_evict_case2_ptr = new cache_evict_case2_t(recvbuf, arrive_serveridx_bytes); // freed by server.worker
+				INVARIANT(tmp_cache_evict_case2_ptr->serveridx() == serveridx);
+				res = server_cache_evict_or_case2_ptr_queue_list[serveridx].write((cache_evict_t *)tmp_cache_evict_case2_ptr);
+			}
+			else {
+				printf("[server.evictserver] error: invalid optype: %d\n", int(optype));
+				exit(-1);
+			}
 			
-			// send CACHE_EVICT/_CASE2 to server.worker 
-			// TODO: server_cache_evict_or_case2_ptr_queue_list
-			bool res = server_cache_evict_ptr_queue_list[serveridx].write(tmp_cache_evict_ptr);
 			if (!res) {
-				printf("[server.evictserver] error: more than one CACHE_EVICT!\n");
+				printf("[server.evictserver] error: more than one CACHE_EVICT/_CASE2!\n");
 				exit(-1);
 			}
 

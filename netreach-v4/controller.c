@@ -397,7 +397,7 @@ void run_controller_evictserver(void *param) {
 		// Get optype
 		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
 			optype = *((int8_t *)buf);
-			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_EVICT);
+			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_EVICT || packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2);
 		}
 
 		// Get vallen

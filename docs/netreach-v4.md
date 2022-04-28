@@ -177,6 +177,7 @@
 		* Send CACHE_EVICT to the correpsonding server, and wait for CACHE_EVICT_ACK <victim.key>
 		* Send CACHE_EVICT_ACK to the switch OS
 	+ Snapshot
+		* TODOTODO: If CASE3 with significant delay (impossible?), controller.snapshotclient sends SNAPSHOT_START to servers such that they can start to process CASE3/controller.notification for server-side snapshot (from receiving SNAPSHOT_START to receiving backup data)
 		* controller.snapshotclient sends SNAPSHOT_START to ToR switchos periodically
 			- NOTE: hybrid consistency and causal consistency are not accepted by caching which requires point-in-time consistency
 			- For distributed snapshot
