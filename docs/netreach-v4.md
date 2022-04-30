@@ -273,18 +273,23 @@
 			- TODOTODO: For records with latest=0, we also store them into snapshow now, which does not break point-in-time consistency; it is just a duplication which can be solved by seq comparison
 		* switchos.ptf reports loaded snapshot data to switchos.snapshotdataserver by tcp
 		* snapshotserver sends SNAPSHOT_SERVERSIDE to controller and hence servers to make server-side snapshot, and waits for ACK
-		* TODO: snapshotserver.ptf resets snapshot_flag=false which does not need atomicity, and reset special case regs
+		* snapshotserver.ptf resets snapshot_flag=false which does not need atomicity, and reset case1_reg
 			- Some ingress pipelines see snapshot_flag=true and report special cases, which must be the same as loaded data
 			- Others see snapshot_flag=false and directly update in-switch value w/o special cases, which does not change loaded data
 		* snapshotserver ensures that popworker knows the end of snapshot (all case2 have been collected)
-			- TODO: snapshotserver resets is_snapshot=false such that no subsequent evicted data as case2
-			- TODO: snapshotserver sets is_snapshot_end=true
-			- TODO: popworker sets popworkerknow_snapshot_end=true if is_snapshot_end=true and popworker_know_snapshot_end=false (at the end of loop)
-			- specialcaseserver sets specialcaseserver_know_snapshot_end=true if is_snapshot_end=true and specialcaseserver_know_snapshot_end=false
-			- TODO: snapshotserver waits until popworker_know_snapshot_end=true and specialcasesever_know_snapshot_end=true
-			- TODO: snapshotserver resets is_snapshot_end=false -> popworker_know_snapshot_end=false and specialcaseserver_know_snapshot_end=false
-		* TODO: snapshotserver performs rollback to get a crash-consistent snapshot, and resets specialcases
+			- snapshotserver resets is_snapshot=false such that no subsequent evicted data as case2
+			- snapshotserver sets is_snapshot_end=true
+			- popworker sets popworker_know_snapshot_end=true, if is_snapshot_end=true and popworker_know_snapshot_end=false (at the end of loop)
+			- specialcaseserver sets specialcaseserver_know_snapshot_end=true, if is_snapshot_end=true and specialcaseserver_know_snapshot_end=false (when timeout occurs)
+			- snapshotserver waits until popworker_know_snapshot_end=true and specialcasesever_know_snapshot_end=true
+		* snapshotserver performs rollback to get a crash-consistent snapshot
 		* TODO: snapshotserver acknowledges controller.snapshotclient with crash-consistent snapshot data
+		* snapshotserver resets metadata
+			- is_snapshot_end=false -> popworker_know_snapshot_end=false and specialcaseserver_know_snapshot_end=false
+			- is_snapshot_prepare=false -> popworker_know_snapshot_prepare=false; is_snapshot=false
+			- free/reset backuped cache metadata
+			- clear specialcases
+			- free/reset loaded snapshot data
 		* TODOTODO: If with ptf session limitation, we can place snapshot flag in SRAM; load values and reset registers by data plane;
 	+ TODO: Periodically reset CM
 		* TODO: If with ptf session limitation, we can reset it in data plane

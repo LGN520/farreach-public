@@ -121,7 +121,7 @@ bool volatile is_snapshot = false;
 // specialcaseserver socket
 int volatile switchos_specialcaseserver_udpsock = -1;
 // special cases updated by specialcaseserver and popworker
-std::mutex switchos_mutex_for_specialcases
+std::mutex switchos_mutex_for_specialcases;
 std::map<int16_t, special_case_t> volatile switchos_specialcases;
 
 // snapshotdataserver socket to load snapshot data from ptf
@@ -759,7 +759,7 @@ void *run_switchos_snapshotserver(void *param) {
 				// ptf sets snapshot flag as true atomically
 				system("bash tofino/set_snapshot_flag.sh");
 
-				// backup cache metadata
+				// backup cache metadata (freed later)
 				switchos_cached_keyarray_backup = new index_key_t[switch_kv_bucketnum];
 				INVARIANT(switchos_cached_keyarray_backup != NULL);
 				memcpy(switchos_cached_keyarray_backup, switchos_cached_keyarray, switch_kv_bucketnum * sizeof(index_key_t));
@@ -793,27 +793,57 @@ void *run_switchos_snapshotserver(void *param) {
 				control_type_phase1 = *((int *)recvbuf);
 				INVARIANT(control_type_phase1 == SNAPSHOT_SERVERSIDE_ACK);
 
-				// TODO: finish snapshot
-				// TODO: perform rollback
+				// finish snapshot
+				system("bash tofino/reset_snapshot_flag_and_reg");
+				is_snapshot = false;
+				is_snapshot_end = true;
+
+				// wait for case2 from popworker and case1 from specialcaseserver
+				while (!popworker_know_snapshot_end || !specialcaseserver_know_snapshot_end) {}
+
+				// perform rollback
+				for (std::map<int16_t, special_case_t>::iterator iter = switchos_specialcases.begin(); iter != switchos_specialcases.end(); iter++) {
+					INVARIANT(switchos_cached_keyarray_backup[iter->first] == iter->second._key);
+					switchos_snapshot_values[iter->first] = iter->second._val;
+					switchos_snapshot_seqs[iter->first] = iter->second._seq;
+					switchos_snapshot_stats[iter->first] = iter->second._valid;
+				}
+
 				// TODO: send rollbacked snapshot data to controller
 
-				// TODO: reset metadata for next snapshot
-				// cur_recv_bytes
-				// control_type_phase0
-				// is_snapshot_prepare
+				// reset metadata for next snapshot
+				is_snapshot_end = false;
+				popworker_know_snapshot_end = false;
+				specialcaseserver_know_snapshot_end = false;
+				is_snapshot_prepare = false;
 				popworker_know_snapshot_prepare = false;
-				// is_snapshot
-				// is_snapshot_end
-				// popworker_know_snapshot_end
-				// specialcaseserver_know_snapshot_end
-				// free switchos_cached_keyarray_backup
-				// free switchos_cached_serveridxarray_backup
-				// switchos_cached_empty_index_backup
+				is_snapshot = false;
+				delete [] switchos_cached_keyarray_backup;
+				switchos_cached_keyarray_backup = NULL;
+				delete [] switchos_cached_serveridxarray_backup;
+				switchos_cached_serveridxarray_backup = NULL;
+				switchos_cached_empty_index_backup = 0;
 				// //clear switchos_cached_key_idx_map_backup
-				// switchos_with_snapshotdata
-				// switchos_snapshot_values
-				// switchos_snapshot_seqs
-				// switchos_snapshot_stats
+				switchos_specialcases.clear();
+				switchos_with_snapshotdata = false;
+				delete [] switchos_snapshot_values;
+				switchos_snapshot_values = NULL;
+				delete [] switchos_snapshot_seqs;
+				switchos_snapshot_seqs = NULL;
+				delete [] switchos_snapshot_stats;
+				switchos_snapshot_stats = NULL;
+				
+				// Move remaining bytes and reset metadata for snapshotserver.tcpsock
+				if (cur_recv_bytes > 2*sizeof(int)) { // SNAPSHOT_START + SNAPSHOT_SERVERSIDE_ACK
+					memcpy(recvbuf, recvbuf + 2*sizeof(int), cur_recv_bytes - 2*sizeof(int));
+					cur_recv_bytes = cur_recv_bytes - 2*sizeof(int);
+				}
+				else {
+					cur_recv_bytes = 0;
+				}
+				phase = 0;
+				control_type_phase0 = -1;
+				control_type_phase1 = -1;
 			} // receive a SNAPSHOT_SERVERSIDE_ACK
 
 		} // phase == 1
