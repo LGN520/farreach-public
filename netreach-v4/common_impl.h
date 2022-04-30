@@ -122,6 +122,8 @@ int SWITCHOS_GET_CACHEDEMPTYINDEX = -1; // ptf get cached_empty_index
 // Packet types used by switchos/controller/server for snapshot
 int SNAPSHOT_START = -1;
 int SNAPSHOT_SERVERSIDE = -1;
+int SNAPSHOT_SERVERSIDE_ACK = -1;
+int SNAPSHOT_DATA = -1;
 
 /*
  * Get configuration
@@ -255,6 +257,8 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_GET_CACHEDEMPTYINDEX = ini.get_switchos_get_cachedemptyindex();
 	SNAPSHOT_START = ini.get_snapshot_start();
 	SNAPSHOT_SERVERSIDE = ini.get_snapshot_serverside();
+	SNAPSHOT_SERVERSIDE_ACK = ini.get_snapshot_serverside_ack();
+	SNAPSHOT_DATA = ini.get_snapshot_data();
 	COUT_VAR(SWITCHO_GET_FREEIDX);
 	COUT_VAR(SWITCHO_GET_KEY_FREEIDX);
 	COUT_VAR(SWITCHO_SET_EVICTDATA);
@@ -262,6 +266,8 @@ inline void parse_control_ini(const char* config_file) {
 	COUT_VAR(SWITCHO_GET_CACHEDEMPTYINDEX);
 	COUT_VAR(SNAPSHOT_START);
 	COUT_VAR(SNAPSHOT_SERVERSIDE);
+	COUT_VAR(SNAPSHOT_SERVERSIDE_ACK);
+	COUT_VAR(SNAPSHOT_DATA);
 }
 
 /*inline void parse_args(int argc, char **argv) {

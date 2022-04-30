@@ -70,6 +70,7 @@ class IniparserWrapper {
 		int get_snapshot_start();
 		int get_snapshot_serverside();
 		int get_snapshot_serverside_ack();
+		int get_snapshot_data();
 
 	private:
 		dictionary *ini = nullptr;

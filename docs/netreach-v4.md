@@ -157,12 +157,15 @@
 	+ Cache population: each server maintains a set of keys being cached to avoid duplicate population
 		* If GETREQ_POP triggers a cache population (i.e., key exists), server adds the key into cached key set
 		* If server receives CACHE_EVICT, it removes the evicted key from cached key set
+		* NOTE: we reduce server.evictservers to a single thread (server.evictserver) now
 	+ TODO: Snapshot
 		* Make server-side snapshot if necessary
-			- optype: PUTREQ_SEQ_CASE3, DELREQ_SEQ_CASE3, TODO: CACHE_EVICT_CASE2, explicit server-side snapshot notification from controller.snapshotclient
-		* TODO: Each server receives in-switch snapshot, and deduplicate by seq comparison
+			- optype: PUTREQ_SEQ_CASE3, DELREQ_SEQ_CASE3, CACHE_EVICT_CASE2, and SNAPSHOT_SERVERSIDE from controller.snapshotclient
+		* TODO: Server.consnapshotserver receives snapshot data -> distribute data among servers with RCU mechanism for range query
+			* TODO: deduplicate during range query
 			* TODO: Treat DELREQ as a special write request -> do not ignore and free deleted atomic value, and remove deleted set (extended_xindex_dynamic_seq_del)
 			* TODO: Provide getseq API for seq comparison
+	+ TODOTODO: We can use multiple threads for controller.snapshotclient.consnapshotclients and server.consnapshotservers/evictservers if necessary -> controller needs to use perserver_bytes in snapshot data
 - Controller
 	+ Cache population
 		* Receive CACHE_POP from server by tcp channel
@@ -188,10 +191,8 @@
 				+ NOTE: provide point-in-time consistency yet degrade throughput -> the degradation time should be limited compared with snapshot period!
 		* Receive SNAPSHOT_SERVERSIDE from switchos, and notify servers for in-memory snapshot
 		* Wait for SNAPSHOT_SERVERSIDE_ACK from servers, and send it to switchos
-		* TODO: Receive per-switch snapshot, and send key-value records from controller.snapshotclient.consnapshotclients[serveridx] to servers[serveridx].consnapshotserver
-			- TODOTODO: We can use multiple threads in controller if necessary
-			- TODOTODO: Or we can reduce server.evictservers/consnapshotservers to a single thread if necessary
-		* TODO: Wait for ACKs from switchos, and sleep until next snapshot period
+		* Receive per-switch snapshot (as final ACK of SNAPSHOT_START) -> send key-value records from controller.snapshotclient.consnapshotclient to server.consnapshotserver
+		* Sleep until next snapshot period
 - Switch OS
 	+ Cache population/eviction
 		* IMPORTANT: Workflow
@@ -283,7 +284,7 @@
 			- specialcaseserver sets specialcaseserver_know_snapshot_end=true, if is_snapshot_end=true and specialcaseserver_know_snapshot_end=false (when timeout occurs)
 			- snapshotserver waits until popworker_know_snapshot_end=true and specialcasesever_know_snapshot_end=true
 		* snapshotserver performs rollback to get a crash-consistent snapshot
-		* TODO: snapshotserver acknowledges controller.snapshotclient with crash-consistent snapshot data
+		* snapshotserver acknowledges controller.snapshotclient with crash-consistent snapshot data
 		* snapshotserver resets metadata
 			- is_snapshot_end=false -> popworker_know_snapshot_end=false and specialcaseserver_know_snapshot_end=false
 			- is_snapshot_prepare=false -> popworker_know_snapshot_prepare=false; is_snapshot=false

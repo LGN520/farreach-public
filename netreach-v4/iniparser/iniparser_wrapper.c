@@ -402,6 +402,15 @@ int IniparserWrapper::get_switchos_get_snapshot_serverside_ack() {
 	return tmp;
 }
 
+int IniparserWrapper::get_switchos_get_snapshot_data() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_get_snapshot_data", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_get_snapshot_data]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
 // Helper func
 
 void IniparserWrapper::parse_mac(uint8_t *macaddr, const char* macstr) {

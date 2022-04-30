@@ -66,10 +66,13 @@ int volatile controller_popclient_tcpsock = -1;
 
 // switchos.popworker <-> controller.evictserver
 int volatile controller_evictserver_tcpsock = -1;
-// controller.evictclients <-> servers.evictserver
+// controller.evictclients <-> servers.evictservers
 // NOTE: evictclient.index = serveridx
-bool volatile is_controller_evictserver_evictclients_connected = false;
-int * volatile controller_evictserver_evictclient_tcpsock_list = NULL;
+//bool volatile is_controller_evictserver_evictclients_connected = false;
+//int * volatile controller_evictserver_evictclient_tcpsock_list = NULL;
+// controller.evictclient <-> server.evictserver
+bool volatile is_controller_evictserver_evictclient_connected = false;
+int volatile controller_evictserver_evictclient_tcpsock = -1;
 
 // controller.snapshotclient <-> switchos.snapshotserver
 bool volatile is_controller_snapshotclient_connected = false;
@@ -166,10 +169,13 @@ void prepare_controller() {
 	prepare_tcpserver(controller_evictserver_tcpsock, false, controller_evictserver_port, 1, "controller.evictserver"); // MAX_PENDING_CONNECTION = 1 (switchos.popworker.evictclient)
 
 	// prepare evictclients
-	controller_evictserver_evictclient_tcpsock_list = new int[server_num];
+	/*controller_evictserver_evictclient_tcpsock_list = new int[server_num];
 	for (size_t i = 0; i < server_num; i++) {
 		create_tcpsock(controller_evictserver_evictclient_tcpsock_list[i], "controller.evictserver.evictclient");
-	}
+	}*/
+
+	// prepare evictclient
+	create_tcpsock(controller_evictserver_evictclient_tcpsock, "controller.evictserver.evictclient");
 
 	// prepare snapshotclient
 	create_tcpsock(controller_snapshotclient_tcpsock, "controller.snapshotclient");
@@ -373,7 +379,7 @@ void run_controller_evictserver(void *param) {
 	int8_t optype = -1;
 	//index_key_t tmpkey = index_key_t();
 	int32_t vallen = -1;
-	int16_t tmpserveridx = -1;
+	//int16_t tmpserveridx = -1;
 	bool is_waitack = false;
 	const int arrive_optype_bytes = sizeof(int8_t);
 	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(int32_t);
@@ -388,11 +394,15 @@ void run_controller_evictserver(void *param) {
 			break;
 		}
 		
-		if (!is_controller_evictserver_evictclients_connected) {
+		/*if (!is_controller_evictserver_evictclients_connected) {
 			for (size_t i = 0; i < server_num; i++) {
 				tcpconnect(controller_evictserver_evictclient_tcpsock_list[i], server_ip, server_evictserver_port_start+i, "controller.evictserver.evictclient", "server.evictserver");
 			}
 			is_controller_evictserver_evictclients_connected = true;
+		}*/
+
+		if (!is_controller_evictserver_evictclient_connected) {
+			tcpconnect(controller_evictserver_evictclient_tcpsock, server_ip, server_evictserver_port_start, "controller.evictserver.evictclient", "server.evictserver");
 		}
 
 		cur_recv_bytes += recvsize;
@@ -422,10 +432,11 @@ void run_controller_evictserver(void *param) {
 			//cache_evict_t *tmp_cache_evict_ptr = new cache_evict_t(buf, arrive_serveridx_bytes);
 
 			// send CACHE_EVICT to corresponding server
-			tmpserveridx = *((int16_t *)(buf + arrive_serveridx_bytes - sizeof(int16_t)));
-			tmpserveridx = int16_t(ntohs(uint16_t(tmpserveridx)));
-			INVARIANT(tmpserveridx >= 0 && tmpserveridx < server_num);
-			tcpsend(controller_evictserver_evictclient_tcpsock_list[tmpserveridx], buf, arrive_serveridx_bytes, "controller.evictserver.evictclient");
+			//tmpserveridx = *((int16_t *)(buf + arrive_serveridx_bytes - sizeof(int16_t)));
+			//tmpserveridx = int16_t(ntohs(uint16_t(tmpserveridx)));
+			//INVARIANT(tmpserveridx >= 0 && tmpserveridx < server_num);
+			//tcpsend(controller_evictserver_evictclient_tcpsock_list[tmpserveridx], buf, arrive_serveridx_bytes, "controller.evictserver.evictclient");
+			tcpsend(controller_evictserver_evictclient_tcpsock, buf, arrive_serveridx_bytes, "controller.evictserver.evictclient");
 
 			is_waitack = true;
 
@@ -436,7 +447,8 @@ void run_controller_evictserver(void *param) {
 		// wait for CACHE_EVICT_ACK from server.evictserver
 		if (is_waitack) {
 			int evictclient_recvsize = 0;
-			bool evictclient_is_broken = tcprecv(controller_evictserver_evictclient_tcpsock_list[tmpserveridx], evictclient_buf + evictclient_cur_recv_bytes, MAX_BUFSIZE - evictclient_cur_recv_bytes, 0, evictclient_recvsize, "controller.evictserver.evictclient");
+			//bool evictclient_is_broken = tcprecv(controller_evictserver_evictclient_tcpsock_list[tmpserveridx], evictclient_buf + evictclient_cur_recv_bytes, MAX_BUFSIZE - evictclient_cur_recv_bytes, 0, evictclient_recvsize, "controller.evictserver.evictclient");
+			bool evictclient_is_broken = tcprecv(controller_evictserver_evictclient_tcpsock, evictclient_buf + evictclient_cur_recv_bytes, MAX_BUFSIZE - evictclient_cur_recv_bytes, 0, evictclient_recvsize, "controller.evictserver.evictclient");
 			if (evictclient_is_broken) {
 				break;
 			}
@@ -468,7 +480,7 @@ void run_controller_evictserver(void *param) {
 				optype = -1;
 				//tmpkey = index_key_t();
 				vallen = -1;
-				tmpserveridx = -1;
+				//tmpserveridx = -1;
 				is_waitack = false;
 				arrive_serveridx_bytes = -1;
 				if (evictclient_cur_recv_bytes > evictclient_arrive_key_bytes) {
@@ -496,15 +508,19 @@ void *run_controller_snapshotclient(void *param) {
 	char recvbuf[MAX_BUFSIZE]; // SNAPSHOT_SERVERSIDE/snapshotdata from switchos
 	uint32_t cur_recv_bytes = 0;
 	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
-	int control_type = -1;
+	int control_type_phase0 = -1;
 	char ack_recvbuf[MAX_SIZE]; // SNAPSHOT_SERVERSIDE_ACK from server
 	int ack_cur_recv_bytes = 0;
-	int ack_control_type = -1;
+	int ack_control_type_phase0 = -1;
+	int control_type_phase1 = -1;
+	int total_bytes = -1;
 	while (controller_running) {
 		INVARIANT(controller_snapshot_period > last_duration);
 		usleep((controller_snapshot_period - last_duration) * 1000); // ms -> us
 
-		// TODO: count time for last_duration
+		// count time for last_duration
+		struct timespec t1, t2, t3;
+		CUR_TIME(t1);
 
 		// connect switchos.snapshotserver
 		if (!is_controller_snapshotclient_connected) {
@@ -531,9 +547,9 @@ void *run_controller_snapshotclient(void *param) {
 
 			// wait for SNAPSHOT_SERVERSIDE from switchos, and send it to server
 			if (phase == 0) {
-				if (control_type == -1 && cur_recv_bytes >= sizeof(int)) {
-					control_type = *((int *)recvbuf);
-					INVARIANT(control_type == SNAPSHOT_SERVERSIDE);
+				if (control_type_phase0 == -1 && cur_recv_bytes >= sizeof(int)) {
+					control_type_phase0 = *((int *)recvbuf);
+					INVARIANT(control_type_phase0 == SNAPSHOT_SERVERSIDE);
 
 					// connect server.consnapshotserver
 					if (!is_controller_snapshotclient_consnapshotclient_connected) {
@@ -546,7 +562,7 @@ void *run_controller_snapshotclient(void *param) {
 
 					// wait for SNAPSHOT_SERVERSIDE_ACK from server, and send it to switchos
 					while (true) {
-						if (ack_control_type == -1 && ack_cur_recv_bytes < sizeof(int)) {
+						if (ack_control_type_phase0 == -1 && ack_cur_recv_bytes < sizeof(int)) {
 							int tmp_recvsize = 0;
 							bool tmp_is_broken = tcprecv(controller_snapshotclient_consnapshotclient_tcpsock, ack_recvbuf + ack_cur_recv_bytes, MAX_BUFSIZE - ack_cur_recv_bytes, 0, tmp_recvsize, "controller.snapshotclient.consnapshotclient");
 							if (tmp_is_broken) {
@@ -560,15 +576,15 @@ void *run_controller_snapshotclient(void *param) {
 							}
 						}
 
-						if (ack_control_type == -1 && ack_cur_recv_bytes >= sizeof(int)) {
-							ack_control_type = *((int *)ack_recvbuf);
-							INVARIANT(ack_control_type == SNAPSHOT_SERVERSIDE_ACK);
+						if (ack_control_type_phase0 == -1 && ack_cur_recv_bytes >= sizeof(int)) {
+							ack_control_type_phase0 = *((int *)ack_recvbuf);
+							INVARIANT(ack_control_type_phase0 == SNAPSHOT_SERVERSIDE_ACK);
 
 							// send SNAPSHOT_SERVERSIDE_ACK to switchos
 							tcpsend(controller_snapshotclient_tcpsock, (char *)&SNAPSHOT_SERVERSIDE_ACK, sizeof(int), "controller.snapshotclient");
 						}
 
-						if (ack_control_type != -1) {
+						if (ack_control_type_phase0 != -1) {
 							// Move remaining bytes and reset metadata
 							if (ack_cur_recv_bytes > sizeof(int)) {
 								memcpy(ack_recvbuf, ack_recvbuf + sizeof(int), ack_cur_recv_bytes - sizeof(int));
@@ -577,7 +593,7 @@ void *run_controller_snapshotclient(void *param) {
 							else {
 								ack_cur_recv_bytes = 0;
 							}
-							ack_control_type = -1;
+							ack_control_type_phase0 = -1;
 							break;
 						} // receive a SNAPSHOT_SERVERSIDE_ACK
 					} // while (true)
@@ -585,23 +601,42 @@ void *run_controller_snapshotclient(void *param) {
 					phase = 1; // wait for crash-consistent snapshot data
 				} // receive a SNAPSHOT_SERVERSIDE
 			} // phase == 0
-			else if (phase == 1) {
+			else if (phase == 1) { // wait for crash-consistent snapshot data
 				// NOTE: skip sizeof(int) for SNAPSHOT_SERVERSIDE
-				// TODO: wait for crash-consistent snapshot data
+				if (control_type_phase1 == -1 && cur_recv_bytes >= sizeof(int) + sizeof(int) + sizeof(int32_t)) { // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
+					control_type_phase1 = *((int *)(recvbuf + sizeof(int)));
+					INVARIANT(control_type_phase1 == SNAPSHOT_DATA);
+					total_bytes = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int)));
+					INVARIANT(total_bytes > 0);
+				}
 
-				// TODO: Move remaining bytes and reset metadata
-				// TODO: not sizeof(int)
-				if (cur_recv_bytes > sizeof(int)) {
-					memcpy(recvbuf, recvbuf + sizeof(int), cur_recv_bytes - sizeof(int));
-					cur_recv_bytes = cur_recv_bytes - sizeof(int);
+				// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
+				// per-server data: <int32_t perserver_bytes, int16_t serveridx, int32_t recordcnt, per-record data>
+				// per-record data: <16B key, int32_t vallen, value (w/ padding), int32_t seq, bool stat>
+				if (control_type_phase1 != -1 && cur_recv_bytes >= sizeof(int) + total_bytes) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
+					// NOTE: per-server_bytes is used for sending snapshot data to different server.consnapshotservers (not used now)
+					
+					// send snapshot data to server.consnapshotserver
+					tcpsend(controller_snapshotclient_consnapshotclient_tcpsock, recvbuf + sizeof(int), total_bytes, "controller.snapshotclient.consnapshotclient");
+
+					// Move remaining bytes and reset metadata
+					if (cur_recv_bytes > sizeof(int) + total_bytes) {
+						memcpy(recvbuf, recvbuf + sizeof(int) + total_bytes, cur_recv_bytes - sizeof(int) - total_bytes);
+						cur_recv_bytes = cur_recv_bytes - sizeof(int) - total_bytes;
+					}
+					else {
+						cur_recv_bytes = 0;
+					}
+					phase = 0;
+					control_type_phase0 = -1;
+					control_type_phase1 = -1;
+					total_bytes = -1;
 				}
-				else {
-					cur_recv_bytes = 0;
-				}
-				control_type = -1;
-				phase = 0;
 			}
 		} // while (true)
+		CUR_TIME(t2);
+		DELTA_TIME(t2, t1, t3);
+		last_duration = GET_MICROSECOND(t3) / 1000; // us -> ms
 	} // while (controller_running)
 
 	close(controller_snapshotclient_tcpsock);
@@ -623,8 +658,8 @@ void close_controller() {
 		delete [] controller_cache_pop_ptrs;
 		controller_cache_pop_ptrs = NULL;
 	}*/
-	if (controller_evictserver_evictclient_tcpsock_list != NULL) {
+	/*if (controller_evictserver_evictclient_tcpsock_list != NULL) {
 		delete [] controller_evictserver_evictclient_tcpsock_list;
 		controller_evictserver_evictclient_tcpsock_list = NULL;
-	}
+	}*/
 }

@@ -11,18 +11,34 @@ struct alignas(CACHELINE_SIZE) ServerWorkerParam {
 };
 typedef ServerWorkerParam server_worker_param_t;
 
+struct SnapshotRecord {
+	val_t val;
+	int32_t seq;
+	bool stat;
+};
+typedef SnapshotRecord snapshot_record_t;
+
 // Per-server popclient <-> one popserver in controller
 int * volatile server_popclient_tcpsock_list = NULL;
 std::set<index_key_t> * volatile server_cached_keyset_list = NULL;
 
-// Per-server evictserver <-> one evictclient in controller
-int * volatile server_evictserver_tcpsock_list = NULL;
+// server.evictservers <-> controller.evictserver.evictclients
+//int * volatile server_evictserver_tcpsock_list = NULL;
+// server.evictserver <-> controller.evictserver.evictclient
+int volatile server_evictserver_tcpsock = -1;
 // single-message queues is sufficient between server.evictclients and server.workers
 message_ptr_queue_t<cache_evict_t> * volatile server_cache_evict_or_case2_ptr_queue_list = NULL;
 message_ptr_queue_t<cache_evict_ack_t> * volatile server_cache_evict_ack_ptr_queue_list = NULL;
 /*cache_evict_ack_t *** volatile cache_evict_ack_ptrs_list = NULL;
 uint32_t *volatile server_heads_for_evict_ack = NULL;
 uint32_t *volatile tails_for_evict_ack = NULL;*/
+
+// snapshot
+int volatile server_consnapshotserver_tcpsock = -1;
+// TODO: END HERE
+std::map<index_key_t, snapshot_record_t> * volatile snapshot_data_ptr = NULL;
+uint32_t* volatile snapshot_rcu;
+bool volatile issnapshot = false; // TODO: it should be atomic
 
 void prepare_server();
 void close_server();
@@ -44,10 +60,11 @@ void prepare_server() {
 	}
 
 	// prepare for cache eviction
-	server_evictserver_tcpksock_list = new int[server_num];
+	/*server_evictserver_tcpksock_list = new int[server_num];
 	for (size_t i = 0; i < server_num; i++) {
 		prepare_tcpserver(server_evictserver_tcpksock_list[i], false, server_evictserver_port_start+i, 1, "server.evictserver"); // MAX_PENDING_NUM = 1
-	}
+	}*/
+	prepare_tcpserver(server_evictserver_tcpsock, false, server_evictserver_port_start, 1, "server.evictserver"); // MAX_PENDING_NUM = 1
 	server_cache_evict_or_case2_ptr_queue_list = new message_ptr_queue_t<cache_evict_t>[server_num](SINGLE_MQ_SIZE);
 	server_cache_evict_ack_ptr_queue_list = new message_ptr_queue_t<cache_evict_ack_t>[server_num](SINGLE_MQ_SIZE);
 
@@ -64,10 +81,10 @@ void close_server() {
 		delete [] server_cached_keyset_list;
 		server_cached_keyset_list = NULL;
 	}
-	if (server_evictserver_tcpsock_list != NULL) {
+	/*if (server_evictserver_tcpsock_list != NULL) {
 		delete [] server_evictserver_tcpsock_list;
 		server_evictserver_tcpsock_list = NULL;
-	}
+	}*/
 	if (server_cache_evict_or_case2_ptr_queue_list != NULL) {
 		delete [] server_cache_evict_or_case2_ptr_queue_list;
 		server_cache_evict_or_case2_ptr_queue_list = NULL;
@@ -352,7 +369,7 @@ static int run_server_worker(void * param) {
 					COUT_THIS("PUTREQ_SEQ_CASE3")
 					put_request_seq_case3_t req(buf, recv_size);
 
-					if (!isbackup) {
+					if (!issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -372,7 +389,7 @@ static int run_server_worker(void * param) {
 					COUT_THIS("PUTREQ_POP_SEQ_CASE3")
 					put_request_pop_seq_case3_t req(buf, recv_size);
 
-					if (!isbackup) {
+					if (!issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -405,7 +422,7 @@ static int run_server_worker(void * param) {
 					COUT_THIS("DELREQ_SEQ_CASE3")
 					del_request_seq_case3_t req(buf, recv_size);
 
-					if (!isbackup) {
+					if (!issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -506,7 +523,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					get_response_pop_evict_case2_t req(buf, recv_size);
 
-					if (!isbackup) {
+					if (!issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -526,7 +543,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_pop_evict_case2_t req(buf, recv_size);
 
-					if (!isbackup) {
+					if (!issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -546,7 +563,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_large_evict_case2_t req(buf, recv_size);
 
-					if (!isbackup) {
+					if (!issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -567,7 +584,7 @@ static int run_server_worker(void * param) {
 					COUT_THIS("PUT_REQ_LARGE_CASE3")
 					put_request_large_case3_t req(buf, recv_size);
 
-					if (!isbackup) {
+					if (!issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -665,7 +682,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					get_response_pop_evict_case2_switch_t req(buf, recv_size);
 
-					if (!isbackup) {
+					if (!issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -685,7 +702,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_pop_evict_case2_switch_t req(buf, recv_size);
 
-					if (!isbackup) {
+					if (!issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -705,7 +722,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_large_evict_case2_switch_t req(buf, recv_size);
 
-					if (!isbackup) {
+					if (!issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -750,7 +767,7 @@ static int run_server_worker(void * param) {
 		// make server-side snapshot for CACHE_EVICT_CASE2
 		if (tmp_cache_evict_ptr->_type == packet_type_t::CACHE_EVICT_CASE2) {
 			printf("CACHE_EVICT_CASE2!\n");
-			if (!isbackup) {
+			if (!issnapshot) {
 				try_kvsnapshot(table);
 			}
 		}
@@ -796,7 +813,7 @@ static int run_server_worker(void * param) {
 }
 
 void run_server_evictserver(void *param) {
-	int16_t serveridx = *((int16_t *)param);
+	//int16_t serveridx = *((int16_t *)param);
 
 	// Not used
 	//struct sockaddr_in controller_addr;
@@ -805,7 +822,8 @@ void run_server_evictserver(void *param) {
 	while (!server_running) {}
 
 	int connfd = -1;
-	tcpaccept(server_evictserver_tcpsock_list[serveridx], NULL, NULL, connfd, "server.evictserver");
+	//tcpaccept(server_evictserver_tcpsock_list[serveridx], NULL, NULL, connfd, "server.evictserver");
+	tcpaccept(server_evictserver_tcpsock, NULL, NULL, connfd, "server.evictserver");
 
 	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
 	char recvbuf[MAX_BUFSIZE];
@@ -817,6 +835,7 @@ void run_server_evictserver(void *param) {
 	const int arrive_optype_bytes = sizeof(int8_t);
 	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(int32_t);
 	int arrive_serveridx_bytes = -1;
+	int tmp_serveridx = -1;
 	while (server_running) {
 		int recvsize = 0;
 		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.evictserver");
@@ -852,13 +871,15 @@ void run_server_evictserver(void *param) {
 			// send CACHE_EVICT to server.worker 
 			if (packet_type_t(optype) == packet_type_t::CACHE_EVICT) {
 				cache_evict_t *tmp_cache_evict_ptr = new cache_evict_t(recvbuf, arrive_serveridx_bytes); // freed by server.worker
-				INVARIANT(tmp_cache_evict_ptr->serveridx() == serveridx);
-				res = server_cache_evict_or_case2_ptr_queue_list[serveridx].write(tmp_cache_evict_ptr);
+				//INVARIANT(tmp_cache_evict_ptr->serveridx() == serveridx);
+				tmp_serveridx = tmp_cache_evict_ptr->serveridx();
+				res = server_cache_evict_or_case2_ptr_queue_list[tmp_serveridx].write(tmp_cache_evict_ptr);
 			}
 			else if (packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2) {
 				cache_evict_case2_t *tmp_cache_evict_case2_ptr = new cache_evict_case2_t(recvbuf, arrive_serveridx_bytes); // freed by server.worker
-				INVARIANT(tmp_cache_evict_case2_ptr->serveridx() == serveridx);
-				res = server_cache_evict_or_case2_ptr_queue_list[serveridx].write((cache_evict_t *)tmp_cache_evict_case2_ptr);
+				//INVARIANT(tmp_cache_evict_case2_ptr->serveridx() == serveridx);
+				tmp_serveridx = tmp_cache_evict_case2_ptr->serveridx();
+				res = server_cache_evict_or_case2_ptr_queue_list[tmp_serveridx].write((cache_evict_t *)tmp_cache_evict_case2_ptr);
 			}
 			else {
 				printf("[server.evictserver] error: invalid optype: %d\n", int(optype));
@@ -875,7 +896,7 @@ void run_server_evictserver(void *param) {
 
 		// wait for CACHE_EVICT_ACK from server.worker
 		if (is_waitack) {
-			cache_evict_ack_t *tmp_cache_evict_ack_ptr = server_cache_evict_ack_ptr_queue_list[serveridx].read();
+			cache_evict_ack_t *tmp_cache_evict_ack_ptr = server_cache_evict_ack_ptr_queue_list[tmp_serveridx].read();
 			if (tmp_cache_evict_ack_ptr != NULL) {
 				INVARIANT(tmp_cache_evict_ack_ptr->key() == tmpkey);
 
@@ -897,6 +918,7 @@ void run_server_evictserver(void *param) {
 				vallen = -1;
 				is_waitack = false;
 				arrive_serveridx_bytes = -1;
+				tmp_serveridx = -1;
 
 				// free CACHE_EVIT_ACK
 				delete tmp_cache_evict_ack_ptr;
@@ -921,7 +943,7 @@ void *run_server_consnapshotserver(void *param) {
 	char recvbuf[MAX_LARGE_BUFSIZE];
 	int cur_recv_bytes = 0;
 	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
-	int control_type = -1;
+	int control_type_phase0 = -1;
 	while (server_running) {
 		int recvsize = 0;
 		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
@@ -937,13 +959,13 @@ void *run_server_consnapshotserver(void *param) {
 
 		if (phase == 0) {
 			// process SNAPSHOT_SERVERSIDE for server-side snapshot
-			if (control_type == -1 && cur_recv_bytes >= sizeof(int)) {
-				control_type = *((int *)recvbuf);
-				INVARIANT(control_type == SNAPSHOT_SERVERSIDE);
+			if (control_type_phase0 == -1 && cur_recv_bytes >= sizeof(int)) {
+				control_type_phase0 = *((int *)recvbuf);
+				INVARIANT(control_type_phase0 == SNAPSHOT_SERVERSIDE);
 			}
 
 			// make server-side snapshot (simulate distributed in-memory KVS by concurrent one)
-			if (!isbackup) {
+			if (!issnapshot) {
 				try_kvsnapshot(table);
 			}
 
@@ -956,7 +978,7 @@ void *run_server_consnapshotserver(void *param) {
 			// NOTE: skip sizeof(int) for SNAPSHOT_SERVERSIDE
 			// TODO: process crash-consistent snapshot
 			
-			// TODO: reset
+			// TODO: move and reset
 		}
 	}
 }
