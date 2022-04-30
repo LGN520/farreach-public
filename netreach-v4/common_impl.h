@@ -84,6 +84,7 @@ short backup_port;
 short notified_port;
 short server_evictserver_port_start = -1;
 size_t per_server_range;
+short server_consnapshotserver_port = -1;
 
 // controller
 const char *controller_ip_for_server = nullptr;
@@ -102,6 +103,7 @@ const char *switchos_ip = nullptr;
 uint32_t switchos_sample_cnt = 0;
 short switchos_snapshotserver_port = -1;
 short switchos_specialcaseserver_port = -1;
+short switchos_snapshotdataserver_port = -1;
 
 // reflector
 const char *reflector_ip_for_switchos = nullptr;
@@ -110,12 +112,23 @@ short reflector_popserver_port = -1;
 // others
 size_t bg_n = 1;
 
+// Packet types used by switchos.paramserver and ptf framework
+int SWITCHOS_GET_FREEIDX = -1; // ptf get freeidx from paramserver
+int SWITCHOS_GET_KEY_FREEIDX = -1; // ptf get key and freeidx from paramserver
+int SWITCHOS_SET_EVICTDATA = -1; // ptf set evictidx, evictvallen, evictval, evictstat, and evictseq to paramserver
+int SWITCHOS_GET_EVICTKEY = -1; // ptf get evictkey
+int SWITCHOS_GET_CACHEDEMPTYINDEX = -1; // ptf get cached_empty_index
+
+// Packet types used by switchos/controller/server for snapshot
+int SNAPSHOT_START = -1;
+int SNAPSHOT_SERVERSIDE = -1;
 
 /*
  * Get configuration
  */
 
 inline void parse_ini(const char * config_file);
+inline void parse_control_ini(const char * config_file);
 //inline void parse_args(int, char **);
 
 inline void parse_ini(const char* config_file) {
@@ -172,6 +185,7 @@ inline void parse_ini(const char* config_file) {
 	notified_port = ini.get_server_notified_port();
 	server_evictserver_port_start = ini,get_server_evictserver_port();
 	per_server_range = std::numeric_limits<size_t>::max() / server_num;
+	server_consnapshotserver_port = ini,get_server_consnapshotserver_port();
 	COUT_VAR(server_num);
 	COUT_VAR(server_port_start);
 	COUT_VAR(pktloss_port_start);
@@ -187,6 +201,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(notified_port);
 	COUT_VAR(server_evictserver_port_start);
 	COUT_VAR(per_server_range);
+	COUT_VAR(server_consnapshotserver_port);
 
 	// controller
 	controller_ip_for_server = ini.get_controller_ip_for_server();
@@ -211,6 +226,7 @@ inline void parse_ini(const char* config_file) {
 	switchos_sample_cnt = ini.get_switchos_sample_cnt();
 	switchos_snapshotserver_port = ini.get_switchos_snapshotserver_port();
 	switchos_specialcaseserver_port = ini.get_switchos_specialcaseserver_port();
+	switchos_snapshotdataserver_port = ini.get_switchos_snapshotdataserver_port();
 	COUT_VAR(kv_bucket_num);
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 	COUR_VAR(switchos_popserver_port);
@@ -219,12 +235,33 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(switchos_sample_cnt);
 	COUT_VAR(switchos_snapshotserver_port);
 	COUT_VAR(switchos_specialcaseserver_port);
+	COUT_VAR(switchos_snapshotdataserver_port);
 
 	// reflector
 	reflector_ip_for_switchos = ini.get_reflector_ip_for_switchos();
 	reflector_popserver_port = ini.get_reflector_popserver_port();
 	printf("reflector ip for switchos: %s\n", reflector_ip_for_switchos);
 	COUT_VAR(reflector_popserver_port);
+}
+
+inline void parse_control_ini(const char* config_file) {
+	IniparserWrapper ini;
+	ini.load(config_file);
+
+	SWITCHOS_GET_FREEIDX = ini.get_switchos_get_freeidx();
+	SWITCHOS_GET_KEY_FREEIDX = ini.get_switchos_get_key_freeidx();
+	SWITCHOS_SET_EVICTDATA = ini.get_switchos_set_evictdata();
+	SWITCHOS_GET_EVICTKEY = ini.get_switchos_get_evictkey();
+	SWITCHOS_GET_CACHEDEMPTYINDEX = ini.get_switchos_get_cachedemptyindex();
+	SNAPSHOT_START = ini.get_snapshot_start();
+	SNAPSHOT_SERVERSIDE = ini.get_snapshot_serverside();
+	COUT_VAR(SWITCHO_GET_FREEIDX);
+	COUT_VAR(SWITCHO_GET_KEY_FREEIDX);
+	COUT_VAR(SWITCHO_SET_EVICTDATA);
+	COUT_VAR(SWITCHO_GET_EVICTKEY);
+	COUT_VAR(SWITCHO_GET_CACHEDEMPTYINDEX);
+	COUT_VAR(SNAPSHOT_START);
+	COUT_VAR(SNAPSHOT_SERVERSIDE);
 }
 
 /*inline void parse_args(int argc, char **argv) {

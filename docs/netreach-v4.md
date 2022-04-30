@@ -186,8 +186,11 @@
 					* TODO: The echoed packets also use A's flag to decide whether to report special cases
 				+ TODO: controller notifies all other spines switches to start snapshot, and disables enforced echo mechanism
 				+ NOTE: provide point-in-time consistency yet degrade throughput -> the degradation time should be limited compared with snapshot period!
-		* TODO: Receive notification from switch OS and notify servers for in-memory snapshot
-		* TODO: Receive per-switch snapshot, and send key-value records to each corresponding server
+		* Receive SNAPSHOT_SERVERSIDE from switchos, and notify servers for in-memory snapshot
+		* Wait for SNAPSHOT_SERVERSIDE_ACK from servers, and send it to switchos
+		* TODO: Receive per-switch snapshot, and send key-value records from controller.snapshotclient.consnapshotclients[serveridx] to servers[serveridx].consnapshotserver
+			- TODOTODO: We can use multiple threads in controller if necessary
+			- TODOTODO: Or we can reduce server.evictservers/consnapshotservers to a single thread if necessary
 		* TODO: Wait for ACKs from switchos, and sleep until next snapshot period
 - Switch OS
 	+ Cache population/eviction
@@ -265,10 +268,11 @@
 			- Cache eviction will evict an old key-value record (valid=1/3/0/1)
 				+ NOTE: only if victim.key = cached_keyarray_backup[idx].key, popworker stores case2 after seq comparison (use smaller one)
 				+ popworker sends CACHE_EVICT_CASE2 instead of CACHE_EVICT to server for server-side snapshot
-		* TODO: if empty_index > 0, snapshotserver.ptf loads idx (0 ~ empty_index-1), vallen, value, deleted, and savedseq
-			- NOTE: ptf directly ignores valid=0/3, and valid=1 yet idx exceeds backup empty idx -> snapshotserver will rollback the snapshot with special cases if any
-			- TODO: For records with latest=0, we also store them into snapshow now, which does not break point-in-time consistency; it is just a duplication which can be solved by seq comparison
-		* TODO: snapshotserver notifies controller -> servers to make server-side snapshot, and waits for ACKs
+		* If empty_index > 0, snapshotserver.ptf loads idx (0 ~ empty_index_backup-1), vallen, value, deleted, and savedseq
+			- NOTE: ptf does not need to care about the records with valid != 1, as snapshotserver will rollback them from the loaded snapshot with special cases if any
+			- TODOTODO: For records with latest=0, we also store them into snapshow now, which does not break point-in-time consistency; it is just a duplication which can be solved by seq comparison
+		* switchos.ptf reports loaded snapshot data to switchos.snapshotdataserver by tcp
+		* snapshotserver sends SNAPSHOT_SERVERSIDE to controller and hence servers to make server-side snapshot, and waits for ACK
 		* TODO: snapshotserver.ptf resets snapshot_flag=false which does not need atomicity, and reset special case regs
 			- Some ingress pipelines see snapshot_flag=true and report special cases, which must be the same as loaded data
 			- Others see snapshot_flag=false and directly update in-switch value w/o special cases, which does not change loaded data
@@ -280,8 +284,7 @@
 			- TODO: snapshotserver waits until popworker_know_snapshot_end=true and specialcasesever_know_snapshot_end=true
 			- TODO: snapshotserver resets is_snapshot_end=false -> popworker_know_snapshot_end=false and specialcaseserver_know_snapshot_end=false
 		* TODO: snapshotserver performs rollback to get a crash-consistent snapshot, and resets specialcases
-		* TODO: snapshotserver sends each cached record to corresponding server based on serveridx by controller
-		* TODO: snapshotserver acknowledges controller.snapshotclient
+		* TODO: snapshotserver acknowledges controller.snapshotclient with crash-consistent snapshot data
 		* TODOTODO: If with ptf session limitation, we can place snapshot flag in SRAM; load values and reset registers by data plane;
 	+ TODO: Periodically reset CM
 		* TODO: If with ptf session limitation, we can reset it in data plane

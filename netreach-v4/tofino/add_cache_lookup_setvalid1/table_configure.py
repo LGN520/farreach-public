@@ -47,10 +47,11 @@ with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini")
     config.readfp(f)
 
 switchos_paramserver_port = int(config.get("switch", "switchos_paramserver_port"))
-SWITCHOS_GET_FREEIDX = 1
-SWITCHOS_GET_KEY_FREEIDX = 2
-SWITCHOS_SET_EVICTDATA = 3
-SWITCHOS_GET_EVICTKEY = 4
+
+control_config = ConfigParser.ConfigParser()
+with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "control_type.ini"), "r") as f:
+    control_config.readfp(f)
+SWITCHOS_GET_KEY_FREEIDX = int(control_config.get("switchos", "switchos_get_key_freeidx"))
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.

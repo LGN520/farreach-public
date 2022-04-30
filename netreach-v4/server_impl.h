@@ -31,6 +31,7 @@ void close_server();
 static int run_server_worker(void *param);
 //void *run_server_worker(void *param);
 void *run_server_evictserver(void *param);
+void *run_server_consnapshotserver(void *param);
 
 void prepare_server() {
 	// Prepare for cache population
@@ -49,6 +50,9 @@ void prepare_server() {
 	}
 	server_cache_evict_or_case2_ptr_queue_list = new message_ptr_queue_t<cache_evict_t>[server_num](SINGLE_MQ_SIZE);
 	server_cache_evict_ack_ptr_queue_list = new message_ptr_queue_t<cache_evict_ack_t>[server_num](SINGLE_MQ_SIZE);
+
+	// prepare for crash-consistent snapshot
+	prepare_tcpserver(server_consnapshotserver_tcpsock, false, server_consnapshotserver_port, 1, "server.consnapshotserver"); // MAX_PENDING_NUM = 1
 }
 
 void close_server() {
@@ -795,8 +799,8 @@ void run_server_evictserver(void *param) {
 	int16_t serveridx = *((int16_t *)param);
 
 	// Not used
-	struct sockaddr_in controller_addr;
-	unsigned int controller_addr_len = sizeof(struct controller_addr);
+	//struct sockaddr_in controller_addr;
+	//unsigned int controller_addr_len = sizeof(struct sockaddr);
 
 	while (!server_running) {}
 
@@ -900,8 +904,61 @@ void run_server_evictserver(void *param) {
 			}
 		}
 	}
+}
 
+void *run_server_consnapshotserver(void *param) {
+	xindex_t *table = (xindex_t *)param;
+	INVARIANT(table != NULL);
 
+	struct sockaddr_in switchos_addr;
+	unsigned int switchos_addr_len = sizeof(struct sockaddr);
+
+	while (!server_running) {}
+
+	int connfd = -1;
+	tcpaccept(server_consnapshotserver_tcpsock, NULL, NULL, connfd, "server.consnapshotserver");
+
+	char recvbuf[MAX_LARGE_BUFSIZE];
+	int cur_recv_bytes = 0;
+	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
+	int control_type = -1;
+	while (server_running) {
+		int recvsize = 0;
+		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
+		if (is_broken) {
+			break;
+		}
+
+		cur_recv_bytes += recvsize;
+		if (cur_recv_bytes >= MAX_LARGE_BUFSIZE) {
+			printf("[server.consnapshotserver] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_LARGE_BUFSIZE);
+            exit(-1);
+		}
+
+		if (phase == 0) {
+			// process SNAPSHOT_SERVERSIDE for server-side snapshot
+			if (control_type == -1 && cur_recv_bytes >= sizeof(int)) {
+				control_type = *((int *)recvbuf);
+				INVARIANT(control_type == SNAPSHOT_SERVERSIDE);
+			}
+
+			// make server-side snapshot (simulate distributed in-memory KVS by concurrent one)
+			if (!isbackup) {
+				try_kvsnapshot(table);
+			}
+
+			// send SNAPSHOT_SERVERSIDE_ACK to controller
+			tcpsend(connfd, (char *)&SNAPSHOT_SERVERSIDE_ACK, sizeof(int), "server.consnapshotserver");
+
+			phase = 1; // wait for crash-consistent snapshot data
+		}
+		else if (phase == 1) {
+			// NOTE: skip sizeof(int) for SNAPSHOT_SERVERSIDE
+			// TODO: process crash-consistent snapshot
+			
+			// TODO: reset
+		}
+	}
 }
 
 #endif

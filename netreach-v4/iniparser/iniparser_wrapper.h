@@ -10,6 +10,8 @@ class IniparserWrapper {
 		
 		void load(const char* filename);
 
+		/* config.ini */
+
 		// global
 		const char *get_workload_name();
 		uint32_t get_max_vallen();
@@ -31,6 +33,7 @@ class IniparserWrapper {
 		short get_server_pktlos_port();
 		short get_server_notified_port();
 		short get_server_evictserver_port();
+		short get_server_consnapshotserver_port();
 
 		// controller
 		const char *get_controller_ip_for_server();
@@ -52,6 +55,21 @@ class IniparserWrapper {
 		uint32_t get_switchos_sample_cnt();
 		short get_switchos_snapshotserver_port();
 		short get_switchos_specialcaseserver_port();
+		short get_switchos_snapshotdataserver_port();
+
+		/* control_type.ini */
+
+		// switchos
+		int get_switchos_get_freeidx();
+		int get_switchos_get_key_freeidx();
+		int get_switchos_set_evictdata();
+		int get_switchos_get_evictkey();
+		int get_switchos_get_cachedemptyindex();
+
+		// snapshot
+		int get_snapshot_start();
+		int get_snapshot_serverside();
+		int get_snapshot_serverside_ack();
 
 	private:
 		dictionary *ini = nullptr;

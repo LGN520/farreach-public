@@ -140,11 +140,13 @@ size_t get_server_idx(index_key_t key) {
 
 bool killed = false;
 volatile bool running = false;
+// TODO: consider evictserver, consnapshotserver, and reflector
 std::atomic<size_t> ready_threads(0);
 
 
 int main(int argc, char **argv) {
   parse_ini("config.ini");
+  parse_control_ini("control_type.ini");
   //parse_args(argc, argv);
   //xindex::init_options(); // init options of rocksdb
 
