@@ -161,7 +161,7 @@
 	+ TODO: Snapshot
 		* Make server-side snapshot if necessary
 			- optype: PUTREQ_SEQ_CASE3, DELREQ_SEQ_CASE3, CACHE_EVICT_CASE2, and SNAPSHOT_SERVERSIDE from controller.snapshotclient
-		* TODO: Server.consnapshotserver receives snapshot data -> distribute data among servers with RCU mechanism for range query
+		* server.consnapshotserver receives snapshot data -> distribute data among servers with RCU mechanism for range query
 			* TODO: deduplicate during range query
 			* TODO: Treat DELREQ as a special write request -> do not ignore and free deleted atomic value, and remove deleted set (extended_xindex_dynamic_seq_del)
 			* TODO: Provide getseq API for seq comparison

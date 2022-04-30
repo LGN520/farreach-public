@@ -35,10 +35,10 @@ uint32_t *volatile tails_for_evict_ack = NULL;*/
 
 // snapshot
 int volatile server_consnapshotserver_tcpsock = -1;
-// TODO: END HERE
-std::map<index_key_t, snapshot_record_t> * volatile snapshot_data_ptr = NULL;
-uint32_t* volatile snapshot_rcu;
-bool volatile issnapshot = false; // TODO: it should be atomic
+// per-server snapshot_map and snapshot_rcu
+std::map<index_key_t, snapshot_record_t> * volatile server_snapshot_maps = NULL;
+uint32_t* volatile server_snapshot_rcus = NULL;
+bool volatile server_issnapshot = false; // TODO: it should be atomic
 
 void prepare_server();
 void close_server();
@@ -70,6 +70,10 @@ void prepare_server() {
 
 	// prepare for crash-consistent snapshot
 	prepare_tcpserver(server_consnapshotserver_tcpsock, false, server_consnapshotserver_port, 1, "server.consnapshotserver"); // MAX_PENDING_NUM = 1
+
+	// prepare for snapshot
+	server_snapshot_rcus = new uint32_t[server_num];
+	memset((void *)server_snapshot_rcus, 0, server_num*sizeof(uint32_t));
 }
 
 void close_server() {
@@ -92,6 +96,10 @@ void close_server() {
 	if (server_cache_evict_ack_ptr_queue_list != NULL) {
 		delete [] server_cache_evict_ack_ptr_queue_list;
 		server_cache_evict_ack_ptr_queue_list = NULL;
+	}
+	if (server_snapshot_rcus != NULL) {
+		delete [] server_snapshot_rcus;
+		server_snapshot_rcus = NULL;
 	}
 }
 
@@ -369,7 +377,7 @@ static int run_server_worker(void * param) {
 					COUT_THIS("PUTREQ_SEQ_CASE3")
 					put_request_seq_case3_t req(buf, recv_size);
 
-					if (!issnapshot) {
+					if (!server_issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -389,7 +397,7 @@ static int run_server_worker(void * param) {
 					COUT_THIS("PUTREQ_POP_SEQ_CASE3")
 					put_request_pop_seq_case3_t req(buf, recv_size);
 
-					if (!issnapshot) {
+					if (!server_issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -422,7 +430,7 @@ static int run_server_worker(void * param) {
 					COUT_THIS("DELREQ_SEQ_CASE3")
 					del_request_seq_case3_t req(buf, recv_size);
 
-					if (!issnapshot) {
+					if (!server_issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -523,7 +531,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					get_response_pop_evict_case2_t req(buf, recv_size);
 
-					if (!issnapshot) {
+					if (!server_issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -543,7 +551,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_pop_evict_case2_t req(buf, recv_size);
 
-					if (!issnapshot) {
+					if (!server_issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -563,7 +571,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_large_evict_case2_t req(buf, recv_size);
 
-					if (!issnapshot) {
+					if (!server_issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -584,7 +592,7 @@ static int run_server_worker(void * param) {
 					COUT_THIS("PUT_REQ_LARGE_CASE3")
 					put_request_large_case3_t req(buf, recv_size);
 
-					if (!issnapshot) {
+					if (!server_issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -610,7 +618,8 @@ static int run_server_worker(void * param) {
 		DELTA_TIME(t2, t1, t3);
 		thread_param.sum_latency += GET_MICROSECOND(t3);
 #endif
-		backup_rcu[serveridx]++;
+		//backup_rcu[serveridx]++;
+		server_snapshot_rcus[serveridx]++;
 		thread_param.throughput++;
 
 		if (sent_pkt_idx >= burst_size) {
@@ -682,7 +691,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					get_response_pop_evict_case2_switch_t req(buf, recv_size);
 
-					if (!issnapshot) {
+					if (!server_issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -702,7 +711,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_pop_evict_case2_switch_t req(buf, recv_size);
 
-					if (!issnapshot) {
+					if (!server_issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -722,7 +731,7 @@ static int run_server_worker(void * param) {
 					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
 					put_request_large_evict_case2_switch_t req(buf, recv_size);
 
-					if (!issnapshot) {
+					if (!server_issnapshot) {
 						try_kvsnapshot(table);
 					}
 
@@ -767,7 +776,7 @@ static int run_server_worker(void * param) {
 		// make server-side snapshot for CACHE_EVICT_CASE2
 		if (tmp_cache_evict_ptr->_type == packet_type_t::CACHE_EVICT_CASE2) {
 			printf("CACHE_EVICT_CASE2!\n");
-			if (!issnapshot) {
+			if (!server_issnapshot) {
 				try_kvsnapshot(table);
 			}
 		}
@@ -944,6 +953,8 @@ void *run_server_consnapshotserver(void *param) {
 	int cur_recv_bytes = 0;
 	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
 	int control_type_phase0 = -1;
+	int control_type_phase1 = -1;
+	int total_bytes = -1;
 	while (server_running) {
 		int recvsize = 0;
 		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
@@ -965,7 +976,7 @@ void *run_server_consnapshotserver(void *param) {
 			}
 
 			// make server-side snapshot (simulate distributed in-memory KVS by concurrent one)
-			if (!issnapshot) {
+			if (!server_issnapshot) {
 				try_kvsnapshot(table);
 			}
 
@@ -976,9 +987,74 @@ void *run_server_consnapshotserver(void *param) {
 		}
 		else if (phase == 1) {
 			// NOTE: skip sizeof(int) for SNAPSHOT_SERVERSIDE
-			// TODO: process crash-consistent snapshot
-			
-			// TODO: move and reset
+			if (control_type_phase1 == -1 && cur_recv_bytes >= sizeof(int) + sizeof(int) + sizeof(int32_t)) { // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
+				control_type_phase1 = *((int *)(recvbuf + sizeof(int)));
+				INVARIANT(control_type_phase1 == SNAPSHOT_DATA);
+				total_bytes = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int)));
+			}
+
+			// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
+			// per-server data: <int32_t perserver_bytes, int16_t serveridx, int32_t recordcnt, per-record data>
+			// per-record data: <16B key, int32_t vallen, value (w/ padding), int32_t seq, bool stat>
+			if (control_type_phase1 != -1 && cur_recv_bytes >= sizeof(int) + total_bytes) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
+				// NOTE: per-server_bytes is used for processing snapshot data of each server (not used now)
+				
+				// save snapshot data of servers
+				int tmp_offset = sizeof(int) + sizeof(int) + sizeof(int32_t); // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
+				std::map<index_key_t, snapshot_record_t> *new_server_snapshot_maps = new std::map<index_key_t, snapshot_record_t>[server_num];
+				const int tmp_maxbytes = sizeof(int) + total_bytes;
+				while (true) {
+					tmp_offset += sizeof(int32_t); // skip perserver_bytes
+					int16_t tmp_serveridx = *((int16_t *)(recvbuf + tmp_offset));
+					tmp_offset += sizeof(int16_t);
+					int32_t tmp_recordcnt = *((int32_t *)(recvbuf + tmp_offset));
+					tmp_offset += sizeof(int32_t);
+					for (int32_t tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {
+						index_key_t tmp_key;
+						snapshot_record_t tmp_record;
+						uint32_t tmp_keysize = tmp_key.deserialize(recvbuf + tmp_offset, tmp_maxbytes - tmp_offset);
+						tmp_offset += tmp_keysize;
+						uint32_t tmp_valsize = tmp_record.val.deserialize(recvbuf + tmp_offset, tmp_maxbytes - tmp_offset);
+						tmp_offset += tmp_valsize;
+						tmp_record.seq = *((int32_t *)(recvbuf + tmp_offset));
+						tmp_offset += sizeof(int32_t);
+						tmp_record.stat = *((bool *)(recvbuf + tmp_offset));
+						tmp_offset += sizeof(bool);
+						new_server_snapshot_maps[tmp_serveridx].insert(std::pair<index_key_t, snapshot_record_t>(tmp_key, tmp_record));
+					}
+					if (tmp_offset >= tmp_maxbytes) {
+						break;
+					}
+				}
+
+				// replace old snapshot data based on RCU
+				std::map<index_key_t, snapshot_record_t> *old_server_snapshot_maps = server_snapshot_maps;
+				server_snapshot_maps = new_server_snapshot_maps;
+				if (old_server_snapshot_maps != NULL) {
+					uint32_t prev_snapshot_rcus[server_num];
+					for (uint32_t i = 0; i < server_num; i++) {
+						prev_snapshot_rcus[i] = snapshot_rcus[i];
+					}
+					for (uint32_t i = 0; i < server_num; i++) {
+						while (server_running && snapshot_rcus[i] == prev_snapshot_rcus[i]) {}
+					}
+					delete [] old_server_snapshot_maps;
+					old_server_snapshot_maps = NULL;
+				}
+
+				// Move remaining bytes and reset metadata
+				if (cur_recv_bytes > sizeof(int) + total_bytes) {
+					memcpy(recvbuf, recvbuf + sizeof(int) + total_bytes, cur_recv_bytes - sizeof(int) - total_bytes);
+					cur_recv_bytes = cur_recv_bytes - sizeof(int) - total_bytes;
+				}
+				else {
+					cur_recv_bytes = 0;
+				}
+				phase = 0;
+				control_type_phase0 = -1;
+				control_type_phase1 = -1;
+				total_bytes = -1;
+			}
 		}
 	}
 }
