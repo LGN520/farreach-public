@@ -57,6 +57,10 @@ parser parse_op {
 		DELREQ_SEQ_INSWITCH_CASE1: parse_vallen;
 		DELREQ_SEQ_CASE3: parse_seq;
 		DELRES: parse_result;
+#ifdef RANGE_SUPPORT
+		SCANREQ: parse_scan;
+		SCANREQ_SPLIT: parse_scan;
+#endif
 		default: ingress; // GETREQ, GETREQ_POP, GETREQ_NLATEST, DELREQ
 
 
@@ -99,6 +103,21 @@ parser parse_op {
 		default: ingress; // GETREQ
 	}
 }
+
+#ifdef RANGE_SUPPORT
+parser parse_scan {
+	extract(scan_hdr);
+	return select(op_hdr.optype) {
+		SCANREQ_SPLIT: parse_split;
+		default: ingress; // SCANREQ
+	}
+}
+
+parser parse_split {
+	extract(split_hdr);
+	default: ingress;
+}
+#endif
 
 parser parse_vallen {
 	extract(vallen_hdr);

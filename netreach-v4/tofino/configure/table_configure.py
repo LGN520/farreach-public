@@ -78,6 +78,9 @@ fp_ports.append(dst_fpport)
 port_pipeidx_map = {} # mapping between port and pipeline
 pipeidx_ports_map = {} # mapping between pipeline and ports
 
+# Set it as True if support range, or False otherwise
+RANGE_SUPPORT = True
+
 GETREQ = 0x00
 PUTREQ = 0x01
 DELREQ = 0x02
@@ -105,9 +108,13 @@ DELREQ_INSWITCH = 0x17
 DELREQ_SEQ = 0x18
 DELREQ_SEQ_INSWITCH_CASE1 = 0x19
 DELREQ_SEQ_CASE3 = 0x1a
-CACHE_POP = 0x1b
-CACHE_POP_INSWITCH = 0x1c
-CACHE_POP_INSWITCH_ACK = 0x1d
+SCANREQ_SPLIT = 0x1b
+CACHE_POP = 0x1c
+CACHE_POP_INSWITCH = 0x1d
+CACHE_POP_INSWITCH_ACK = 0x1e
+CACHE_EVICT = 0x1f
+CACHE_EVICT_ACK = 0x20
+CACHE_EVICT_CASE2 = 0x21
 
 
 
@@ -422,14 +429,46 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: cache_lookup_tbl (default: uncached_action; size: 64K)
             print "Leave cache_lookup_tbl managed by controller in runtime"
 
-            # Table: hash_for_partition_tbl (default: nop; size: ?)
-            print "Configuring hash_for_partition_tbl"
-            for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
-                matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        meta_need_recirculate = 0)
-                self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
+            if RANGE_SUPPORT:
+                # Table: range_partition_tbl (default: nop; server_num <= 128)
+                print "Configuring range_partition_tbl"
+                key_start = -pow(2, 31) # [-2^31, 2^31-1]
+                key_range_per_server = pow(2, 32) / server_num
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
+                    for iport in self.devPorts:
+                        for i in range(server_num):
+                            if i == server_num - 1:
+                                key_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
+                            else:
+                                key_end = key_start + key_range_per_server - 1
+                            # NOTE: both start and end are included
+                            matchspec0 = netbufferv4_range_partition_tbl_match_spec_t(\
+                                    op_hdr_optype = tmpoptype,
+                                    op_hdr_keyhihi_start = key_start,
+                                    op_hdr_keyhihi_end = key_end,
+                                    ig_intr_md_ingress_port = iport,
+                                    meta_need_recirculate = 0)
+                            # Forward to the egress pipeline of server
+                            # serveridx = i
+                            eport = self.devPorts[1]
+                            if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
+                                actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                                        server_port + i, self.devPorts[1], 0)
+                            else: # in wrong pipeline
+                                actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                                        server_port + i, self.devPorts[1], 1)
+                            self.client.range_partition_tbl_table_add_with_range_partition(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                            key_start = key_end + 1
+            else:
+                # Table: hash_for_partition_tbl (default: nop; size: ?)
+                print "Configuring hash_for_partition_tbl"
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
+                    matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
+                            op_hdr_optype = tmpoptype,
+                            meta_need_recirculate = 0)
+                    self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: hash_for_cm_tbl (default: nop; size: ?)
             print "Configuring hash_for_cm_tbl"
@@ -460,36 +499,71 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 2
 
-            # Table: hash_partition_tbl (default: nop; server_num <= 128)
-            print "Configuring hash_partition_tbl"
-            hash_start = 0
-            hash_range_per_server = partition_count / server_num
-            for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
+            if RANGE_SUPPORT:
+                # Table: range_partition_for_scan_tbl (default: nop; server_num <= 128)
+                # TODO: limit max_scannum <= constant (e.g., 32)
+                print "Configuring range_partition_for_scan_tbl"
+                startkey_start = -pow(2, 31) # [-2^31, 2^31-1]
+                key_range_per_server = pow(2, 32) / server_num
                 for iport in self.devPorts:
                     for i in range(server_num):
                         if i == server_num - 1:
-                            hash_end = partition_count - 1 # if end is not included, then it is just processed by port 1111
+                            startkey_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
                         else:
-                            hash_end = hash_start + hash_range_per_server
-                        # NOTE: both start and end are included
-                        matchspec0 = netbufferv4_hash_partition_tbl_match_spec_t(\
-                                op_hdr_optype = tmpoptype,
-                                meta_hashval_for_partition_start = hash_start,
-                                meta_hashval_for_partition_end = hash_end,
-                                ig_intr_md_ingress_port = iport,
-                                meta_need_recirculate = 0)
-                        # Forward to the egress pipeline of server
-                        # serveridx = i
-                        eport = self.devPorts[1]
-                        if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
-                            actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                                    server_port + i, self.devPorts[1], 0)
-                        else: # in wrong pipeline
-                            actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                                    server_port + i, self.devPorts[1], 1)
-                        self.client.hash_partition_tbl_table_add_with_hash_partition(\
-                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-                        hash_start = hash_end
+                            startkey_end = startkey_start + key_range_per_server - 1
+                        endkey_start = startkey_start
+                        for j in range(i, server_num):
+                            if j == server_num - 1:
+                                endkey_end = pow(2, 31) - 1
+                            else:
+                                endkey_end = endkey_start + key_range_per_server - 1
+                            # NOTE: both start and end are included
+                            matchspec0 = netbufferv4_range_partition_for_scan_tbl_match_spec_t(\
+                                    op_hdr_optype = SCANREQ,
+                                    op_hdr_keyhihi_start = startkey_start,
+                                    op_hdr_keyhihi_end = startkey_end,
+                                    scan_hdr_keyhihi_start = endkey_start,
+                                    scan_hdr_keyhihi_end = endkey_end,
+                                    meta_need_recirculate = 0)
+                            # Forward to the egress pipeline of server
+                            # serveridx = i to j
+                            actnspec0 = netbufferv4_range_partition_for_scan_action_spec_t(\
+                                    server_port + i, self.devPorts[1], j-i+1)
+                            self.client.range_partition_for_scan_tbl_table_add_with_range_partition_for_scan(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                            endkey_start = endkey_end + 1
+                        startkey_start = startkey_end + 1
+            else:
+                # Table: hash_partition_tbl (default: nop; server_num <= 128)
+                print "Configuring hash_partition_tbl"
+                hash_start = 0 # [0, partition_count-1]
+                hash_range_per_server = partition_count / server_num
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
+                    for iport in self.devPorts:
+                        for i in range(server_num):
+                            if i == server_num - 1:
+                                hash_end = partition_count - 1 # if end is not included, then it is just processed by port 1111
+                            else:
+                                hash_end = hash_start + hash_range_per_server - 1
+                            # NOTE: both start and end are included
+                            matchspec0 = netbufferv4_hash_partition_tbl_match_spec_t(\
+                                    op_hdr_optype = tmpoptype,
+                                    meta_hashval_for_partition_start = hash_start,
+                                    meta_hashval_for_partition_end = hash_end,
+                                    ig_intr_md_ingress_port = iport,
+                                    meta_need_recirculate = 0)
+                            # Forward to the egress pipeline of server
+                            # serveridx = i
+                            eport = self.devPorts[1]
+                            if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
+                                actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                                        server_port + i, self.devPorts[1], 0)
+                            else: # in wrong pipeline
+                                actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                                        server_port + i, self.devPorts[1], 1)
+                            self.client.hash_partition_tbl_table_add_with_hash_partition(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                            hash_start = hash_end + 1
 
             # Stage 3
 
@@ -519,6 +593,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype = DELREQ,
                     meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_delreq_to_delreq_inswitch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = SCANREQ,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_scanreq_to_scanreq_split(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 4
@@ -561,9 +640,42 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     eval("self.client.access_cm{}_tbl_table_add_with_update_cm{}".format(i, i))(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
+            if RANGE_SUPPORT:
+                # Table: process_scanreq_split_tbl
+                print "Configuring process_scanreq_split_tbl"
+                for i in range(server_num):
+                    dstport = server_port + i
+                    matchspec0 = netbufferv4_process_scanreq_split_tbl_match_spec_t(\
+                            op_hdr_optype = SCANREQ_SPLIT,
+                            udp_hdr_dstPort = dstport)
+                    # Set eport and sid for dstport
+                    actnspec0 = netbufferv4_process_scanreq_split_action_spec_t(self.devPorts[1], self.sids[1])
+                    self.client.process_scanreq_split_tbl_table_add_with_process_scanreq_split(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+                # Table: process_cloned_scanreq_split_tbl
+                print "Configuring process_cloned_scanreq_split_tbl"
+                for i in range(server_num):
+                    dstport = server_port + i
+                    matchspec0 = netbufferv4_process_cloned_scanreq_split_tbl_match_spec_t(\
+                            op_hdr_optype = SCANREQ_SPLIT,
+                            udp_hdr_dstPort = dstport)
+                    # Set eport and sid for dstport+1
+                    actnspec0 = netbufferv4_process_cloned_scanreq_split_action_spec_t(self.devPorts[1], self.sids[1])
+                    self.client.process_cloned_scanreq_split_tbl_table_add_with_process_cloned_scanreq_split(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+
             # Stgae 1
 
-            # Table: is_hot_tbl (default: not_hop; size: 1)
+            if RANGE_SUPPORT:
+                # Table: is_last_scansplit_tbl (default: reset_is_last_scansplit; size: 1)
+                print "Configuring is_last_scansplit_tbl"
+                matchspec0 = netbufferv4_is_last_scansplit_tbl_match_spec_t(\
+                        op_hdr_optype = SCANREQ_SPLIT,
+                        meta_remain_scannum = 1)
+                self.client.is_last_scansplit_tbl_table_add_with_set_is_last_scansplit(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: is_hot_tbl (default: not_hot; size: 1)
             print "Configuring is_hot_tbl"
             matchspec0 = netbufferv4_is_hot_tbl_match_spec_t(\
                     meta_cm1_predicate = 2,
@@ -1338,6 +1450,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         # Update DELREQ_SEQ_INSWITCHCASE1 as DELRES to client by mirroring
                                                         self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
+
+            if RANGE_SUPPORT:
+                # Table: scan_forward_tbl
+                matchspec0 = netbufferv4_scan_forward_tbl_match_spec_t(\
+                        op_hdr_optype = SCANREQ_SPLIT,
+                        meta_is_last_scansplit = 1)
+                self.client.scan_forward_tbl_table_add_with_forward_scanreq_split(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+
+
+
 
 
 

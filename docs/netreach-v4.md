@@ -33,12 +33,16 @@
 	+ Result header: 1B result
 		* NOTE: success flag for PUTRES/DELRES; deleted flag for GETRES; SCANRES does not need it
 	+ Inswitch header: 1b is_cached, 1b is_sampled, 1b is_wrong_pipeline, 9 bit eport_for_res, 9b sid, 3b padding, 2B hashval, 2B idx
-	+ CACHE_POP: key, value, seq, serveridx
-	+ CACHE_POP_INSWITCH: key, value, seq, inswitch_hdr.freeidx
-	+ CACHE_EVICT: key, value, result, seq, serveridx
-	+ CACHE_EVICT_ACK: key
+	+ CACHE_POP: op_hdr(optype+key), value, seq, serveridx
+	+ CACHE_POP_INSWITCH: op_hdr(optype+key), value, seq, inswitch_hdr.freeidx
+	+ CACHE_EVICT: op_hdr(optype+key),, value, seq, result, serveridx
+	+ CACHE_EVICT_ACK: op_hdr(optype+key)
+	+ CASE1: op_hdr(optype+key), value, seq, inswitch_hdr, result
+	+ SCANREQ: op_hdr(optype+key), endkey
+	+ SCANREQ_SPLIT: op_hdr(optype+key), endkey, split_hdr(cur_scanidx, max_scannum)
 - Client
 	+ Send GETREQ and wait for GETRES
+	+ TODO: For SCANRES, wait for all packets with different cur_scanidx (e.g., 1/2/3) under max_scannum (e.g., 3)
 - Switch
 	+ Ingress pipeline
 		* Stage 0
@@ -55,8 +59,13 @@
 			- cache_lookup_tbl (key -> idx, is_cached)
 				+ idx: index for in-switch cache (assigned by controller)
 				+ NOTE: even if the packet is not FarReach packet, set inswitch_hdr does not affect their PHVs
-			- hash_for_partition_tbl (optype, key -> hashval_for_partition)
-				+ optype: GETREQ, PUTREQ, DELREQ
+			- Partition for normal requests
+				- hash_for_partition_tbl (optype, key -> hashval_for_partition)
+					+ optype: GETREQ, PUTREQ, DELREQ, CACHE_POP_INSWITCH
+				- range_partition_tbl: (optype, key range, ingress port -> udp.dstPort, egress port, is_wrong_pipeline)
+					+ optype: GETREQ, PUTREQ, DELREQ, CACHE_POP_INSWITCH
+					+ NOTE: we treat the most significant 4B of key (keyhihi) as int32_t for range matching -> need conversion between little-endian and small-endian for each 4B of a key (note that we deploy key by ptf)
+					+ TODO: Check why we need the param of 0 for MAT with range matching
 			- hash_for_cm_tbl (optype, key -> hashval_for_cm)
 				+ optype: GETREQ, PUTREQ
 			- hash_for_seq_tbl (optype, key -> hashval_for_seq)
@@ -71,19 +80,22 @@
 					* TODO: But not need to embed the sampling result; instead, we can use in-switch sample to choose spine or leaf;
 			- NOTE: SCANREQ does not access all above tables
 		* Stage 2 (need_recirculate == 0)
-			- hash_partition_tbl or range_partition_tbl
-				- Hash partition: (optype, hashval range, ingress port -> udp.dstPort, egress port, is_wrong_pipeline)
+			- Partition for normal requests
+				- hash_partition_tbl: (optype, hashval_for_partition range, ingress port -> udp.dstPort, egress port, is_wrong_pipeline)
 					+ optype: GETREQ, PUTREQ, DELREQ
 					+ NOTE: PARTITION_COUNT (for consistent hashing) is independent with KV_BUCKET_COUNT
 					+ TODO: Check why we need the param of 0 for MAT with range matching
-				- TODO: range partition: (optype, key range, ingress port -> udp.dstPort, egress port)
-					+ optype: GETREQ, PUTREQ, DELREQ, SCANREQ
-					+ TODO: We treat the most significant 4B of key as int32_t for range matching -> need conversion between little-endian and small-endian for the 4B of each key
+				- range_partition_for_scan_tbl: (optype, startkey range, endkey range -> udp.dstPort, egress port, max_scannum)
+					+ optype: SCANREQ
+					+ start_key range -> udpport and eport (indicate first server); startkey range + endkey range -> max_scannum
+					+ TODO: Check why we need the param of 0 for MAT with range matching
 				- NOTE: we use different udp.dstPort under the same egress port to simulate different egress ports
 		* Stage 3 (need_recirculate == 0)
 			- ig_port_forward_tbl (op_hdr.optype -> op_hdr.optype)
 				+ optype: GETREQ, PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ
-				+ Add inswitch_hdr to FarReach packet
+					* Add inswitch_hdr to FarReach packet
+				+ optype: SCANREQ
+					* Update SCANREQ as SCANREQ_SPLIT
 		* Stage 4 (need_recirculate == 0)
 			- ipv4_forward_tbl (optype, ingress port, dstip -> egress port)
 				- optype: GETRES, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH
@@ -99,8 +111,21 @@
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
 				+ NOTE: CM_BUCKET_COUNT is independent with KV_BUCKET_COUNT
 				+ NOTE: we resort to server to notify controller to avoid in-switch BF; NetCache directly reports to server yet with BF
-			- TODO: is_snapshot_tbl (optype -> is_snapshot)
+			- process_scanreq_split_tbl (optype, udphdr.dstPort -> egress port, sid)
+				+ optype: SCANREQ_SPLIT
+				+ udphdr.dstPort -> serveridx -> egress port and sid
+				+ meta.remain_scannum = split_hdr.max_scannum - split_hdr.cur_scanidx
+				+ NOTE: if max_scannum=3, cur_scanidx = 0 here -> remain_scannum = 3
+			- process_cloned_scanreq_split_tbl (optype, udphdr.dstPort -> dstPort, egress port, sid)
+				+ optype: cloned SCANREQ_SPLIT
+				+ udphdr.dstPort = dstPort + 1
+				+ udphdr.dstPort+1 -> serveridx -> egress port and sid
+				+ meta.remain_scannum = split_hdr.max_scannum - split_hdr.cur_scanidx
+				+ NOTE: if max_scannum=3, cur_scanidx = 1/2 here -> remain_scannum = 2/1
 		* Stage 1 (3 ALU)
+			- is_last_scansplit_tbl (optype, remain_scannum -> is_last_scansplit)
+				+ optype: SCANREQ_SPLIT
+				+ If remain_scannum=1, set is_last_scansplit=1; otherwise (default action), set is_last_scansplit=0
 			- is_hot_tbl (cm_predicates -> meta.is_hot)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
 				+ Reduce 4 cm_predicates into 1 meta.is_hot to reduce TCAM usage
@@ -145,9 +170,16 @@
 		* Stage 10 (4 ALU)
 			- vallo13, valhi13, vallo14, valhi14 (optype, is_cached, idx, valid, is_latest -> val_hdr)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
-			- eg_port_forward_tbl (optype, is_cached, is_hot, is_valid, is_latest, is_deleted, is_wrong_pipeline -> optype)
+			- eg_port_forward_tbl (optype, is_cached, is_hot, is_valid, is_latest, is_deleted, is_wrong_pipeline, is_last_scansplit -> optype)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_LATEST_SEQ
+				+ TODO: IMPORTANT: output to optype2 to break dependency if necessary
+					* GUESS: if w/ read-write or write-write contention in action, we need two stages; if w/ read in match and write in action, we can place into the same stage (match will read the value before write in action)
 				+ TODO: If TCAM of single stage is not enough, we can assume the value of each matched key field is initialized
+			- scan_forward_tbl (optype, is_last_scansplit -> cur_scanidx)
+				+ optype: SCANREQ_SPLIT
+					* If is_last_scansplit=1, cur_scanidx+=1, forward SCANREQ_SPLIT
+					* Otherwise (default action), cur_scanidx+=1, forward SCANREQ_SPLIT, and clone_e2e(sid)
+					* NOTE: if max_scannum=3, cur_scanidx = 1/2/3 here
 		* Stage 11 (4 ALU)
 			- vallo15, valhi15, vallo16, valhi16 (optype, is_cached, idx, valid, is_latest -> val_hdr)
 				+ optype: GETREQ_INSWITCH, PUTREQ_INSIWTCH, DELREQ_INSWITCH
@@ -158,13 +190,15 @@
 		* If GETREQ_POP triggers a cache population (i.e., key exists), server adds the key into cached key set
 		* If server receives CACHE_EVICT, it removes the evicted key from cached key set
 		* NOTE: we reduce server.evictservers to a single thread (server.evictserver) now
-	+ TODO: Snapshot
+	+ Snapshot
 		* Make server-side snapshot if necessary
 			- optype: PUTREQ_SEQ_CASE3, DELREQ_SEQ_CASE3, CACHE_EVICT_CASE2, and SNAPSHOT_SERVERSIDE from controller.snapshotclient
 		* server.consnapshotserver receives snapshot data -> distribute data among servers with RCU mechanism for range query
 			* TODO: deduplicate during range query
 			* TODO: Treat DELREQ as a special write request -> do not ignore and free deleted atomic value, and remove deleted set (extended_xindex_dynamic_seq_del)
 			* TODO: Provide getseq API for seq comparison
+	+ Range query
+		* TODO: Pre-calculate min_startkey and max_endkey for each server
 	+ TODOTODO: We can use multiple threads for controller.snapshotclient.consnapshotclients and server.consnapshotservers/evictservers if necessary -> controller needs to use perserver_bytes in snapshot data
 - Controller
 	+ Cache population

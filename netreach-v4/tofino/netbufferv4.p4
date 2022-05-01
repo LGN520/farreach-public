@@ -3,6 +3,9 @@
 #include "tofino/stateful_alu_blackbox.p4"
 #include "tofino/primitives.p4"
 
+// Uncomment it if support range query, or comment it otherwise
+#define RANGE_SUPPORT
+
 // 1B optype does not need endian conversion
 #define GETREQ 0x00
 #define PUTREQ 0x01
@@ -31,12 +34,13 @@
 #define DELREQ_SEQ 0x18
 #define DELREQ_SEQ_INSWITCH_CASE1 0x19
 #define DELREQ_SEQ_CASE3 0x1a
-#define CACHE_POP 0x1b
-#define CACHE_POP_INSWITCH 0x1c
-#define CACHE_POP_INSWITCH_ACK 0x1d
-#define CACHE_EVICT 0x1e
-#define CACHE_EVICT_ACK 0x1f
-#define CACHE_EVICT_CASE2 0x20
+#define SCANREQ_SPLIT 0x1b
+#define CACHE_POP 0x1c
+#define CACHE_POP_INSWITCH 0x1d
+#define CACHE_POP_INSWITCH_ACK 0x1e
+#define CACHE_EVICT 0x1f
+#define CACHE_EVICT_ACK 0x20
+#define CACHE_EVICT_CASE2 0x21
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)
@@ -118,13 +122,21 @@ control ingress {
 	apply(snapshot_flag_tbl); // update snapshot_flag
 	apply(sid_tbl); // set sid corresponding to ingress port
 	apply(cache_lookup_tbl); // managed by controller
-	apply(hash_for_partition_tbl); // for partition
+#ifdef RANGE_SUPPORT
+	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
+#else
+	apply(hash_for_partition_tbl); // for hash partition
+#endif
 	apply(hash_for_cm_tbl); // for CM
 	apply(hash_for_seq_tbl); // for seq
 	apply(sample_tbl); // for CM and cache_frequency
 
 	// Stage 2
+#ifdef RANGE_SUPPORT
+	apply(range_partition_for_scan_tbl); // for range partition (SCAN)
+#else
 	apply(hash_partition_tbl);
+#endif
 
 	// Stgae 3
 	apply(ig_port_forward_tbl);
@@ -142,6 +154,14 @@ control egress {
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
 	apply(access_cm4_tbl);
+#define RANGE_SUPPORT
+	if (pkt_is_e2e_mirrored) {
+		apply(process_cloned_scanreq_split_tbl);
+	}
+	else {
+		apply(process_scanreq_split_tbl);
+	}
+#endif
 
 	// Stage 1
 	apply(is_hot_tbl);
@@ -193,6 +213,9 @@ control egress {
 	apply(update_vallo14_tbl);
 	apply(update_valhi14_tbl);
 	apply(eg_port_forward_tbl);
+#ifdef RANGE_SUPPORT
+	apply(scan_forward_tbl);
+#endif
 
 	// Stage 11
 	apply(update_vallo15_tbl);

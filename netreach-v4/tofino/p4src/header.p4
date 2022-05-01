@@ -45,6 +45,23 @@ header_type op_t {
 	}
 }
 
+#ifdef RANGE_SUPPORT
+header_type scan_t {
+	fields {
+		keylolo: 32;
+		keylohi: 32;
+		keyhilo: 32;
+		keyhihi: 32;
+	}
+}
+header_type split_t {
+	fields {
+		cur_scanidx: 16;
+		max_scannum: 16;
+	}
+}
+#endif
+
 // Used by PUTREQ and GETRES to save PHV
 header_type vallen_t {
 	fields {
@@ -56,6 +73,12 @@ header_type val_t {
 	fields {
 		vallo: 32;
 		valhi: 32;
+	}
+}
+
+header_type seq_t {
+	fields {
+		seq: 32;
 	}
 }
 
@@ -72,12 +95,6 @@ header_type inswitch_t {
 		padding: 1;
 		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
-	}
-}
-
-header_type seq_t {
-	fields {
-		seq: 32;
 	}
 }
 
@@ -99,7 +116,12 @@ header_type result_t {
 header_type metadata_t {
 	fields {
 		need_recirculate: 1;
+#ifdef RANGE_SUPPORT
+		remain_scannum: 16;
+		is_last_scansplit: 1;
+#else
 		hashval_for_partition: 16; // at most 32K
+#endif
 		cm1_predicate: 4;
 		cm2_predicate: 4;
 		cm3_predicate: 4;
@@ -135,6 +157,10 @@ header ethernet_t ethernet_hdr;
 header ipv4_t ipv4_hdr;
 header udp_t udp_hdr;
 header op_t op_hdr;
+#ifdef RANGE_SUPPORT
+header scan_t scan_hdr;
+header split_t split_hdr;
+#endif
 header vallen_t vallen_hdr;
 header val_t val1_hdr;
 header val_t val2_hdr;
@@ -152,8 +178,8 @@ header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
 header val_t val16_hdr;
-header result_t result_hdr;
 header seq_t seq_hdr;
 header inswitch_t inswitch_hdr;
+header result_t result_hdr;
 //header status_t status_hdr;
 metadata metadata_t meta;

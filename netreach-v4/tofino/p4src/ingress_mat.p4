@@ -140,6 +140,28 @@ field_list_calculation hash_calc {
 	output_width: 1;
 }*/
 
+#ifdef RANGE_SUPPORT
+action range_partition(udpport, eport, is_wrong_pipeline) {
+	modify_field(udp_hdr.dstPort, udpport);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
+}
+@pragma stage 1
+table range_partition_tbl {
+	reads {
+		op_hdr.optype: exact;
+		op_hdr.keyhihi: range;
+		ig_intr_md.ingress_port: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		range_partition;
+		nop;
+	}
+	default_action: nop();
+	size: 0;
+}
+#else
 action hash_for_partition() {
 	modify_field_with_hash_based_offset(meta.hashval_for_partition, 0, hash_calc, PARTITION_COUNT);
 }
@@ -157,6 +179,7 @@ table hash_for_partition_tbl {
 	default_action: nop();
 	size: 0;
 }
+#endif
 
 action hash_for_cm() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm, 0, hash_calc, CM_BUCKET_COUNT);
@@ -215,6 +238,30 @@ table sample_tbl {
 
 // Stage 2
 
+#ifdef RANGE_SUPPORT
+action range_partition_for_scan(udpport, eport, max_scannum) {
+	modify_field(udp_hdr.dstPort, udpport);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	modify_field(split_hdr.cur_scanidx, 0);
+	modify_field(split_hdr.max_scannum, max_scannum);
+}
+
+#pragma stage 2
+table range_partition_for_scan_tbl {
+	reads {
+		op_hdr.optype: exact;
+		op_hdr.keyhihi: range;
+		scan_hdr.keyhihi: range;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		range_partition_for_scan;
+		nop;
+	}
+	default_action: nop();
+	size: 0;
+}
+#else
 action hash_partition(udpport, eport, is_wrong_pipeline) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
@@ -236,6 +283,7 @@ table hash_partition_tbl {
 	default_action: nop();
 	size: 128;
 }
+#endif
 
 // Stage 3
 
@@ -265,6 +313,11 @@ action update_delreq_to_delreq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
+action update_scanreq_to_scanreq_split() {
+	modify_field(op_hdr.optype, SCANREQ_SPLIT);
+	add_header(split_hdr);
+}
+
 @pragma stage 3
 table ig_port_forward_tbl {
 	reads {
@@ -277,6 +330,7 @@ table ig_port_forward_tbl {
 		update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
 		update_putreq_to_putreq_inswitch;
 		update_delreq_to_delreq_inswitch;
+		update_scanreq_to_scanreq_split;
 		nop;
 	}
 	default_action: nop();
@@ -309,7 +363,6 @@ table ipv4_forward_tbl {
 	default_action: nop();
 	size: 0;
 }
-
 
 
 
