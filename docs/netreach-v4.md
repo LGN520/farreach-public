@@ -42,7 +42,10 @@
 	+ SCANREQ_SPLIT: op_hdr(optype+key), endkey, split_hdr(cur_scanidx, max_scannum)
 - Client
 	+ Send GETREQ and wait for GETRES
-	+ TODO: For SCANRES, wait for all packets with different cur_scanidx (e.g., 1/2/3) under max_scannum (e.g., 3)
+	+ Range query
+		* TODO: Send SCANREQ <optype, key, endkey>
+		* TODO: Wait for all SCANRES_SPLIT <optype, key, endkey, cur_scanidx, max_scannum, key-value pairs>
+		* TODO: cur_scanidx are different (e.g., 1/2/3) under max_scannum (e.g., 3)
 - Switch
 	+ Ingress pipeline
 		* Stage 0
@@ -199,6 +202,7 @@
 			* TODO: Provide getseq API for seq comparison
 	+ Range query
 		* TODO: Pre-calculate min_startkey and max_endkey for each server
+		* TODO: For each SCANREQ_SPLIT, verify key range -> get results of in-memory snapshot and in-switch snapshot -> merge sort w/ seq comparison -> sendback SCANRES_SPLIT
 	+ TODOTODO: We can use multiple threads for controller.snapshotclient.consnapshotclients and server.consnapshotservers/evictservers if necessary -> controller needs to use perserver_bytes in snapshot data
 - Controller
 	+ Cache population

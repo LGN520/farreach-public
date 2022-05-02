@@ -431,9 +431,10 @@ action update_putreq_inswitch_to_putres_by_mirroring() {
 
 field_list clone_field_list_for_pktloss_and_res {
 	meta.clonenum_for_pktloss: exact;
-	inswitch_hdr.is_wrong_pipeline: exact;
-	inswitch_hdr.eport_for_res: 9;
-	inswitch_hdr.sid: 9;
+	// NOTE: extracted fields cannot be used as clone fields
+	//inswitch_hdr.is_wrong_pipeline: exact;
+	//inswitch_hdr.eport_for_res: 9;
+	//inswitch_hdr.sid: 9;
 }
 
 action update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(sid, port, result) {
