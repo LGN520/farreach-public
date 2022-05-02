@@ -14,7 +14,7 @@
 #define GETRES 0x04
 #define PUTRES 0x05
 #define DELRES 0x06
-#define SCANRES 0x07
+#define SCANRES_SPLIT 0x07
 #define GETREQ_INSWITCH 0x08
 #define GETREQ_POP 0x09
 #define GETREQ_NLATEST 0x0a

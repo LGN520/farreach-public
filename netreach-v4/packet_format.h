@@ -14,13 +14,13 @@
 #define INSWITCH_PREV_BYTES 7
 
 enum class PacketType {
-	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 
+	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES_SPLIT, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 
 	GETRES_LATEST_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH_CASE1, 
 	GETRES_DELETED_SEQ, GETRES_DELETED_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH_CASE1, 
 	PUTREQ_INSWITCH, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3,
-	DELREQ_INSWITCH, DELREQ_SEQ, DELREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_CASE3,
+	DELREQ_INSWITCH, DELREQ_SEQ, DELREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_CASE3, SCANREQ_SPLIT
 
-	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2
+	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2,
 };
 typedef PacketType packet_type_t;
 
@@ -155,13 +155,13 @@ class DelResponse : public Packet<key_t> {
 };
 
 template<class key_t, class val_t>
-class ScanResponse : public Packet<key_t> {
+class ScanResponseSplit : public ScanRequestSplit<key_t> {
 	public: 
-		ScanResponse(uint16_t hashidx, key_t key, key_t endkey, uint32_t num, std::vector<std::pair<key_t, val_t>> pairs);
-		ScanResponse(const char * data, uint32_t recv_size);
+		//ScanResponseSplit(key_t key, key_t endkey, int32_t num, int16_t cur_scanidx, int16_t max_scannum, int32_t pairnum, std::vector<std::pair<key_t, val_t>> pairs);
+		ScanResponseSplit(key_t key, key_t endkey, int16_t cur_scanidx, int16_t max_scannum, int32_t parinum, std::vector<std::pair<key_t, val_t>> pairs);
+		ScanResponseSplit(const char * data, uint32_t recv_size);
 
-		key_t endkey() const;
-		uint32_t num() const;
+		int32_t pairnum() const;
 		std::vector<std::pair<key_t, val_t>> pairs() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -169,8 +169,7 @@ class ScanResponse : public Packet<key_t> {
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 	private:
-		key_t _endkey;
-		uint32_t _num;
+		int32_t _pairnum;
 		std::vector<std::pair<key_t, val_t>> _pairs;
 };
 
@@ -302,6 +301,23 @@ class DelRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_
 	public: 
 		DelRequestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat);
 		DelRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
+};
+
+template<class key_t>
+class ScanRequestSplit : public ScanRequest<key_t> {
+	public: 
+		ScanRequestSplit(const char * data, uint32_t recv_size);
+
+		int16_t cur_scanidx() const;
+		int16_t max_scannum() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+	private:
+		int16_t _cur_scanidx;
+		int16_t _max_scannum;
 };
 
 // NOTE: only used in end-hosts

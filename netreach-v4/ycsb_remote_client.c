@@ -510,7 +510,10 @@ static int run_fg(void *param) {
 			struct timespec scan_rsp_t1, scan_rsp_t2, scan_rsp_t3;
 			struct timespec scan_wait_t1, scan_wait_t2, scan_wait_t3;
 			double scan_rsp_latency = 0.0, scan_wait_latency = 0.0;
-			for (size_t tmpsplit = 0; tmpsplit < split_num; tmpsplit++) {
+			//for (size_t tmpsplit = 0; tmpsplit < split_num; tmpsplit++) {
+			int16_t received_scannum = 0;
+			int16_t max_scannum = -1;
+			while (true) {
 				CUR_TIME(scan_wait_t1);
 				while (heads[thread_id] == tails[thread_id])
 					;
@@ -523,11 +526,14 @@ static int run_fg(void *param) {
 				tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
 				INVARIANT(recv_size != -1);
 
-				packet_type_t pkt_type = get_packet_type(buf, recv_size);
-				INVARIANT(pkt_type == packet_type_t::SCAN_RES);
-				scan_response_t rsp(buf, recv_size);
+				scan_response_split_t rsp(buf, recv_size);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
-						<< "endkey = " << rsp.endkey().to_string() << " num = " << rsp.num());
+						<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
+				received_scannum += 1;
+				if (max_scannum == -1) {
+					max_scannum = rsp.max_scannum();
+					INVARIANT(max_scannum >= 1 && max_scannum <= server_num);
+				}
 				CUR_TIME(scan_rsp_t2);
 
 				DELTA_TIME(scan_rsp_t2, scan_rsp_t1, scan_rsp_t3);
@@ -543,6 +549,10 @@ static int run_fg(void *param) {
 					scan_wait_latency = tmp_scan_wait_latency;
 					wait_t1 = scan_wait_t1;
 					wait_t2 = scan_wait_t2;
+				}
+
+				if (received_scannum >= max_scannum) {
+					break;
 				}
 			}
 		}

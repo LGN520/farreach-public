@@ -116,9 +116,13 @@ static int run_server_worker(void * param) {
 
   // scan.startkey <= max_startkey; scan.endkey >= min_startkey
   // use size_t to avoid int overflow
-  size_t min_startkey = serveridx * perserver_keyrange;
-  size_t max_endkey = min_startkey - 1 + perserver_keyrange;
-  INVARIANT(max_endkey >= min_startkey);
+  size_t min_startkeyhihi = serveridx * perserver_keyrange;
+  size_t max_endkeyhihi = min_startkeyhihi - 1 + perserver_keyrange;
+  INVARIANT(min_startkeyhihi >= std::numeric_limits<int32_t>::min() && min_startkeyhihi <= std::numeric_limits<int32_t>::max());
+  INVARIANT(max_endkeyhihi >= std::numeric_limits<int32_t>::min() && max_endkeyhihi <= std::numeric_limits<int32_t>::max());
+  INVARIANT(max_endkeyhihi >= min_startkeyhihi);
+  index_key_t min_startkey(0, 0, 0, min_startkeyhihi);
+  index_key_t max_endkey(std::numeric_limits<int32_t>::max(), std::numeric_limits<int32_t>::max(), std::numeric_limits<int32_t>::max(), max_endkeyhihi);
 
   tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
   //tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port_start + serveridx, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
@@ -292,15 +296,15 @@ static int run_server_worker(void * param) {
 					deleted_sets[serveridx].add(req.key(), req.seq());
 					break;
 				}
-			case packet_type_t::SCANREQ:
+			case packet_type_t::SCANREQ_SPLIT:
 				{
-					scan_request_t req(buf, recv_size);
+					scan_request_split_t req(buf, recv_size);
 					
 					// get verified key range
 					INVARIANT(req.key() <= max_endkey);
 					INVARIANT(req.endkey() >= min_startkey);
 					index_key_t cur_startkey = req.key();
-					index_key-t cur_endkey = req.endkey();
+					index_key_t cur_endkey = req.endkey();
 					if (cur_startkey < min_startkey) {
 						cur_startkey = min_startkey;
 					}
@@ -308,25 +312,114 @@ static int run_server_worker(void * param) {
 						cur_endkey = max_endkey;
 					}
 
-					// TODO: get results in [cur_startkey, cur_endkey]
-
-					//COUT_THIS("[server] startkey = " << req.key().to_string() << 
-					//		<< "endkey = " << req.endkey().to_string() << " num = " << req.num())
-					std::vector<std::pair<index_key_t, val_t>> results;
+					// get results from in-memory snapshot in [cur_startkey, cur_endkey]
+					//COUT_THIS("[server.worker] startkey: " << cur_startkey << "endkey: " << cur_endkey().to_string()
+					//		<< "min_startkey: " << min_startkey << "max_endkey: " << max_endkey; // << " num = " << req.num())
+					std::vector<std::pair<index_key_t, val_t>> inmemory_results; // TODO: val_t -> snapshot_record_t
 					//size_t tmp_num = table->scan(req.key(), req.num(), results, serveridx);
-					size_t tmp_num = table->range_scan(req.key(), req.endkey(), results, serveridx);
+					size_t inmemory_num = table->range_scan(cur_startkey, cur_endkey, inmemory_results, serveridx);
 
-					// Add kv pairs of backup data into results
-					std::map<index_key_t, val_t> *kvdata = &backup_data->_kvmap;
-					if (kvdata != nullptr) {
-						std::map<index_key_t, val_t>::iterator kviter = kvdata->lower_bound(req.key());
-						for (; kviter != kvdata->end() && kviter->first < req.endkey(); kviter++) {
-							results.push_back(*kviter);
+					// get results from in-switch snapshot in [cur_startkey, cur_endkey]
+					std::map<index_key_t, snapshot_record_t> *tmp_server_snapshot_maps = server_snapshot_maps;
+					std::vector<std::pair<index_key_t, snapshot_record_t>> inswitch_results;
+					if (tmp_server_snapshot_maps != NULL) {
+						std::map<index_key_t, snapshot_record_t>::iterator iter = tmp_server_snapshot_maps[serveridx].lower_bound(cur_startkey);
+						for (; iter != tmp_server_snapshot_maps[serveridx].end() && iter->first <= cur_endkey; iter++) {
+							//inmemory_results.push_back(*iter);
+							inswitch_results.push_back(*iter);
 						}
 					}
-					//COUT_THIS("SCAN results size: " << results.size())
 
-					scan_response_t rsp(req.hashidx(), req.key(), req.endkey(), results.size(), results);
+					// merge sort w/ seq comparison
+					std::vector<std::pair<index_key_t, val_t>> results;
+					if (inmemory_results.size() == 0) {
+						for (uint32_t inswitch_idx = 0; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
+							index_key_t &tmpkey = inswitch_results[inswitch_idx].first;
+							snapshot_record_t &tmprecord = inswitch_results[inswitch_idx].second;
+							if (tmprecord.stat) {
+								results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
+							}
+						}
+					}
+					else if (inswitch_results.size() == 0) {
+						for (uint32_t inmemory_idx = 0; inmemory_idx < inmemory_results.size(); inmemory_idx++) {
+							index_key_t &tmpkey = inmemory_results[inmemory_idx].first;
+							snapshot_record_t &tmprecord = inmemory_results[inmemory_idx].second;
+							if (tmprecord.stat) {
+								results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
+							}
+						}
+					}
+					else {
+						uint32_t inmemory_idx = 0;
+						uint32_t inswitch_idx = 0;
+						bool remain_inmemory = false;
+						bool remain_inswitch = false;
+						while (true) {
+							index_key_t &tmp_inmemory_key = inmemory_results[inmemory_idx].first;
+							snapshot_record_t &tmp_inmemory_record = inmemory_results[inmemory_idx].second;
+							index_key_t &tmp_inswitch_key = inswitch_results[inswitch_idx].first;
+							snapshot_record_t &tmp_inswitch_record = inswitch_results[inswitch_idx].second;
+							if ((tmp_inmemory_key < tmp_inswitch_key) && tmp_inmemory_record.stat) {
+								results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+								inmemory_idx += 1;
+							}
+							else if ((tmp_inswitch_key < tmp_inmemory_key) && tmp_inswitch_record.stat) {
+								results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+								inswitch_idx += 1;
+							}
+							else if (tmp_inmemory_key == tmp_inswitch_key) {
+								if (tmp_inmemory_record.stat && tmp_inswitch_record.stat) {
+									if (tmp_inmemory_record.seq >= tmp_inswitch_record.seq) {
+										results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+										inmemory_idx += 1;
+									}
+									else {
+										results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+										inswitch_idx += 1;
+									}
+								}
+								else if (tmp_inmemory_record.stat) {
+									results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+									inmemory_idx += 1;
+								}
+								else if (tmp_inswitch_record.stat) {
+									results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+									inswitch_idx += 1;
+								}
+							}
+
+							if (inmemory_idx >= inmemory_results.size()) {
+								remain_inswitch = true;
+								break;
+							}
+							else if (inswitch_idx >= inswitch_results.size()) {
+								remain_inmemory = true;
+								break;
+							}
+						} // while (true)
+						if (remain_inswitch) {
+							for (; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
+								index_key_t &tmpkey = inswitch_results[inswitch_idx].first;
+								snapshot_record_t &tmprecord = inswitch_results[inswitch_idx].second;
+								if (tmprecord.stat) {
+									results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
+								}
+							}
+						}
+						else if (remain_inmemory) {
+							for (; inmemory_idx < inmemory_results.size(); inmemory_idx++) {
+								index_key_t &tmpkey = inmemory_results[inmemory_idx].first;
+								snapshot_record_t &tmprecord = inmemory_results[inmemory_idx].second;
+								if (tmprecord.stat) {
+									results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
+								}
+							}
+						}
+					} // both inmemory_results and inswitch_results are not empty
+					//COUT_THIS("results size: " << results.size());
+
+					scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), results.size(), results);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					
 					// DPDK

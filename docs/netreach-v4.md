@@ -44,8 +44,8 @@
 	+ Send GETREQ and wait for GETRES
 	+ Range query
 		* Send SCANREQ <optype, key, endkey>
-		* TODO: Wait for all SCANRES_SPLIT <optype, key, endkey, cur_scanidx, max_scannum, key-value pairs>
-		* TODO: cur_scanidx are different (e.g., 1/2/3) under max_scannum (e.g., 3)
+		* Wait for all SCANRES_SPLIT <optype, key, endkey, cur_scanidx, max_scannum, pairnum, key-value pairs>
+		* NOTE: cur_scanidx are different (e.g., 1/2/3) under max_scannum (e.g., 3)
 - Switch
 	+ Ingress pipeline
 		* Stage 0
@@ -198,14 +198,14 @@
 			- optype: PUTREQ_SEQ_CASE3, DELREQ_SEQ_CASE3, CACHE_EVICT_CASE2, and SNAPSHOT_SERVERSIDE from controller.snapshotclient
 		* server.consnapshotserver receives snapshot data -> distribute data among servers with RCU mechanism for range query
 			* TODO: deduplicate during range query
-			* TODO: Treat DELREQ as a special write request -> do not ignore and free deleted atomic value, and remove deleted set (extended_xindex_dynamic_seq_del)
+			* TODO: Treat DELREQ as a special write request -> do not ignore and free deleted atomic value, and remove deleted set (extended_xindex_dynamic_seq_del) -> range query needs to get value+deleted+seq for seq comparison with inswitch_results
 			* TODO: Provide getseq API for seq comparison
 	+ Range query
 		* Pre-calculate min_startkey and max_endkey for each server
 		* For each SCANREQ_SPLIT
 			- Get verified key range
-			- TODO: Get results of in-memory snapshot and in-switch snapshot for verified key range
-			- TODO: Merge sort w/ seq comparison -> sendback SCANRES_SPLIT
+			- Get results of in-memory snapshot and in-switch snapshot for verified key range
+			- Merge sort w/ seq comparison -> sendback SCANRES_SPLIT
 	+ TODOTODO: We can use multiple threads for controller.snapshotclient.consnapshotclients and server.consnapshotservers/evictservers if necessary -> controller needs to use perserver_bytes in snapshot data
 - Controller
 	+ Cache population

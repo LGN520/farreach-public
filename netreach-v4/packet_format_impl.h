@@ -215,6 +215,7 @@ uint32_t ScanRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	memcpy(begin, (void *)&this->_type, sizeof(int8_t));
 	begin += sizeof(int8_t);
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
+	begin += tmp_keysize;
 	uint32_t tmp_endkeysize = this->_endkey.serialize(begin, max_size - sizeof(int8_t) - tmp_keysize);
 	//memcpy(begin, (void *)&this->_num, sizeof(int32_t));
 	return sizeof(int8_t) + tmp_keysize + tmp_endkeysize; // + sizeof(int32_t);
@@ -397,108 +398,112 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 }
 
-// ScanResponse
+// ScanResponseSplit
 
-template<class key_t, class val_t>
-ScanResponse<key_t, val_t>::ScanResponse(uint16_t hashidx, key_t key, key_t endkey, uint32_t num, std::vector<std::pair<key_t, val_t>> pairs) 
-	: Packet<key_t>(PacketType::SCAN_RES, hashidx, key), _endkey(endkey), _num(num)
+/*template<class key_t, class val_t>
+ScanResponseSplit<key_t, val_t>::ScanResponseSplit(key_t key, key_t endkey, uint32_t num, int16_t cur_scanidx, int16_t max_scannum, int32_t parinum, std::vector<std::pair<key_t, val_t>> pairs) 
+	: ScanRequestSplit<key_t>(PacketType::SCANRES_SPLIT, key, endkey, num, cur_scanidx, max_scannum), _pairnum(pairnum)
 {	
 	INVARIANT(pairs.size() == num);
+	this->_pairs.assign(pairs.begin(), pairs.end());
+}*/
+template<class key_t, class val_t>
+ScanResponseSplit<key_t, val_t>::ScanResponseSplit(key_t key, key_t endkey, int16_t cur_scanidx, int16_t max_scannum, int32_t pairnum, std::vector<std::pair<key_t, val_t>> pairs) 
+	: ScanRequestSplit<key_t>(PacketType::SCANRES_SPLIT, key, endkey, cur_scanidx, max_scannum), _pairnum(pairnum)
+{	
+	INVARIANT(pairnum == pairs.size());
 	this->_pairs.assign(pairs.begin(), pairs.end());
 }
 
 template<class key_t, class val_t>
-ScanResponse<key_t, val_t>::ScanResponse(const char * data, uint32_t recv_size) {
+ScanResponseSplit<key_t, val_t>::ScanResponseSplit(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::SCAN_RES);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::SCANRES_SPLIT);
 }
 
 template<class key_t, class val_t>
-key_t ScanResponse<key_t, val_t>::endkey() const {
-	return this->_endkey;
+int32_t ScanResponseSplit<key_t, val_t>::pairnum() const {
+	return this->_pairnum;
 }
 
 template<class key_t, class val_t>
-uint32_t ScanResponse<key_t, val_t>::num() const {
-	return this->_num;
-}
-
-template<class key_t, class val_t>
-std::vector<std::pair<key_t, val_t>> ScanResponse<key_t, val_t>::pairs() const {
+std::vector<std::pair<key_t, val_t>> ScanResponseSplit<key_t, val_t>::pairs() const {
 	return this->_pairs;
 }
 
 template<class key_t, class val_t>
-uint32_t ScanResponse<key_t, val_t>::size() {
-	// NOTE: invoke size() after getting correct num
-	// NOTE: PUTREQ and GETRES needs alignment since they should be processed in tofino
-	// However, SCANRES does't need alignment
-	//return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + 
-	//	this->_num*(sizeof(key_t) + sizeof(uint8_t) + val_t::max_bytesnum();
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint32_t);
+uint32_t ScanResponseSplit<key_t, val_t>::size() {
+	//return sizeof(int8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(int32_t) + sizeof(int16_t) + sizeof(int16_t) + sizeof(int32_t);
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(int16_t) + sizeof(int16_t) + sizeof(int32_t);
 }
 
 template<class key_t, class val_t>
-uint32_t ScanResponse<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(max_size >= my_size);
 	char *begin = data;
-	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	uint16_t bigendian_hashidx = htons(this->_hashidx);
-	memcpy(begin, (void *)&bigendian_hashidx, sizeof(uint16_t)); // Small-endian to big-endian
-	begin += sizeof(uint16_t);
-	memcpy(begin, (void *)&this->_key, sizeof(key_t));
-	begin += sizeof(key_t);
-	memcpy(begin, (void *)&this->_endkey, sizeof(key_t));
-	begin += sizeof(key_t);
-	memcpy(begin, (void *)&this->_num, sizeof(val_t));
-	begin += sizeof(uint32_t);
-	for (uint32_t pair_i = 0; pair_i < this->_pairs.size(); pair_i++) {
-		memcpy(begin, (void *)&this->_pairs[pair_i].first, sizeof(key_t));
-		begin += sizeof(key_t);
-		uint32_t tmp = this->_pairs[pair_i].second.serialize(begin);
-		if (pair_i != this->_pairs.size() - 1) {
-			begin += tmp;
-		}
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_endkeysize = this->_endkey.serialize(begin, max_size - sizeof(int8_t) - tmp_keysize);
+	begin += tmp_endkeysize;
+	//memcpy(begin, (void *)&this->_num, sizeof(int32_t));
+	//begin += sizeof(int32_t);
+	uint16_t bigendian_cur_scanidx = htons(uint16_t(this->_cur_scanidx));
+	memcpy(begin, (void *)&bigendian_cur_scanidx, sizeof(int16_t));
+	begin += sizeof(int16_t);
+	uint16_t bigendian_max_scannum = htons(uint16_t(this->_max_scannum));
+	memcpy(begin, (void *)&bigendian_max_scannum, sizeof(int16_t));
+	begin += sizeof(int16_t);
 
-		my_size = my_size + sizeof(key_t) + tmp;
-		INVARIANT(max_size >= my_size);
+	uint32_t bigendian_pairnum = htonl(uint32_t(this->_pairnum));
+	memcpy(begin, (void *)&bigendian_pairnum, sizeof(int32_t));
+	begin += sizeof(int32_t);
+	uint32_t totalsize = my_size;
+	for (uint32_t pair_i = 0; pair_i < this->_pairs.size(); pair_i++) {
+		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.serialize(begin, max_size - totalsize);
+		begin += tmp_pair_keysize;
+		totalsize += tmp_pair_keysize;
+		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.serialize(begin, max_size - totalsize);
+		begin += tmp_pair_valsize;
+		totalsize += tmp_pair_valsize;
 	}
-	return my_size;
+	return totalsize;
 }
 
 template<class key_t, class val_t>
-void ScanResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(recv_size >= my_size);
 	const char *begin = data;
-	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
-	this->_hashidx = ntohs(this->_hashidx); // Big-endian to small-endian
-	begin += sizeof(uint16_t);
-	memcpy((void *)&this->_key, begin, sizeof(key_t));
-	begin += sizeof(key_t);
-	memcpy((void *)&this->_endkey, begin, sizeof(key_t));
-	begin += sizeof(key_t);
-	memcpy((void *)&this->_num, begin, sizeof(uint32_t));
-	begin += sizeof(uint32_t);
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
+	begin += tmp_endkeysize;
+	//memcpy((void *)&this->_num, begin, sizeof(int32_t));
+	//begin += sizeof(int32_t);
+	memcpy((void *)&this->_cur_scanidx, begin, sizeof(int16_t));
+	this->_cur_scanidx = int16_t(ntohs(uint16_t(this->_cur_scanidx)));
+	begin += sizeof(int16_t);
+	memcpy((void *)&this->_max_scannum, begin, sizeof(int16_t));
+	this->_max_scannum = int16_t(ntohs(uint16_t(this->_max_scannum)));
+	begin += sizeof(int16_t);
 
-	key_t tmp_key;
-	val_t tmp_val;
-	this->_pairs.reserve(this->_num);
-	for (uint32_t pair_i = 0; pair_i < this->_num; pair_i++) {
-		memcpy((void *)&tmp_key, begin, sizeof(key_t));
-		begin += sizeof(key_t);
-		uint32_t tmp = tmp_val.deserialize(begin);
-		if (pair_i != uint32_t(this->_num - 1)) {
-			begin += tmp;
-		}
-		this->_pairs.push_back(std::pair<key_t, val_t>(tmp_key, tmp_val));
-
-		my_size = my_size + sizeof(key_t) + tmp;
-		INVARIANT(recv_size >= my_size);
+	memcpy((void *)&this->_pairnum, begin, sizeof(int32_t));
+	this->_pairnum = int32_t(ntohl(uint32_t(this->_pairnum)));
+	begin += sizeof(int32_t);
+	uint32_t totalsize = my_size;
+	this->_pairs.resize(this->_pairnum); // change size to this->_pairnum (not just reserve)
+	for (uint32_t pair_i = 0; pair_i < this->_pairnum; pair_i++) {
+		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.deserialize(begin, recv_size - totalsize);
+		begin += tmp_pair_keysize;
+		totalsize += tmp_pair_keysize;
+		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.deserialize(begin, recv_size - totalsize);
+		begin += tmp_pair_valsize;
+		totalsize += tmp_pair_valsize;
 	}
 }
 
@@ -855,6 +860,55 @@ DelRequestSeqInswitchCase1<key_t, val_t>::DelRequestSeqInswitchCase1(const char 
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(this->_seq >= 0);
 	INVARIANT(this->_idx >= 0);
+}
+
+// ScanRequestSplit
+
+template<class key_t>
+ScanRequestSplit<key_t>::ScanRequestSplit(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::SCANREQ_SPLIT);
+}
+
+template<class key_t>
+int16_t ScanRequestSplit<key_t>::cur_scanidx() const {
+	return this->_cur_scanidx;
+}
+
+template<class key_t>
+int16_t ScanRequestSplit<key_t>::max_scannum() const {
+	return this->_max_scannum;
+}
+
+template<class key_t>
+uint32_t ScanRequestSplit<key_t>::size() {
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(int16_t) + sizeof(int16_t);// + sizeof(int32_t);
+}
+
+template<class key_t>
+uint32_t ScanRequestSplit<key_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for ScanRequestSplit");
+}
+
+template<class key_t>
+void ScanRequestSplit<key_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size == recv_size);
+	const char *begin = data;
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
+	begin += tmp_endkeysize;
+	//memcpy((void *)&this->_num, begin, sizeof(int32_t));
+	//begin += sizeof(int32_t);
+	memcpy((void *)&this->_cur_scanidx, begin, sizeof(int16_t));
+	this->_cur_scanidx = int16_t(ntohs(uint16_t(this->_cur_scanidx)));
+	begin += sizeof(int16_t);
+	memcpy((void *)&this->_max_scannum, begin, sizeof(int16_t));
+	this->_max_scannum = int16_t(ntohs(uint16_t(this->_max_scannum)));
+	//begin += sizeof(int16_t);
 }
 
 // CachePop (value must <= 128B; only used in end-hosts)
