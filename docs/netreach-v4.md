@@ -43,7 +43,7 @@
 - Client
 	+ Send GETREQ and wait for GETRES
 	+ Range query
-		* TODO: Send SCANREQ <optype, key, endkey>
+		* Send SCANREQ <optype, key, endkey>
 		* TODO: Wait for all SCANRES_SPLIT <optype, key, endkey, cur_scanidx, max_scannum, key-value pairs>
 		* TODO: cur_scanidx are different (e.g., 1/2/3) under max_scannum (e.g., 3)
 - Switch
@@ -201,8 +201,11 @@
 			* TODO: Treat DELREQ as a special write request -> do not ignore and free deleted atomic value, and remove deleted set (extended_xindex_dynamic_seq_del)
 			* TODO: Provide getseq API for seq comparison
 	+ Range query
-		* TODO: Pre-calculate min_startkey and max_endkey for each server
-		* TODO: For each SCANREQ_SPLIT, verify key range -> get results of in-memory snapshot and in-switch snapshot -> merge sort w/ seq comparison -> sendback SCANRES_SPLIT
+		* Pre-calculate min_startkey and max_endkey for each server
+		* For each SCANREQ_SPLIT
+			- Get verified key range
+			- TODO: Get results of in-memory snapshot and in-switch snapshot for verified key range
+			- TODO: Merge sort w/ seq comparison -> sendback SCANRES_SPLIT
 	+ TODOTODO: We can use multiple threads for controller.snapshotclient.consnapshotclients and server.consnapshotservers/evictservers if necessary -> controller needs to use perserver_bytes in snapshot data
 - Controller
 	+ Cache population

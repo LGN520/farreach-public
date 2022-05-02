@@ -111,8 +111,14 @@ static int run_server_worker(void * param) {
 //void *run_perserver_worker(void * param) {
   // Parse param
   sfg_param_t &thread_param = *(sfg_param_t *)param;
-  uint8_t serveridx = thread_param.serveridx;
+  uint8_t serveridx = thread_param.serveridx; // [0, server_num-1]
   xindex_t *table = thread_param.table;
+
+  // scan.startkey <= max_startkey; scan.endkey >= min_startkey
+  // use size_t to avoid int overflow
+  size_t min_startkey = serveridx * perserver_keyrange;
+  size_t max_endkey = min_startkey - 1 + perserver_keyrange;
+  INVARIANT(max_endkey >= min_startkey);
 
   tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
   //tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port_start + serveridx, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
@@ -286,9 +292,24 @@ static int run_server_worker(void * param) {
 					deleted_sets[serveridx].add(req.key(), req.seq());
 					break;
 				}
-			case packet_type_t::SCAN_REQ:
+			case packet_type_t::SCANREQ:
 				{
 					scan_request_t req(buf, recv_size);
+					
+					// get verified key range
+					INVARIANT(req.key() <= max_endkey);
+					INVARIANT(req.endkey() >= min_startkey);
+					index_key_t cur_startkey = req.key();
+					index_key-t cur_endkey = req.endkey();
+					if (cur_startkey < min_startkey) {
+						cur_startkey = min_startkey;
+					}
+					if (cur_endkey > max_endkey) {
+						cur_endkey = max_endkey;
+					}
+
+					// TODO: get results in [cur_startkey, cur_endkey]
+
 					//COUT_THIS("[server] startkey = " << req.key().to_string() << 
 					//		<< "endkey = " << req.endkey().to_string() << " num = " << req.num())
 					std::vector<std::pair<index_key_t, val_t>> results;

@@ -174,16 +174,22 @@ void DelRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 }
 
 // ScanRequest
-template<class key_t>
-ScanRequest<key_t>::ScanRequest(uint16_t hashidx, key_t key, key_t endkey, uint32_t num)
+
+/*template<class key_t>
+ScanRequest<key_t>::ScanRequest(key_t key, key_t endkey, int32_t num)
 	: Packet<key_t>(packet_type_t::SCAN_REQ, hashidx, key), _endkey(endkey), _num(num)
+{
+}*/
+template<class key_t>
+ScanRequest<key_t>::ScanRequest(key_t key, key_t endkey)
+	: Packet<key_t>(packet_type_t::SCANREQ, key), _endkey(endkey)
 {
 }
 
 template<class key_t>
 ScanRequest<key_t>::ScanRequest(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::SCAN_REQ);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::SCANREQ);
 }
 
 template<class key_t>
@@ -191,14 +197,14 @@ key_t ScanRequest<key_t>::endkey() const {
 	return this->_endkey;
 }
 
-template<class key_t>
-uint32_t ScanRequest<key_t>::num() const {
+/*template<class key_t>
+int32_t ScanRequest<key_t>::num() const {
 	return this->_num;
-}
+}*/
 
 template<class key_t>
 uint32_t ScanRequest<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(uint16_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint32_t);
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(key_t);// + sizeof(int32_t);
 }
 
 template<class key_t>
@@ -206,17 +212,12 @@ uint32_t ScanRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(max_size >= my_size);
 	char *begin = data;
-	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	uint16_t bigendian_hashidx = htons(this->_hashidx);
-	memcpy(begin, (void *)&bigendian_hashidx, sizeof(uint16_t)); // Small-endian to big-endian
-	begin += sizeof(uint16_t);
-	memcpy(begin, (void *)&this->_key, sizeof(key_t));
-	begin += sizeof(key_t);
-	memcpy(begin, (void *)&this->_endkey, sizeof(key_t));
-	begin += sizeof(key_t);
-	memcpy(begin, (void *)&this->_num, sizeof(uint32_t));
-	return my_size;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
+	uint32_t tmp_endkeysize = this->_endkey.serialize(begin, max_size - sizeof(int8_t) - tmp_keysize);
+	//memcpy(begin, (void *)&this->_num, sizeof(int32_t));
+	return sizeof(int8_t) + tmp_keysize + tmp_endkeysize; // + sizeof(int32_t);
 }
 
 template<class key_t>
@@ -224,16 +225,13 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
-	begin += sizeof(uint8_t);
-	memcpy((void *)&this->_hashidx, begin, sizeof(uint16_t));
-	this->_hashidx = ntohs(this->_hashidx); // Big-endian to small-endian
-	begin += sizeof(uint16_t);
-	memcpy((void *)&this->_key, begin, sizeof(key_t));
-	begin += sizeof(key_t);
-	memcpy((void *)&this->_endkey, begin, sizeof(key_t));
-	begin += sizeof(key_t);
-	memcpy((void *)&this->_num, begin, sizeof(uint32_t));
+	memcpy((void *)&this->_type, begin, sizeof(int8_t));
+	begin += sizeof(int8_t);
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
+	begin += tmp_keysize;
+	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
+	//begin += tmp_endkeysize;
+	//memcpy((void *)&this->_num, begin, sizeof(int32_t));
 }
 
 

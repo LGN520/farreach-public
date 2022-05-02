@@ -87,11 +87,12 @@ class DelRequest : public Packet<key_t> {
 template<class key_t>
 class ScanRequest : public Packet<key_t> {
 	public: 
-		ScanRequest(uint16_t hashidx, key_t key, key_t endkey, uint32_t num);
+		//ScanRequest(key_t key, key_t endkey, uint32_t num);
+		ScanRequest(key_t key, key_t endkey);
 		ScanRequest(const char * data, uint32_t recv_size);
 
 		key_t endkey() const;
-		uint32_t num() const;
+		//int32_t num() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -99,7 +100,7 @@ class ScanRequest : public Packet<key_t> {
 		virtual void deserialize(const char * data, uint32_t recv_size);
 	private:
 		key_t _endkey;
-		uint32_t _num;
+		//int32_t _num;
 };
 
 template<class key_t, class val_t>

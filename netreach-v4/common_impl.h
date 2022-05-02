@@ -83,8 +83,8 @@ short backup_port;
 // notified for processing explicit notification of server-side snapshot
 short notified_port;
 short server_evictserver_port_start = -1;
-size_t per_server_range;
 short server_consnapshotserver_port = -1;
+size_t perserver_keyrange = -1; // use size_t to avoid int overflow
 
 // controller
 const char *controller_ip_for_server = nullptr;
@@ -186,8 +186,8 @@ inline void parse_ini(const char* config_file) {
 	backup_port = ini.get_server_backup_port();
 	notified_port = ini.get_server_notified_port();
 	server_evictserver_port_start = ini,get_server_evictserver_port();
-	per_server_range = std::numeric_limits<size_t>::max() / server_num;
 	server_consnapshotserver_port = ini,get_server_consnapshotserver_port();
+	perserver_keyrange = size_t(4*1024*1024*1024) / server_num; // 2^32 / server_num
 	COUT_VAR(server_num);
 	COUT_VAR(server_port_start);
 	COUT_VAR(pktloss_port_start);
@@ -202,8 +202,8 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(backup_port);
 	COUT_VAR(notified_port);
 	COUT_VAR(server_evictserver_port_start);
-	COUT_VAR(per_server_range);
 	COUT_VAR(server_consnapshotserver_port);
+	COUT_VAR(perserver_keyrange);
 
 	// controller
 	controller_ip_for_server = ini.get_controller_ip_for_server();

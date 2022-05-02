@@ -62,11 +62,11 @@ const uint32_t range_gap = 1024; // add 2^10 to keylo of startkey
 const int range_num = 10; // max number of returned kv pairs
 index_key_t generate_endkey(index_key_t &startkey) {
 	index_key_t endkey = startkey;
-	if (std::numeric_limits<uint64_t>::max() - endkey.keylo > range_gap) {
-		endkey.keylo += range_gap;
+	if (std::numeric_limits<uint64_t>::max() - endkey.keylolo > range_gap) {
+		endkey.keylolo += range_gap;
 	}
 	else {
-		endkey.keylo = std::numeric_limits<uint64_t>::max();
+		endkey.keylolo = std::numeric_limits<uint64_t>::max();
 	}
 	return endkey;
 }
@@ -491,13 +491,14 @@ static int run_fg(void *param) {
 		}
 		else if (iter.type() == int8_t(packet_type_t::SCANREQ)) {
 			index_key_t endkey = generate_endkey(tmpkey);
-			size_t first_server_idx = get_server_idx(tmpkey);
+			/*size_t first_server_idx = get_server_idx(tmpkey);
 			size_t last_server_idx = get_server_idx(endkey);
-			size_t split_num = last_server_idx - first_server_idx + 1;
+			size_t split_num = last_server_idx - first_server_idx + 1;*/
 
 			CUR_TIME(req_t1);
-			uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
-			scan_request_t req(hashidx, tmpkey, endkey, range_num);
+			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			//scan_request_t req(tmpkey, endkey, range_num);
+			scan_request_t req(tmpkey, endkey);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
 					<< "endkey = " << endkey.to_string() << " num = " << range_num);
 			req_size = req.serialize(buf, MAX_BUFSIZE);
