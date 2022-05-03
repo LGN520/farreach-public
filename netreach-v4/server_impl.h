@@ -1,6 +1,8 @@
 #ifndef SERVER_IMPL_H
 #define SERVER_IMPL_H
 
+typedef xindex::XIndex<index_key_t, val_t> xindex_t;
+
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   xindex_t *table;
   int16_t serveridx;
@@ -492,7 +494,7 @@ static int run_server_worker(void * param) {
 					put_request_seq_case3_t req(buf, recv_size);
 
 					if (!server_issnapshot) {
-						try_kvsnapshot(table);
+						table->make_snapshot();
 					}
 
 					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
@@ -512,7 +514,7 @@ static int run_server_worker(void * param) {
 					put_request_pop_seq_case3_t req(buf, recv_size);
 
 					if (!server_issnapshot) {
-						try_kvsnapshot(table);
+						table->make_snapshot();
 					}
 
 					//COUT_THIS("[server] key = " << req.key().to_string())
@@ -545,7 +547,7 @@ static int run_server_worker(void * param) {
 					del_request_seq_case3_t req(buf, recv_size);
 
 					if (!server_issnapshot) {
-						try_kvsnapshot(table);
+						table->make_snapshot();
 					}
 
 					bool tmp_stat = table->remove(req.key(), serveridx, req.seq());
@@ -584,145 +586,6 @@ static int run_server_worker(void * param) {
 			INVARIANT(res == 0);
 		}
 	} // End for mbuf from receiver to server
-	if (server_heads_for_pktloss[serveridx] != tails_for_pktloss[serveridx]) {
-		INVARIANT(pkts_list_for_pktloss[serveridx][tails_for_pktloss[serveridx]] != nullptr);
-		recv_size = get_payload(pkts_list_for_pktloss[serveridx][tails_for_pktloss[serveridx]], buf);
-		rte_pktmbuf_free((struct rte_mbuf*)pkts_list_for_pktloss[serveridx][tails_for_pktloss[serveridx]]);
-		tails_for_pktloss[serveridx] = (tails_for_pktloss[serveridx] + 1) % MQ_SIZE;
-
-		packet_type_t pkt_type = get_packet_type(buf, recv_size);
-		switch (pkt_type) {
-			// NOTE: we use seq mechanism to avoid incorrect overwrite of packet reordering
-			case packet_type_t::GET_RES_POP_EVICT_SWITCH:
-				{
-					// Put evicted data into key-value store
-					get_response_pop_evict_switch_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool isdeleted = deleted_sets[serveridx].check_and_remove(req.key(), req.seq());
-					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
-						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), serveridx, req.seq());
-						}
-						else {
-							table->remove(req.key(), serveridx, req.seq());
-						}
-					}
-					break;
-				}
-			case packet_type_t::PUT_REQ_POP_EVICT_SWITCH:
-				{
-					// Put evicted data into key-value store
-					put_request_pop_evict_switch_t req(buf, recv_size);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool isdeleted = deleted_sets[serveridx].check_and_remove(req.key(), req.seq());
-					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
-						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), serveridx, req.seq());
-						}
-						else {
-							table->remove(req.key(), serveridx, req.seq());
-						}
-					}
-					break;
-				}
-			case packet_type_t::PUT_REQ_LARGE_EVICT_SWITCH:
-				{
-					// Put evicted data into key-value store
-					put_request_large_evict_switch_t req(buf, recv_size);
-					INVARIANT(req.val().val_length <= val_t::SWITCH_MAX_VALLEN);
-					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool isdeleted = deleted_sets[serveridx].check_and_remove(req.key(), req.seq());
-					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
-						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), serveridx, req.seq());
-						}
-						else {
-							table->remove(req.key(), serveridx, req.seq());
-						}
-					}
-					break;
-				}
-			case packet_type_t::GET_RES_POP_EVICT_CASE2_SWITCH:
-				{
-					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
-					get_response_pop_evict_case2_switch_t req(buf, recv_size);
-
-					if (!server_issnapshot) {
-						try_kvsnapshot(table);
-					}
-
-					bool isdeleted = deleted_sets[serveridx].check_and_remove(req.key(), req.seq());
-					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
-						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), serveridx, req.seq());
-						}
-						else {
-							table->remove(req.key(), serveridx, req.seq());
-						}
-					}
-					break;
-				}
-			case packet_type_t::PUT_REQ_POP_EVICT_CASE2_SWITCH:
-				{
-					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
-					put_request_pop_evict_case2_switch_t req(buf, recv_size);
-
-					if (!server_issnapshot) {
-						try_kvsnapshot(table);
-					}
-
-					bool isdeleted = deleted_sets[serveridx].check_and_remove(req.key(), req.seq());
-					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
-						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), serveridx, req.seq());
-						}
-						else {
-							table->remove(req.key(), serveridx, req.seq());
-						}
-					}
-					break;
-				}
-			case packet_type_t::PUT_REQ_LARGE_EVICT_CASE2_SWITCH:
-				{
-					// Switch OS will add special case for rollback; here we only perform the pkt if necessary
-					put_request_large_evict_case2_switch_t req(buf, recv_size);
-
-					if (!server_issnapshot) {
-						try_kvsnapshot(table);
-					}
-
-					INVARIANT(req.val().val_length <= val_t.SWITCH_MAX_VALLEN);
-					bool isdeleted = deleted_sets[serveridx].check_and_remove(req.key(), req.seq());
-					if (!isdeleted) { // Do not overwrite if delete.seq > evict.eq
-						if (req.val().val_length > 0) {
-							table->put(req.key(), req.val(), serveridx, req.seq());
-						}
-						else {
-							table->remove(req.key(), serveridx, req.seq());
-						}
-					}
-					break;
-				}
-			default:
-				{
-					COUT_THIS("[server] Invalid packet type from tcp channel: " << int(pkt_type))
-					std::cout << std::flush;
-					exit(-1);
-				}
-		}
-	} // End for mbuf from switch os (and tcp server) to server 
-
-
-
-
-
-
-
-
-
-
-
-
 
 	cache_evict_t *tmp_cache_evict_ptr = server_cache_evict_or_case2_ptr_queue_list[serveridx].read();
 	if (tmp_cache_evict_ptr != NULL) {
@@ -733,7 +596,7 @@ static int run_server_worker(void * param) {
 		if (tmp_cache_evict_ptr->_type == packet_type_t::CACHE_EVICT_CASE2) {
 			printf("CACHE_EVICT_CASE2!\n");
 			if (!server_issnapshot) {
-				try_kvsnapshot(table);
+				table->make_snapshot();
 			}
 		}
 
@@ -933,7 +796,7 @@ void *run_server_consnapshotserver(void *param) {
 
 			// make server-side snapshot (simulate distributed in-memory KVS by concurrent one)
 			if (!server_issnapshot) {
-				try_kvsnapshot(table);
+				table->make_snapshot();
 			}
 
 			// send SNAPSHOT_SERVERSIDE_ACK to controller

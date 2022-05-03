@@ -17,7 +17,6 @@
 //#include <sys/time.h> // struct timeval
 
 #include "helper.h"
-#include "packet_format_impl.h"
 #include "dpdk_helper.h"
 #include "key.h"
 #include "val.h"
@@ -50,23 +49,27 @@ uint32_t* volatile tails;
 
 // SCAN split
 size_t get_server_idx(index_key_t key) {
-	size_t server_idx = key.keylo / per_server_range;
+#ifdef LARGE_KEY
+	size_t server_idx = key.keyhihi / perserver_keyrange;
+#else
+	size_t server_idx = key.keyhi / perserver_keyrange;
+#endif
 	if (server_idx >= server_num) {
 		server_idx = server_num - 1;
 	}
 	return server_idx;
 }
 
-const uint32_t range_gap = 1024; // add 2^10 to keylo of startkey
+const int32_t range_gap = 1024; // add 2^10 to keylo of startkey
 //const uint32_t range_gap = 0x80000000; // add 2^31 to keylo of startkey
 const int range_num = 10; // max number of returned kv pairs
 index_key_t generate_endkey(index_key_t &startkey) {
 	index_key_t endkey = startkey;
-	if (std::numeric_limits<uint64_t>::max() - endkey.keylolo > range_gap) {
+	if (std::numeric_limits<int32_t>::max() - endkey.keylolo > range_gap) {
 		endkey.keylolo += range_gap;
 	}
 	else {
-		endkey.keylolo = std::numeric_limits<uint64_t>::max();
+		endkey.keylolo = std::numeric_limits<int32_t>::max();
 	}
 	return endkey;
 }
@@ -219,7 +222,7 @@ void run_benchmark() {
 #ifdef TEST_DPDK_POLLING
 	std::vector<double> wait_list; // TMPTMP
 #endif
-	double sum_latency;
+	double sum_latency = 0.0;
 	for (size_t i = 0; i < client_num; i++) {
 		latency_list.insert(latency_list.end(), fg_params[i].latency_list.begin(), fg_params[i].latency_list.end());
 #ifdef TEST_DPDK_POLLING
@@ -409,8 +412,6 @@ static int run_fg(void *param) {
 			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
 			INVARIANT(recv_size != -1);
 
-			packet_type_t pkt_type = get_packet_type(buf, recv_size);
-			INVARIANT(pkt_type == packet_type_t::GETRES);
 			get_response_t rsp(buf, recv_size);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
 			CUR_TIME(rsp_t2);
@@ -452,8 +453,6 @@ static int run_fg(void *param) {
 			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
 			INVARIANT(recv_size != -1);
 
-			packet_type_t pkt_type = get_packet_type(buf, recv_size);
-			INVARIANT(pkt_type == packet_type_t::PUT_RES);
 			put_response_t rsp(buf, recv_size);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 			CUR_TIME(rsp_t2);
@@ -483,8 +482,6 @@ static int run_fg(void *param) {
 			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
 			INVARIANT(recv_size != -1);
 
-			packet_type_t pkt_type = get_packet_type(buf, recv_size);
-			INVARIANT(pkt_type == packet_type_t::DEL_RES);
 			del_response_t rsp(buf, recv_size);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 			CUR_TIME(rsp_t2);
@@ -532,24 +529,26 @@ static int run_fg(void *param) {
 				received_scannum += 1;
 				if (max_scannum == -1) {
 					max_scannum = rsp.max_scannum();
-					INVARIANT(max_scannum >= 1 && max_scannum <= server_num);
+					INVARIANT(max_scannum >= 1 && max_scannum <= int16_t(server_num));
 				}
 				CUR_TIME(scan_rsp_t2);
 
 				DELTA_TIME(scan_rsp_t2, scan_rsp_t1, scan_rsp_t3);
 				double tmp_scan_rsp_latency = GET_MICROSECOND(scan_rsp_t3);
-				if (tmpsplit == 0 || tmp_scan_rsp_latency < scan_rsp_latency) {
+				scan_rsp_latency += tmp_scan_rsp_latency;
+				/*if (scan_rsp_latency == 0.0 || tmp_scan_rsp_latency < scan_rsp_latency) {
 					scan_rsp_latency = tmp_scan_rsp_latency;
 					rsp_t1 = scan_rsp_t1;
 					rsp_t2 = scan_rsp_t2;
-				}
+				}*/
 				DELTA_TIME(scan_wait_t2, scan_wait_t1, scan_wait_t3);
 				double tmp_scan_wait_latency = GET_MICROSECOND(scan_wait_t3);
-				if (tmpsplit == 0 || tmp_scan_wait_latency < scan_wait_latency) {
+				scan_wait_latency += tmp_scan_wait_latency;
+				/*if (scan_wait_latency == 0.0 || tmp_scan_wait_latency < scan_wait_latency) {
 					scan_wait_latency = tmp_scan_wait_latency;
 					wait_t1 = scan_wait_t1;
 					wait_t2 = scan_wait_t2;
-				}
+				}*/
 
 				if (received_scannum >= max_scannum) {
 					break;

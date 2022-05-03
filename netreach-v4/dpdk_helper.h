@@ -46,7 +46,7 @@ int decode_mbuf(struct rte_mbuf * volatile mbuf, uint8_t *srcmac, uint8_t *dstma
 int get_srcport(struct rte_mbuf * volatile mbuf);
 int get_dstport(struct rte_mbuf * volatile mbuf);
 int get_payload(struct rte_mbuf * volatile mbuf, char *payload);
-int get_optype(struct rte_mbuf * volatile mbuf);
+int8_t get_optype(struct rte_mbuf * volatile mbuf);
 bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num);
 void set_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num);
 

@@ -248,8 +248,7 @@ void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring, uint16_t n
 
 	/* Initialize all ports. */
 	if (port_init(portid, *mbuf_pool_ptr, n_txring, n_rxring) != 0)
-		rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu16 "\n",
-				portid);
+		rte_exit(EXIT_FAILURE, "Cannot init port %d\n", int(portid));
 
 	lcore_count = rte_lcore_count();
 	printf("Number of logical cores: %u\n", lcore_count);
@@ -465,33 +464,33 @@ int get_payload(struct rte_mbuf *volatile mbuf, char *payload) {
 	return payload_size;
 }
 
-uint8_t get_optype(struct rte_mbuf * volatile mbuf) {
+int8_t get_optype(struct rte_mbuf * volatile mbuf) {
 	char *data;
 	data = rte_pktmbuf_mtod(mbuf, char *);
-	uint8_t optype = *(uint8_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 6);
+	int8_t optype = *(int8_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 6);
 	return optype;
 }
 
-bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num) {
+/*//bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, int32_t *num) {
+bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey) {
 	char *data;
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
 	//printf("pktsize: %d\n", mbuf->pkt_len);
 	//dump_buf(data, mbuf->pkt_len);
-	uint8_t optype = *(uint8_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 6);
-	if (optype == (uint8_t)packet_type_t::SCAN_REQ) {
-		startkey->keylo = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 8);
-		startkey->keyhi = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 16);
-		endkey->keylo = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 24);
-		endkey->keyhi = *(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 32);
-		*num = *(uint32_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 40);
+	packet_type_t optype = packet_type_t(*(int8_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 6));
+	if (optype == packet_type_t::SCANREQ || optype == packet_type_t::SCANREQ_SPLIT) {
+		uint32_t tmp_keysize = startkey->deserialize(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 7, ???);
+		uint32_t tmp_endkeysize = startkey->deserialize(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 7 + tmp_keysize, ???);
+		UNUSED(tmp_endkeysize)
+		// *num = *(int32_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 40);
 		return true;
 	}
 	return false;
-}
+}*/
 
-void set_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num) {
+/*void set_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num) {
 	char *data;
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
@@ -499,9 +498,8 @@ void set_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, 
 	//printf("pktsize: %d\n", mbuf->pkt_len);
 	//dump_buf(data, mbuf->pkt_len);
 	
-	*(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 8) = startkey->keylo;
-	*(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 16) = startkey->keyhi;
-	*(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 24) = endkey->keylo;
-	*(uint64_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 32) = endkey->keyhi;
-	*(uint32_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 40) = *num;
-}
+	uint32_t tmp_keysize = startkey->serialize(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 7, ???);
+	uint32_t tmp_endkeysize = startkey->serialize(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 7 + tmp_keysize, ???);
+	UNUSED(tmp_endkeysize);
+	// *(int32_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 40) = *num;
+}*/

@@ -541,7 +541,7 @@ struct AtomicVal {
 	  assert(!removed(this->status)); // check removed of pointer-type atomic value
 	  assert(this->aval_ptr != nullptr);
 	  // AtomicVal pointed by aval_ptr will not be freed before finishing this read_snapshot() due to RCU during compact
-	  res = this->aval_ptr->read_with_latestid(val, id);
+	  res = this->aval_ptr->read_with_latestid_seqnum(val, id, seqnum);
 	}
 	else {
 		id = this->latest_id;
@@ -581,7 +581,7 @@ struct AtomicVal {
     if (unlikely(is_ptr(this->status))) {
       assert(!removed(this->status));
 	  assert(this->aval_ptr != nullptr);
-      res = this->aval_ptr->update(val, snapshot_id);
+      res = this->aval_ptr->update(val, snapshot_id, seqnum);
     } else if (!removed(this->status)) { // do not make snapshot for removed latest version
 		if (seqnum > this->latest_seqnum) {
 			this->latest_seqnum = seqnum;
@@ -620,7 +620,7 @@ struct AtomicVal {
     if (unlikely(is_ptr(this->status))) {
       assert(!removed(this->status));
 	  assert(this->aval_ptr != nullptr);
-      res = this->aval_ptr->remove(snapshot_id);
+      res = this->aval_ptr->remove(snapshot_id, seqnum);
     } else if (!removed(this->status)) { // do not make snapshot for removed latest version
 		if (seqnum > this->latest_seqnum) {
 			this->latest_seqnum = seqnum;

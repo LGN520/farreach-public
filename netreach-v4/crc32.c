@@ -26,7 +26,7 @@ unsigned int crc32(unsigned char *message, uint32_t size) {
          crc = (crc >> 1) ^ (0xEDB88320 & mask);
       }
       i = i + 1;
-	  if (i == size) break;
+	  if (i == int(size)) break;
    }
    return ~crc;
 }

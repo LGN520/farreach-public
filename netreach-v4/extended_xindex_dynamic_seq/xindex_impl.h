@@ -106,9 +106,10 @@ size_t XIndex<key_t, val_t, seq>::range_scan(
 }
 
 template <class key_t, class val_t, bool seq>
-void XIndex<key_t, val_t, seq>::make_snapshot(const uint32_t worker_id) {
+//void XIndex<key_t, val_t, seq>::make_snapshot(const uint32_t worker_id) {
+void XIndex<key_t, val_t, seq>::make_snapshot() {
   if (!is_snapshot.test_and_set(std::memory_order_acquire)) {
-    rcu_progress(worker_id);
+    //rcu_progress(worker_id);
 	snapshot_id += 1; // monotically increase snapshot id
   }
 }

@@ -89,6 +89,7 @@ class DelRequest : public Packet<key_t> {
 template<class key_t>
 class ScanRequest : public Packet<key_t> {
 	public: 
+		ScanRequest();
 		//ScanRequest(key_t key, key_t endkey, uint32_t num);
 		ScanRequest(key_t key, key_t endkey);
 		ScanRequest(const char * data, uint32_t recv_size);
@@ -100,7 +101,6 @@ class ScanRequest : public Packet<key_t> {
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-	private:
 		key_t _endkey;
 		//int32_t _num;
 };
@@ -170,7 +170,6 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> {
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-	private:
 		int32_t _pairnum;
 		std::vector<std::pair<key_t, val_t>> _pairs;
 };
@@ -316,6 +315,7 @@ class DelRequestSeqCase3 : public DelRequestSeq<key_t> { // seq (w/o stat)
 template<class key_t>
 class ScanRequestSplit : public ScanRequest<key_t> {
 	public: 
+		ScanRequestSplit();
 		ScanRequestSplit(const char * data, uint32_t recv_size);
 
 		int16_t cur_scanidx() const;
@@ -325,7 +325,6 @@ class ScanRequestSplit : public ScanRequest<key_t> {
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-	private:
 		int16_t _cur_scanidx;
 		int16_t _max_scannum;
 };

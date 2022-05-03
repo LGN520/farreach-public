@@ -36,6 +36,8 @@
 
 #include "common_impl.h"
 
+typedef xindex::XIndex<index_key_t, val_t> xindex_t;
+
 struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
   uint64_t throughput;
@@ -56,7 +58,6 @@ double update_ratio = 0;
 double delete_ratio = 0;
 double scan_ratio = 0;
 size_t runtime = 10;
-size_t bg_n = 1;
 
 std::vector<index_key_t> exist_keys;
 std::vector<index_key_t> non_exist_keys;
@@ -68,8 +69,8 @@ std::map<index_key_t, val_t>* volatile backup_data = nullptr;
 
 void test_merge_latency() {
 	backup_data = new std::map<index_key_t, val_t>;
-	for (size_t i = 0; i < kv_bucket_num; i++) {
-		uint64_t init_val_data[1] = {1};
+	for (size_t i = 0; i < switch_kv_bucket_num; i++) {
+		char init_val_data[1] = {1};
 		backup_data->insert(std::pair<index_key_t, val_t>(exist_keys[i], val_t(init_val_data, 1)));
 	}
 }

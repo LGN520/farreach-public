@@ -1,6 +1,10 @@
 #ifndef COMMON_IMPL_H
 #define COMMON_IMPL_H
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include "packet_format_impl.h"
 #include "socket_helper.h"
 #include "message_queue_impl.h"
@@ -17,7 +21,6 @@ typedef uint64_t val_t;
 typedef Val val_t;
 #endif
 
-typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
 typedef PutRequest<index_key_t, val_t> put_request_t;
 typedef DelRequest<index_key_t> del_request_t;
@@ -80,7 +83,6 @@ char server_load_workload_dir[256];
 size_t server_num = 1;
 short server_port_start = -1;
 // switch os simulator for processing special cases and packet loss handling (and tcp servers for workers)
-short pktloss_port_start = -1;
 const char* server_ip = nullptr;
 uint8_t server_macaddr[6];
 // backuper for processing in-switch snapshot
@@ -90,7 +92,7 @@ short backup_port;
 short notified_port;
 short server_evictserver_port_start = -1;
 short server_consnapshotserver_port = -1;
-size_t perserver_keyrange = -1; // use size_t to avoid int overflow
+uint64_t perserver_keyrange = -1; // use size_t to avoid int overflow
 
 // controller
 const char *controller_ip_for_server = nullptr;
@@ -101,7 +103,7 @@ short controller_evictserver_port = -1;
 uint32_t controller_snapshot_period = -1; // ms
 
 // switch
-uint32_t kv_bucket_num;
+uint32_t switch_kv_bucket_num;
 short switchos_popserver_port = -1;
 short switchos_paramserver_port = -1;
 const char *switchos_ip = nullptr;
@@ -114,7 +116,7 @@ short switchos_snapshotdataserver_port = -1;
 const char *reflector_ip_for_switchos = nullptr;
 short reflector_popserver_port = -1;
 
-// others
+// others (xindex)
 size_t bg_n = 1;
 
 // Packet types used by switchos.paramserver and ptf framework
@@ -157,7 +159,7 @@ inline void parse_ini(const char* config_file) {
 	client_port_start = ini.get_client_port();
 	client_ip = ini.get_client_ip();
 	ini.get_client_mac(client_macaddr);
-	RUN_SPLIT_DIR(client_workload_dir, workload_name, client_num);
+	RUN_SPLIT_DIR(client_workload_dir, workload_name, int(client_num));
 	per_client_per_period_max_sending_rate = max_sending_rate / client_num / (1 * 1000 * 1000 / rate_limit_period);
 	COUT_VAR(client_num);
 	COUT_VAR(client_port_start);
@@ -174,7 +176,7 @@ inline void parse_ini(const char* config_file) {
 	split_n = ini.get_split_num();
 	INVARIANT(split_n >= 2);
 	load_n = split_n - 1;
-	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, split_n); // get the split directory for loading phase
+	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(split_n)); // get the split directory for loading phase
 	struct stat dir_stat;
 	if (!(stat(server_load_workload_dir, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
 		printf("Output directory does not exist: %s\n", server_load_workload_dir);
@@ -188,18 +190,16 @@ inline void parse_ini(const char* config_file) {
 	server_num = ini.get_server_num();
 	INVARIANT(server_num >= load_n);
 	server_port_start = ini.get_server_port();
-	pktloss_port_start = ini.get_server_pktloss_port();
 	server_ip = ini.get_server_ip();
 	ini.get_server_mac(server_macaddr);
 	backup_ip = ini.get_server_backup_ip();
 	backup_port = ini.get_server_backup_port();
 	notified_port = ini.get_server_notified_port();
-	server_evictserver_port_start = ini,get_server_evictserver_port();
-	server_consnapshotserver_port = ini,get_server_consnapshotserver_port();
-	perserver_keyrange = size_t(4*1024*1024*1024) / server_num; // 2^32 / server_num
+	server_evictserver_port_start = ini.get_server_evictserver_port();
+	server_consnapshotserver_port = ini.get_server_consnapshotserver_port();
+	perserver_keyrange = 4ul*1024ul*1024ul*1024ul / uint64_t(server_num); // 2^32 / server_num
 	COUT_VAR(server_num);
 	COUT_VAR(server_port_start);
-	COUT_VAR(pktloss_port_start);
 	printf("server_ip: %s\n", server_ip);
 	printf("server_macaddr: ");
 	for (size_t i = 0; i < 6; i++) {
@@ -229,7 +229,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(controller_snapshot_period);
 	
 	// switch
-	kv_bucket_num = ini.get_bucket_num();
+	switch_kv_bucket_num = ini.get_kv_bucket_num();
 	switchos_popserver_port = ini.get_switchos_popserver_port();
 	switchos_paramserver_port = ini.get_switchos_paramserver_port();
 	switchos_ip = ini.get_switchos_ip();
@@ -237,12 +237,12 @@ inline void parse_ini(const char* config_file) {
 	switchos_snapshotserver_port = ini.get_switchos_snapshotserver_port();
 	switchos_specialcaseserver_port = ini.get_switchos_specialcaseserver_port();
 	switchos_snapshotdataserver_port = ini.get_switchos_snapshotdataserver_port();
-	COUT_VAR(kv_bucket_num);
+	COUT_VAR(switch_kv_bucket_num);
 #ifndef ORIGINAL_XINDEX
 	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 #endif
-	COUR_VAR(switchos_popserver_port);
+	COUT_VAR(switchos_popserver_port);
 	COUT_VAR(switchos_paramserver_port);
 	printf("switchos ip: %s\n", switchos_ip);
 	COUT_VAR(switchos_sample_cnt);
@@ -270,11 +270,11 @@ inline void parse_control_ini(const char* config_file) {
 	SNAPSHOT_SERVERSIDE = ini.get_snapshot_serverside();
 	SNAPSHOT_SERVERSIDE_ACK = ini.get_snapshot_serverside_ack();
 	SNAPSHOT_DATA = ini.get_snapshot_data();
-	COUT_VAR(SWITCHO_GET_FREEIDX);
-	COUT_VAR(SWITCHO_GET_KEY_FREEIDX);
-	COUT_VAR(SWITCHO_SET_EVICTDATA);
-	COUT_VAR(SWITCHO_GET_EVICTKEY);
-	COUT_VAR(SWITCHO_GET_CACHEDEMPTYINDEX);
+	COUT_VAR(SWITCHOS_GET_FREEIDX);
+	COUT_VAR(SWITCHOS_GET_KEY_FREEIDX);
+	COUT_VAR(SWITCHOS_SET_EVICTDATA);
+	COUT_VAR(SWITCHOS_GET_EVICTKEY);
+	COUT_VAR(SWITCHOS_GET_CACHEDEMPTYINDEX);
 	COUT_VAR(SNAPSHOT_START);
 	COUT_VAR(SNAPSHOT_SERVERSIDE);
 	COUT_VAR(SNAPSHOT_SERVERSIDE_ACK);

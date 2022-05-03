@@ -30,7 +30,6 @@ class IniparserWrapper {
 		void get_server_mac(uint8_t* macaddr);
 		const char *get_server_backup_ip();
 		short get_server_backup_port();
-		short get_server_pktlos_port();
 		short get_server_notified_port();
 		short get_server_evictserver_port();
 		short get_server_consnapshotserver_port();

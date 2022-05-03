@@ -5,10 +5,11 @@
 #include <map>
 #include <mutex>
 
-template<class key_t, class seq_t>
+template <class key_t, class seq_t>
 class DeletedSet {
-	typedef std::map<key_t, seq_t>::iterator iterator_bykey_t;
-	typedef std::map<seq_t, key_t>::iterator iterator_byseq_t;
+	// tell compiler that map::iterator is a type instead of a static member
+	typedef typename std::map<key_t, seq_t>::iterator iterator_bykey_t;
+	typedef typename std::map<seq_t, key_t>::iterator iterator_byseq_t;
 	public:
 		// We always keep the recently deleted record set (within c*rtt period) to avoid incorrect overwrites caused by evicted packet sent from switch OS (if with packet loss)
 		// Very conservative setting: c=10, rtt=10us

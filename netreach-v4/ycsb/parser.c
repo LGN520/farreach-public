@@ -133,7 +133,7 @@ bool ParserIterator::parsekv(const char* line) {
 	int32_t keyhilo = 0;
 	int32_t keyhihi = 0;
 	memcpy((void *)&keyhilo, (void *)&tmpkey, sizeof(int32_t)); // lowest 4B -> keyhilo
-	memcpy((void *)&keyhihi, ((void *)&tmpkey)+4, sizeof(int32_t)); // highest 4B -> keyhihi
+	memcpy((void *)&keyhihi, ((char *)&tmpkey)+4, sizeof(int32_t)); // highest 4B -> keyhihi
 	_key = Key(0, 0, keyhilo, keyhihi);
 
 	val_begin = strstr(line, "[ field0=");
@@ -169,7 +169,7 @@ bool ParserIterator::parsekey(const char* line) {
 	int32_t keyhilo = 0;
 	int32_t keyhihi = 0;
 	memcpy((void *)&keyhilo, (void *)&tmpkey, sizeof(int32_t)); // lowest 4B -> keyhilo
-	memcpy((void *)&keyhihi, ((void *)&tmpkey)+4, sizeof(int32_t)); // highest 4B -> keyhihi
+	memcpy((void *)&keyhihi, ((char *)&tmpkey)+4, sizeof(int32_t)); // highest 4B -> keyhihi
 	_key = Key(0, 0, keyhilo, keyhihi);
 
 	_val = Val();

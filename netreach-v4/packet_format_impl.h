@@ -100,7 +100,7 @@ val_t PutRequest<key_t, val_t>::val() const {
 
 template<class key_t, class val_t>
 uint32_t PutRequest<key_t, val_t>::size() { // not used
-	return sizeof(int8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::max_bytesnum();
+	return sizeof(int8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN;
 }
 
 template<class key_t, class val_t>
@@ -126,6 +126,7 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size-sizeof(int8_t)-tmp_keysize);
+	UNUSED(tmp_valsize);
 }
 
 // DelRequest
@@ -172,9 +173,16 @@ void DelRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	memcpy((void *)&this->_type, begin, sizeof(int8_t));
 	begin += sizeof(int8_t);
 	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
+	UNUSED(tmp_keysize);
 }
 
 // ScanRequest
+
+	template<class key_t>
+ScanRequest<key_t>::ScanRequest()
+	: Packet<key_t>(), _endkey(key_t::min())
+{
+}
 
 /*template<class key_t>
 ScanRequest<key_t>::ScanRequest(key_t key, key_t endkey, int32_t num)
@@ -232,6 +240,7 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
 	begin += tmp_keysize;
 	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
+	UNUSED(tmp_endkeysize);
 	//begin += tmp_endkeysize;
 	//memcpy((void *)&this->_num, begin, sizeof(int32_t));
 }
@@ -498,7 +507,7 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 	begin += sizeof(int32_t);
 	uint32_t totalsize = my_size;
 	this->_pairs.resize(this->_pairnum); // change size to this->_pairnum (not just reserve)
-	for (uint32_t pair_i = 0; pair_i < this->_pairnum; pair_i++) {
+	for (int32_t pair_i = 0; pair_i < this->_pairnum; pair_i++) {
 		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.deserialize(begin, recv_size - totalsize);
 		begin += tmp_pair_keysize;
 		totalsize += tmp_pair_keysize;
@@ -542,7 +551,7 @@ uint32_t GetRequestNLatest<key_t>::serialize(char * const data, uint32_t max_siz
 
 template<class key_t, class val_t>
 GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key_t key, val_t val, int32_t seq)
-	: Packet<key_t>::Packet(key), _val(val), _seq(seq)
+	: Packet<key_t>(key), _val(val), _seq(seq)
 {
 	this->_type = static_cast<int8_t>(PacketType::GETRES_LATEST_SEQ);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -590,7 +599,7 @@ void GetResponseLatestSeq<key_t, val_t>::deserialize(const char * data, uint32_t
 
 template<class key_t, class val_t>
 GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat) 
-	: GetResponseLatestSeq<key_t, val_t>::GetResponse(key, val, seq), _idx(idx), _stat(stat)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq), _idx(idx), _stat(stat)
 {
 	this->_type = static_cast<uint8_t>(PacketType::GETRES_LATEST_SEQ_INSWITCH_CASE1);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -672,7 +681,7 @@ void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * d
 
 template<class key_t, class val_t>
 GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(key_t key, val_t val, int32_t seq)
-	: GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key, val, seq)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq)
 {
 	this->_type = static_cast<int8_t>(PacketType::GETRES_DELETED_SEQ);
 	INVARIANT(this->_val.val_length == 0);
@@ -689,7 +698,7 @@ void GetResponseDeletedSeq<key_t, val_t>::deserialize(const char * data, uint32_
 
 template<class key_t, class val_t>
 GetResponseDeletedSeqInswitchCase1<key_t, val_t>::GetResponseDeletedSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat) 
-	: GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(key, val, seq, idx, stat)
+	: GetResponseLatestSeqInswitchCase1<key_t, val_t>(key, val, seq, idx, stat)
 {
 	this->_type = static_cast<uint8_t>(PacketType::GETRES_DELETED_SEQ_INSWITCH_CASE1);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -760,7 +769,7 @@ uint32_t PutRequestPopSeq<key_t, val_t>::serialize(char * const data, uint32_t m
 
 template<class key_t, class val_t>
 PutRequestSeqInswitchCase1<key_t, val_t>::PutRequestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat) 
-	: GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(key, val, seq, idx, stat)
+	: GetResponseLatestSeqInswitchCase1<key_t, val_t>(key, val, seq, idx, stat)
 {
 	this->_type = static_cast<uint8_t>(PacketType::PUTREQ_SEQ_INSWITCH_CASE1);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -846,7 +855,7 @@ void DelRequestSeq<key_t>::deserialize(const char * data, uint32_t recv_size) {
 
 template<class key_t, class val_t>
 DelRequestSeqInswitchCase1<key_t, val_t>::DelRequestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat) 
-	: GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(key, val, seq, idx, stat)
+	: GetResponseLatestSeqInswitchCase1<key_t, val_t>(key, val, seq, idx, stat)
 {
 	this->_type = static_cast<uint8_t>(PacketType::DELREQ_SEQ_INSWITCH_CASE1);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -880,6 +889,12 @@ uint32_t DelRequestSeqCase3<key_t>::serialize(char * const data, uint32_t max_si
 }
 
 // ScanRequestSplit
+
+template<class key_t>
+ScanRequestSplit<key_t>::ScanRequestSplit() 
+	: ScanRequest<key_t>(), _cur_scanidx(0), _max_scannum(0)
+{
+}
 
 template<class key_t>
 ScanRequestSplit<key_t>::ScanRequestSplit(const char * data, uint32_t recv_size) {
@@ -932,7 +947,7 @@ void ScanRequestSplit<key_t>::deserialize(const char * data, uint32_t recv_size)
 
 template<class key_t, class val_t>
 CachePop<key_t, val_t>::CachePop(key_t key, val_t val, int32_t seq, int16_t serveridx)
-	: GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key, val, seq), _serveridx(serveridx)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq), _serveridx(serveridx)
 {
 	this->_type = static_cast<int8_t>(PacketType::CACHE_POP);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -1001,7 +1016,7 @@ void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 
 template<class key_t, class val_t>
 CachePopInSwitch<key_t, val_t>::CachePopInSwitch(key_t key, val_t val, int32_t seq, int16_t freeidx)
-	: GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key, val, seq), _freeidx(freeidx)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq), _freeidx(freeidx)
 {
 	this->_type = static_cast<uint8_t>(PacketType::CACHE_POP_INSWITCH);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -1065,7 +1080,7 @@ uint32_t CachePopInSwitchAck<key_t>::serialize(char * const data, uint32_t max_s
 
 template<class key_t, class val_t>
 CacheEvict<key_t, val_t>::CacheEvict(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx) 
-	: GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key, val, seq), _stat(stat), _serveridx(serveridx)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq), _stat(stat), _serveridx(serveridx)
 {
 	this->_type = static_cast<uint8_t>(PacketType::CACHE_EVICT);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -1141,7 +1156,7 @@ void CacheEvict<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 
 template<class key_t>
 CacheEvictAck<key_t>::CacheEvictAck(key_t key) 
-	: GetRequest<key_t>::GetRequest(key)
+	: GetRequest<key_t>(key)
 {
 	this->_type = static_cast<uint8_t>(PacketType::CACHE_EVICT_ACK);
 }
@@ -1156,7 +1171,7 @@ CacheEvictAck<key_t>::CacheEvictAck(const char * data, uint32_t recv_size) {
 
 template<class key_t, class val_t>
 CacheEvictCase2<key_t, val_t>::CacheEvictCase2(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx) 
-	: CacheEvict<key_t, val_t>::CacheEvict(key, val, seq, stat, serveridx)
+	: CacheEvict<key_t, val_t>(key, val, seq, stat, serveridx)
 {
 	this->_type = static_cast<uint8_t>(PacketType::CACHE_EVICT_CASE2);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
