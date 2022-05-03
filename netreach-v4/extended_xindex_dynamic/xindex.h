@@ -25,11 +25,7 @@
 #include "xindex_model.h"
 #include "xindex_root.h"
 #include "../helper.h"
-#ifdef DYNAMIC_MEMORY
-#include "xindex_util_v2.h"
-#else
 #include "xindex_util.h"
-#endif
 
 #include <atomic>
 

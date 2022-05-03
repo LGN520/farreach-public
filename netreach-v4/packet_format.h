@@ -18,11 +18,13 @@ enum class PacketType {
 	GETRES_LATEST_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH_CASE1, 
 	GETRES_DELETED_SEQ, GETRES_DELETED_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH_CASE1, 
 	PUTREQ_INSWITCH, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3,
-	DELREQ_INSWITCH, DELREQ_SEQ, DELREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_CASE3, SCANREQ_SPLIT
+	DELREQ_INSWITCH, DELREQ_SEQ, DELREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_CASE3, SCANREQ_SPLIT,
 
 	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2,
 };
 typedef PacketType packet_type_t;
+
+template<class key_t> class ScanRequestSplit;
 
 template<class key_t>
 class Packet {
@@ -226,7 +228,7 @@ class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val
 template<class key_t, class val_t>
 class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // seq (w/o stat)
 	public: 
-		GetResponseLatestSeq(key_t key, val_t val, int32_t seq);
+		GetResponseDeletedSeq(key_t key, val_t val, int32_t seq);
 
 	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);
@@ -284,7 +286,7 @@ class PutRequestPopSeqCase3 : public PutRequestSeq<key_t, val_t> { // seq (w/o s
 template<class key_t>
 class DelRequestSeq : public Packet<key_t> { // seq (w/o stat)
 	public: 
-		DelRequestSeq(const char * data, uint23_t recv_size);
+		DelRequestSeq(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -301,6 +303,14 @@ class DelRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_
 	public: 
 		DelRequestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat);
 		DelRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
+};
+
+template<class key_t>
+class DelRequestSeqCase3 : public DelRequestSeq<key_t> { // seq (w/o stat)
+	public: 
+		DelRequestSeqCase3(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
 template<class key_t>
@@ -355,7 +365,7 @@ class CachePopInSwitch : public GetResponseLatestSeq<key_t, val_t> { // seq (w/o
 template<class key_t>
 class CachePopInSwitchAck : public GetRequest<key_t> {
 	public: 
-		CachePopInswitchAck(const char * data, uint32_t recv_size);
+		CachePopInSwitchAck(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
@@ -392,270 +402,6 @@ class CacheEvictCase2 : public CacheEvict<key_t, val_t> { // seq + stat + server
 	public: 
 		CacheEvictCase2(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx);
 		CacheEvictCase2(const char * data, uint32_t recv_size);
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-template<class key_t, class val_t>
-class GetResponsePOP : public GetResponse<key_t, val_t> { // seq
-	public: 
-		GetResponsePOP(uint16_t hashidx, key_t key, val_t val, int32_t seq);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-
-		int32_t seq() const;
-
-	protected:
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-		int32_t _seq;
-};
-
-template<class key_t, class val_t>
-class GetResponseNPOP : public GetResponse<key_t, val_t> {
-	public: 
-		GetResponseNPOP(uint16_t hashidx, key_t key, val_t val);
-
-	protected:
-		virtual void deserialize(const char * data, uint32_t recv_size);
-};
-
-template<class key_t, class val_t>
-class GetResponsePOPLarge : public GetResponse<key_t, val_t> {
-	public: 
-		GetResponsePOPLarge(uint16_t hashidx, key_t key, val_t val);
-
-	protected:
-		virtual void deserialize(const char * data, uint32_t recv_size);
-};
-
-template<class key_t, class val_t>
-class GetResponsePOPEvict : public PutRequestSeq<key_t, val_t> { // seq
-	public:
-		GetResponsePOPEvict(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class PutRequestSeq : public PutRequest<key_t, val_t> { // seq
-	public:
-		PutRequestSeq(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-
-		int32_t seq() const;
-	protected:
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-		int32_t _seq;
-};
-
-template<class key_t, class val_t>
-class PutRequestPOPEvict : public PutRequestSeq<key_t, val_t> { // seq
-	public:
-		PutRequestPOPEvict(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class PutRequestLarge : public PutRequest<key_t, val_t> {
-	public:
-		PutRequestLarge(uint16_t hashidx, key_t key, val_t val, int32_t seq);
-		PutRequestLarge(const char * data, uint32_t recv_size);
-};
-
-template<class key_t, class val_t>
-class PutRequestLargeSeq : public PutRequestSeq<key_t, val_t> { // ophdr + vallen + seq + value (in payload)
-	public:
-		PutRequestLargeSeq(const char * data, uint32_t recv_size);
-
-	protected:
-		virtual void deserialize(const char * data, uint32_t recv_size); // NOTE: deserialize seq before value
-		virtual uint32_t serialize(char * const data, uint32_t max_size); // not support serialize
-};
-
-template<class key_t, class val_t>
-class PutRequestLargeEvict : public PutRequestSeq<key_t, val_t> { // seq
-	public:
-		PutRequestLargeEvict(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class DelRequestSeq : public DelRequest<key_t, val_t> { // seq
-	public:
-		DelRequestSeq(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-
-		int32_t seq() const;
-	protected:
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-		int32_t _seq;
-};
-
-template<class key_t, class val_t>
-class PutRequestCase1 : public PutRequest<key_t, val_t> {
-	public:
-		PutRequestCase1(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class DelRequestCase1 : public PutRequest<key_t, val_t> {
-	public:
-		DelRequestCase1(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class GetResponsePOPEvictCase2 : public PutRequestPOPEvictCase2<key_t, val_t> { // seq + valid
-	public:
-		GetResponsePOPEvictCase2(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class PutRequestPOPEvictCase2 : public PutRequestPOPEvict<key_t, val_t> { // seq + valid
-	public:
-		PutRequestPOPEvictCase2(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-
-		bool valid() const;
-	protected:
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-		bool _valid;
-};
-
-template<class key_t, class val_t>
-class PutRequestLargeEvictCase2 : public PutRequestSeq<key_t, val_t> { // seq
-	public:
-		PutRequestLargeEvictCase2(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class PutRequestCase3 : public PutRequestSeq<key_t, val_t> { // seq
-	public:
-		PutRequestCase3(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t>
-class DelRequestCase3 : public DelRequestSeq<key_t> { // seq
-	public:
-		DelRequestCase3(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class PutRequestLargeCase3 : public PutRequestLargeSeq<key_t, val_t> { // ophdr + vallen + seq + value (in payload)
-	public:
-		PutRequestLargeCase3(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t>
-class PutResponseCase3 : public PutResponse<key_t> { // serveridx
-	public: 
-		PutResponseCase3(uint16_t hashidx, key_t key, bool stat);
-
-		int16_t serveridx() const;
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-	protected:
-		int16_t _serveridx();
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-};
-
-
-template<class key_t>
-class DelResponseCase3 : public DelResponse<key_t> { // serveridx
-	public: 
-		DelResponseCase3(uint16_t hashidx, key_t key, bool stat);
-
-		int16_t serveridx() const;
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-	protected:
-		int16_t _serveridx();
-		virtual uint32_t size();
-		virtual void deserialize(const char * data, uint32_t recv_size);
-};
-
-
-template<class key_t, class val_t>
-class GetResponsePOPEvictSwitch : public PutRequest<key_t, val_t> {
-	public:
-		GetResponsePOPEvictSwitch(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class GetResponsePOPEvictCase2Switch : public PutRequest<key_t, val_t> {
-	public:
-		GetResponsePOPEvictCase2Switch(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class PutRequestPOPEvictSwitch : public PutRequestSeq<key_t, val_t> { // seq
-	public:
-		PutRequestPOPEvictSwitch(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class PutRequestPOPEvictCase2Switch : public PutRequestEvictCase2<key_t, val_t> { // seq + valid
-	public:
-		PutRequestPOPEvictCase2Switch(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class PutRequestLargeEvictSwitch : public PutRequestSeq<key_t, val_t> { // seq
-	public:
-		PutRequestLargeEvictSwitch(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
-};
-
-template<class key_t, class val_t>
-class PutRequestLargeEvictCase2Switch : public PutRequestSeq<key_t, val_t> { // seq
-	public:
-		PutRequestLargeEvictCase2Switch(const char * data, uint32_t recv_size);
-
-		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
 // APIs

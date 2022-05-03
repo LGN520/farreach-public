@@ -1,7 +1,7 @@
 #include "message_queue.h"
 
 template<class obj_t>
-class MessagePtrQueue<obj_t>::MessagePtrQueue(uint32_t size) {
+MessagePtrQueue<obj_t>::MessagePtrQueue(uint32_t size) {
 	this->_size = size;
 
 	this->_obj_ptrs = new obj_t*[size];
@@ -12,17 +12,19 @@ class MessagePtrQueue<obj_t>::MessagePtrQueue(uint32_t size) {
 }
 
 template<class obj_t>
-bool class MessagePtrQueue<obj_t>::write(obj_t *newobj) {
+bool MessagePtrQueue<obj_t>::write(obj_t *newobj) {
 	INVARIANT(newobj != NULL);
 	if (((this->_head + 1) % this->_size) != this->_tail) {
 		INVARIANT(this->_obj_ptrs[this->_head] == NULL);
 		this->_obj_ptrs[this->_head] = newobj;
 		this->_head = (this->_head + 1) % this->_size;
+		return true;
 	}
+	return false;
 }
 
 template<class obj_t>
-obj_t * class MessagePtrQueue<obj_t>::read() {
+obj_t * MessagePtrQueue<obj_t>::read() {
 	obj_t *result = NULL;
 	if (this->_tail != this->_head) {
 		result = this->_obj_ptrs[this->_tail];
@@ -34,7 +36,7 @@ obj_t * class MessagePtrQueue<obj_t>::read() {
 }
 
 template<class obj_t>
-class MessagePtrQueue<obj_t>::~MessagePtrQueue() {
+MessagePtrQueue<obj_t>::~MessagePtrQueue() {
 	if (this->_obj_ptrs != NULL) {
 		for (size_t i = 0; i < this->_size; i++) {
 			if (this->_obj_ptrs[i] != NULL) {

@@ -70,15 +70,19 @@ inline void prepare() {
   //std::random_device rd;
   //std::mt19937 gen(rd());
   std::mt19937 gen(0);
-  std::uniform_int_distribution<int64_t> rand_int64(
-      0, std::numeric_limits<int64_t>::max());
+  //std::uniform_int_distribution<int64_t> rand_int64(
+  //    0, std::numeric_limits<int64_t>::max());
+  std::uniform_int_distribution<int32_t> rand_int32(
+      0, std::numeric_limits<int32_t>::max()); // [0, 2^31-1]
 
   exist_keys.reserve(table_size);
   for (size_t i = 0; i < table_size; ++i) {
 #ifdef LARGE_KEY
-    exist_keys.push_back(index_key_t(rand_int64(gen), rand_int64(gen)));
+    //exist_keys.push_back(index_key_t(rand_int64(gen), rand_int64(gen)));
+    exist_keys.push_back(index_key_t(rand_int32(gen), rand_int32(gen), rand_int32(gen), rand_int32(gen)));
 #else
-    exist_keys.push_back(index_key_t(rand_int64(gen)));
+    //exist_keys.push_back(index_key_t(rand_int64(gen)));
+    exist_keys.push_back(index_key_t(rand_int32(gen), rand_int32(gen)));
 #endif
   }
 
@@ -86,9 +90,11 @@ inline void prepare() {
     non_exist_keys.reserve(table_size);
     for (size_t i = 0; i < table_size; ++i) {
 #ifdef LARGE_KEY
-		non_exist_keys.push_back(index_key_t(rand_int64(gen), rand_int64(gen)));
+		//non_exist_keys.push_back(index_key_t(rand_int64(gen), rand_int64(gen)));
+		non_exist_keys.push_back(index_key_t(rand_int32(gen), rand_int32(gen), rand_int32(gen), rand_int32(gen)));
 #else
-		non_exist_keys.push_back(index_key_t(rand_int64(gen)));
+		//non_exist_keys.push_back(index_key_t(rand_int64(gen)));
+		non_exist_keys.push_back(index_key_t(rand_int32(gen), rand_int32(gen)));
 #endif
     }
   }

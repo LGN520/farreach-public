@@ -9,7 +9,7 @@ class MessagePtrQueue {
 		MessagePtrQueue(uint32_t size);
 		~MessagePtrQueue();
 
-		void write(obj_t * newobj);
+		bool write(obj_t * newobj);
 		obj_t * read();
 
 		uint32_t volatile _size = 0;
@@ -17,7 +17,5 @@ class MessagePtrQueue {
 		uint32_t volatile _head = 0;
 		uint32_t volatile _tail = 0;
 };
-
-typedef MessagePtrQueue message_ptr_queue;
 
 #endif

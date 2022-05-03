@@ -17,7 +17,7 @@ class Val {
 
   Val();
   ~Val();
-  Val(const uint64_t* buf, int32_t length);
+  Val(const char* buf, int32_t length);
   Val(const Val &other);
   Val(const volatile Val &other);
   Val &operator=(const Val &other);
@@ -34,8 +34,8 @@ class Val {
 
   // operation on packet buf (1B vallength + valdata)
   uint32_t deserialize(const char *buf, uint32_t buflen);
-  uint32_t deserialize_vallen(const char *buf, uint32_t buflen)
-  uint32_t deserialize_val(const char *buf, uint32_t buflen)
+  uint32_t deserialize_vallen(const char *buf, uint32_t buflen);
+  uint32_t deserialize_val(const char *buf, uint32_t buflen);
   uint32_t serialize(char *buf, uint32_t buflen);
 
   uint32_t get_bytesnum() const;

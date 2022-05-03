@@ -12,7 +12,6 @@
 #include <sys/time.h> // struct timeval
 
 #include "helper.h"
-#include "packet_format_impl.h"
 #include "key.h"
 #include "iniparser/iniparser_wrapper.h"
 
@@ -33,25 +32,16 @@
 #include "extended_xindex/xindex.h"
 #include "extended_xindex/xindex_impl.h"
 #endif
-
-struct alignas(CACHELINE_SIZE) SFGParam;
-
-typedef Key index_key_t;
-#ifdef ORIGINAL_XINDEX
-typedef uint64_t val_t;
-#else
-typedef Val val_t;
 #endif
+
+#include "common_impl.h"
+
+struct alignas(CACHELINE_SIZE) SFGParam {
+  xindex_t *table;
+  uint64_t throughput;
+  uint8_t thread_id;
+};
 typedef SFGParam sfg_param_t;
-typedef xindex::XIndex<index_key_t, val_t> xindex_t;
-typedef GetRequest<index_key_t> get_request_t;
-typedef PutRequest<index_key_t, val_t> put_request_t;
-typedef DelRequest<index_key_t> del_request_t;
-typedef ScanRequest<index_key_t> scan_request_t;
-typedef GetResponse<index_key_t, val_t> get_response_t;
-typedef PutResponse<index_key_t> put_response_t;
-typedef DelResponse<index_key_t> del_response_t;
-typedef ScanResponse<index_key_t, val_t> scan_response_t;
 
 inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
@@ -66,10 +56,7 @@ double update_ratio = 0;
 double delete_ratio = 0;
 double scan_ratio = 0;
 size_t runtime = 10;
-size_t fg_n = 1;
 size_t bg_n = 1;
-const char *workload_name;
-uint32_t kv_bucket_num;
 
 std::vector<index_key_t> exist_keys;
 std::vector<index_key_t> non_exist_keys;
@@ -87,12 +74,6 @@ void test_merge_latency() {
 	}
 }
 
-struct alignas(CACHELINE_SIZE) SFGParam {
-  xindex_t *table;
-  uint64_t throughput;
-  uint8_t thread_id;
-};
-
 int main(int argc, char **argv) {
 
   parse_ini("config.ini");
@@ -109,28 +90,13 @@ int main(int argc, char **argv) {
 #else
   std::vector<val_t> vals(exist_keys.size(), val_t(init_val_data, 1));
 #endif
-  xindex_t *tab_xi = new xindex_t(exist_keys, vals, fg_n, bg_n); // fg_n to create array of RCU status; bg_n background threads have been launched
+  xindex_t *tab_xi = new xindex_t(exist_keys, vals, server_num, bg_n); // server_num to create array of RCU status; bg_n background threads have been launched
 
   run_server(tab_xi, runtime);
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
 
   COUT_THIS("[localtest] Exit successfully")
   exit(0);
-}
-
-inline void parse_ini(const char* config_file) {
-	IniparserWrapper ini;
-	ini.load(config_file);
-
-	fg_n = ini.get_server_num();
-	workload_name = ini.get_workload_name();
-	kv_bucket_num = ini.get_bucket_num();
-#ifndef ORIGINAL_XINDEX
-	val_t::MAX_VALLEN = ini.get_max_vallen();
-	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
-	COUT_VAR(val_t::MAX_VALLEN);
-	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
-#endif
 }
 
 inline void parse_args(int argc, char **argv) {
@@ -219,7 +185,7 @@ inline void parse_args(int argc, char **argv) {
     }
   }
 
-  COUT_VAR(fg_n);
+  COUT_VAR(server_num);
   COUT_VAR(bg_n);
   COUT_VAR(xindex::config.root_error_bound);
   COUT_VAR(xindex::config.root_memory_constraint);
@@ -269,17 +235,17 @@ void run_server(xindex_t *table, size_t sec) {
 	running = false;
 
 	// Prepare fg params
-	pthread_t threads[fg_n];
-	sfg_param_t sfg_params[fg_n];
+	pthread_t threads[server_num];
+	sfg_param_t sfg_params[server_num];
 	// check if parameters are cacheline aligned
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		if ((uint64_t)(&(sfg_params[i])) % CACHELINE_SIZE != 0) {
 			COUT_N_EXIT("wrong parameter address: " << &(sfg_params[i]));
 		}
 	}
 
 	// Launch workers
-	for (size_t worker_i = 0; worker_i < fg_n; worker_i++) {
+	for (size_t worker_i = 0; worker_i < server_num; worker_i++) {
 		sfg_params[worker_i].table = table;
     	sfg_params[worker_i].throughput = 0;
 		sfg_params[worker_i].thread_id = static_cast<uint8_t>(worker_i);
@@ -294,16 +260,16 @@ void run_server(xindex_t *table, size_t sec) {
 	}
 
 	COUT_THIS("[localtest] prepare server foreground threads...")
-	while (ready_threads < fg_n) sleep(1);
+	while (ready_threads < server_num) sleep(1);
 
 	running = true;
 	COUT_THIS("[localtest] start running...")
-	std::vector<size_t> tput_history(fg_n, 0);
+	std::vector<size_t> tput_history(server_num, 0);
 	size_t current_sec = 0;
 	while (current_sec < sec) {
 		sleep(1);
 		uint64_t tput = 0;
-		for (size_t i = 0; i < fg_n; i++) {
+		for (size_t i = 0; i < server_num; i++) {
 		  tput += sfg_params[i].throughput - tput_history[i];
 		  tput_history[i] = sfg_params[i].throughput;
 		}
@@ -320,7 +286,7 @@ void run_server(xindex_t *table, size_t sec) {
 	COUT_THIS("[localtest] Throughput(op/s): " << throughput / sec);
 
 	void *status;
-	for (size_t i = 0; i < fg_n; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		int rc = pthread_join(threads[i], &status);
 		if (rc) {
 		  COUT_N_EXIT("Error:unable to join," << rc);
@@ -338,14 +304,14 @@ void *run_sfg(void * param) {
   std::mt19937 gen(rd());
   std::uniform_real_distribution<> ratio_dis(0, 1);
 
-  size_t exist_key_n_per_thread = exist_keys.size() / fg_n;
+  size_t exist_key_n_per_thread = exist_keys.size() / server_num;
   size_t exist_key_start = thread_id * exist_key_n_per_thread;
   size_t exist_key_end = (thread_id + 1) * exist_key_n_per_thread;
   std::vector<index_key_t> op_keys(exist_keys.begin() + exist_key_start,
                                    exist_keys.begin() + exist_key_end);
 
   if (non_exist_keys.size() > 0) {
-    size_t non_exist_key_n_per_thread = non_exist_keys.size() / fg_n;
+    size_t non_exist_key_n_per_thread = non_exist_keys.size() / server_num;
     size_t non_exist_key_start = thread_id * non_exist_key_n_per_thread,
            non_exist_key_end = (thread_id + 1) * non_exist_key_n_per_thread;
     op_keys.insert(op_keys.end(), non_exist_keys.begin() + non_exist_key_start,

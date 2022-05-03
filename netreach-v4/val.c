@@ -1,14 +1,15 @@
 #include "val.h"
 #include <sstream>
+#include <arpa/inet.h>
 
 int32_t Val::MAX_VALLEN = 128;
 int32_t Val::SWITCH_MAX_VALLEN = 256;
 
 int32_t Val::get_padding_size(int32_t vallen) {
 	int32_t padding_size = 0;
-	if (val_length <= SWITCH_MAX_VALLEN) {
-		if (val_length % 8 != 0) {
-			padding_size = 8 - val_length % 8;
+	if (vallen <= SWITCH_MAX_VALLEN) {
+		if (vallen % 8 != 0) {
+			padding_size = 8 - vallen % 8;
 		}
 	}
 	INVARIANT(padding_size >= 0 && padding_size < 8);

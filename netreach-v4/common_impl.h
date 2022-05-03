@@ -10,7 +10,13 @@
  */
 
 typedef Key index_key_t;
+#ifdef ORIGINAL_XINDEX
+typedef uint64_t val_t;
+#else
+#include "val.h"
 typedef Val val_t;
+#endif
+
 typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 typedef GetRequest<index_key_t> get_request_t;
 typedef PutRequest<index_key_t, val_t> put_request_t;
@@ -32,12 +38,12 @@ typedef PutRequestSeqInswitchCase1<index_key_t, val_t> put_request_seq_inswitch_
 typedef PutRequestSeqCase3<index_key_t, val_t> put_request_seq_case3_t;
 typedef PutRequestPopSeqCase3<index_key_t, val_t> put_request_pop_seq_case3_t;
 typedef DelRequestSeq<index_key_t> del_request_seq_t;
-typedef DelRequestSeqInswitchCase1<index_key_t> del_request_seq_inswitch_case1_t;
+typedef DelRequestSeqInswitchCase1<index_key_t, val_t> del_request_seq_inswitch_case1_t;
 typedef DelRequestSeqCase3<index_key_t> del_request_seq_case3_t;
 typedef ScanRequestSplit<index_key_t> scan_request_split_t;
 typedef CachePop<index_key_t, val_t> cache_pop_t;
 typedef CachePopInSwitch<index_key_t, val_t> cache_pop_inswitch_t;
-typedef CachePopInSwitchAck<index_key_t, val_t> cache_pop_inswitch_ack_t;
+typedef CachePopInSwitchAck<index_key_t> cache_pop_inswitch_ack_t;
 typedef CacheEvict<index_key_t, val_t> cache_evict_t;
 typedef CacheEvictAck<index_key_t> cache_evict_ack_t;
 typedef CacheEvictCase2<index_key_t, val_t> cache_evict_case2_t;
@@ -56,7 +62,6 @@ const size_t rate_limit_period = 10 * 1000; // 10 * 1000us
 
 // global
 const char *workload_name = nullptr;
-val_t::MAX_VALLEN = 128;
 
 // client
 size_t client_num;
@@ -97,7 +102,6 @@ uint32_t controller_snapshot_period = -1; // ms
 
 // switch
 uint32_t kv_bucket_num;
-val_t::SWITCH_MAX_VALLEN = 128;
 short switchos_popserver_port = -1;
 short switchos_paramserver_port = -1;
 const char *switchos_ip = nullptr;
@@ -140,9 +144,13 @@ inline void parse_ini(const char* config_file) {
 
 	// global
 	workload_name = ini.get_workload_name();
-	val_t::MAX_VALLEN = ini.get_max_vallen();
 	printf("workload_name: %s\n", workload_name);
+	val_t::MAX_VALLEN = ini.get_max_vallen();
 	COUT_VAR(val_t::MAX_VALLEN);
+#ifndef ORIGINAL_XINDEX
+	val_t::MAX_VALLEN = ini.get_max_vallen();
+	COUT_VAR(val_t::MAX_VALLEN);
+#endif
 
 	// client
 	client_num = ini.get_client_num();
@@ -222,7 +230,6 @@ inline void parse_ini(const char* config_file) {
 	
 	// switch
 	kv_bucket_num = ini.get_bucket_num();
-	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
 	switchos_popserver_port = ini.get_switchos_popserver_port();
 	switchos_paramserver_port = ini.get_switchos_paramserver_port();
 	switchos_ip = ini.get_switchos_ip();
@@ -231,7 +238,10 @@ inline void parse_ini(const char* config_file) {
 	switchos_specialcaseserver_port = ini.get_switchos_specialcaseserver_port();
 	switchos_snapshotdataserver_port = ini.get_switchos_snapshotdataserver_port();
 	COUT_VAR(kv_bucket_num);
+#ifndef ORIGINAL_XINDEX
+	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
+#endif
 	COUR_VAR(switchos_popserver_port);
 	COUT_VAR(switchos_paramserver_port);
 	printf("switchos ip: %s\n", switchos_ip);

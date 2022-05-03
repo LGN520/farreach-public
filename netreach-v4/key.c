@@ -1,5 +1,6 @@
 #include "key.h"
 #include <sstream>
+#include <arpa/inet.h> // endian conversion
 
 Key Key::max() {
 #ifdef LARGE_KEY
