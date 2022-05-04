@@ -123,6 +123,7 @@ int main(int argc, char **argv) {
 
 	controller_running = true;
 
+	// connections from servers
 	while (controller_finish_subthreads < controller_expected_finish_subthreads) sleep(1);
 
 	controller_running = false;

@@ -6,7 +6,6 @@
 #include "deleted_set_impl.h"
 
 typedef DeletedSet<index_key_t, int32_t> deleted_set_t;
-typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   xindex_t *table;
@@ -30,12 +29,7 @@ typedef SnapshotRecord snapshot_record_t;
 };*/
 //typedef ReceiverParam receiver_param_t;
 
-bool volatile server_running = false;
-std::atomic<size_t> server_ready_threads(0);
-size_t server_expected_ready_threads = 0;
-
 // server.receiver in transaction phase
-struct rte_mempool *mbuf_pool = NULL;
 //volatile struct rte_mbuf **pkts;
 //volatile bool *stats;
 struct rte_mbuf*** volatile server_worker_pkts_list; // pkts from receiver to each worker
@@ -67,27 +61,16 @@ bool volatile server_issnapshot = false; // TODO: it should be atomic
 // DELREQ
 deleted_set_t *server_deleted_sets = NULL;
 
-bool volatile killed = false;
-void kill(int signum) {
-	COUT_THIS("[server] receive SIGKILL!")
-	killed = true;
-}
-
 void prepare_server();
-void run_server(xindex_t *table); // transaction phase
-void close_server();
-
 static int run_receiver(__attribute__((unused)) void *param);
 // server.workers for processing pkts
 static int run_server_worker(void *param);
 //void *run_server_worker(void *param);
 void *run_server_evictserver(void *param);
 void *run_server_consnapshotserver(void *param);
+void close_server();
 
 void prepare_server() {
-	// server_num workers + receiver + evictserver + consnapshotserver
-	server_expected_ready_threads = server_num + 3;
-
 	// Prepare pkts and stats for receiver (based on ring buffer)
 	// From receiver to each server
 	//pkts = new volatile struct rte_mbuf*[server_num];
@@ -144,111 +127,6 @@ void prepare_server() {
 	server_deleted_sets = new deleted_set_t[server_num];
 }
 
-void run_server(xindex_t *table) {
-	int ret = 0;
-	unsigned lcoreid = 1; // 0: master lcore; 1: slave lcore for receiver
-
-	server_running = false;
-
-	// launch receiver
-	//receiver_param_t receiver_param;
-	//receiver_param.overall_thpt = 0;
-	//ret = rte_eal_remote_launch(run_receiver, (void*)&receiver_param, lcoreid);
-	ret = rte_eal_remote_launch(run_receiver, NULL, lcoreid);
-	if (ret) {
-		COUT_N_EXIT("Error of launching receiver:" << ret);
-	}
-	COUT_THIS("[server] Launch receiver with ret code " << ret);
-	lcoreid++;
-
-	// launch workers (processing normal packets)
-	//pthread_t threads[server_num];
-	server_worker_param_t server_worker_params[server_num];
-	// check if parameters are cacheline aligned
-	for (size_t i = 0; i < server_num; i++) {
-		if ((uint64_t)(&(server_worker_params[i])) % CACHELINE_SIZE != 0) {
-			COUT_N_EXIT("wrong parameter address: " << &(server_worker_params[i]));
-		}
-	}
-	for (int16_t worker_i = 0; worker_i < int16_t(server_num); worker_i++) {
-		server_worker_params[worker_i].table = table;
-		server_worker_params[worker_i].serveridx = worker_i;
-		server_worker_params[worker_i].throughput = 0;
-#ifdef TEST_AGG_THPT
-		server_worker_params[worker_i].sum_latency = 0.0;
-#endif
-		//int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&server_worker_params[worker_i]);
-		ret = rte_eal_remote_launch(run_server_worker, (void *)&server_worker_params[worker_i], lcoreid);
-		if (ret) {
-		  COUT_N_EXIT("Error of launching some worker:" << ret);
-		}
-		lcoreid++;
-		if (lcoreid >= MAX_LCORE_NUM) {
-			lcoreid = 1;
-		}
-	}
-	COUT_THIS("[server] prepare server worker threads...")
-
-	// launch evictserver
-	pthread_t evictserver_thread;
-	ret = pthread_create(&evictserver_thread, nullptr, run_server_evictserver, nullptr);
-	if (ret) {
-		COUT_N_EXIT("Error of launching evictserver: " << ret);
-	}
-
-	// launch consnapshotserver
-	pthread_t consnapshotserver_thread;
-	ret = pthread_create(&consnapshotserver_thread, nullptr, run_server_consnapshotserver, (void *)table);
-	if (ret) {
-		COUT_N_EXIT("Error of launching consnapshotserver: " << ret);
-	}
-
-	while (server_ready_threads < server_expected_ready_threads) sleep(1);
-
-	server_running = true;
-	COUT_THIS("[server] start running...")
-
-	signal(SIGTERM, kill); // Set for main thread (kill -15)
-
-	while (!killed) {
-		sleep(1);
-	}
-
-	/* Processing Statistics */
-	//COUT_THIS("Server-side aggregate throughput: " << receiver_param.overall_thpt);
-	size_t overall_thpt = 0;
-	std::vector<double> load_balance_ratio_list;
-	for (size_t i = 0; i < server_num; i++) {
-		overall_thpt += server_worker_params[i].throughput;
-	}
-	COUT_THIS("Server-side overall throughput: " << overall_thpt);
-	double avg_per_server_thpt = double(overall_thpt) / double(server_num);
-	for (size_t i = 0; i < server_num; i++) {
-		load_balance_ratio_list.push_back(double(server_worker_params[i].throughput) / avg_per_server_thpt);
-	}
-	for (size_t i = 0; i < load_balance_ratio_list.size(); i++) {
-		COUT_THIS("Load balance ratio of server " << i << ": " << load_balance_ratio_list[i]);
-	}
-#ifdef TEST_AGG_THPT
-	double max_agg_thpt = 0.0;
-	for (size_t i = 0; i < server_num; i++) {
-		max_agg_thpt += (double(server_worker_params[i].throughput) / server_worker_params[i].sum_latency * 1000 * 1000);
-	}
-	max_agg_thpt /= double(1024 * 1024);
-	COUT_THIS("Max server-side aggregate throughput: " << max_agg_thpt << " MQPS");
-#endif
-
-	server_running = false;
-	/*void *status;
-	for (size_t i = 0; i < server_num; i++) {
-		int rc = pthread_join(threads[i], &status);
-		if (rc) {
-		  COUT_N_EXIT("Error:unable to join," << rc);
-		}
-	}*/
-	rte_eal_mp_wait_lcore();
-}
-
 void close_server() {
 	if (server_popclient_tcpsock_list != NULL) {
 		delete [] server_popclient_tcpsock_list;
@@ -295,16 +173,15 @@ void close_server() {
 
 static int run_receiver(void *param) {
 	//receiver_param_t &receiver_param = *((receiver_param_t *)param);
-	server_ready_threads++;
+	transaction_ready_threads++;
 
-	while (!server_running)
+	while (!transaction_running)
 		;
 
 	struct rte_mbuf *received_pkts[32];
 	memset((void *)received_pkts, 0, 32*sizeof(struct rte_mbuf *));
 	index_key_t startkey, endkey;
-	uint32_t num;
-	while (server_running) {
+	while (transaction_running) {
 		uint16_t n_rx;
 		n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
 		//n_rx = rte_eth_rx_burst(0, 0, received_pkts, 1);
@@ -436,12 +313,12 @@ static int run_server_worker(void * param) {
   uint16_t srcport;
   uint16_t unused_dstport; // we use server_port_start instead of received dstport to hide server-side partition for client
 
-  server_ready_threads++;
+  transaction_ready_threads++;
 
-  while (!server_running) {
+  while (!transaction_running) {
   }
 
-  while (server_running) {
+  while (transaction_running) {
 	/*recv_size = recvfrom(sockfd, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&server_sockaddr, &sockaddr_len);
 	if (recv_size == -1) {
 		if (errno == EWOULDBLOCK || errno == EINTR) {
@@ -906,9 +783,9 @@ void run_server_evictserver(void *param) {
 	//struct sockaddr_in controller_addr;
 	//unsigned int controller_addr_len = sizeof(struct sockaddr);
 	
-	server_ready_threads++;
+	transaction_ready_threads++;
 
-	while (!server_running) {}
+	while (!transaction_running) {}
 
 	int connfd = -1;
 	//tcpaccept(server_evictserver_tcpsock_list[serveridx], NULL, NULL, connfd, "server.evictserver");
@@ -925,7 +802,7 @@ void run_server_evictserver(void *param) {
 	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(int32_t);
 	int arrive_serveridx_bytes = -1;
 	int tmp_serveridx = -1;
-	while (server_running) {
+	while (transaction_running) {
 		int recvsize = 0;
 		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.evictserver");
 		if (is_broken) {
@@ -1025,9 +902,9 @@ void *run_server_consnapshotserver(void *param) {
 	//struct sockaddr_in controller_addr;
 	//unsigned int controller_addr_len = sizeof(struct sockaddr);
 	
-	server_ready_threads++;
+	transaction_ready_threads++;
 
-	while (!server_running) {}
+	while (!transaction_running) {}
 
 	int connfd = -1;
 	tcpaccept(server_consnapshotserver_tcpsock, NULL, NULL, connfd, "server.consnapshotserver");
@@ -1038,7 +915,7 @@ void *run_server_consnapshotserver(void *param) {
 	int control_type_phase0 = -1;
 	int control_type_phase1 = -1;
 	int total_bytes = -1;
-	while (server_running) {
+	while (transaction_running) {
 		int recvsize = 0;
 		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
 		if (is_broken) {
@@ -1119,7 +996,7 @@ void *run_server_consnapshotserver(void *param) {
 						prev_snapshot_rcus[i] = snapshot_rcus[i];
 					}
 					for (uint32_t i = 0; i < server_num; i++) {
-						while (server_running && snapshot_rcus[i] == prev_snapshot_rcus[i]) {}
+						while (transaction_running && snapshot_rcus[i] == prev_snapshot_rcus[i]) {}
 					}
 					delete [] old_server_snapshot_maps;
 					old_server_snapshot_maps = NULL;

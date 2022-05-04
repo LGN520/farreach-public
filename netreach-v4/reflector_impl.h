@@ -30,8 +30,8 @@ void prepare_reflector() {
 
 	// From receiver to reflector.dpdkserver
 	reflector_pkts_for_popack_snapshot = new struct rte_mbuf*[MQ_SIZE];
-	for (size_t j = 0; j < MQ_SIZE; j++) {
-		reflector_pkts_for_popack_snapshot[i][j] = nullptr;
+	for (size_t i = 0; i < MQ_SIZE; i++) {
+		reflector_pkts_for_popack_snapshot[i] = nullptr;
 	}
 	reflector_head_for_popack_snapshot = 0;
 	reflector_tail_for_popack_snapshot = 0;
@@ -49,31 +49,24 @@ void *run_reflector_popserver(void *param) {
 	INVARIANT(res == 0);
 
 	char buf[MAX_BUFSIZE];
+	transaction_ready_threads++;
 
-	while (!running) {
-	}
+	while (!transaction_running) {}
 
-	while (running) {
-		struct sockaddr_in tmp_switchos_popworker_addr;
-		unsigned int tmp_switchos_popworker_addr_len = sizeof(struct sockaddr);
+	while (transaction_running) {
 		int recvsize = 0;
 		if (!reflector_with_switchos_popworker_addr) {
-			udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&tmp_switchos_popworker_addr, &tmp_switchos_popworker_addr_len, recvsize, "reflector.popserver");
+			udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, (socklen_t *)&reflector_switchos_popworker_addr_len, recvsize, "reflector.popserver");
+			reflector_with_switchos_popworker_addr = true;
 		}
 		else {
 			udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.popserver");
 		}
 
-		if (!reflector_with_switchos_popworker_addr) {
-			reflector_switchos_popworker_addr = tmp_switchos_popworker_addr;
-			reflector_switchos_popworker_addr_len = tmp_switchos_popworker_addr_len;
-			reflector_with_switchos_popworker_addr = true;
-		}
-
 		// send CACHE_POP_INSWITCH to data plane
 		//cache_pop_inswitch_t tmp_cache_pop_inswitch_pkt(buf, recv_size); // TODO: check whether buf is CACHE_POP_INSWITCH
-		encode_mbuf(sent_pkts[sent_pkt_idx], server_macaddr, client_macaddr, server_ip, client_ip, server_port_start, client_port_start, buf, recv_size);
-		res = rte_eth_tx_burst(0, server_num, &sent_pkt, 1); // through dpdk queue for reflector
+		encode_mbuf(sent_pkts[sent_pkt_idx], server_macaddr, client_macaddr, server_ip, client_ip, server_port_start, client_port_start, buf, recvsize);
+		res = rte_eth_tx_burst(0, server_num, &sent_pkts[sent_pkt_idx], 1); // through dpdk queue for reflector
 		sent_pkt_idx++;
 
 		if (sent_pkt_idx >= burst_size) {
@@ -101,15 +94,16 @@ void *run_reflector_dpdkserver() {
 	set_sockaddr(reflector_switchos_specialcaseserver_addr, inet_addr(switchos_ip), switchos_specialcaseserver_port);
 	unsigned int volatile reflector_switchos_specialcaseserver_addr_len = sizeof(struct sockaddr);
 
-	while (!running) {
-	}
+	transaction_ready_threads++;
 
-	while(running) {
+	while (!transaction_running) {}
+
+	while (transaction_running) {
 		if (reflector_tail_for_popack_snapshot != reflector_head_for_popack_snapshot) {
 			INVARIANT(reflector_with_switchos_popworker_addr);
 			recvsize = get_payload(reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot], buf);
 
-			packet_type_t pkt_type = get_packet_type(buf, recv_size);
+			packet_type_t pkt_type = get_packet_type(buf, recvsize);
 			switch (pkt_type) {
 				case packet_type_t::CACHE_POP_INSWITCH_ACK:
 					{
@@ -125,6 +119,11 @@ void *run_reflector_dpdkserver() {
 					{
 						// send CASE1 to switchos.specialcaseserver
 						udpsendto(reflector_dpdkserver_specialcaseclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_specialcaseserver_addr, reflector_switchos_specialcaseserver_addr_len, "reflector.dpdkserver.specialcaseclient");
+						break;
+					}
+				default:
+					{
+						printf("[reflector.dpdkserver] invalid packet type: %d\n", int(pkt_type));
 						break;
 					}
 			}

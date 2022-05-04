@@ -151,7 +151,7 @@ void *run_switchos_popworker(void *param);
 void *run_switchos_snapshotserver(void *param);
 void *run_switchos_specialcaseserver(void *param);
 bool process_speicalcase(const int16_t &tmpidx, const index_key_t &tmpkey, const val_t &tmpval, const int32_t &tmpseq, const bool &tmpstat);
-void close_switchis();
+void close_switchos();
 
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
@@ -181,6 +181,7 @@ int main(int argc, char **argv) {
 
 	switchos_running = true;
 
+	// connection from controller
 	while (!switchos_popserver_finish) {}
 
 	switchos_running = false;

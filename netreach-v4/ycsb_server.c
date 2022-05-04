@@ -46,8 +46,10 @@
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
 #include "common_impl.h"
-#include "reflector_impl.h"
-#include "server_impl.h"
+
+/* class and alias */
+
+typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 
 struct alignas(CACHELINE_SIZE) LoadSFGParam {
 	xindex_t *table;
@@ -55,15 +57,32 @@ struct alignas(CACHELINE_SIZE) LoadSFGParam {
 };
 typedef LoadSFGParam load_sfg_param_t;
 
-// Prepare data structures
-void prepare_dpdk();
+/* variables */
 
+// prepare phase
+struct rte_mempool *mbuf_pool = NULL;
 // loading phase
 volatile bool load_running = false;
 std::atomic<size_t> load_ready_threads(0);
-void run_load_server(xindex_t *table); // loading phase
+// transaction phase
+bool volatile transaction_running = false;
+std::atomic<size_t> transaction_ready_threads(0);
+size_t transaction_expected_ready_threads = 0;
+bool volatile killed = false;
+
+/* functions */
+
+// prepare phase
+void prepare_dpdk();
+// loading phase
+void loading_main(xindex_t *table); // loading phase
 void *run_load_sfg(void *param); // workers in loading phase
 void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals);
+// transaction phase
+#include "reflector_impl.h"
+#include "server_impl.h"
+void transaction_main(xindex_t *table); // transaction phase
+void kill(int signum);
 
 size_t get_server_idx(index_key_t key) {
 	size_t server_idx = key.keylo / per_server_range;
@@ -94,17 +113,21 @@ int main(int argc, char **argv) {
   signal(SIGTERM, SIG_IGN); // Ignore SIGTERM for subthreads
 
   /* (2) loading phase */
-
-  run_load_server(tab_xi);
+  //prepare_load_server();
+  loading_main(tab_xi);
 
   /* (3) transaction phase */
+  prepare_reflector();
+  prepare_server();
+  transaction_main(tab_xi);
 
-  run_server(tab_xi); // loop until killed
+  /* (4) free phase */
 
   if (tab_xi != nullptr) delete tab_xi; // terminate_bg -> bg_master joins bg_threads
-
-  close_server();
   dpdk_free();
+  // close_load_server();
+  close_reflector();
+  close_server();
 
   COUT_THIS("[ycsb_server.main] Exit successfully")
   exit(0);
@@ -188,7 +211,7 @@ void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {
 	COUT_N_EXIT("Keys are sorted!");*/
 }
 
-void run_load_server(xindex_t *table) {
+void loading_main(xindex_t *table) {
 	int ret = 0;
 	unsigned lcoreid = 1;
 
@@ -286,4 +309,144 @@ void *run_load_sfg(void * param) {
 	ofs.close();
 #endif
 	return 0;
+}
+
+/*
+ * Transaction phase
+ */
+
+void transaction_main(xindex_t *table) {
+	// reflector: popserver + dpdkserver
+	// server: server_num workers + receiver + evictserver + consnapshotserver
+	transaction_expected_ready_threads = server_num + 5;
+
+	int ret = 0;
+	unsigned lcoreid = 1; // 0: master lcore; 1: slave lcore for receiver; 2~: slave lcores for workers
+
+	transaction_running = false;
+
+	// launch popserver
+	pthread_t popserver_thread;
+	ret = pthread_create(&popserver_thread, nullptr, run_reflector_popserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error of launching reflector.popserver: " << ret);
+	}
+
+	// launch dpdkserver
+	pthread_t dpdkserver_thread;
+	ret = pthread_create(&dpdkserver_thread, nullptr, run_reflector_dpdkserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error of launching reflector.dpdkserver: " << ret);
+	}
+
+	// launch receiver
+	//receiver_param_t receiver_param;
+	//receiver_param.overall_thpt = 0;
+	//ret = rte_eal_remote_launch(run_receiver, (void*)&receiver_param, lcoreid);
+	ret = rte_eal_remote_launch(run_receiver, NULL, lcoreid);
+	if (ret) {
+		COUT_N_EXIT("Error of launching server.receiver:" << ret);
+	}
+	COUT_THIS("[transaction phase] Launch receiver with ret code " << ret);
+	lcoreid++;
+
+	// launch workers (processing normal packets)
+	//pthread_t threads[server_num];
+	server_worker_param_t server_worker_params[server_num];
+	// check if parameters are cacheline aligned
+	for (size_t i = 0; i < server_num; i++) {
+		if ((uint64_t)(&(server_worker_params[i])) % CACHELINE_SIZE != 0) {
+			COUT_N_EXIT("wrong parameter address: " << &(server_worker_params[i]));
+		}
+	}
+	for (int16_t worker_i = 0; worker_i < int16_t(server_num); worker_i++) {
+		server_worker_params[worker_i].table = table;
+		server_worker_params[worker_i].serveridx = worker_i;
+		server_worker_params[worker_i].throughput = 0;
+#ifdef TEST_AGG_THPT
+		server_worker_params[worker_i].sum_latency = 0.0;
+#endif
+		//int ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&server_worker_params[worker_i]);
+		ret = rte_eal_remote_launch(run_server_worker, (void *)&server_worker_params[worker_i], lcoreid);
+		if (ret) {
+		  COUT_N_EXIT("Error of launching some server.worker:" << ret);
+		}
+		lcoreid++;
+		if (lcoreid >= MAX_LCORE_NUM) {
+			lcoreid = 1;
+		}
+	}
+	COUT_THIS("[tranasaction phase] prepare server worker threads...")
+
+	// launch evictserver
+	pthread_t evictserver_thread;
+	ret = pthread_create(&evictserver_thread, nullptr, run_server_evictserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error of launching server.evictserver: " << ret);
+	}
+
+	// launch consnapshotserver
+	pthread_t consnapshotserver_thread;
+	ret = pthread_create(&consnapshotserver_thread, nullptr, run_server_consnapshotserver, (void *)table);
+	if (ret) {
+		COUT_N_EXIT("Error of launching server.consnapshotserver: " << ret);
+	}
+
+	while (transaction_ready_threads < transaction_expected_ready_threads) sleep(1);
+
+	transaction_running = true;
+	COUT_THIS("[transaction phase] start running...")
+
+	signal(SIGTERM, kill); // Set for main thread (kill -15)
+
+	while (!killed) {
+		sleep(1);
+	}
+
+	/* Processing Statistics */
+	//COUT_THIS("Server-side aggregate throughput: " << receiver_param.overall_thpt);
+	size_t overall_thpt = 0;
+	std::vector<double> load_balance_ratio_list;
+	for (size_t i = 0; i < server_num; i++) {
+		overall_thpt += server_worker_params[i].throughput;
+	}
+	COUT_THIS("Server-side overall throughput: " << overall_thpt);
+	double avg_per_server_thpt = double(overall_thpt) / double(server_num);
+	for (size_t i = 0; i < server_num; i++) {
+		load_balance_ratio_list.push_back(double(server_worker_params[i].throughput) / avg_per_server_thpt);
+	}
+	for (size_t i = 0; i < load_balance_ratio_list.size(); i++) {
+		COUT_THIS("Load balance ratio of server " << i << ": " << load_balance_ratio_list[i]);
+	}
+#ifdef TEST_AGG_THPT
+	double max_agg_thpt = 0.0;
+	for (size_t i = 0; i < server_num; i++) {
+		max_agg_thpt += (double(server_worker_params[i].throughput) / server_worker_params[i].sum_latency * 1000 * 1000);
+	}
+	max_agg_thpt /= double(1024 * 1024);
+	COUT_THIS("Max server-side aggregate throughput: " << max_agg_thpt << " MQPS");
+#endif
+
+	transaction_running = false;
+	void *status;
+	/*for (size_t i = 0; i < server_num; i++) {
+		int rc = pthread_join(threads[i], &status);
+		if (rc) {
+		  COUT_N_EXIT("Error: unable to join," << rc);
+		}
+	}*/
+	int rc = pthread_join(evictserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join evictserver " << rc);
+	}
+	rc = pthread_join(consnapshotserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join consnapshotserver " << rc);
+	}
+	rte_eal_mp_wait_lcore();
+}
+
+void kill(int signum) {
+	COUT_THIS("[transaction phase] receive SIGKILL!")
+	killed = true;
 }
