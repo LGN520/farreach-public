@@ -22,7 +22,7 @@
 #include "val.h"
 #include "socket_helper.h"
 #include "special_case.h"
-#include "message_queue_impl.h"
+#include "common_impl.h"
 
 // ptf scripts used by switchos
 // cache eviction: get_evictdata_setvalid3.sh, remove_cache_lookup.sh

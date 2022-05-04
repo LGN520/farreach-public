@@ -6,7 +6,9 @@
 template<class obj_t>
 class MessagePtrQueue {
 	public:
+		MessagePtrQueue();
 		MessagePtrQueue(uint32_t size);
+		void init(uint32_t size);
 		~MessagePtrQueue();
 
 		bool write(obj_t * newobj);

@@ -1,7 +1,16 @@
 #include "message_queue.h"
 
 template<class obj_t>
+MessagePtrQueue<obj_t>::MessagePtrQueue() {
+}
+
+template<class obj_t>
 MessagePtrQueue<obj_t>::MessagePtrQueue(uint32_t size) {
+	this->init(size);
+}
+
+template<class obj_t>
+void MessagePtrQueue<obj_t>::init(uint32_t size) {
 	this->_size = size;
 
 	this->_obj_ptrs = new obj_t*[size];

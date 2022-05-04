@@ -121,7 +121,7 @@ void tcpsend(int sockfd, char *buf, int size, const char *role) {
 	}
 }
 
-void prepare_tcpserver(int &sockfd, bool need_timeout, short server_port, int max_pending_num, const char *role) {
+void prepare_tcpserver(volatile int &sockfd, bool need_timeout, short server_port, int max_pending_num, const char *role) {
 	INVARIANT(role != NULL);
 
 	// create socket

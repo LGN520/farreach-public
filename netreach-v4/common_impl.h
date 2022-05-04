@@ -92,7 +92,7 @@ short backup_port;
 short notified_port;
 short server_evictserver_port_start = -1;
 short server_consnapshotserver_port = -1;
-uint64_t perserver_keyrange = -1; // use size_t to avoid int overflow
+int64_t perserver_keyrange = -1; // use size_t to avoid int overflow
 
 // controller
 const char *controller_ip_for_server = nullptr;
@@ -197,7 +197,7 @@ inline void parse_ini(const char* config_file) {
 	notified_port = ini.get_server_notified_port();
 	server_evictserver_port_start = ini.get_server_evictserver_port();
 	server_consnapshotserver_port = ini.get_server_consnapshotserver_port();
-	perserver_keyrange = 4ul*1024ul*1024ul*1024ul / uint64_t(server_num); // 2^32 / server_num
+	perserver_keyrange = 4ll*1024ll*1024ll*1024ll / int64_t(server_num); // 2^32 / server_num
 	COUT_VAR(server_num);
 	COUT_VAR(server_port_start);
 	printf("server_ip: %s\n", server_ip);
