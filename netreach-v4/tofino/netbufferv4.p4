@@ -84,22 +84,10 @@
 #include "p4src/regs/cm.p4"
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/valid.p4"
+#include "p4src/regs/latest.p4"
+#include "p4src/regs/deleted.p4"
 #include "p4src/regs/seq.p4"
-
-
-
-
-
-
-#include "p4src/regs/lock.p4"
-#include "p4src/regs/case12.p4"
-#include "p4src/regs/case3.p4"
-
-// registers and MATs related with 124B val
 #include "p4src/regs/val.p4"
-
-// registers and MATs related with votes
-#include "p4src/regs/vote.p4"
 
 #include "p4src/ingress_mat.p4"
 #include "p4src/egress_mat.p4"
@@ -154,7 +142,7 @@ control egress {
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
 	apply(access_cm4_tbl);
-#define RANGE_SUPPORT
+#ifdef RANGE_SUPPORT
 	if (pkt_is_e2e_mirrored) {
 		apply(process_cloned_scanreq_split_tbl);
 	}

@@ -16,7 +16,7 @@ action get_valid() {
 	get_valid_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
-# TODO: only used by PUTREQ/DELREQ if with PUTREQ_LARGE
+// TODO: only used by PUTREQ/DELREQ if with PUTREQ_LARGE
 blackbox stateful_alu set_and_get_valid_alu {
 	reg: valid_reg;
 
@@ -35,7 +35,7 @@ action set_and_get_valid() {
 	set_and_get_valid_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
-# TODO: only used by PUTREQ_LARGE
+// TODO: only used by PUTREQ_LARGE
 blackbox stateful_alu reset_and_get_valid_alu {
 	reg: valid_reg;
 

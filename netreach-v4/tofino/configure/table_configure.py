@@ -1174,9 +1174,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_is_case1 = is_case1)
                                                 if is_cached == 1 and valid == 1 and is_latest == 0 and snapshot_flag == 1 and is_case1 == 0:
                                                     # Update GETRES_LATEST_SEQ_INSWITCH as GETRES_LATEST_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
-                                                    if is_deleted == 0: # is_deleted=0 -> result=1
+                                                    if is_deleted == 0: # is_deleted=0 -> stat=1
                                                         actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 1)
-                                                    elif is_deleted == 1: # is_deleted=1 -> result=0
+                                                    elif is_deleted == 1: # is_deleted=1 -> stat=0
                                                         actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 0)
                                                     self.client.eg_port_forwrad_tbl_table_add_with_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                 else:
@@ -1231,9 +1231,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_is_case1 = is_case1)
                                                 if is_cached == 1 and valid == 1 and is_latest == 0 and snapshot_flag == 1 and is_case1 == 0:
                                                     # Update GETRES_DELETED_SEQ_INSWITCH as GETRES_DELETED_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
-                                                    if is_deleted == 0: # is_deleted=0 -> result=1
+                                                    if is_deleted == 0: # is_deleted=0 -> stat=1
                                                         actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 1)
-                                                    elif is_deleted == 1: # is_deleted=1 -> result=0
+                                                    elif is_deleted == 1: # is_deleted=1 -> stat=0
                                                         actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 0)
                                                     self.client.eg_port_forwrad_tbl_table_add_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                 else:
@@ -1339,9 +1339,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     elif valid == 1:
                                                         if snapshot_flag == 1 and is_case1 == 0:
                                                             # Update PUTREQ_INSWITCH as PUTREQ_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
-                                                            if is_deleted == 0: # is_deleted=0 -> result=1
+                                                            if is_deleted == 0: # is_deleted=0 -> stat=1
                                                                 actnspec0 = netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 1)
-                                                            elif is_deleted == 1: # is_deleted=1 -> result=0
+                                                            elif is_deleted == 1: # is_deleted=1 -> stat=0
                                                                 actnspec0 = netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 0)
                                                             self.client.eg_port_forwrad_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         else:
@@ -1411,9 +1411,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     elif valid == 1:
                                                         if snapshot_flag == 1 and is_case1 == 0:
                                                             # Update DELREQ_INSWITCH as DELREQ_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
-                                                            if is_deleted == 0: # is_deleted=0 -> result=1
+                                                            if is_deleted == 0: # is_deleted=0 -> stat=1
                                                                 actnspec0 = netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 1)
-                                                            elif is_deleted == 1: # is_deleted=1 -> result=0
+                                                            elif is_deleted == 1: # is_deleted=1 -> stat=0
                                                                 actnspec0 = netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 0)
                                                             self.client.eg_port_forwrad_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         else:

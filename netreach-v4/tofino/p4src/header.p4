@@ -98,9 +98,9 @@ header_type inswitch_t {
 	}
 }
 
-header_type result_t {
+header_type stat_t {
 	fields {
-		result: 8;
+		stat: 8;
 	}
 }
 
@@ -133,21 +133,6 @@ header_type metadata_t {
 		is_case1: 1;
 		clonenum_for_pktloss: 8;
 		is_lastclone_for_pktloss: 1;
-
-
-
-
-
-		tmp_sport: 16;
-		tmp_dport: 16;
-		canput: 4; // predicate for seq (update vallen and val only if with valid seq)
-		zerovote: 4; // predicate (if we need to trigger cache update)
-		islock: 1; // if the entry is locked before
-		isbackup: 1; // backup flag
-		iscase12: 1; // case 1/2 of backup
-		iscase3: 1; // case3 of backup
-		hashidx: 16; // for hash partition in egress pipeline
-		seq_large: 32; // seq number for PUTREQ_LARGE/_RECIR/_SEQ
 	}
 }
 
@@ -180,6 +165,6 @@ header val_t val15_hdr;
 header val_t val16_hdr;
 header seq_t seq_hdr;
 header inswitch_t inswitch_hdr;
-header result_t result_hdr;
+header stat_t stat_hdr;
 //header status_t status_hdr;
 metadata metadata_t meta;
