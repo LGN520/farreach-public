@@ -111,12 +111,14 @@ class AltBtreeBuffer {
     void advance_to_next_valid(int32_t snapshot_id);
     const key_t &get_key();
     const val_t &get_val();
+	const int32_t &get_seqnum();
 
     leaf_t *next = nullptr;
     bool has_next = false;
     int pos = 0, n = 0;
     key_t keys[node_capacity];
     val_t vals[node_capacity];
+	int32_t seqnums[node_capacity];
   };
 
   // Only used for compact

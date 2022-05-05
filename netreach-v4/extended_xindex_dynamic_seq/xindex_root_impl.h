@@ -243,9 +243,63 @@ inline size_t Root<key_t, val_t, seq>::scan(
 }
 
 template <class key_t, class val_t, bool seq>
+inline size_t Root<key_t, val_t, seq>::scan(
+    const key_t &begin, const size_t n,
+    std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id) {
+  size_t remaining = n;
+  result.clear();
+  result.reserve(n);
+  key_t next_begin = begin;
+  key_t latest_group_pivot = key_t::min();  // for cross-slot chained groups
+
+  int group_i;
+  group_t *group = locate_group_pt2(begin, locate_group_pt1(begin, group_i));
+  while (remaining && group_i < (int)group_n) {
+    while (remaining && group &&
+           group->get_pivot() > latest_group_pivot) { // avoid re-entry
+      size_t done = group->scan(next_begin, remaining, result, snapshot_id);
+      assert(done <= remaining);
+      remaining -= done;
+      latest_group_pivot = group->get_pivot();
+      next_begin = key_t::min();  // though don't know the exact begin
+      group = group->next;
+    }
+    group_i++;
+    group = groups[group_i].second;
+  }
+
+  return n - remaining;
+}
+
+template <class key_t, class val_t, bool seq>
 inline size_t Root<key_t, val_t, seq>::range_scan(
     const key_t &begin, const key_t &end,
     std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id) {
+  //COUT_N_EXIT("not implemented yet");
+  result.clear();
+  key_t latest_group_pivot = key_t::min();  // for cross-slot chained groups
+
+  int group_i;
+  int group_i_last;
+  group_t *group = locate_group_pt2(begin, locate_group_pt1(begin, group_i));
+  group_t *group_last = locate_group_pt2(end, locate_group_pt1(end, group_i_last));
+  UNUSED(group_last);
+  while (group_i <= group_i_last && group_i_last < (int)group_n) {
+    while (group && group->get_pivot() > latest_group_pivot) { // avoid re-entry
+      group->range_scan(begin, end, result, snapshot_id);
+      latest_group_pivot = group->get_pivot();
+      group = group->next;
+    }
+    group_i++;
+    group = groups[group_i].second;
+  }
+  return result.size();
+}
+
+template <class key_t, class val_t, bool seq>
+inline size_t Root<key_t, val_t, seq>::range_scan(
+    const key_t &begin, const key_t &end,
+    std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id) {
   //COUT_N_EXIT("not implemented yet");
   result.clear();
   key_t latest_group_pivot = key_t::min();  // for cross-slot chained groups

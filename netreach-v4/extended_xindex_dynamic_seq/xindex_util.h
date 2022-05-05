@@ -27,6 +27,7 @@
 #include <mutex>
 #include "../helper.h"
 #include <boost/thread/shared_mutex.hpp>
+#include "../snapshot_helper.h"
 
 //#include "rocksdb/db.h"
 //#include "rocksdb/cache.h"
@@ -202,10 +203,14 @@ struct AtomicVal {
   // NOTE: the two snapshot versions may be in removed status due to merge_snapshot in compact
   int32_t latest_id = -1; // -1: impossible value; k: latest write happens at epoch k 
   int32_t latest_seqnum = 0; // For serializability under potential packet loss
+
   volatile val_t ss_val_0; // val_length = 0 and val_data = NULL
-  volatile uint64_t ss_status_0 = 0; // only focus on removed w/o lock, is_ptr, and version
+  int32_t ss_seqnum_0 = 0;
   int32_t ss_id_0 = -1; // -1: no snapshot; otherwise: snapshot of epoch k 
+  volatile uint64_t ss_status_0 = 0; // only focus on removed w/o lock, is_ptr, and version
+
   volatile val_t ss_val_1; // val_length = 0 and val_data = NULL
+  int32_t ss_seqnum_1 = 0;
   int32_t ss_id_1 = -1; // -1: no snapshot; otherwise: snapshot of epoch k'
   volatile uint64_t ss_status_1 = 0; // only focus on removed w/o lock, is_ptr, and version
 
@@ -229,11 +234,13 @@ struct AtomicVal {
 	  latest_val = other.latest_val;
 	  status = other.status;
 	  ss_val_0 = other.ss_val_0;
-	  ss_status_0 = other.ss_status_0;
+	  ss_seqnum_0 = other.ss_seqnum_0;
 	  ss_id_0 = other.ss_id_0;
+	  ss_status_0 = other.ss_status_0;
 	  ss_val_1 = other.ss_val_1;
-	  ss_status_1 = other.ss_status_1;
+	  ss_seqnum_1 = other.ss_seqnum_1;
 	  ss_id_1 = other.ss_id_1;
+	  ss_status_1 = other.ss_status_1;
 	  aval_ptr = other.aval_ptr;
 	  return *this;
   }
@@ -277,7 +284,7 @@ struct AtomicVal {
 
   // Snapshot by multi-versioning
   //bool read_snapshot(val_t &val, int32_t &ss_id, int32_t snapshot_id) {
-  bool read_snapshot(val_t &val, int32_t snapshot_id) {
+  bool read_snapshot(val_t &val, int32_t &seqnum, int32_t snapshot_id) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -287,7 +294,7 @@ struct AtomicVal {
       assert(!removed(this->status)); // check removed of pointer-type atomic value
 	  assert(this->aval_ptr != nullptr);
 	  // AtomicVal pointed by aval_ptr will not be freed before finishing this read_snapshot() due to RCU during compact
-      res = this->aval_ptr->read_snapshot(val, snapshot_id);
+      res = this->aval_ptr->read_snapshot(val, seqnum, snapshot_id);
 	}
 	else {
 	  // At most one memcpy
@@ -304,12 +311,14 @@ struct AtomicVal {
 			  if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
 				  if (!removed(this->ss_status_1)) {
 					  val = this->ss_val_1;
+					  seqnum = this->ss_seqnum_1;
 					  res = true;
 				  }
 			  }
 			  else if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
 				  if (!removed(this->ss_status_0)) {
 					  val = this->ss_val_0;
+					  seqnum = this->ss_seqnum_0;
 					  res = true;
 				  }
 			  }
@@ -318,12 +327,14 @@ struct AtomicVal {
 			  if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
 				  if (!removed(this->ss_status_0)) {
 					  val = this->ss_val_0;
+					  seqnum = this->ss_seqnum_0;
 					  res = true;
 				  }
 			  }
 			  else if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
 				  if (!removed(this->ss_status_1)) {
 					  val = this->ss_val_1;
+					  seqnum = this->ss_seqnum_1;
 					  res = true;
 				  }
 			  }
@@ -333,7 +344,7 @@ struct AtomicVal {
 	this->rwlock.unlock_shared();
 	return res;
   }
-  bool read_snapshot_0(val_t &val, int32_t &ss_id) {
+  bool read_snapshot_0(val_t &val, int32_t &seqnum, int32_t &ss_id) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -343,20 +354,21 @@ struct AtomicVal {
 	  assert(!removed(this->status)); // check removed of pointer-type atomic value
 	  assert(this->aval_ptr != nullptr);
 	  // AtomicVal pointed by aval_ptr will not be freed before finishing this read_snapshot() due to RCU during compact
-	  res = this->aval_ptr->read_snapshot_0(val, ss_id);
+	  res = this->aval_ptr->read_snapshot_0(val, seqnum, ss_id);
 	}
 	else {
 	  // At most one memcpy
 	  ss_id = this->ss_id_0;
 	  if (this->ss_id_0 != -1 && !removed(this->ss_status_0)) {
 		  val = this->ss_val_0;
+		  seqnum = this->ss_seqnum_0;
 		  res = true;
 	  }
 	}
 	this->rwlock.unlock_shared();
 	return res;
   }
-  bool read_snapshot_1(val_t &val, int32_t &ss_id) {
+  bool read_snapshot_1(val_t &val, int32_t &seqnum, int32_t &ss_id) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -366,13 +378,14 @@ struct AtomicVal {
 	  assert(!removed(this->status)); // check removed of pointer-type atomic value
 	  assert(this->aval_ptr != nullptr);
 	  // AtomicVal pointed by aval_ptr will not be freed before finishing this read_snapshot() due to RCU during compact
-	  res = this->aval_ptr->read_snapshot_1(val, ss_id);
+	  res = this->aval_ptr->read_snapshot_1(val, seqnum, ss_id);
 	}
 	else {
 	  // At most one memcpy
 	  ss_id = this->ss_id_1;
 	  if (this->ss_id_1 != -1 && !removed(this->ss_status_1)) {
 		  val = this->ss_val_1;
+		  seqnum = this->ss_seqnum_1;
 		  res = true;
 	  }
 	}
@@ -381,7 +394,7 @@ struct AtomicVal {
   }
   // Snapshot by multi-versioning while ignoring ptr, as AtomicVal in buffer and buffer_temp cannot be ptr-type
   //bool read_snapshot_ignoring_ptr(val_t &val, int32_t &ss_id, int32_t snapshot_id) {
-  bool read_snapshot_ignoring_ptr(val_t &val, int32_t snapshot_id) {
+  bool read_snapshot_ignoring_ptr(val_t &val, int32_t &seqnum, int32_t snapshot_id) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -401,12 +414,14 @@ struct AtomicVal {
 		  if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
 			  if (!removed(this->ss_status_1)) {
 				  val = this->ss_val_1;
+				  seqnum = this->ss_seqnum_1;
 				  res = true;
 			  }
 		  }
 		  else if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
 			  if (!removed(this->ss_status_0)) {
 				  val = this->ss_val_0;
+				  seqnum = this->ss_seqnum_0;
 				  res = true;
 			  }
 		  }
@@ -415,12 +430,14 @@ struct AtomicVal {
 		  if (tmpssid_0 != -1 && tmpssid_0 < snapshot_id) {
 			  if (!removed(this->ss_status_0)) {
 				  val = this->ss_val_0;
+				  seqnum = this->ss_seqnum_0;
 				  res = true;
 			  }
 		  }
 		  else if (tmpssid_1 != -1 && tmpssid_1 < snapshot_id) {
 			  if (!removed(this->ss_status_1)) {
 				  val = this->ss_val_1;
+				  seqnum = this->ss_seqnum_1;
 				  res = true;
 			  }
 		  }
@@ -430,49 +447,60 @@ struct AtomicVal {
 	return res;
   }
   // Try to merge snapshot versions from data.base_val into buffer.buf_val
-  bool merge_snapshot(int32_t &data_latestid, val_t &data_ssval_0, int32_t &data_ssid_0, bool data_ssremoved_0, val_t &data_ssval_1, int32_t &data_ssid_1, bool data_ssremoved_1) {
+  // TODO: we do not need this function after treating DELREQ as special PUTREQ
+  bool merge_snapshot(int32_t &data_latestseqnum, int32_t &data_latestid, val_t &data_ssval_0, int32_t &data_ssseqnum_0, int32_t &data_ssid_0, bool data_ssremoved_0, val_t &data_ssval_1, int32_t &data_ssseqnum_1, int32_t &data_ssid_1, bool data_ssremoved_1) {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
 
 	// NOTE: buffer.buf_val.min_snapshot_id >= data.base_val.max_snapshot_id
 	if (this->ss_id_0 == -1 || this->ss_id_1 == -1) { // with at least one empty snapshot entry
-		int32_t *newer_ssid = NULL;
-		int32_t *older_ssid = NULL;
 		val_t *newer_ssval = NULL;
 		val_t *older_ssval = NULL;
+		int32_t *newer_ssseqnum = NULL;
+		int32_t * older_ssseqnum = NULL;
+		int32_t *newer_ssid = NULL;
+		int32_t *older_ssid = NULL;
 		bool newer_removed, older_removed;
 		if (this->latest_id == data_latestid || this->ss_id_0 == data_latestid || this->ss_id_1 == data_latestid) {
+			newer_ssseqnum = &data_ssseqnum_0;
 			newer_ssid = &data_ssid_0;
 			newer_ssval = &data_ssval_0;
 			newer_removed = data_ssremoved_0;
+			older_ssseqnum = &data_ssseqnum_1;
 			older_ssid = &data_ssid_1;
 			older_ssval = &data_ssval_1;
 			older_removed = data_ssremoved_1;
 			if (data_ssid_0 < data_ssid_1) {
+				newer_ssseqnum = &data_ssseqnum_1;
 				newer_ssid = &data_ssid_1;
 				newer_ssval = &data_ssval_1;
 				newer_removed = data_ssremoved_1;
+				older_ssseqnum = &data_ssseqnum_0;
 				older_ssid = &data_ssid_0;
 				older_ssval = &data_ssval_0;
 				older_removed = data_ssremoved_0;
 			}
 		}
 		else {
+			newer_ssseqnum = &data_latestseqnum;
 			newer_ssid = &data_latestid; // NOTE: latest value in data.base_val must be removed
-			newer_removed = false;
+			newer_removed = true;
 			if (data_ssid_0 >= data_ssid_1) { // Choose the newer snapshot
+				older_ssseqnum = &data_ssseqnum_0;
 				older_ssid = &data_ssid_0;
 				older_ssval = &data_ssval_0;
 				older_removed = data_ssremoved_0;
 			}
 			else {
+				older_ssseqnum = &data_ssseqnum_1;
 				older_ssid = &data_ssid_1;
 				older_ssval = &data_ssval_1;
 				older_removed = data_ssremoved_1;
 			}
 		}
 		if (this->ss_id_0 == -1) {
+			this->ss_seqnum_0 = *newer_ssseqnum;
 			this->ss_id_0 = *newer_ssid; 
 			this->ss_status_0 = 0; // set not removed
 			if (!newer_removed) {
@@ -482,6 +510,7 @@ struct AtomicVal {
 				this->ss_status_0 |= removed_mask; // set removed
 			}
 			if (this->ss_id_1 == -1) {
+				this->ss_seqnum_1 = *older_ssseqnum;
 				this->ss_id_1 = *older_ssid; 
 				this->ss_status_1 = 0; // set not removed
 				if (!older_removed) {
@@ -493,6 +522,7 @@ struct AtomicVal {
 			}
 		}
 		else { // only this->ss_id_1 == -1
+			this->ss_seqnum_1 = *newer_ssseqnum;
 			this->ss_id_1 = *newer_ssid; 
 			this->ss_status_1 = 0; // set not removed
 			if (!newer_removed) {
@@ -591,11 +621,13 @@ struct AtomicVal {
 			else {
 				// latest_id must > any ss_id
 				if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+					this->ss_seqnum_0 = this->latest_seqnum;
 					this->ss_id_0 = this->latest_id;
 					this->ss_val_0 = this->latest_val;
 					this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
 				}
 				else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+					this->ss_seqnum_1 = this->latest_seqnum;
 					this->ss_id_1 = this->latest_id;
 					this->ss_val_1 = this->latest_val;
 					this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
@@ -631,11 +663,13 @@ struct AtomicVal {
 			else {
 				// latest_id must > any ss_id
 				if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+					this->ss_seqnum_0 = this->latest_seqnum;
 					this->ss_id_0 = this->latest_id;
 					this->ss_val_0 = this->latest_val;
 					this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
 				}
 				else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+					this->ss_seqnum_1 = this->latest_seqnum;
 					this->ss_id_1 = this->latest_id;
 					this->ss_val_1 = this->latest_val;
 					this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
@@ -675,18 +709,22 @@ struct AtomicVal {
 	// Get snapshot value 0
 	val_t tmp_ssval_0;
 	int32_t tmp_ssid_0;
-	if (!aval_ptr->read_snapshot_0(tmp_ssval_0, tmp_ssid_0)) {
-		this->ss_status_0 != removed_mask;
+	int32_t tmp_ssseqnum_0;
+	if (!aval_ptr->read_snapshot_0(tmp_ssval_0, tmp_ssseqnum_0, tmp_ssid_0)) {
+		this->ss_status_0 |= removed_mask;
 	}
 	this->ss_val_0 = tmp_ssval_0;
+	this->ss_seqnum_0 = tmp_ssseqnum_0;
 	this->ss_id_0 = tmp_ssid_0;
 	// Get snapshot value 1
 	val_t tmp_ssval_1;
+	int32_t tmp_ssseqnum_1;
 	int32_t tmp_ssid_1;
-	if (!aval_ptr->read_snapshot_1(tmp_ssval_1, tmp_ssid_1)) {
-		this->ss_status_1 != removed_mask;
+	if (!aval_ptr->read_snapshot_1(tmp_ssval_1, tmp_ssseqnum_1, tmp_ssid_1)) {
+		this->ss_status_1 |= removed_mask;
 	}
 	this->ss_val_1 = tmp_ssval_1;
+	this->ss_seqnum_1 = tmp_ssseqnum_1;
 	this->ss_id_1 = tmp_ssid_1;
     unset_is_ptr();
     memory_fence();
@@ -732,11 +770,13 @@ struct AtomicVal {
 				// latest_id must > any ss_id
 				if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
 					this->ss_id_0 = this->latest_id;
+					this->ss_seqnum_0 = this->latest_seqnum;
 					this->ss_val_0 = this->latest_val;
 					this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
 				}
 				else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
 					this->ss_id_1 = this->latest_id;
+					this->ss_seqnum_1 = this->latest_seqnum;
 					this->ss_val_1 = this->latest_val;
 					this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
 				}
@@ -768,11 +808,13 @@ struct AtomicVal {
 				// latest_id must > any ss_id
 				if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
 					this->ss_id_0 = this->latest_id;
+					this->ss_seqnum_0 = this->latest_seqnum;
 					this->ss_val_0 = this->latest_val;
 					this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
 				}
 				else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
 					this->ss_id_1 = this->latest_id;
+					this->ss_seqnum_1 = this->latest_seqnum;
 					this->ss_val_1 = this->latest_val;
 					this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
 				}

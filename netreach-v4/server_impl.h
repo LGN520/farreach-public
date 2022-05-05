@@ -3,7 +3,10 @@
 
 // Transaction phase for ycsb_server
 
+#include <vector>
+
 #include "deleted_set_impl.h"
+#include "snapshot_helper.h"
 
 typedef DeletedSet<index_key_t, int32_t> deleted_set_t;
 
@@ -16,13 +19,6 @@ struct alignas(CACHELINE_SIZE) ServerWorkerParam {
 #endif
 };
 typedef ServerWorkerParam server_worker_param_t;
-
-struct SnapshotRecord {
-	val_t val;
-	int32_t seq;
-	bool stat;
-};
-typedef SnapshotRecord snapshot_record_t;
 
 /*struct alignas(CACHELINE_SIZE) ReceiverParam {
 	size_t overall_thpt;
@@ -452,9 +448,10 @@ static int run_server_worker(void * param) {
 					// get results from in-memory snapshot in [cur_startkey, cur_endkey]
 					//COUT_THIS("[server.worker] startkey: " << cur_startkey << "endkey: " << cur_endkey().to_string()
 					//		<< "min_startkey: " << min_startkey << "max_endkey: " << max_endkey; // << " num = " << req.num())
-					std::vector<std::pair<index_key_t, val_t>> inmemory_results; // TODO: val_t -> snapshot_record_t
+					std::vector<std::pair<index_key_t, snapshot_record_t>> inmemory_results;
 					//size_t tmp_num = table->scan(req.key(), req.num(), results, serveridx);
 					size_t inmemory_num = table->range_scan(cur_startkey, cur_endkey, inmemory_results, serveridx);
+					UNUSED(inmemory_num);
 
 					// get results from in-switch snapshot in [cur_startkey, cur_endkey]
 					std::map<index_key_t, snapshot_record_t> *tmp_server_snapshot_maps = server_snapshot_maps;
@@ -468,7 +465,6 @@ static int run_server_worker(void * param) {
 					}
 
 					// merge sort w/ seq comparison
-					// TODO: change val_t to snapshot_record_t for results in xindex.range_scan
 					std::vector<std::pair<index_key_t, val_t>> results;
 					if (inmemory_results.size() == 0) {
 						for (uint32_t inswitch_idx = 0; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
@@ -585,7 +581,7 @@ static int run_server_worker(void * param) {
 
 					// Trigger cache population if necessary (key exist and not being cached)
 					if (tmp_stat) {
-						bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list.end());
+						bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
 						if (!is_cached_before) {
 							server_cached_keyset_list[serveridx].insert(req.key());
 							// Send CACHE_POP to controller.popserver
@@ -613,7 +609,7 @@ static int run_server_worker(void * param) {
 
 					// Trigger cache population if necessary (key exist and not being cached)
 					if (tmp_stat) { // successful put
-						bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list.end());
+						bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
 						if (!is_cached_before) {
 							server_cached_keyset_list[serveridx].insert(req.key());
 							// Send CACHE_POP to controller.popserver
@@ -666,7 +662,7 @@ static int run_server_worker(void * param) {
 
 					// Trigger cache population if necessary (key exist and not being cached)
 					if (tmp_stat) { // successful put
-						bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list.end());
+						bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
 						if (!is_cached_before) {
 							server_cached_keyset_list[serveridx].insert(req.key());
 							// Send CACHE_POP to controller.popserver
@@ -726,10 +722,10 @@ static int run_server_worker(void * param) {
 	cache_evict_t *tmp_cache_evict_ptr = server_cache_evict_or_case2_ptr_queue_list[serveridx].read();
 	if (tmp_cache_evict_ptr != NULL) {
 		INVARIANT(tmp_cache_evict_ptr->serveridx() == serveridx);
-		INVARIANT(server_cached_keyset_list[serveridx].find(tmp_cache_evict_ptr->key()) != server_cached_keyset_list.end());
+		INVARIANT(server_cached_keyset_list[serveridx].find(tmp_cache_evict_ptr->key()) != server_cached_keyset_list[serveridx].end());
 
 		// make server-side snapshot for CACHE_EVICT_CASE2
-		if (tmp_cache_evict_ptr->_type == packet_type_t::CACHE_EVICT_CASE2) {
+		if (tmp_cache_evict_ptr->type() == packet_type_t::CACHE_EVICT_CASE2) {
 			printf("CACHE_EVICT_CASE2!\n");
 			if (!server_issnapshot) {
 				table->make_snapshot();
@@ -737,10 +733,10 @@ static int run_server_worker(void * param) {
 		}
 
 		// remove from cached keyset
-		server_cached_keysetlist[serveridx].erase(tmp_cache_evict_ptr->key()); // NOTE: no contention
+		server_cached_keyset_list[serveridx].erase(tmp_cache_evict_ptr->key()); // NOTE: no contention
 
 		// update in-memory KVS if necessary
-		if (tmp_cache_evict_ptr->result()) { // put
+		if (tmp_cache_evict_ptr->stat()) { // put
 			table->put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), serveridx, tmp_cache_evict_ptr->seq());
 		}
 		else { // del
@@ -748,7 +744,7 @@ static int run_server_worker(void * param) {
 		}
 
 		// send CACHE_EVICT_ACK to server.evictserver
-		cachr_evict_ack_t *tmp_cache_evict_ack_ptr = new cache_evict_ack(tmp_cache_evict_ptr->key()); // freed by server.evictserver
+		cache_evict_ack_t *tmp_cache_evict_ack_ptr = new cache_evict_ack_t(tmp_cache_evict_ptr->key()); // freed by server.evictserver
 		bool res = server_cache_evict_ack_ptr_queue_list[serveridx].write(tmp_cache_evict_ack_ptr);
 		if (!res) {
 			printf("[server.worker] error: more than one CACHE_EVICT_ACK!\n");
@@ -776,7 +772,7 @@ static int run_server_worker(void * param) {
   return 0;
 }
 
-void run_server_evictserver(void *param) {
+void *run_server_evictserver(void *param) {
 	//int16_t serveridx = *((int16_t *)param);
 
 	// Not used
@@ -868,13 +864,13 @@ void run_server_evictserver(void *param) {
 
 				// send CACHE_EVICT_ACK to controller.evictserver.evictclient
 				char sendbuf[MAX_BUFSIZE];
-				int sendsize = tmp_cache_evict_ack_ptr.serialize(sendbuf, MAX_BUF_SIZE);
+				int sendsize = tmp_cache_evict_ack_ptr->serialize(sendbuf, MAX_BUFSIZE);
 				tcpsend(connfd, sendbuf, sendsize, "server.evictserver");
 
 				// move remaining bytes and reset metadata
 				if (cur_recv_bytes > arrive_serveridx_bytes) {
-					memcpy(buf, buf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
-					cur_recv_bytes = cur_recv_bytes - arrive_serveridx_byets;
+					memcpy(recvbuf, recvbuf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
+					cur_recv_bytes = cur_recv_bytes - arrive_serveridx_bytes;
 				}
 				else {
 					cur_recv_bytes = 0;
@@ -892,6 +888,8 @@ void run_server_evictserver(void *param) {
 			}
 		}
 	}
+	close(server_evictserver_tcpsock);
+	pthread_exit(nullptr);
 }
 
 void *run_server_consnapshotserver(void *param) {
@@ -930,7 +928,7 @@ void *run_server_consnapshotserver(void *param) {
 
 		if (phase == 0) {
 			// process SNAPSHOT_SERVERSIDE for server-side snapshot
-			if (control_type_phase0 == -1 && cur_recv_bytes >= sizeof(int)) {
+			if (control_type_phase0 == -1 && cur_recv_bytes >= int(sizeof(int))) {
 				control_type_phase0 = *((int *)recvbuf);
 				INVARIANT(control_type_phase0 == SNAPSHOT_SERVERSIDE);
 			}
@@ -947,7 +945,7 @@ void *run_server_consnapshotserver(void *param) {
 		}
 		else if (phase == 1) {
 			// NOTE: skip sizeof(int) for SNAPSHOT_SERVERSIDE
-			if (control_type_phase1 == -1 && cur_recv_bytes >= sizeof(int) + sizeof(int) + sizeof(int32_t)) { // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
+			if (control_type_phase1 == -1 && cur_recv_bytes >= int(sizeof(int) + sizeof(int) + sizeof(int32_t))) { // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
 				control_type_phase1 = *((int *)(recvbuf + sizeof(int)));
 				INVARIANT(control_type_phase1 == SNAPSHOT_DATA);
 				total_bytes = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int)));
@@ -956,7 +954,7 @@ void *run_server_consnapshotserver(void *param) {
 			// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
 			// per-server data: <int32_t perserver_bytes, int16_t serveridx, int32_t recordcnt, per-record data>
 			// per-record data: <16B key, int32_t vallen, value (w/ padding), int32_t seq, bool stat>
-			if (control_type_phase1 != -1 && cur_recv_bytes >= sizeof(int) + total_bytes) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
+			if (control_type_phase1 != -1 && cur_recv_bytes >= int(sizeof(int) + total_bytes)) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
 				// NOTE: per-server_bytes is used for processing snapshot data of each server (not used now)
 				
 				// save snapshot data of servers
@@ -991,19 +989,19 @@ void *run_server_consnapshotserver(void *param) {
 				std::map<index_key_t, snapshot_record_t> *old_server_snapshot_maps = server_snapshot_maps;
 				server_snapshot_maps = new_server_snapshot_maps;
 				if (old_server_snapshot_maps != NULL) {
-					uint32_t prev_snapshot_rcus[server_num];
+					uint32_t prev_server_snapshot_rcus[server_num];
 					for (uint32_t i = 0; i < server_num; i++) {
-						prev_snapshot_rcus[i] = snapshot_rcus[i];
+						prev_server_snapshot_rcus[i] = server_snapshot_rcus[i];
 					}
 					for (uint32_t i = 0; i < server_num; i++) {
-						while (transaction_running && snapshot_rcus[i] == prev_snapshot_rcus[i]) {}
+						while (transaction_running && server_snapshot_rcus[i] == prev_server_snapshot_rcus[i]) {}
 					}
 					delete [] old_server_snapshot_maps;
 					old_server_snapshot_maps = NULL;
 				}
 
 				// Move remaining bytes and reset metadata
-				if (cur_recv_bytes > sizeof(int) + total_bytes) {
+				if (cur_recv_bytes > int(sizeof(int) + total_bytes)) {
 					memcpy(recvbuf, recvbuf + sizeof(int) + total_bytes, cur_recv_bytes - sizeof(int) - total_bytes);
 					cur_recv_bytes = cur_recv_bytes - sizeof(int) - total_bytes;
 				}
@@ -1017,6 +1015,8 @@ void *run_server_consnapshotserver(void *param) {
 			}
 		}
 	}
+	close(server_consnapshotserver_tcpsock);
+	pthread_exit(nullptr);
 }
 
 #endif

@@ -168,9 +168,30 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan(
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline size_t Group<key_t, val_t, seq, max_model_n>::scan(
+    const key_t &begin, const size_t n,
+    std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id) {
+  return buffer_temp ? scan_3_way(begin, n, key_t::max(), result, snapshot_id)
+                     : scan_2_way(begin, n, key_t::max(), result, snapshot_id);
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::range_scan(
     const key_t &begin, const key_t &end,
     std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id) {
+  size_t old_size = result.size();
+  if (buffer_temp) {
+    scan_3_way(begin, std::numeric_limits<size_t>::max(), end, result, snapshot_id);
+  } else {
+    scan_2_way(begin, std::numeric_limits<size_t>::max(), end, result, snapshot_id);
+  }
+  return result.size() - old_size;
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline size_t Group<key_t, val_t, seq, max_model_n>::range_scan(
+    const key_t &begin, const key_t &end,
+    std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id) {
   size_t old_size = result.size();
   if (buffer_temp) {
     scan_3_way(begin, std::numeric_limits<size_t>::max(), end, result, snapshot_id);
@@ -871,11 +892,12 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 	  assert(base_val.removed(base_val.status)); // latest version in data must be removed
 	  // NOTE: as the lastet version in base_val is removed now, its snapshot versions must not be changed
 	  val_t base_ssval_0, base_ssval_1;
-	  int32_t base_ssid_0, base_ssid_1;
-	  bool base_ssremoved_0 = base_val.read_snapshot_0(base_ssval_0, base_ssid_0);
-	  bool base_ssremoved_1 = base_val.read_snapshot_1(base_ssval_1, base_ssid_1);
+	  int32_t base_ssid_0, base_ssid_1, base_ssseqnum_0, base_ssseqnum_1;
+	  bool base_ssremoved_0 = base_val.read_snapshot_0(base_ssval_0, base_ssseqnum_0, base_ssid_0);
+	  bool base_ssremoved_1 = base_val.read_snapshot_1(base_ssval_1, base_ssseqnum_1, base_ssid_1);
 	  int32_t base_latestid = base_val.latest_id;
-	  bool buf_all_removed = buf_val.merge_snapshot(base_latestid, base_ssval_0, base_ssid_0, base_ssremoved_0, base_ssval_1, base_ssid_1, base_ssremoved_1);
+	  int32_t base_seqnum = base_val.latest_seqnum;
+	  bool buf_all_removed = buf_val.merge_snapshot(base_seqnum, base_latestid, base_ssval_0, base_ssseqnum_0, base_ssid_0, base_ssremoved_0, base_ssval_1, base_ssseqnum_1, base_ssid_1, base_ssremoved_1);
 
 		// Ignore buf_val if it is all removed after merging snapshots from base_val
 		// We directly drop the stale snapshots in data as we only need latest snapshot for range query
@@ -996,6 +1018,99 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
       break;
     }
     result.push_back(std::pair<key_t, val_t>(buf_key, buf_val));
+    buffer_source.advance_to_next_valid(snapshot_id);
+    remaining--;
+  }
+
+  return n - remaining;
+}
+
+// Only one of data/buffer can have a valid snapshot -> do not need to fix multiple valid snapshots
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
+    const key_t &begin, const size_t n, const key_t &end,
+    std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id) {
+  size_t remaining = n;
+  bool out_of_range = false;
+  uint32_t base_i = get_pos_from_array(begin);
+  ArrayDataSource array_source(data, array_size, base_i);
+  typename buffer_t::DataSource buffer_source(begin, buffer, snapshot_id);
+
+  // first read a not-removed value from array and buffer, to avoid double read
+  // during merge
+  array_source.advance_to_next_valid(snapshot_id);
+  buffer_source.advance_to_next_valid(snapshot_id);
+
+  while (array_source.has_next && buffer_source.has_next && remaining &&
+         !out_of_range) {
+    // we are sure that these key has not-removed (pre-read) value
+    const key_t &base_key = array_source.get_key();
+    const val_t &base_val = array_source.get_val();
+	const int32_t &base_seqnum = array_source.get_seqnum();
+	snapshot_record_t base_record;
+	base_record.val = base_val;
+	base_record.seq = base_seqnum;
+	base_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    const key_t &buf_key = buffer_source.get_key();
+    const val_t &buf_val = buffer_source.get_val();
+	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	snapshot_record_t buf_record;
+	buf_record.val = buf_val;
+	buf_record.seq = buf_seqnum;
+	buf_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    assert(base_key != buf_key);  // since update are inplaced
+
+    if (base_key < buf_key) {
+      if (base_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, snapshot_record_t>(base_key, base_record));
+      array_source.advance_to_next_valid(snapshot_id);
+    } else {
+      if (buf_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, snapshot_record_t>(buf_key, buf_record));
+      buffer_source.advance_to_next_valid(snapshot_id);
+    }
+
+    remaining--;
+  }
+
+  while (array_source.has_next && remaining && !out_of_range) {
+    const key_t &base_key = array_source.get_key();
+    const val_t &base_val = array_source.get_val();
+	const int32_t &base_seqnum = array_source.get_seqnum();
+	snapshot_record_t base_record;
+	base_record.val = base_val;
+	base_record.seq = base_seqnum;
+	base_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+    if (base_key >= end) {
+      out_of_range = true;
+      break;
+    }
+    result.push_back(std::pair<key_t, snapshot_record_t>(base_key, base_record));
+    array_source.advance_to_next_valid(snapshot_id);
+    remaining--;
+  }
+
+  while (buffer_source.has_next && remaining && !out_of_range) {
+    const key_t &buf_key = buffer_source.get_key();
+    const val_t &buf_val = buffer_source.get_val();
+	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	snapshot_record_t buf_record;
+	buf_record.val = buf_val;
+	buf_record.seq = buf_seqnum;
+	buf_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+    if (buf_key >= end) {
+      out_of_range = true;
+      break;
+    }
+    result.push_back(std::pair<key_t, snapshot_record_t>(buf_key, buf_record));
     buffer_source.advance_to_next_valid(snapshot_id);
     remaining--;
   }
@@ -1189,6 +1304,257 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
   return n - remaining;
 }
 
+// Only one of data/buffer/buffer_temp can have a valid snapshot -> do not need to fix multiple valid snapshots
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
+    const key_t &begin, const size_t n, const key_t &end,
+    std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id) {
+  size_t remaining = n;
+  bool out_of_range = false;
+  uint32_t base_i = get_pos_from_array(begin);
+  ArrayDataSource array_source(data, array_size, base_i);
+  typename buffer_t::DataSource buffer_source(begin, buffer, snapshot_id);
+  typename buffer_t::DataSource temp_buffer_source(begin, buffer_temp, snapshot_id);
+
+  // first read a not-removed value from array and buffer, to avoid double read
+  // during merge
+  array_source.advance_to_next_valid(snapshot_id);
+  buffer_source.advance_to_next_valid(snapshot_id);
+  temp_buffer_source.advance_to_next_valid(snapshot_id);
+
+  // 3-way
+  while (array_source.has_next && buffer_source.has_next &&
+         temp_buffer_source.has_next && remaining && !out_of_range) {
+    // we are sure that these key has not-removed (pre-read) value
+    const key_t &base_key = array_source.get_key();
+    const val_t &base_val = array_source.get_val();
+	const int32_t &base_seqnum = array_source.get_seqnum();
+	snapshot_record_t base_record;
+	base_record.val = base_val;
+	base_record.seq = base_seqnum;
+	base_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    const key_t &buf_key = buffer_source.get_key();
+    const val_t &buf_val = buffer_source.get_val();
+	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	snapshot_record_t buf_record;
+	buf_record.val = buf_val;
+	buf_record.seq = buf_seqnum;
+	buf_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    const key_t &tmp_buf_key = temp_buffer_source.get_key();
+    const val_t &tmp_buf_val = temp_buffer_source.get_val();
+	const int32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
+	snapshot_record_t tmp_buf_record;
+	tmp_buf_record.val = tmp_buf_val;
+	tmp_buf_record.seq = tmp_buf_seqnum;
+	tmp_buf_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    assert(base_key != buf_key);      // since update are inplaced
+    assert(base_key != tmp_buf_key);  // and removed values are skipped
+
+    if (base_key < buf_key && base_key < tmp_buf_key) {
+      if (base_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, snapshot_record_t>(base_key, base_record));
+      array_source.advance_to_next_valid(snapshot_id);
+    } else if (buf_key < base_key && buf_key < tmp_buf_key) {
+      if (buf_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, val_t>(buf_key, buf_record));
+      buffer_source.advance_to_next_valid(snapshot_id);
+    } else {
+      if (tmp_buf_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, val_t>(tmp_buf_key, tmp_buf_record));
+      temp_buffer_source.advance_to_next_valid(snapshot_id);
+    }
+
+    remaining--;
+  }
+
+  // 2-way trailings
+  while (array_source.has_next && buffer_source.has_next && remaining &&
+         !out_of_range) {
+    // we are sure that these key has not-removed (pre-read) value
+    const key_t &base_key = array_source.get_key();
+    const val_t &base_val = array_source.get_val();
+	const int32_t &base_seqnum = array_source.get_seqnum();
+	snapshot_record_t base_record;
+	base_record.val = base_val;
+	base_record.seq = base_seqnum;
+	base_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    const key_t &buf_key = buffer_source.get_key();
+    const val_t &buf_val = buffer_source.get_val();
+	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	snapshot_record_t buf_record;
+	buf_record.val = buf_val;
+	buf_record.seq = buf_seqnum;
+	buf_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    assert(base_key != buf_key);  // since update are inplaced
+
+    if (base_key < buf_key) {
+      if (base_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, val_t>(base_key, base_record));
+      array_source.advance_to_next_valid(snapshot_id);
+    } else {
+      if (buf_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, val_t>(buf_key, buf_record));
+      buffer_source.advance_to_next_valid(snapshot_id);
+    }
+
+    remaining--;
+  }
+
+  while (buffer_source.has_next && temp_buffer_source.has_next && remaining &&
+         !out_of_range) {
+    // we are sure that these key has not-removed (pre-read) value
+    const key_t &buf_key = buffer_source.get_key();
+    const val_t &buf_val = buffer_source.get_val();
+	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	snapshot_record_t buf_record;
+	buf_record.val = buf_val;
+	buf_record.seq = buf_seqnum;
+	buf_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    const key_t &tmp_buf_key = temp_buffer_source.get_key();
+    const val_t &tmp_buf_val = temp_buffer_source.get_val();
+	const int32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
+	snapshot_record_t tmp_buf_record;
+	tmp_buf_record.val = tmp_buf_val;
+	tmp_buf_record.seq = tmp_buf_seqnum;
+	tmp_buf_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    assert(buf_key != tmp_buf_key);  // and removed values are skipped
+
+    if (buf_key < tmp_buf_key) {
+      if (buf_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, val_t>(buf_key, buf_record));
+      buffer_source.advance_to_next_valid(snapshot_id);
+    } else {
+      if (tmp_buf_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, val_t>(tmp_buf_key, tmp_buf_record));
+      temp_buffer_source.advance_to_next_valid(snapshot_id);
+    }
+
+    remaining--;
+  }
+
+  while (array_source.has_next && temp_buffer_source.has_next && remaining &&
+         !out_of_range) {
+    // we are sure that these key has not-removed (pre-read) value
+    const key_t &base_key = array_source.get_key();
+    const val_t &base_val = array_source.get_val();
+	const int32_t &base_seqnum = array_source.get_seqnum();
+	snapshot_record_t base_record;
+	base_record.val = base_val;
+	base_record.seq = base_seqnum;
+	base_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    const key_t &tmp_buf_key = temp_buffer_source.get_key();
+    const val_t &tmp_buf_val = temp_buffer_source.get_val();
+	const int32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
+	snapshot_record_t tmp_buf_record;
+	tmp_buf_record.val = tmp_buf_val;
+	tmp_buf_record.seq = tmp_buf_seqnum;
+	tmp_buf_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+
+    assert(base_key != tmp_buf_key);  // and removed values are skipped
+
+    if (base_key < tmp_buf_key) {
+      if (base_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, val_t>(base_key, base_record));
+      array_source.advance_to_next_valid(snapshot_id);
+    } else {
+      if (tmp_buf_key >= end) {
+        out_of_range = true;
+        break;
+      }
+      result.push_back(std::pair<key_t, val_t>(tmp_buf_key, tmp_buf_record));
+      temp_buffer_source.advance_to_next_valid(snapshot_id);
+    }
+
+    remaining--;
+  }
+
+  // 1-way trailings
+  while (array_source.has_next && remaining && !out_of_range) {
+    const key_t &base_key = array_source.get_key();
+    const val_t &base_val = array_source.get_val();
+	const int32_t &base_seqnum = array_source.get_seqnum();
+	snapshot_record_t base_record;
+	base_record.val = base_val;
+	base_record.seq = base_seqnum;
+	base_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+    if (base_key >= end) {
+      out_of_range = true;
+      break;
+    }
+    result.push_back(std::pair<key_t, val_t>(base_key, base_record));
+    array_source.advance_to_next_valid(snapshot_id);
+    remaining--;
+  }
+
+  while (buffer_source.has_next && remaining && !out_of_range) {
+    const key_t &buf_key = buffer_source.get_key();
+    const val_t &buf_val = buffer_source.get_val();
+	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	snapshot_record_t buf_record;
+	buf_record.val = buf_val;
+	buf_record.seq = buf_seqnum;
+	buf_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+    if (buf_key >= end) {
+      out_of_range = true;
+      break;
+    }
+    result.push_back(std::pair<key_t, val_t>(buf_key, buf_record));
+    buffer_source.advance_to_next_valid(snapshot_id);
+    remaining--;
+  }
+
+  while (temp_buffer_source.has_next && remaining && !out_of_range) {
+    const key_t &tmp_buf_key = temp_buffer_source.get_key();
+    const val_t &tmp_buf_val = temp_buffer_source.get_val();
+	const int32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
+	snapshot_record_t tmp_buf_record;
+	tmp_buf_record.val = tmp_buf_val;
+	tmp_buf_record.seq = tmp_buf_seqnum;
+	tmp_buf_record.stat = true; // TODO: fix after treating DELREQ as special PUTREQ
+    if (tmp_buf_key >= end) {
+      out_of_range = true;
+      break;
+    }
+    result.push_back(std::pair<key_t, val_t>(tmp_buf_key, tmp_buf_record));
+    temp_buffer_source.advance_to_next_valid(snapshot_id);
+    remaining--;
+  }
+
+  return n - remaining;
+}
+
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::ArrayDataSource(
     record_t *data, uint32_t array_size, uint32_t pos)
@@ -1198,7 +1564,7 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq,
            max_model_n>::ArrayDataSource::advance_to_next_valid(int32_t snapshot_id) {
   while (pos < array_size) {
-    if (data[pos].second.read_snapshot(next_val, snapshot_id)) {
+    if (data[pos].second.read_snapshot(next_val, next_seqnum, snapshot_id)) {
       next_key = data[pos].first;
       has_next = true;
       pos++;
@@ -1217,6 +1583,11 @@ const key_t &Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::get_key() {
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 const val_t &Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::get_val() {
   return next_val;
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+const int32_t &Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::get_seqnum() {
+  return next_seqnum;
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>

@@ -98,9 +98,25 @@ inline size_t XIndex<key_t, val_t, seq>::scan(
 }
 
 template <class key_t, class val_t, bool seq>
+inline size_t XIndex<key_t, val_t, seq>::scan(
+    const key_t &begin, const size_t n,
+    std::vector<std::pair<key_t, snapshot_record_t>> &result, const uint32_t worker_id) {
+  rcu_progress(worker_id);
+  return root->scan(begin, n, result, snapshot_id);
+}
+
+template <class key_t, class val_t, bool seq>
 size_t XIndex<key_t, val_t, seq>::range_scan(
     const key_t &begin, const key_t &end,
     std::vector<std::pair<key_t, val_t>> &result, const uint32_t worker_id) {
+  rcu_progress(worker_id);
+  return root->range_scan(begin, end, result, snapshot_id);
+}
+
+template <class key_t, class val_t, bool seq>
+size_t XIndex<key_t, val_t, seq>::range_scan(
+    const key_t &begin, const key_t &end,
+    std::vector<std::pair<key_t, snapshot_record_t>> &result, const uint32_t worker_id) {
   rcu_progress(worker_id);
   return root->range_scan(begin, end, result, snapshot_id);
 }

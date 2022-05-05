@@ -703,7 +703,7 @@ AltBtreeBuffer<key_t, val_t>::DataSource::DataSource(key_t begin,
     int key_n = leaf_ptr->key_n;
     pos = 0;
     for (int i = slot; i < key_n; i++) {
-      if (leaf_ptr->vals[i].read_snapshot_ignoring_ptr(vals[pos], snapshot_id)) { // buffer_t::DataSource only used for range query
+      if (leaf_ptr->vals[i].read_snapshot_ignoring_ptr(vals[pos], seqnums[pos], snapshot_id)) { // buffer_t::DataSource only used for range query
         keys[pos] = leaf_ptr->keys[i];
         pos++;
       }
@@ -753,7 +753,7 @@ void AltBtreeBuffer<key_t, val_t>::DataSource::advance_to_next_valid(int32_t sna
         int key_n = leaf_ptr->key_n;
         pos = 0;
         for (int i = 0; i < key_n; i++) {
-          if (leaf_ptr->vals[i].read_snapshot_ignoring_ptr(vals[pos], snapshot_id)) { // buffer_t::DataSource only used for range query
+          if (leaf_ptr->vals[i].read_snapshot_ignoring_ptr(vals[pos], seqnums[pos], snapshot_id)) { // buffer_t::DataSource only used for range query
             keys[pos] = leaf_ptr->keys[i];
             pos++;
           }
@@ -792,6 +792,11 @@ const key_t &AltBtreeBuffer<key_t, val_t>::DataSource::get_key() {
 template <class key_t, class val_t>
 const val_t &AltBtreeBuffer<key_t, val_t>::DataSource::get_val() {
   return vals[pos];
+}
+
+template <class key_t, class val_t>
+const int32_t &AltBtreeBuffer<key_t, val_t>::DataSource::get_seqnum() {
+  return seqnums[pos];
 }
 
 template <class key_t, class val_t>

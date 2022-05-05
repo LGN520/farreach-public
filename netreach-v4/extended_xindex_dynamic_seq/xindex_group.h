@@ -66,12 +66,14 @@ class alignas(CACHELINE_SIZE) Group {
     void advance_to_next_valid(int32_t snapshot_id);
     const key_t &get_key();
     const val_t &get_val();
+	const int32_t &get_seqnum();
 
     uint32_t array_size, pos;
     record_t *data;
     bool has_next;
     key_t next_key;
     val_t next_val;
+	int32_t next_seqnum;
   };
 
   // ArrayRefSource only used for merge_refs_internal (compact)
@@ -105,8 +107,12 @@ class alignas(CACHELINE_SIZE) Group {
   inline result_t remove(const key_t &key, int32_t snapshot_id, int32_t seqnum);
   inline size_t scan(const key_t &begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
+  inline size_t scan(const key_t &begin, const size_t n,
+                     std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id);
   inline size_t range_scan(const key_t &begin, const key_t &end,
                            std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
+  inline size_t range_scan(const key_t &begin, const key_t &end,
+                           std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id);
 
   double mean_error_est();
   Group *split_model();
@@ -163,8 +169,12 @@ class alignas(CACHELINE_SIZE) Group {
                                   uint32_t &new_array_size) const;
   inline size_t scan_2_way(const key_t &begin, const size_t n, const key_t &end,
                            std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
+  inline size_t scan_2_way(const key_t &begin, const size_t n, const key_t &end,
+                           std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id);
   inline size_t scan_3_way(const key_t &begin, const size_t n, const key_t &end,
                            std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
+  inline size_t scan_3_way(const key_t &begin, const size_t n, const key_t &end,
+                           std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id);
   void seq_lock();
   void seq_unlock();
   inline void enable_seq_insert_opt();

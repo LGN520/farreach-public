@@ -49,8 +49,12 @@ class Root {
   inline result_t remove(const key_t &key, int32_t snapshot_id, int32_t seqnum);
   inline size_t scan(const key_t &begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
+  inline size_t scan(const key_t &begin, const size_t n,
+                     std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id);
   inline size_t range_scan(const key_t &begin, const key_t &end,
                            std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
+  inline size_t range_scan(const key_t &begin, const key_t &end,
+                           std::vector<std::pair<key_t, snapshot_record_t>> &result, int32_t snapshot_id);
 
   static void *do_adjustment(void *args);
   Root *create_new_root();

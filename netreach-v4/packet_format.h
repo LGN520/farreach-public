@@ -31,6 +31,7 @@ class Packet {
 	public:
 		Packet();
 		Packet(packet_type_t type, key_t key);
+		virtual ~Packet(){}
 
 		packet_type_t type() const;
 		key_t key() const;
@@ -50,6 +51,7 @@ class GetRequest : public Packet<key_t> {
 		GetRequest();
 		GetRequest(key_t key);
 		GetRequest(const char * data, uint32_t recv_size);
+		virtual ~GetRequest(){}
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -194,6 +196,7 @@ template<class key_t, class val_t>
 class GetResponseLatestSeq : public Packet<key_t> { // seq (w/o stat)
 	public: 
 		GetResponseLatestSeq(key_t key, val_t val, int32_t seq);
+		virtual ~GetResponseLatestSeq(){}
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -375,6 +378,7 @@ class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // seq + stat + s
 	public: 
 		CacheEvict(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx);
 		CacheEvict(const char * data, uint32_t recv_size);
+		virtual ~CacheEvict(){}
 
 		bool stat() const;
 		int16_t serveridx() const;
@@ -393,6 +397,7 @@ class CacheEvictAck : public GetRequest<key_t> {
 	public: 
 		CacheEvictAck(key_t key);
 		CacheEvictAck(const char * data, uint32_t recv_size);
+		virtual ~CacheEvictAck(){}
 };
 
 // NOTE: only used in end-hosts
