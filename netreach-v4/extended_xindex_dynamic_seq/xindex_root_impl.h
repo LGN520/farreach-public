@@ -197,6 +197,15 @@ inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val, int32
 }
 
 /*
+ * Root::force_put
+ */
+template <class key_t, class val_t, bool seq>
+inline result_t Root<key_t, val_t, seq>::force_put(const key_t &key, const val_t &val,
+                                             const uint32_t worker_id, int32_t snapshot_id) {
+  return locate_group(key)->force_put(key, val, worker_id, snapshot_id);
+}
+
+/*
  * Root::put
  */
 template <class key_t, class val_t, bool seq>

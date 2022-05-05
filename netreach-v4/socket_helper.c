@@ -1,7 +1,9 @@
 #include "socket_helper.h"
 
+#include <arpa/inet.h> // inetaddr conversion
+
 void set_sockaddr(volatile sockaddr_in &addr, uint32_t bigendian_saddr, short littleendian_port) {
-	memset(&addr, 0, sizeof(addr));
+	memset((void *)&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = bigendian_saddr;
 	addr.sin_port = htons(littleendian_port);
@@ -9,7 +11,7 @@ void set_sockaddr(volatile sockaddr_in &addr, uint32_t bigendian_saddr, short li
 
 // udp
 
-void create_udpsock(int &sockfd, const char* role) {
+void create_udpsock(int volatile &sockfd, const char* role) {
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd == -1) {
 		printf("[%s] fail to create udp socket, errno: %d!\n", role, errno);
@@ -30,14 +32,16 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 	struct timeval tv;
 	tv.tv_sec = 0;
 	tv.tv_usec =  0;
-	int res = getsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	socklen_t tvsz = sizeof(tv);
+	int res = getsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, &tvsz);
+	UNUSED(res);
 	if (tv.tv_sec != 0 || tv.tv_usec != 0) {
 		need_timeout = true;
 	}
 
 	bool is_timeout = false;
-	recvsize = recvfrom(sockfd, buf, len, flags, src-addr, addrlen);
-	if (recv_size < 0) {
+	recvsize = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+	if (recvsize < 0) {
 		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR)) {
 			is_timeout = true;
 		}
@@ -63,7 +67,8 @@ void prepare_udpserver(volatile int &sockfd, bool need_timeout, short server_por
 	// Disable udp/tcp check
 	int disable = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-		COUT_N_EXIT("[%s] disable udp checksum failed, errno: %d!", role, errno);
+		printf("[%s] disable udp checksum failed, errno: %d!", role, errno);
+		exit(-1);
 	}
 	// Set timeout for recvfrom/accept of udp/tcp
 	if (need_timeout) {
@@ -135,7 +140,8 @@ void prepare_tcpserver(volatile int &sockfd, bool need_timeout, short server_por
 	// Disable udp/tcp check
 	int disable = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-		COUT_N_EXIT("[%s] disable tcp checksum failed, errno: %d!\n", role, errno);
+		printf("[%s] disable tcp checksum failed, errno: %d!\n", role, errno);
+		exit(-1);
 	}
 	// Set timeout for recvfrom/accept of udp/tcp
 	if (need_timeout) {
@@ -158,12 +164,14 @@ void prepare_tcpserver(volatile int &sockfd, bool need_timeout, short server_por
 	}
 }
 
-bool tcpaccept(int sockfd, struct sockaddr *addr, socklen_t *addrrlen, int &connfd, const char* role) {
+bool tcpaccept(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int &connfd, const char* role) {
 	bool need_timeout = false;
 	struct timeval tv;
 	tv.tv_sec = 0;
 	tv.tv_usec =  0;
-	int res = getsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	socklen_t tvsz = sizeof(tv);
+	int res = getsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, &tvsz);
+	UNUSED(res);
 	if (tv.tv_sec != 0 || tv.tv_usec != 0) {
 		need_timeout = true;
 	}

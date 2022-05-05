@@ -23,8 +23,8 @@ class IniparserWrapper {
 		void get_client_mac(uint8_t* macaddr);
 		
 		// server
-		size_t get_split_num();
-		size_t get_server_num();
+		uint32_t get_split_num();
+		uint32_t get_server_num();
 		short get_server_port();
 		const char *get_server_ip();
 		void get_server_mac(uint8_t* macaddr);

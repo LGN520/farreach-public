@@ -142,6 +142,8 @@ class AltBtreeBuffer {
   ~AltBtreeBuffer();
 
   inline bool get(const key_t &key, val_t &val, int32_t &seqnum);
+  inline bool force_update(const key_t &key, const val_t &val, int32_t snapshot_id);
+  inline void force_insert(const key_t &key, const val_t &val, int32_t snapshot_id);
   inline bool update(const key_t &key, const val_t &val, int32_t snapshot_id, int32_t seqnum);
   inline void insert(const key_t &key, const val_t &val, int32_t snapshot_id, int32_t seqnum);
   inline bool remove(const key_t &key, int32_t snapshot_id, int32_t seqnum);
@@ -156,6 +158,9 @@ class AltBtreeBuffer {
   leaf_t *locate_leaf(key_t key, uint64_t &version);
   leaf_t *locate_leaf_locked(key_t key);
 
+  void force_insert_leaf(const key_t &key, const val_t &val, leaf_t *target, int32_t snapshot_id);
+  void force_split_n_insert_leaf(const key_t &key, const val_t &val, int slot,
+                           leaf_t *target, int32_t snapshot_id);
   void insert_leaf(const key_t &key, const val_t &val, leaf_t *target, int32_t snapshot_id, int32_t seqnum);
   void split_n_insert_leaf(const key_t &key, const val_t &val, int slot,
                            leaf_t *target, int32_t snapshot_id, int32_t seqnum);

@@ -195,6 +195,7 @@ class GetRequestNLatest : public GetRequest<key_t> {
 template<class key_t, class val_t>
 class GetResponseLatestSeq : public Packet<key_t> { // seq (w/o stat)
 	public: 
+		GetResponseLatestSeq();
 		GetResponseLatestSeq(key_t key, val_t val, int32_t seq);
 		virtual ~GetResponseLatestSeq(){}
 
@@ -246,6 +247,7 @@ class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCa
 template<class key_t, class val_t>
 class PutRequestSeq : public GetResponseLatestSeq<key_t, val_t> { // seq (w/o stat)
 	public: 
+		PutRequestSeq();
 		PutRequestSeq(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -288,6 +290,7 @@ class PutRequestPopSeqCase3 : public PutRequestSeq<key_t, val_t> { // seq (w/o s
 template<class key_t>
 class DelRequestSeq : public Packet<key_t> { // seq (w/o stat)
 	public: 
+		DelRequestSeq();
 		DelRequestSeq(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -319,6 +322,7 @@ template<class key_t>
 class ScanRequestSplit : public ScanRequest<key_t> {
 	public: 
 		ScanRequestSplit();
+		ScanRequestSplit(key_t key, key_t endkey, int16_t cur_scanidx, int16_t max_scannum);
 		ScanRequestSplit(const char * data, uint32_t recv_size);
 
 		int16_t cur_scanidx() const;
@@ -376,6 +380,7 @@ class CachePopInSwitchAck : public GetRequest<key_t> {
 template<class key_t, class val_t>
 class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // seq + stat + serveridx
 	public: 
+		CacheEvict();
 		CacheEvict(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx);
 		CacheEvict(const char * data, uint32_t recv_size);
 		virtual ~CacheEvict(){}

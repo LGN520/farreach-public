@@ -38,7 +38,7 @@ obj_t * MessagePtrQueue<obj_t>::read() {
 	if (this->_tail != this->_head) {
 		result = this->_obj_ptrs[this->_tail];
 		this->_obj_ptrs[this->_tail] = NULL;
-		this->tail = (this->_tail + 1) % this->_size;
+		this->_tail = (this->_tail + 1) % this->_size;
 		INVARIANT(result != NULL);
 	}
 	return result;

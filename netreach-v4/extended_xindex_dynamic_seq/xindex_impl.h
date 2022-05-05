@@ -72,6 +72,17 @@ inline bool XIndex<key_t, val_t, seq>::get(const key_t &key, val_t &val,
 }
 
 template <class key_t, class val_t, bool seq>
+inline bool XIndex<key_t, val_t, seq>::force_put(const key_t &key, const val_t &val,
+                                           const uint32_t worker_id) {
+  result_t res;
+  rcu_progress(worker_id);
+  while ((res = root->force_put(key, val, worker_id, snapshot_id)) == result_t::retry) {
+    rcu_progress(worker_id);
+  }
+  return res == result_t::ok;
+}
+
+template <class key_t, class val_t, bool seq>
 inline bool XIndex<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
                                            const uint32_t worker_id, int32_t seqnum) {
   result_t res;

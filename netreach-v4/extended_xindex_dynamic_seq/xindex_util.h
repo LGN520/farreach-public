@@ -603,6 +603,46 @@ struct AtomicVal {
 	this->rwlock.unlock_shared();
 	return res;
   }
+  bool force_update(const val_t &val, int32_t snapshot_id) {
+	while (true) {
+		if (this->rwlock.try_lock()) break;
+	}
+    bool res = false;
+    if (unlikely(is_ptr(this->status))) {
+      assert(!removed(this->status));
+	  assert(this->aval_ptr != nullptr);
+      res = this->aval_ptr->force_update(val, snapshot_id);
+    } else if (!removed(this->status)) { // do not make snapshot for removed latest version
+		// Keep original latest_seqnum (only used in loading phase)
+		INVARIANT(this->latest_seqnum == 0);
+		if (this->latest_id == snapshot_id) {
+			this->latest_val = val;
+		}
+		else {
+			// latest_id must > any ss_id
+			if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+				this->ss_seqnum_0 = this->latest_seqnum;
+				this->ss_id_0 = this->latest_id;
+				this->ss_val_0 = this->latest_val;
+				this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
+			}
+			else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+				this->ss_seqnum_1 = this->latest_seqnum;
+				this->ss_id_1 = this->latest_id;
+				this->ss_val_1 = this->latest_val;
+				this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
+			}
+
+			this->latest_id = snapshot_id;
+			this->latest_val = val;
+		}
+		res = true;
+    } else { // if the latest version is removed, xindex should insert the val into buffer/buffer_temp as a new record
+      res = false;
+    }
+    this->rwlock.unlock();
+    return res;
+  }
   bool update(const val_t &val, int32_t snapshot_id, int32_t seqnum) {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
@@ -754,6 +794,42 @@ struct AtomicVal {
 	res = removed(this->status) && (this->ss_id_0 == -1 || removed(this->ss_status_0)) && (this->ss_id_1 == -1 || removed(this->ss_status_1));
 	this->rwlock.unlock_shared();
 	return res;
+  }
+  bool force_update_ignoring_ptr(const val_t &val, int32_t snapshot_id) {
+	while (true) {
+		if (this->rwlock.try_lock()) break;
+	}
+    bool res = false;
+    if (!removed(this->status)) { // do not make snapshot for removed latest version
+		// Keep original latest_seqnum (only used in loading phase)
+		INVARIANT(this->latest_seqnum == 0);
+		if (this->latest_id == snapshot_id) {
+		  this->latest_val = val;
+		}
+		else {
+			// latest_id must > any ss_id
+			if (this->ss_id_0 == -1 || this->ss_id_0 <= this->ss_id_1) {
+				this->ss_id_0 = this->latest_id;
+				this->ss_seqnum_0 = this->latest_seqnum;
+				this->ss_val_0 = this->latest_val;
+				this->ss_status_0 = 0; // set not removed (latest value must not be removed here)
+			}
+			else if (this->ss_id_1 == -1 || this->ss_id_1 <= this->ss_id_0) {
+				this->ss_id_1 = this->latest_id;
+				this->ss_seqnum_1 = this->latest_seqnum;
+				this->ss_val_1 = this->latest_val;
+				this->ss_status_1 = 0; // set not removed (latest value must not be removed here)
+			}
+
+			this->latest_id = snapshot_id;
+			this->latest_val = val;
+		}
+		res = true;
+    } else { // if the latest version is removed, xindex should insert the val into buffer/buffer_temp as a new record
+      res = false;
+    }
+    this->rwlock.unlock();
+    return res;
   }
   bool update_ignoring_ptr(const val_t &val, int32_t snapshot_id, int32_t seqnum) {
 	while (true) {

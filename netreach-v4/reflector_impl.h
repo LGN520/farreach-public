@@ -86,7 +86,7 @@ void *run_reflector_popserver(void *param) {
 	pthread_exit(nullptr);
 }
 
-void *run_reflector_dpdkserver() {
+void *run_reflector_dpdkserver(void *param) {
 	char buf[MAX_BUFSIZE];
 	uint32_t recvsize = 0;
 

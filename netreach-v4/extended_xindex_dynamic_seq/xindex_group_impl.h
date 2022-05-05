@@ -103,6 +103,40 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t &key,
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline result_t Group<key_t, val_t, seq, max_model_n>::force_put(
+    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id) {
+  result_t res;
+#ifdef BF_OPTIMIZATION
+  if (bf->query(key) == true) { // may have false positive
+    res = force_update_to_array(key, val, worker_id, snapshot_id);
+    if (res == result_t::ok || res == result_t::retry) {
+      return res;
+    }
+  }
+#else
+    res = force_update_to_array(key, val, worker_id, snapshot_id);
+  if (res == result_t::ok || res == result_t::retry) {
+    return res;
+  }
+#endif
+
+  if (likely(buffer_temp == nullptr)) {
+    if (buf_frozen) {
+      return result_t::retry;
+    }
+    force_insert_to_buffer(key, val, buffer, snapshot_id);
+    return result_t::ok;
+  } else {
+    if (force_update_to_buffer(key, val, buffer, snapshot_id)) {
+      return result_t::ok;
+    }
+    force_insert_to_buffer(key, val, buffer_temp, snapshot_id);
+    return result_t::ok;
+  }
+  COUT_N_EXIT("force put should not fail!");
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::put(
     const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum) {
   result_t res;
@@ -504,6 +538,63 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_array(
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline result_t Group<key_t, val_t, seq, max_model_n>::force_update_to_array(
+    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id) {
+  if (seq) {
+    seq_lock();
+    size_t pos = get_pos_from_array(key);
+    if (pos != array_size) {  // position is valid (not out-of-range)
+      seq_unlock();
+      return (/* key matches */ data[pos].first == key &&
+              /* record updated */ data[pos].second.force_update(val, snapshot_id))
+                 ? result_t::ok
+                 : result_t::failed;
+    } else {                      // might append
+      if (buffer->size() == 0) {  // buf is empty
+        if (capacity < 0) {
+          seq_unlock();
+          return result_t::retry;
+        }
+
+        if ((int32_t)array_size == capacity) {
+          record_t *prev_data = nullptr;
+          capacity = array_size * seq_insert_reserve_factor;
+          record_t *new_data = new record_t[capacity]();
+          memcpy(new_data, data, array_size * sizeof(record_t));
+          prev_data = data;
+          data = new_data;
+
+          data[pos].first = key;
+          data[pos].second = wrapped_val_t(val, snapshot_id, 0);
+          array_size++;
+          seq_unlock();
+
+          rcu_barrier(worker_id);
+          memory_fence();
+          delete[] prev_data;
+          return result_t::ok;
+        } else {
+          data[pos].first = key;
+          data[pos].second = wrapped_val_t(val, snapshot_id, 0);
+          array_size++;
+          seq_unlock();
+          return result_t::ok;
+        }
+      } else {
+        seq_unlock();
+        return result_t::failed;
+      }
+    }
+  } else {  // no seq
+    size_t pos = get_pos_from_array(key);
+    return pos != array_size && data[pos].first == key &&
+                   data[pos].second.force_update(val, snapshot_id)
+               ? result_t::ok
+               : result_t::failed;
+  }
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
     const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum) {
   if (seq) {
@@ -680,6 +771,18 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::get_from_buffer(
     const key_t &key, val_t &val, buffer_t *buffer, int32_t &seqnum) {
   return buffer->get(key, val, seqnum);
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline bool Group<key_t, val_t, seq, max_model_n>::force_update_to_buffer(
+    const key_t &key, const val_t &val, buffer_t *buffer, int32_t snapshot_id) {
+  return buffer->force_update(key, val, snapshot_id);
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+inline void Group<key_t, val_t, seq, max_model_n>::force_insert_to_buffer(
+    const key_t &key, const val_t &val, buffer_t *buffer, int32_t snapshot_id) {
+  buffer->force_insert(key, val, snapshot_id);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
@@ -1365,14 +1468,14 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
         out_of_range = true;
         break;
       }
-      result.push_back(std::pair<key_t, val_t>(buf_key, buf_record));
+      result.push_back(std::pair<key_t, snapshot_record_t>(buf_key, buf_record));
       buffer_source.advance_to_next_valid(snapshot_id);
     } else {
       if (tmp_buf_key >= end) {
         out_of_range = true;
         break;
       }
-      result.push_back(std::pair<key_t, val_t>(tmp_buf_key, tmp_buf_record));
+      result.push_back(std::pair<key_t, snapshot_record_t>(tmp_buf_key, tmp_buf_record));
       temp_buffer_source.advance_to_next_valid(snapshot_id);
     }
 
@@ -1406,14 +1509,14 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
         out_of_range = true;
         break;
       }
-      result.push_back(std::pair<key_t, val_t>(base_key, base_record));
+      result.push_back(std::pair<key_t, snapshot_record_t>(base_key, base_record));
       array_source.advance_to_next_valid(snapshot_id);
     } else {
       if (buf_key >= end) {
         out_of_range = true;
         break;
       }
-      result.push_back(std::pair<key_t, val_t>(buf_key, buf_record));
+      result.push_back(std::pair<key_t, snapshot_record_t>(buf_key, buf_record));
       buffer_source.advance_to_next_valid(snapshot_id);
     }
 
@@ -1446,14 +1549,14 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
         out_of_range = true;
         break;
       }
-      result.push_back(std::pair<key_t, val_t>(buf_key, buf_record));
+      result.push_back(std::pair<key_t, snapshot_record_t>(buf_key, buf_record));
       buffer_source.advance_to_next_valid(snapshot_id);
     } else {
       if (tmp_buf_key >= end) {
         out_of_range = true;
         break;
       }
-      result.push_back(std::pair<key_t, val_t>(tmp_buf_key, tmp_buf_record));
+      result.push_back(std::pair<key_t, snapshot_record_t>(tmp_buf_key, tmp_buf_record));
       temp_buffer_source.advance_to_next_valid(snapshot_id);
     }
 
@@ -1486,14 +1589,14 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
         out_of_range = true;
         break;
       }
-      result.push_back(std::pair<key_t, val_t>(base_key, base_record));
+      result.push_back(std::pair<key_t, snapshot_record_t>(base_key, base_record));
       array_source.advance_to_next_valid(snapshot_id);
     } else {
       if (tmp_buf_key >= end) {
         out_of_range = true;
         break;
       }
-      result.push_back(std::pair<key_t, val_t>(tmp_buf_key, tmp_buf_record));
+      result.push_back(std::pair<key_t, snapshot_record_t>(tmp_buf_key, tmp_buf_record));
       temp_buffer_source.advance_to_next_valid(snapshot_id);
     }
 
@@ -1513,7 +1616,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
       out_of_range = true;
       break;
     }
-    result.push_back(std::pair<key_t, val_t>(base_key, base_record));
+    result.push_back(std::pair<key_t, snapshot_record_t>(base_key, base_record));
     array_source.advance_to_next_valid(snapshot_id);
     remaining--;
   }
@@ -1530,7 +1633,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
       out_of_range = true;
       break;
     }
-    result.push_back(std::pair<key_t, val_t>(buf_key, buf_record));
+    result.push_back(std::pair<key_t, snapshot_record_t>(buf_key, buf_record));
     buffer_source.advance_to_next_valid(snapshot_id);
     remaining--;
   }
@@ -1547,7 +1650,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
       out_of_range = true;
       break;
     }
-    result.push_back(std::pair<key_t, val_t>(tmp_buf_key, tmp_buf_record));
+    result.push_back(std::pair<key_t, snapshot_record_t>(tmp_buf_key, tmp_buf_record));
     temp_buffer_source.advance_to_next_valid(snapshot_id);
     remaining--;
   }

@@ -75,12 +75,12 @@ char client_workload_dir[256];
 size_t per_client_per_period_max_sending_rate;
 
 // server: loading phase
-size_t split_n;
-size_t load_n;
+uint32_t split_n;
+uint32_t load_n;
 char server_load_workload_dir[256];
 
 // server: transaction phase
-size_t server_num = 1;
+uint32_t server_num = 1;
 short server_port_start = -1;
 // switch os simulator for processing special cases and packet loss handling (and tcp servers for workers)
 const char* server_ip = nullptr;

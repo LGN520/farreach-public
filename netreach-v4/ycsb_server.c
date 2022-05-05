@@ -84,14 +84,6 @@ void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals);
 void transaction_main(xindex_t *table); // transaction phase
 void kill(int signum);
 
-size_t get_server_idx(index_key_t key) {
-	size_t server_idx = key.keylo / per_server_range;
-	if (server_idx >= server_num) {
-		server_idx = server_num - 1;
-	}
-	return server_idx;
-}
-
 int main(int argc, char **argv) {
   parse_ini("config.ini");
   parse_control_ini("control_type.ini");
@@ -181,7 +173,7 @@ void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {
 	while (true) {
 		tmpkey = iter.key();
 		tmpval = iter.val();	
-		if (iter.type() == uint8_t(packet_type_t::PUT_REQ)) {	// INESRT
+		if (iter.type() == int8_t(packet_type_t::PUTREQ)) {	// INESRT
 			loadmap.insert(std::pair<index_key_t, val_t>(tmpkey, tmpval));
 		}
 		else {
@@ -212,7 +204,6 @@ void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {
 }
 
 void loading_main(xindex_t *table) {
-	int ret = 0;
 	unsigned lcoreid = 1;
 
 	load_running = false;
@@ -272,10 +263,10 @@ void *run_load_sfg(void * param) {
 	index_key_t tmpkey;
 	val_t tmpval;
 
-	int res = 0;
 	COUT_THIS("[local client " << uint32_t(thread_id) << "] Ready.");
 
-	ready_threads++;
+	// TODO: update server_expected_ready_threads
+	transaction_ready_threads++;
 
 #if !defined(NDEBUGGING_LOG)
   std::string logname;
@@ -289,8 +280,8 @@ void *run_load_sfg(void * param) {
 	while (load_running) {
 		tmpkey = iter.key();
 		tmpval = iter.val();	
-		if (iter.type() == uint8_t(packet_type_t::PUT_REQ)) {	// INESRT
-			bool tmp_stat = table->put(tmpkey, tmpval, thread_id); // Use put instead of data_put as data structure (i.e., vector) cannot handle dyanmic insert
+		if (iter.type() == uint8_t(packet_type_t::PUTREQ)) {	// INESRT
+			bool tmp_stat = table->force_put(tmpkey, tmpval, thread_id); // Use put instead of data_put as data structure (i.e., vector) cannot handle dyanmic insert
 			if (!tmp_stat) {
 				COUT_N_EXIT("Loading phase: fail to put <" << tmpkey.to_string() << ", " << tmpval.to_string() << ">");
 			}

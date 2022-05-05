@@ -103,9 +103,14 @@ CLEAN += ycsb/parser.o
 DEPS += crc32.d
 CLEAN += crc32.o
 
-DEPS += backup_data.d special_case.d
-CLEAN += backup_data.d backup_data.o special_case.d special_case.o
-BACKUP_OBJECTS := backup_data.o special_case.o
+DEPS += socket_helper.d
+CLEAN += socket_helper.o
+
+#DEPS += backup_data.d special_case.d
+#CLEAN += backup_data.d backup_data.o special_case.d special_case.o
+#BACKUP_OBJECTS := backup_data.o special_case.o
+DEPS += special_case.d
+CLEAN += special_case.o
 
 INIPARSER_OBJECTS := iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
 DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
@@ -148,10 +153,20 @@ ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o
 DEPS += ycsb_remote_client.d
 CLEAN += ycsb_remote_client.o ycsb_remote_client
 
-ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) $(BACKUP_OBJECTS)
+ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o ycsb/parser.o socket_helper.o $(INIPARSER_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += ycsb_server.d
 CLEAN += ycsb_server.o ycsb_server
+
+switchos: switchos.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS) special_case.o
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += switchos.d
+CLEAN += switchos.o switchos
+
+controller: controller.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS)
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += controller.d
+CLEAN += controller.o controller
 
 ##############################################################################
 # Top level targets
