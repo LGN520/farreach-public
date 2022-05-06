@@ -582,7 +582,7 @@ void *run_controller_snapshotclient(void *param) {
 							}
 						}
 
-						if (ack_control_type_phase0 == -1 && ack_cur_recv_bytes >= sizeof(int)) {
+						if (ack_control_type_phase0 == -1 && ack_cur_recv_bytes >= int(sizeof(int))) {
 							ack_control_type_phase0 = *((int *)ack_recvbuf);
 							INVARIANT(ack_control_type_phase0 == SNAPSHOT_SERVERSIDE_ACK);
 
@@ -592,7 +592,7 @@ void *run_controller_snapshotclient(void *param) {
 
 						if (ack_control_type_phase0 != -1) {
 							// Move remaining bytes and reset metadata
-							if (ack_cur_recv_bytes > sizeof(int)) {
+							if (ack_cur_recv_bytes > int(sizeof(int))) {
 								memcpy(ack_recvbuf, ack_recvbuf + sizeof(int), ack_cur_recv_bytes - sizeof(int));
 								ack_cur_recv_bytes = ack_cur_recv_bytes - sizeof(int);
 							}
