@@ -606,6 +606,12 @@ void GetResponseLatestSeq<key_t, val_t>::deserialize(const char * data, uint32_t
 // GetResponseLatestSeqInswitchCase1 (value must <= 128B)
 
 template<class key_t, class val_t>
+GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1()
+	: GetResponseLatestSeq<key_t, val_t>(), _idx(0), _stat(false)
+{
+}
+
+template<class key_t, class val_t>
 GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat) 
 	: GetResponseLatestSeq<key_t, val_t>(key, val, seq), _idx(idx), _stat(stat)
 {
@@ -675,7 +681,7 @@ void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * d
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
 	begin += tmp_valsize;
 	memcpy((void *)&this->_seq, begin, sizeof(int32_t));
-	this->_seq = int32_t(ntohl(uint32_t(this->seq)));
+	this->_seq = int32_t(ntohl(uint32_t(this->_seq)));
 	begin += sizeof(int32_t);
 	begin += INSWITCH_PREV_BYTES; // the first bytes of inswitch_hdr
 	memcpy((void *)&this->_idx, begin, sizeof(int16_t));
@@ -1044,10 +1050,10 @@ void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 	this->_serveridx = int16_t(ntohs(uint16_t(this->_serveridx))); // Big-endian to little-endian
 }
 
-// CachePopInSwitch (valud must <= 128B)
+// CachePopInswitch (valud must <= 128B)
 
 template<class key_t, class val_t>
-CachePopInSwitch<key_t, val_t>::CachePopInSwitch(key_t key, val_t val, int32_t seq, int16_t freeidx)
+CachePopInswitch<key_t, val_t>::CachePopInswitch(key_t key, val_t val, int32_t seq, int16_t freeidx)
 	: GetResponseLatestSeq<key_t, val_t>(key, val, seq), _freeidx(freeidx)
 {
 	this->_type = static_cast<uint8_t>(PacketType::CACHE_POP_INSWITCH);
@@ -1057,7 +1063,7 @@ CachePopInSwitch<key_t, val_t>::CachePopInSwitch(key_t key, val_t val, int32_t s
 }
 
 template<class key_t, class val_t>
-uint32_t CachePopInSwitch<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+uint32_t CachePopInswitch<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	//uint32_t my_size = this->size();
 	//INVARIANT(max_size >= my_size);
 	char *begin = data;
@@ -1078,34 +1084,34 @@ uint32_t CachePopInSwitch<key_t, val_t>::serialize(char * const data, uint32_t m
 }
 
 template<class key_t, class val_t>
-int16_t CachePopInSwitch<key_t, val_t>::freeidx() const {
+int16_t CachePopInswitch<key_t, val_t>::freeidx() const {
 	return _freeidx;
 }
 
 template<class key_t, class val_t>
-uint32_t CachePopInSwitch<key_t, val_t>::size() { // unused
+uint32_t CachePopInswitch<key_t, val_t>::size() { // unused
 	return sizeof(int8_t) + sizeof(key_t) + sizeof(int32_t) + val_t::MAX_VALLEN + sizeof(int32_t) + 5 + sizeof(int16_t);
 }
 
 template<class key_t, class val_t>
-void CachePopInSwitch<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
+void CachePopInswitch<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 {
-	COUT_N_EXIT("Invalid invoke of deserialize for CachePopInSwitch");
+	COUT_N_EXIT("Invalid invoke of deserialize for CachePopInswitch");
 }
 
-// CachePopInSwitchAck (no value)
+// CachePopInswitchAck (no value)
 
 template<class key_t>
-CachePopInSwitchAck<key_t>::CachePopInSwitchAck(const char *data, uint32_t recv_size)
+CachePopInswitchAck<key_t>::CachePopInswitchAck(const char *data, uint32_t recv_size)
 {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_POP_INSWITCH_ACK);
 }
 
 template<class key_t>
-uint32_t CachePopInSwitchAck<key_t>::serialize(char * const data, uint32_t max_size)
+uint32_t CachePopInswitchAck<key_t>::serialize(char * const data, uint32_t max_size)
 {
-	COUT_N_EXIT("Invalid invoke of serialize for CachePopInSwitchAck");
+	COUT_N_EXIT("Invalid invoke of serialize for CachePopInswitchAck");
 }
 
 // CacheEvict (value must <= 128B; only used in end-hosts)

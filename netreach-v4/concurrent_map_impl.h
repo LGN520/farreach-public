@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <vector>
+#include "concurrent_map.h"
 
 template <class key_t, class val_t>
 ConcurrentMap<key_t, val_t>::ConcurrentMap() {
@@ -672,13 +673,13 @@ void ConcurrentMap<key_t, val_t>::Leaf::move_vals_backward(int begin,
 
 template <class key_t, class val_t>
 void ConcurrentMap<key_t, val_t>::Leaf::copy_vals(int begin, int end,
-                                                   atomic_val_t *dst) {
+                                                   concurrent_val_t *dst) {
   std::copy(vals + begin, vals + end, dst);
 }
 
 template <class key_t, class val_t>
 void ConcurrentMap<key_t, val_t>::Leaf::copy_vals(int begin,
-                                                   atomic_val_t *dst) {
+                                                   concurrent_val_t *dst) {
   std::copy(vals + begin, vals + key_n, dst);
 }
 

@@ -56,6 +56,7 @@ Val::Val(const Val &other) {
 }
 
 Val::Val(const volatile Val &other) {
+	memory_fence();
 	if (other.val_data != nullptr && other.val_length != 0) {
 		// Deep copy
 		val_data = new char[other.val_length];
@@ -68,7 +69,6 @@ Val::Val(const volatile Val &other) {
 		val_length = 0;
 		val_data = nullptr;
 	}
-	memory_fence();
 }
 
 Val& Val::operator=(const Val &other) {
@@ -87,7 +87,24 @@ Val& Val::operator=(const Val &other) {
 	return *this;
 }
 
-Val& Val::operator=(const volatile Val &other) {
+/*Val& Val::operator=(const volatile Val &other) {
+	memory_fence();
+	if (other.val_data != nullptr && other.val_length != 0) {
+		// Deep copy
+		val_data = new char[other.val_length];
+		INVARIANT(val_data != nullptr);
+		memcpy(val_data, other.val_data, other.val_length); // val_length is # of bytes
+
+		val_length = other.val_length;
+	}
+	else {
+		val_length = 0;
+		val_data = nullptr;
+	}
+	return *this;
+}*/
+
+void Val::operator=(const Val &other) volatile {
 	if (other.val_data != nullptr && other.val_length != 0) {
 		// Deep copy
 		val_data = new char[other.val_length];
@@ -101,10 +118,10 @@ Val& Val::operator=(const volatile Val &other) {
 		val_data = nullptr;
 	}
 	memory_fence();
-	return *this;
 }
 
-volatile Val& Val::operator=(const Val &other) volatile {
+/*void Val::operator=(const volatile Val &other) volatile {
+	memory_fence();
 	if (other.val_data != nullptr && other.val_length != 0) {
 		// Deep copy
 		val_data = new char[other.val_length];
@@ -118,25 +135,7 @@ volatile Val& Val::operator=(const Val &other) volatile {
 		val_data = nullptr;
 	}
 	memory_fence();
-	return *this;
-}
-
-volatile Val& Val::operator=(const volatile Val &other) volatile {
-	if (other.val_data != nullptr && other.val_length != 0) {
-		// Deep copy
-		val_data = new char[other.val_length];
-		INVARIANT(val_data != nullptr);
-		memcpy(val_data, other.val_data, other.val_length); // val_length is # of bytes
-
-		val_length = other.val_length;
-	}
-	else {
-		val_length = 0;
-		val_data = nullptr;
-	}
-	memory_fence();
-	return *this;
-}
+}*/
 
 bool Val::operator==(const Val &other) {
 	if (val_length == 0 && val_data == nullptr && \
@@ -177,7 +176,7 @@ void Val::from_slice(rocksdb::Slice& slice) {
 */
 
 void Val::from_string(std::string& str) {
-	INVARIANT(str.length() <= int32_t(MAX_VALLEN));
+	INVARIANT(int32_t(str.length()) <= MAX_VALLEN);
 	if (str.data() != nullptr && str.length() != 0) {
 		// Deep copy
 		val_data = new char[str.length()];
@@ -214,6 +213,19 @@ uint32_t Val::deserialize(const char *buf, uint32_t buflen) {
 	buf += vallen_bytes;
 	buflen -= vallen_bytes;
 	uint32_t val_deserialize_size = deserialize_val(buf, buflen); // vallen + [padding size]
+
+	return vallen_bytes + val_deserialize_size; // sizeof(vallen) + vallen + [padding size]
+}
+
+uint32_t Val::deserialize(const char *buf, uint32_t buflen) volatile {
+	INVARIANT(buf != nullptr);
+
+	uint32_t vallen_bytes = ((Val *)this)->deserialize_vallen(buf, buflen); // sizeof(vallen)
+	memory_fence();
+	buf += vallen_bytes;
+	buflen -= vallen_bytes;
+	uint32_t val_deserialize_size = ((Val *)this)->deserialize_val(buf, buflen); // vallen + [padding size]
+	memory_fence();
 
 	return vallen_bytes + val_deserialize_size; // sizeof(vallen) + vallen + [padding size]
 }

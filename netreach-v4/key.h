@@ -35,7 +35,10 @@ class Key {
   Key(int32_t keylo, int32_t keyhi);
 #endif
   Key(const Key &other);
+  Key(const Key volatile &other);
   Key &operator=(const Key &other);
+  Key &operator=(const Key volatile &other);
+  void operator=(const Key &other) volatile; // suppress warning of implicit deference of volatile type
 
   /*rocksdb::Slice to_slice() const;
   void from_slice(rocksdb::Slice& slice);*/
@@ -56,6 +59,7 @@ class Key {
   // operation on packet buf (16B key)
   uint32_t deserialize(const char *buf, uint32_t buflen);
   uint32_t serialize(char *buf, uint32_t buflen);
+  uint32_t serialize(char *buf, uint32_t buflen) volatile;
   //uint32_t size() const;
 
 #ifdef LARGE_KEY

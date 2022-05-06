@@ -76,7 +76,7 @@ void prepare_server() {
 	//for (size_t i = 0; i < server_num; i++) {
 	//  pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
 	//}
-	server_worker_pkts_list = new struct rte_mbuf**[server_num];
+	server_worker_pkts_list = new struct rte_mbuf* volatile *[server_num];
 	server_worker_heads = new uint32_t[server_num];
 	server_worker_tails = new uint32_t[server_num];
 	for (size_t i = 0; i < server_num; i++) {
@@ -211,6 +211,7 @@ static int run_receiver(void *param) {
 						|| optype == packet_type_t::PUTREQ_SEQ_INSWITCH_CASE1
 						|| optype == packet_type_t::DELREQ_SEQ_INSWITCH_CASE1) {
 					if (((reflector_head_for_popack_snapshot + 1) % MQ_SIZE) != reflector_tail_for_popack_snapshot) {
+						INVARIANT(reflector_pkts_for_popack_snapshot[reflector_head_for_popack_snapshot] == NULL);
 						reflector_pkts_for_popack_snapshot[reflector_head_for_popack_snapshot] = received_pkts[i];
 						reflector_head_for_popack_snapshot = (reflector_head_for_popack_snapshot + 1) % MQ_SIZE;
 					}
@@ -232,6 +233,7 @@ static int run_receiver(void *param) {
 						}*/
 						if (((server_worker_heads[idx] + 1) % MQ_SIZE) != server_worker_tails[idx]) {
 							//receiver_param.overall_thpt++;
+							INVARIANT(server_worker_pkts_list[idx][server_worker_heads[idx]] == NULL);
 							server_worker_pkts_list[idx][server_worker_heads[idx]] = received_pkts[i];
 							server_worker_heads[idx] = (server_worker_heads[idx] + 1) % MQ_SIZE;
 						}
@@ -752,7 +754,7 @@ static int run_server_worker(void * param) {
 		server_cached_keyset_list[serveridx].erase(tmp_cache_evict_ptr->key()); // NOTE: no contention
 
 		// update in-memory KVS if necessary
-		bool is_deleted_before = deleted_sets[serveridx].check_and_remove(req.key(), req.seq());
+		bool is_deleted_before = server_deleted_sets[serveridx].check_and_remove(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->seq());
 		if (!is_deleted_before) {
 			if (tmp_cache_evict_ptr->stat()) { // put
 				table->put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), serveridx, tmp_cache_evict_ptr->seq());

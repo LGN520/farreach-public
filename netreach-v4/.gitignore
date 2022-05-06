@@ -21,3 +21,5 @@ ycsb_server
 !testcases/backup/*
 !testcases/normal/*
 *.pcap
+switchos
+controller

@@ -66,6 +66,19 @@ Key::Key(const Key &other) {
 #endif
 }
 
+Key::Key(const Key volatile &other) {
+	memory_fence();
+#ifdef LARGE_KEY
+	this->keylolo = other.keylolo;
+	this->keylohi = other.keylohi;
+	this->keyhilo = other.keyhilo;
+	this->keyhihi = other.keyhihi;
+#else
+	keylo = other.keylo;
+	keyhi = other.keyhi;
+#endif
+}
+
 Key& Key::operator=(const Key &other) {
 #ifdef LARGE_KEY
 	this->keylolo = other.keylolo;
@@ -77,6 +90,33 @@ Key& Key::operator=(const Key &other) {
 	keyhi = other.keyhi;
 #endif
 	return *this;
+}
+
+Key& Key::operator=(const Key volatile &other) {
+	memory_fence();
+#ifdef LARGE_KEY
+	this->keylolo = other.keylolo;
+	this->keylohi = other.keylohi;
+	this->keyhilo = other.keyhilo;
+	this->keyhihi = other.keyhihi;
+#else
+	keylo = other.keylo;
+	keyhi = other.keyhi;
+#endif
+	return *this;
+}
+
+void Key::operator=(const Key &other) volatile {
+#ifdef LARGE_KEY
+	this->keylolo = other.keylolo;
+	this->keylohi = other.keylohi;
+	this->keyhilo = other.keyhilo;
+	this->keyhihi = other.keyhihi;
+#else
+	keylo = other.keylo;
+	keyhi = other.keyhi;
+#endif
+	memory_fence();
 }
 
 /*
@@ -121,9 +161,9 @@ Key::model_key_t Key::to_model_key() const {
 
 int64_t Key::to_int() const {
 #ifdef LARGE_KEY
-	return (int64_t(keylohi<<32) | int64_t(keylolo)) ^ (int64_t(keyhihi<<32) | int64_t(keyhilo));
+	return ((int64_t(keylohi)<<32) | int64_t(keylolo)) ^ ((int64_t(keyhihi)<<32) | int64_t(keyhilo));
 #else
-	return int64_t(keyhi<<32) | int64_t(keylo);
+	return (int64_t(keyhi)<<32) | int64_t(keylo);
 #endif
 }
 
@@ -218,6 +258,31 @@ uint32_t Key::deserialize(const char* buf, uint32_t buflen) {
 }
 
 uint32_t Key::serialize(char* buf, uint32_t buflen) {
+#ifdef LARGE_KEY
+	INVARIANT(buf != nullptr && buflen >= 16);
+	// Little-endian to big-endian
+	uint32_t bigendian_keylolo = htonl(uint32_t(keylolo));
+	uint32_t bigendian_keylohi = htonl(uint32_t(keylohi));
+	uint32_t bigendian_keyhilo = htonl(uint32_t(keyhilo));
+	uint32_t bigendian_keyhihi = htonl(uint32_t(keyhihi));
+	memcpy(buf, (char *)&bigendian_keylolo, sizeof(uint32_t));
+	memcpy(buf+4, (char *)&bigendian_keylohi, sizeof(uint32_t));
+	memcpy(buf+8, (char *)&bigendian_keyhilo, sizeof(uint32_t));
+	memcpy(buf+12, (char *)&bigendian_keyhihi, sizeof(uint32_t));
+	return 16;
+#else
+	INVARIANT(buf != nullptr && buflen >= 8);
+	// Little-endian to big-endian
+	uint32_t bigendian_keylo = htonl(uint32_t(keylo));
+	uint32_t bigendian_keyhi = htonl(uint32_t(keyhi));
+	memcpy(buf, (char *)&bigendian_keylo, sizeof(uint32_t));
+	memcpy(buf+4, (char *)&bigendian_keyhi, sizeof(uint32_t));
+	return 8;
+#endif
+}
+
+uint32_t Key::serialize(char* buf, uint32_t buflen) volatile {
+	memory_fence();
 #ifdef LARGE_KEY
 	INVARIANT(buf != nullptr && buflen >= 16);
 	// Little-endian to big-endian

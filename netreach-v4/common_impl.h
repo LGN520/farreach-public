@@ -45,8 +45,8 @@ typedef DelRequestSeqInswitchCase1<index_key_t, val_t> del_request_seq_inswitch_
 typedef DelRequestSeqCase3<index_key_t> del_request_seq_case3_t;
 typedef ScanRequestSplit<index_key_t> scan_request_split_t;
 typedef CachePop<index_key_t, val_t> cache_pop_t;
-typedef CachePopInSwitch<index_key_t, val_t> cache_pop_inswitch_t;
-typedef CachePopInSwitchAck<index_key_t> cache_pop_inswitch_ack_t;
+typedef CachePopInswitch<index_key_t, val_t> cache_pop_inswitch_t;
+typedef CachePopInswitchAck<index_key_t> cache_pop_inswitch_ack_t;
 typedef CacheEvict<index_key_t, val_t> cache_evict_t;
 typedef CacheEvictAck<index_key_t> cache_evict_ack_t;
 typedef CacheEvictCase2<index_key_t, val_t> cache_evict_case2_t;

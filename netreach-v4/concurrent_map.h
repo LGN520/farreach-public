@@ -82,10 +82,12 @@ class ConcurrentMap {
     Leaf *next;
   };
 
+ public:
+
   // Only used for range query
   struct DataSource {
-    DataSource(key_t begin, ConcurrentMap *buffer, int32_t snapshot_id);
-    void advance_to_next_valid(int32_t snapshot_id);
+    DataSource(key_t begin, ConcurrentMap *buffer);
+    void advance_to_next_valid();
     const key_t &get_key();
     const val_t &get_val();
 
@@ -96,7 +98,6 @@ class ConcurrentMap {
     val_t vals[node_capacity];
   };
 
- public:
   ConcurrentMap();
   ~ConcurrentMap();
 

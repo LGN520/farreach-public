@@ -85,7 +85,6 @@ struct ConcurrentVal {
   }
   bool update(const val_t &val) {
     lock();
-    uint64_t status = this->status;
 	this->val = val;
     memory_fence();
     incr_version();

@@ -37,6 +37,7 @@
 	+ For cache consistency between CPU register and whole memory
 		* volatile: disable reordering; disable register cache (both LOAD/STORE) for the specified variables
 		* memory fence: disable reordering; disable register cache by re-loading all registers before LOAD and flushing to memory after STORE 
+	+ For atomicity/serializability, we can use locking. copy-on-write w/ RCU, and version check
 
 ## Overview
 

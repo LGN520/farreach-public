@@ -39,6 +39,7 @@ template<class obj_t>
 obj_t * MessagePtrQueue<obj_t>::read() {
 	obj_t *result = NULL;
 	if (this->_tail != this->_head) {
+		INVARIANT(this->_obj_ptrs[this->_tail] != NULL);
 		result = this->_obj_ptrs[this->_tail];
 		this->_obj_ptrs[this->_tail] = NULL;
 		this->_tail = (this->_tail + 1) % this->_size;

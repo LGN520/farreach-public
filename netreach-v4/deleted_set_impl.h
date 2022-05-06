@@ -57,7 +57,7 @@ bool DeletedSet<key_t, seq_t>::check_and_remove(key_t key, seq_t seq) {
 		return isdeleted;
 	}
 
-	uint32_t oldseq = iter->second;
+	seq_t oldseq = iter->second;
 	INVARIANT(oldseq != seq);
 	if (oldseq < seq) {
 		records_sorted_bykey.erase(iter);

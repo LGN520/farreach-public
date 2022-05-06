@@ -21,10 +21,10 @@ class Val {
   Val(const Val &other);
   Val(const volatile Val &other);
   Val &operator=(const Val &other);
-  Val &operator=(const volatile Val &other);
+  //Val &operator=(const volatile Val &other);
   // Qualifiers of member functions are used to restrict "this"
-  volatile Val &operator=(const Val &other) volatile;
-  volatile Val &operator=(const volatile Val &other) volatile;
+  void operator=(const Val &other) volatile;
+  //void operator=(const volatile Val &other) volatile;
   bool operator==(const Val& other);
 
   /*rocksdb::Slice to_slice() const; // NOTE: slice is shallow copy
@@ -34,6 +34,7 @@ class Val {
 
   // operation on packet buf (1B vallength + valdata)
   uint32_t deserialize(const char *buf, uint32_t buflen);
+  uint32_t deserialize(const char *buf, uint32_t buflen) volatile;
   uint32_t deserialize_vallen(const char *buf, uint32_t buflen);
   uint32_t deserialize_val(const char *buf, uint32_t buflen);
   uint32_t serialize(char *buf, uint32_t buflen);
