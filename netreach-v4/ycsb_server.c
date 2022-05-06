@@ -19,10 +19,7 @@
 
 #include "helper.h"
 #include "dpdk_helper.h"
-#include "key.h"
-#include "iniparser/iniparser_wrapper.h"
 #include "ycsb/parser.h"
-#include "socket_helper.h"
 
 #ifdef ORIGINAL_XINDEX
 #include "original_xindex/xindex.h"

@@ -19,18 +19,12 @@
 #include <sys/time.h> // struct timeval
 #include <string.h>
 #include <map>
+#include <mutex>
 
 #include "helper.h"
-#include "key.h"
-#include "val.h"
-#include "socket_helper.h"
-#include "message_queue_impl.h"
 #include "snapshot_helper.h"
 
 #include "common_impl.h"
-
-typedef Key index_key_t;
-typedef Val val_t;
 
 struct alignas(CACHELINE_SIZE) ControllerPopserverSubthreadParam {
 	int connfd;
@@ -55,7 +49,7 @@ std::mutex mutex_for_pop;
 //std::map<index_key_t, int16_t> volatile controller_cachedkey_serveridx_map; // TODO: Evict removes the corresponding kv pair
 //std::map<int16_t, uint32_t> volatile controller_serveridx_subthreadidx_map; // Not used
 // Message queue between controller.popservers with controller.popclient (connected with switchos.popserver)
-message_ptr_queue_t<cache_pop_t> controller_cache_pop_ptr_queue(MQ_SIZE);
+MessagePtrQueue<cache_pop_t> controller_cache_pop_ptr_queue(MQ_SIZE);
 /*cache_pop_t ** volatile controller_cache_pop_ptrs = NULL;
 uint32_t volatile controller_head_for_pop = 0;
 uint32_t volatile controller_tail_for_pop = 0;*/
@@ -102,19 +96,19 @@ int main(int argc, char **argv) {
 	}
 
 	pthread_t popclient_thread;
-	int ret = pthread_create(&popclient_thread, nullptr, run_controller_popclient, nullptr);
+	ret = pthread_create(&popclient_thread, nullptr, run_controller_popclient, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error: " << ret);
 	}
 
 	pthread_t evictserver_thread;
-	int ret = pthread_create(&evictserver_thread, nullptr, run_controller_evictserver, nullptr);
+	ret = pthread_create(&evictserver_thread, nullptr, run_controller_evictserver, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error: " << ret);
 	}
 
 	pthread_t snapshotclient_thread;
-	int ret = pthread_create(&snapshotclient_thread, nullptr, run_controller_snapshotclient, nullptr);
+	ret = pthread_create(&snapshotclient_thread, nullptr, run_controller_snapshotclient, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error: " << ret);
 	}
@@ -128,11 +122,20 @@ int main(int argc, char **argv) {
 
 	controller_running = false;
 
-	int rc = pthread_join(popsever_thread, &status);
+	void * status;
+	int rc = pthread_join(popserver_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
 	rc = pthread_join(popclient_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
+	rc = pthread_join(evictserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
+	rc = pthread_join(snapshotclient_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
@@ -195,8 +198,8 @@ void *run_controller_popserver(void *param) {
 
 	while (controller_running) {
 		// Not used
-		struct sockaddr_in server_addr;
-		unsigned int server_addr_len = sizeof(struct sockaddr);
+		//struct sockaddr_in server_addr;
+		//unsigned int server_addr_len = sizeof(struct sockaddr);
 
 		int connfd = -1;
 		bool is_timeout = tcpaccept(controller_popserver_tcpsock, NULL, NULL, connfd, "controller.popserver");
@@ -230,10 +233,10 @@ void *run_controller_popserver(void *param) {
 	pthread_exit(nullptr);
 }
 
-void run_controller_popserver_subthread(void *param) {
+void *run_controller_popserver_subthread(void *param) {
 	controller_popserver_subthread_param_t *curparam = (controller_popserver_subthread_param_t *)param;
 	int connfd = curparam->connfd;
-	uint32_t subthreadidx = curparam->subthreadidx;
+	//uint32_t subthreadidx = curparam->subthreadidx;
 
 	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
 	char buf[MAX_BUFSIZE];
@@ -315,7 +318,7 @@ void run_controller_popserver_subthread(void *param) {
 			// Move remaining bytes and reset metadata
 			if (cur_recv_bytes > arrive_serveridx_bytes) {
 				memcpy(buf, buf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
-				cur_recv_bytes = cur_recv_bytes - arrive_serveridx_byets;
+				cur_recv_bytes = cur_recv_bytes - arrive_serveridx_bytes;
 			}
 			else {
 				cur_recv_bytes = 0;
@@ -332,7 +335,7 @@ void run_controller_popserver_subthread(void *param) {
 	pthread_exit(nullptr);
 }
 
-void run_controller_popclient(void *param) {
+void *run_controller_popclient(void *param) {
 	controller_ready_threads++;
 
 	while (!controller_running) {}
@@ -363,10 +366,10 @@ void run_controller_popclient(void *param) {
 	pthread_exit(nullptr);
 }
 
-void run_controller_evictserver(void *param) {
+void *run_controller_evictserver(void *param) {
 	// Not used
-	struct sockaddr_in switchos_addr;
-	unsigned int switchos_addr_len = sizeof(struct sockaddr);
+	//struct sockaddr_in switchos_addr;
+	//unsigned int switchos_addr_len = sizeof(struct sockaddr);
 
 	controller_ready_threads++;
 
@@ -475,7 +478,7 @@ void run_controller_evictserver(void *param) {
 				// move remaining bytes and reset metadata
 				if (cur_recv_bytes > arrive_serveridx_bytes) {
 					memcpy(buf, buf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
-					cur_recv_bytes = cur_recv_bytes - arrive_serveridx_byets;
+					cur_recv_bytes = cur_recv_bytes - arrive_serveridx_bytes;
 				}
 				else {
 					cur_recv_bytes = 0;
@@ -488,7 +491,7 @@ void run_controller_evictserver(void *param) {
 				arrive_serveridx_bytes = -1;
 				if (evictclient_cur_recv_bytes > evictclient_arrive_key_bytes) {
 					memcpy(evictclient_buf, evictclient_buf + evictclient_arrive_key_bytes, evictclient_cur_recv_bytes - evictclient_arrive_key_bytes);
-					evictclient_cur_recv_bytes = evictclient_cur_recv_bytes - evictclient_arrive_key_byets;
+					evictclient_cur_recv_bytes = evictclient_cur_recv_bytes - evictclient_arrive_key_bytes;
 				}
 				else {
 					evictclient_cur_recv_bytes = 0;
@@ -512,7 +515,7 @@ void *run_controller_snapshotclient(void *param) {
 	uint32_t cur_recv_bytes = 0;
 	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
 	int control_type_phase0 = -1;
-	char ack_recvbuf[MAX_SIZE]; // SNAPSHOT_SERVERSIDE_ACK from server
+	char ack_recvbuf[MAX_BUFSIZE]; // SNAPSHOT_SERVERSIDE_ACK from server
 	int ack_cur_recv_bytes = 0;
 	int ack_control_type_phase0 = -1;
 	int control_type_phase1 = -1;
@@ -565,7 +568,7 @@ void *run_controller_snapshotclient(void *param) {
 
 					// wait for SNAPSHOT_SERVERSIDE_ACK from server, and send it to switchos
 					while (true) {
-						if (ack_control_type_phase0 == -1 && ack_cur_recv_bytes < sizeof(int)) {
+						if (ack_control_type_phase0 == -1 && ack_cur_recv_bytes < int(sizeof(int))) {
 							int tmp_recvsize = 0;
 							bool tmp_is_broken = tcprecv(controller_snapshotclient_consnapshotclient_tcpsock, ack_recvbuf + ack_cur_recv_bytes, MAX_BUFSIZE - ack_cur_recv_bytes, 0, tmp_recvsize, "controller.snapshotclient.consnapshotclient");
 							if (tmp_is_broken) {
