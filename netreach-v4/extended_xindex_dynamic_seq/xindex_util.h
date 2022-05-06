@@ -185,7 +185,7 @@ template <class val_t>
 struct AtomicVal {
   typedef val_t value_type;
   // Use dynamic memory for var-len value to save space
-  volatile val_t latest_val; // val_length = 0 and val_data = NULL
+  val_t latest_val; // val_length = 0 and val_data = NULL
   AtomicVal *aval_ptr = nullptr; // Only aval_ptr makes sense for pointer-type atomic value
 
   // 60 bits for version
@@ -195,7 +195,7 @@ struct AtomicVal {
   static const uint64_t pointer_mask = 0x4000000000000000;
 
   // removed - is_ptr (no lock and version now)
-  volatile uint64_t status;
+  uint64_t status;
   boost::shared_mutex rwlock; // fine-grained control
 
   // For snapshot (only valid for value-type AtomicVal)
@@ -204,15 +204,15 @@ struct AtomicVal {
   int32_t latest_id = -1; // -1: impossible value; k: latest write happens at epoch k 
   int32_t latest_seqnum = 0; // For serializability under potential packet loss
 
-  volatile val_t ss_val_0; // val_length = 0 and val_data = NULL
+  val_t ss_val_0; // val_length = 0 and val_data = NULL
   int32_t ss_seqnum_0 = 0;
   int32_t ss_id_0 = -1; // -1: no snapshot; otherwise: snapshot of epoch k 
-  volatile uint64_t ss_status_0 = 0; // only focus on removed w/o lock, is_ptr, and version
+  uint64_t ss_status_0 = 0; // only focus on removed w/o lock, is_ptr, and version
 
-  volatile val_t ss_val_1; // val_length = 0 and val_data = NULL
+  val_t ss_val_1; // val_length = 0 and val_data = NULL
   int32_t ss_seqnum_1 = 0;
   int32_t ss_id_1 = -1; // -1: no snapshot; otherwise: snapshot of epoch k'
-  volatile uint64_t ss_status_1 = 0; // only focus on removed w/o lock, is_ptr, and version
+  uint64_t ss_status_1 = 0; // only focus on removed w/o lock, is_ptr, and version
 
   AtomicVal() : status(0) {}
   ~AtomicVal() {}
@@ -223,6 +223,7 @@ struct AtomicVal {
 	  ss_id_1 = -1;
 	  latest_id = snapshot_id; 
 	  latest_seqnum = seqnum;
+	  memory_fence(); // store to memory
   }
   AtomicVal(AtomicVal *ptr) : aval_ptr(ptr), status(0) { set_is_ptr(); }
   AtomicVal(const AtomicVal& other) {
@@ -242,6 +243,7 @@ struct AtomicVal {
 	  ss_id_1 = other.ss_id_1;
 	  ss_status_1 = other.ss_status_1;
 	  aval_ptr = other.aval_ptr;
+	  memory_fence(); // store to memory
 	  return *this;
   }
 
@@ -288,6 +290,7 @@ struct AtomicVal {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
+	memory_fence(); // re-load registers
 	  
 	bool res = false;
 	if (unlikely(is_ptr(this->status))) {
@@ -348,6 +351,7 @@ struct AtomicVal {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
+	memory_fence(); // re-load registers
 	  
 	bool res = false;
 	if (unlikely(is_ptr(this->status))) { // check is_ptr
@@ -372,6 +376,7 @@ struct AtomicVal {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
+	memory_fence();
 	  
 	bool res = false;
 	if (unlikely(is_ptr(this->status))) { // check is_ptr
@@ -398,6 +403,7 @@ struct AtomicVal {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
+	memory_fence(); // re-load registers
 	  
 	bool res = false;
 	// At most one memcpy
@@ -452,6 +458,7 @@ struct AtomicVal {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
+	memory_fence(); // re-load registers
 
 	// NOTE: buffer.buf_val.min_snapshot_id >= data.base_val.max_snapshot_id
 	if (this->ss_id_0 == -1 || this->ss_id_1 == -1) { // with at least one empty snapshot entry
@@ -534,6 +541,7 @@ struct AtomicVal {
 		}
 	}
 	bool res = removed(this->status) && (this->ss_id_0 == -1 || removed(this->ss_status_0)) && (this->ss_id_1 == -1 || removed(this->ss_status_1));
+	memory_fence(); // store to memory
     this->rwlock.unlock();
 	return res;
   }
@@ -543,6 +551,7 @@ struct AtomicVal {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
+	memory_fence(); // re-load registers
 
 	bool res = false;
 	if (unlikely(is_ptr(this->status))) { // check is_ptr
@@ -565,6 +574,7 @@ struct AtomicVal {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
+	memory_fence(); // re-load registers
 
 	bool res = false;
 	if (unlikely(is_ptr(this->status))) { // check is_ptr
@@ -589,6 +599,7 @@ struct AtomicVal {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
+	memory_fence(); // re-load registers
 
 	bool res = false;
 	if (unlikely(is_ptr(this->status))) { // check is_ptr
@@ -647,6 +658,8 @@ struct AtomicVal {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
+	memory_fence(); // re-load registers
+
     bool res = false;
     if (unlikely(is_ptr(this->status))) {
       assert(!removed(this->status));
@@ -681,6 +694,7 @@ struct AtomicVal {
     } else { // if the latest version is removed, xindex should insert the val into buffer/buffer_temp as a new record
       res = false;
     }
+	memory_fence(); // store to memory
     this->rwlock.unlock();
     return res;
   }
@@ -688,6 +702,8 @@ struct AtomicVal {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
+	memory_fence(); // re-load registers
+
     bool res = false;
     if (unlikely(is_ptr(this->status))) {
       assert(!removed(this->status));
@@ -724,6 +740,7 @@ struct AtomicVal {
     } else {
       res = false;
     }
+	memory_fence(); // store to memory
     this->rwlock.unlock();
     return res;
   }
@@ -731,6 +748,8 @@ struct AtomicVal {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
+	memory_fence(); // re-load registers
+
     uint64_t status = this->status;
     UNUSED(status);
     assert(is_ptr(status));
@@ -767,13 +786,14 @@ struct AtomicVal {
 	this->ss_seqnum_1 = tmp_ssseqnum_1;
 	this->ss_id_1 = tmp_ssid_1;
     unset_is_ptr();
-    memory_fence();
+    memory_fence(); // store to memory
     this->rwlock.unlock();
   }
   bool read_ignoring_ptr(val_t &val, int32_t &seqnum) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
+	memory_fence(); // re-load registers
 
 	bool res = false;
 	if (!removed(this->status)) {
@@ -789,6 +809,7 @@ struct AtomicVal {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
+	memory_fence(); // re-load registers
 
 	bool res = false;
 	res = removed(this->status) && (this->ss_id_0 == -1 || removed(this->ss_status_0)) && (this->ss_id_1 == -1 || removed(this->ss_status_1));
@@ -799,6 +820,8 @@ struct AtomicVal {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
+	memory_fence(); // re-load registers
+
     bool res = false;
     if (!removed(this->status)) { // do not make snapshot for removed latest version
 		// Keep original latest_seqnum (only used in loading phase)
@@ -828,6 +851,8 @@ struct AtomicVal {
     } else { // if the latest version is removed, xindex should insert the val into buffer/buffer_temp as a new record
       res = false;
     }
+
+	memory_fence(); // store to memory
     this->rwlock.unlock();
     return res;
   }
@@ -835,6 +860,8 @@ struct AtomicVal {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
+	memory_fence(); // re-load registers
+
     bool res = false;
     if (!removed(this->status)) { // do not make snapshot for removed latest version
 		if (seqnum > this->latest_seqnum) {
@@ -865,6 +892,8 @@ struct AtomicVal {
     } else { // if the latest version is removed, xindex should insert the val into buffer/buffer_temp as a new record
       res = false;
     }
+
+	memory_fence(); // store to memory
     this->rwlock.unlock();
     return res;
   }
@@ -872,6 +901,8 @@ struct AtomicVal {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
+	memory_fence(); // re-load registers
+
     bool res = false;
     if (!removed(this->status)) { // do not make snapshot for removed latest version
 		if (seqnum > this->latest_seqnum) {
@@ -904,6 +935,8 @@ struct AtomicVal {
     } else {
       res = false;
     }
+
+	memory_fence(); // store to memory
     this->rwlock.unlock();
     return res;
   }

@@ -101,11 +101,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
         # TODO: check API of register set
-        print "Set valid_reg as 1"
+        print "Set validvalue_reg as 1"
         index = freeidx
         value = 1
         flags = netbufferv4_register_flags_t(read_hw_sync=True)
-        self.client.register_set_valid_reg(self.sess_hdl, self.dev_tgt, index, value, flags)
+        self.client.register_set_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value, flags)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
         self.conn_mgr.client_cleanup(self.sess_hdl) # close session

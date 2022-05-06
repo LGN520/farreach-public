@@ -47,7 +47,7 @@ table access_deleted_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		meta.valid: exact;
+		meta.validvalue: exact;
 		meta.is_latest: exact;
 	}
 	actions {

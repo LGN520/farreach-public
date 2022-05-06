@@ -1,3 +1,6 @@
+#ifndef PACKET_FORMAT_IMPL_H
+#define PACKET_FORMAT_IMPL_H
+
 #include "packet_format.h"
 #include <arpa/inet.h>
 
@@ -1229,3 +1232,5 @@ packet_type_t get_packet_type(const char * data, uint32_t recv_size) {
 	memcpy((void *)&tmp, data, sizeof(uint8_t));
 	return static_cast<packet_type_t>(tmp);
 }
+
+#endif

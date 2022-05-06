@@ -106,11 +106,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 min_frequency = frequency_counters[i]
                 evictidx = i
 
-        print "Set valid[{}] = 3 for atomicity".format(evictidx)
+        print "Set validvalue[{}] = 3 for atomicity".format(evictidx)
         # TODO: check API of register set
         index = evictidx
         value = 3
-        self.client.register_set_valid_reg(self.sess_hdl, self.dev_tgt, index, value, flags)
+        self.client.register_set_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value, flags)
 
         print "Load evicted data"
         # TODO: Check register API

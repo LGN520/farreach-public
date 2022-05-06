@@ -2,7 +2,7 @@
 
 #include <arpa/inet.h> // inetaddr conversion
 
-void set_sockaddr(volatile sockaddr_in &addr, uint32_t bigendian_saddr, short littleendian_port) {
+void set_sockaddr(sockaddr_in &addr, uint32_t bigendian_saddr, short littleendian_port) {
 	memset((void *)&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = bigendian_saddr;
@@ -11,7 +11,7 @@ void set_sockaddr(volatile sockaddr_in &addr, uint32_t bigendian_saddr, short li
 
 // udp
 
-void create_udpsock(int volatile &sockfd, const char* role) {
+void create_udpsock(int &sockfd, const char* role) {
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd == -1) {
 		printf("[%s] fail to create udp socket, errno: %d!\n", role, errno);
@@ -53,7 +53,7 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 	return is_timeout;
 }
 
-void prepare_udpserver(volatile int &sockfd, bool need_timeout, short server_port, const char* role) {
+void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const char* role) {
 	INVARIANT(role != NULL);
 
 	// create socket
@@ -89,7 +89,7 @@ void prepare_udpserver(volatile int &sockfd, bool need_timeout, short server_por
 
 // tcp
 
-void create_tcpsock(volatile int &sockfd, const char* role) {
+void create_tcpsock(int &sockfd, const char* role) {
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd == -1) {
 		printf("[%s] fail to create tcp socket, errno: %d!\n", role, errno);
@@ -126,7 +126,7 @@ void tcpsend(int sockfd, char *buf, int size, const char *role) {
 	}
 }
 
-void prepare_tcpserver(volatile int &sockfd, bool need_timeout, short server_port, int max_pending_num, const char *role) {
+void prepare_tcpserver(int &sockfd, bool need_timeout, short server_port, int max_pending_num, const char *role) {
 	INVARIANT(role != NULL);
 
 	// create socket

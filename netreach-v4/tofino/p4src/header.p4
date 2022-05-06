@@ -106,7 +106,7 @@ header_type stat_t {
 
 /*header_type status_t {
 	fields {
-		valid: 8; // if the entry is valid
+		validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		padding: 6;
@@ -127,7 +127,7 @@ header_type metadata_t {
 		cm3_predicate: 4;
 		cm4_predicate: 4;
 		is_hot: 1;
-		valid: 8; // if the entry is valid
+		validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;

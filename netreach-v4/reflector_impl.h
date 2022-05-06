@@ -1,5 +1,5 @@
-#ifndef REFLECTOR_H
-#define REFLECTOR_H
+#ifndef REFLECTOR_IMPL_H
+#define REFLECTOR_IMPL_H
 
 // shared by reflector.popserver and reflector.dpdkserver, but no contention
 bool volatile reflector_with_switchos_popworker_addr = false;

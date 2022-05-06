@@ -55,7 +55,7 @@ blackbox stateful_alu update_cm2_alu {
 	output_dst: meta.cm2_predicate; // false: 1; true: 2
 }
 
-action udpate_cm2() {
+action update_cm2() {
 	update_cm2_alu.execute_stateful_alu(inswitch_hdr.hashval_for_cm);
 }
 
@@ -95,7 +95,7 @@ blackbox stateful_alu update_cm3_alu {
 	output_dst: meta.cm3_predicate; // false: 1; true: 2
 }
 
-action udpate_cm3() {
+action update_cm3() {
 	update_cm3_alu.execute_stateful_alu(inswitch_hdr.hashval_for_cm);
 }
 
@@ -135,7 +135,7 @@ blackbox stateful_alu update_cm4_alu {
 	output_dst: meta.cm4_predicate; // false: 1; true: 2
 }
 
-action udpate_cm4() {
+action update_cm4() {
 	update_cm4_alu.execute_stateful_alu(inswitch_hdr.hashval_for_cm);
 }
 

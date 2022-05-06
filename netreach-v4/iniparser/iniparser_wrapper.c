@@ -167,10 +167,10 @@ short IniparserWrapper::get_server_consnapshotserver_port() {
 
 // Switch
 
-uint32_t IniparserWrapper::get_kv_bucket_num() {
-	int tmp = iniparser_getint(ini, "switch:kv_bucket_num", -1);
+uint32_t IniparserWrapper::get_switch_kv_bucket_num() {
+	int tmp = iniparser_getint(ini, "switch:switch_kv_bucket_num", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [switch:kv_bucket_num]: %d\n", tmp);
+		printf("Invalid entry of [switch:switch_kv_bucket_num]: %d\n", tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);

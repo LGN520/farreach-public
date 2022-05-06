@@ -34,7 +34,7 @@ table access_case1_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		meta.valid: exact;
+		meta.validvalue: exact;
 		meta.is_latest: exact;
 		inswitch_hdr.snapshot_flag: exact;
 	}

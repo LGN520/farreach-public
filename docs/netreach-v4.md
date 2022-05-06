@@ -19,10 +19,24 @@
 		* When receiving case3 packet from data plane or explicit notification from controller, make server-side snapshot only if snapshot flag = false -> set snapshot flag = true
 	+ NOTE: it guarantees that each server must make a server-side snapshot for each snapshot period exactly once!
 - NOTE: one register can provide at most 3 stateful APIs -> we cannot aggregate valid and latest/deleted as a whole
-- NOTE
+- NOTEs
 	+ Egress pipeline recirculation issue is ok
 	+ We provide weak-form durability -> data is durable before a certain snapshot timepoint -> bounded-error reliability
 	+ Limited recirculation for atomicity in snapshot is ok
+- NOTE for xindex
+	+ For a record in data, PUT (in-place update) -> DEL (mark data.record as removed) -> PUT (insert buffer.record) -> DEL (mark buffer.record as removed)
+		* If w/o compact: -> PUT (replace buffer.record w/ a new one)
+		* If w/ compact: -> PUT (insert temp_buffer.record) -> DEL (mark temp_buffer.record as removed) -> PUT (replace temp_buffer.record w/ a new one)
+	+ As xindex does not maintain entry of deleted record in merged data, it does not allow in-place update for DELREQ in data and buffer during compaction
+	+ After treating DELREQ as a speical PUTREQ
+		* TODO: If the record is not old enough. allow in-place update for removed record in data/buffer/temp_buffer
+		* TODO: Otherwise, cope with removed record as in original xindex
+		* TODO: Range query should consider removed records
+- NOTE for multi-thread programming
+	+ Cache coherence among CPU caches is fixed by MESI protocol -> we treat CPU caches and memory as a consistent whole
+	+ For cache consistency between CPU register and whole memory
+		* volatile: disable reordering; disable register cache (both LOAD/STORE) for the specified variables
+		* memory fence: disable reordering; disable register cache by re-loading all registers before LOAD and flushing to memory after STORE 
 
 ## Overview
 

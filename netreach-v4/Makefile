@@ -89,7 +89,7 @@ include mk/recipes.mk
 DEPS :=
 CLEAN :=
 #TARGETS := prepare split_workload ycsb_local_client ycsb_remote_client ycsb_server
-TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_server
+TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_server switchos controller
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o

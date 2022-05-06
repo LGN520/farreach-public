@@ -1,3 +1,6 @@
+#ifndef MESSAGE_QUEUE_IMPL_H
+#define MESSAGE_QUEUE_IMPL_H
+
 #include "message_queue.h"
 
 template<class obj_t>
@@ -13,7 +16,7 @@ template<class obj_t>
 void MessagePtrQueue<obj_t>::init(uint32_t size) {
 	this->_size = size;
 
-	this->_obj_ptrs = new obj_t*[size];
+	*((obj_t * volatile * volatile *)&this->_obj_ptrs) = new obj_t*[size];
 	INVARIANT(this->_obj_ptrs != NULL);
 	for (size_t i = 0; i < size; i++) {
 		this->_obj_ptrs[i] = NULL;
@@ -57,3 +60,5 @@ MessagePtrQueue<obj_t>::~MessagePtrQueue() {
 		this->_obj_ptrs = NULL;
 	}
 }
+
+#endif

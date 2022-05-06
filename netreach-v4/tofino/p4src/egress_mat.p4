@@ -161,7 +161,7 @@ action update_getreq_inswitch_to_getres_for_deleted() {
 	add_header(val14_hdr);
 	add_header(val15_hdr);
 	add_header(val16_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
 	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
 }
@@ -188,9 +188,9 @@ action update_getreq_inswitch_to_getres_for_deleted_by_mirroring() {
 	add_header(val14_hdr);
 	add_header(val15_hdr);
 	add_header(val16_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
-	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
 }
 
@@ -216,7 +216,7 @@ action update_getreq_inswitch_to_getres() {
 	add_header(val14_hdr);
 	add_header(val15_hdr);
 	add_header(val16_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
 	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
 }
@@ -243,9 +243,9 @@ action update_getreq_inswitch_to_getres_by_mirroring() {
 	add_header(val14_hdr);
 	add_header(val15_hdr);
 	add_header(val16_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
-	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
 }
 
@@ -254,20 +254,20 @@ action update_getres_latest_seq_to_getres() {
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(seq_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 }
 
 field_list clone_field_list_for_pktloss {
-	meta.clonenum_for_pktloss: exact;
+	meta.clonenum_for_pktloss;
 }
 
-action update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(sid, port, result) {
+action update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(sid, port, stat) {
 	modify_field(op_hdr.optype, GETRES_LATEST_SEQ_INSWITCH_CASE1);
-	modify_field(stat_hdr.stat, result);
+	modify_field(stat_hdr.stat, stat);
 	modify_field(meta.clonenum_for_pktloss, 1); // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone)
 
 	//remove_header(inswitch_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
 	modify_field(eg_intr_md.egress_port, port); // set eport to switchos
 	clone_egress_pkt_to_egress(sid, clone_field_list_for_pktloss);
@@ -291,16 +291,16 @@ action update_getres_deleted_seq_to_getres() {
 	modify_field(stat_hdr.stat, 0);
 
 	remove_header(seq_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 }
 
-action update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(sid, port, result) {
+action update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(sid, port, stat) {
 	modify_field(op_hdr.optype, GETRES_DELETED_SEQ_INSWITCH_CASE1);
-	modify_field(stat_hdr.stat, result);
+	modify_field(stat_hdr.stat, stat);
 	modify_field(meta.clonenum_for_pktloss, 1); // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone)
 
 	//remove_header(inswitch_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
 	modify_field(eg_intr_md.egress_port, port); // set eport to switchos
 	clone_egress_pkt_to_egress(sid, clone_field_list_for_pktloss);
@@ -396,7 +396,7 @@ action update_putreq_inswitch_to_putres() {
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
 	remove_header(val16_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
 	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
 }
@@ -423,28 +423,28 @@ action update_putreq_inswitch_to_putres_by_mirroring() {
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
 	remove_header(val16_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
-	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
 }
 
 field_list clone_field_list_for_pktloss_and_res {
-	meta.clonenum_for_pktloss: exact;
+	meta.clonenum_for_pktloss;
 	// NOTE: extracted fields cannot be used as clone fields
-	//inswitch_hdr.is_wrong_pipeline: exact;
-	//inswitch_hdr.eport_for_res: 9;
-	//inswitch_hdr.sid: 9;
+	//inswitch_hdr.is_wrong_pipeline;
+	//inswitch_hdr.eport_for_res;
+	//inswitch_hdr.sid;
 }
 
-action update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(sid, port, result) {
+action update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(sid, port, stat) {
 	modify_field(op_hdr.optype, PUTREQ_SEQ_INSWITCH_CASE1);
-	modify_field(stat_hdr.stat, result);
+	modify_field(stat_hdr.stat, stat);
 	modify_field(meta.clonenum_for_pktloss, 2); // 3 ACKs (clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> PUTRES)
 
 	//remove_header(inswitch_hdr);
 	add_header(seq_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
 	modify_field(eg_intr_md.egress_port, port); // set eport to switchos
 	clone_egress_pkt_to_egress(sid, clone_field_list_for_pktloss_and_res);
@@ -509,7 +509,7 @@ action update_putreq_seq_inswitch_case1_to_putres_by_mirroring() {
 
 	remove_header(inswitch_hdr);
 
-	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
 }
 
@@ -545,7 +545,7 @@ action update_delreq_inswitch_to_delres() {
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(inswitch_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
 	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
 }
@@ -555,20 +555,20 @@ action update_delreq_inswitch_to_delres_by_mirroring() {
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(inswitch_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
-	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
 }
 
-action update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(sid, port, result) {
+action update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(sid, port, stat) {
 	modify_field(op_hdr.optype, DELREQ_SEQ_INSWITCH_CASE1);
-	modify_field(stat_hdr.stat, result);
+	modify_field(stat_hdr.stat, stat);
 	modify_field(meta.clonenum_for_pktloss, 2); // 3 ACKs (clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> DELRES)
 
 	//remove_header(inswitch_hdr);
 	add_header(seq_hdr);
-	add_header(result_hdr);
+	add_header(stat_hdr);
 
 	modify_field(eg_intr_md.egress_port, port); // set eport to switchos
 	clone_egress_pkt_to_egress(sid, clone_field_list_for_pktloss_and_res);
@@ -633,11 +633,11 @@ action update_delreq_seq_inswitch_case1_to_delres_by_mirroring() {
 
 	remove_header(inswitch_hdr);
 
-	modify_field(eg_intr_md.drop_ctl, 1); // Disable unicast, but enable mirroring
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(inswitch_hdr.sid); // clone for egress switching
 }
 
-action update_delreq_inswitch_to_delreq_seq() {
+action update_delreq_inswitch_to_delreq_seq_case3() {
 	modify_field(op_hdr.optype, DELREQ_SEQ_CASE3);
 
 	remove_header(inswitch_hdr);
@@ -648,15 +648,15 @@ action update_delreq_inswitch_to_delreq_seq() {
 
 table eg_port_forward_tbl {
 	reads {
-		op_hdr_optype: exact;
+		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
 		meta.is_hot: exact;
-		meta.valid: exact;
+		meta.validvalue: exact;
 		meta.is_latest: exact;
 		meta.is_deleted: exact;
 		inswitch_hdr.is_wrong_pipeline: exact;
 		meta.is_lastclone_for_pktloss: exact;
-		meta.snapshot_flag: exact;
+		inswitch_hdr.snapshot_flag: exact;
 		meta.is_case1: exact;
 	}
 	actions {
@@ -708,7 +708,7 @@ table eg_port_forward_tbl {
 action forward_scanreq_split_and_clone() {
 	add_to_field(split_hdr.cur_scanidx, 1);
 	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
-	clone_egress_to_egress(inswitch_hdr.sid);
+	clone_egress_pkt_to_egress(inswitch_hdr.sid);
 }
 action forward_scanreq_split() {
 	add_to_field(split_hdr.cur_scanidx, 1);

@@ -68,6 +68,7 @@ Val::Val(const volatile Val &other) {
 		val_length = 0;
 		val_data = nullptr;
 	}
+	memory_fence();
 }
 
 Val& Val::operator=(const Val &other) {
@@ -99,6 +100,7 @@ Val& Val::operator=(const volatile Val &other) {
 		val_length = 0;
 		val_data = nullptr;
 	}
+	memory_fence();
 	return *this;
 }
 
@@ -115,6 +117,7 @@ volatile Val& Val::operator=(const Val &other) volatile {
 		val_length = 0;
 		val_data = nullptr;
 	}
+	memory_fence();
 	return *this;
 }
 
@@ -131,6 +134,7 @@ volatile Val& Val::operator=(const volatile Val &other) volatile {
 		val_length = 0;
 		val_data = nullptr;
 	}
+	memory_fence();
 	return *this;
 }
 
@@ -140,7 +144,7 @@ bool Val::operator==(const Val &other) {
 		return true;
 	}
 	if (val_length == other.val_length && val_data != nullptr && other.val_data != nullptr) {
-		for (size_t i = 0; i < val_length; i++) {
+		for (int32_t i = 0; i < val_length; i++) {
 			if (val_data[i] != other.val_data[i]) {
 				return false;
 			}
@@ -173,7 +177,7 @@ void Val::from_slice(rocksdb::Slice& slice) {
 */
 
 void Val::from_string(std::string& str) {
-	INVARIANT(str.length() <= MAX_VALLEN);
+	INVARIANT(str.length() <= int32_t(MAX_VALLEN));
 	if (str.data() != nullptr && str.length() != 0) {
 		// Deep copy
 		val_data = new char[str.length()];

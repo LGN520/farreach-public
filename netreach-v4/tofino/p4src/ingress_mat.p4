@@ -106,7 +106,7 @@ table cache_lookup_tbl {
 		op_hdr.keylohi: exact;
 		op_hdr.keyhilo: exact;
 		op_hdr.keyhihi: exact;
-		meta.need_reirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions {
 		cached_action;
@@ -170,10 +170,10 @@ action hash_for_partition() {
 table hash_for_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_reirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions {
-		hash;
+		hash_for_partition;
 		nop;
 	}
 	default_action: nop();
@@ -189,10 +189,10 @@ action hash_for_cm() {
 table hash_for_cm_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_reirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions {
-		hash;
+		hash_for_cm;
 		nop;
 	}
 	default_action: nop();
@@ -207,10 +207,10 @@ action hash_for_seq() {
 table hash_for_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_reirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions {
-		hash;
+		hash_for_seq;
 		nop;
 	}
 	default_action: nop();
@@ -226,7 +226,7 @@ action sample() {
 table sample_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_reirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions {
 		sample;
@@ -246,7 +246,7 @@ action range_partition_for_scan(udpport, eport, max_scannum) {
 	modify_field(split_hdr.max_scannum, max_scannum);
 }
 
-#pragma stage 2
+@pragma stage 2
 table range_partition_for_scan_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -274,7 +274,7 @@ table hash_partition_tbl {
 		op_hdr.optype: exact;
 		meta.hashval_for_partition: range;
 		ig_intr_md.ingress_port: exact;
-		meta.need_reirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions {
 		hash_partition;
@@ -322,7 +322,7 @@ action update_scanreq_to_scanreq_split() {
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_reirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions {
 		update_getreq_to_getreq_inswitch;
@@ -340,12 +340,12 @@ table ig_port_forward_tbl {
 // Stage 4
 
 action forward_normal_response(eport) {
-	modify_field(ig_intr_md_for_tm.ucast_ingress_port, eport);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
 action forward_special_get_response(sid) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
-	clone_ingress_to_egress(sid); // Cloned packet enter the egress pipeline to corresponding client
+	clone_ingress_pkt_to_egress(sid); // Cloned packet enter the egress pipeline to corresponding client
 }
 
 @pragma stage 4
@@ -353,7 +353,7 @@ table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 		ipv4_hdr.dstAddr: lpm;
-		meta.need_reirculate: exact;
+		meta.need_recirculate: exact;
 	}
 	actions {
 		forward_normal_response;

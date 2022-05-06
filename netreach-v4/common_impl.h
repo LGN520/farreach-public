@@ -229,7 +229,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(controller_snapshot_period);
 	
 	// switch
-	switch_kv_bucket_num = ini.get_kv_bucket_num();
+	switch_kv_bucket_num = ini.get_switch_kv_bucket_num();
 	switchos_popserver_port = ini.get_switchos_popserver_port();
 	switchos_paramserver_port = ini.get_switchos_paramserver_port();
 	switchos_ip = ini.get_switchos_ip();

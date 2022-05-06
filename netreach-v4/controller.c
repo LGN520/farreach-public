@@ -32,19 +32,19 @@
 typedef Key index_key_t;
 typedef Val val_t;
 
-bool volatile controller_running = false;
-std::atomic<size_t> controller_ready_threads(0);
-const size_t controller_expected_ready_threads = 4;
-
 struct alignas(CACHELINE_SIZE) ControllerPopserverSubthreadParam {
 	int connfd;
 	uint32_t subthreadidx;
 };
 typedef ControllerPopserverSubthreadParam controller_popserver_subthread_param_t;
 
+bool volatile controller_running = false;
+std::atomic<size_t> controller_ready_threads(0);
+const size_t controller_expected_ready_threads = 4;
+
 // Per-server popclient <-> one popserver.subthread in controller
 // NOTE: subthreadidx != serveridx
-int volatile controller_popserver_tcpsock = -1;
+int controller_popserver_tcpsock = -1;
 pthread_t *volatile controller_popserver_subthreads = NULL;
 std::atomic<size_t> controller_finish_subthreads(0);
 size_t controller_expected_finish_subthreads = -1;
@@ -62,25 +62,25 @@ uint32_t volatile controller_tail_for_pop = 0;*/
 
 // controller.popclient <-> switchos.popserver
 bool volatile is_controller_popclient_connected = false;
-int volatile controller_popclient_tcpsock = -1;
+int controller_popclient_tcpsock = -1;
 
 // switchos.popworker <-> controller.evictserver
-int volatile controller_evictserver_tcpsock = -1;
+int controller_evictserver_tcpsock = -1;
 // controller.evictclients <-> servers.evictservers
 // NOTE: evictclient.index = serveridx
 //bool volatile is_controller_evictserver_evictclients_connected = false;
-//int * volatile controller_evictserver_evictclient_tcpsock_list = NULL;
+//int * controller_evictserver_evictclient_tcpsock_list = NULL;
 // controller.evictclient <-> server.evictserver
 bool volatile is_controller_evictserver_evictclient_connected = false;
-int volatile controller_evictserver_evictclient_tcpsock = -1;
+int controller_evictserver_evictclient_tcpsock = -1;
 
 // controller.snapshotclient <-> switchos.snapshotserver
 bool volatile is_controller_snapshotclient_connected = false;
-int volatile controller_snapshotclient_tcpsock = -1;
+int controller_snapshotclient_tcpsock = -1;
 
 // controller.snapshotclient.consnapshotclient <-> server.consnapshotserver
 bool volatile is_controller_snapshotclient_consnapshotclient_connected = false;
-int volatile controller_snapshotclient_consnapshotclient = -1;
+int controller_snapshotclient_consnapshotclient_tcpsock = -1;
 
 void prepare_controller();
 void *run_controller_popserver(void *param); // Accept connections from servers
@@ -183,6 +183,8 @@ void prepare_controller() {
 
 	// prepare consnapshotclient
 	create_tcpsock(controller_snapshotclient_consnapshotclient_tcpsock, "controller.snapshotclient.consnapshotclient");
+
+	memory_fence();
 }
 
 void *run_controller_popserver(void *param) {

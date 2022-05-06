@@ -4,11 +4,14 @@
 // Transaction phase for ycsb_server
 
 #include <vector>
+#include "helper.h"
 
 #include "deleted_set_impl.h"
 #include "snapshot_helper.h"
+#include "concurrent_map_impl.h"
 
 typedef DeletedSet<index_key_t, int32_t> deleted_set_t;
+typedef ConcurrentMap<index_key_t, snapshot_record_t> concurrent_snapshot_map_t;
 
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   xindex_t *table;
@@ -26,35 +29,32 @@ typedef ServerWorkerParam server_worker_param_t;
 //typedef ReceiverParam receiver_param_t;
 
 // server.receiver in transaction phase
-//volatile struct rte_mbuf **pkts;
-//volatile bool *stats;
-struct rte_mbuf*** volatile server_worker_pkts_list; // pkts from receiver to each worker
-uint32_t* volatile server_worker_heads;
-uint32_t* volatile server_worker_tails;
+// NOTE: DPDK does not support struct rte_mbuf* volatile, thus receiver/worker must ensure the change of memory during write/read pkts_list
+struct rte_mbuf* volatile ** server_worker_pkts_list; // pkts from receiver to each worker
+uint32_t volatile * server_worker_heads;
+uint32_t volatile * server_worker_tails;
 
 // Per-server popclient <-> one popserver in controller
-int * volatile server_popclient_tcpsock_list = NULL;
-std::set<index_key_t> * volatile server_cached_keyset_list = NULL;
+int * server_popclient_tcpsock_list = NULL;
+std::set<index_key_t> * server_cached_keyset_list = NULL;
 
 // server.evictservers <-> controller.evictserver.evictclients
-//int * volatile server_evictserver_tcpsock_list = NULL;
+//int * server_evictserver_tcpsock_list = NULL;
 // server.evictserver <-> controller.evictserver.evictclient
-int volatile server_evictserver_tcpsock = -1;
+int server_evictserver_tcpsock = -1;
 // single-message queues is sufficient between server.evictclients and server.workers
-MessagePtrQueue<cache_evict_t> * volatile server_cache_evict_or_case2_ptr_queue_list = NULL;
-MessagePtrQueue<cache_evict_ack_t> * volatile server_cache_evict_ack_ptr_queue_list = NULL;
-/*cache_evict_ack_t *** volatile cache_evict_ack_ptrs_list = NULL;
-uint32_t *volatile server_server_worker_heads_for_evict_ack = NULL;
-uint32_t *volatile server_worker_tails_for_evict_ack = NULL;*/
+MessagePtrQueue<cache_evict_t> * server_cache_evict_or_case2_ptr_queue_list = NULL;
+MessagePtrQueue<cache_evict_ack_t> * server_cache_evict_ack_ptr_queue_list = NULL;
 
 // snapshot
-int volatile server_consnapshotserver_tcpsock = -1;
+int server_consnapshotserver_tcpsock = -1;
 // per-server snapshot_map and snapshot_rcu
-std::map<index_key_t, snapshot_record_t> * volatile server_snapshot_maps = NULL;
-uint32_t* volatile server_snapshot_rcus = NULL;
+//std::map<index_key_t, snapshot_record_t> * volatile server_snapshot_maps = NULL;
+concurrent_snapshot_map_t * volatile server_snapshot_maps = NULL;
+uint32_t volatile * server_snapshot_rcus = NULL;
 bool volatile server_issnapshot = false; // TODO: it should be atomic
 
-// DELREQ
+// set of DELREQ (not need volatile_set as only accessed by each worker)
 deleted_set_t *server_deleted_sets = NULL;
 
 void prepare_server();
@@ -79,15 +79,15 @@ void prepare_server() {
 	server_worker_pkts_list = new struct rte_mbuf**[server_num];
 	server_worker_heads = new uint32_t[server_num];
 	server_worker_tails = new uint32_t[server_num];
-	memset((void*)server_worker_heads, 0, sizeof(uint32_t)*server_num);
-	memset((void*)server_worker_tails, 0, sizeof(uint32_t)*server_num);
-	//int res = 0;
 	for (size_t i = 0; i < server_num; i++) {
-	  server_worker_pkts_list[i] = new struct rte_mbuf*[MQ_SIZE];
-	  for (size_t j = 0; j < MQ_SIZE; j++) {
-		  server_worker_pkts_list[i][j] = nullptr;
-	  }
-	  //res = rte_pktmbuf_alloc_bulk(mbuf_pool, server_worker_pkts_list[i], MQ_SIZE);
+		server_worker_heads[i] = 0;
+		server_worker_tails[i] = 0;
+		//int res = 0;
+		server_worker_pkts_list[i] = new struct rte_mbuf*[MQ_SIZE];
+		for (size_t j = 0; j < MQ_SIZE; j++) {
+			server_worker_pkts_list[i][j] = nullptr;
+		}
+		//res = rte_pktmbuf_alloc_bulk(mbuf_pool, server_worker_pkts_list[i], MQ_SIZE);
 	}
 
 	// Prepare for cache population
@@ -117,10 +117,14 @@ void prepare_server() {
 
 	// prepare for snapshot
 	server_snapshot_rcus = new uint32_t[server_num];
-	memset((void *)server_snapshot_rcus, 0, server_num*sizeof(uint32_t));
+	for (size_t i = 0; i < server_num; i++) {
+		server_snapshot_rcus[i] = 0;
+	}
 
 	// DELREQ
 	server_deleted_sets = new deleted_set_t[server_num];
+
+	memory_fence();
 }
 
 void close_server() {
@@ -158,8 +162,17 @@ void close_server() {
 	//rte_pktmbuf_free((struct rte_mbuf *)pkts[i]);
 	  while (server_worker_heads[i] != server_worker_tails[i]) {
 		  rte_pktmbuf_free((struct rte_mbuf*)server_worker_pkts_list[i][server_worker_tails[i]]);
+		  server_worker_pkts_list[i][server_worker_tails[i]] = NULL;
 		  server_worker_tails[i] += 1;
 	  }
+	}
+	if (server_worker_heads != NULL) {
+		delete [] server_worker_heads;
+		server_worker_heads = NULL;
+	}
+	if (server_worker_tails != NULL) {
+		delete [] server_worker_tails;
+		server_worker_tails = NULL;
 	}
 }
 
@@ -347,6 +360,7 @@ static int run_server_worker(void * param) {
 		memset(dstmac, 0, 6);
 		recv_size = decode_mbuf(server_worker_pkts_list[serveridx][server_worker_tails[serveridx]], srcmac, dstmac, srcip, dstip, &srcport, &unused_dstport, buf);
 		rte_pktmbuf_free((struct rte_mbuf*)server_worker_pkts_list[serveridx][server_worker_tails[serveridx]]);
+		server_worker_pkts_list[serveridx][server_worker_tails[serveridx]] = NULL;
 		server_worker_tails[serveridx] = (server_worker_tails[serveridx] + 1) % MQ_SIZE;
 
 		/*if ((debug_idx + 1) % 10001 == 0) {
@@ -454,14 +468,16 @@ static int run_server_worker(void * param) {
 					UNUSED(inmemory_num);
 
 					// get results from in-switch snapshot in [cur_startkey, cur_endkey]
-					std::map<index_key_t, snapshot_record_t> *tmp_server_snapshot_maps = server_snapshot_maps;
+					//std::map<index_key_t, snapshot_record_t> *tmp_server_snapshot_maps = server_snapshot_maps;
+					concurrent_snapshot_map_t *tmp_server_snapshot_maps = server_snapshot_maps;
 					std::vector<std::pair<index_key_t, snapshot_record_t>> inswitch_results;
 					if (tmp_server_snapshot_maps != NULL) {
-						std::map<index_key_t, snapshot_record_t>::iterator iter = tmp_server_snapshot_maps[serveridx].lower_bound(cur_startkey);
+						/*std::map<index_key_t, snapshot_record_t>::iterator iter = tmp_server_snapshot_maps[serveridx].lower_bound(cur_startkey);
 						for (; iter != tmp_server_snapshot_maps[serveridx].end() && iter->first <= cur_endkey; iter++) {
 							//inmemory_results.push_back(*iter);
 							inswitch_results.push_back(*iter);
-						}
+						}*/
+						tmp_server_snapshot_maps[serveridx].range_scan(cur_startkey, cur_endkey, inswitch_results);
 					}
 
 					// merge sort w/ seq comparison
@@ -736,11 +752,14 @@ static int run_server_worker(void * param) {
 		server_cached_keyset_list[serveridx].erase(tmp_cache_evict_ptr->key()); // NOTE: no contention
 
 		// update in-memory KVS if necessary
-		if (tmp_cache_evict_ptr->stat()) { // put
-			table->put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), serveridx, tmp_cache_evict_ptr->seq());
-		}
-		else { // del
-			table->remove(tmp_cache_evict_ptr->key(), serveridx, tmp_cache_evict_ptr->seq());
+		bool is_deleted_before = deleted_sets[serveridx].check_and_remove(req.key(), req.seq());
+		if (!is_deleted_before) {
+			if (tmp_cache_evict_ptr->stat()) { // put
+				table->put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), serveridx, tmp_cache_evict_ptr->seq());
+			}
+			else { // del
+				table->remove(tmp_cache_evict_ptr->key(), serveridx, tmp_cache_evict_ptr->seq());
+			}
 		}
 
 		// send CACHE_EVICT_ACK to server.evictserver
@@ -949,6 +968,7 @@ void *run_server_consnapshotserver(void *param) {
 				control_type_phase1 = *((int *)(recvbuf + sizeof(int)));
 				INVARIANT(control_type_phase1 == SNAPSHOT_DATA);
 				total_bytes = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int)));
+				server_issnapshot = true;
 			}
 
 			// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
@@ -959,7 +979,8 @@ void *run_server_consnapshotserver(void *param) {
 				
 				// save snapshot data of servers
 				int tmp_offset = sizeof(int) + sizeof(int) + sizeof(int32_t); // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
-				std::map<index_key_t, snapshot_record_t> *new_server_snapshot_maps = new std::map<index_key_t, snapshot_record_t>[server_num];
+				//std::map<index_key_t, snapshot_record_t> *new_server_snapshot_maps = new std::map<index_key_t, snapshot_record_t>[server_num];
+				concurrent_snapshot_map_t *new_server_snapshot_maps = new concurrent_snapshot_map_t[server_num];
 				const int tmp_maxbytes = sizeof(int) + total_bytes;
 				while (true) {
 					tmp_offset += sizeof(int32_t); // skip perserver_bytes
@@ -978,7 +999,8 @@ void *run_server_consnapshotserver(void *param) {
 						tmp_offset += sizeof(int32_t);
 						tmp_record.stat = *((bool *)(recvbuf + tmp_offset));
 						tmp_offset += sizeof(bool);
-						new_server_snapshot_maps[tmp_serveridx].insert(std::pair<index_key_t, snapshot_record_t>(tmp_key, tmp_record));
+						//new_server_snapshot_maps[tmp_serveridx].insert(std::pair<index_key_t, snapshot_record_t>(tmp_key, tmp_record));
+						new_server_snapshot_maps[tmp_serveridx].insert(tmp_key, tmp_record);
 					}
 					if (tmp_offset >= tmp_maxbytes) {
 						break;
@@ -986,7 +1008,8 @@ void *run_server_consnapshotserver(void *param) {
 				}
 
 				// replace old snapshot data based on RCU
-				std::map<index_key_t, snapshot_record_t> *old_server_snapshot_maps = server_snapshot_maps;
+				//std::map<index_key_t, snapshot_record_t> *old_server_snapshot_maps = server_snapshot_maps;
+				concurrent_snapshot_map_t *old_server_snapshot_maps = server_snapshot_maps;
 				server_snapshot_maps = new_server_snapshot_maps;
 				if (old_server_snapshot_maps != NULL) {
 					uint32_t prev_server_snapshot_rcus[server_num];
@@ -1012,6 +1035,8 @@ void *run_server_consnapshotserver(void *param) {
 				control_type_phase0 = -1;
 				control_type_phase1 = -1;
 				total_bytes = -1;
+
+				server_issnapshot = false;
 			}
 		}
 	}

@@ -46,7 +46,7 @@ class IniparserWrapper {
 		short get_reflector_popserver_port();
 
 		// switch
-		uint32_t get_kv_bucket_num();
+		uint32_t get_switch_kv_bucket_num();
 		uint32_t get_switch_max_vallen();
 		short get_switchos_popserver_port();
 		short get_switchos_paramserver_port();

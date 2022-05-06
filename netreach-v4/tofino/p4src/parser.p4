@@ -76,7 +76,7 @@ parser parse_scan {
 
 parser parse_split {
 	extract(split_hdr);
-	default: ingress;
+	return ingress;
 }
 #endif
 
@@ -144,7 +144,7 @@ parser parse_val_len0 {
 
 parser parse_val_len1 {
 	extract(val1_hdr);
-	return paser_val_len0;
+	return parse_val_len0;
 }
 
 parser parse_val_len2 {
@@ -250,9 +250,4 @@ parser parse_inswitch {
 parser parse_stat {
 	extract(stat_hdr);
 	return ingress; // GETRES, PUTRES, DELRES, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
-}
-
-parser parse_other {
-	extract(other_hdr);
-	return ingress;
 }
