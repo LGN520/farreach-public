@@ -23,7 +23,7 @@ table need_recirculate_tbl {
 		reset_need_recirculate;
 	}
 	default_action: reset_need_recirculate();
-	size: 16;
+	size: 8;
 }
 
 // Stage 1
@@ -43,7 +43,7 @@ table recirculate_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 16;
+	size: 2;
 }
 
 // Stage 1
@@ -87,7 +87,7 @@ table sid_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 8;
 }
 
 action cached_action(idx) {
@@ -113,7 +113,7 @@ table cache_lookup_tbl {
 		uncached_action;
 	}
 	default_action: uncached_action();
-	size: LOOKUP_ENTRY_COUNT;
+	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
 }
 
 field_list hash_fields {
@@ -159,7 +159,7 @@ table range_partition_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: RANGE_PARTITION_ENTRY_NUM;
 }
 #else
 action hash_for_partition() {
@@ -177,7 +177,7 @@ table hash_for_partition_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 4;
 }
 #endif
 
@@ -196,7 +196,7 @@ table hash_for_cm_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 2;
 }
 
 action hash_for_seq() {
@@ -214,7 +214,7 @@ table hash_for_seq_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 2;
 }
 
 action sample() {
@@ -233,7 +233,7 @@ table sample_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 2;
 }
 
 // Stage 2
@@ -259,7 +259,7 @@ table range_partition_for_scan_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: RANGE_PARTITION_FOR_SCAN_ENTRY_NUM;
 }
 #else
 action hash_partition(udpport, eport, is_wrong_pipeline) {
@@ -281,7 +281,7 @@ table hash_partition_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 128;
+	size: HASH_PARTITION_ENTRY_NUM;
 }
 #endif
 
@@ -301,7 +301,6 @@ action update_getres_deleted_seq_to_getres_deleted_seq_inswitch() {
 	modify_field(op_hdr.optype, GETRES_DELETED_SEQ_INSWITCH);
 	add_header(inswitch_hdr);
 }
-
 
 action update_putreq_to_putreq_inswitch() {
 	modify_field(op_hdr.optype, PUTREQ_INSWITCH);
@@ -334,7 +333,7 @@ table ig_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 8;
 }
 
 // Stage 4
@@ -361,6 +360,6 @@ table ipv4_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 8;
 }
 

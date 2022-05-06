@@ -374,7 +374,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 0
             
-            # Table: need_recirculate_tbl (default: reset_need_recirculate; size: ?)
+            # Table: need_recirculate_tbl (default: reset_need_recirculate; size: <=8)
             #print "Configuring need_recirculate_tbl"
             #for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
             #    for iport in self.devPorts:
@@ -387,7 +387,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: recirculate_tbl (default: nop; size: ?)
+            # Table: recirculate_tbl (default: nop; size: 2)
             print "Configuring recirculate_tbl"
             for tmpoptype in [PUTREQ, DELREQ]:
                 matchspec0 = netbufferv4_recirculate_tbl_match_spec_t(\
@@ -399,7 +399,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: ?)
+            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=2)
             #print "Configuring snapshot_flag_tbl"
             #for tmpoptype in [PUTREQ, DELREQ]:
             #    matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
@@ -408,7 +408,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #    self.client.snapshot_flag_tbl_table_add_with_reset_snapshot_flag(\
             #            self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: sid_tbl (default: nop; size: ?)
+            # Table: sid_tbl (default: nop; size: 6)
             print "Configuring sid_tbl"
             for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
                 matchspec0 = netbufferv4_sid_tbl_match_spec_t(\
@@ -426,11 +426,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.sid_tbl_table_add_with_set_sid(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-            # Table: cache_lookup_tbl (default: uncached_action; size: 64K)
+            # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
             print "Leave cache_lookup_tbl managed by controller in runtime"
 
             if RANGE_SUPPORT:
-                # Table: range_partition_tbl (default: nop; server_num <= 128)
+                # Table: range_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring range_partition_tbl"
                 key_start = -pow(2, 31) # [-2^31, 2^31-1]
                 key_range_per_server = pow(2, 32) / server_num
@@ -461,7 +461,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                             key_start = key_end + 1
             else:
-                # Table: hash_for_partition_tbl (default: nop; size: ?)
+                # Table: hash_for_partition_tbl (default: nop; size: 4)
                 print "Configuring hash_for_partition_tbl"
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
                     matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
@@ -470,7 +470,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: hash_for_cm_tbl (default: nop; size: ?)
+            # Table: hash_for_cm_tbl (default: nop; size: 2)
             print "Configuring hash_for_cm_tbl"
             for tmpoptype in [GETREQ, PUTREQ]:
                 matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
@@ -479,7 +479,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.hash_for_cm_tbl_table_add_with_hash_for_cm(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: hash_for_seq_tbl (default: nop; size: ?)
+            # Table: hash_for_seq_tbl (default: nop; size: 2)
             print "Configuring hash_for_seq_tbl"
             for tmpoptype in [PUTREQ, DELREQ]:
                 matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
@@ -488,7 +488,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.hash_for_seq_tbl_table_add_with_hash_for_seq(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: sample_tbl (default: nop; size: ?)
+            # Table: sample_tbl (default: nop; size: 2)
             print "Configuring sample_tbl"
             for tmpoptype in [GETREQ, PUTREQ]:
                 matchspec0 = netbufferv4_sample_tbl_match_spec_t(\
@@ -500,7 +500,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 2
 
             if RANGE_SUPPORT:
-                # Table: range_partition_for_scan_tbl (default: nop; server_num <= 128)
+                # Table: range_partition_for_scan_tbl (default: nop; size <= 2 * 128)
                 # TODO: limit max_scannum <= constant (e.g., 32)
                 print "Configuring range_partition_for_scan_tbl"
                 startkey_start = -pow(2, 31) # [-2^31, 2^31-1]
@@ -534,7 +534,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             endkey_start = endkey_end + 1
                         startkey_start = startkey_end + 1
             else:
-                # Table: hash_partition_tbl (default: nop; server_num <= 128)
+                # Table: hash_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_start = 0 # [0, partition_count-1]
                 hash_range_per_server = partition_count / server_num
@@ -567,7 +567,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: ig_port_forward_tbl (default: nop; size: ?)
+            # Table: ig_port_forward_tbl (default: nop; size: 6)
             print "Configuring ig_port_forward_tbl"
             matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ,
@@ -602,7 +602,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 4
 
-            # Table: ipv4_forward_tbl (default: nop; size: ?)
+            # Table: ipv4_forward_tbl (default: nop; size: 5)
             print "Configuring ipv4_forward_tbl"
             ipv4addr0 = ipv4Addr_to_i32(src_ip)
             for tmpoptype in [GETRES, PUTRES, DELRES]:
@@ -628,7 +628,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 0
 
-            # Table: access_cmi_tbl (default: initialize_cmi_predicate; size: ?)
+            # Table: access_cmi_tbl (default: initialize_cmi_predicate; size: 2)
             cm_hashnum = 4
             for i in range(1, cm_hashnum+1):
                 print "Configuring access_cm{}_tbl".format(i)
@@ -641,7 +641,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
             if RANGE_SUPPORT:
-                # Table: process_scanreq_split_tbl
+                # Table: process_scanreq_split_tbl (default: nop; size <= 1 * 128)
                 print "Configuring process_scanreq_split_tbl"
                 for i in range(server_num):
                     dstport = server_port + i
@@ -652,7 +652,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     actnspec0 = netbufferv4_process_scanreq_split_action_spec_t(self.devPorts[1], self.sids[1])
                     self.client.process_scanreq_split_tbl_table_add_with_process_scanreq_split(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
-                # Table: process_cloned_scanreq_split_tbl
+                    # Table: process_cloned_scanreq_split_tbl (default: nop; size <= 1 * 128)
                 print "Configuring process_cloned_scanreq_split_tbl"
                 for i in range(server_num):
                     dstport = server_port + i
@@ -685,7 +685,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.is_hot_tbl_table_add_with_is_hot(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_cache_frequency_tbl (default: nop; size: ?)
+            # Table: access_cache_frequency_tbl (default: nop; size: 6)
             print "Configuring access_cache_frequency_tbl"
             for tmpoptype in [GETREQ_INSWITCH, PUTREQ_INSWITCH]:
                 matchspec0 = netbufferv4_access_cache_frequency_tbl_match_spec_t(\
@@ -703,7 +703,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.access_cache_frequency_table_add_with_reset_cache_frequency(\
                             self.sess_hdl, self.dev_tgt, match_spec0)
 
-            # Table: access_validvalue_tbl (default: nop; size: ?)
+            # Table: access_validvalue_tbl (default: nop; size: 5)
             print "Configuring access_validvalue_tbl"
             for tmpoptype in [GETREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH]:
                 matchspec0 = netbufferv4_access_validvalue_tbl_match_spec_t(\
@@ -712,7 +712,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client,access_validvalue_tbl_table_add_with_get_validvalue(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_seq_tbl (default: nop; size: ?)
+            # Table: access_seq_tbl (default: nop; size: 2)
             print "Configuring access_seq_tbl"
             for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
                 matchspec0 = netbufferv4_access_seq_tbl_match_spec_t(\
@@ -722,7 +722,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stgae 2
 
-            # Table: access_latest_tbl (default: nop; size: ?)
+            # Table: access_latest_tbl (default: nop; size: 18)
             print "Configuring access_latest_tbl"
             for is_cached in cached_list:
                 for validvalue in validvalue_list:
@@ -761,7 +761,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: access_deleted_tbl (default: nop; size: ?)
+            # Table: access_deleted_tbl (default: nop; size: 30)
             print "Configuring access_deleted_tbl"
             for is_cached in cached_list:
                 for validvalue in validvalue_list:
@@ -814,7 +814,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: update_vallen_tbl (default: nop; 24)
+            # Table: update_vallen_tbl (default: nop; 30)
             print "Configuring update_vallen_tbl"
             for is_cached in cached_list:
                 for validvalue in validvalue_list:
@@ -860,7 +860,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_savedseq_tbl (default: nop; size: ?)
+            # Table: access_savedseq_tbl (default: nop; size: 22)
             print "Configuring access_savedseq_tbl"
             for is_cached in cached_list:
                 for validvalue in validvalue_list:
@@ -891,7 +891,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_case1_tbl (default: nop; ?)
+            # Table: access_case1_tbl (default: nop; 6)
             print "Configuring access_case1_tbl"
             for is_latest in latest_list:
                 for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:

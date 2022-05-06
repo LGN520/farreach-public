@@ -35,7 +35,7 @@ table access_cm1_tbl {
 		initialize_cm1_predicate;
 	}
 	default_action: initialize_cm1_predicate();
-	size: 0;
+	size: 2;
 }
 
 register cm2_reg {
@@ -75,7 +75,7 @@ table access_cm2_tbl {
 		initialize_cm2_predicate;
 	}
 	default_action: initialize_cm2_predicate();
-	size: 0;
+	size: 2;
 }
 
 register cm3_reg {
@@ -115,7 +115,7 @@ table access_cm3_tbl {
 		initialize_cm3_predicate;
 	}
 	default_action: initialize_cm3_predicate();
-	size: 0;
+	size: 2;
 }
 
 register cm4_reg {
@@ -155,5 +155,5 @@ table access_cm4_tbl {
 		initialize_cm4_predicate;
 	}
 	default_action: initialize_cm4_predicate();
-	size: 0;
+	size: 2;
 }

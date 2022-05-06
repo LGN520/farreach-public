@@ -67,5 +67,5 @@ table access_validvalue_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 8;
 }

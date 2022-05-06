@@ -19,7 +19,7 @@ table process_scanreq_split_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: MAX_SERVERNUM;
 }
 action process_cloned_scanreq_split(eport, sid) {
 	add_to_field(udp_hdr.dstPort, 1);
@@ -38,7 +38,7 @@ table process_cloned_scanreq_split_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: MAX_SERVERNUM;
 }
 #endif
 
@@ -567,6 +567,23 @@ action update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and
 	modify_field(meta.clonenum_for_pktloss, 2); // 3 ACKs (clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> DELRES)
 
 	//remove_header(inswitch_hdr);
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	add_header(val16_hdr);
 	add_header(seq_hdr);
 	add_header(stat_hdr);
 

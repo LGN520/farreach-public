@@ -57,5 +57,5 @@ table access_latest_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }

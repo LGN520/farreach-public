@@ -4,7 +4,7 @@
 #include "tofino/primitives.p4"
 
 // Uncomment it if support range query, or comment it otherwise
-#define RANGE_SUPPORT
+//#define RANGE_SUPPORT
 
 // 1B optype does not need endian conversion
 #define GETREQ 0x00
@@ -47,14 +47,23 @@
 //#define KV_BUCKET_COUNT 32768
 #define KV_BUCKET_COUNT 1
 
-// pipeline_num * kv_bucket_count
-#define LOOKUP_ENTRY_COUNT 65536
+// egress_pipeline_num * kv_bucket_count
+//#define LOOKUP_ENTRY_COUNT 65536
+#define LOOKUP_ENTRY_COUNT 32768
 
 // 64K * 2B counter
 #define CM_BUCKET_COUNT 65536
 #define HH_THRESHOLD 100
 
-// partition range
+#define MAX_SERVER_NUM 128
+// RANGE_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM
+#define RANGE_PARTITION_ENTRY_NUM 1024
+// RANGE_PARTITION_FOR_SCAN_ENTRY_NUM = 2 * MAX_SERVER_NUM
+#define RANGE_PARTITION_FOR_SCAN_ENTRY_NUM 256
+// HASH_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM
+#define HASH_PARTITION_ENTRY_NUM 1024
+
+// hash partition range
 #define PARTITION_COUNT 32768
 
 // 32K * 4B counter

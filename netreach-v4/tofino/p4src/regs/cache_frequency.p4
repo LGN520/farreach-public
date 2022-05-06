@@ -36,5 +36,5 @@ table access_cache_frequency_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 8;
 }

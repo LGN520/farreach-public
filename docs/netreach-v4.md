@@ -527,7 +527,7 @@
 				* If valid=0/3, skip savedseq_tbl (keep the original savedseq)
 				* If iscached=1 and valid=1, set savedseq=seq
 			+ access_case1_tbl: if is_cached=1, valid=1, snapshot_flag=1, set and get case1
-		* Intermediate stages: reset vallen = 0 (save bandwidth), not access value 
+		* Intermediate stages: reset_and_get vallen = 0 (save bandwidth), reset_and_get value
 		* Stage 10: eg_port_forward_tbl
 			* If inswitch_hdr.is_cached=0
 				- If snapshot_flag=1, forward DELREQ_SEQ_CASE3 to server
