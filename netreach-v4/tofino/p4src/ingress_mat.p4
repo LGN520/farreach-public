@@ -78,12 +78,13 @@ table snapshot_flag_tbl {
 }*/
 
 // NOTE: eg_intr_md.egress_port is a read-only field (we cannot directly set egress port in egress pipeline even if w/ correct pipeline)
+// NOTE: using inswitch_hdr.sid for clone_e2e in ALU needs to maintain inswitch_hdr.sid and eg_intr_md_for_md.mirror_id into the same group, which violates PHV allocation constraints -> but MAU can access different groups
 action set_sid(sid) {
 	modify_field(inswitch_hdr.sid, sid);
 }
 
 @pragma stage 1
-table sid_tbl {
+table prepare_for_res_tbl {
 	reads {
 		op_hdr.optype: exact;
 		ig_intr_md.ingress_port: exact;

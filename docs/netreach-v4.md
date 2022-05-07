@@ -38,6 +38,10 @@
 		* volatile: disable reordering; disable register cache (both LOAD/STORE) for the specified variables
 		* memory fence: disable reordering; disable register cache by re-loading all registers before LOAD and flushing to memory after STORE 
 	+ For atomicity/serializability, we can use locking. copy-on-write w/ RCU, and version check
+- NOTE for PHV allocation
+	+ Containers accessed by one ALU must be allocated in the same group
+	+ In each stage, one container can only be accessed once by an ALU
+	+ The above contraints are only for ALU instead of MAU -> MAU can match containers in different groups, each can be matched with multiple times
 
 ## Overview
 

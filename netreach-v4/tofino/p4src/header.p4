@@ -92,7 +92,7 @@ header_type inswitch_t {
 		//eport_for_res: 9;
 		sid: 9;
 		hashval_for_cm: 17; // at most 64K
-		padding: 1;
+		padding: 3;
 		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
 	}

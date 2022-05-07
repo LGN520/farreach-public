@@ -416,24 +416,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #    self.client.snapshot_flag_tbl_table_add_with_reset_snapshot_flag(\
             #            self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: sid_tbl (default: nop; size: 6)
-            print "Configuring sid_tbl"
+            # Table: prepare_for_res_tbl (default: nop; size: 6)
+            print "Configuring prepare_for_res_tbl"
             for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
-                matchspec0 = netbufferv4_sid_tbl_match_spec_t(\
+                matchspec0 = netbufferv4_prepare_for_res_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ig_intr_md_ingress_port = self.devPorts[0],
                         meta_need_recirculate = 0)
                 #actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0], self.devPorts[0])
                 actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0])
-                self.client.sid_tbl_table_add_with_set_sid(\
+                self.client.prepare_for_res_tbl_table_add_with_set_sid(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 # Should not used: no req from server
-                matchspec0 = netbufferv4_sid_tbl_match_spec_t(\
+                matchspec0 = netbufferv4_prepare_for_res_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
-                        ig_intr_md_ingress_port = self.devPorts[1])
+                        ig_intr_md_ingress_port = self.devPorts[1],
+                        meta_need_recirculate = 0)
                 #actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1], self.devPorts[1])
                 actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1])
-                self.client.sid_tbl_table_add_with_set_sid(\
+                self.client.prepare_for_res_tbl_table_add_with_set_sid(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
@@ -664,7 +665,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             op_hdr_optype = SCANREQ_SPLIT,
                             udp_hdr_dstPort = dstport)
                     # Set eport and sid for dstport
-                    actnspec0 = netbufferv4_process_scanreq_split_action_spec_t(self.devPorts[1], self.sids[1])
+                    #actnspec0 = netbufferv4_process_scanreq_split_action_spec_t(self.devPorts[1], self.sids[1])
+                    # Set sid for dstport+1
+                    actnspec0 = netbufferv4_process_scanreq_split_action_spec_t(self.sids[1])
                     self.client.process_scanreq_split_tbl_table_add_with_process_scanreq_split(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
                     # Table: process_cloned_scanreq_split_tbl (default: nop; size <= 1 * 128)
@@ -675,7 +678,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             op_hdr_optype = SCANREQ_SPLIT,
                             udp_hdr_dstPort = dstport)
                     # Set eport and sid for dstport+1
-                    actnspec0 = netbufferv4_process_cloned_scanreq_split_action_spec_t(self.devPorts[1], self.sids[1])
+                    #actnspec0 = netbufferv4_process_cloned_scanreq_split_action_spec_t(self.devPorts[1], self.sids[1])
+                    # Set sid for dstport+2
+                    actnspec0 = netbufferv4_process_cloned_scanreq_split_action_spec_t(self.sids[1])
                     self.client.process_cloned_scanreq_split_tbl_table_add_with_process_cloned_scanreq_split(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -1218,9 +1223,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 if is_cached == 1 and validvalue == 1 and is_latest == 0 and snapshot_flag == 1 and is_case1 == 0:
                                                     # Update GETRES_LATEST_SEQ_INSWITCH as GETRES_LATEST_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
                                                     if is_deleted == 0: # is_deleted=0 -> stat=1
-                                                        actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 1)
+                                                        #actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 1)
+                                                        actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], 1)
                                                     elif is_deleted == 1: # is_deleted=1 -> stat=0
-                                                        actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 0)
+                                                        #actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 0)
+                                                        actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], 0)
                                                     self.client.eg_port_forwrad_tbl_table_add_with_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                 else:
                                                     # Drop GETRES_LATEST_SEQ_INSWITCH
@@ -1287,9 +1294,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 if is_cached == 1 and validvalue == 1 and is_latest == 0 and snapshot_flag == 1 and is_case1 == 0:
                                                     # Update GETRES_DELETED_SEQ_INSWITCH as GETRES_DELETED_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
                                                     if is_deleted == 0: # is_deleted=0 -> stat=1
-                                                        actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 1)
+                                                        #actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 1)
+                                                        actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], 1)
                                                     elif is_deleted == 1: # is_deleted=1 -> stat=0
-                                                        actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 0)
+                                                        #actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 0)
+                                                        actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], 0)
                                                     self.client.eg_port_forwrad_tbl_table_add_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                 else:
                                                     # Drop GETRES_DELETED_SEQ_INSWITCH
@@ -1335,7 +1344,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     inswitch_hdr_snapshot_flag = snapshot_flag,
                                                     meta_is_case1 = is_case1)
                                                 # Update CACHE_POP_INSWITCH as CACHE_POP_INSWITCH_ACK to reflector (w/ clone)
-                                                actnspec0 = netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_action_spec_t(self.sids[1], self.devPorts[1])
+                                                #actnspec0 = netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_action_spec_t(self.sids[1], self.devPorts[1])
+                                                actnspec0 = netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_action_spec_t(self.sids[1])
                                                 self.client.eg_port_forward_tbl_table_add_with_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, snapshot_flag, is_case1 should be 0 for CACHE_POP_INSWITCH_ACK
