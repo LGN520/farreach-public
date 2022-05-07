@@ -159,12 +159,12 @@ DEPS += ycsb_server.d
 CLEAN += ycsb_server.o ycsb_server
 
 switchos: switchos.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS) special_case.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+	$(CC) -pthread -g $(LDDIR) $^ -lpthread -o $@
 DEPS += switchos.d
 CLEAN += switchos.o switchos
 
 controller: controller.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS)
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += controller.d
 CLEAN += controller.o controller
 

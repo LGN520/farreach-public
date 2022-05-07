@@ -133,7 +133,8 @@ class ConcurrentMap {
   std::vector<uint8_t *> allocated_blocks;
   size_t next_node_i = 0;
   static const size_t node_n_per_block = alt_buf_fanout + 1;
-  static const size_t node_size = std::max(sizeof(leaf_t), sizeof(internal_t));
+  static const size_t node_size = (sizeof(leaf_t) >= sizeof(internal_t)) ? sizeof(leaf_t) : sizeof(internal_t); // for compilation in switchos
+  //static const size_t node_size = std::max(sizeof(leaf_t), sizeof(internal_t));
 };
 
 #endif
