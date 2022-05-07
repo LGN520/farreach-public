@@ -240,7 +240,10 @@
 		* controller.snapshotclient sends SNAPSHOT_START to ToR switchos periodically
 			- NOTE: hybrid consistency and causal consistency are not accepted by caching which requires point-in-time consistency
 			- For distributed snapshot
-				+ TODO: controller enforces other spine switches echo each packet by the same spine switch A
+				+ TODO: controller enforces other spine switches echo each PUTREQ/DELREQ by the same spine switch A
+				+ TODO: Think about whether we need to report case2 for GETRES_LATEST/DELETED_SEQ?
+					* If so controller needs to enforce all leaf switches echo each GETRES_LATEST/DELETED_SEQ to the same spine switch A
+					* Maybe acceptable, as we target on write-intensive workloads + GETRES_LATSET/DELETED_SEQ is only triggered by the first packets of newly populated records + limited time (3 RTTs: enable echo -> set snapshot_flags -> disable echo)
 				+ TODO: controller notifies A to start snapshot
 					* TODO: The echoed packets also use A's flag to decide whether to report special cases
 				+ TODO: controller notifies all other spines switches to start snapshot, and disables enforced echo mechanism

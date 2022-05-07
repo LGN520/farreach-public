@@ -118,7 +118,7 @@ table update_vallo1_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi1_reg {
@@ -179,7 +179,7 @@ table update_valhi1_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo2_reg {
@@ -240,7 +240,7 @@ table update_vallo2_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi2_reg {
@@ -301,7 +301,7 @@ table update_valhi2_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo3_reg {
@@ -362,7 +362,7 @@ table update_vallo3_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi3_reg {
@@ -423,7 +423,7 @@ table update_valhi3_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo4_reg {
@@ -484,7 +484,7 @@ table update_vallo4_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi4_reg {
@@ -545,7 +545,7 @@ table update_valhi4_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo5_reg {
@@ -606,7 +606,7 @@ table update_vallo5_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi5_reg {
@@ -667,7 +667,7 @@ table update_valhi5_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo6_reg {
@@ -728,7 +728,7 @@ table update_vallo6_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi6_reg {
@@ -789,7 +789,7 @@ table update_valhi6_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo7_reg {
@@ -850,7 +850,7 @@ table update_vallo7_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi7_reg {
@@ -911,7 +911,7 @@ table update_valhi7_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo8_reg {
@@ -972,7 +972,7 @@ table update_vallo8_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi8_reg {
@@ -1033,7 +1033,7 @@ table update_valhi8_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo9_reg {
@@ -1094,7 +1094,7 @@ table update_vallo9_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi9_reg {
@@ -1155,7 +1155,7 @@ table update_valhi9_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo10_reg {
@@ -1216,7 +1216,7 @@ table update_vallo10_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi10_reg {
@@ -1277,7 +1277,7 @@ table update_valhi10_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo11_reg {
@@ -1338,7 +1338,7 @@ table update_vallo11_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi11_reg {
@@ -1399,7 +1399,7 @@ table update_valhi11_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo12_reg {
@@ -1460,7 +1460,7 @@ table update_vallo12_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi12_reg {
@@ -1521,7 +1521,7 @@ table update_valhi12_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo13_reg {
@@ -1582,7 +1582,7 @@ table update_vallo13_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi13_reg {
@@ -1643,7 +1643,7 @@ table update_valhi13_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo14_reg {
@@ -1704,7 +1704,7 @@ table update_vallo14_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi14_reg {
@@ -1765,7 +1765,7 @@ table update_valhi14_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo15_reg {
@@ -1826,7 +1826,7 @@ table update_vallo15_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi15_reg {
@@ -1887,7 +1887,7 @@ table update_valhi15_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register vallo16_reg {
@@ -1948,7 +1948,7 @@ table update_vallo16_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }
 
 register valhi16_reg {
@@ -2009,5 +2009,5 @@ table update_valhi16_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 32;
 }

@@ -66,11 +66,11 @@ table is_last_scansplit_tbl {
 }
 #endif
 
-action is_hot() {
+action set_is_hot() {
 	modify_field(meta.is_hot, 1);
 }
 
-action not_hot() {
+action reset_is_hot() {
 	modify_field(meta.is_hot, 0);
 }
 
@@ -82,20 +82,20 @@ table is_hot_tbl {
 		meta.cm4_predicate: exact;
 	}
 	actions {
-		is_hot;
-		not_hot;
+		set_is_hot;
+		reset_is_hot;
 	}
-	default_action: not_hot();
+	default_action: reset_is_hot();
 	size: 1;
 }
 
 // Stage 9
 
-action is_lastclone_action() {
+action set_is_lastclone() {
 	modify_field(meta.is_lastclone_for_pktloss, 1);
 }
 
-action not_lastclone_action() {
+action reset_is_lastclone() {
 	modify_field(meta.is_lastclone_for_pktloss, 0);
 }
 
@@ -106,11 +106,11 @@ table lastclone_tbl {
 		meta.clonenum_for_pktloss: exact;
 	}
 	actions {
-		is_lastclone_action;
-		not_lastclone_action;
+		set_is_lastclone;
+		reset_is_lastclone;
 	}
-	default_action: not_lastclone_action();
-	size: 1;
+	default_action: reset_is_lastclone();
+	size: 8;
 }
 
 // Stage 10
@@ -718,7 +718,7 @@ table eg_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 0;
+	size: 2048;
 }
 
 #ifdef RANGE_SUPPORT

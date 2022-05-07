@@ -29,6 +29,10 @@ action try_case1() {
 	try_case1_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+action reset_is_case1() {
+	modify_field(meta.is_case1, 0);
+}
+
 @pragma stage 3
 table access_case1_tbl {
 	reads {
@@ -39,10 +43,10 @@ table access_case1_tbl {
 		inswitch_hdr.snapshot_flag: exact;
 	}
 	actions {
-		try_case1;
-		read_case1;
-		nop;
+		try_case1; // touch case1_reg
+		read_case1; // touch case1_reg
+		reset_is_case1; // not touch case1_reg
 	}
-	default_action: nop();
+	default_action: reset_is_case1();
 	size: 8;
 }

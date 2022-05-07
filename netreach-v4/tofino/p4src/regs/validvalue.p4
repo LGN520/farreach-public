@@ -54,6 +54,10 @@ action reset_and_get_validvalue() {
 	reset_and_get_validvalue_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+action reset_meta_validvalue() {
+	modify_field(meta.validvalue, 0);
+}
+
 @pragma stage 1
 table access_validvalue_tbl {
 	reads {
@@ -64,8 +68,8 @@ table access_validvalue_tbl {
 		get_validvalue;
 		set_and_get_validvalue;
 		reset_and_get_validvalue;
-		nop;
+		reset_meta_validvalue; // not touch validvalue_reg
 	}
-	default_action: nop();
+	default_action: reset_meta_validvalue();
 	size: 8;
 }

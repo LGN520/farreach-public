@@ -43,6 +43,10 @@ action reset_and_get_latest() {
 	reset_and_get_latest_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+action reset_is_latest {
+	modify_field(meta.is_latest, 0);
+}
+
 @pragma stage 2
 table access_latest_tbl {
 	reads {
@@ -54,8 +58,8 @@ table access_latest_tbl {
 		get_latest;
 		set_and_get_latest;
 		reset_and_get_latest;
-		nop;
+		reset_is_latest; // not touch latest_reg
 	}
-	default_action: nop();
+	default_action: reset_is_latest();
 	size: 32;
 }

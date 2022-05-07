@@ -140,6 +140,9 @@ field_list_calculation hash_calc {
 	output_width: 1;
 }*/
 
+action reset_is_wrong_pipeline() {
+	modify_field(inswitch_hdr.is_wrong_pipeline, 0);
+}
 #ifdef RANGE_SUPPORT
 action range_partition(udpport, eport, is_wrong_pipeline) {
 	modify_field(udp_hdr.dstPort, udpport);
@@ -156,9 +159,9 @@ table range_partition_tbl {
 	}
 	actions {
 		range_partition;
-		nop;
+		reset_is_wrong_pipeline;
 	}
-	default_action: nop();
+	default_action: reset_is_wrong_pipeline();
 	size: RANGE_PARTITION_ENTRY_NUM;
 }
 #else
@@ -278,9 +281,9 @@ table hash_partition_tbl {
 	}
 	actions {
 		hash_partition;
-		nop;
+		reset_is_wrong_pipeline;
 	}
-	default_action: nop();
+	default_action: reset_is_wrong_pipeline();
 	size: HASH_PARTITION_ENTRY_NUM;
 }
 #endif

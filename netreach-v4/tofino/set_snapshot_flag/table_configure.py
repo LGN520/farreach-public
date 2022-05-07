@@ -60,6 +60,8 @@ pipeidx_ports_map = {} # mapping between pipeline and ports
 
 PUTREQ = 0x01
 DELREQ = 0x02
+GETRES_LATEST_SEQ = 0x0b
+GETRES_DELETED_SEQ = 0x0e
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
@@ -108,7 +110,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         for tmppipeidx in pipeidx_ports_map.keys():
             if tmppipeidx != ingress_pipeidx:
                 tmpports = pipeidx_ports_map[tmppipeidx]
-                for tmpoptype in [PUTREQ, DELREQ]:
+                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
                     for iport in tmpports:
                         matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
                                 op_hdr_optype = tmpoptype,
@@ -117,7 +119,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
         print "Set snapshot_flag=1 for all ingress pipelines"
-        for tmpoptype in [PUTREQ, DELREQ]:
+        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
             matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
                     op_hdr_optype = tmpoptype,
                     meta_need_recirculate = 0)
@@ -131,7 +133,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         for tmppipeidx in pipeidx_ports_map.keys():
             if tmppipeidx != ingress_pipeidx:
                 tmpports = pipeidx_ports_map[tmppipeidx]
-                for tmpoptype in [PUTREQ, DELREQ]:
+                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
                     for iport in tmpports:
                         matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
                                 op_hdr_optype = tmpoptype,

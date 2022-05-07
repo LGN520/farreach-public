@@ -42,6 +42,10 @@ action reset_and_get_deleted() {
 	reset_and_get_deleted_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+action reset_is_deleted() {
+	modify_field(meta.isdeleted, 0);
+}
+
 @pragma stage 3
 table access_deleted_tbl {
 	reads {
@@ -54,8 +58,8 @@ table access_deleted_tbl {
 		get_deleted;
 		set_and_get_deleted;
 		reset_and_get_deleted;
-		nop;
+		reset_is_deleted;
 	}
-	default_action: nop();
+	default_action: reset_is_deleted();
 	size: 32;
 }
