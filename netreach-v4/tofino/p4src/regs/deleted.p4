@@ -43,7 +43,7 @@ action reset_and_get_deleted() {
 }
 
 action reset_is_deleted() {
-	modify_field(meta.isdeleted, 0);
+	modify_field(meta.is_deleted, 0);
 }
 
 @pragma stage 3

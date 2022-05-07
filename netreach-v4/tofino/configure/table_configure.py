@@ -156,7 +156,7 @@ validvalue_list = [0, 1, 3]
 #validvalue_list = [0, 1, 2, 3] # If with PUTREQ_LARGE
 latest_list = [0, 1]
 deleted_lsit = [0, 1]
-wrong_pipeline_list = [0, 1]
+#wrong_pipeline_list = [0, 1]
 sampled_list = [0, 1]
 lastclone_list = [0, 1]
 snapshot_flag_list = [0, 1]
@@ -423,6 +423,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         op_hdr_optype = tmpoptype,
                         ig_intr_md_ingress_port = self.devPorts[0],
                         meta_need_recirculate = 0)
+                #actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0], self.devPorts[0])
                 actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0])
                 self.client.sid_tbl_table_add_with_set_sid(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -430,6 +431,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 matchspec0 = netbufferv4_sid_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ig_intr_md_ingress_port = self.devPorts[1])
+                #actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1], self.devPorts[1])
                 actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1])
                 self.client.sid_tbl_table_add_with_set_sid(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -438,7 +440,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Leave cache_lookup_tbl managed by controller in runtime"
 
             if RANGE_SUPPORT:
-                # Table: range_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
+                # # Table: range_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring range_partition_tbl"
                 key_start = -pow(2, 31) # [-2^31, 2^31-1]
                 key_range_per_server = pow(2, 32) / server_num
@@ -457,14 +460,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     ig_intr_md_ingress_port = iport,
                                     meta_need_recirculate = 0)
                             # Forward to the egress pipeline of server
-                            # serveridx = i
                             eport = self.devPorts[1]
-                            if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
-                                actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                                        server_port + i, self.devPorts[1], 0)
-                            else: # in wrong pipeline
-                                actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                                        server_port + i, self.devPorts[1], 1)
+                            #if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
+                            #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                            #            server_port + i, eport, 0)
+                            #else: # in wrong pipeline
+                            #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                            #            server_port + i, eport, 1)
+                            actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                                    server_port + i, eport)
                             self.client.range_partition_tbl_table_add_with_range_partition(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                             key_start = key_end + 1
@@ -542,7 +546,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             endkey_start = endkey_end + 1
                         startkey_start = startkey_end + 1
             else:
-                # Table: hash_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
+                # # Table: hash_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_start = 0 # [0, partition_count-1]
                 hash_range_per_server = partition_count / server_num
@@ -561,14 +566,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     ig_intr_md_ingress_port = iport,
                                     meta_need_recirculate = 0)
                             # Forward to the egress pipeline of server
-                            # serveridx = i
                             eport = self.devPorts[1]
-                            if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
-                                actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                                        server_port + i, self.devPorts[1], 0)
-                            else: # in wrong pipeline
-                                actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                                        server_port + i, self.devPorts[1], 1)
+                            #if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
+                            #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                            #            server_port + i, eport, 0)
+                            #else: # in wrong pipeline
+                            #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                            #            server_port + i, eport, 1)
+                            actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                                    server_port + i, eport)
                             self.client.hash_partition_tbl_table_add_with_hash_partition(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                             hash_start = hash_end + 1
@@ -602,11 +608,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_delreq_to_delreq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = SCANREQ,
-                    meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_scanreq_to_scanreq_split(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+            if RANGE_SUPPORT:
+                matchspec0 = netbufferv4_ig_port_forward_tbl_match_spec_t(\
+                        op_hdr_optype = SCANREQ,
+                        meta_need_recirculate = 0)
+                self.client.ig_port_forward_tbl_table_add_with_update_scanreq_to_scanreq_split(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 4
 
@@ -1072,368 +1079,409 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     for validvalue in validvalue_list:
                         for is_latest in latest_list:
                             for is_deleted in deleted_list:
-                                for is_wrong_pipeline in pipeline_list:
-                                    for is_lastclone_for_pktloss in lastclone_list:
-                                        for snapshot_flag in snapshot_flag_list:
-                                            for is_case1 in case1_list:
-                                                # is_lastclone_for_pktloss, snapshot_flag, and is_case1 should be 0 for GETREQ_INSWITCH
-                                                if is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
-                                                    # size: 128
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = GETREQ_INSWITCH,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    if is_cached == 0:
-                                                        if is_hot == 1:
-                                                            # Update GETREQ_INSWITCH as GETREQ_POP to server
-                                                            #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_pop_action_spec_t(self.devPorts[1])
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_pop(\
+                                # NOTE: eg_intr_md.egress_port is read-only
+                                #for is_wrong_pipeline in pipeline_list:
+                                for is_lastclone_for_pktloss in lastclone_list:
+                                    for snapshot_flag in snapshot_flag_list:
+                                        for is_case1 in case1_list:
+                                            # is_lastclone_for_pktloss, snapshot_flag, and is_case1 should be 0 for GETREQ_INSWITCH
+                                            if is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                                # size: 64
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = GETREQ_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                if is_cached == 0:
+                                                    if is_hot == 1:
+                                                        # Update GETREQ_INSWITCH as GETREQ_POP to server
+                                                        #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_pop_action_spec_t(self.devPorts[1])
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_pop(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    else:
+                                                        # Update GETREQ_INSWITCH as GETREQ to server
+                                                        #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                else:
+                                                    if validvalue == 0:
+                                                        # Update GETREQ_INSWITCH as GETREQ to server
+                                                        #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    elif validvalue == 1:
+                                                        if is_latest == 0:
+                                                            # Update GETREQ_INSWITCH as GETREQ_NLATEST to server
+                                                            #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_nlatest_action_spec_t(self.devPorts[1])
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_nlatest(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         else:
+                                                            #if is_wrong_pipeline == 0:
+                                                            #    if is_deleted == 1:
+                                                            #        # Update GETREQ_INSWITCH as GETRES for deleted value to client
+                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
+                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            #    else:
+                                                            #        # Update GETREQ_INSWITCH as GETRES to client
+                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
+                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            #elif is_wrong_pipeline == 1:
+                                                            #    if is_deleted == 1:
+                                                            #        # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
+                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
+                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            #    else:
+                                                            #        # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
+                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            if is_deleted == 1:
+                                                                # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
+                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
+                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            else:
+                                                                # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
+                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    elif validvalue == 3:
+                                                        if is_latest == 0:
                                                             # Update GETREQ_INSWITCH as GETREQ to server
                                                             #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
                                                             self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                                                    else:
-                                                        if validvalue == 0:
-                                                            # Update GETREQ_INSWITCH as GETREQ to server
-                                                            #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                                                        elif validvalue == 1:
-                                                            if is_latest == 0:
-                                                                # Update GETREQ_INSWITCH as GETREQ_NLATEST to server
-                                                                #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_nlatest_action_spec_t(self.devPorts[1])
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_nlatest(\
+                                                        else:
+                                                            #if is_wrong_pipeline == 0:
+                                                            #    if is_deleted == 1:
+                                                            #        # Update GETREQ_INSWITCH as GETRES for deleted value to client
+                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
+                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            #    else:
+                                                            #        # Update GETREQ_INSWITCH as GETRES to client
+                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
+                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            #elif is_wrong_pipeline == 1:
+                                                            #    if is_deleted == 1:
+                                                            #        # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
+                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
+                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            #    else:
+                                                            #        # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
+                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            if is_deleted == 1:
+                                                                # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
+                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                                             else:
-                                                                if is_wrong_pipeline == 0:
-                                                                    if is_deleted == 1:
-                                                                        # Update GETREQ_INSWITCH as GETRES for deleted value to client
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    else:
-                                                                        # Update GETREQ_INSWITCH as GETRES to client
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                elif is_wrong_pipeline == 1:
-                                                                    if is_deleted == 1:
-                                                                        # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    else:
-                                                                        # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                        elif validvalue == 3:
-                                                            if is_latest == 0:
-                                                                # Update GETREQ_INSWITCH as GETREQ to server
-                                                                #actnspec0 = netbufferv4_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                                # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            else:
-                                                                if is_wrong_pipeline == 0:
-                                                                    if is_deleted == 1:
-                                                                        # Update GETREQ_INSWITCH as GETRES for deleted value to client
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    else:
-                                                                        # Update GETREQ_INSWITCH as GETRES to client
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                elif is_wrong_pipeline == 1:
-                                                                    if is_deleted == 1:
-                                                                        # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    else:
-                                                                        # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ
-                                                # size: 1
-                                                if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = GETRES_LATEST_SEQ,
+                                            # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ
+                                            # size: 1
+                                            #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                            if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = GETRES_LATEST_SEQ,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                # TODO: check if we need to set egress port for packet cloned by clone_i2e
+                                                # Update GETRES_LATEST_SEQ (by clone_i2e) as GETRES to client
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                            # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), is_lastclone_for_pktloss should be 0 for GETRES_LATEST_SEQ_INSWITCH
+                                            # size: 128
+                                            #if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
+                                            if is_hot == 0 and is_lastclone_for_pktloss == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                if is_cached == 1 and validvalue == 1 and is_latest == 0 and snapshot_flag == 1 and is_case1 == 0:
+                                                    # Update GETRES_LATEST_SEQ_INSWITCH as GETRES_LATEST_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
+                                                    if is_deleted == 0: # is_deleted=0 -> stat=1
+                                                        actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 1)
+                                                    elif is_deleted == 1: # is_deleted=1 -> stat=0
+                                                        actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 0)
+                                                    self.client.eg_port_forwrad_tbl_table_add_with_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                else:
+                                                    # Drop GETRES_LATEST_SEQ_INSWITCH
+                                                    self.client.eg_port_forward_tbl_table_add_with_drop_getres_latest_seq_inswitch(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                            # is_cached=1, is_wrong_pipeline=0, and snapshot_flag=1 (same inswitch_hdr as GETRES_LATEST_SEQ_INSWITCH); is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_case1 should be 0 for GETRES_LATEST_SEQ_INSWITCH_CASE1
+                                            # size: 2
+                                            #if is_cached == 1 and is_wrong_pipeline == 0 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
+                                            if is_cached == 1 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH_CASE1,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                if is_lastclone_for_pktloss == 0:
+                                                    # Forward GETRES_LATEST_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
+                                                    actnspec0 = netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.sids[1])
+                                                    self.client.eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                elif is_lastclone_for_pktloss == 1:
+                                                    # Forward GETRES_LATEST_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector
+                                                    self.client.eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_inswitch_case1(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                            # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_DELETED_SEQ
+                                            # size: 1
+                                            #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                            if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                        op_hdr_optype = GETRES_DELETED_SEQ,
                                                         inswitch_hdr_is_cached = is_cached,
                                                         meta_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                        #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     # TODO: check if we need to set egress port for packet cloned by clone_i2e
-                                                    # Update GETRES_LATEST_SEQ (by clone_i2e) as GETRES to client
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres(\
+                                                    # Update GETRES_DELETED_SEQ (by clone_i2e) as GETRES to client
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), is_lastclone_for_pktloss should be 0 for GETRES_LATEST_SEQ_INSWITCH
-                                                # size: 128
-                                                if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    if is_cached == 1 and validvalue == 1 and is_latest == 0 and snapshot_flag == 1 and is_case1 == 0:
-                                                        # Update GETRES_LATEST_SEQ_INSWITCH as GETRES_LATEST_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
-                                                        if is_deleted == 0: # is_deleted=0 -> stat=1
-                                                            actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 1)
-                                                        elif is_deleted == 1: # is_deleted=1 -> stat=0
-                                                            actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 0)
-                                                        self.client.eg_port_forwrad_tbl_table_add_with_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    else:
-                                                        # Drop GETRES_LATEST_SEQ_INSWITCH
-                                                        self.client.eg_port_forward_tbl_table_add_with_drop_getres_latest_seq_inswitch(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_cached=1, is_wrong_pipeline=0, and snapshot_flag=1 (same inswitch_hdr as GETRES_LATEST_SEQ_INSWITCH); is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_case1 should be 0 for GETRES_LATEST_SEQ_INSWITCH_CASE1
-                                                # size: 2
-                                                if is_cached == 1 and is_wrong_pipeline == 0 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH_CASE1,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    if is_lastclone_for_pktloss == 0:
-                                                        # Forward GETRES_LATEST_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
-                                                        actnspec0 = netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.sids[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    elif is_lastclone_for_pktloss == 1:
-                                                        # Forward GETRES_LATEST_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector
-                                                        self.client.eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_inswitch_case1(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_DELETED_SEQ
-                                                # size: 1
-                                                if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                            op_hdr_optype = GETRES_DELETED_SEQ,
-                                                            inswitch_hdr_is_cached = is_cached,
-                                                            meta_is_hot = is_hot,
-                                                            meta_validvalue = validvalue,
-                                                            meta_is_latest = is_latest,
-                                                            meta_is_deleted = is_deleted,
-                                                            inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                            meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                            inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                            meta_is_case1 = is_case1)
-                                                        # TODO: check if we need to set egress port for packet cloned by clone_i2e
-                                                        # Update GETRES_DELETED_SEQ (by clone_i2e) as GETRES to client
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), is_lastclone_for_pktloss should be 0 for GETRES_DELETED_SEQ_INSWITCH
-                                                # size: 128
-                                                if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    if is_cached == 1 and validvalue == 1 and is_latest == 0 and snapshot_flag == 1 and is_case1 == 0:
-                                                        # Update GETRES_DELETED_SEQ_INSWITCH as GETRES_DELETED_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
-                                                        if is_deleted == 0: # is_deleted=0 -> stat=1
-                                                            actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 1)
-                                                        elif is_deleted == 1: # is_deleted=1 -> stat=0
-                                                            actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 0)
-                                                        self.client.eg_port_forwrad_tbl_table_add_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    else:
-                                                        # Drop GETRES_DELETED_SEQ_INSWITCH
-                                                        self.client.eg_port_forward_tbl_table_add_with_drop_getres_deleted_seq_inswitch(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_cached=1, is_wrong_pipeline=0, and snapshot_flag=1 (same inswitch_hdr as GETRES_LATEST_SEQ_INSWITCH); is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_case1 should be 0 for GETRES_DELETED_SEQ_INSWITCH_CASE1
-                                                # size: 2
-                                                if is_cached == 1 and is_wrong_pipeline == 0 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH_CASE1,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    if is_lastclone_for_pktloss == 0:
-                                                        # Forward GETRES_DELETED_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
-                                                        actnspec0 = netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.sids[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    elif is_lastclone_for_pktloss == 1:
-                                                        # Forward GETRES_DELETED_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector
-                                                        self.client.eg_port_forward_tbl_table_add_with_forward_getres_deleted_seq_inswitch_case1(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_cached (memset inswitch_hdr by end-host), is_hot (cm_predicate=1), validvalue, is_wrong_pipeline, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_POP_INSWITCH
-                                                # size: 4
-                                                if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = CACHE_POP_INSWITCH,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    # Update CACHE_POP_INSWITCH as CACHE_POP_INSWITCH_ACK to reflector (w/ clone)
-                                                    actnspec0 = netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_action_spec_t(self.sids[1], self.devPorts[1])
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, snapshot_flag, is_case1 should be 0 for CACHE_POP_INSWITCH_ACK
-                                                # size: 2
-                                                if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and snapshot_flag == 0 and is_case1 == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = CACHE_POP_INSWITCH_ACK,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    # TODO: check if we need to set egress port for packet cloned by clone_e2e
-                                                    if is_lastclone_for_pktloss == 0:
-                                                        # Forward CACHE_POP_INSWITCH_ACK (by clone_e2e) to reflector (w/ clone)
-                                                        actnspec0 = netbufferv4_forward_cache_pop_inswitch_ack_clone_for_pktloss_action_spec_t(self.sids[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_forward_cache_pop_inswitch_ack_clone_for_pktloss(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    elif is_lastclone_for_pktloss == 1:
-                                                        # Forward CACHE_POP_INSWITCH_ACK (by clone_e2e) to reflector
-                                                        self.client.eg_port_forward_tbl_table_add_with_forward_cache_pop_inswitch_ack(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_lastclone_for_pktloss should be 0 for PUTREQ_INSWITCH
-                                                # size: 512
+                                            # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), is_lastclone_for_pktloss should be 0 for GETRES_DELETED_SEQ_INSWITCH
+                                            # size: 128
+                                            #if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
+                                            if is_hot == 0 and is_lastclone_for_pktloss == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                if is_cached == 1 and validvalue == 1 and is_latest == 0 and snapshot_flag == 1 and is_case1 == 0:
+                                                    # Update GETRES_DELETED_SEQ_INSWITCH as GETRES_DELETED_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
+                                                    if is_deleted == 0: # is_deleted=0 -> stat=1
+                                                        actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 1)
+                                                    elif is_deleted == 1: # is_deleted=1 -> stat=0
+                                                        actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sids[1], self.devPorts[1], 0)
+                                                    self.client.eg_port_forwrad_tbl_table_add_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                else:
+                                                    # Drop GETRES_DELETED_SEQ_INSWITCH
+                                                    self.client.eg_port_forward_tbl_table_add_with_drop_getres_deleted_seq_inswitch(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                            # is_cached=1, is_wrong_pipeline=0, and snapshot_flag=1 (same inswitch_hdr as GETRES_LATEST_SEQ_INSWITCH); is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_case1 should be 0 for GETRES_DELETED_SEQ_INSWITCH_CASE1
+                                            # size: 2
+                                            #if is_cached == 1 and is_wrong_pipeline == 0 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
+                                            if is_cached == 1 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH_CASE1,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
                                                 if is_lastclone_for_pktloss == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = PUTREQ_INSWITCH,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    if is_cached == 0:
+                                                    # Forward GETRES_DELETED_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
+                                                    actnspec0 = netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.sids[1])
+                                                    self.client.eg_port_forward_tbl_table_add_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                elif is_lastclone_for_pktloss == 1:
+                                                    # Forward GETRES_DELETED_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector
+                                                    self.client.eg_port_forward_tbl_table_add_with_forward_getres_deleted_seq_inswitch_case1(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                            # is_cached (memset inswitch_hdr by end-host), is_hot (cm_predicate=1), validvalue, is_wrong_pipeline, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_POP_INSWITCH
+                                            # size: 4
+                                            #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                            if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = CACHE_POP_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                # Update CACHE_POP_INSWITCH as CACHE_POP_INSWITCH_ACK to reflector (w/ clone)
+                                                actnspec0 = netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_action_spec_t(self.sids[1], self.devPorts[1])
+                                                self.client.eg_port_forward_tbl_table_add_with_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, snapshot_flag, is_case1 should be 0 for CACHE_POP_INSWITCH_ACK
+                                            # size: 2
+                                            #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                            if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = CACHE_POP_INSWITCH_ACK,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                # TODO: check if we need to set egress port for packet cloned by clone_e2e
+                                                if is_lastclone_for_pktloss == 0:
+                                                    # Forward CACHE_POP_INSWITCH_ACK (by clone_e2e) to reflector (w/ clone)
+                                                    actnspec0 = netbufferv4_forward_cache_pop_inswitch_ack_clone_for_pktloss_action_spec_t(self.sids[1])
+                                                    self.client.eg_port_forward_tbl_table_add_with_forward_cache_pop_inswitch_ack_clone_for_pktloss(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                elif is_lastclone_for_pktloss == 1:
+                                                    # Forward CACHE_POP_INSWITCH_ACK (by clone_e2e) to reflector
+                                                    self.client.eg_port_forward_tbl_table_add_with_forward_cache_pop_inswitch_ack(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                            # is_lastclone_for_pktloss should be 0 for PUTREQ_INSWITCH
+                                            # size: 256
+                                            if is_lastclone_for_pktloss == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = PUTREQ_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                if is_cached == 0:
+                                                    if snapshot_flag == 1:
+                                                        if is_hot == 1:
+                                                            # Update PUTREQ_INSWITCH as PUTREQ_POP_SEQ_CASE3 to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_pop_seq_case3(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                        elif is_hot == 0:
+                                                            # Update PUTREQ_INSWITCH as PUTREQ_SEQ_CASE3 to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_case3(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    elif snapshot_flag == 0:
+                                                        if is_hot == 1:
+                                                            # Update PUTREQ_INSWITCH as PUTREQ_POP_SEQ to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_pop_seq(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                        elif is_hot == 0:
+                                                            # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                elif is_cached == 1:
+                                                    if validvalue == 0 or validvalue == 3:
                                                         if snapshot_flag == 1:
-                                                            if is_hot == 1:
-                                                                # Update PUTREQ_INSWITCH as PUTREQ_POP_SEQ_CASE3 to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_pop_seq_case3(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            elif is_hot == 0:
-                                                                # Update PUTREQ_INSWITCH as PUTREQ_SEQ_CASE3 to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_case3(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            # Update PUTREQ_INSWITCH as PUTREQ_SEQ_CASE3 to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_case3(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
                                                         elif snapshot_flag == 0:
-                                                            if is_hot == 1:
-                                                                # Update PUTREQ_INSWITCH as PUTREQ_POP_SEQ to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_pop_seq(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            elif is_hot == 0:
-                                                                # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                                                    elif is_cached == 1:
-                                                        if validvalue == 0 or validvalue == 3:
-                                                            if snapshot_flag == 1:
-                                                                # Update PUTREQ_INSWITCH as PUTREQ_SEQ_CASE3 to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_case3(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            elif snapshot_flag == 0:
-                                                                # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                                                        elif validvalue == 1:
-                                                            if snapshot_flag == 1 and is_case1 == 0:
-                                                                # Update PUTREQ_INSWITCH as PUTREQ_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
-                                                                if is_deleted == 0: # is_deleted=0 -> stat=1
-                                                                    actnspec0 = netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 1)
-                                                                elif is_deleted == 1: # is_deleted=1 -> stat=0
-                                                                    actnspec0 = netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 0)
-                                                                self.client.eg_port_forwrad_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                            else:
-                                                                if is_wrong_pipeline == 0:
-                                                                    # Update PUTREQ_INSWITCH as PUTRES to client
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres(\
-                                                                            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                elif is_wrong_pipeline == 1:
-                                                                    # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
-                                                                            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_cached=1, is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot=1, is_case1 should be 0 for PUTREQ_SEQ_INSWITCH_CASE1
-                                                # size: 8
-                                                if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot == 1 and is_case1 == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = PUTREQ_SEQ_INSWITCH_CASE1,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    if is_lastclone_for_pktloss == 0:
-                                                        # Forward PUTREQ_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
-                                                        actnspec0 = netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres_action_spec_t(self.sids[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    elif is_lastclone_for_pktloss == 1:
-                                                        if is_wrong_pipeline == 0:
-                                                            # Update PUTREQ_SEQ_INSWITCH_CASE1 as PUTRES to client
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_case1_to_putres(\
+                                                            # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                                                        elif is_wrong_pipeline == 1:
-                                                            # Update PUTREQ_SEQ_INSWITCH_CASE1 as PUTRES to client by mirroring
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(\
+                                                    elif validvalue == 1:
+                                                        if snapshot_flag == 1 and is_case1 == 0:
+                                                            # Update PUTREQ_INSWITCH as PUTREQ_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
+                                                            if is_deleted == 0: # is_deleted=0 -> stat=1
+                                                                actnspec0 = netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 1)
+                                                            elif is_deleted == 1: # is_deleted=1 -> stat=0
+                                                                actnspec0 = netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 0)
+                                                            self.client.eg_port_forwrad_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                        else:
+                                                            #if is_wrong_pipeline == 0:
+                                                            #    # Update PUTREQ_INSWITCH as PUTRES to client
+                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres(\
+                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            #elif is_wrong_pipeline == 1:
+                                                            #    # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
+                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
+                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_hot (cm_predicate=1), is_lastclone_for_pktloss should be 0 for DELREQ_INSWITCH
-                                                # size: 256
-                                                if is_hot == 0 and is_lastclone_for_pktloss == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = DELREQ_INSWITCH,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    if is_cached == 0:
+                                            # is_cached=1, is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot=1, is_case1 should be 0 for PUTREQ_SEQ_INSWITCH_CASE1
+                                            # size: 2
+                                            if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot == 1 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = PUTREQ_SEQ_INSWITCH_CASE1,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                if is_lastclone_for_pktloss == 0:
+                                                    # Forward PUTREQ_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
+                                                    actnspec0 = netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres_action_spec_t(self.sids[1])
+                                                    self.client.eg_port_forward_tbl_table_add_with_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                elif is_lastclone_for_pktloss == 1:
+                                                    #if is_wrong_pipeline == 0:
+                                                    #    # Update PUTREQ_SEQ_INSWITCH_CASE1 as PUTRES to client
+                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_case1_to_putres(\
+                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    #elif is_wrong_pipeline == 1:
+                                                    #    # Update PUTREQ_SEQ_INSWITCH_CASE1 as PUTRES to client by mirroring
+                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(\
+                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    # Update PUTREQ_SEQ_INSWITCH_CASE1 as PUTRES to client by mirroring
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                            # is_hot (cm_predicate=1), is_lastclone_for_pktloss should be 0 for DELREQ_INSWITCH
+                                            # size: 128
+                                            if is_hot == 0 and is_lastclone_for_pktloss == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = DELREQ_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                if is_cached == 0:
+                                                    if snapshot_flag == 1:
+                                                        # Update DELREQ_INSWITCH as DELREQ_SEQ_CASE3 to server
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_case3(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    elif snapshot_flag == 0:
+                                                        # Update DELREQ_INSWITCH as DELREQ_SEQ to server
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                elif is_cached == 1:
+                                                    if validvalue == 0 or validvalue == 3:
                                                         if snapshot_flag == 1:
                                                             # Update DELREQ_INSWITCH as DELREQ_SEQ_CASE3 to server
                                                             self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_case3(\
@@ -1442,61 +1490,57 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             # Update DELREQ_INSWITCH as DELREQ_SEQ to server
                                                             self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                                                    elif is_cached == 1:
-                                                        if validvalue == 0 or validvalue == 3:
-                                                            if snapshot_flag == 1:
-                                                                # Update DELREQ_INSWITCH as DELREQ_SEQ_CASE3 to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_case3(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            elif snapshot_flag == 0:
-                                                                # Update DELREQ_INSWITCH as DELREQ_SEQ to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0)
-                                                        elif validvalue == 1:
-                                                            if snapshot_flag == 1 and is_case1 == 0:
-                                                                # Update DELREQ_INSWITCH as DELREQ_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
-                                                                if is_deleted == 0: # is_deleted=0 -> stat=1
-                                                                    actnspec0 = netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 1)
-                                                                elif is_deleted == 1: # is_deleted=1 -> stat=0
-                                                                    actnspec0 = netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 0)
-                                                                self.client.eg_port_forwrad_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                            else:
-                                                                if is_wrong_pipeline == 0:
-                                                                    # Update DELREQ_INSWITCH as DELRES to client
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres(\
-                                                                            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                elif is_wrong_pipeline == 1:
-                                                                    # Update DELREQ_INSWITCH as DELRES to client by mirroring
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
-                                                                            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                # is_cached=1, is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for DELREQ_SEQ_INSWITCH_CASE1
-                                                # size: 8
-                                                if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 1 and is_case1 == 0:
-                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
-                                                        op_hdr_optype = DELREQ_SEQ_INSWITCH_CASE1,
-                                                        inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
-                                                        meta_validvalue = validvalue,
-                                                        meta_is_latest = is_latest,
-                                                        meta_is_deleted = is_deleted,
-                                                        inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
-                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
-                                                        meta_is_case1 = is_case1)
-                                                    if is_lastclone_for_pktloss == 0:
-                                                        # Forward DELREQ_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
-                                                        actnspec0 = netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres_action_spec_t(self.sids[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    elif is_lastclone_for_pktloss == 1:
-                                                        if is_wrong_pipeline == 0:
-                                                            # Update DELREQ_SEQ_INSWITCH_CASE1 as DELRES to client
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_case1_to_delres(\
+                                                    elif validvalue == 1:
+                                                        if snapshot_flag == 1 and is_case1 == 0:
+                                                            # Update DELREQ_INSWITCH as DELREQ_SEQ_INSWITCH_CASE1 to reflector (w/ clone)
+                                                            if is_deleted == 0: # is_deleted=0 -> stat=1
+                                                                actnspec0 = netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 1)
+                                                            elif is_deleted == 1: # is_deleted=1 -> stat=0
+                                                                actnspec0 = netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sids[1], self.devPorts[1], 0)
+                                                            self.client.eg_port_forwrad_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_inswitch_case1(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                        else:
+                                                            #if is_wrong_pipeline == 0:
+                                                            #    # Update DELREQ_INSWITCH as DELRES to client
+                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres(\
+                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            #elif is_wrong_pipeline == 1:
+                                                            #    # Update DELREQ_INSWITCH as DELRES to client by mirroring
+                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
+                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            # Update DELREQ_INSWITCH as DELRES to client by mirroring
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                                                        elif is_wrong_pipeline == 1:
-                                                            # Update DELREQ_SEQ_INSWITCHCASE1 as DELRES to client by mirroring
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                            # is_cached=1, is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for DELREQ_SEQ_INSWITCH_CASE1
+                                            # size: 8
+                                            if is_cached == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and snapshot_flag == 1 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = DELREQ_SEQ_INSWITCH_CASE1,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                if is_lastclone_for_pktloss == 0:
+                                                    # Forward DELREQ_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
+                                                    actnspec0 = netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres_action_spec_t(self.sids[1])
+                                                    self.client.eg_port_forward_tbl_table_add_with_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                elif is_lastclone_for_pktloss == 1:
+                                                    #if is_wrong_pipeline == 0:
+                                                    #    # Update DELREQ_SEQ_INSWITCH_CASE1 as DELRES to client
+                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_case1_to_delres(\
+                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    #elif is_wrong_pipeline == 1:
+                                                    #    # Update DELREQ_SEQ_INSWITCHCASE1 as DELRES to client by mirroring
+                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(\
+                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    # Update DELREQ_SEQ_INSWITCHCASE1 as DELRES to client by mirroring
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
 
             if RANGE_SUPPORT:
                 # Table: scan_forward_tbl (default: nop; size: 1)

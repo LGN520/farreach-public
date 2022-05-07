@@ -70,9 +70,16 @@ table snapshot_flag_tbl {
 	size: 2;
 }
 
+/*action set_sid(sid, eport) {
+	modify_field(inswitch_hdr.sid, sid);
+	// NOTE: eport_for_res and sid must be in the same group for ALU access; as compiler aims to place them into the same container, they must come from the same source (action parameter or PHV)
+	//modify_field(inswitch_hdr.eport_for_res, ig_intr_md.ingress_port);
+	modify_field(inswitch_hdr.eport_for_res, eport);
+}*/
+
+// NOTE: eg_intr_md.egress_port is a read-only field (we cannot directly set egress port in egress pipeline even if w/ correct pipeline)
 action set_sid(sid) {
 	modify_field(inswitch_hdr.sid, sid);
-	modify_field(inswitch_hdr.eport_for_res, ig_intr_md.ingress_port);
 }
 
 @pragma stage 1
@@ -140,14 +147,18 @@ field_list_calculation hash_calc {
 	output_width: 1;
 }*/
 
-action reset_is_wrong_pipeline() {
+/*action reset_is_wrong_pipeline() {
 	modify_field(inswitch_hdr.is_wrong_pipeline, 0);
-}
+}*/
 #ifdef RANGE_SUPPORT
-action range_partition(udpport, eport, is_wrong_pipeline) {
+/*action range_partition(udpport, eport, is_wrong_pipeline) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
+}*/
+action range_partition(udpport, eport) {
+	modify_field(udp_hdr.dstPort, udpport);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 @pragma stage 1
 table range_partition_tbl {
@@ -159,9 +170,11 @@ table range_partition_tbl {
 	}
 	actions {
 		range_partition;
-		reset_is_wrong_pipeline;
+		//reset_is_wrong_pipeline;
+		nop;
 	}
-	default_action: reset_is_wrong_pipeline();
+	//default_action: reset_is_wrong_pipeline();
+	default_action: nop();
 	size: RANGE_PARTITION_ENTRY_NUM;
 }
 #else
@@ -265,10 +278,14 @@ table range_partition_for_scan_tbl {
 	size: RANGE_PARTITION_FOR_SCAN_ENTRY_NUM;
 }
 #else
-action hash_partition(udpport, eport, is_wrong_pipeline) {
+/*action hash_partition(udpport, eport, is_wrong_pipeline) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
+}*/
+action hash_partition(udpport, eport) {
+	modify_field(udp_hdr.dstPort, udpport);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
 @pragma stage 2
@@ -281,9 +298,11 @@ table hash_partition_tbl {
 	}
 	actions {
 		hash_partition;
-		reset_is_wrong_pipeline;
+		//reset_is_wrong_pipeline;
+		nop;
 	}
-	default_action: reset_is_wrong_pipeline();
+	//default_action: reset_is_wrong_pipeline();
+	default_action: nop();
 	size: HASH_PARTITION_ENTRY_NUM;
 }
 #endif
@@ -315,10 +334,12 @@ action update_delreq_to_delreq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
+#ifdef RANGE_SUPPORT
 action update_scanreq_to_scanreq_split() {
 	modify_field(op_hdr.optype, SCANREQ_SPLIT);
 	add_header(split_hdr);
 }
+#endif
 
 @pragma stage 3
 table ig_port_forward_tbl {
@@ -332,7 +353,9 @@ table ig_port_forward_tbl {
 		update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
 		update_putreq_to_putreq_inswitch;
 		update_delreq_to_delreq_inswitch;
+#ifdef RANGE_SUPPORT
 		update_scanreq_to_scanreq_split;
+#endif
 		nop;
 	}
 	default_action: nop();

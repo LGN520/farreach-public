@@ -43,7 +43,7 @@ action reset_and_get_latest() {
 	reset_and_get_latest_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
-action reset_is_latest {
+action reset_is_latest() {
 	modify_field(meta.is_latest, 0);
 }
 

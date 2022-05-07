@@ -82,14 +82,14 @@ header_type seq_t {
 	}
 }
 
-// NOTE: inswicth_t affects CACHE_POP_INSWITCH and CASE1 in end-hosts
+// NOTE: inswicth_t affects INSWITCH_PREV_BYTES in packet_format.h
 header_type inswitch_t {
 	fields {
 		snapshot_flag: 1;
 		is_cached: 1;
 		is_sampled: 1;
-		is_wrong_pipeline: 1;
-		eport_for_res: 9;
+		//is_wrong_pipeline: 1;
+		//eport_for_res: 9;
 		sid: 9;
 		hashval_for_cm: 17; // at most 64K
 		padding: 1;
