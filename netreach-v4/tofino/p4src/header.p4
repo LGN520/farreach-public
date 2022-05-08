@@ -76,6 +76,12 @@ header_type val_t {
 	}
 }
 
+header_type shadowtype_t {
+	fields {
+		shadowtype: 8;
+	}
+}
+
 header_type seq_t {
 	fields {
 		seq: 32;
@@ -106,15 +112,6 @@ header_type stat_t {
 		stat: 8;
 	}
 }
-
-/*header_type status_t {
-	fields {
-		validvalue: 8; // validvalue of the entry
-		is_latest: 1; // if the entry is latest
-		is_deleted: 1; // if the entry is deleted
-		padding: 6;
-	}
-}*/
 
 header_type metadata_t {
 	fields {
@@ -166,8 +163,8 @@ header val_t val13_hdr;
 header val_t val14_hdr;
 header val_t val15_hdr;
 header val_t val16_hdr;
+header shadowtype_t shadowtype_hdr;
 header seq_t seq_hdr;
 header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
-//header status_t status_hdr;
 metadata metadata_t meta;

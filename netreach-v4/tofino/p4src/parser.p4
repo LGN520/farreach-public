@@ -10,15 +10,15 @@
 // NOTE: carefully assign optype to reduce branches
 // (1) vallen&value: mask 0b0001; seq: mask 0b0010; inswitch_hdr: mask 0b0100; stat: mask 0b1000;
 // (2) scan/split: specific value (X + 0b0000); not parsed optypes: X + 0b0000
-// op_hdr + vallen&value (0b0001): PUTREQ,
-// op_hdr + vallen&value + seq (0b0011): GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3
-// op_hdr + vallen&value + seq + inswitch_hdr (0b0111): GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH
-// op_hdr + vallen&value + seq + inswitch_hdr + stat (0b1111): GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
-// op_hdr + vallen&value + stat (0b1001): GETRES
-// op_hdr + vallen&value + inswitch (0b0101): PUTREQ_INSWITCH
-// op_hdr + inswitch_hdr (0b0100): GETREQ_INSWITCH, DELREQ_INSWITCH
-// op_hdr + seq (0b0010): DELREQ_SEQ, DELREQ_SEQ_CASE3
-// op_hdr + stat (0b1000): PUTRES, DELRES
+// op_hdr + vallen&value + shadowtype (0b0001): PUTREQ,
+// op_hdr + vallen&value + shadowtype + seq (0b0011): GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3
+// op_hdr + vallen&value + shadowtype + seq + inswitch_hdr (0b0111): GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH
+// op_hdr + vallen&value + shadowtype + seq + inswitch_hdr + stat (0b1111): GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
+// op_hdr + vallen&value + shadowtype + stat (0b1001): GETRES
+// op_hdr + vallen&value + shadowtype + inswitch (0b0101): PUTREQ_INSWITCH
+// op_hdr + shadowtype + inswitch_hdr (0b0100): GETREQ_INSWITCH, DELREQ_INSWITCH
+// op_hdr + shadowtype + seq (0b0010): DELREQ_SEQ, DELREQ_SEQ_CASE3
+// op_hdr + shadowtype + stat (0b1000): PUTRES, DELRES
 // NOTE: followings are ended with 0b0000
 // op_hdr + scan_hdr (specific value): SCANREQ
 // op_hdr + scan_hdr + split_hdr (specific value): SCANREQ_SPLIT
@@ -52,15 +52,18 @@ parser parse_udp {
 	return parse_op;
 }
 
-// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr
+// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> shadowtype_hdr -> val_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr
 
 parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
 		1 mask 0x01: parse_vallen;
-		2 mask 0x02: parse_seq;
+		/*2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
-		8 mask 0x08: parse_stat;
+		8 mask 0x08: parse_stat;*/
+		2 mask 0x02: parse_shadowtype;
+		4 mask 0x04: parse_shadowtype;
+		8 mask 0x08: parse_shadowtype;
 #ifdef RANGE_SUPPORT
 		SCANREQ: parse_scan;
 		SCANREQ_SPLIT: parse_scan;
@@ -115,7 +118,8 @@ parser parse_split {
 parser parse_vallen {
 	extract(vallen_hdr);
 	return select(vallen_hdr.vallen) {
-		0: parse_val_len0;
+		//0: parse_val_len0;
+		0: parse_shadowtype;
 		0 mask 0xFFFFFFF8: parse_val_len1;
 		8: parse_val_len1;
 		8 mask 0xFFFFFFF8: parse_val_len2;
@@ -148,40 +152,42 @@ parser parse_vallen {
 		120: parse_val_len15;
 		120 mask 0xFFFFFFF8: parse_val_len16;
 		128: parse_val_len16;
-		default: parse_val_len0; // > 128
+		//default: parse_val_len0; // > 128
+		default: parse_shadowtype; // > 128
 	}
 }
 
-parser parse_val_len0 {
+/*parser parse_val_len0 {
 	return select(op_hdr.optype) {
 		2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
 		8 mask 0x08: parse_stat;
 		default: ingress;
 		
-		/*GETRES: parse_stat;
-		GETRES_LATEST_SEQ: parse_seq;
-		GETRES_LATEST_SEQ_INSWITCH: parse_seq;
-		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_seq;
-		GETRES_DELETED_SEQ: parse_seq;
-		GETRES_DELETED_SEQ_INSWITCH: parse_seq;
-		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_seq;
-		CACHE_POP_INSWITCH: parse_seq;
-		PUTREQ_INSWITCH: parse_inswitch;
-		PUTREQ_SEQ: parse_seq;
-		PUTREQ_POP_SEQ: parse_seq;
-		PUTREQ_SEQ_INSWITCH_CASE1: parse_seq;
-		PUTREQ_SEQ_CASE3: parse_seq;
-		PUTREQ_POP_SEQ_CASE3: parse_seq;
-		DELREQ_INSWITCH: parse_inswitch;
-		DELREQ_SEQ_INSWITCH_CASE1: parse_seq;
-		default: ingress; // PUTREQ */
+		//GETRES: parse_stat;
+		//GETRES_LATEST_SEQ: parse_seq;
+		//GETRES_LATEST_SEQ_INSWITCH: parse_seq;
+		//GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_seq;
+		//GETRES_DELETED_SEQ: parse_seq;
+		//GETRES_DELETED_SEQ_INSWITCH: parse_seq;
+		//GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_seq;
+		//CACHE_POP_INSWITCH: parse_seq;
+		//PUTREQ_INSWITCH: parse_inswitch;
+		//PUTREQ_SEQ: parse_seq;
+		//PUTREQ_POP_SEQ: parse_seq;
+		//PUTREQ_SEQ_INSWITCH_CASE1: parse_seq;
+		//PUTREQ_SEQ_CASE3: parse_seq;
+		//PUTREQ_POP_SEQ_CASE3: parse_seq;
+		//DELREQ_INSWITCH: parse_inswitch;
+		//DELREQ_SEQ_INSWITCH_CASE1: parse_seq;
+		//default: ingress; // PUTREQ
 	}
-}
+}*/
 
 parser parse_val_len1 {
 	extract(val1_hdr);
-	return parse_val_len0;
+	//return parse_val_len0;
+	return parse_shadowtype;
 }
 
 parser parse_val_len2 {
@@ -259,9 +265,20 @@ parser parse_val_len16 {
 	return parse_val_len15;
 }
 
+parser parse_shadowtype {
+	extract(shadowtype_hdr);
+	return select(shadowtype_hdr.shadowtype) {
+		2 mask 0x02: parse_seq;
+		4 mask 0x04: parse_inswitch;
+		8 mask 0x08: parse_stat;
+		default: ingress;
+	}
+}
+
 parser parse_seq {
 	extract(seq_hdr);
-	return select(op_hdr.optype) {
+	//return select(op_hdr.optype) {
+	return select(shadowtype_hdr.shadowtype) {
 		4 mask 0x04: parse_inswitch;
 		default: ingress;
 		
@@ -278,7 +295,8 @@ parser parse_seq {
 
 parser parse_inswitch {
 	extract(inswitch_hdr);
-	return select(op_hdr.optype) {
+	//return select(op_hdr.optype) {
+	return select(shadowtype_hdr.shadowtype) {
 		8 mask 0x08: parse_stat;
 		default: ingress;
 		
