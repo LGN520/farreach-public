@@ -5,6 +5,26 @@
 #define PROTOTYPE_TCP 0x06
 #define PROTOTYPE_UDP 0x11
 
+// NOTE: due to hardware limitation, we cannot make too many branches in switch expression
+
+// NOTE: carefully assign optype to reduce branches
+// (1) vallen&value: mask 0b0001; seq: mask 0b0010; inswitch_hdr: mask 0b0100; stat: mask 0b1000;
+// (2) scan/split: specific value (X + 0b0000); not parsed optypes: X + 0b0000
+// op_hdr + vallen&value (0b0001): PUTREQ,
+// op_hdr + vallen&value + seq (0b0011): GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3
+// op_hdr + vallen&value + seq + inswitch_hdr (0b0111): GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH
+// op_hdr + vallen&value + seq + inswitch_hdr + stat (0b1111): GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
+// op_hdr + vallen&value + stat (0b1001): GETRES
+// op_hdr + vallen&value + inswitch (0b0101): PUTREQ_INSWITCH
+// op_hdr + inswitch_hdr (0b0100): GETREQ_INSWITCH, DELREQ_INSWITCH
+// op_hdr + seq (0b0010): DELREQ_SEQ, DELREQ_SEQ_CASE3
+// op_hdr + stat (0b1000): PUTRES, DELRES
+// NOTE: followings are ended with 0b0000
+// op_hdr + scan_hdr (specific value): SCANREQ
+// op_hdr + scan_hdr + split_hdr (specific value): SCANREQ_SPLIT
+// only op_hdr (default): GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK
+// not parsed in switch: SCANRES_SPLIT, CACHE_POP, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2
+
 parser start {
 	return parse_ethernet;
 }
@@ -32,12 +52,22 @@ parser parse_udp {
 	return parse_op;
 }
 
-// op_hdr -> vallen_hdr -> val_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr
+// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr
 
 parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
-		GETREQ_INSWITCH: parse_inswitch;
+		1 mask 0x01: parse_vallen;
+		2 mask 0x02: parse_seq;
+		4 mask 0x04: parse_inswitch;
+		8 mask 0x08: parse_stat;
+#ifdef RANGE_SUPPORT
+		SCANREQ: parse_scan;
+		SCANREQ_SPLIT: parse_scan;
+#endif
+		default: ingress;
+		
+		/*GETREQ_INSWITCH: parse_inswitch;
 		GETRES: parse_vallen;
 		GETRES_LATEST_SEQ: parse_vallen;
 		GETRES_LATEST_SEQ_INSWITCH: parse_vallen;
@@ -63,7 +93,7 @@ parser parse_op {
 		SCANREQ: parse_scan;
 		SCANREQ_SPLIT: parse_scan;
 #endif
-		default: ingress; // GETREQ, GETREQ_POP, GETREQ_NLATEST, DELREQ
+		default: ingress; // GETREQ, GETREQ_POP, GETREQ_NLATEST, DELREQ*/
 	}
 }
 
@@ -82,7 +112,6 @@ parser parse_split {
 }
 #endif
 
-// NOTE: due to hardware limitation, we cannot make too many branches (or switch/select expressions?)
 parser parse_vallen {
 	extract(vallen_hdr);
 	return select(vallen_hdr.vallen) {
@@ -125,7 +154,12 @@ parser parse_vallen {
 
 parser parse_val_len0 {
 	return select(op_hdr.optype) {
-		GETRES: parse_stat;
+		2 mask 0x02: parse_seq;
+		4 mask 0x04: parse_inswitch;
+		8 mask 0x08: parse_stat;
+		default: ingress;
+		
+		/*GETRES: parse_stat;
 		GETRES_LATEST_SEQ: parse_seq;
 		GETRES_LATEST_SEQ_INSWITCH: parse_seq;
 		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_seq;
@@ -141,7 +175,7 @@ parser parse_val_len0 {
 		PUTREQ_POP_SEQ_CASE3: parse_seq;
 		DELREQ_INSWITCH: parse_inswitch;
 		DELREQ_SEQ_INSWITCH_CASE1: parse_seq;
-		default: ingress; // PUTREQ
+		default: ingress; // PUTREQ */
 	}
 }
 
@@ -228,25 +262,31 @@ parser parse_val_len16 {
 parser parse_seq {
 	extract(seq_hdr);
 	return select(op_hdr.optype) {
-		GETRES_LATEST_SEQ_INSWITCH: parse_inswitch;
+		4 mask 0x04: parse_inswitch;
+		default: ingress;
+		
+		/*GETRES_LATEST_SEQ_INSWITCH: parse_inswitch;
 		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_inswitch;
 		GETRES_DELETED_SEQ_INSWITCH: parse_inswitch;
 		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_inswitch;
 		CACHE_POP_INSWITCH: parse_inswitch; // inswitch_hdr is set by switchos
 		PUTREQ_SEQ_INSWITCH_CASE1: parse_inswitch;
 		DELREQ_SEQ_INSWITCH_CASE1: parse_inswitch;
-		default: ingress; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ, DELREQ_SEQ_CASE3
+		default: ingress; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ, DELREQ_SEQ_CASE3 */
 	}
 }
 
 parser parse_inswitch {
 	extract(inswitch_hdr);
 	return select(op_hdr.optype) {
-		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_stat;
+		8 mask 0x08: parse_stat;
+		default: ingress;
+		
+		/*GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_stat;
 		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_stat;
 		PUTREQ_SEQ_INSWITCH_CASE1: parse_stat;
 		DELREQ_SEQ_INSWITCH_CASE1: parse_stat;
-		default: ingress; // GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH, CACHE_POP_INSWITCH
+		default: ingress; // GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH, CACHE_POP_INSWITCH */
 	}
 }
 

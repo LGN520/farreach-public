@@ -6,7 +6,53 @@
 // Uncomment it if support range query, or comment it otherwise
 //#define RANGE_SUPPORT
 
-// 1B optype does not need endian conversion
+// NOTE: 1B optype does not need endian conversion
+// 0b0001
+#define PUTREQ 0x01
+// 0b0011
+#define GETRES_LATEST_SEQ 0x03
+#define GETRES_DELETED_SEQ 0x13
+#define PUTREQ_SEQ 0x23
+#define PUTREQ_POP_SEQ 0x33
+#define PUTREQ_SEQ_CASE3 0x43
+#define PUTREQ_POP_SEQ_CASE3 0x53
+// 0b0111
+#define GETRES_LATEST_SEQ_INSWITCH 0x07
+#define GETRES_DELETED_SEQ_INSWITCH 0x17
+#define CACHE_POP_INSWITCH 0x27
+// 0b1111
+#define GETRES_LATEST_SEQ_INSWITCH_CASE1 0x0f
+#define GETRES_DELETED_SEQ_INSWITCH_CASE1 0x1f
+#define PUTREQ_SEQ_INSWITCH_CASE1 0x2f
+#define DELREQ_SEQ_INSWITCH_CASE1 0x3f
+// 0b1001
+#define GETRES 0x09
+// 0b0101
+#define PUTREQ_INSWITCH 0x05
+// 0b0100
+#define GETREQ_INSWITCH 0x04
+#define DELREQ_INSWITCH 0x14
+// 0b0010
+#define DELREQ_SEQ 0x02
+#define DELREQ_SEQ_CASE3 0x12
+// 0b1000
+#define PUTRES 0x08
+#define DELRES 0x18
+// 0b0000
+#define SCANREQ 0x10
+#define SCANREQ_SPLIT 0x20
+#define GETREQ 0x30
+#define DELREQ 0x40
+#define GETREQ_POP 0x50
+#define GETREQ_NLATEST 0x60
+#define CACHE_POP_INSWITCH_ACK 0x70
+#define SCANRES_SPLIT 0x80
+#define CACHE_POP 0x90
+#define CACHE_EVICT 0xa0
+#define CACHE_EVICT_ACK 0xb0
+#define CACHE_EVICT_CASE2 0xc0
+
+/*
 #define GETREQ 0x00
 #define PUTREQ 0x01
 #define DELREQ 0x02
@@ -41,6 +87,7 @@
 #define CACHE_EVICT 0x1f
 #define CACHE_EVICT_ACK 0x20
 #define CACHE_EVICT_CASE2 0x21
+*/
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (4B vallen + 128B value + 4B frequency + 1B status)

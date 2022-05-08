@@ -46,7 +46,7 @@
 		* Even if two fields do not have dependency, if they are located in a same container, they cannot be accessed by different ALUs in the same stage
 	+ The above contraints are only for ALU instead of MAU -> MAU can match containers in different groups, each can be matched with multiple times
 - NOTE for parser branch
-	+ The total number of branches used by all parsers is limited
+	+ The total number of branches of switch/select expression used by all parsers is limited
 
 ## Overview
 
