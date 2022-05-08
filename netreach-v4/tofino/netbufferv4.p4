@@ -117,17 +117,14 @@ control ingress {
 	/* else if meta.need_recirculate == 0 */
 
 	// Stage 1
-	apply(snapshot_flag_tbl); // update snapshot_flag
-	apply(sid_tbl); // set sid corresponding to ingress port
-	apply(cache_lookup_tbl); // managed by controller
 #ifdef RANGE_SUPPORT
 	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
 #else
 	apply(hash_for_partition_tbl); // for hash partition
 #endif
+	apply(cache_lookup_tbl); // TODO: managed by controller
 	apply(hash_for_cm_tbl); // for CM
-	apply(hash_for_seq_tbl); // for seq
-	apply(sample_tbl); // for CM and cache_frequency
+	apply(hash_for_seq_tbl); // TODO: for seq
 
 	// Stage 2
 #ifdef RANGE_SUPPORT
@@ -135,12 +132,13 @@ control ingress {
 #else
 	apply(hash_partition_tbl);
 #endif
+	apply(snapshot_flag_tbl); // snapshot_flag and is_cached are in the same container
+	apply(prepare_for_cachehit_tbl); // sid and hashval_for_cm are in the same container
 
 	// Stgae 3
-	apply(ig_port_forward_tbl);
-
-	// Stage 4
+	apply(sample_tbl); // for CM and cache_frequency; is_sampled, is_cached, and snapshot_flag are in the same container
 	apply(ipv4_forward_tbl);
+	apply(ig_port_forward_tbl);
 }
 
 /* Egress Processing */

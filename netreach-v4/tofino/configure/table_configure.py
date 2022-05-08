@@ -416,25 +416,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #    self.client.snapshot_flag_tbl_table_add_with_reset_snapshot_flag(\
             #            self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: prepare_for_res_tbl (default: nop; size: 6)
-            print "Configuring prepare_for_res_tbl"
+            # Table: prepare_for_cachehit_tbl (default: nop; size: 6)
+            print "Configuring prepare_for_cachehit_tbl"
             for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
-                matchspec0 = netbufferv4_prepare_for_res_tbl_match_spec_t(\
+                matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ig_intr_md_ingress_port = self.devPorts[0],
                         meta_need_recirculate = 0)
                 #actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0], self.devPorts[0])
                 actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0])
-                self.client.prepare_for_res_tbl_table_add_with_set_sid(\
+                self.client.prepare_for_cachehit_tbl_table_add_with_set_sid(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 # Should not used: no req from server
-                matchspec0 = netbufferv4_prepare_for_res_tbl_match_spec_t(\
+                matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ig_intr_md_ingress_port = self.devPorts[1],
                         meta_need_recirculate = 0)
                 #actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1], self.devPorts[1])
                 actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1])
-                self.client.prepare_for_res_tbl_table_add_with_set_sid(\
+                self.client.prepare_for_cachehit_tbl_table_add_with_set_sid(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
@@ -630,7 +630,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec0 = netbufferv4_forward_normal_response_action_spec_t(self.devPorts[0])
                 self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
+            for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
                 matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ipv4_hdr_dstAddr = ipv4addr0,

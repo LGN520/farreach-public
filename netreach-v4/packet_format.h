@@ -11,7 +11,7 @@
 #define VALID_MASK 0x01
 
 // # of bytes before idx in inswitch_hdr
-#define INSWITCH_PREV_BYTES 6
+#define INSWITCH_PREV_BYTES 7
 
 enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES_SPLIT, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 

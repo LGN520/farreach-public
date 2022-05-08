@@ -1,5 +1,21 @@
 /* Ingress Processing (Normal Operation) */
 
+field_list hash_fields {
+	op_hdr.keylolo;
+	op_hdr.keylohi;
+	op_hdr.keyhilo;
+	op_hdr.keyhihi;
+}
+
+field_list_calculation hash_calc {
+	input {
+		hash_fields;
+	}
+	algorithm: crc32;
+	//output_width: 16;
+	output_width: 32;
+}
+
 action nop() {}
 
 // Stage 0
@@ -26,7 +42,7 @@ table need_recirculate_tbl {
 	size: 8;
 }
 
-// Stage 1
+// Stage 1 (need_recirculate = 1)
 
 action recirculate_pkt(port) {
 	recirculate(port);
@@ -46,107 +62,7 @@ table recirculate_tbl {
 	size: 2;
 }
 
-// Stage 1
-
-action set_snapshot_flag() {
-	modify_field(inswitch_hdr.snapshot_flag, 1);
-}
-
-action reset_snapshot_flag() {
-	modify_field(inswitch_hdr.snapshot_flag, 0);
-}
-
-@pragma stage 1
-table snapshot_flag_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		set_snapshot_flag;
-		reset_snapshot_flag;
-	}
-	default_action: reset_snapshot_flag();
-	size: 2;
-}
-
-/*action set_sid(sid, eport) {
-	modify_field(inswitch_hdr.sid, sid);
-	// NOTE: eport_for_res and sid must be in the same group for ALU access; as compiler aims to place them into the same container, they must come from the same source (action parameter or PHV)
-	//modify_field(inswitch_hdr.eport_for_res, ig_intr_md.ingress_port);
-	modify_field(inswitch_hdr.eport_for_res, eport);
-}*/
-
-// NOTE: eg_intr_md.egress_port is a read-only field (we cannot directly set egress port in egress pipeline even if w/ correct pipeline)
-// NOTE: using inswitch_hdr.sid for clone_e2e in ALU needs to maintain inswitch_hdr.sid and eg_intr_md_for_md.mirror_id into the same group, which violates PHV allocation constraints -> but MAU can access different groups
-action set_sid(sid) {
-	modify_field(inswitch_hdr.sid, sid);
-}
-
-@pragma stage 1
-table prepare_for_res_tbl {
-	reads {
-		op_hdr.optype: exact;
-		ig_intr_md.ingress_port: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		set_sid;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-
-action cached_action(idx) {
-	modify_field(inswitch_hdr.idx, idx);
-	modify_field(inswitch_hdr.is_cached, 1);
-}
-
-action uncached_action() {
-	modify_field(inswitch_hdr.is_cached, 0);
-}
-
-@pragma stage 1
-table cache_lookup_tbl {
-	reads {
-		op_hdr.keylolo: exact;
-		op_hdr.keylohi: exact;
-		op_hdr.keyhilo: exact;
-		op_hdr.keyhihi: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		cached_action;
-		uncached_action;
-	}
-	default_action: uncached_action();
-	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
-}
-
-field_list hash_fields {
-	op_hdr.keylolo;
-	op_hdr.keylohi;
-	op_hdr.keyhilo;
-	op_hdr.keyhihi;
-}
-
-field_list_calculation hash_calc {
-	input {
-		hash_fields;
-	}
-	algorithm: crc32;
-	//output_width: 16;
-	output_width: 32;
-}
-
-/*field_list_calculation sample_calc {
-	input {
-		hash_fields;
-	}
-	algorithm: crc32;
-	output_width: 1;
-}*/
+// Stage 1 (need_recirculate = 0)
 
 /*action reset_is_wrong_pipeline() {
 	modify_field(inswitch_hdr.is_wrong_pipeline, 0);
@@ -198,6 +114,40 @@ table hash_for_partition_tbl {
 }
 #endif
 
+action cached_action(idx) {
+	modify_field(inswitch_hdr.idx, idx);
+	modify_field(inswitch_hdr.is_cached, 1);
+}
+
+action uncached_action() {
+	modify_field(inswitch_hdr.is_cached, 0);
+}
+
+@pragma stage 1
+table cache_lookup_tbl {
+	reads {
+		op_hdr.keylolo: exact;
+		op_hdr.keylohi: exact;
+		op_hdr.keyhilo: exact;
+		op_hdr.keyhihi: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		cached_action;
+		uncached_action;
+	}
+	default_action: uncached_action();
+	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
+}
+
+/*field_list_calculation sample_calc {
+	input {
+		hash_fields;
+	}
+	algorithm: crc32;
+	output_width: 1;
+}*/
+
 action hash_for_cm() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm, 0, hash_calc, CM_BUCKET_COUNT);
 }
@@ -228,25 +178,6 @@ table hash_for_seq_tbl {
 	}
 	actions {
 		hash_for_seq;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
-action sample() {
-	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, sample_calc, 2);
-	modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2);
-}
-
-@pragma stage 1
-table sample_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		sample;
 		nop;
 	}
 	default_action: nop();
@@ -308,7 +239,76 @@ table hash_partition_tbl {
 }
 #endif
 
+action set_snapshot_flag() {
+	modify_field(inswitch_hdr.snapshot_flag, 1);
+}
+
+action reset_snapshot_flag() {
+	modify_field(inswitch_hdr.snapshot_flag, 0);
+}
+
+@pragma stage 2
+table snapshot_flag_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		set_snapshot_flag;
+		reset_snapshot_flag;
+	}
+	default_action: reset_snapshot_flag();
+	size: 2;
+}
+
+/*action set_sid(sid, eport) {
+	modify_field(inswitch_hdr.sid, sid);
+	// NOTE: eport_for_res and sid must be in the same group for ALU access; as compiler aims to place them into the same container, they must come from the same source (action parameter or PHV)
+	//modify_field(inswitch_hdr.eport_for_res, ig_intr_md.ingress_port);
+	modify_field(inswitch_hdr.eport_for_res, eport);
+}*/
+
+// NOTE: eg_intr_md.egress_port is a read-only field (we cannot directly set egress port in egress pipeline even if w/ correct pipeline)
+// NOTE: using inswitch_hdr.sid for clone_e2e in ALU needs to maintain inswitch_hdr.sid and eg_intr_md_for_md.mirror_id into the same group, which violates PHV allocation constraints -> but MAU can access different groups
+action set_sid(sid) {
+	modify_field(inswitch_hdr.sid, sid);
+}
+
+@pragma stage 2
+table prepare_for_cachehit_tbl {
+	reads {
+		op_hdr.optype: exact;
+		ig_intr_md.ingress_port: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		set_sid;
+		nop;
+	}
+	default_action: nop();
+	size: 8;
+}
+
 // Stage 3
+
+action sample() {
+	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, sample_calc, 2);
+	modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2);
+}
+
+@pragma stage 3
+table sample_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		sample;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}
 
 action update_getreq_to_getreq_inswitch() {
 	modify_field(op_hdr.optype, GETREQ_INSWITCH);
@@ -363,8 +363,6 @@ table ig_port_forward_tbl {
 	size: 8;
 }
 
-// Stage 4
-
 action forward_normal_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
@@ -374,7 +372,7 @@ action forward_special_get_response(sid) {
 	clone_ingress_pkt_to_egress(sid); // Cloned packet enter the egress pipeline to corresponding client
 }
 
-@pragma stage 4
+@pragma stage 3
 table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;

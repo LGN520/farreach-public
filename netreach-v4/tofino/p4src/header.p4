@@ -90,9 +90,9 @@ header_type inswitch_t {
 		is_sampled: 1;
 		//is_wrong_pipeline: 1;
 		//eport_for_res: 9;
+		padding: 5;
 		sid: 9;
-		hashval_for_cm: 17; // at most 64K
-		padding: 3;
+		hashval_for_cm: 23; // at most 64K
 		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
 	}
