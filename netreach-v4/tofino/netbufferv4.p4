@@ -137,8 +137,8 @@ control ingress {
 
 	// Stgae 3
 	apply(sample_tbl); // TODO: for CM and cache_frequency (access inswitch_hdr.is_sampled)
-	apply(ipv4_forward_tbl);
-	apply(ig_port_forward_tbl);
+	apply(ipv4_forward_tbl); // TODO: update egress_port for normal/speical response packets
+	apply(ig_port_forward_tbl); // TODO: update op_hdr.optype
 }
 
 /* Egress Processing */

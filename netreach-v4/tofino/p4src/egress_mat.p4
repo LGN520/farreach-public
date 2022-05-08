@@ -83,6 +83,7 @@ action reset_is_hot() {
 	modify_field(meta.is_hot, 0);
 }
 
+@pragma stage 1
 table is_hot_tbl {
 	reads {
 		meta.cm1_predicate: exact;

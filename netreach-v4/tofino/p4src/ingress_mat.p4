@@ -342,7 +342,7 @@ action update_scanreq_to_scanreq_split() {
 }
 #endif
 
-@pragma stage 3
+//@pragma stage 3
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -372,7 +372,7 @@ action forward_special_get_response(sid) {
 	clone_ingress_pkt_to_egress(sid); // Cloned packet enter the egress pipeline to corresponding client
 }
 
-@pragma stage 3
+//@pragma stage 3
 table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;

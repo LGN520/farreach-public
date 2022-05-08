@@ -11,18 +11,20 @@ parser start {
 
 parser parse_ethernet {
 	extract(ethernet_hdr);
-	return select(ethernet_hdr.etherType) {
+	return parse_ipv4;
+	/*return select(ethernet_hdr.etherType) {
 		ETHERTYPE_IPV4: parse_ipv4;
 		default: ingress;
-	}
+	}*/
 }
 
 parser parse_ipv4 {
 	extract(ipv4_hdr);
-	return select(ipv4_hdr.protocol) {
+	return parse_udp;
+	/*return select(ipv4_hdr.protocol) {
 		PROTOTYPE_UDP: parse_udp;
 		default: ingress;
-	}
+	}*/
 }
 
 parser parse_udp {
@@ -80,6 +82,7 @@ parser parse_split {
 }
 #endif
 
+// NOTE: due to hardware limitation, we cannot make too many branches (or switch/select expressions?)
 parser parse_vallen {
 	extract(vallen_hdr);
 	return select(vallen_hdr.vallen) {
