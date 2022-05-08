@@ -122,9 +122,8 @@ control ingress {
 #else
 	apply(hash_for_partition_tbl); // for hash partition
 #endif
-	apply(cache_lookup_tbl); // TODO: managed by controller
-	apply(hash_for_cm_tbl); // for CM
-	apply(hash_for_seq_tbl); // TODO: for seq
+	apply(cache_lookup_tbl); // TODO: managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
+	apply(hash_for_cm_tbl); // TODO: for CM (access inswitch_hdr.hashval_for_cm)
 
 	// Stage 2
 #ifdef RANGE_SUPPORT
@@ -132,11 +131,12 @@ control ingress {
 #else
 	apply(hash_partition_tbl);
 #endif
-	apply(snapshot_flag_tbl); // snapshot_flag and is_cached are in the same container
-	apply(prepare_for_cachehit_tbl); // sid and hashval_for_cm are in the same container
+	apply(hash_for_seq_tbl); // TODO: for seq (access inswitch_hdr.hashval_for_seq)
+	apply(snapshot_flag_tbl); // TODO: for snapshot (access inswitch_hdr.snapshot_flag)
+	apply(prepare_for_cachehit_tbl); // TODO: for response of cache hit (access inswitch_hdr.sid)
 
 	// Stgae 3
-	apply(sample_tbl); // for CM and cache_frequency; is_sampled, is_cached, and snapshot_flag are in the same container
+	apply(sample_tbl); // TODO: for CM and cache_frequency (access inswitch_hdr.is_sampled)
 	apply(ipv4_forward_tbl);
 	apply(ig_port_forward_tbl);
 }

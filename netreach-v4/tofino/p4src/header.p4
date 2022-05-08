@@ -85,14 +85,17 @@ header_type seq_t {
 // NOTE: inswicth_t affects INSWITCH_PREV_BYTES in packet_format.h
 header_type inswitch_t {
 	fields {
+		// 8-bit container
 		snapshot_flag: 1;
 		is_cached: 1;
 		is_sampled: 1;
 		//is_wrong_pipeline: 1;
 		//eport_for_res: 9;
 		padding: 5;
+		// 32-bit container
 		sid: 9;
 		hashval_for_cm: 23; // at most 64K
+		// 32-bit container
 		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
 	}

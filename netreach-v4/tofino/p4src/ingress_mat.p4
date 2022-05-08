@@ -123,7 +123,7 @@ action uncached_action() {
 	modify_field(inswitch_hdr.is_cached, 0);
 }
 
-@pragma stage 1
+//@pragma stage 1
 table cache_lookup_tbl {
 	reads {
 		op_hdr.keylolo: exact;
@@ -152,7 +152,7 @@ action hash_for_cm() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm, 0, hash_calc, CM_BUCKET_COUNT);
 }
 
-@pragma stage 1
+//@pragma stage 1
 table hash_for_cm_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -160,24 +160,6 @@ table hash_for_cm_tbl {
 	}
 	actions {
 		hash_for_cm;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
-action hash_for_seq() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_seq, 0, hash_calc, SEQ_BUCKET_COUNT);
-}
-
-@pragma stage 1
-table hash_for_seq_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		hash_for_seq;
 		nop;
 	}
 	default_action: nop();
@@ -239,6 +221,24 @@ table hash_partition_tbl {
 }
 #endif
 
+action hash_for_seq() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_seq, 0, hash_calc, SEQ_BUCKET_COUNT);
+}
+
+//@pragma stage 2
+table hash_for_seq_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		hash_for_seq;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}
+
 action set_snapshot_flag() {
 	modify_field(inswitch_hdr.snapshot_flag, 1);
 }
@@ -247,7 +247,7 @@ action reset_snapshot_flag() {
 	modify_field(inswitch_hdr.snapshot_flag, 0);
 }
 
-@pragma stage 2
+//@pragma stage 2
 table snapshot_flag_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -274,7 +274,7 @@ action set_sid(sid) {
 	modify_field(inswitch_hdr.sid, sid);
 }
 
-@pragma stage 2
+//@pragma stage 2
 table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -296,7 +296,7 @@ action sample() {
 	modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2);
 }
 
-@pragma stage 3
+//@pragma stage 3
 table sample_tbl {
 	reads {
 		op_hdr.optype: exact;
