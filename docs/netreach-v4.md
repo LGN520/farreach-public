@@ -45,8 +45,8 @@
 	+ In each stage, one container can only be accessed once by an ALU
 		* Even if two fields do not have dependency, if they are located in a same container, they cannot be accessed by different ALUs in the same stage
 	+ The above contraints are only for ALU instead of MAU -> MAU can match containers in different groups, each can be matched with multiple times
-- NOTE for parser branch
-	+ The total number of branches of switch/select expression used by all parsers is limited
+- NOTE for parser
+	+ The total parse length of each packet header (not each single field) for select/switch expression after being extracted is limited (<=4)
 
 ## Overview
 
