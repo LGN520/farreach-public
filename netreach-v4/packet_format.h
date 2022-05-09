@@ -13,7 +13,23 @@
 // # of bytes before idx in inswitch_hdr
 #define INSWITCH_PREV_BYTES 7
 
+// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr
+
+// (1) vallen&value: mask 0b0001; seq: mask 0b0010; inswitch_hdr: mask 0b0100; stat: mask 0b1000;
+// (2) scan/split: specific value (X + 0b0000); not parsed optypes: X + 0b0000
 enum class PacketType {
+	PUTREQ=0x01,
+	GETRES_LATEST_SEQ=0x03, GETRES_DELETED_SEQ=0x13, PUTREQ_SEQ=0x23, PUTREQ_POP_SEQ=0x33, PUTREQ_SEQ_CASE3=0x43, PUTREQ_POP_SEQ_CASE3=0x53,
+	GETRES_LATEST_SEQ_INSWITCH=0x07, GETRES_DELETED_SEQ_INSWITCH=0x17, CACHE_POP_INSWITCH=0x27,
+	GETRES_LATEST_SEQ_INSWITCH_CASE1=0x0f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x1f, PUTREQ_SEQ_INSWITCH_CASE1=0x2f, DELREQ_SEQ_INSWITCH_CASE1=0x3f,
+	GETRES=0x09,
+	PUTREQ_INSWITCH=0x05,
+	GETREQ_INSWITCH=0x04, DELREQ_INSWITCH=0x14,
+	DELREQ_SEQ=0x02, DELREQ_SEQ_CASE3=0x12,
+	PUTRES=0x08, DELRES=0x18,
+	SCANREQ=0x10, SCANREQ_SPLIT=0x20, GETREQ=0x30, DELREQ=0x40, GETREQ_POP=0x50, GETREQ_NLATEST=0x60, CACHE_POP_INSWITCH_ACK=0x70, SCANRES_SPLIT=0x80, CACHE_POP=0x90, CACHE_EVICT=0xa0, CACHE_EVICT_ACK=0xb0, CACHE_EVICT_CASE2=0xc0
+};
+/*enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES_SPLIT, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 
 	GETRES_LATEST_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH_CASE1, 
 	GETRES_DELETED_SEQ, GETRES_DELETED_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH_CASE1, 
@@ -21,7 +37,7 @@ enum class PacketType {
 	DELREQ_INSWITCH, DELREQ_SEQ, DELREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_CASE3, SCANREQ_SPLIT,
 
 	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2,
-};
+};*/
 typedef PacketType packet_type_t;
 
 template<class key_t> class ScanRequestSplit;
@@ -46,7 +62,7 @@ class Packet {
 };
 
 template<class key_t>
-class GetRequest : public Packet<key_t> {
+class GetRequest : public Packet<key_t> { // ophdr
 	public: 
 		GetRequest();
 		GetRequest(key_t key);
@@ -60,7 +76,7 @@ class GetRequest : public Packet<key_t> {
 };
 
 template<class key_t, class val_t>
-class PutRequest : public Packet<key_t> {
+class PutRequest : public Packet<key_t> { // ophdr + val + shadowtype
 	public:
 		PutRequest();
 		PutRequest(key_t key, val_t val);
@@ -76,7 +92,7 @@ class PutRequest : public Packet<key_t> {
 };
 
 template<class key_t>
-class DelRequest : public Packet<key_t> {
+class DelRequest : public Packet<key_t> { // ophdr
 	public: 
 		DelRequest();
 		DelRequest(key_t key);
@@ -89,7 +105,7 @@ class DelRequest : public Packet<key_t> {
 };
 
 template<class key_t>
-class ScanRequest : public Packet<key_t> {
+class ScanRequest : public Packet<key_t> { // ophdr + scanhdr
 	public: 
 		ScanRequest();
 		//ScanRequest(key_t key, key_t endkey, uint32_t num);
@@ -108,7 +124,7 @@ class ScanRequest : public Packet<key_t> {
 };
 
 template<class key_t, class val_t>
-class GetResponse : public Packet<key_t> {
+class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat
 	public:
 		GetResponse();
 		GetResponse(key_t key, val_t val, bool stat);
@@ -127,7 +143,7 @@ class GetResponse : public Packet<key_t> {
 };
 
 template<class key_t>
-class PutResponse : public Packet<key_t> {
+class PutResponse : public Packet<key_t> { // ophdr + shadowtype + stat
 	public: 
 		PutResponse(key_t key, bool stat);
 		PutResponse(const char * data, uint32_t recv_size);
@@ -143,7 +159,7 @@ class PutResponse : public Packet<key_t> {
 };
 
 template<class key_t>
-class DelResponse : public Packet<key_t> {
+class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat
 	public: 
 		DelResponse(key_t key, bool stat);
 		DelResponse(const char * data, uint32_t recv_size);
@@ -159,7 +175,7 @@ class DelResponse : public Packet<key_t> {
 };
 
 template<class key_t, class val_t>
-class ScanResponseSplit : public ScanRequestSplit<key_t> {
+class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr + splithdr + pairs
 	public: 
 		//ScanResponseSplit(key_t key, key_t endkey, int32_t num, int16_t cur_scanidx, int16_t max_scannum, int32_t pairnum, std::vector<std::pair<key_t, val_t>> pairs);
 		ScanResponseSplit(key_t key, key_t endkey, int16_t cur_scanidx, int16_t max_scannum, int32_t parinum, std::vector<std::pair<key_t, val_t>> pairs);
@@ -177,7 +193,7 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> {
 };
 
 template<class key_t>
-class GetRequestPOP : public GetRequest<key_t> {
+class GetRequestPOP : public GetRequest<key_t> { // ophdr
 	public: 
 		GetRequestPOP(const char * data, uint32_t recv_size);
 
@@ -185,7 +201,7 @@ class GetRequestPOP : public GetRequest<key_t> {
 };
 
 template<class key_t>
-class GetRequestNLatest : public GetRequest<key_t> {
+class GetRequestNLatest : public GetRequest<key_t> { // ophdr
 	public: 
 		GetRequestNLatest(const char * data, uint32_t recv_size);
 
@@ -193,7 +209,7 @@ class GetRequestNLatest : public GetRequest<key_t> {
 };
 
 template<class key_t, class val_t>
-class GetResponseLatestSeq : public Packet<key_t> { // seq (w/o stat)
+class GetResponseLatestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
 	public: 
 		GetResponseLatestSeq();
 		GetResponseLatestSeq(key_t key, val_t val, int32_t seq);
@@ -212,7 +228,7 @@ class GetResponseLatestSeq : public Packet<key_t> { // seq (w/o stat)
 };
 
 template<class key_t, class val_t>
-class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val_t> { // seq + idx + stat
+class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
 	public: 
 		GetResponseLatestSeqInswitchCase1();
 		GetResponseLatestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat);
@@ -230,7 +246,7 @@ class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val
 };
 
 template<class key_t, class val_t>
-class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // seq (w/o stat)
+class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
 	public: 
 		GetResponseDeletedSeq(key_t key, val_t val, int32_t seq);
 
@@ -239,14 +255,14 @@ class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // seq
 };
 
 template<class key_t, class val_t>
-class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // seq + idx + stat
+class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
 	public: 
 		GetResponseDeletedSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat);
 		GetResponseDeletedSeqInswitchCase1(const char * data, uint32_t recv_size);
 };
 
 template<class key_t, class val_t>
-class PutRequestSeq : public GetResponseLatestSeq<key_t, val_t> { // seq (w/o stat)
+class PutRequestSeq : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
 	public: 
 		PutRequestSeq();
 		PutRequestSeq(const char * data, uint32_t recv_size);
@@ -258,7 +274,7 @@ class PutRequestSeq : public GetResponseLatestSeq<key_t, val_t> { // seq (w/o st
 };
 
 template<class key_t, class val_t>
-class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // seq (w/o stat)
+class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
 	public: 
 		PutRequestPopSeq(const char * data, uint32_t recv_size);
 
@@ -266,14 +282,14 @@ class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // seq (w/o stat)
 };
 
 template<class key_t, class val_t>
-class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // seq + idx + stat
+class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
 	public: 
 		PutRequestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat);
 		PutRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
 };
 
 template<class key_t, class val_t>
-class PutRequestSeqCase3 : public PutRequestSeq<key_t, val_t> { // seq (w/o stat)
+class PutRequestSeqCase3 : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
 	public: 
 		PutRequestSeqCase3(const char * data, uint32_t recv_size);
 
@@ -281,7 +297,7 @@ class PutRequestSeqCase3 : public PutRequestSeq<key_t, val_t> { // seq (w/o stat
 };
 
 template<class key_t, class val_t>
-class PutRequestPopSeqCase3 : public PutRequestSeq<key_t, val_t> { // seq (w/o stat)
+class PutRequestPopSeqCase3 : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
 	public: 
 		PutRequestPopSeqCase3(const char * data, uint32_t recv_size);
 
@@ -289,7 +305,7 @@ class PutRequestPopSeqCase3 : public PutRequestSeq<key_t, val_t> { // seq (w/o s
 };
 
 template<class key_t>
-class DelRequestSeq : public Packet<key_t> { // seq (w/o stat)
+class DelRequestSeq : public Packet<key_t> { // ophdr + shadowtype + seq
 	public: 
 		DelRequestSeq();
 		DelRequestSeq(const char * data, uint32_t recv_size);
@@ -305,14 +321,14 @@ class DelRequestSeq : public Packet<key_t> { // seq (w/o stat)
 };
 
 template<class key_t, class val_t>
-class DelRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // seq + idx + stat
+class DelRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
 	public: 
 		DelRequestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat);
 		DelRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
-class DelRequestSeqCase3 : public DelRequestSeq<key_t> { // seq (w/o stat)
+class DelRequestSeqCase3 : public DelRequestSeq<key_t> { // ophdr + shadowtype + seq
 	public: 
 		DelRequestSeqCase3(const char * data, uint32_t recv_size);
 
@@ -320,7 +336,7 @@ class DelRequestSeqCase3 : public DelRequestSeq<key_t> { // seq (w/o stat)
 };
 
 template<class key_t>
-class ScanRequestSplit : public ScanRequest<key_t> {
+class ScanRequestSplit : public ScanRequest<key_t> { // ophdr + scanhdr + splithdr
 	public: 
 		ScanRequestSplit();
 		ScanRequestSplit(key_t key, key_t endkey, int16_t cur_scanidx, int16_t max_scannum);
@@ -339,7 +355,7 @@ class ScanRequestSplit : public ScanRequest<key_t> {
 
 // NOTE: only used in end-hosts
 template<class key_t, class val_t>
-class CachePop : public GetResponseLatestSeq<key_t, val_t> { // seq (w/o stat) + serveridx
+class CachePop : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + seq + serveridx
 	public: 
 		CachePop(key_t key, val_t val, int32_t seq, int16_t serveridx);
 		CachePop(const char * data, uint32_t recv_size);
@@ -355,7 +371,7 @@ class CachePop : public GetResponseLatestSeq<key_t, val_t> { // seq (w/o stat) +
 };
 
 template<class key_t, class val_t>
-class CachePopInswitch : public GetResponseLatestSeq<key_t, val_t> { // seq (w/o stat) + inswitch_hdr
+class CachePopInswitch : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr
 	public: 
 		CachePopInswitch(key_t key, val_t val, int32_t seq, int16_t freeidx);
 
@@ -370,7 +386,7 @@ class CachePopInswitch : public GetResponseLatestSeq<key_t, val_t> { // seq (w/o
 };
 
 template<class key_t>
-class CachePopInswitchAck : public GetRequest<key_t> {
+class CachePopInswitchAck : public GetRequest<key_t> { // ophdr
 	public: 
 		CachePopInswitchAck(const char * data, uint32_t recv_size);
 
@@ -379,7 +395,7 @@ class CachePopInswitchAck : public GetRequest<key_t> {
 
 // NOTE: only used in end-hosts
 template<class key_t, class val_t>
-class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // seq + stat + serveridx
+class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + seq + stat + serveridx
 	public: 
 		CacheEvict();
 		CacheEvict(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx);
@@ -399,7 +415,7 @@ class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // seq + stat + s
 
 // NOTE: only used in end-hosts
 template<class key_t>
-class CacheEvictAck : public GetRequest<key_t> {
+class CacheEvictAck : public GetRequest<key_t> { // ophdr
 	public: 
 		CacheEvictAck(key_t key);
 		CacheEvictAck(const char * data, uint32_t recv_size);
@@ -408,7 +424,7 @@ class CacheEvictAck : public GetRequest<key_t> {
 
 // NOTE: only used in end-hosts
 template<class key_t, class val_t>
-class CacheEvictCase2 : public CacheEvict<key_t, val_t> { // seq + stat + serveridx
+class CacheEvictCase2 : public CacheEvict<key_t, val_t> { // ophdr + val + seq + stat + serveridx
 	public: 
 		CacheEvictCase2(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx);
 		CacheEvictCase2(const char * data, uint32_t recv_size);

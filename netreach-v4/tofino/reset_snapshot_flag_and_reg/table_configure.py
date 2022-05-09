@@ -55,7 +55,7 @@ kv_bucket_num = int(config.get("switch", "kv_bucket_num"))
 #SWITCHOS_GETCACHEDEMPTYINDEX = int(control_config.get("switchos", "switchos_get_cachedemptyindex"))
 
 PUTREQ = 0x01
-DELREQ = 0x02
+DELREQ = 0x40
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.

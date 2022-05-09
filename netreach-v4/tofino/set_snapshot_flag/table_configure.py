@@ -59,9 +59,9 @@ port_pipeidx_map = {} # mapping between port and pipeline
 pipeidx_ports_map = {} # mapping between pipeline and ports
 
 PUTREQ = 0x01
-DELREQ = 0x02
-GETRES_LATEST_SEQ = 0x0b
-GETRES_DELETED_SEQ = 0x0e
+DELREQ = 0x40
+GETRES_LATEST_SEQ = 0x03
+GETRES_DELETED_SEQ = 0x13
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.

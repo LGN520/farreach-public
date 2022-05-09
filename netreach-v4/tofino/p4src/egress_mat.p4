@@ -127,6 +127,7 @@ table lastclone_tbl {
 
 action update_getreq_inswitch_to_getreq() {
 	modify_field(op_hdr.optype, GETREQ);
+	modify_field(shadowtype_hdr.shadowtype, GETREQ);
 
 	remove_header(inswitch_hdr);
 
@@ -135,6 +136,7 @@ action update_getreq_inswitch_to_getreq() {
 
 action update_getreq_inswitch_to_getreq_pop() {
 	modify_field(op_hdr.optype, GETREQ_POP);
+	modify_field(shadowtype_hdr.shadowtype, GETREQ_POP);
 
 	remove_header(inswitch_hdr);
 
@@ -143,6 +145,7 @@ action update_getreq_inswitch_to_getreq_pop() {
 
 action update_getreq_inswitch_to_getreq_nlatest() {
 	modify_field(op_hdr.optype, GETREQ_NLATEST);
+	modify_field(shadowtype_hdr.shadowtype, GETREQ_NLATEST);
 
 	remove_header(inswitch_hdr);
 
@@ -151,6 +154,7 @@ action update_getreq_inswitch_to_getreq_nlatest() {
 
 /*action update_getreq_inswitch_to_getres_for_deleted() {
 	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, 0);
 
 	remove_header(inswitch_hdr);
@@ -178,6 +182,7 @@ action update_getreq_inswitch_to_getreq_nlatest() {
 
 action update_getreq_inswitch_to_getres_for_deleted_by_mirroring(sid) {
 	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, 0);
 
 	remove_header(inswitch_hdr);
@@ -206,6 +211,7 @@ action update_getreq_inswitch_to_getres_for_deleted_by_mirroring(sid) {
 
 /*action update_getreq_inswitch_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(inswitch_hdr);
@@ -233,6 +239,7 @@ action update_getreq_inswitch_to_getres_for_deleted_by_mirroring(sid) {
 
 action update_getreq_inswitch_to_getres_by_mirroring(sid) {
 	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(inswitch_hdr);
@@ -261,6 +268,7 @@ action update_getreq_inswitch_to_getres_by_mirroring(sid) {
 
 action update_getres_latest_seq_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(seq_hdr);
@@ -274,6 +282,7 @@ field_list clone_field_list_for_pktloss {
 //action update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(sid, port, stat) {
 action update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(sid, stat) {
 	modify_field(op_hdr.optype, GETRES_LATEST_SEQ_INSWITCH_CASE1);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_LATEST_SEQ_INSWITCH_CASE1);
 	modify_field(stat_hdr.stat, stat);
 	//modify_field(meta.clonenum_for_pktloss, 1); // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone)
 	modify_field(meta.clonenum_for_pktloss, 2); // 3 ACKs (drop w/ 2 -> clone w/ 1 -> clone w/ 0 -> no clone)
@@ -301,6 +310,7 @@ action forward_getres_latest_seq_inswitch_case1() {
 
 action update_getres_deleted_seq_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, 0);
 
 	remove_header(seq_hdr);
@@ -310,6 +320,7 @@ action update_getres_deleted_seq_to_getres() {
 //action update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(sid, port, stat) {
 action update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(sid, stat) {
 	modify_field(op_hdr.optype, GETRES_DELETED_SEQ_INSWITCH_CASE1);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_DELETED_SEQ_INSWITCH_CASE1);
 	modify_field(stat_hdr.stat, stat);
 	//modify_field(meta.clonenum_for_pktloss, 1); // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone)
 	modify_field(meta.clonenum_for_pktloss, 2); // 3 ACKs (drop w/ 2 -> clone w/ 1 -> clone w/ 0 -> no clone)
@@ -338,6 +349,7 @@ action forward_getres_deleted_seq_inswitch_case1() {
 //action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(sid, port) {
 action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(sid) {
 	modify_field(op_hdr.optype, CACHE_POP_INSWITCH_ACK);
+	modify_field(shadowtype_hdr.shadowtype, CACHE_POP_INSWITCH_ACK);
 	//modify_field(meta.clonenum_for_pktloss, 1); // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone)
 	modify_field(meta.clonenum_for_pktloss, 2); // 3 ACKs (drop w/ 2 -> clone w/ 1 -> clone w/ 0 -> no clone)
 
@@ -377,6 +389,7 @@ action forward_cache_pop_inswitch_ack() {
 
 action update_putreq_inswitch_to_putreq_seq() {
 	modify_field(op_hdr.optype, PUTREQ_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -386,6 +399,7 @@ action update_putreq_inswitch_to_putreq_seq() {
 
 action update_putreq_inswitch_to_putreq_pop_seq() {
 	modify_field(op_hdr.optype, PUTREQ_POP_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_POP_SEQ);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -395,6 +409,7 @@ action update_putreq_inswitch_to_putreq_pop_seq() {
 
 /*action update_putreq_inswitch_to_putres() {
 	modify_field(op_hdr.optype, PUTRES);
+	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(inswitch_hdr);
@@ -422,6 +437,7 @@ action update_putreq_inswitch_to_putreq_pop_seq() {
 
 action update_putreq_inswitch_to_putres_by_mirroring(sid) {
 	modify_field(op_hdr.optype, PUTRES);
+	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(inswitch_hdr);
@@ -459,6 +475,7 @@ field_list clone_field_list_for_pktloss_and_res {
 //action update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(sid, port, stat) {
 action update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(sid, stat) {
 	modify_field(op_hdr.optype, PUTREQ_SEQ_INSWITCH_CASE1);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_INSWITCH_CASE1);
 	modify_field(stat_hdr.stat, stat);
 	//modify_field(meta.clonenum_for_pktloss, 2); // 3 ACKs (clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> PUTRES)
 	modify_field(meta.clonenum_for_pktloss, 3); // 3 ACKs (drop w/ 3 -> clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> PUTRES)
@@ -480,6 +497,7 @@ action forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(sid) {
 
 /*action update_putreq_seq_inswitch_case1_to_putres() {
 	modify_field(op_hdr.optype, PUTRES);
+	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(vallen_hdr);
@@ -508,6 +526,7 @@ action forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(sid) {
 
 action update_putreq_seq_inswitch_case1_to_putres_by_mirroring(sid) {
 	modify_field(op_hdr.optype, PUTRES);
+	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(vallen_hdr);
@@ -537,6 +556,7 @@ action update_putreq_seq_inswitch_case1_to_putres_by_mirroring(sid) {
 
 action update_putreq_inswitch_to_putreq_seq_case3() {
 	modify_field(op_hdr.optype, PUTREQ_SEQ_CASE3);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_CASE3);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -546,6 +566,7 @@ action update_putreq_inswitch_to_putreq_seq_case3() {
 
 action update_putreq_inswitch_to_putreq_pop_seq_case3() {
 	modify_field(op_hdr.optype, PUTREQ_POP_SEQ_CASE3);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_POP_SEQ_CASE3);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -555,6 +576,7 @@ action update_putreq_inswitch_to_putreq_pop_seq_case3() {
 
 action update_delreq_inswitch_to_delreq_seq() {
 	modify_field(op_hdr.optype, DELREQ_SEQ);
+	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -564,6 +586,7 @@ action update_delreq_inswitch_to_delreq_seq() {
 
 /*action update_delreq_inswitch_to_delres() {
 	modify_field(op_hdr.optype, DELRES);
+	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(inswitch_hdr);
@@ -574,6 +597,7 @@ action update_delreq_inswitch_to_delreq_seq() {
 
 action update_delreq_inswitch_to_delres_by_mirroring(sid) {
 	modify_field(op_hdr.optype, DELRES);
+	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(inswitch_hdr);
@@ -586,6 +610,7 @@ action update_delreq_inswitch_to_delres_by_mirroring(sid) {
 //action update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(sid, port, stat) {
 action update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(sid, stat) {
 	modify_field(op_hdr.optype, DELREQ_SEQ_INSWITCH_CASE1);
+	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_INSWITCH_CASE1);
 	modify_field(stat_hdr.stat, stat);
 	//modify_field(meta.clonenum_for_pktloss, 2); // 3 ACKs (clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> DELRES)
 	modify_field(meta.clonenum_for_pktloss, 3); // 3 ACKs (drop w/ 3 -> clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> DELRES)
@@ -624,6 +649,7 @@ action forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(sid) {
 
 /*action update_delreq_seq_inswitch_case1_to_delres() {
 	modify_field(op_hdr.optype, DELRES);
+	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(vallen_hdr);
@@ -652,6 +678,7 @@ action forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(sid) {
 
 action update_delreq_seq_inswitch_case1_to_delres_by_mirroring(sid) {
 	modify_field(op_hdr.optype, DELRES);
+	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
 
 	remove_header(vallen_hdr);
@@ -681,6 +708,7 @@ action update_delreq_seq_inswitch_case1_to_delres_by_mirroring(sid) {
 
 action update_delreq_inswitch_to_delreq_seq_case3() {
 	modify_field(op_hdr.optype, DELREQ_SEQ_CASE3);
+	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_CASE3);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);

@@ -312,32 +312,38 @@ table sample_tbl {
 
 action update_getreq_to_getreq_inswitch() {
 	modify_field(op_hdr.optype, GETREQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, GETREQ_INSWITCH);
 	add_header(inswitch_hdr);
 }
 
 action update_getres_latest_seq_to_getres_latest_seq_inswitch() {
 	modify_field(op_hdr.optype, GETRES_LATEST_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_LATEST_SEQ_INSWITCH);
 	add_header(inswitch_hdr);
 }
 
 action update_getres_deleted_seq_to_getres_deleted_seq_inswitch() {
 	modify_field(op_hdr.optype, GETRES_DELETED_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_DELETED_SEQ_INSWITCH);
 	add_header(inswitch_hdr);
 }
 
 action update_putreq_to_putreq_inswitch() {
 	modify_field(op_hdr.optype, PUTREQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_INSWITCH);
 	add_header(inswitch_hdr);
 }
 
 action update_delreq_to_delreq_inswitch() {
 	modify_field(op_hdr.optype, DELREQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, DELREQ_INSWITCH);
 	add_header(inswitch_hdr);
 }
 
 #ifdef RANGE_SUPPORT
 action update_scanreq_to_scanreq_split() {
 	modify_field(op_hdr.optype, SCANREQ_SPLIT);
+	modify_field(shadowtype_hdr.shadowtype, SCANREQ_SPLIT);
 	add_header(split_hdr);
 }
 #endif

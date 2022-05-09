@@ -46,7 +46,11 @@
 		* Even if two fields do not have dependency, if they are located in a same container, they cannot be accessed by different ALUs in the same stage
 	+ The above contraints are only for ALU instead of MAU -> MAU can match containers in different groups, each can be matched with multiple times
 - NOTE for parser
-	+ The total parse length of each packet header (not each single field) for select/switch expression after being extracted is limited (<=4)
+	+ The total select length of each packet header (not each single field) for select/switch expression after being extracted is limited (<=4)
+		* select length: # of selects between the first select of the packet header and the last one; for example:
+		* select(optype) -> extract(vallen) -> extract(value) -> select(optype) -> select(optype) -> select(optype): select length = 4 -> OK
+		* select(optype) -> select(vallen) -> extract(value) -> select(optype) -> select(optype) -> select(optype): select length = 5 -> OK
+	+ No limitation on # of selects and branches
 
 ## Overview
 

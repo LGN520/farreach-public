@@ -52,7 +52,7 @@ parser parse_udp {
 	return parse_op;
 }
 
-// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> shadowtype_hdr -> val_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr
+// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr
 
 parser parse_op {
 	extract(op_hdr);

@@ -116,7 +116,9 @@ uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
-	return sizeof(int8_t) + tmp_keysize + tmp_valsize;
+	begin += tmp_valsize;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t)); // shadowtype
+	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(int8_t);
 }
 
 template<class key_t, class val_t>
@@ -130,6 +132,7 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size-sizeof(int8_t)-tmp_keysize);
 	UNUSED(tmp_valsize);
+	// deserialize shadowtype
 }
 
 // DelRequest
@@ -295,8 +298,10 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
 	begin += tmp_valsize;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t)); // shadowtype
+	begin += sizeof(int8_t);
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
-	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(bool);
+	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(int8_t) + sizeof(bool);
 }
 
 template<class key_t, class val_t>
@@ -310,6 +315,7 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
 	begin += tmp_valsize;
+	begin += sizeof(int8_t); // deserialize shadowtype
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 }
 
@@ -346,6 +352,8 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	begin += sizeof(int8_t);
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
 	begin += tmp_keysize; 
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t)); // shadowtype
+	begin += sizeof(int8_t);
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	return my_size;
 }
@@ -359,6 +367,7 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	begin += sizeof(int8_t);
 	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
 	begin += tmp_keysize;
+	begin += sizeof(int8_t); // deserialize shadowtype
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 }
 
@@ -395,6 +404,8 @@ uint32_t DelResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	begin += sizeof(int8_t);
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(int8_t));
 	begin += tmp_keysize;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t)); // shadowtype
+	begin += sizeof(int8_t);
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	return sizeof(int8_t) + tmp_keysize + sizeof(bool);
 }
@@ -408,6 +419,7 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	begin += sizeof(int8_t);
 	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
 	begin += tmp_keysize;
+	begin += sizeof(int8_t); // deserialize shadowtype
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 }
 
@@ -577,6 +589,8 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::serialize(char * const data, uint32
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
 	begin += tmp_valsize;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t)); // shadowtype
+	begin += sizeof(int8_t);
 	uint32_t bigendian_seq = htonl(uint32_t(this->_seq));
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
 	return sizeof(int8_t) + tmp_keysize + tmp_valsize + sizeof(uint32_t);
@@ -656,6 +670,8 @@ uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::serialize(char * const
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
 	begin += tmp_valsize;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t)); // shadowtype
+	begin += sizeof(int8_t);
 	uint32_t bigendian_seq = htonl(uint32_t(this->_seq));
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t));
 	begin += sizeof(uint32_t);
@@ -680,6 +696,7 @@ void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * d
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
 	begin += tmp_valsize;
+	begin += sizeof(int8_t); // deserialize shadowtype
 	memcpy((void *)&this->_seq, begin, sizeof(int32_t));
 	this->_seq = int32_t(ntohl(uint32_t(this->_seq)));
 	begin += sizeof(int32_t);
@@ -758,6 +775,7 @@ void PutRequestSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_s
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - sizeof(int8_t) - tmp_keysize);
 	begin += tmp_valsize;
+	begin += sizeof(int8_t); // deserialize shadowtype
 	memcpy((void *)&this->_seq, begin, sizeof(int32_t));
 	this->_seq = int32_t(ntohl(uint32_t(this->_seq))); // Big-endian to little-endian
 }
@@ -878,6 +896,7 @@ void DelRequestSeq<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	begin += sizeof(int8_t);
 	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - sizeof(int8_t));
 	begin += tmp_keysize;
+	begin += sizeof(int8_t); // deserialize shadowtype
 	memcpy((void *)&this->_seq, begin, sizeof(int32_t));
 	this->_seq = int32_t(ntohl(uint32_t(this->_seq)));
 }
@@ -1073,6 +1092,8 @@ uint32_t CachePopInswitch<key_t, val_t>::serialize(char * const data, uint32_t m
 	begin += tmp_keysize;
 	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(int8_t)-tmp_keysize);
 	begin += tmp_valsize;
+	memcpy(begin, (void *)&this->_type, sizeof(int8_t)); // shadowtype
+	begin += sizeof(int8_t);
 	uint32_t bigendian_seq = htonl(uint32_t(this->_seq));
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
 	begin += sizeof(uint32_t);
