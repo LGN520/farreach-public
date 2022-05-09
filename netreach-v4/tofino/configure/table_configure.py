@@ -408,50 +408,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=2)
-            #print "Configuring snapshot_flag_tbl"
-            #for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
-            #    matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
-            #            op_hdr_optype = tmpoptype,
-            #            meta_need_recirculate = 0)
-            #    self.client.snapshot_flag_tbl_table_add_with_reset_snapshot_flag(\
-            #            self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: prepare_for_cachehit_tbl (default: nop; size: 6)
-            print "Configuring prepare_for_cachehit_tbl"
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
-                matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ig_intr_md_ingress_port = self.devPorts[0],
-                        meta_need_recirculate = 0)
-                #actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0], self.devPorts[0])
-                actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0])
-                self.client.prepare_for_cachehit_tbl_table_add_with_set_sid(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                # Should not used: no req from server
-                matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ig_intr_md_ingress_port = self.devPorts[1],
-                        meta_need_recirculate = 0)
-                #actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1], self.devPorts[1])
-                actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1])
-                self.client.prepare_for_cachehit_tbl_table_add_with_set_sid(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-
-            # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
-            print "Leave cache_lookup_tbl managed by controller in runtime"
-
             if RANGE_SUPPORT:
                 # # Table: range_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
                 # Table: range_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring range_partition_tbl"
-                key_start = -pow(2, 31) # [-2^31, 2^31-1]
+                #key_start = -pow(2, 31) # [-2^31, 2^31-1]
+                key_start = 0 # [0, 2^32-1]
                 key_range_per_server = pow(2, 32) / server_num
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
                     for iport in self.devPorts:
                         for i in range(server_num):
                             if i == server_num - 1:
-                                key_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
+                                #key_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
+                                key_end = pow(2, 32) - 1
                             else:
                                 key_end = key_start + key_range_per_server - 1
                             # NOTE: both start and end are included
@@ -484,51 +453,27 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: hash_for_cm_tbl (default: nop; size: 2)
-            print "Configuring hash_for_cm_tbl"
-            for tmpoptype in [GETREQ, PUTREQ]:
-                matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        meta_need_recirculate = 0)
-                self.client.hash_for_cm_tbl_table_add_with_hash_for_cm(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: hash_for_seq_tbl (default: nop; size: 2)
-            print "Configuring hash_for_seq_tbl"
-            for tmpoptype in [PUTREQ, DELREQ]:
-                matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        meta_need_recirculate = 0)
-                self.client.hash_for_seq_tbl_table_add_with_hash_for_seq(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: sample_tbl (default: nop; size: 2)
-            print "Configuring sample_tbl"
-            for tmpoptype in [GETREQ, PUTREQ]:
-                matchspec0 = netbufferv4_sample_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        meta_need_recirculate = 0)
-                self.client.sample_tbl_table_add_with_sample(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-
             # Stage 2
 
             if RANGE_SUPPORT:
                 # Table: range_partition_for_scan_tbl (default: nop; size <= 2 * 128)
                 # TODO: limit max_scannum <= constant (e.g., 32)
                 print "Configuring range_partition_for_scan_tbl"
-                startkey_start = -pow(2, 31) # [-2^31, 2^31-1]
+                #startkey_start = -pow(2, 31) # [-2^31, 2^31-1]
+                startkey_start = 0 # [0, 2^32-1]
                 key_range_per_server = pow(2, 32) / server_num
                 for iport in self.devPorts:
                     for i in range(server_num):
                         if i == server_num - 1:
-                            startkey_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
+                            #startkey_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
+                            startkey_end = pow(2, 32) - 1
                         else:
                             startkey_end = startkey_start + key_range_per_server - 1
                         endkey_start = startkey_start
                         for j in range(i, server_num):
                             if j == server_num - 1:
-                                endkey_end = pow(2, 31) - 1
+                                #endkey_end = pow(2, 31) - 1
+                                endkey_end = pow(2, 32) - 1
                             else:
                                 endkey_end = endkey_start + key_range_per_server - 1
                             # NOTE: both start and end are included
@@ -581,7 +526,92 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
                             hash_start = hash_end + 1
 
+            # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
+            print "Leave cache_lookup_tbl managed by controller in runtime"
+
+            # Table: hash_for_cm_tbl (default: nop; size: 2)
+            print "Configuring hash_for_cm_tbl"
+            for tmpoptype in [GETREQ, PUTREQ]:
+                matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 0)
+                self.client.hash_for_cm_tbl_table_add_with_hash_for_cm(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: hash_for_seq_tbl (default: nop; size: 2)
+            print "Configuring hash_for_seq_tbl"
+            for tmpoptype in [PUTREQ, DELREQ]:
+                matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 0)
+                self.client.hash_for_seq_tbl_table_add_with_hash_for_seq(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+
             # Stage 3
+
+            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=2)
+            #print "Configuring snapshot_flag_tbl"
+            #for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+            #    matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
+            #            op_hdr_optype = tmpoptype,
+            #            meta_need_recirculate = 0)
+            #    self.client.snapshot_flag_tbl_table_add_with_reset_snapshot_flag(\
+            #            self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Table: prepare_for_cachehit_tbl (default: nop; size: 6)
+            print "Configuring prepare_for_cachehit_tbl"
+            for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
+                matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ig_intr_md_ingress_port = self.devPorts[0],
+                        meta_need_recirculate = 0)
+                #actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0], self.devPorts[0])
+                actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[0])
+                self.client.prepare_for_cachehit_tbl_table_add_with_set_sid(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                # Should not used: no req from server
+                matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ig_intr_md_ingress_port = self.devPorts[1],
+                        meta_need_recirculate = 0)
+                #actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1], self.devPorts[1])
+                actnspec0 = netbufferv4_set_sid_action_spec_t(self.sids[1])
+                self.client.prepare_for_cachehit_tbl_table_add_with_set_sid(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
+            # Table: ipv4_forward_tbl (default: nop; size: 5)
+            print "Configuring ipv4_forward_tbl"
+            ipv4addr0 = ipv4Addr_to_i32(src_ip)
+            for tmpoptype in [GETRES, PUTRES, DELRES]:
+                matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ipv4_hdr_dstAddr = ipv4addr0,
+                        ipv4_hdr_dstAddr_prefix_length = 32,
+                        meta_need_recirculate = 0)
+                actnspec0 = netbufferv4_forward_normal_response_action_spec_t(self.devPorts[0])
+                self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ipv4_hdr_dstAddr = ipv4addr0,
+                        ipv4_hdr_dstAddr_prefix_length = 32,
+                        meta_need_recirculate = 0)
+                actnspec0 = netbufferv4_ipv4_forward_special_get_response_action_spec_t(self.sids[0])
+                self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+
+            # Stage 4
+
+            # Table: sample_tbl (default: nop; size: 2)
+            print "Configuring sample_tbl"
+            for tmpoptype in [GETREQ, PUTREQ]:
+                matchspec0 = netbufferv4_sample_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 0)
+                self.client.sample_tbl_table_add_with_sample(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+
 
             # Table: ig_port_forward_tbl (default: nop; size: 6)
             print "Configuring ig_port_forward_tbl"
@@ -616,30 +646,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_scanreq_to_scanreq_split(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Stage 4
-
-            # Table: ipv4_forward_tbl (default: nop; size: 5)
-            print "Configuring ipv4_forward_tbl"
-            ipv4addr0 = ipv4Addr_to_i32(src_ip)
-            for tmpoptype in [GETRES, PUTRES, DELRES]:
-                matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ipv4_hdr_dstAddr = ipv4addr0,
-                        ipv4_hdr_dstAddr_prefix_length = 32,
-                        meta_need_recirculate = 0)
-                actnspec0 = netbufferv4_forward_normal_response_action_spec_t(self.devPorts[0])
-                self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
-                matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ipv4_hdr_dstAddr = ipv4addr0,
-                        ipv4_hdr_dstAddr_prefix_length = 32,
-                        meta_need_recirculate = 0)
-                actnspec0 = netbufferv4_ipv4_forward_special_get_response_action_spec_t(self.sids[0])
-                self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Egress pipeline
 

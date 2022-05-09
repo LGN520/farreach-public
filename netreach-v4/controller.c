@@ -241,12 +241,12 @@ void *run_controller_popserver_subthread(void *param) {
 	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
-	int8_t optype = -1;
-	int32_t vallen = -1;
+	uint8_t optype = -1;
+	uint32_t vallen = -1;
 	bool is_cached_before = false; // TODO: remove
 	//index_key_t tmpkey(0, 0, 0, 0);
-	const int arrive_optype_bytes = sizeof(int8_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(int32_t);
+	const int arrive_optype_bytes = sizeof(uint8_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
 	int arrive_serveridx_bytes = -1;
 	while (true) {
 		int recvsize = 0;
@@ -263,18 +263,18 @@ void *run_controller_popserver_subthread(void *param) {
 
 		// Get optype
 		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
-			optype = *((int8_t *)buf);
+			optype = *((uint8_t *)buf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_POP);
 		}
 
 		// Get vallen
 		if (optype != -1 && vallen == -1 && cur_recv_bytes >= arrive_vallen_bytes) {
 			//tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
-			vallen = *((int32_t *)(buf + arrive_vallen_bytes - sizeof(int32_t)));
-			vallen = int32_t(ntohl(uint32_t(vallen)));
+			vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
+			vallen = ntohl(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
-			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(int32_t) + sizeof(int16_t);
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(int16_t);
 		}
 
 		// Get one complete CACHE_POP
@@ -382,13 +382,13 @@ void *run_controller_evictserver(void *param) {
 	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
-	int8_t optype = -1;
+	uint8_t optype = -1;
 	//index_key_t tmpkey = index_key_t();
-	int32_t vallen = -1;
+	uint32_t vallen = -1;
 	//int16_t tmpserveridx = -1;
 	bool is_waitack = false;
-	const int arrive_optype_bytes = sizeof(int8_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(int32_t);
+	const int arrive_optype_bytes = sizeof(uint8_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
 	int arrive_serveridx_bytes = -1;
 	char evictclient_buf[MAX_BUFSIZE];
 	int evictclient_cur_recv_bytes = 0;
@@ -419,18 +419,18 @@ void *run_controller_evictserver(void *param) {
 
 		// Get optype
 		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
-			optype = *((int8_t *)buf);
+			optype = *((uint8_t *)buf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_EVICT || packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2);
 		}
 
 		// Get vallen
 		if (optype != -1 && vallen == -1 && cur_recv_bytes >= arrive_vallen_bytes) {
 			//tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
-			vallen = *((int32_t *)(buf + arrive_vallen_bytes - sizeof(int32_t)));
-			vallen = int32_t(ntohl(uint32_t(vallen)));
+			vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
+			vallen = ntohl(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
-			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(int32_t) + sizeof(bool) + sizeof(int16_t);
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(bool) + sizeof(int16_t);
 		}
 
 		// Get one complete CACHE_EVICT/_CASE2 (only need serveridx here)
@@ -467,7 +467,7 @@ void *run_controller_evictserver(void *param) {
 
 			// get CACHE_EVICT_ACK from server.evictserver
 			if (evictclient_cur_recv_bytes >= evictclient_arrive_key_bytes) {
-				int8_t evictclient_optype = *((int8_t *)evictclient_buf);
+				uint8_t evictclient_optype = *((uint8_t *)evictclient_buf);
 				INVARIANT(packet_type_t(evictclient_optype) == packet_type_t::CACHE_EVICT_ACK);
 
 				// TODO: update metadata if any (no metadata now)
@@ -618,7 +618,7 @@ void *run_controller_snapshotclient(void *param) {
 
 				// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
 				// per-server data: <int32_t perserver_bytes, int16_t serveridx, int32_t recordcnt, per-record data>
-				// per-record data: <16B key, int32_t vallen, value (w/ padding), int32_t seq, bool stat>
+				// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
 				if (control_type_phase1 != -1 && cur_recv_bytes >= sizeof(int) + total_bytes) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
 					// NOTE: per-server_bytes is used for sending snapshot data to different server.consnapshotservers (not used now)
 					

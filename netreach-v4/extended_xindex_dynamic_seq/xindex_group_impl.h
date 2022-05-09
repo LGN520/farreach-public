@@ -81,7 +81,7 @@ const key_t &Group<key_t, val_t, seq, max_model_n>::get_pivot() {
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t &key,
-                                                           val_t &val, int32_t &seqnum) {
+                                                           val_t &val, uint32_t &seqnum) {
 #ifdef BF_OPTIMIZATION
   if (bf->query(key) == true) { // may have false positive
     if (get_from_array(key, val, seqnum)) {
@@ -138,7 +138,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::force_put(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::put(
-    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum) {
+    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id, uint32_t seqnum) {
   result_t res;
 #ifdef BF_OPTIMIZATION
   if (bf->query(key) == true) { // may have false positive
@@ -172,7 +172,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::remove(
-    const key_t &key, int32_t snapshot_id, int32_t seqnum) {
+    const key_t &key, int32_t snapshot_id, uint32_t seqnum) {
 #ifdef BF_OPTIMIZATION
   if (bf->query(key) == true) { // may have false positive
 	  if (remove_from_array(key, snapshot_id, seqnum)) {
@@ -530,7 +530,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::locate_model(
 // return true on success
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::get_from_array(
-    const key_t &key, val_t &val, int32_t &seqnum) {
+    const key_t &key, val_t &val, uint32_t &seqnum) {
   size_t pos = get_pos_from_array(key);
   return pos != array_size &&         // position is valid (not out-of-range)
          data[pos].first == key &&    // key matches
@@ -596,7 +596,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::force_update_to_array(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
-    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum) {
+    const key_t &key, const val_t &val, const uint32_t worker_id, int32_t snapshot_id, uint32_t seqnum) {
   if (seq) {
     seq_lock();
     size_t pos = get_pos_from_array(key);
@@ -653,7 +653,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_array(
-    const key_t &key, int32_t snapshot_id, int32_t seqnum) {
+    const key_t &key, int32_t snapshot_id, uint32_t seqnum) {
   size_t pos = get_pos_from_array(key);
   return pos != array_size &&        // position is valid (not out-of-range)
          data[pos].first == key &&   // key matches
@@ -769,7 +769,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::exponential_search_key(
 // return true on success
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::get_from_buffer(
-    const key_t &key, val_t &val, buffer_t *buffer, int32_t &seqnum) {
+    const key_t &key, val_t &val, buffer_t *buffer, uint32_t &seqnum) {
   return buffer->get(key, val, seqnum);
 }
 
@@ -787,19 +787,19 @@ inline void Group<key_t, val_t, seq, max_model_n>::force_insert_to_buffer(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::update_to_buffer(
-    const key_t &key, const val_t &val, buffer_t *buffer, int32_t snapshot_id, int32_t seqnum) {
+    const key_t &key, const val_t &val, buffer_t *buffer, int32_t snapshot_id, uint32_t seqnum) {
   return buffer->update(key, val, snapshot_id, seqnum);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline void Group<key_t, val_t, seq, max_model_n>::insert_to_buffer(
-    const key_t &key, const val_t &val, buffer_t *buffer, int32_t snapshot_id, int32_t seqnum) {
+    const key_t &key, const val_t &val, buffer_t *buffer, int32_t snapshot_id, uint32_t seqnum) {
   buffer->insert(key, val, snapshot_id, seqnum);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_buffer(
-    const key_t &key, buffer_t *buffer, int32_t snapshot_id, int32_t seqnum) {
+    const key_t &key, buffer_t *buffer, int32_t snapshot_id, uint32_t seqnum) {
   return buffer->remove(key, snapshot_id, seqnum);
 }
 
@@ -999,7 +999,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 	  bool base_ssremoved_0 = base_val.read_snapshot_0(base_ssval_0, base_ssseqnum_0, base_ssid_0);
 	  bool base_ssremoved_1 = base_val.read_snapshot_1(base_ssval_1, base_ssseqnum_1, base_ssid_1);
 	  int32_t base_latestid = base_val.latest_id;
-	  int32_t base_seqnum = base_val.latest_seqnum;
+	  uint32_t base_seqnum = base_val.latest_seqnum;
 	  bool buf_all_removed = buf_val.merge_snapshot(base_seqnum, base_latestid, base_ssval_0, base_ssseqnum_0, base_ssid_0, base_ssremoved_0, base_ssval_1, base_ssseqnum_1, base_ssid_1, base_ssremoved_1);
 
 		// Ignore buf_val if it is all removed after merging snapshots from base_val
@@ -1149,7 +1149,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
     // we are sure that these key has not-removed (pre-read) value
     const key_t &base_key = array_source.get_key();
     const val_t &base_val = array_source.get_val();
-	const int32_t &base_seqnum = array_source.get_seqnum();
+	const uint32_t &base_seqnum = array_source.get_seqnum();
 	snapshot_record_t base_record;
 	base_record.val = base_val;
 	base_record.seq = base_seqnum;
@@ -1157,7 +1157,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
 
     const key_t &buf_key = buffer_source.get_key();
     const val_t &buf_val = buffer_source.get_val();
-	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	const uint32_t &buf_seqnum = buffer_source.get_seqnum();
 	snapshot_record_t buf_record;
 	buf_record.val = buf_val;
 	buf_record.seq = buf_seqnum;
@@ -1187,7 +1187,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
   while (array_source.has_next && remaining && !out_of_range) {
     const key_t &base_key = array_source.get_key();
     const val_t &base_val = array_source.get_val();
-	const int32_t &base_seqnum = array_source.get_seqnum();
+	const uint32_t &base_seqnum = array_source.get_seqnum();
 	snapshot_record_t base_record;
 	base_record.val = base_val;
 	base_record.seq = base_seqnum;
@@ -1204,7 +1204,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
   while (buffer_source.has_next && remaining && !out_of_range) {
     const key_t &buf_key = buffer_source.get_key();
     const val_t &buf_val = buffer_source.get_val();
-	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	const uint32_t &buf_seqnum = buffer_source.get_seqnum();
 	snapshot_record_t buf_record;
 	buf_record.val = buf_val;
 	buf_record.seq = buf_seqnum;
@@ -1431,7 +1431,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
     // we are sure that these key has not-removed (pre-read) value
     const key_t &base_key = array_source.get_key();
     const val_t &base_val = array_source.get_val();
-	const int32_t &base_seqnum = array_source.get_seqnum();
+	const uint32_t &base_seqnum = array_source.get_seqnum();
 	snapshot_record_t base_record;
 	base_record.val = base_val;
 	base_record.seq = base_seqnum;
@@ -1439,7 +1439,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
 
     const key_t &buf_key = buffer_source.get_key();
     const val_t &buf_val = buffer_source.get_val();
-	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	const uint32_t &buf_seqnum = buffer_source.get_seqnum();
 	snapshot_record_t buf_record;
 	buf_record.val = buf_val;
 	buf_record.seq = buf_seqnum;
@@ -1447,7 +1447,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
 
     const key_t &tmp_buf_key = temp_buffer_source.get_key();
     const val_t &tmp_buf_val = temp_buffer_source.get_val();
-	const int32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
+	const uint32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
 	snapshot_record_t tmp_buf_record;
 	tmp_buf_record.val = tmp_buf_val;
 	tmp_buf_record.seq = tmp_buf_seqnum;
@@ -1488,7 +1488,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
     // we are sure that these key has not-removed (pre-read) value
     const key_t &base_key = array_source.get_key();
     const val_t &base_val = array_source.get_val();
-	const int32_t &base_seqnum = array_source.get_seqnum();
+	const uint32_t &base_seqnum = array_source.get_seqnum();
 	snapshot_record_t base_record;
 	base_record.val = base_val;
 	base_record.seq = base_seqnum;
@@ -1496,7 +1496,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
 
     const key_t &buf_key = buffer_source.get_key();
     const val_t &buf_val = buffer_source.get_val();
-	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	const uint32_t &buf_seqnum = buffer_source.get_seqnum();
 	snapshot_record_t buf_record;
 	buf_record.val = buf_val;
 	buf_record.seq = buf_seqnum;
@@ -1528,7 +1528,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
     // we are sure that these key has not-removed (pre-read) value
     const key_t &buf_key = buffer_source.get_key();
     const val_t &buf_val = buffer_source.get_val();
-	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	const uint32_t &buf_seqnum = buffer_source.get_seqnum();
 	snapshot_record_t buf_record;
 	buf_record.val = buf_val;
 	buf_record.seq = buf_seqnum;
@@ -1536,7 +1536,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
 
     const key_t &tmp_buf_key = temp_buffer_source.get_key();
     const val_t &tmp_buf_val = temp_buffer_source.get_val();
-	const int32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
+	const uint32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
 	snapshot_record_t tmp_buf_record;
 	tmp_buf_record.val = tmp_buf_val;
 	tmp_buf_record.seq = tmp_buf_seqnum;
@@ -1568,7 +1568,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
     // we are sure that these key has not-removed (pre-read) value
     const key_t &base_key = array_source.get_key();
     const val_t &base_val = array_source.get_val();
-	const int32_t &base_seqnum = array_source.get_seqnum();
+	const uint32_t &base_seqnum = array_source.get_seqnum();
 	snapshot_record_t base_record;
 	base_record.val = base_val;
 	base_record.seq = base_seqnum;
@@ -1576,7 +1576,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
 
     const key_t &tmp_buf_key = temp_buffer_source.get_key();
     const val_t &tmp_buf_val = temp_buffer_source.get_val();
-	const int32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
+	const uint32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
 	snapshot_record_t tmp_buf_record;
 	tmp_buf_record.val = tmp_buf_val;
 	tmp_buf_record.seq = tmp_buf_seqnum;
@@ -1607,7 +1607,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
   while (array_source.has_next && remaining && !out_of_range) {
     const key_t &base_key = array_source.get_key();
     const val_t &base_val = array_source.get_val();
-	const int32_t &base_seqnum = array_source.get_seqnum();
+	const uint32_t &base_seqnum = array_source.get_seqnum();
 	snapshot_record_t base_record;
 	base_record.val = base_val;
 	base_record.seq = base_seqnum;
@@ -1624,7 +1624,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
   while (buffer_source.has_next && remaining && !out_of_range) {
     const key_t &buf_key = buffer_source.get_key();
     const val_t &buf_val = buffer_source.get_val();
-	const int32_t &buf_seqnum = buffer_source.get_seqnum();
+	const uint32_t &buf_seqnum = buffer_source.get_seqnum();
 	snapshot_record_t buf_record;
 	buf_record.val = buf_val;
 	buf_record.seq = buf_seqnum;
@@ -1641,7 +1641,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
   while (temp_buffer_source.has_next && remaining && !out_of_range) {
     const key_t &tmp_buf_key = temp_buffer_source.get_key();
     const val_t &tmp_buf_val = temp_buffer_source.get_val();
-	const int32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
+	const uint32_t &tmp_buf_seqnum = temp_buffer_source.get_seqnum();
 	snapshot_record_t tmp_buf_record;
 	tmp_buf_record.val = tmp_buf_val;
 	tmp_buf_record.seq = tmp_buf_seqnum;
@@ -1689,7 +1689,7 @@ const val_t &Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::get_val() {
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-const int32_t &Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::get_seqnum() {
+const uint32_t &Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::get_seqnum() {
   return next_seqnum;
 }
 

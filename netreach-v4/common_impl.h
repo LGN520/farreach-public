@@ -94,7 +94,7 @@ short backup_port;
 short notified_port;
 short server_evictserver_port_start = -1;
 short server_consnapshotserver_port = -1;
-int64_t perserver_keyrange = -1; // use size_t to avoid int overflow
+uint64_t perserver_keyrange = -1; // use size_t to avoid int overflow
 
 // controller
 const char *controller_ip_for_server = nullptr;

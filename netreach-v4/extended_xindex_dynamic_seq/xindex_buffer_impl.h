@@ -52,7 +52,7 @@ AltBtreeBuffer<key_t, val_t>::~AltBtreeBuffer() {
 }
 
 template <class key_t, class val_t>
-inline bool AltBtreeBuffer<key_t, val_t>::get(const key_t &key, val_t &val, int32_t &seqnum) {
+inline bool AltBtreeBuffer<key_t, val_t>::get(const key_t &key, val_t &val, uint32_t &seqnum) {
   uint64_t leaf_ver;
   leaf_t *leaf_ptr = locate_leaf(key, leaf_ver);
 
@@ -105,7 +105,7 @@ inline void AltBtreeBuffer<key_t, val_t>::force_insert(const key_t &key,
 
 template <class key_t, class val_t>
 inline bool AltBtreeBuffer<key_t, val_t>::update(const key_t &key,
-                                                 const val_t &val, int32_t snapshot_id, int32_t seqnum) {
+                                                 const val_t &val, int32_t snapshot_id, uint32_t seqnum) {
   leaf_t *leaf_ptr = locate_leaf_locked(key);
   int slot = leaf_ptr->find_first_larger_than_or_equal_to(key);
   bool res = (slot < leaf_ptr->key_n && leaf_ptr->keys[slot] == key)
@@ -118,13 +118,13 @@ inline bool AltBtreeBuffer<key_t, val_t>::update(const key_t &key,
 
 template <class key_t, class val_t>
 inline void AltBtreeBuffer<key_t, val_t>::insert(const key_t &key,
-                                                 const val_t &val, int32_t snapshot_id, int32_t seqnum) {
+                                                 const val_t &val, int32_t snapshot_id, uint32_t seqnum) {
   leaf_t *leaf_ptr = locate_leaf_locked(key);
   insert_leaf(key, val, leaf_ptr, snapshot_id, seqnum);  // lock is released within
 }
 
 template <class key_t, class val_t>
-inline bool AltBtreeBuffer<key_t, val_t>::remove(const key_t &key, int32_t snapshot_id, int32_t seqnum) {
+inline bool AltBtreeBuffer<key_t, val_t>::remove(const key_t &key, int32_t snapshot_id, uint32_t seqnum) {
   leaf_t *leaf_ptr = locate_leaf_locked(key);
   int slot = leaf_ptr->find_first_larger_than_or_equal_to(key);
   bool res = (slot < leaf_ptr->key_n && leaf_ptr->keys[slot] == key)
@@ -272,7 +272,7 @@ void AltBtreeBuffer<key_t, val_t>::force_insert_leaf(const key_t &key,
 template <class key_t, class val_t>
 void AltBtreeBuffer<key_t, val_t>::insert_leaf(const key_t &key,
                                                const val_t &val,
-                                               leaf_t *target, int32_t snapshot_id, int32_t seqnum) {
+                                               leaf_t *target, int32_t snapshot_id, uint32_t seqnum) {
   // first try to update inplace (without modifying mem layout)
   int slot = target->find_first_larger_than_or_equal_to(key);
   if (slot < target->key_n && target->keys[slot] == key) {
@@ -584,7 +584,7 @@ template <class key_t, class val_t>
 void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
                                                        const val_t &val,
                                                        int slot,
-                                                       leaf_t *target, int32_t snapshot_id, int32_t seqnum) {
+                                                       leaf_t *target, int32_t snapshot_id, uint32_t seqnum) {
   node_t *node_ptr = target;
   node_t *sib_ptr = allocate_leaf();
   sib_ptr->lock();
@@ -1126,7 +1126,7 @@ const val_t &AltBtreeBuffer<key_t, val_t>::DataSource::get_val() {
 }
 
 template <class key_t, class val_t>
-const int32_t &AltBtreeBuffer<key_t, val_t>::DataSource::get_seqnum() {
+const uint32_t &AltBtreeBuffer<key_t, val_t>::DataSource::get_seqnum() {
   return seqnums[pos];
 }
 

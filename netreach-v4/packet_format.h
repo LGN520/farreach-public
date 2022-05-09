@@ -54,7 +54,7 @@ class Packet {
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size) = 0;
 	protected:
-		int8_t _type;
+		uint8_t _type;
 		key_t _key;
 
 		virtual uint32_t size() = 0;
@@ -113,14 +113,14 @@ class ScanRequest : public Packet<key_t> { // ophdr + scanhdr
 		ScanRequest(const char * data, uint32_t recv_size);
 
 		key_t endkey() const;
-		//int32_t num() const;
+		//uint32_t num() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		key_t _endkey;
-		//int32_t _num;
+		//uint32_t _num;
 };
 
 template<class key_t, class val_t>
@@ -212,26 +212,26 @@ template<class key_t, class val_t>
 class GetResponseLatestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
 	public: 
 		GetResponseLatestSeq();
-		GetResponseLatestSeq(key_t key, val_t val, int32_t seq);
+		GetResponseLatestSeq(key_t key, val_t val, uint32_t seq);
 		virtual ~GetResponseLatestSeq(){}
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
 		val_t val() const;
-		int32_t seq() const;
+		uint32_t seq() const;
 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
-		int32_t _seq;
+		uint32_t _seq;
 };
 
 template<class key_t, class val_t>
 class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
 	public: 
 		GetResponseLatestSeqInswitchCase1();
-		GetResponseLatestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat);
+		GetResponseLatestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, int16_t idx, bool stat);
 		GetResponseLatestSeqInswitchCase1(const char * data, uint32_t recv_size);
 
 		int16_t idx() const;
@@ -248,7 +248,7 @@ class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val
 template<class key_t, class val_t>
 class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
 	public: 
-		GetResponseDeletedSeq(key_t key, val_t val, int32_t seq);
+		GetResponseDeletedSeq(key_t key, val_t val, uint32_t seq);
 
 	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);
@@ -257,7 +257,7 @@ class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // oph
 template<class key_t, class val_t>
 class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
 	public: 
-		GetResponseDeletedSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat);
+		GetResponseDeletedSeqInswitchCase1(key_t key, val_t val, uint32_t seq, int16_t idx, bool stat);
 		GetResponseDeletedSeqInswitchCase1(const char * data, uint32_t recv_size);
 };
 
@@ -284,7 +284,7 @@ class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + s
 template<class key_t, class val_t>
 class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
 	public: 
-		PutRequestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat);
+		PutRequestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, int16_t idx, bool stat);
 		PutRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
 };
 
@@ -312,18 +312,18 @@ class DelRequestSeq : public Packet<key_t> { // ophdr + shadowtype + seq
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
-		int32_t seq() const;
+		uint32_t seq() const;
 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-		int32_t _seq;
+		uint32_t _seq;
 };
 
 template<class key_t, class val_t>
 class DelRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
 	public: 
-		DelRequestSeqInswitchCase1(key_t key, val_t val, int32_t seq, int16_t idx, bool stat);
+		DelRequestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, int16_t idx, bool stat);
 		DelRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
 };
 
@@ -357,7 +357,7 @@ class ScanRequestSplit : public ScanRequest<key_t> { // ophdr + scanhdr + splith
 template<class key_t, class val_t>
 class CachePop : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + seq + serveridx
 	public: 
-		CachePop(key_t key, val_t val, int32_t seq, int16_t serveridx);
+		CachePop(key_t key, val_t val, uint32_t seq, int16_t serveridx);
 		CachePop(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
@@ -373,7 +373,7 @@ class CachePop : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + se
 template<class key_t, class val_t>
 class CachePopInswitch : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr
 	public: 
-		CachePopInswitch(key_t key, val_t val, int32_t seq, int16_t freeidx);
+		CachePopInswitch(key_t key, val_t val, uint32_t seq, int16_t freeidx);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -398,7 +398,7 @@ template<class key_t, class val_t>
 class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + seq + stat + serveridx
 	public: 
 		CacheEvict();
-		CacheEvict(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx);
+		CacheEvict(key_t key, val_t val, uint32_t seq, bool stat, int16_t serveridx);
 		CacheEvict(const char * data, uint32_t recv_size);
 		virtual ~CacheEvict(){}
 
@@ -426,7 +426,7 @@ class CacheEvictAck : public GetRequest<key_t> { // ophdr
 template<class key_t, class val_t>
 class CacheEvictCase2 : public CacheEvict<key_t, val_t> { // ophdr + val + seq + stat + serveridx
 	public: 
-		CacheEvictCase2(key_t key, val_t val, int32_t seq, bool stat, int16_t serveridx);
+		CacheEvictCase2(key_t key, val_t val, uint32_t seq, bool stat, int16_t serveridx);
 		CacheEvictCase2(const char * data, uint32_t recv_size);
 };
 

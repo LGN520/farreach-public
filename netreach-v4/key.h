@@ -30,9 +30,9 @@ class Key {
 
   Key();
 #ifdef LARGE_KEY
-  Key(int32_t keylolo, int32_t keylohi, int32_t keyhilo, int32_t keyhihi);
+  Key(uint32_t keylolo, uint32_t keylohi, uint32_t keyhilo, uint32_t keyhihi);
 #else
-  Key(int32_t keylo, int32_t keyhi);
+  Key(uint32_t keylo, uint32_t keyhi);
 #endif
   Key(const Key &other);
   Key(const Key volatile &other);
@@ -63,13 +63,13 @@ class Key {
   //uint32_t size() const;
 
 #ifdef LARGE_KEY
-  int32_t keylolo;
-  int32_t keylohi;
-  int32_t keyhilo;
-  int32_t keyhihi;
+  uint32_t keylolo;
+  uint32_t keylohi;
+  uint32_t keyhilo;
+  uint32_t keyhihi;
 #else
-  int32_t keylo;
-  int32_t keyhi;
+  uint32_t keylo;
+  uint32_t keyhi;
 #endif
 } PACKED;
 

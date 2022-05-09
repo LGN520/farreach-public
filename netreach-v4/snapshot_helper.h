@@ -12,7 +12,7 @@ typedef Val val_t;
 
 struct SnapshotRecord {
 	val_t val;
-	int32_t seq;
+	uint32_t seq;
 	bool stat;
 };
 typedef SnapshotRecord snapshot_record_t;

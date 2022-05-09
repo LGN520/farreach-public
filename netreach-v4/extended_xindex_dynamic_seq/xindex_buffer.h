@@ -111,14 +111,14 @@ class AltBtreeBuffer {
     void advance_to_next_valid(int32_t snapshot_id);
     const key_t &get_key();
     const val_t &get_val();
-	const int32_t &get_seqnum();
+	const uint32_t &get_seqnum();
 
     leaf_t *next = nullptr;
     bool has_next = false;
     int pos = 0, n = 0;
     key_t keys[node_capacity];
     val_t vals[node_capacity];
-	int32_t seqnums[node_capacity];
+	uint32_t seqnums[node_capacity];
   };
 
   // Only used for compact
@@ -141,12 +141,12 @@ class AltBtreeBuffer {
   AltBtreeBuffer();
   ~AltBtreeBuffer();
 
-  inline bool get(const key_t &key, val_t &val, int32_t &seqnum);
+  inline bool get(const key_t &key, val_t &val, uint32_t &seqnum);
   inline bool force_update(const key_t &key, const val_t &val, int32_t snapshot_id);
   inline void force_insert(const key_t &key, const val_t &val, int32_t snapshot_id);
-  inline bool update(const key_t &key, const val_t &val, int32_t snapshot_id, int32_t seqnum);
-  inline void insert(const key_t &key, const val_t &val, int32_t snapshot_id, int32_t seqnum);
-  inline bool remove(const key_t &key, int32_t snapshot_id, int32_t seqnum);
+  inline bool update(const key_t &key, const val_t &val, int32_t snapshot_id, uint32_t seqnum);
+  inline void insert(const key_t &key, const val_t &val, int32_t snapshot_id, uint32_t seqnum);
+  inline bool remove(const key_t &key, int32_t snapshot_id, uint32_t seqnum);
   inline size_t scan(const key_t &key_begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result);
   inline void range_scan(const key_t &key_begin, const key_t &key_end,
@@ -161,9 +161,9 @@ class AltBtreeBuffer {
   void force_insert_leaf(const key_t &key, const val_t &val, leaf_t *target, int32_t snapshot_id);
   void force_split_n_insert_leaf(const key_t &key, const val_t &val, int slot,
                            leaf_t *target, int32_t snapshot_id);
-  void insert_leaf(const key_t &key, const val_t &val, leaf_t *target, int32_t snapshot_id, int32_t seqnum);
+  void insert_leaf(const key_t &key, const val_t &val, leaf_t *target, int32_t snapshot_id, uint32_t seqnum);
   void split_n_insert_leaf(const key_t &key, const val_t &val, int slot,
-                           leaf_t *target, int32_t snapshot_id, int32_t seqnum);
+                           leaf_t *target, int32_t snapshot_id, uint32_t seqnum);
 
   inline void allocate_new_block();
   inline uint8_t *allocate_node();

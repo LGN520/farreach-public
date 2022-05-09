@@ -45,10 +45,10 @@ class XIndex {
          size_t worker_num, size_t bg_n);
   ~XIndex();
 
-  inline bool get(const key_t &key, val_t &val, const uint32_t worker_id, int32_t &seqnum);
+  inline bool get(const key_t &key, val_t &val, const uint32_t worker_id, uint32_t &seqnum);
   inline bool force_put(const key_t &key, const val_t &val, const uint32_t worker_id); // keep original seqnum (used in loading phase)
-  inline bool put(const key_t &key, const val_t &val, const uint32_t worker_id, int32_t seqnum);
-  inline bool remove(const key_t &key, const uint32_t worker_id, int32_t seqnum);
+  inline bool put(const key_t &key, const val_t &val, const uint32_t worker_id, uint32_t seqnum);
+  inline bool remove(const key_t &key, const uint32_t worker_id, uint32_t seqnum);
   inline size_t scan(const key_t &begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result,
                      const uint32_t worker_id);

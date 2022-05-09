@@ -98,11 +98,12 @@ header_type inswitch_t {
 		//is_wrong_pipeline: 1;
 		//eport_for_res: 9;
 		padding: 5;
-		// 32-bit container
-		sid: 9;
-		hashval_for_cm: 23; // at most 64K
-		// 32-bit container
+		// two 16-bit containers
+		sid: 10; // clone_e2e sets eg_intr_md_for_mb.mirror_id w/ 10 bits
+		hashval_for_cm: 22; // at most 64K
+		// 16-bit container
 		hashval_for_seq: 16; // at most 32K
+		// 16-bit container
 		idx: 16; // index for in-switch cache
 	}
 }

@@ -10,7 +10,7 @@
 #include "snapshot_helper.h"
 #include "concurrent_map_impl.h"
 
-typedef DeletedSet<index_key_t, int32_t> deleted_set_t;
+typedef DeletedSet<index_key_t, uint32_t> deleted_set_t;
 typedef ConcurrentMap<index_key_t, snapshot_record_t> concurrent_snapshot_map_t;
 
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
@@ -263,13 +263,13 @@ static int run_server_worker(void * param) {
 
   // scan.startkey <= max_startkey; scan.endkey >= min_startkey
   // use size_t to avoid int overflow
-  int64_t min_startkeyhihi = serveridx * perserver_keyrange;
-  int64_t max_endkeyhihi = min_startkeyhihi - 1 + perserver_keyrange;
-  INVARIANT(min_startkeyhihi >= std::numeric_limits<int32_t>::min() && min_startkeyhihi <= std::numeric_limits<int32_t>::max());
-  INVARIANT(max_endkeyhihi >= std::numeric_limits<int32_t>::min() && max_endkeyhihi <= std::numeric_limits<int32_t>::max());
+  uint64_t min_startkeyhihi = serveridx * perserver_keyrange;
+  uint64_t max_endkeyhihi = min_startkeyhihi - 1 + perserver_keyrange;
+  INVARIANT(min_startkeyhihi >= std::numeric_limits<uint32_t>::min() && min_startkeyhihi <= std::numeric_limits<uint32_t>::max());
+  INVARIANT(max_endkeyhihi >= std::numeric_limits<uint32_t>::min() && max_endkeyhihi <= std::numeric_limits<uint32_t>::max());
   INVARIANT(max_endkeyhihi >= min_startkeyhihi);
   index_key_t min_startkey(0, 0, 0, min_startkeyhihi);
-  index_key_t max_endkey(std::numeric_limits<int32_t>::max(), std::numeric_limits<int32_t>::max(), std::numeric_limits<int32_t>::max(), max_endkeyhihi);
+  index_key_t max_endkey(std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), max_endkeyhihi);
 
   // NOTE: controller and switchos should have been launched before servers
   tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
@@ -377,7 +377,7 @@ static int run_server_worker(void * param) {
 					get_request_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
-					int32_t tmp_seq = 0;
+					uint32_t tmp_seq = 0;
 					bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					get_response_t rsp(req.key(), tmp_val, tmp_stat);
@@ -394,7 +394,7 @@ static int run_server_worker(void * param) {
 					get_request_nlatest_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
-					int32_t tmp_seq = 0;
+					uint32_t tmp_seq = 0;
 					bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					if (tmp_stat) { // key exists
@@ -585,7 +585,7 @@ static int run_server_worker(void * param) {
 					get_request_pop_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
-					int32_t tmp_seq;
+					uint32_t tmp_seq;
 					bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
@@ -811,12 +811,12 @@ void *run_server_evictserver(void *param) {
 	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
 	char recvbuf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
-	int8_t optype = -1;
+	uint8_t optype = -1;
 	index_key_t tmpkey = index_key_t();
-	int32_t vallen = -1;
+	uint32_t vallen = -1;
 	bool is_waitack = false;
-	const int arrive_optype_bytes = sizeof(int8_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(int32_t);
+	const int arrive_optype_bytes = sizeof(uint8_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint32_t);
 	int arrive_serveridx_bytes = -1;
 	int tmp_serveridx = -1;
 	while (transaction_running) {
@@ -834,18 +834,18 @@ void *run_server_evictserver(void *param) {
 
 		// Get optype
 		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
-			optype = *((int8_t *)recvbuf);
+			optype = *((uint8_t *)recvbuf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_EVICT || packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2);
 		}
 
 		// Get key and vallen
 		if (optype != -1 && vallen == -1 && cur_recv_bytes >= arrive_vallen_bytes) {
 			tmpkey.deserialize(recvbuf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
-			vallen = *((int32_t *)(recvbuf + arrive_vallen_bytes - sizeof(int32_t)));
-			vallen = int32_t(ntohl(uint32_t(vallen)));
+			vallen = *((uint32_t *)(recvbuf + arrive_vallen_bytes - sizeof(uint32_t)));
+			vallen = ntohl(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
-			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(int32_t) + sizeof(bool) + sizeof(int16_t);
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(bool) + sizeof(int16_t);
 		}
 
 		// Get one complete CACHE_EVICT/_CASE2 (only need serveridx here)
@@ -975,7 +975,7 @@ void *run_server_consnapshotserver(void *param) {
 
 			// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
 			// per-server data: <int32_t perserver_bytes, int16_t serveridx, int32_t recordcnt, per-record data>
-			// per-record data: <16B key, int32_t vallen, value (w/ padding), int32_t seq, bool stat>
+			// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
 			if (control_type_phase1 != -1 && cur_recv_bytes >= int(sizeof(int) + total_bytes)) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
 				// NOTE: per-server_bytes is used for processing snapshot data of each server (not used now)
 				
@@ -997,8 +997,8 @@ void *run_server_consnapshotserver(void *param) {
 						tmp_offset += tmp_keysize;
 						uint32_t tmp_valsize = tmp_record.val.deserialize(recvbuf + tmp_offset, tmp_maxbytes - tmp_offset);
 						tmp_offset += tmp_valsize;
-						tmp_record.seq = *((int32_t *)(recvbuf + tmp_offset));
-						tmp_offset += sizeof(int32_t);
+						tmp_record.seq = *((uint32_t *)(recvbuf + tmp_offset));
+						tmp_offset += sizeof(uint32_t);
 						tmp_record.stat = *((bool *)(recvbuf + tmp_offset));
 						tmp_offset += sizeof(bool);
 						//new_server_snapshot_maps[tmp_serveridx].insert(std::pair<index_key_t, snapshot_record_t>(tmp_key, tmp_record));

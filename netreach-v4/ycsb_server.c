@@ -170,7 +170,7 @@ void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {
 	while (true) {
 		tmpkey = iter.key();
 		tmpval = iter.val();	
-		if (iter.type() == int8_t(packet_type_t::PUTREQ)) {	// INESRT
+		if (iter.type() == uint8_t(packet_type_t::PUTREQ)) {	// INESRT
 			loadmap.insert(std::pair<index_key_t, val_t>(tmpkey, tmpval));
 		}
 		else {

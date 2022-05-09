@@ -40,7 +40,7 @@ Val ParserIterator::val() {
 	return _val;
 }
 
-int8_t ParserIterator::type() {
+uint8_t ParserIterator::type() {
 	return _type;
 }
 
@@ -130,10 +130,10 @@ bool ParserIterator::parsekv(const char* line) {
 	if (unlikely(key_end == nullptr)) return false;
 	std::string keystr(key_begin, key_end - key_begin);
 	uint64_t tmpkey = std::stoull(keystr);
-	int32_t keyhilo = 0;
-	int32_t keyhihi = 0;
-	memcpy((void *)&keyhilo, (void *)&tmpkey, sizeof(int32_t)); // lowest 4B -> keyhilo
-	memcpy((void *)&keyhihi, ((char *)&tmpkey)+4, sizeof(int32_t)); // highest 4B -> keyhihi
+	uint32_t keyhilo = 0;
+	uint32_t keyhihi = 0;
+	memcpy((void *)&keyhilo, (void *)&tmpkey, sizeof(uint32_t)); // lowest 4B -> keyhilo
+	memcpy((void *)&keyhihi, ((char *)&tmpkey)+4, sizeof(uint32_t)); // highest 4B -> keyhihi
 	_key = Key(0, 0, keyhilo, keyhihi);
 
 	val_begin = strstr(line, "[ field0=");
@@ -142,7 +142,7 @@ bool ParserIterator::parsekv(const char* line) {
 	val_end = line + strlen(line) - 3; // The last substr is " ]\n"
 	if (unlikely(strncmp(val_end, " ]\n", 3) != 0)) return false;
 	if (unlikely(val_begin >= val_end)) return false;
-	uint8_t val_len = uint8_t(val_end - val_begin); // # of bytes
+	uint32_t val_len = uint32_t(val_end - val_begin); // # of bytes
 	char val_buf[val_len];
 	memset(val_buf, '\0', val_len);
 	memcpy(val_buf, val_begin, val_end - val_begin);
@@ -166,10 +166,10 @@ bool ParserIterator::parsekey(const char* line) {
 	if (unlikely(key_end == nullptr)) return false;
 	std::string keystr(key_begin, key_end - key_begin);
 	uint64_t tmpkey = std::stoull(keystr);
-	int32_t keyhilo = 0;
-	int32_t keyhihi = 0;
-	memcpy((void *)&keyhilo, (void *)&tmpkey, sizeof(int32_t)); // lowest 4B -> keyhilo
-	memcpy((void *)&keyhihi, ((char *)&tmpkey)+4, sizeof(int32_t)); // highest 4B -> keyhihi
+	uint32_t keyhilo = 0;
+	uint32_t keyhihi = 0;
+	memcpy((void *)&keyhilo, (void *)&tmpkey, sizeof(uint32_t)); // lowest 4B -> keyhilo
+	memcpy((void *)&keyhihi, ((char *)&tmpkey)+4, sizeof(uint32_t)); // highest 4B -> keyhihi
 	_key = Key(0, 0, keyhilo, keyhihi);
 
 	_val = Val();

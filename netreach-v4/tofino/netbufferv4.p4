@@ -169,23 +169,25 @@ control ingress {
 #else
 	apply(hash_for_partition_tbl); // for hash partition
 #endif
-	apply(cache_lookup_tbl); // TODO: managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
-	apply(hash_for_cm_tbl); // TODO: for CM (access inswitch_hdr.hashval_for_cm)
 
-	// Stage 2
+	// Stage 2 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_tbl); // for range partition (SCAN)
 #else
 	apply(hash_partition_tbl);
 #endif
-	apply(hash_for_seq_tbl); // TODO: for seq (access inswitch_hdr.hashval_for_seq)
-	apply(snapshot_flag_tbl); // TODO: for snapshot (access inswitch_hdr.snapshot_flag)
-	apply(prepare_for_cachehit_tbl); // TODO: for response of cache hit (access inswitch_hdr.sid)
+	apply(cache_lookup_tbl); // managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
+	apply(hash_for_cm_tbl); // for CM (access inswitch_hdr.hashval_for_cm)
+	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
 	// Stgae 3
-	apply(sample_tbl); // TODO: for CM and cache_frequency (access inswitch_hdr.is_sampled)
-	apply(ipv4_forward_tbl); // TODO: update egress_port for normal/speical response packets
-	apply(ig_port_forward_tbl); // TODO: update op_hdr.optype
+	apply(snapshot_flag_tbl); // for snapshot (access inswitch_hdr.snapshot_flag)
+	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.sid)
+	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
+
+	// Stage 4
+	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
+	apply(ig_port_forward_tbl); // update op_hdr.optype
 }
 
 /* Egress Processing */

@@ -114,58 +114,6 @@ table hash_for_partition_tbl {
 }
 #endif
 
-action cached_action(idx) {
-	modify_field(inswitch_hdr.idx, idx);
-	modify_field(inswitch_hdr.is_cached, 1);
-}
-
-action uncached_action() {
-	modify_field(inswitch_hdr.is_cached, 0);
-}
-
-//@pragma stage 1
-table cache_lookup_tbl {
-	reads {
-		op_hdr.keylolo: exact;
-		op_hdr.keylohi: exact;
-		op_hdr.keyhilo: exact;
-		op_hdr.keyhihi: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		cached_action;
-		uncached_action;
-	}
-	default_action: uncached_action();
-	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
-}
-
-/*field_list_calculation sample_calc {
-	input {
-		hash_fields;
-	}
-	algorithm: crc32;
-	output_width: 1;
-}*/
-
-action hash_for_cm() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm, 0, hash_calc, CM_BUCKET_COUNT);
-}
-
-//@pragma stage 1
-table hash_for_cm_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		hash_for_cm;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
 // Stage 2
 
 #ifdef RANGE_SUPPORT
@@ -221,11 +169,63 @@ table hash_partition_tbl {
 }
 #endif
 
+action cached_action(idx) {
+	modify_field(inswitch_hdr.idx, idx);
+	modify_field(inswitch_hdr.is_cached, 1);
+}
+
+action uncached_action() {
+	modify_field(inswitch_hdr.is_cached, 0);
+}
+
+@pragma stage 2
+table cache_lookup_tbl {
+	reads {
+		op_hdr.keylolo: exact;
+		op_hdr.keylohi: exact;
+		op_hdr.keyhilo: exact;
+		op_hdr.keyhihi: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		cached_action;
+		uncached_action;
+	}
+	default_action: uncached_action();
+	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
+}
+
+/*field_list_calculation sample_calc {
+	input {
+		hash_fields;
+	}
+	algorithm: crc32;
+	output_width: 1;
+}*/
+
+action hash_for_cm() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm, 0, hash_calc, CM_BUCKET_COUNT);
+}
+
+@pragma stage 2
+table hash_for_cm_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		hash_for_cm;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}
+
 action hash_for_seq() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_seq, 0, hash_calc, SEQ_BUCKET_COUNT);
 }
 
-//@pragma stage 2
+@pragma stage 2
 table hash_for_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -239,6 +239,8 @@ table hash_for_seq_tbl {
 	size: 2;
 }
 
+// Stage 3
+
 action set_snapshot_flag() {
 	modify_field(inswitch_hdr.snapshot_flag, 1);
 }
@@ -247,7 +249,7 @@ action reset_snapshot_flag() {
 	modify_field(inswitch_hdr.snapshot_flag, 0);
 }
 
-//@pragma stage 2
+@pragma stage 3
 table snapshot_flag_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -274,7 +276,7 @@ action set_sid(sid) {
 	modify_field(inswitch_hdr.sid, sid);
 }
 
-//@pragma stage 2
+@pragma stage 3
 table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -289,14 +291,40 @@ table prepare_for_cachehit_tbl {
 	size: 8;
 }
 
-// Stage 3
+action forward_normal_response(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+
+action forward_special_get_response(sid) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
+	clone_ingress_pkt_to_egress(sid); // Cloned packet enter the egress pipeline to corresponding client
+}
+
+@pragma stage 3
+table ipv4_forward_tbl {
+	reads {
+		op_hdr.optype: exact;
+		ipv4_hdr.dstAddr: lpm;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		forward_normal_response;
+		forward_special_get_response;
+		nop;
+	}
+	default_action: nop();
+	size: 8;
+}
+
+// Stage 4
+
 
 action sample() {
 	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, sample_calc, 2);
 	modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2);
 }
 
-//@pragma stage 3
+@pragma stage 4
 table sample_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -348,7 +376,7 @@ action update_scanreq_to_scanreq_split() {
 }
 #endif
 
-//@pragma stage 3
+@pragma stage 4
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -368,29 +396,3 @@ table ig_port_forward_tbl {
 	default_action: nop();
 	size: 8;
 }
-
-action forward_normal_response(eport) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-
-action forward_special_get_response(sid) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
-	clone_ingress_pkt_to_egress(sid); // Cloned packet enter the egress pipeline to corresponding client
-}
-
-//@pragma stage 3
-table ipv4_forward_tbl {
-	reads {
-		op_hdr.optype: exact;
-		ipv4_hdr.dstAddr: lpm;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		forward_normal_response;
-		forward_special_get_response;
-		nop;
-	}
-	default_action: nop();
-	size: 8;
-}
-

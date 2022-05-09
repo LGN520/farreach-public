@@ -4,26 +4,26 @@
 
 Key Key::max() {
 #ifdef LARGE_KEY
-    static Key max_key(std::numeric_limits<int32_t>::max(),
-			std::numeric_limits<int32_t>::max(),
-			std::numeric_limits<int32_t>::max(),
-			std::numeric_limits<int32_t>::max());
+    static Key max_key(std::numeric_limits<uint32_t>::max(),
+			std::numeric_limits<uint32_t>::max(),
+			std::numeric_limits<uint32_t>::max(),
+			std::numeric_limits<uint32_t>::max());
 #else
-    static Key max_key(std::numeric_limits<int32_t>::max(),
-			std::numeric_limits<int32_t>::max());
+    static Key max_key(std::numeric_limits<uint32_t>::max(),
+			std::numeric_limits<uint32_t>::max());
 #endif
     return max_key;
 }
 
 Key Key::min() {
 #ifdef LARGE_KEY
-    static Key min_key(std::numeric_limits<int32_t>::min(),
-			std::numeric_limits<int32_t>::min(),
-			std::numeric_limits<int32_t>::min(),
-			std::numeric_limits<int32_t>::min());
+    static Key min_key(std::numeric_limits<uint32_t>::min(),
+			std::numeric_limits<uint32_t>::min(),
+			std::numeric_limits<uint32_t>::min(),
+			std::numeric_limits<uint32_t>::min());
 #else
-    static Key min_key(std::numeric_limits<int32_t>::min(),
-			std::numeric_limits<int32_t>::min());
+    static Key min_key(std::numeric_limits<uint32_t>::min(),
+			std::numeric_limits<uint32_t>::min());
 #endif
     return min_key;
 }
@@ -41,14 +41,14 @@ Key::Key() {
 }
 
 #ifdef LARGE_KEY
-Key::Key(int32_t keylolo, int32_t keylohi, int32_t keyhilo, int32_t keyhihi) {
+Key::Key(uint32_t keylolo, uint32_t keylohi, uint32_t keyhilo, uint32_t keyhihi) {
 	this->keylolo = keylolo;
 	this->keylohi = keylohi;
 	this->keyhilo = keyhilo;
 	this->keyhihi = keyhihi;
 }
 #else
-Key::Key(int32_t keylo, int32_t keyhi) {
+Key::Key(uint32_t keylo, uint32_t keyhi) {
 	this->keylo = keylo;
 	this->keyhi = keyhi;
 }
@@ -134,13 +134,13 @@ rocksdb::Slice Key::to_slice() const {
 
 void Key::from_slice(rocksdb::Slice& slice) {
 #ifdef LARGE_KEY
-	keylolo = *(int32_t*)slice.data_;
-	keylohi = *(int32_t*)(slice.data_+4);
-	keyhilo = *(int32_t*)(slice.data_+8);
-	keyhihi = *(int32_t*)(slice.data_+12);
+	keylolo = *(uint32_t*)slice.data_;
+	keylohi = *(uint32_t*)(slice.data_+4);
+	keyhilo = *(uint32_t*)(slice.data_+8);
+	keyhihi = *(uint32_t*)(slice.data_+12);
 #else
-	keylo = *(int32_t*)slice.data_;
-	keyhi = *(int32_t*)(slice.data_+4);
+	keylo = *(uint32_t*)slice.data_;
+	keyhi = *(uint32_t*)(slice.data_+4);
 #endif
 }
 */
@@ -236,23 +236,23 @@ bool operator!=(const Key &l, const Key &r) {
 uint32_t Key::deserialize(const char* buf, uint32_t buflen) {
 #ifdef LARGE_KEY
 	INVARIANT(buf != nullptr && buflen >= 16);
-	memcpy((char *)&keylolo, buf, sizeof(int32_t));
-	memcpy((char *)&keylohi, buf+4, sizeof(int32_t));
-	memcpy((char *)&keyhilo, buf+8, sizeof(int32_t));
-	memcpy((char *)&keyhihi, buf+12, sizeof(int32_t));
+	memcpy((char *)&keylolo, buf, sizeof(uint32_t));
+	memcpy((char *)&keylohi, buf+4, sizeof(uint32_t));
+	memcpy((char *)&keyhilo, buf+8, sizeof(uint32_t));
+	memcpy((char *)&keyhihi, buf+12, sizeof(uint32_t));
 	// Big-endian to little-endian
-	keylolo = int32_t(ntohl(uint32_t(keylolo)));
-	keylohi = int32_t(ntohl(uint32_t(keylohi)));
-	keyhilo = int32_t(ntohl(uint32_t(keyhilo)));
-	keyhihi = int32_t(ntohl(uint32_t(keyhihi)));
+	keylolo = ntohl(keylolo);
+	keylohi = ntohl(keylohi);
+	keyhilo = ntohl(keyhilo);
+	keyhihi = ntohl(keyhihi);
 	return 16;
 #else
 	INVARIANT(buf != nullptr && buflen >= 8);
-	memcpy((char *)&keylo, buf, sizeof(int32_t));
-	memcpy((char *)&keyhi, buf+4, sizeof(int32_t));
+	memcpy((char *)&keylo, buf, sizeof(uint32_t));
+	memcpy((char *)&keyhi, buf+4, sizeof(uint32_t));
 	// Big-endian to little-endian
-	keylo = int32_t(ntohl(uint32_t(keylo)));
-	keyhi = int32_t(ntohl(uint32_t(keyhi)));
+	keylo = ntohl(keylo);
+	keyhi = ntohl(keyhi);
 	return 8;
 #endif
 }
@@ -261,10 +261,10 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) {
 #ifdef LARGE_KEY
 	INVARIANT(buf != nullptr && buflen >= 16);
 	// Little-endian to big-endian
-	uint32_t bigendian_keylolo = htonl(uint32_t(keylolo));
-	uint32_t bigendian_keylohi = htonl(uint32_t(keylohi));
-	uint32_t bigendian_keyhilo = htonl(uint32_t(keyhilo));
-	uint32_t bigendian_keyhihi = htonl(uint32_t(keyhihi));
+	uint32_t bigendian_keylolo = htonl(keylolo);
+	uint32_t bigendian_keylohi = htonl(keylohi);
+	uint32_t bigendian_keyhilo = htonl(keyhilo);
+	uint32_t bigendian_keyhihi = htonl(keyhihi);
 	memcpy(buf, (char *)&bigendian_keylolo, sizeof(uint32_t));
 	memcpy(buf+4, (char *)&bigendian_keylohi, sizeof(uint32_t));
 	memcpy(buf+8, (char *)&bigendian_keyhilo, sizeof(uint32_t));
@@ -273,8 +273,8 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) {
 #else
 	INVARIANT(buf != nullptr && buflen >= 8);
 	// Little-endian to big-endian
-	uint32_t bigendian_keylo = htonl(uint32_t(keylo));
-	uint32_t bigendian_keyhi = htonl(uint32_t(keyhi));
+	uint32_t bigendian_keylo = htonl(keylo);
+	uint32_t bigendian_keyhi = htonl(keyhi);
 	memcpy(buf, (char *)&bigendian_keylo, sizeof(uint32_t));
 	memcpy(buf+4, (char *)&bigendian_keyhi, sizeof(uint32_t));
 	return 8;
@@ -286,11 +286,11 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) volatile {
 #ifdef LARGE_KEY
 	INVARIANT(buf != nullptr && buflen >= 16);
 	// Little-endian to big-endian
-	uint32_t bigendian_keylolo = htonl(uint32_t(keylolo));
-	uint32_t bigendian_keylohi = htonl(uint32_t(keylohi));
-	uint32_t bigendian_keyhilo = htonl(uint32_t(keyhilo));
-	uint32_t bigendian_keyhihi = htonl(uint32_t(keyhihi));
-	memcpy(buf, (char *)&bigendian_keylolo, sizeof(uint32_t));
+	uint32_t bigendian_keylolo = htonl(keylolo);
+	uint32_t bigendian_keylohi = htonl(keylohi);
+	uint32_t bigendian_keyhilo = htonl(keyhilo);
+	uint32_t bigendian_keyhihi = htonl(keyhihi);
+	memcpy(buf, (char *)&bigendian_keylolo, sizof(uint32_t));
 	memcpy(buf+4, (char *)&bigendian_keylohi, sizeof(uint32_t));
 	memcpy(buf+8, (char *)&bigendian_keyhilo, sizeof(uint32_t));
 	memcpy(buf+12, (char *)&bigendian_keyhihi, sizeof(uint32_t));
@@ -298,8 +298,8 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) volatile {
 #else
 	INVARIANT(buf != nullptr && buflen >= 8);
 	// Little-endian to big-endian
-	uint32_t bigendian_keylo = htonl(uint32_t(keylo));
-	uint32_t bigendian_keyhi = htonl(uint32_t(keyhi));
+	uint32_t bigendian_keylo = htonl(keylo);
+	uint32_t bigendian_keyhi = htonl(keyhi);
 	memcpy(buf, (char *)&bigendian_keylo, sizeof(uint32_t));
 	memcpy(buf+4, (char *)&bigendian_keyhi, sizeof(uint32_t));
 	return 8;

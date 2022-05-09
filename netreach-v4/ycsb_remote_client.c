@@ -60,16 +60,16 @@ size_t get_server_idx(index_key_t key) {
 	return server_idx;
 }
 
-const int32_t range_gap = 1024; // add 2^10 to keylo of startkey
+const uint32_t range_gap = 1024; // add 2^10 to keylo of startkey
 //const uint32_t range_gap = 0x80000000; // add 2^31 to keylo of startkey
 const int range_num = 10; // max number of returned kv pairs
 index_key_t generate_endkey(index_key_t &startkey) {
 	index_key_t endkey = startkey;
-	if (std::numeric_limits<int32_t>::max() - endkey.keylolo > range_gap) {
+	if (std::numeric_limits<uint32_t>::max() - endkey.keylolo > range_gap) {
 		endkey.keylolo += range_gap;
 	}
 	else {
-		endkey.keylolo = std::numeric_limits<int32_t>::max();
+		endkey.keylolo = std::numeric_limits<uint32_t>::max();
 	}
 	return endkey;
 }
@@ -382,7 +382,7 @@ static int run_fg(void *param) {
 		tmpkey = iter.key();
 		struct timespec req_t1, req_t2, req_t3, rsp_t1, rsp_t2, rsp_t3, final_t3;
 		struct timespec wait_t1, wait_t2, wait_t3;
-		if (iter.type() == int8_t(packet_type_t::GETREQ)) { // get
+		if (iter.type() == uint8_t(packet_type_t::GETREQ)) { // get
 			CUR_TIME(req_t1);
 			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
 			get_request_t req(tmpkey);
@@ -416,7 +416,7 @@ static int run_fg(void *param) {
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
 			CUR_TIME(rsp_t2);
 		}
-		else if (iter.type() == int8_t(packet_type_t::PUTREQ)) { // update or insert
+		else if (iter.type() == uint8_t(packet_type_t::PUTREQ)) { // update or insert
 			tmpval = iter.val();
 
 			CUR_TIME(req_t1);
@@ -457,7 +457,7 @@ static int run_fg(void *param) {
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 			CUR_TIME(rsp_t2);
 		}
-		else if (iter.type() == int8_t(packet_type_t::DELREQ)) {
+		else if (iter.type() == uint8_t(packet_type_t::DELREQ)) {
 			CUR_TIME(req_t1);
 			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
 			del_request_t req(tmpkey);
@@ -486,7 +486,7 @@ static int run_fg(void *param) {
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 			CUR_TIME(rsp_t2);
 		}
-		else if (iter.type() == int8_t(packet_type_t::SCANREQ)) {
+		else if (iter.type() == uint8_t(packet_type_t::SCANREQ)) {
 			index_key_t endkey = generate_endkey(tmpkey);
 			/*size_t first_server_idx = get_server_idx(tmpkey);
 			size_t last_server_idx = get_server_idx(endkey);

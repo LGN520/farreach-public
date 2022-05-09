@@ -72,8 +72,8 @@ inline void prepare() {
   std::mt19937 gen(0);
   //std::uniform_int_distribution<int64_t> rand_int64(
   //    0, std::numeric_limits<int64_t>::max());
-  std::uniform_int_distribution<int32_t> rand_int32(
-      0, std::numeric_limits<int32_t>::max()); // [0, 2^31-1]
+  std::uniform_int_distribution<uint32_t> rand_int32(
+      0, std::numeric_limits<uint32_t>::max()); // [0, 2^32-1]
 
   exist_keys.reserve(table_size);
   for (size_t i = 0; i < table_size; ++i) {

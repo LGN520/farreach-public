@@ -192,7 +192,7 @@ void Root<key_t, val_t, seq>::calculate_err(const std::vector<key_t> &keys,
  * Root::get
  */
 template <class key_t, class val_t, bool seq>
-inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val, int32_t &seqnum) {
+inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val, uint32_t &seqnum) {
   return locate_group(key)->get(key, val, seqnum);
 }
 
@@ -210,7 +210,7 @@ inline result_t Root<key_t, val_t, seq>::force_put(const key_t &key, const val_t
  */
 template <class key_t, class val_t, bool seq>
 inline result_t Root<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
-                                             const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum) {
+                                             const uint32_t worker_id, int32_t snapshot_id, uint32_t seqnum) {
   return locate_group(key)->put(key, val, worker_id, snapshot_id, seqnum);
 }
 
@@ -218,7 +218,7 @@ inline result_t Root<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
  * Root::remove
  */
 template <class key_t, class val_t, bool seq>
-inline result_t Root<key_t, val_t, seq>::remove(const key_t &key, int32_t snapshot_id, int32_t seqnum) {
+inline result_t Root<key_t, val_t, seq>::remove(const key_t &key, int32_t snapshot_id, uint32_t seqnum) {
   return locate_group(key)->remove(key, snapshot_id, seqnum);
 }
 

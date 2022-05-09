@@ -202,21 +202,21 @@ struct AtomicVal {
   // Maintain one latest version and two versions for snapshot to support unfinished range query when making new snapshot
   // NOTE: the two snapshot versions may be in removed status due to merge_snapshot in compact
   int32_t latest_id = -1; // -1: impossible value; k: latest write happens at epoch k 
-  int32_t latest_seqnum = 0; // For serializability under potential packet loss
+  uint32_t latest_seqnum = 0; // For serializability under potential packet loss
 
   val_t ss_val_0; // val_length = 0 and val_data = NULL
-  int32_t ss_seqnum_0 = 0;
+  uint32_t ss_seqnum_0 = 0;
   int32_t ss_id_0 = -1; // -1: no snapshot; otherwise: snapshot of epoch k 
   uint64_t ss_status_0 = 0; // only focus on removed w/o lock, is_ptr, and version
 
   val_t ss_val_1; // val_length = 0 and val_data = NULL
-  int32_t ss_seqnum_1 = 0;
+  uint32_t ss_seqnum_1 = 0;
   int32_t ss_id_1 = -1; // -1: no snapshot; otherwise: snapshot of epoch k'
   uint64_t ss_status_1 = 0; // only focus on removed w/o lock, is_ptr, and version
 
   AtomicVal() : status(0) {}
   ~AtomicVal() {}
-  AtomicVal(val_t val, int32_t snapshot_id, int32_t seqnum) : status(0) {
+  AtomicVal(val_t val, int32_t snapshot_id, uint32_t seqnum) : status(0) {
 	  this->latest_val = val; // deep copy
 	  // Empty snapshot
 	  ss_id_0 = -1;
@@ -286,7 +286,7 @@ struct AtomicVal {
 
   // Snapshot by multi-versioning
   //bool read_snapshot(val_t &val, int32_t &ss_id, int32_t snapshot_id) {
-  bool read_snapshot(val_t &val, int32_t &seqnum, int32_t snapshot_id) {
+  bool read_snapshot(val_t &val, uint32_t &seqnum, int32_t snapshot_id) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -347,7 +347,7 @@ struct AtomicVal {
 	this->rwlock.unlock_shared();
 	return res;
   }
-  bool read_snapshot_0(val_t &val, int32_t &seqnum, int32_t &ss_id) {
+  bool read_snapshot_0(val_t &val, uint32_t &seqnum, int32_t &ss_id) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -372,7 +372,7 @@ struct AtomicVal {
 	this->rwlock.unlock_shared();
 	return res;
   }
-  bool read_snapshot_1(val_t &val, int32_t &seqnum, int32_t &ss_id) {
+  bool read_snapshot_1(val_t &val, uint32_t &seqnum, int32_t &ss_id) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -399,7 +399,7 @@ struct AtomicVal {
   }
   // Snapshot by multi-versioning while ignoring ptr, as AtomicVal in buffer and buffer_temp cannot be ptr-type
   //bool read_snapshot_ignoring_ptr(val_t &val, int32_t &ss_id, int32_t snapshot_id) {
-  bool read_snapshot_ignoring_ptr(val_t &val, int32_t &seqnum, int32_t snapshot_id) {
+  bool read_snapshot_ignoring_ptr(val_t &val, uint32_t &seqnum, int32_t snapshot_id) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -454,7 +454,7 @@ struct AtomicVal {
   }
   // Try to merge snapshot versions from data.base_val into buffer.buf_val
   // TODO: we do not need this function after treating DELREQ as special PUTREQ
-  bool merge_snapshot(int32_t &data_latestseqnum, int32_t &data_latestid, val_t &data_ssval_0, int32_t &data_ssseqnum_0, int32_t &data_ssid_0, bool data_ssremoved_0, val_t &data_ssval_1, int32_t &data_ssseqnum_1, int32_t &data_ssid_1, bool data_ssremoved_1) {
+  bool merge_snapshot(uint32_t &data_latestseqnum, int32_t &data_latestid, val_t &data_ssval_0, uint32_t &data_ssseqnum_0, int32_t &data_ssid_0, bool data_ssremoved_0, val_t &data_ssval_1, uint32_t &data_ssseqnum_1, int32_t &data_ssid_1, bool data_ssremoved_1) {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
@@ -464,8 +464,8 @@ struct AtomicVal {
 	if (this->ss_id_0 == -1 || this->ss_id_1 == -1) { // with at least one empty snapshot entry
 		val_t *newer_ssval = NULL;
 		val_t *older_ssval = NULL;
-		int32_t *newer_ssseqnum = NULL;
-		int32_t * older_ssseqnum = NULL;
+		uint32_t *newer_ssseqnum = NULL;
+		uint32_t * older_ssseqnum = NULL;
 		int32_t *newer_ssid = NULL;
 		int32_t *older_ssid = NULL;
 		bool newer_removed, older_removed;
@@ -547,7 +547,7 @@ struct AtomicVal {
   }
 
   // semantics: atomically read the value and the `removed` flag
-  bool read(val_t &val, int32_t &seqnum) {
+  bool read(val_t &val, uint32_t &seqnum) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -570,7 +570,7 @@ struct AtomicVal {
 	this->rwlock.unlock_shared();
 	return res;
   }
-  bool read_with_latestid_seqnum(val_t &val, int32_t &id, int32_t &seqnum) {
+  bool read_with_latestid_seqnum(val_t &val, int32_t &id, uint32_t &seqnum) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -654,7 +654,7 @@ struct AtomicVal {
     this->rwlock.unlock();
     return res;
   }
-  bool update(const val_t &val, int32_t snapshot_id, int32_t seqnum) {
+  bool update(const val_t &val, int32_t snapshot_id, uint32_t seqnum) {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
@@ -698,7 +698,7 @@ struct AtomicVal {
     this->rwlock.unlock();
     return res;
   }
-  bool remove(int32_t snapshot_id, int32_t seqnum) {
+  bool remove(int32_t snapshot_id, uint32_t seqnum) {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
@@ -758,7 +758,7 @@ struct AtomicVal {
 	assert(aval_ptr != nullptr);
 	val_t tmp_latestval;
 	int32_t tmp_latestid;
-	int32_t tmp_seqnum;
+	uint32_t tmp_seqnum;
     if (!aval_ptr->read_with_latestid_seqnum(tmp_latestval, tmp_latestid, tmp_seqnum)) {
       set_removed();
     }
@@ -768,7 +768,7 @@ struct AtomicVal {
 	// Get snapshot value 0
 	val_t tmp_ssval_0;
 	int32_t tmp_ssid_0;
-	int32_t tmp_ssseqnum_0;
+	uint32_t tmp_ssseqnum_0;
 	if (!aval_ptr->read_snapshot_0(tmp_ssval_0, tmp_ssseqnum_0, tmp_ssid_0)) {
 		this->ss_status_0 |= removed_mask;
 	}
@@ -777,7 +777,7 @@ struct AtomicVal {
 	this->ss_id_0 = tmp_ssid_0;
 	// Get snapshot value 1
 	val_t tmp_ssval_1;
-	int32_t tmp_ssseqnum_1;
+	uint32_t tmp_ssseqnum_1;
 	int32_t tmp_ssid_1;
 	if (!aval_ptr->read_snapshot_1(tmp_ssval_1, tmp_ssseqnum_1, tmp_ssid_1)) {
 		this->ss_status_1 |= removed_mask;
@@ -789,7 +789,7 @@ struct AtomicVal {
     memory_fence(); // store to memory
     this->rwlock.unlock();
   }
-  bool read_ignoring_ptr(val_t &val, int32_t &seqnum) {
+  bool read_ignoring_ptr(val_t &val, uint32_t &seqnum) {
 	while (true) {
 	  if (this->rwlock.try_lock_shared()) break;
 	}
@@ -856,7 +856,7 @@ struct AtomicVal {
     this->rwlock.unlock();
     return res;
   }
-  bool update_ignoring_ptr(const val_t &val, int32_t snapshot_id, int32_t seqnum) {
+  bool update_ignoring_ptr(const val_t &val, int32_t snapshot_id, uint32_t seqnum) {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}
@@ -897,7 +897,7 @@ struct AtomicVal {
     this->rwlock.unlock();
     return res;
   }
-  bool remove_ignoring_ptr(int32_t snapshot_id, int32_t seqnum) {
+  bool remove_ignoring_ptr(int32_t snapshot_id, uint32_t seqnum) {
 	while (true) {
 		if (this->rwlock.try_lock()) break;
 	}

@@ -43,12 +43,12 @@ class Root {
                      double &err_at_percentile, double &max_err,
                      double &avg_err);
 
-  inline result_t get(const key_t &key, val_t &val, int32_t &seqnum);
+  inline result_t get(const key_t &key, val_t &val, uint32_t &seqnum);
   inline result_t force_put(const key_t &key, const val_t &val,
                       const uint32_t worker_id, int32_t snapshot_id);
   inline result_t put(const key_t &key, const val_t &val,
-                      const uint32_t worker_id, int32_t snapshot_id, int32_t seqnum);
-  inline result_t remove(const key_t &key, int32_t snapshot_id, int32_t seqnum);
+                      const uint32_t worker_id, int32_t snapshot_id, uint32_t seqnum);
+  inline result_t remove(const key_t &key, int32_t snapshot_id, uint32_t seqnum);
   inline size_t scan(const key_t &begin, const size_t n,
                      std::vector<std::pair<key_t, val_t>> &result, int32_t snapshot_id);
   inline size_t scan(const key_t &begin, const size_t n,

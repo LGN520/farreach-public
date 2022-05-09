@@ -122,15 +122,15 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
         print "Prepare sendbuf to switchos.snapshotdataserver"
         sendbuf = bytes()
-        # <total_bytesnum, records> -> for each record: <vallen (big-endian), valbytes (same order), seq, result>
+        # <total_bytesnum, records> -> for each record: <uint32_t vallen (big-endian for Val::deserialize), valbytes (same order), uint32_t seq (little-endian), result>
         for i in range(record_cnt):
             tmpvallen = vallen_list[i]
-            sendbuf = sendbuf + struct.pack("!i", tmpvallen)
+            sendbuf = sendbuf + struct.pack("!I", tmpvallen)
             tmp_eightbyte_cnt = (tmpvallen + 7) / 8
             for j in range(tmp_eightbyte_cnt):
                 # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
                 sendbuf = sendbuf + struct.pack("!2I", vallo_list_list[j][i], valhi_list_list[j][i])
-            sendbuf = sendbuf + struct.packet("=i?", savedseq_list[i], stat_list[i])
+            sendbuf = sendbuf + struct.packet("=I?", savedseq_list[i], stat_list[i])
         total_bytesnum = 4 + len(sendbuf) # total # of bytes in sendbuf including total_bytesnum itself
         sendbuf = struct.pack("=i", total_bytesnum) + sendbuf
 
