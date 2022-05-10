@@ -94,7 +94,7 @@ short backup_port;
 short notified_port;
 short server_evictserver_port_start = -1;
 short server_consnapshotserver_port = -1;
-uint64_t perserver_keyrange = -1; // use size_t to avoid int overflow
+uint64_t perserver_keyrange = 0; // use size_t to avoid int overflow
 
 // controller
 const char *controller_ip_for_server = nullptr;
@@ -102,7 +102,7 @@ const char *controller_ip_for_switchos = nullptr;
 //short controller_popserver_port_start = -1;
 short controller_popserver_port = -1;
 short controller_evictserver_port = -1;
-uint32_t controller_snapshot_period = -1; // ms
+uint32_t controller_snapshot_period = 0; // ms
 
 // switch
 uint32_t switch_kv_bucket_num;

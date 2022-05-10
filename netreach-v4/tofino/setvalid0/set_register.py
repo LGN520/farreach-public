@@ -86,7 +86,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         sendbuf = struct.pack("=i", SWITCHOS_GET_FREEIDX) # 4-byte int
         ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
         recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
-        freeidx = struct.unpack("=h", recvbuf)[0]
+        freeidx = struct.unpack("=H", recvbuf)[0]
 
         # TODO: check API of register set
         print "Set validvalue_reg as 0"

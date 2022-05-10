@@ -88,7 +88,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
         # TODO: Check correctness of key
         keylolo, keylohi, keyhilo, keyhihi = struct.unpack("!4I", recvbuf)
-        #keylolo, keylohi, keyhilo, keyhihi, evictidx = struct,unpack("!4I=h", recvbuf)
+        #keylolo, keylohi, keyhilo, keyhihi, evictidx = struct,unpack("!4I=H", recvbuf)
 
         print "Remove {},{},{},{} from cache_lookup_tbl".format(keyhihi, keyhilo, keylohi, keylolo, freeidx)
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\

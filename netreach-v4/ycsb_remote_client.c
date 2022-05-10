@@ -79,7 +79,7 @@ std::atomic<size_t> ready_threads(0);
 std::atomic<size_t> finish_threads(0);
 
 struct alignas(CACHELINE_SIZE) FGParam {
-	uint8_t thread_id;
+	uint16_t thread_id;
 	std::vector<double> latency_list;
 #ifdef TEST_DPDK_POLLING
 	std::vector<double> wait_list; // TMPTMP: To count dpdk polling time
@@ -187,7 +187,7 @@ void run_benchmark() {
 	}
 
 	// Launch workers
-	for (uint8_t worker_i = 0; worker_i < client_num; worker_i++) {
+	for (uint16_t worker_i = 0; worker_i < client_num; worker_i++) {
 		fg_params[worker_i].thread_id = worker_i;
 		fg_params[worker_i].latency_list.clear();
 #ifdef TEST_DPDK_POLLING
@@ -331,7 +331,7 @@ static int run_receiver(void *param) {
 
 static int run_fg(void *param) {
 	fg_param_t &thread_param = *(fg_param_t *)param;
-	uint8_t thread_id = thread_param.thread_id;
+	uint16_t thread_id = thread_param.thread_id;
 
 	char load_filename[256];
 	memset(load_filename, '\0', 256);
@@ -508,8 +508,9 @@ static int run_fg(void *param) {
 			struct timespec scan_wait_t1, scan_wait_t2, scan_wait_t3;
 			double scan_rsp_latency = 0.0, scan_wait_latency = 0.0;
 			//for (size_t tmpsplit = 0; tmpsplit < split_num; tmpsplit++) {
-			int16_t received_scannum = 0;
-			int16_t max_scannum = -1;
+			uint16_t received_scannum = 0;
+			uint16_t max_scannum = 0;
+			bool with_max_scannum = false;
 			while (true) {
 				CUR_TIME(scan_wait_t1);
 				while (heads[thread_id] == tails[thread_id])
@@ -527,9 +528,10 @@ static int run_fg(void *param) {
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
 						<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
 				received_scannum += 1;
-				if (max_scannum == -1) {
+				if (!with_max_scannum) {
 					max_scannum = rsp.max_scannum();
-					INVARIANT(max_scannum >= 1 && max_scannum <= int16_t(server_num));
+					INVARIANT(max_scannum >= 1 && max_scannum <= server_num);
+					with_max_scannum = true;
 				}
 				CUR_TIME(scan_rsp_t2);
 

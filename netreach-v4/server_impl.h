@@ -15,7 +15,7 @@ typedef ConcurrentMap<index_key_t, snapshot_record_t> concurrent_snapshot_map_t;
 
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   xindex_t *table;
-  int16_t serveridx;
+  uint16_t serveridx;
   size_t throughput;
 #ifdef TEST_AGG_THPT
   double sum_latency;
@@ -258,7 +258,7 @@ static int run_server_worker(void * param) {
 //void *run_perserver_worker(void * param) {
   // Parse param
   server_worker_param_t &thread_param = *(server_worker_param_t *)param;
-  uint8_t serveridx = thread_param.serveridx; // [0, server_num-1]
+  uint16_t serveridx = thread_param.serveridx; // [0, server_num-1]
   xindex_t *table = thread_param.table;
 
   // scan.startkey <= max_startkey; scan.endkey >= min_startkey
@@ -603,7 +603,7 @@ static int run_server_worker(void * param) {
 						if (!is_cached_before) {
 							server_cached_keyset_list[serveridx].insert(req.key());
 							// Send CACHE_POP to controller.popserver
-							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, int16_t(serveridx));
+							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, serveridx);
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
 						}
@@ -631,7 +631,7 @@ static int run_server_worker(void * param) {
 						if (!is_cached_before) {
 							server_cached_keyset_list[serveridx].insert(req.key());
 							// Send CACHE_POP to controller.popserver
-							cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), int16_t(serveridx));
+							cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
 						}
@@ -684,7 +684,7 @@ static int run_server_worker(void * param) {
 						if (!is_cached_before) {
 							server_cached_keyset_list[serveridx].insert(req.key());
 							// Send CACHE_POP to controller.popserver
-							cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), int16_t(serveridx));
+							cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
 						}
@@ -794,7 +794,7 @@ static int run_server_worker(void * param) {
 }
 
 void *run_server_evictserver(void *param) {
-	//int16_t serveridx = *((int16_t *)param);
+	//uint16_t serveridx = *((uint16_t *)param);
 
 	// Not used
 	//struct sockaddr_in controller_addr;
@@ -811,14 +811,16 @@ void *run_server_evictserver(void *param) {
 	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
 	char recvbuf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
-	uint8_t optype = -1;
+	uint8_t optype = 0;
+	bool with_optype = false;
 	index_key_t tmpkey = index_key_t();
-	uint32_t vallen = -1;
+	uint32_t vallen = 0;
+	bool with_vallen = false;
 	bool is_waitack = false;
 	const int arrive_optype_bytes = sizeof(uint8_t);
 	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint32_t);
 	int arrive_serveridx_bytes = -1;
-	int tmp_serveridx = -1;
+	uint16_t tmp_serveridx = 0;
 	while (transaction_running) {
 		int recvsize = 0;
 		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.evictserver");
@@ -833,23 +835,25 @@ void *run_server_evictserver(void *param) {
 		}
 
 		// Get optype
-		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
+		if (!with_optype && cur_recv_bytes >= arrive_optype_bytes) {
 			optype = *((uint8_t *)recvbuf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_EVICT || packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2);
+			with_optype = true;
 		}
 
 		// Get key and vallen
-		if (optype != -1 && vallen == -1 && cur_recv_bytes >= arrive_vallen_bytes) {
+		if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
 			tmpkey.deserialize(recvbuf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
 			vallen = *((uint32_t *)(recvbuf + arrive_vallen_bytes - sizeof(uint32_t)));
 			vallen = ntohl(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
-			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(bool) + sizeof(int16_t);
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+			with_vallen = true;
 		}
 
 		// Get one complete CACHE_EVICT/_CASE2 (only need serveridx here)
-		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
+		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
 			bool res = false;
 			// send CACHE_EVICT to server.worker 
 			if (packet_type_t(optype) == packet_type_t::CACHE_EVICT) {
@@ -896,12 +900,14 @@ void *run_server_evictserver(void *param) {
 				else {
 					cur_recv_bytes = 0;
 				}
-				optype = -1;
+				optype = 0;
+				with_optype = false;
 				tmpkey = index_key_t();
-				vallen = -1;
+				vallen = 0;
+				with_vallen = false;
 				is_waitack = false;
 				arrive_serveridx_bytes = -1;
-				tmp_serveridx = -1;
+				tmp_serveridx = 0;
 
 				// free CACHE_EVIT_ACK
 				delete tmp_cache_evict_ack_ptr;
@@ -974,7 +980,7 @@ void *run_server_consnapshotserver(void *param) {
 			}
 
 			// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
-			// per-server data: <int32_t perserver_bytes, int16_t serveridx, int32_t recordcnt, per-record data>
+			// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 			// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
 			if (control_type_phase1 != -1 && cur_recv_bytes >= int(sizeof(int) + total_bytes)) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
 				// NOTE: per-server_bytes is used for processing snapshot data of each server (not used now)
@@ -986,8 +992,8 @@ void *run_server_consnapshotserver(void *param) {
 				const int tmp_maxbytes = sizeof(int) + total_bytes;
 				while (true) {
 					tmp_offset += sizeof(int32_t); // skip perserver_bytes
-					int16_t tmp_serveridx = *((int16_t *)(recvbuf + tmp_offset));
-					tmp_offset += sizeof(int16_t);
+					uint16_t tmp_serveridx = *((uint16_t *)(recvbuf + tmp_offset));
+					tmp_offset += sizeof(uint16_t);
 					int32_t tmp_recordcnt = *((int32_t *)(recvbuf + tmp_offset));
 					tmp_offset += sizeof(int32_t);
 					for (int32_t tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {

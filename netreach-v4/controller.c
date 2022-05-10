@@ -41,13 +41,13 @@ const size_t controller_expected_ready_threads = 4;
 int controller_popserver_tcpsock = -1;
 pthread_t *volatile controller_popserver_subthreads = NULL;
 std::atomic<size_t> controller_finish_subthreads(0);
-size_t controller_expected_finish_subthreads = -1;
+size_t controller_expected_finish_subthreads = 0;
 
 // Keep atomicity for the following variables
 std::mutex mutex_for_pop;
 //std::set<index_key_t> * volatile controller_cached_keyset_list = NULL; // TODO: Comment it after checking server.cached_keyset_list
-//std::map<index_key_t, int16_t> volatile controller_cachedkey_serveridx_map; // TODO: Evict removes the corresponding kv pair
-//std::map<int16_t, uint32_t> volatile controller_serveridx_subthreadidx_map; // Not used
+//std::map<index_key_t, uint16_t> volatile controller_cachedkey_serveridx_map; // TODO: Evict removes the corresponding kv pair
+//std::map<uint16_t, uint32_t> volatile controller_serveridx_subthreadidx_map; // Not used
 // Message queue between controller.popservers with controller.popclient (connected with switchos.popserver)
 MessagePtrQueue<cache_pop_t> controller_cache_pop_ptr_queue(MQ_SIZE);
 /*cache_pop_t ** volatile controller_cache_pop_ptrs = NULL;
@@ -241,8 +241,10 @@ void *run_controller_popserver_subthread(void *param) {
 	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
-	uint8_t optype = -1;
-	uint32_t vallen = -1;
+	uint8_t optype = 0;
+	bool with_optype = false;
+	uint32_t vallen = 0;
+	bool with_vallen = false;
 	bool is_cached_before = false; // TODO: remove
 	//index_key_t tmpkey(0, 0, 0, 0);
 	const int arrive_optype_bytes = sizeof(uint8_t);
@@ -262,23 +264,25 @@ void *run_controller_popserver_subthread(void *param) {
 		}
 
 		// Get optype
-		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
+		if (!with_optype && cur_recv_bytes >= arrive_optype_bytes) {
 			optype = *((uint8_t *)buf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_POP);
+			with_optype = true;
 		}
 
 		// Get vallen
-		if (optype != -1 && vallen == -1 && cur_recv_bytes >= arrive_vallen_bytes) {
+		if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
 			//tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
 			vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
 			vallen = ntohl(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
-			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(int16_t);
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(uint16_t);
+			with_vallen = true;
 		}
 
 		// Get one complete CACHE_POP
-		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_serveridx_bytes) {
+		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes) {
 			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by controller.popclient
 
 			//is_cached_before = (controller_cached_keyset_list[tmp_cache_pop_ptr->serveridx()].find(tmp_cache_pop_ptr->key()) != controller_cached_keyset_list[tmp_cache_pop_ptr->serveridx()].end());
@@ -296,7 +300,7 @@ void *run_controller_popserver_subthread(void *param) {
 				// Serialize CACHE_POPs
 				mutex_for_pop.lock();
 				/*if (controller_serveridx_subthreadidx_map.find(tmp_cache_pop_ptr->serveridx()) == controller_serveridx_subthreadidx_map.end()) {
-					controller_serveridx_subthreadidx_map.insert(std::pair<int16_t, uint32_t>(tmp_cache_pop_ptr->serveridx(), subthreadidx));
+					controller_serveridx_subthreadidx_map.insert(std::pair<uint16_t, uint32_t>(tmp_cache_pop_ptr->serveridx(), subthreadidx));
 				}
 				else {
 					INVARIANT(controller_serveridx_subthreadidx_map[tmp_cache_pop_ptr->serveridx()] == subthreadidx);
@@ -323,8 +327,10 @@ void *run_controller_popserver_subthread(void *param) {
 			else {
 				cur_recv_bytes = 0;
 			}
-			optype = -1;
-			vallen = -1;
+			optype = 0;
+			with_optype = false;
+			vallen = 0;
+			with_vallen = false;
 			arrive_serveridx_bytes = -1;
 			is_cached_before = false;
 		}
@@ -382,10 +388,12 @@ void *run_controller_evictserver(void *param) {
 	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
-	uint8_t optype = -1;
+	uint8_t optype = 0;
+	bool with_optype = false;
 	//index_key_t tmpkey = index_key_t();
-	uint32_t vallen = -1;
-	//int16_t tmpserveridx = -1;
+	uint32_t vallen = 0;
+	bool with_vallen = false;
+	//uint16_t tmpserveridx = 0;
 	bool is_waitack = false;
 	const int arrive_optype_bytes = sizeof(uint8_t);
 	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
@@ -418,28 +426,30 @@ void *run_controller_evictserver(void *param) {
 		}
 
 		// Get optype
-		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
+		if (!with_optype && cur_recv_bytes >= arrive_optype_bytes) {
 			optype = *((uint8_t *)buf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_EVICT || packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2);
+			with_optype = true;
 		}
 
 		// Get vallen
-		if (optype != -1 && vallen == -1 && cur_recv_bytes >= arrive_vallen_bytes) {
+		if (!with_optype && with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
 			//tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
 			vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
 			vallen = ntohl(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
-			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(bool) + sizeof(int16_t);
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+			with_vallen = true;
 		}
 
 		// Get one complete CACHE_EVICT/_CASE2 (only need serveridx here)
-		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
+		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
 			//cache_evict_t *tmp_cache_evict_ptr = new cache_evict_t(buf, arrive_serveridx_bytes);
 
 			// send CACHE_EVICT to corresponding server
-			//tmpserveridx = *((int16_t *)(buf + arrive_serveridx_bytes - sizeof(int16_t)));
-			//tmpserveridx = int16_t(ntohs(uint16_t(tmpserveridx)));
+			//tmpserveridx = *((uint16_t *)(buf + arrive_serveridx_bytes - sizeof(uint16_t)));
+			//tmpserveridx = uint16_t(ntohs(uint16_t(tmpserveridx)));
 			//INVARIANT(tmpserveridx >= 0 && tmpserveridx < server_num);
 			//tcpsend(controller_evictserver_evictclient_tcpsock_list[tmpserveridx], buf, arrive_serveridx_bytes, "controller.evictserver.evictclient");
 			tcpsend(controller_evictserver_evictclient_tcpsock, buf, arrive_serveridx_bytes, "controller.evictserver.evictclient");
@@ -483,9 +493,11 @@ void *run_controller_evictserver(void *param) {
 				else {
 					cur_recv_bytes = 0;
 				}
-				optype = -1;
+				optype = 0;
+				with_optype = false;
 				//tmpkey = index_key_t();
-				vallen = -1;
+				vallen = 0;
+				with_vallen = false;
 				//tmpserveridx = -1;
 				is_waitack = false;
 				arrive_serveridx_bytes = -1;
@@ -617,7 +629,7 @@ void *run_controller_snapshotclient(void *param) {
 				}
 
 				// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
-				// per-server data: <int32_t perserver_bytes, int16_t serveridx, int32_t recordcnt, per-record data>
+				// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 				// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
 				if (control_type_phase1 != -1 && cur_recv_bytes >= sizeof(int) + total_bytes) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
 					// NOTE: per-server_bytes is used for sending snapshot data to different server.consnapshotservers (not used now)

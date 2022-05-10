@@ -41,7 +41,7 @@ typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 struct alignas(CACHELINE_SIZE) SFGParam {
   xindex_t *table;
   uint64_t throughput;
-  uint8_t thread_id;
+  uint16_t thread_id;
 };
 typedef SFGParam sfg_param_t;
 
@@ -249,7 +249,7 @@ void run_server(xindex_t *table, size_t sec) {
 	for (size_t worker_i = 0; worker_i < server_num; worker_i++) {
 		sfg_params[worker_i].table = table;
     	sfg_params[worker_i].throughput = 0;
-		sfg_params[worker_i].thread_id = static_cast<uint8_t>(worker_i);
+		sfg_params[worker_i].thread_id = static_cast<uint16_t>(worker_i);
 		ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error:" << ret);
@@ -298,7 +298,7 @@ void run_server(xindex_t *table, size_t sec) {
 void *run_sfg(void * param) {
   // Parse param
   sfg_param_t &thread_param = *(sfg_param_t *)param;
-  uint8_t thread_id = thread_param.thread_id;
+  uint16_t thread_id = thread_param.thread_id;
   xindex_t *table = thread_param.table;
 
   std::random_device rd;

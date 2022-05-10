@@ -140,7 +140,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Set evictdata to paramserver"
         ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # <int type, int16_t evictidx, uint32_t vallen (big-endian for Val::deserialize), valbytes (same order), int32_t savedseq (little-endian), bool status>
-        sendbuf = struct.pack("=ih!I={}cI?".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
+        sendbuf = struct.pack("=iH!I={}cI?".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
         ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
 
         self.conn_mgr.complete_operations(self.sess_hdl)

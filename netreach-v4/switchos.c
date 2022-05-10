@@ -47,7 +47,7 @@ typedef CachePopInswitch<index_key_t, val_t> cache_pop_inswitch_t;
 typedef CachePopInswitchAck<index_key_t> cache_pop_inswitch_ack_t;
 typedef CacheEvict<index_key_t, val_t> cache_evict_t;
 typedef CacheEvictCase2<index_key_t, val_t> cache_evict_case2_t;
-typedef ConcurrentMap<int16_t, special_case_t> concurrent_specicalcase_map_t;
+typedef ConcurrentMap<uint16_t, special_case_t> concurrent_specicalcase_map_t;
 
 bool volatile switchos_running = false;
 std::atomic<size_t> switchos_ready_threads(0);
@@ -96,13 +96,13 @@ uint32_t volatile switchos_tail_for_pop;*/
 
 // switchos.popworker
 index_key_t volatile * switchos_cached_keyarray = NULL; // idx (of inswitch KV) -> key (TODO: different switches for distributed case)
-int16_t volatile * switchos_cached_serveridxarray = NULL; // idx (of inswitch KV) -> serveridx of the key
+uint16_t volatile * switchos_cached_serveridxarray = NULL; // idx (of inswitch KV) -> serveridx of the key
 uint32_t volatile switchos_cached_empty_index = 0; // [empty index, kv_bucket_num-1] is empty
-// std::map<index_key_t, int16_t> volatile switchos_cached_key_idx_map; // key -> idx (of inswitch KV)
+// std::map<index_key_t, uint16_t> volatile switchos_cached_key_idx_map; // key -> idx (of inswitch KV)
 int switchos_popworker_popclient_udpsock = -1;
 
 // Used by switchos.paramserer <-> ptf framework
-int16_t volatile switchos_freeidx = -1; // switchos.popworker write -> launch ptf.population -> switchos.paramserver read (no contention)
+uint16_t volatile switchos_freeidx = 0; // switchos.popworker write -> launch ptf.population -> switchos.paramserver read (no contention)
 index_key_t volatile switchos_newkey = index_key_t();
 
 // Cache eviction
@@ -113,11 +113,11 @@ int switchos_popworker_evictclient_tcpsock = -1;
 // Used by switchos.paramserer <-> ptf framework
 // launch ptf.eviction -> ptf sets evicted information -> switchos.paramserver read
 bool volatile switchos_with_evictdata = false;
-int16_t volatile switchos_evictidx = -1;
+uint16_t volatile switchos_evictidx = 0;
 //uint32_t volatile switchos_evictvallen = 0;
 //char * volatile switchos_evictvalbytes = NULL;
 val_t volatile switchos_evictvalue = val_t();
-uint32_t volatile switchos_evictseq = -1;
+uint32_t volatile switchos_evictseq = 0;
 bool volatile switchos_evictstat = false;
 
 // Snapshot
@@ -132,9 +132,9 @@ bool volatile popworker_know_snapshot_prepare = false; // ensure current cache p
 
 // backuped cache metadata (set/reset by snapshotserver, read by popoworker/specialcaseserver)
 index_key_t * volatile switchos_cached_keyarray_backup = NULL; // idx (of inswitch KV) -> key (TODO: different switches for distributed case)
-int16_t * volatile switchos_cached_serveridxarray_backup = NULL; // idx (of inswitch KV) -> serveridx of the key
+uint16_t * volatile switchos_cached_serveridxarray_backup = NULL; // idx (of inswitch KV) -> serveridx of the key
 uint32_t volatile switchos_cached_empty_index_backup = 0; // [empty index, kv_bucket_num-1] is empty (not used)
-// std::map<index_key_t, int16_t> volatile switchos_cached_key_idx_map_backup; // key -> idx (of inswitch KV)
+// std::map<index_key_t, uint16_t> volatile switchos_cached_key_idx_map_backup; // key -> idx (of inswitch KV)
 
 // collect special cases during snapshot
 bool volatile is_snapshot = false;
@@ -142,7 +142,7 @@ bool volatile is_snapshot = false;
 int switchos_specialcaseserver_udpsock = -1;
 // special cases updated by specialcaseserver and popworker
 std::mutex switchos_mutex_for_specialcases;
-//std::map<int16_t, special_case_t> volatile switchos_specialcases;
+//std::map<uint16_t, special_case_t> volatile switchos_specialcases;
 concurrent_specicalcase_map_t * volatile switchos_specialcases_ptr;
 
 // snapshotdataserver socket to load snapshot data from ptf
@@ -168,7 +168,7 @@ void *run_switchos_snapshotdataserver(void *param); // snapshot data transfer be
 void *run_switchos_popworker(void *param);
 void *run_switchos_snapshotserver(void *param);
 void *run_switchos_specialcaseserver(void *param);
-void process_specialcase(const int16_t &tmpidx, const index_key_t &tmpkey, const val_t &tmpval, const uint32_t &tmpseq, const bool &tmpstat);
+void process_specialcase(const uint16_t &tmpidx, const index_key_t &tmpkey, const val_t &tmpval, const uint32_t &tmpseq, const bool &tmpstat);
 void close_switchos();
 
 int main(int argc, char **argv) {
@@ -293,7 +293,7 @@ void prepare_switchos() {
 
 	create_udpsock(switchos_popworker_popclient_udpsock, "switchos.popworker");
 	switchos_cached_keyarray = new index_key_t[switch_kv_bucket_num]();
-	switchos_cached_serveridxarray = new int16_t[switch_kv_bucket_num];
+	switchos_cached_serveridxarray = new uint16_t[switch_kv_bucket_num];
 	for (size_t i = 0; i < switch_kv_bucket_num; i++) {
 		switchos_cached_serveridxarray[i] = -1;
 	}
@@ -334,8 +334,10 @@ void *run_switchos_popserver(void *param) {
 	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
-	uint8_t optype = -1;
-	uint32_t vallen = -1;
+	uint8_t optype = 0;
+	bool with_optype = false;
+	uint32_t vallen = 0;
+	bool with_vallen = false;
 	bool is_cached_before = false; // TODO: remove
 	//index_key_t tmpkey(0, 0, 0, 0);
 	const int arrive_optype_bytes = sizeof(uint8_t);
@@ -355,23 +357,23 @@ void *run_switchos_popserver(void *param) {
 		}
 
 		// Get optype
-		if (optype == -1 && cur_recv_bytes >= arrive_optype_bytes) {
+		if (!with_optype && cur_recv_bytes >= arrive_optype_bytes) {
 			optype = *((uint8_t *)buf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_POP);
 		}
 
 		// Get vallen
-		if (optype != -1 && vallen == -1 && cur_recv_bytes >= arrive_vallen_bytes) {
+		if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
 			//tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
 			vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
 			vallen = ntohl(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
-			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(int16_t);
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(uint16_t);
 		}
 
 		// Get one complete CACHE_POP
-		if (optype != -1 && vallen != -1 && cur_recv_bytes >= arrive_serveridx_bytes) {
+		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes) {
 			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by switchos.popworker
 
 			//is_cached_before = (switchos_cached_keyset.find(tmp_cache_pop_ptr->key()) != switchos_cached_keyset.end());
@@ -400,8 +402,10 @@ void *run_switchos_popserver(void *param) {
 			else {
 				cur_recv_bytes = 0;
 			}
-			optype = -1;
-			vallen = -1;
+			optype = 0;
+			with_optype = false;
+			vallen = 0;
+			with_vallen = false;
 			arrive_serveridx_bytes = -1;
 			is_cached_before = false;
 		}
@@ -436,32 +440,32 @@ void *run_switchos_paramserver(void *param) {
 			memset(buf, 0, MAX_BUFSIZE); // use buf as sendbuf
 
 			// ptf get freeidx -> popworker send switchos_freeidx to ptf framework
-			//memcpy(buf, (void *)&switchos_freeidx, sizeof(int16_t));
-			*((int16_t *)buf) = switchos_freeidx;
-			udpsendto(switchos_paramserver_udpsock, buf, sizeof(int16_t), 0, (struct sockaddr *)&ptf_addr, ptf_addr_len, "switchos.paramserver");
+			//memcpy(buf, (void *)&switchos_freeidx, sizeof(uint16_t));
+			*((uint16_t *)buf) = switchos_freeidx;
+			udpsendto(switchos_paramserver_udpsock, buf, sizeof(uint16_t), 0, (struct sockaddr *)&ptf_addr, ptf_addr_len, "switchos.paramserver");
 		}
 		else if (control_type == SWITCHOS_GET_KEY_FREEIDX) {
 			memset(buf, 0, MAX_BUFSIZE); // use buf as sendbuf
 
 			// ptf get key and freeidx -> popworker send key and switchos_freeidx to ptf framework
 			uint32_t tmp_keysize = switchos_newkey.serialize(buf, MAX_BUFSIZE);
-			//memcpy(buf + tmp_keysize, (void *)&switchos_freeidx, sizeof(int16_t));
-			*((int16_t *)(buf + tmp_keysize)) = switchos_freeidx;
-			udpsendto(switchos_paramserver_udpsock, buf, tmp_keysize + sizeof(int16_t), 0, (struct sockaddr *)&ptf_addr, ptf_addr_len, "switchos.paramserver");
+			//memcpy(buf + tmp_keysize, (void *)&switchos_freeidx, sizeof(uint16_t));
+			*((uint16_t *)(buf + tmp_keysize)) = switchos_freeidx;
+			udpsendto(switchos_paramserver_udpsock, buf, tmp_keysize + sizeof(uint16_t), 0, (struct sockaddr *)&ptf_addr, ptf_addr_len, "switchos.paramserver");
 		}
 		else if (control_type == SWITCHOS_SET_EVICTDATA) {
 			char *curptr = buf; // continue to use buf as recvbuf
 			curptr += sizeof(int); // skip control_type
 
 			// ptf set evict data -> popworker get evictdata from ptf framework
-			switchos_evictidx = *((int16_t *)curptr);
-			curptr += sizeof(int16_t);
+			switchos_evictidx = *((uint16_t *)curptr);
+			curptr += sizeof(uint16_t);
 			/*switchos_evictvallen = *((uint32_t *)curptr);
 			curptr += sizeof(uint32_t);
 			uint32_t tmp_valbytesnum = switchos_evictvallen + val_t::get_padding_size(switchos_evictvallen);
 			memcpy(switchos_evictvalbytes, curptr, tmp_valbytesnum);
 			curptr += tmp_valbytesnum;*/
-			uint32_t tmp_valsize = switchos_evictvalue.deserialize(curptr, recv_size - sizeof(int) - sizeof(int16_t));
+			uint32_t tmp_valsize = switchos_evictvalue.deserialize(curptr, recv_size - sizeof(int) - sizeof(uint16_t));
 			curptr += tmp_valsize;
 			switchos_evictseq = *((uint32_t *)curptr);
 			curptr += sizeof(uint32_t);
@@ -476,8 +480,8 @@ void *run_switchos_paramserver(void *param) {
 			// NOTE: we reset cached_keyarray[evictidx] after removing evicted data from cache_lookup_tbl, so here the evicted key is correct
 			uint32_t tmp_keysize = switchos_cached_keyarray[switchos_evictidx].serialize(buf, MAX_BUFSIZE);
 			udpsendto(switchos_paramserver_udpsock, buf, tmp_keysize, 0, (struct sockaddr *)&ptf_addr, ptf_addr_len, "switchos.paramserver");
-			//memcpy(buf + tmp_keysize, (void *)&switchos_evictidx, sizeof(int16_t));
-			//udpsendto(switchos_paramserver_udpsock, buf, tmp_keysize + sizeof(int16_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len, "switchos.paramserver");
+			//memcpy(buf + tmp_keysize, (void *)&switchos_evictidx, sizeof(uint16_t));
+			//udpsendto(switchos_paramserver_udpsock, buf, tmp_keysize + sizeof(uint16_t), 0, (struct sockaddr *)ptf_addr, ptf_addr_len, "switchos.paramserver");
 		}
 		else if (control_type == SWITCHOS_GET_CACHEDEMPTYINDEX) {
 			memset(buf, 0, MAX_BUFSIZE); // use buf as sendbuf
@@ -612,7 +616,7 @@ void *run_switchos_popworker(void *param) {
 
 				// assign switchos_freeidx for new record 
 				if (switchos_cached_empty_index < switch_kv_bucket_num) { // With free idx
-					switchos_freeidx = int16_t(switchos_cached_empty_index);
+					switchos_freeidx = switchos_cached_empty_index;
 					switchos_cached_empty_index += 1;
 					// NOTE: as freeidx of new record must > switchos_cached_empty_index_backup, no case2 for cache population
 				}
@@ -626,7 +630,7 @@ void *run_switchos_popworker(void *param) {
 					while (!switchos_with_evictdata) {}
 
 					// switchos.popworker.evictclient sends CACHE_EVICT to controller.evictserver
-					INVARIANT(switchos_evictidx >= 0 && switchos_evictidx < int16_t(switch_kv_bucket_num));
+					INVARIANT(switchos_evictidx >= 0 && switchos_evictidx < switch_kv_bucket_num);
 					index_key_t cur_evictkey = switchos_cached_keyarray[switchos_evictidx];
 					if (!is_case2) {
 						cache_evict_t tmp_cache_evict(cur_evictkey, \
@@ -678,7 +682,7 @@ void *run_switchos_popworker(void *param) {
 
 					// store case2
 					if (is_case2) {
-						process_specialcase(int16_t(switchos_evictidx), cur_evictkey, \
+						process_specialcase(uint16_t(switchos_evictidx), cur_evictkey, \
 								//val_t(switchos_evictvalbytes, switchos_evictvallen), 
 								val_t(switchos_evictvalue), \
 								uint32_t(switchos_evictseq), bool(switchos_evictstat));
@@ -698,7 +702,7 @@ void *run_switchos_popworker(void *param) {
 
 				/* cache population for new record */
 
-				INVARIANT(switchos_freeidx >= 0 && switchos_freeidx < int16_t(switch_kv_bucket_num));
+				INVARIANT(switchos_freeidx >= 0 && switchos_freeidx < switch_kv_bucket_num);
 
 				// set valid=0 for atomicity
 				system("bash tofino/setvalid0.sh");
@@ -726,19 +730,19 @@ void *run_switchos_popworker(void *param) {
 
 				switchos_cached_keyarray[switchos_freeidx] = tmp_cache_pop_ptr->key();
 				switchos_cached_serveridxarray[switchos_freeidx] = tmp_cache_pop_ptr->serveridx();
-				//switchos_cached_key_idx_map.insert(std::pair<index_key_t, int16_t>(tmp_cache_pop_ptr->key(), switchos_freeidx));
+				//switchos_cached_key_idx_map.insert(std::pair<index_key_t, uint16_t>(tmp_cache_pop_ptr->key(), switchos_freeidx));
 
 				// reset intermediate data for paramserver
 				// for cache population
-				switchos_freeidx = -1;
+				switchos_freeidx = 0;
 				switchos_newkey = index_key_t();
 				// for cache eviction
 				switchos_with_evictdata = false;
-				switchos_evictidx = -1;
+				switchos_evictidx = 0;
 				//switchos_evictvallen = 0;
 				//memset(switchos_evictvalbytes, 0, val_t::MAX_VALLEN);
 				switchos_evictvalue = val_t();
-				switchos_evictseq = -1;
+				switchos_evictseq = 0;
 				switchos_evictstat = false;
 			} // tmp_cache_pop_ptr != NULL
 		} // !is_snapshot_prepare
@@ -814,9 +818,9 @@ void *run_switchos_snapshotserver(void *param) {
 				switchos_cached_keyarray_backup = new index_key_t[switch_kv_bucket_num];
 				INVARIANT(switchos_cached_keyarray_backup != NULL);
 				memcpy(switchos_cached_keyarray_backup, (void *)switchos_cached_keyarray, switch_kv_bucket_num * sizeof(index_key_t));
-				switchos_cached_serveridxarray_backup = new int16_t[switch_kv_bucket_num];
+				switchos_cached_serveridxarray_backup = new uint16_t[switch_kv_bucket_num];
 				INVARIANT(switchos_cached_serveridxarray_backup != NULL);
-				memcpy(switchos_cached_serveridxarray_backup, (void *)switchos_cached_serveridxarray, switch_kv_bucket_num * sizeof(int16_t));
+				memcpy(switchos_cached_serveridxarray_backup, (void *)switchos_cached_serveridxarray, switch_kv_bucket_num * sizeof(uint16_t));
 				switchos_cached_empty_index_backup = switchos_cached_empty_index;
 				//switchos_cached_key_idx_map_backup = switchos_cached_key_idx_map; // by copy assignment
 				memory_fence();
@@ -854,7 +858,7 @@ void *run_switchos_snapshotserver(void *param) {
 				while (!popworker_know_snapshot_end || !specialcaseserver_know_snapshot_end) {}
 
 				// perform rollback (now both popserver/specicalserver will not touch specialcases; snapshotdataserver will not touch snapshot data)
-				/*for (std::map<int16_t, special_case_t>::iterator iter = switchos_specialcases.begin(); iter != switchos_specialcases.end(); iter++) {
+				/*for (std::map<uint16_t, special_case_t>::iterator iter = switchos_specialcases.begin(); iter != switchos_specialcases.end(); iter++) {
 					INVARIANT(switchos_cached_keyarray_backup[iter->first] == iter->second._key);
 					switchos_snapshot_values[iter->first] = iter->second._val;
 					switchos_snapshot_seqs[iter->first] = iter->second._seq;
@@ -873,10 +877,10 @@ void *run_switchos_snapshotserver(void *param) {
 				}
 
 				// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
-				// per-server data: <int32_t perserver_bytes, int16_t serveridx, int32_t recordcnt, per-record data>
+				// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 				// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
 				for (uint32_t tmpidx = 0; tmpidx < switchos_cached_empty_index_backup; tmpidx++) { // prepare per-server per-record data
-					int16_t tmp_serveridx = switchos_cached_serveridxarray_backup[tmpidx];
+					uint16_t tmp_serveridx = switchos_cached_serveridxarray_backup[tmpidx];
 					char * tmpptr = tmp_sendbuf_list[tmp_serveridx];
 					uint32_t tmp_keysize = switchos_cached_keyarray_backup[tmpidx].serialize(tmpptr + tmp_send_bytes[tmp_serveridx], MAX_LARGE_BUFSIZE - tmp_send_bytes[tmp_serveridx]);
 					tmp_send_bytes[tmp_serveridx] += tmp_keysize;
@@ -889,13 +893,13 @@ void *run_switchos_snapshotserver(void *param) {
 					tmp_record_cnts[tmp_serveridx] += 1;
 				}
 				int total_bytes = sizeof(int) + sizeof(int32_t); // leave 4B for SNAPSHOT_DATA and total_bytes
-				for (int16_t tmp_serveridx = 0; tmp_serveridx < int16_t(server_num); tmp_serveridx++) {
+				for (uint16_t tmp_serveridx = 0; tmp_serveridx < server_num; tmp_serveridx++) {
 					if (tmp_record_cnts[tmp_serveridx] > 0) {
-						int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(int16_t) + sizeof(int);
+						int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int);
 						memcpy(sendbuf + total_bytes, (void *)&tmp_perserver_bytes, sizeof(int32_t));
 						total_bytes += sizeof(int32_t);
-						memcpy(sendbuf + total_bytes, (void *)&tmp_serveridx, sizeof(int16_t));
-						total_bytes += sizeof(int16_t);
+						memcpy(sendbuf + total_bytes, (void *)&tmp_serveridx, sizeof(uint16_t));
+						total_bytes += sizeof(uint16_t);
 						memcpy(sendbuf + total_bytes, (void *)&tmp_record_cnts[tmp_serveridx], sizeof(int));
 						total_bytes += sizeof(int);
 						memcpy(sendbuf + total_bytes, tmp_sendbuf_list[tmp_serveridx], tmp_send_bytes[tmp_serveridx]);
@@ -1016,18 +1020,18 @@ void *run_switchos_specialcaseserver(void *param) {
 	pthread_exit(nullptr);
 }
 
-void process_specialcase(const int16_t &tmpidx, const index_key_t &tmpkey, const val_t &tmpval, const uint32_t &tmpseq, const bool &tmpstat) {
+void process_specialcase(const uint16_t &tmpidx, const index_key_t &tmpkey, const val_t &tmpval, const uint32_t &tmpseq, const bool &tmpstat) {
 	// verify key (NOTE: use switchos_cached_key_idx_map_backup) 
-	/*std::map<index_key_t, int16_t>::iterator key_idx_map_iter = switchos_cached_key_idx_map_backup.find(req.key()); 
+	/*std::map<index_key_t, uint16_t>::iterator key_idx_map_iter = switchos_cached_key_idx_map_backup.find(req.key()); 
 	if (key_idx_map_iter == switchos_cached_key_idx_map_backup.end()) { // unmatched key 
 		break; 
 	} 
-	int16_t tmpidx = key_idx_map_iter->second;*/
+	uint16_t tmpidx = key_idx_map_iter->second;*/
 
-	INVARIANT(tmpidx >= 0 && tmpidx < int16_t(switch_kv_bucket_num));
+	INVARIANT(tmpidx >= 0 && tmpidx < switch_kv_bucket_num);
 	if (switchos_cached_keyarray_backup[tmpidx] == tmpkey) { 
 		//switchos_mutex_for_specialcases.lock(); 
-		//std::map<int16_t, special_case_t>::iterator specialcase_iter = switchos_specialcases.find(tmpidx); 
+		//std::map<uint16_t, special_case_t>::iterator specialcase_iter = switchos_specialcases.find(tmpidx); 
 		special_case_t tmpcase;
 		bool res = switchos_specialcases_ptr->get(tmpidx, tmpcase);
 		//if (specialcase_iter == switchos_specialcases.end()) { // no special case for the idx/key
@@ -1037,7 +1041,7 @@ void process_specialcase(const int16_t &tmpidx, const index_key_t &tmpkey, const
 			tmpcase._val = tmpval;
 			tmpcase._seq = tmpseq;
 			tmpcase._valid = tmpstat; // stat=1 means not deleted
-			//switchos_specialcases.insert(std::pair<int16_t, special_case_t>(tmpidx, tmpcase)); 
+			//switchos_specialcases.insert(std::pair<uint16_t, special_case_t>(tmpidx, tmpcase)); 
 			switchos_specialcases_ptr->insert(tmpidx, tmpcase);
 		} 
 		//else if (req.seq() < specialcase_iter->second.seq()) { // current special case is more close to snapshot timepoint

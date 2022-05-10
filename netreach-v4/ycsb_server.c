@@ -50,7 +50,7 @@ typedef xindex::XIndex<index_key_t, val_t> xindex_t;
 
 struct alignas(CACHELINE_SIZE) LoadSFGParam {
 	xindex_t *table;
-	uint8_t thread_id;
+	uint16_t thread_id;
 };
 typedef LoadSFGParam load_sfg_param_t;
 
@@ -218,7 +218,7 @@ void loading_main(xindex_t *table) {
 	// Launch workers
 	for (size_t worker_i = 0; worker_i < load_n; worker_i++) {
 		load_sfg_params[worker_i].table = table;
-		load_sfg_params[worker_i].thread_id = static_cast<uint8_t>(worker_i);
+		load_sfg_params[worker_i].thread_id = static_cast<uint16_t>(worker_i);
 		int ret = pthread_create(&threads[worker_i], nullptr, run_load_sfg, (void *)&load_sfg_params[worker_i]);
 		if (ret) {
 			COUT_N_EXIT("Error:" << ret);
@@ -248,7 +248,7 @@ void loading_main(xindex_t *table) {
 void *run_load_sfg(void * param) {
 	// Parse param
 	load_sfg_param_t &thread_param = *(load_sfg_param_t *)param;
-	uint8_t thread_id = thread_param.thread_id;
+	uint16_t thread_id = thread_param.thread_id;
 	xindex_t *table = thread_param.table;
 
 	char load_filename[256];
@@ -347,7 +347,7 @@ void transaction_main(xindex_t *table) {
 			COUT_N_EXIT("wrong parameter address: " << &(server_worker_params[i]));
 		}
 	}
-	for (int16_t worker_i = 0; worker_i < int16_t(server_num); worker_i++) {
+	for (uint16_t worker_i = 0; worker_i < server_num; worker_i++) {
 		server_worker_params[worker_i].table = table;
 		server_worker_params[worker_i].serveridx = worker_i;
 		server_worker_params[worker_i].throughput = 0;
