@@ -1,4 +1,4 @@
-fieldlength=96
+fieldlength=128
 fieldcount=1
 fieldlengthdistribution=constant
 threads=10

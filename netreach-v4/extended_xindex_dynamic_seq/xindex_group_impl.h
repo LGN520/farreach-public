@@ -995,7 +995,8 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 	  assert(base_val.removed(base_val.status)); // latest version in data must be removed
 	  // NOTE: as the lastet version in base_val is removed now, its snapshot versions must not be changed
 	  val_t base_ssval_0, base_ssval_1;
-	  int32_t base_ssid_0, base_ssid_1, base_ssseqnum_0, base_ssseqnum_1;
+	  int32_t base_ssid_0, base_ssid_1;
+	  uint32_t base_ssseqnum_0, base_ssseqnum_1;
 	  bool base_ssremoved_0 = base_val.read_snapshot_0(base_ssval_0, base_ssseqnum_0, base_ssid_0);
 	  bool base_ssremoved_1 = base_val.read_snapshot_1(base_ssval_1, base_ssseqnum_1, base_ssid_1);
 	  int32_t base_latestid = base_val.latest_id;

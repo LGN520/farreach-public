@@ -87,11 +87,6 @@ short server_port_start = -1;
 // switch os simulator for processing special cases and packet loss handling (and tcp servers for workers)
 const char* server_ip = nullptr;
 uint8_t server_macaddr[6];
-// backuper for processing in-switch snapshot
-const char* backup_ip = nullptr;
-short backup_port;
-// notified for processing explicit notification of server-side snapshot
-short notified_port;
 short server_evictserver_port_start = -1;
 short server_consnapshotserver_port = -1;
 uint64_t perserver_keyrange = 0; // use size_t to avoid int overflow
@@ -194,9 +189,6 @@ inline void parse_ini(const char* config_file) {
 	server_port_start = ini.get_server_port();
 	server_ip = ini.get_server_ip();
 	ini.get_server_mac(server_macaddr);
-	backup_ip = ini.get_server_backup_ip();
-	backup_port = ini.get_server_backup_port();
-	notified_port = ini.get_server_notified_port();
 	server_evictserver_port_start = ini.get_server_evictserver_port();
 	server_consnapshotserver_port = ini.get_server_consnapshotserver_port();
 	perserver_keyrange = 4ll*1024ll*1024ll*1024ll / int64_t(server_num); // 2^32 / server_num
@@ -209,9 +201,6 @@ inline void parse_ini(const char* config_file) {
 		if (i != 5) printf(":");
 		else printf("\n");
 	}
-	printf("backup_ip: %s\n", backup_ip);
-	COUT_VAR(backup_port);
-	COUT_VAR(notified_port);
 	COUT_VAR(server_evictserver_port_start);
 	COUT_VAR(server_consnapshotserver_port);
 	COUT_VAR(perserver_keyrange);

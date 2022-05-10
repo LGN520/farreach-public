@@ -576,8 +576,9 @@ void *run_switchos_snapshotdataserver(void *param) {
 				total_bytesnum = -1;
 			}
 		}
-
 	}
+	close(switchos_snapshotdataserver_port);
+	pthread_exit(nullptr);
 }
 
 void *run_switchos_popworker(void *param) {

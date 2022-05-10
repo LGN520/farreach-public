@@ -14,7 +14,7 @@ class SpecialCase {
 
 		Key _key;
 		Val _val;
-		int32_t _seq;
+		uint32_t _seq;
 		bool _valid; // If valid = true, overwrite backup with this kv; otherwise, delete backup item if key exists
 };
 

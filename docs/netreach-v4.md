@@ -635,9 +635,26 @@
 ## Run
 
 - Software
-	+ Launch switchos in local control plane of Tofino
-	+ Launch controller in end host
-	+ Launch servers in end host
+- Prepare YCSB workload for loading or transaction phase
+	+ For example:
+	+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > workloada-load.out`
+	+ `./bin/ycsb.sh run basic -P workloads/workloada -P netbuffer.dat > workloada-run.out`
+	+ `./split_workload load` -> workloada-load-{split_num}/*.out
+	+ `./split_workload run` -> workloada-run-{server_num}/*.out
+- Launch switchos in local control plane of Tofino
+	+ `./switchos`
+- Launch controller in end host
+	+ `./controller`
+- Switch
+	- Run `cd tofino`
+	+ Run `su` to enter root account
+	+ Run `bash compile.sh` to compile p4 into binary code
+	+ Run `bash start_switch.sh` to launch Tofino
+	+ Create a new terminal and run `bash configure.sh` to configure data plane
+- Launch servers in end host
+	+ `./ycsb_server`
+- Launch clients in end host
+	- `./ycsb_remote_client`
 
 ## Simple test
 

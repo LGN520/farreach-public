@@ -183,6 +183,9 @@
 			- Install libsnappy and remake static lib of rocksdb
 			- Prepare the directory for database in advance
 - Install YCSB
+	+ Install Java if necessary
+		* `sudo apt-get install default-jdk`
+		* Configure $JAVA_HOME
 	+ `curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz`
 	+ `tar xfvz ycsb-0.17.0.tar.gz`
 	+ `cd ycsb-0.17.0`

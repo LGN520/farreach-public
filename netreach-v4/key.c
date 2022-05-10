@@ -290,7 +290,7 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) volatile {
 	uint32_t bigendian_keylohi = htonl(keylohi);
 	uint32_t bigendian_keyhilo = htonl(keyhilo);
 	uint32_t bigendian_keyhihi = htonl(keyhihi);
-	memcpy(buf, (char *)&bigendian_keylolo, sizof(uint32_t));
+	memcpy(buf, (char *)&bigendian_keylolo, sizeof(uint32_t));
 	memcpy(buf+4, (char *)&bigendian_keylohi, sizeof(uint32_t));
 	memcpy(buf+8, (char *)&bigendian_keyhilo, sizeof(uint32_t));
 	memcpy(buf+12, (char *)&bigendian_keyhihi, sizeof(uint32_t));
