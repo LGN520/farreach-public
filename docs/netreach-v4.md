@@ -645,6 +645,38 @@
 		* Add inswitch_hdr to case1 in data plane for inswitch_hdr.idx
 	+ Implement case3
 	+ Implement case2
+- Compile in C
+	+ Implement concurrent map and fix volatile issue
+- Compile in Tofino
+	* Fix parser issue: parse_vallen cannot use switch expression due to the limited chain length of the same packet header
+		- GUESS1: maybe due to limited # of selects -> reduce selects of ethernet and ipv4 -> FAIL
+		- GUESS2: maybe due to limited # of branches -> reduce branches of vallen by byte alignment and those of optype by careful coding -> FAIL
+			+ update optype in configure.py and packet_format.h
+		- GUESS3: maybe due to limited length of chain of the same packet field/header
+			+ Original parser: optype -> vallen -> optype -> optype -> optype (length > 4)
+			+ (1) Not select vallen, directly return parse_val_len16 -> length = 4 -> SUCCESS
+				* NODO: pad (not align) small value (vallen <= 128B) to 128 bytes in client side and use vallen to identify the real bytes in server side
+			+ (2) Introduce op_hdr.optype2 -> limited length of chain of the same packet header -> FAIL
+			+ (3) Introduce shadowtype_hdr.shadowtype -> SUCCESS
+				* Introduce shadowtype in packet_format.h
+				* Keep shadowtype the same as optype in p4
+	* Fix placement issue of cache_lookup_tbl and hash_for_seq_tbl -> check visulatization -> update p4src/ingress.p4 and configure.py
+	* Fix signedness issue (Tofino uses unsigned PHV/reg by default)
+		- Consider
+			+ C: key, val, prepare, packet_format, localtest, ycsb/parser, ycsb_remote_client, ycsb_server, server_impl, controller, switchos, common_impl, reflector_impl, snapshot_record, special_case
+			+ P4: remove_cache_lookup, add_cache_lookup, configure, load_snapshot_data, get_evictdata, set_valid0
+			+ XIndex: xindex, xindex_buffer. xindex_root, xindex_group, xindex_util
+		- Use uint8_t for optype (packet_format, ycsb/parser, ycsb_remote_client, ycsb_server, server_impl, controller, switchos)
+		- Use uint32_t for key (key, prepare, ycsb/parser, recb_remote_client, server_impl, common_impl, remove_cache_lookup, add_cache_lookup, configure)
+		- Use uint32_t for vallen (val, ycsb/parser, server_impl, controller, switchos, load_snapshot_data, get_evictdata)
+		- Use uint32_t for seq (packet_format, localtest, server_impl, controller, switchos, load_snapshot_data, get_evictdata, snapshot_record, special_case, xindex, xindex_buffer, xindex_root, xindex_group, xindex_util)
+		- Use uint16_t for inswitch_hdr.idx (packet_format, switchos, remove_cache_lookup, add_cache_lookup, get_evictdata, set_valid0)
+		- stat (bool): not need to change
+		- Use uint16_t for split_hdr.cur_scanidx/max_scannum (packet_format, ycsb_remote_client)
+		- Use uint16_t for serveridx/thread_id/worker_id (packet_format, localtest, ycsb_remote_client, ycsb_server, server_impl, controller, switchos)
+		- NOTE: Use 0 instead of -1 to initialize (ycsb_remote_client, server_impl, controller, switchos, common_impl)
+	* Fix syntax issue in ptf
+	* Fix signedness issue in ptf.Thrift
 
 ## Run
 
