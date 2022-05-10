@@ -42,125 +42,11 @@ from devport_mgr_pd_rpc.ttypes import *
 from ptf_port import *
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
-
-import ConfigParser
-config = ConfigParser.ConfigParser()
-with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
-    config.readfp(f)
-
-server_num = int(config.get("server", "server_num"))
-server_port = int(config.get("server", "server_port"))
-#kv_bucket_num = int(config.get("switch", "kv_bucket_num"))
-partition_count = int(config.get("switch", "partition_count"))
-src_mac = str(config.get("client", "client_mac"))
-dst_mac = str(config.get("server", "server_mac"))
-src_ip = str(config.get("client", "client_ip"))
-dst_ip = str(config.get("server", "server_ip"))
-switch_max_vallen = int(config.get("switch", "switch_max_vallen"))
-ingress_pipeidx = int(config.get("hardware", "ingress_pipeidx"))
-egress_pipeidx = int(config.get("hardware", "egress_pipeidx"))
-#gthreshold = int(config.get("switch", "gthreshold"))
-#pthreshold = int(config.get("switch", "pthreshold"))
-
-# Front Panel Ports
-#   List of front panel ports to use. Each front panel port has 4 channels.
-#   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
-#
-#   ex: ["1/0", "1/1"]
-#
-fp_ports = []
-src_fpport = str(config.get("switch", "src_fpport"))
-fp_ports.append(src_fpport)
-dst_fpport = str(config.get("switch", "dst_fpport"))
-fp_ports.append(dst_fpport)
-#fp_ports = ["2/0", "3/0"]
+sys.path.append(os.path.dirname(this_dir))
+from common import *
 
 port_pipeidx_map = {} # mapping between port and pipeline
 pipeidx_ports_map = {} # mapping between pipeline and ports
-
-# Set it as True if support range, or False otherwise
-RANGE_SUPPORT = True
-
-# 0b0001
-PUTREQ = 0x01
-# 0b0011
-GETRES_LATEST_SEQ = 0x03
-GETRES_DELETED_SEQ = 0x13
-PUTREQ_SEQ = 0x23
-PUTREQ_POP_SEQ = 0x33
-PUTREQ_SEQ_CASE3 = 0x43
-PUTREQ_POP_SEQ_CASE3 = 0x53
-# 0b0111
-GETRES_LATEST_SEQ_INSWITCH = 0x07
-GETRES_DELETED_SEQ_INSWITCH = 0x17
-CACHE_POP_INSWITCH = 0x27
-# 0b1111
-GETRES_LATEST_SEQ_INSWITCH_CASE1 = 0x0f
-GETRES_DELETED_SEQ_INSWITCH_CASE1 = 0x1f
-PUTREQ_SEQ_INSWITCH_CASE1 = 0x2f
-DELREQ_SEQ_INSWITCH_CASE1 = 0x3f
-# 0b1001
-GETRES = 0x09
-# 0b0101
-PUTREQ_INSWITCH = 0x05
-# 0b0100
-GETREQ_INSWITCH = 0x04
-DELREQ_INSWITCH = 0x14
-# 0b0010
-DELREQ_SEQ = 0x02
-DELREQ_SEQ_CASE3 = 0x12
-# 0b1000
-PUTRES = 0x08
-DELRES = 0x18
-# 0b0000
-SCANREQ = 0x10
-SCANREQ_SPLIT = 0x20
-GETREQ = 0x30
-DELREQ = 0x40
-GETREQ_POP = 0x50
-GETREQ_NLATEST = 0x60
-CACHE_POP_INSWITCH_ACK = 0x70
-SCANRES_SPLIT = 0x80
-CACHE_POP = 0x90
-CACHE_EVICT = 0xa0
-CACHE_EVICT_ACK = 0xb0
-CACHE_EVICT_CASE2 = 0xc0
-
-#GETREQ = 0x00
-#PUTREQ = 0x01
-#DELREQ = 0x02
-#SCANREQ = 0x03
-#GETRES = 0x04
-#PUTRES = 0x05
-#DELRES = 0x06
-#SCANRES_SPLIT = 0x07
-#GETREQ_INSWITCH = 0x08
-#GETREQ_POP = 0x09
-#GETREQ_NLATEST = 0x0a
-#GETRES_LATEST_SEQ = 0x0b
-#GETRES_LATEST_SEQ_INSWITCH = 0x0c
-#GETRES_LATEST_SEQ_INSWITCH_CASE1 = 0x0d
-#GETRES_DELETED_SEQ = 0x0e
-#GETRES_DELETED_SEQ_INSWITCH = 0x0f
-#GETRES_DELETED_SEQ_INSWITCH_CASE1 = 0x10
-#PUTREQ_INSWITCH = 0x11
-#PUTREQ_SEQ = 0x12
-#PUTREQ_POP_SEQ = 0x13
-#PUTREQ_SEQ_INSWITCH_CASE1 = 0x14
-#PUTREQ_SEQ_CASE3 = 0x15
-#PUTREQ_POP_SEQ_CASE3 = 0x16
-#DELREQ_INSWITCH = 0x17
-#DELREQ_SEQ = 0x18
-#DELREQ_SEQ_INSWITCH_CASE1 = 0x19
-#DELREQ_SEQ_CASE3 = 0x1a
-#SCANREQ_SPLIT = 0x1b
-#CACHE_POP = 0x1c
-#CACHE_POP_INSWITCH = 0x1d
-#CACHE_POP_INSWITCH_ACK = 0x1e
-#CACHE_EVICT = 0x1f
-#CACHE_EVICT_ACK = 0x20
-#CACHE_EVICT_CASE2 = 0x21
-
 
 cached_list = [0, 1]
 hot_list = [0, 1]
@@ -328,12 +214,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             for i in range(64, 72):
                 try:
                     self.devport_mgr.devport_mgr_remove_port(0, i)
-                except InvalidvalueDevportMgrOperation as e:
+                except InvalidDevportMgrOperation as e:
                     pass
             for i in range(192, 200):
                 try:
                     self.devport_mgr.devport_mgr_remove_port(0, i)
-                except InvalidvalueDevportMgrOperation as e:
+                except InvalidDevportMgrOperation as e:
                     pass
 
             # Enable recirculation before add special ports
@@ -404,7 +290,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         meta_need_recirculate = 1)
                 actnspec0 = netbufferv4_recirculate_pkt_action_spec_t(self.recirPorts[ingress_pipeidx])
                 self.client.recirculate_tbl_table_add_with_recirculate_pkt(\
-                        self.sess_hdl, self.dev_tgt, matchpsec0, actnspec0)
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Stage 1
 
@@ -412,11 +298,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # # Table: range_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
                 # Table: range_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring range_partition_tbl"
-                #key_start = -pow(2, 31) # [-2^31, 2^31-1]
-                key_start = 0 # [0, 2^32-1]
                 key_range_per_server = pow(2, 32) / server_num
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
                     for iport in self.devPorts:
+                        #key_start = -pow(2, 31) # [-2^31, 2^31-1]
+                        key_start = 0 # [0, 2^32-1]
                         for i in range(server_num):
                             if i == server_num - 1:
                                 #key_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
@@ -426,8 +312,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             # NOTE: both start and end are included
                             matchspec0 = netbufferv4_range_partition_tbl_match_spec_t(\
                                     op_hdr_optype = tmpoptype,
-                                    op_hdr_keyhihi_start = key_start,
-                                    op_hdr_keyhihi_end = key_end,
+                                    op_hdr_keyhihi_start = convert_u32_to_i32(key_start),
+                                    op_hdr_keyhihi_end = convert_u32_to_i32(key_end),
                                     ig_intr_md_ingress_port = iport,
                                     meta_need_recirculate = 0)
                             # Forward to the egress pipeline of server
@@ -447,7 +333,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # Table: hash_for_partition_tbl (default: nop; size: 4)
                 print "Configuring hash_for_partition_tbl"
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
-                    matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
+                    matchspec0 = netbufferv4_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             meta_need_recirculate = 0)
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
@@ -459,10 +345,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # Table: range_partition_for_scan_tbl (default: nop; size <= 2 * 128)
                 # TODO: limit max_scannum <= constant (e.g., 32)
                 print "Configuring range_partition_for_scan_tbl"
-                #startkey_start = -pow(2, 31) # [-2^31, 2^31-1]
-                startkey_start = 0 # [0, 2^32-1]
                 key_range_per_server = pow(2, 32) / server_num
                 for iport in self.devPorts:
+                    #startkey_start = -pow(2, 31) # [-2^31, 2^31-1]
+                    startkey_start = 0 # [0, 2^32-1]
                     for i in range(server_num):
                         if i == server_num - 1:
                             #startkey_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
@@ -479,10 +365,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             # NOTE: both start and end are included
                             matchspec0 = netbufferv4_range_partition_for_scan_tbl_match_spec_t(\
                                     op_hdr_optype = SCANREQ,
-                                    op_hdr_keyhihi_start = startkey_start,
-                                    op_hdr_keyhihi_end = startkey_end,
-                                    scan_hdr_keyhihi_start = endkey_start,
-                                    scan_hdr_keyhihi_end = endkey_end,
+                                    op_hdr_keyhihi_start = convert_u32_to_i32(startkey_start),
+                                    op_hdr_keyhihi_end = convert_u32_to_i32(startkey_end),
+                                    scan_hdr_keyhihi_start = convert_u32_to_i32(endkey_start),
+                                    scan_hdr_keyhihi_end = convert_u32_to_i32(endkey_end),
                                     meta_need_recirculate = 0)
                             # Forward to the egress pipeline of server
                             # serveridx = i to j
@@ -496,10 +382,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # # Table: hash_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
                 # Table: hash_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring hash_partition_tbl"
-                hash_start = 0 # [0, partition_count-1]
                 hash_range_per_server = partition_count / server_num
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
                     for iport in self.devPorts:
+                        hash_start = 0 # [0, partition_count-1]
                         for i in range(server_num):
                             if i == server_num - 1:
                                 hash_end = partition_count - 1 # if end is not included, then it is just processed by port 1111
@@ -508,8 +394,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             # NOTE: both start and end are included
                             matchspec0 = netbufferv4_hash_partition_tbl_match_spec_t(\
                                     op_hdr_optype = tmpoptype,
-                                    meta_hashval_for_partition_start = hash_start,
-                                    meta_hashval_for_partition_end = hash_end,
+                                    meta_hashval_for_partition_start = convert_u16_to_i16(hash_start),
+                                    meta_hashval_for_partition_end = convert_u16_to_i16(hash_end),
                                     ig_intr_md_ingress_port = iport,
                                     meta_need_recirculate = 0)
                             # Forward to the egress pipeline of server
@@ -532,7 +418,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: hash_for_cm_tbl (default: nop; size: 2)
             print "Configuring hash_for_cm_tbl"
             for tmpoptype in [GETREQ, PUTREQ]:
-                matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
+                matchspec0 = netbufferv4_hash_for_cm_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 0)
                 self.client.hash_for_cm_tbl_table_add_with_hash_for_cm(\
@@ -541,7 +427,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: hash_for_seq_tbl (default: nop; size: 2)
             print "Configuring hash_for_seq_tbl"
             for tmpoptype in [PUTREQ, DELREQ]:
-                matchspec0 = netbufferv4_hash_tbl_match_spec_t(\
+                matchspec0 = netbufferv4_hash_for_seq_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 0)
                 self.client.hash_for_seq_tbl_table_add_with_hash_for_seq(\
@@ -597,7 +483,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         ipv4_hdr_dstAddr = ipv4addr0,
                         ipv4_hdr_dstAddr_prefix_length = 32,
                         meta_need_recirculate = 0)
-                actnspec0 = netbufferv4_ipv4_forward_special_get_response_action_spec_t(self.sids[0])
+                actnspec0 = netbufferv4_forward_special_get_response_action_spec_t(self.sids[0])
                 self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
@@ -657,7 +543,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 print "Configuring access_cm{}_tbl".format(i)
                 for tmpoptype in [GETREQ_INSWITCH, PUTREQ_INSWITCH]:
                     matchspec0 = eval("netbufferv4_access_cm{}_tbl_match_spec_t".format(i))(\
-                            op_hdr.optype = tmpoptype,
+                            op_hdr_optype = tmpoptype,
                             inswitch_hdr_is_sampled = 1,
                             inswitch_hdr_is_cached = 0)
                     eval("self.client.access_cm{}_tbl_table_add_with_update_cm{}".format(i, i))(\
@@ -903,7 +789,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         self.sess_hdl, self.dev_tgt, matchspec0)
                         for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
                             matchspec0 = netbufferv4_access_savedseq_tbl_match_spec_t(\
-                                    op_hdr_optype = tmpoptype.
+                                    op_hdr_optype = tmpoptype,
                                     inswitch_hdr_is_cached = is_cached,
                                     meta_validvalue = validvalue,
                                     meta_is_latest = is_latest)
@@ -1085,7 +971,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 10
 
             # Table: eg_port_forward_tbl (default: nop; size: 1180)
-            print "Configuring eg_port_forward_tbl")
+            print "Configuring eg_port_forward_tbl"
             for is_cached in cached_list:
                 for is_hot in hot_list:
                     for validvalue in validvalue_list:
@@ -1279,10 +1165,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
-                                                    # TODO: check if we need to set egress port for packet cloned by clone_i2e
-                                                    # Update GETRES_DELETED_SEQ (by clone_i2e) as GETRES to client
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                # TODO: check if we need to set egress port for packet cloned by clone_i2e
+                                                # Update GETRES_DELETED_SEQ (by clone_i2e) as GETRES to client
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
                                             # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), is_lastclone_for_pktloss should be 0 for GETRES_DELETED_SEQ_INSWITCH
                                             # size: 128
                                             #if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
@@ -1569,138 +1455,133 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
 
 
-
-
-
-
-
             # Stage 4
 
-"""
-            # Table: update_udplen_tbl (default: nop; 145)
-            print "Configuring update_udplen_tbl"
-            for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
-                if i == 0:
-                    vallen_start = 0
-                    vallen_end = 0
-                    aligned_vallen = 0
-                else:
-                    vallen_start = (i-1)*8+1 # 1, ..., 121
-                    vallen_end = (i-1)*8+8 # 8, ..., 128
-                    aligned_vallen = vallen_end # 8, ..., 128
-                # NOTE: if vallen of GETRES > 128B, it must be issued by server which has already set correct udplen
-                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                        op_hdr_optype=GETRES_TYPE,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end)
-                actnspec0 = netbufferv4_update_getres_udplen_action_spec_t(\
-                        aligned_vallen)
-                self.client.update_udplen_tbl_table_add_with_update_getres_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                        op_hdr_optype=GETRES_POP_EVICT_TYPE,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end)
-                actnspec0 = netbufferv4_update_getres_pop_evict_udplen_action_spec_t(\
-                        aligned_vallen)
-                self.client.update_udplen_tbl_table_add_with_update_getres_pop_evict_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                        op_hdr_optype=GETRES_POP_EVICT_CASE2_TYPE,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end)
-                actnspec0 = netbufferv4_update_getres_pop_evict_case2_udplen_action_spec_t(\
-                        aligned_vallen)
-                self.client.update_udplen_tbl_table_add_with_update_getres_pop_evict_case2_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                        op_hdr_optype=PUTREQ_POP_EVICT_TYPE,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end)
-                actnspec0 = netbufferv4_update_putreq_pop_evict_udplen_action_spec_t(\
-                        aligned_vallen)
-                self.client.update_udplen_tbl_table_add_with_update_putreq_pop_evict_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                        op_hdr_optype=PUTREQ_POP_EVICT_CASE2_TYPE,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end)
-                actnspec0 = netbufferv4_update_putreq_pop_evict_case2_udplen_action_spec_t(\
-                        aligned_vallen)
-                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                        op_hdr_optype=PUTREQ_LARGE_EVICT_TYPE,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end)
-                actnspec0 = netbufferv4_update_putreq_large_evict_udplen_action_spec_t(\
-                        aligned_vallen)
-                self.client.update_udplen_tbl_table_add_with_update_putreq_large_evict_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                        op_hdr_optype=PUTREQ_LARGE_EVICT_CASE2_TYPE,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end)
-                actnspec0 = netbufferv4_update_putreq_large_evict_case2_udplen_action_spec_t(\
-                        aligned_vallen)
-                self.client.update_udplen_tbl_table_add_with_update_putreq_large_evict_case2_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                        op_hdr_optype=PUTREQ_CASE1_TYPE,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end)
-                actnspec0 = netbufferv4_update_putreq_case1_udplen_action_spec_t(\
-                        aligned_vallen)
-                self.client.update_udplen_tbl_table_add_with_update_putreq_case1_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                        op_hdr_optype=DELREQ_CASE1_TYPE,
-                        vallen_hdr_vallen_start=vallen_start,
-                        vallen_hdr_vallen_end=vallen_end)
-                actnspec0 = netbufferv4_update_delreq_case1_udplen_action_spec_t(\
-                        aligned_vallen)
-                self.client.update_udplen_tbl_table_add_with_update_delreq_case1_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-            # NOTE: switch never directly responds PUTREQ_LARGE even if savedseq>seq, its PUTRES must be issued by server which has already set correct udplen
-            matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                    op_hdr_optype=PUTRES_TYPE,
-                    vallen_hdr_vallen_start=0,
-                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-            self.client.update_udplen_tbl_table_add_with_update_putres_udplen(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
-            # NOTE: DELREQ does not have value -> vallen must be 0
-            matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-                    op_hdr_optype=DELRES_TYPE,
-                    vallen_hdr_vallen_start=0,
-                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-            self.client.update_udplen_tbl_table_add_with_update_delres_udplen(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+#            # Table: update_udplen_tbl (default: nop; 145)
+#            print "Configuring update_udplen_tbl"
+#            for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
+#                if i == 0:
+#                    vallen_start = 0
+#                    vallen_end = 0
+#                    aligned_vallen = 0
+#                else:
+#                    vallen_start = (i-1)*8+1 # 1, ..., 121
+#                    vallen_end = (i-1)*8+8 # 8, ..., 128
+#                    aligned_vallen = vallen_end # 8, ..., 128
+#                # NOTE: if vallen of GETRES > 128B, it must be issued by server which has already set correct udplen
+#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                        op_hdr_optype=GETRES_TYPE,
+#                        vallen_hdr_vallen_start=vallen_start,
+#                        vallen_hdr_vallen_end=vallen_end)
+#                actnspec0 = netbufferv4_update_getres_udplen_action_spec_t(\
+#                        aligned_vallen)
+#                self.client.update_udplen_tbl_table_add_with_update_getres_udplen(\
+#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                        op_hdr_optype=GETRES_POP_EVICT_TYPE,
+#                        vallen_hdr_vallen_start=vallen_start,
+#                        vallen_hdr_vallen_end=vallen_end)
+#                actnspec0 = netbufferv4_update_getres_pop_evict_udplen_action_spec_t(\
+#                        aligned_vallen)
+#                self.client.update_udplen_tbl_table_add_with_update_getres_pop_evict_udplen(\
+#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                        op_hdr_optype=GETRES_POP_EVICT_CASE2_TYPE,
+#                        vallen_hdr_vallen_start=vallen_start,
+#                        vallen_hdr_vallen_end=vallen_end)
+#                actnspec0 = netbufferv4_update_getres_pop_evict_case2_udplen_action_spec_t(\
+#                        aligned_vallen)
+#                self.client.update_udplen_tbl_table_add_with_update_getres_pop_evict_case2_udplen(\
+#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                        op_hdr_optype=PUTREQ_POP_EVICT_TYPE,
+#                        vallen_hdr_vallen_start=vallen_start,
+#                        vallen_hdr_vallen_end=vallen_end)
+#                actnspec0 = netbufferv4_update_putreq_pop_evict_udplen_action_spec_t(\
+#                        aligned_vallen)
+#                self.client.update_udplen_tbl_table_add_with_update_putreq_pop_evict_udplen(\
+#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                        op_hdr_optype=PUTREQ_POP_EVICT_CASE2_TYPE,
+#                        vallen_hdr_vallen_start=vallen_start,
+#                        vallen_hdr_vallen_end=vallen_end)
+#                actnspec0 = netbufferv4_update_putreq_pop_evict_case2_udplen_action_spec_t(\
+#                        aligned_vallen)
+#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                        op_hdr_optype=PUTREQ_LARGE_EVICT_TYPE,
+#                        vallen_hdr_vallen_start=vallen_start,
+#                        vallen_hdr_vallen_end=vallen_end)
+#                actnspec0 = netbufferv4_update_putreq_large_evict_udplen_action_spec_t(\
+#                        aligned_vallen)
+#                self.client.update_udplen_tbl_table_add_with_update_putreq_large_evict_udplen(\
+#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                        op_hdr_optype=PUTREQ_LARGE_EVICT_CASE2_TYPE,
+#                        vallen_hdr_vallen_start=vallen_start,
+#                        vallen_hdr_vallen_end=vallen_end)
+#                actnspec0 = netbufferv4_update_putreq_large_evict_case2_udplen_action_spec_t(\
+#                        aligned_vallen)
+#                self.client.update_udplen_tbl_table_add_with_update_putreq_large_evict_case2_udplen(\
+#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                        op_hdr_optype=PUTREQ_CASE1_TYPE,
+#                        vallen_hdr_vallen_start=vallen_start,
+#                        vallen_hdr_vallen_end=vallen_end)
+#                actnspec0 = netbufferv4_update_putreq_case1_udplen_action_spec_t(\
+#                        aligned_vallen)
+#                self.client.update_udplen_tbl_table_add_with_update_putreq_case1_udplen(\
+#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                        op_hdr_optype=DELREQ_CASE1_TYPE,
+#                        vallen_hdr_vallen_start=vallen_start,
+#                        vallen_hdr_vallen_end=vallen_end)
+#                actnspec0 = netbufferv4_update_delreq_case1_udplen_action_spec_t(\
+#                        aligned_vallen)
+#                self.client.update_udplen_tbl_table_add_with_update_delreq_case1_udplen(\
+#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+#            # NOTE: switch never directly responds PUTREQ_LARGE even if savedseq>seq, its PUTRES must be issued by server which has already set correct udplen
+#            matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                    op_hdr_optype=PUTRES_TYPE,
+#                    vallen_hdr_vallen_start=0,
+#                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+#            self.client.update_udplen_tbl_table_add_with_update_putres_udplen(\
+#                    self.sess_hdl, self.dev_tgt, matchspec0)
+#            # NOTE: DELREQ does not have value -> vallen must be 0
+#            matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+#                    op_hdr_optype=DELRES_TYPE,
+#                    vallen_hdr_vallen_start=0,
+#                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+#            self.client.update_udplen_tbl_table_add_with_update_delres_udplen(\
+#                    self.sess_hdl, self.dev_tgt, matchspec0)
+#
+#            # Table: update_macaddr_tbl (default: nop; 5)
+#            print "Configuring update_macaddr_tbl"
+#            actnspec0 = netbufferv4_update_macaddr_s2c_action_spec_t(\
+#                    macAddr_to_string(src_mac), \
+#                    macAddr_to_string(dst_mac))
+#            actnspec1 = netbufferv4_update_macaddr_c2s_action_spec_t(\
+#                    macAddr_to_string(src_mac), \
+#                    macAddr_to_string(dst_mac))
+#            matchspec0 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_TYPE)
+#            matchspec1 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES_TYPE)
+#            matchspec2 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES_TYPE)
+#            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
+#                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+#            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
+#                    self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
+#            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
+#                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
+#            #matchspec3 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_TYPE)
+#            #self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
+#            #        self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
+#            matchspec3 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_EVICT_TYPE)
+#            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
+#                    self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
+#            matchspec4 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_EVICT_CASE2_TYPE)
+#            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
+#                    self.sess_hdl, self.dev_tgt, matchspec4, actnspec1)
 
-            # Table: update_macaddr_tbl (default: nop; 5)
-            print "Configuring update_macaddr_tbl"
-            actnspec0 = netbufferv4_update_macaddr_s2c_action_spec_t(\
-                    macAddr_to_string(src_mac), \
-                    macAddr_to_string(dst_mac))
-            actnspec1 = netbufferv4_update_macaddr_c2s_action_spec_t(\
-                    macAddr_to_string(src_mac), \
-                    macAddr_to_string(dst_mac))
-            matchspec0 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_TYPE)
-            matchspec1 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES_TYPE)
-            matchspec2 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES_TYPE)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
-                    self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
-                    self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
-            #matchspec3 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_TYPE)
-            #self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
-            #        self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
-            matchspec3 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_EVICT_TYPE)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
-                    self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
-            matchspec4 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_POP_EVICT_CASE2_TYPE)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
-                    self.sess_hdl, self.dev_tgt, matchspec4, actnspec1)
-"""
+            
 
             self.conn_mgr.complete_operations(self.sess_hdl)
             self.conn_mgr.client_cleanup(self.sess_hdl) # close session

@@ -40,35 +40,11 @@ import socket
 import struct
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
-
-import ConfigParser
-config = ConfigParser.ConfigParser()
-with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
-    config.readfp(f)
-
-ingress_pipeidx = int(config.get("hardware", "ingress_pipeidx"))
-egress_pipeidx = int(config.get("hardware", "egress_pipeidx"))
-
-fp_ports = []
-src_fpport = str(config.get("switch", "src_fpport"))
-fp_ports.append(src_fpport)
-dst_fpport = str(config.get("switch", "dst_fpport"))
-fp_ports.append(dst_fpport)
+sys.path.append(os.path.dirname(this_dir))
+from common import *
 
 port_pipeidx_map = {} # mapping between port and pipeline
 pipeidx_ports_map = {} # mapping between pipeline and ports
-
-PUTREQ = 0x01
-DELREQ = 0x40
-GETRES_LATEST_SEQ = 0x03
-GETRES_DELETED_SEQ = 0x13
-
-# Front Panel Ports
-#   List of front panel ports to use. Each front panel port has 4 channels.
-#   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
-#
-#   ex: ["1/0", "1/1"]
-#
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):

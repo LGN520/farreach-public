@@ -40,28 +40,8 @@ import socket
 import struct
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
-
-import ConfigParser
-config = ConfigParser.ConfigParser()
-with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
-    config.readfp(f)
-
-switchos_paramserver_port = int(config.get("switch", "switchos_paramserver_port"))
-switchos_sample_cnt = int(config.get("switch", "switchos_sample_cnt"))
-kv_bucket_num = int(config.get("switch", "kv_bucket_num"))
-egress_pipeidx = int(config.get("hardware", "egress_pipeidx"))
-
-control_config = ConfigParser.ConfigParser()
-with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "control_type.ini"), "r") as f:
-    control_config.readfp(f)
-SWITCHOS_SET_EVICTDATA = int(control_config.get("switchos", "switchos_set_evictdata"))
-
-# Front Panel Ports
-#   List of front panel ports to use. Each front panel port has 4 channels.
-#   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
-#
-#   ex: ["1/0", "1/1"]
-#
+sys.path.append(os.path.dirname(this_dir))
+from common import *
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -95,7 +75,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         # TODO: Check register API
         frequency_counters = []
         for i in range(len(sampled_idxes)):
-            tmp_frequency_counter = self.client.register_read_cache_frequency_reg(self.sess_hdl, self.dev_tgt, sampled_idxes[i], flags)[egress_pipeidx]
+            tmp_frequency_counter = convert_i32_to_u32(self.client.register_read_cache_frequency_reg(self.sess_hdl, self.dev_tgt, sampled_idxes[i], flags)[egress_pipeidx])
             frequency_counters.append(tmp_frequency_counter)
 
         print "Get evictidx by approximate LRF"
@@ -122,10 +102,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         else:
             print "Invalid tmp_deleted: {}".format(tmp_deleted)
             exit(-1)
-        evictvallen = self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
+        evictvallen = convert_i32_to_u32(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
         eightbyte_cnt = (evictvallen+7) / 8;
         val_list = []
         for i in range(1, eightbyte_cnt+1):
+            # int32_t
             tmp_vallo = eval("self.client.register_read_vallo{}_reg".format(i))(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
             tmp_valhi = eval("self.client.register_read_valhi{}_reg".format(i))(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
             val_list.append(tmp_vallo)
@@ -133,9 +114,9 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         evictvalbytes = bytes()
         for i in range(val_list):
             # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
-            evictvalbytes = evictvalbytes + struct.pack("!I", val_list[i])
+            evictvalbytes = evictvalbytes + struct.pack("!i", val_list[i])
         # load savedseq
-        evictseq = self.client.register_read_savedseq_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
+        evictseq = convert_i32_to_u32(self.client.register_read_savedseq_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
 
         print "Set evictdata to paramserver"
         ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

@@ -40,25 +40,8 @@ import socket
 import struct
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
-
-import ConfigParser
-config = ConfigParser.ConfigParser()
-with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
-    config.readfp(f)
-
-switchos_paramserver_port = int(config.get("switch", "switchos_paramserver_port"))
-
-control_config = ConfigParser.ConfigParser()
-with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "control_type.ini"), "r") as f:
-    control_config.readfp(f)
-SWITCHOS_GET_FREEIDX = int(control_config.get("switchos", "switchos_get_freeidx"))
-
-# Front Panel Ports
-#   List of front panel ports to use. Each front panel port has 4 channels.
-#   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
-#
-#   ex: ["1/0", "1/1"]
-#
+sys.path.append(os.path.dirname(this_dir))
+from common import *
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):

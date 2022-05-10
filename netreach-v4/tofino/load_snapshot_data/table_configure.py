@@ -40,29 +40,8 @@ import socket
 import struct
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
-
-import ConfigParser
-config = ConfigParser.ConfigParser()
-with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "config.ini"), "r") as f:
-    config.readfp(f)
-
-switchos_paramserver_port = int(config.get("switch", "switchos_paramserver_port"))
-kv_bucket_num = int(config.get("switch", "kv_bucket_num"))
-egress_pipeidx = int(config.get("hardware", "egress_pipeidx"))
-switch_max_vallen = int(config.get("global", "switch_max_vallen"))
-switchos_snapshotdataserver_port = int(config.get("switch", "switchos_snapshotdataserver_port"))
-
-control_config = ConfigParser.ConfigParser()
-with open(os.path.join(os.path.dirname(os.path.dirname(this_dir)), "control_type.ini"), "r") as f:
-    control_config.readfp(f)
-SWITCHOS_GETCACHEDEMPTYINDEX = int(control_config.get("switchos", "switchos_get_cachedemptyindex"))
-
-# Front Panel Ports
-#   List of front panel ports to use. Each front panel port has 4 channels.
-#   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
-#
-#   ex: ["1/0", "1/1"]
-#
+sys.path.append(os.path.dirname(this_dir))
+from common import *
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -103,6 +82,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         record_cnt = end_index - start_index + 1
         # TODO: check len of vallen_list
         vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, self.dev_tgt, start_index, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt]
+        for i in range(len(vallen_list)):
+            vallen_list[i] = convert_i32_to_u32(vallen_list[i])
         vallo_list_list = []
         valhi_list_list = []
         for i in range(switch_max_vallen/8): # 128 bytes / 8 = 16 register arrays
@@ -119,6 +100,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 print "Invalid deleted_list[{}]: {}".format(i, deleted_list[i])
                 exit(-1)
         savedseq_list = self.client.register_range_read_savedseq_reg(self.sess_hdl, self.dev_tgt, start_index, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt]
+        for i in range(len(savedseq_list)):
+            savedseq_list[i] = convert_i32_to_u32(savedseq_list[i])
 
         print "Prepare sendbuf to switchos.snapshotdataserver"
         sendbuf = bytes()
@@ -129,7 +112,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmp_eightbyte_cnt = (tmpvallen + 7) / 8
             for j in range(tmp_eightbyte_cnt):
                 # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
-                sendbuf = sendbuf + struct.pack("!2I", vallo_list_list[j][i], valhi_list_list[j][i])
+                sendbuf = sendbuf + struct.pack("!2i", vallo_list_list[j][i], valhi_list_list[j][i])
             sendbuf = sendbuf + struct.packet("=I?", savedseq_list[i], stat_list[i])
         total_bytesnum = 4 + len(sendbuf) # total # of bytes in sendbuf including total_bytesnum itself
         sendbuf = struct.pack("=i", total_bytesnum) + sendbuf

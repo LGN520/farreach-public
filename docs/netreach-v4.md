@@ -57,6 +57,20 @@
 	+ We can set signed and saturating (fixed at maximum/minimum) if necessary; for example
 		* For a field of packet header, op_hdr.optype: 8 (signed, saturating)
 		* FOr a reg, attributes: signed, saturating
+	+ Ptf uses Thrift to configure data plane
+		* Thrift only supports int8 (<=8b), int16 (<=16b), int32 (<=32b), and string (>32b) -> we eventually focus on the bytes
+		* The signedness of the bytes passed by Thrift is determined by the target (field/reg) in data plane
+		* For example, ptf passes ipv4 address as int32 to data plane, which yet treats the bytes as uint32
+- NOTE for python search path
+	+ If use interative python shell -> current shell execution path
+	+ If directly run the script -> script file path
+	+ If use python -m package.module -> all package paths 
+	+ Example: tmp/shell.py (shell path) -> tmp/a/helper.py -> tmp/a/b/main.py
+		* To support ..helper in main.py, we must know a.helper and a.b.main (both helper and a&b relationship <-> path of tmp)
+			- python a/b/main.py -> only know main -> not support
+			- python a/b/main.py + manually append path of a into sys.path -> only know helper and b.main -> not support
+			- (1) python a/b/main.py + manually append path of tmp into sys.path; (2) python shell.py; (3) python -m a.b.main
+				+ -> know a.helper and a.b.main -> support!
 
 ## Overview
 
