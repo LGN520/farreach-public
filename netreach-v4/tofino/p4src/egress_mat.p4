@@ -797,7 +797,7 @@ table scan_forward_tbl {
 		forward_scanreq_split;
 	}
 	default_action: forward_scanreq_split_and_clone();
-	size: 1;
+	size: 2;
 }
 #endif
 

@@ -287,7 +287,7 @@ table prepare_for_cachehit_tbl {
 		set_sid;
 		nop;
 	}
-	default_action: nop();
+	default_action: set_sid(0); // deprecated: configured as set_sid(sids[0]) in ptf
 	size: 8;
 }
 
