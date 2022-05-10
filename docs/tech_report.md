@@ -78,14 +78,14 @@
 	+ Add /usr/local/lib into /etc/ld.so.conf, and run `sudo ldconfig`
 - Install boost
 	+ `sudo apt-get install libboost-all-dev`
-- Install cmake
+- Deprecated: Install cmake
 	+ `wget http://www.cmake.org/files/v3.5/cmake-3.5.1.tar.gz`
 	+ `tar xf cmake-3.5.1.tar.gz`
 	+ `cd cmake-3.5.1`
 	+ `./configure`
 	+ `make`
 	+ `make install`
-- Install OVS
+- Deprecated: Install OVS
 	+ `git clone https://github.com/openvswitch/ovs.git`
 	+ `./boot.sh`
 	+ `./configure -with-linux=/lib/modules/$(uname -r)/build`
@@ -94,7 +94,7 @@
 	+ `ovs-ctl start`
 	+ Check whether with successful install: `ovs-vsctl show`
 	+ After modifying source code of OVS: `sudo ./remake.sh`
-- Install DPDK
+- Install DPDK (we use 18.11 instead of 20.08)
 	+ Check environment
 		* `lspci | grep Ethernet`
 		* `enstool -i <if>`
@@ -106,7 +106,7 @@
 	+ Install and configure DPDK
 		* `cd dpdk-20.08/usertools`
 		* Build and bind
-			* IGB UIO
+			* Deprecated: IGB UIO
 				* `./dpdk-setup.sh`
 					- Select option: 45 -> ERROR: Target does not have the DPDK UIO Kernel Module.
 					- Solution: modify `dpdk-20.08/config/common_base`, set `CONFIG_RTE_EAL_IGB_UIO=y` (Line 107) and `CONFIG_RTE_LIBRTE_IEEE1588=y` (Line 156)
@@ -130,8 +130,8 @@
 				* Check IOMMU: `uname -r`; `dmesg | grep -e DMAR -e IOMMU`; `cat /proc/cmdline | grep iommu=pt`; `cat /proc/cmdline | grep intel_iommu=on`;
 					- If IOMMU is not enabled: set `GRUB_CMDLINE_LINUX_DEFAULT="quiet splash iommu=pt intel_iommu=on"` in /etc/default/grub; `sudo update-grub`; `sudo reboot`
 				* `./dpdk-setup.sh`
-					- Select option: 38 to build DPDK
-					- Select option: 46 to insert VFIO
+					- Select option: 38 to build DPDK (15 for 18.11)
+					- Select option: 46 to insert VFIO (19 for 18.11)
 					- `ifconfig ens3f1 down`
 					- ./dpdk-devbind.py --b vfio-pci 0000:5e:00.1
 			* To unbind the interface, we can use dpdk-setup.sh to change the driver from vfio to i40e
@@ -154,16 +154,16 @@
 			* `sudo ./build/basicfwd -l 0-3 -n 4`
 				- Error: no available port
 				- Solution
-					+ (1) Change DPDL from 20.08 to 18.11 to match the kernel driver version and firmware version of the PCI device
+					+ (1) Change DPDK from 20.08 to 18.11 to match the kernel driver version and firmware version of the PCI device
 					+ (3) Change driver from igb_uio to vfio
 					+ (4) Use Makefile (refer to [tas](https://github.com/tcp-acceleration-service/tas/blob/master/Makefile))
-					+ NOT USE: Change `CONFIG_RTE_LIBRTE_BNX2X_PMD=n` to `CONFIG_RTE_LIBRTE_BNX2X_PMD=y` in $RTE_SDK/config/common_base
+					+ NOT USED: Change `CONFIG_RTE_LIBRTE_BNX2X_PMD=n` to `CONFIG_RTE_LIBRTE_BNX2X_PMD=y` in $RTE_SDK/config/common_base
 		* Notes
 			- How to run DPDK without root permission?
 				+ We should use VA mode instead of PA mode for IOVA theoretically
 			- `sudo ./app/test-pmd/build/app/testpmd -- -i --total-num-mbufs=2048` -> start -> stop -> non-zero TX/RX packets
 				+ If always zero, (1) the port is not connected to NIC or switch; for tofino, the port is not correctly enabled; (2) You must have odd ports
-- Install TLDK (Deprecated)
+- Deprecated: Install TLDK
 	+ `git clone https://github.com/FDio/tldk.git`
 	+ Install DPDK 18.11
 	+ Change files for compatibility
@@ -171,7 +171,7 @@
 		* `bash tldk_fix.sh` to solve error of `dereferencing pointer incomplete type`
 	+ Test
 		* `sudo ./x86_64-native-linuxapp-gcc/app/l4fwd -- --udp --mbuf-num 1000 --becfg ~/projects/NetBuffer/tofino-xindex-dpdk/client.cfg`
-- Install RocksDB (we use the modified version)
+- Deprecated: Install RocksDB (we use the modified version)
 	+ `sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev`
 	+ `wget https://github.com/facebook/rocksdb/archive/refs/tags/v6.22.1.tar.gz`
 	+ `gunzip v6.22.1.tar.gz`
@@ -189,7 +189,7 @@
 	+ `curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz`
 	+ `tar xfvz ycsb-0.17.0.tar.gz`
 	+ `cd ycsb-0.17.0`
-- Install redis
+- Deprecated: Install redis
 	+ `sudo apt install redis-server`
 	+ `sudo vim /etc/redis/redis.conf` (we use localhost:6379)
 	+ `sudo service redis restart`
