@@ -71,6 +71,9 @@
 			- python a/b/main.py + manually append path of a into sys.path -> only know helper and b.main -> not support
 			- (1) python a/b/main.py + manually append path of tmp into sys.path; (2) python shell.py; (3) python -m a.b.main
 				+ -> know a.helper and a.b.main -> support!
+- NOTE for socket timeout
+	+ select() is used to set timeout for all output functions, e.g., connect and send
+	+ setsockopt() for SO_RCVTIMEO is used to set timeout for all input functions, e.g., accept and receive
 
 ## Overview
 

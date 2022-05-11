@@ -34,7 +34,8 @@ typedef ControllerPopserverSubthreadParam controller_popserver_subthread_param_t
 
 bool volatile controller_running = false;
 std::atomic<size_t> controller_ready_threads(0);
-const size_t controller_expected_ready_threads = 4;
+//const size_t controller_expected_ready_threads = 4;
+const size_t controller_expected_ready_threads = 3;
 
 // Per-server popclient <-> one popserver.subthread in controller
 // NOTE: subthreadidx != serveridx
@@ -86,6 +87,7 @@ void close_controller();
 
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
+	parse_control_ini("control_type.ini");
 
 	prepare_controller();
 
@@ -107,11 +109,11 @@ int main(int argc, char **argv) {
 		COUT_N_EXIT("Error: " << ret);
 	}
 
-	pthread_t snapshotclient_thread;
+	/*pthread_t snapshotclient_thread;
 	ret = pthread_create(&snapshotclient_thread, nullptr, run_controller_snapshotclient, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error: " << ret);
-	}
+	}*/
 
 	while (controller_ready_threads < controller_expected_ready_threads) sleep(1);
 	printf("[controller] all threads ready\n");
@@ -137,10 +139,10 @@ int main(int argc, char **argv) {
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
-	rc = pthread_join(snapshotclient_thread, &status);
+	/*rc = pthread_join(snapshotclient_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
-	}
+	}*/
 
 	printf("[controller] all threads end\n");
 	close_controller();
@@ -214,6 +216,14 @@ void *run_controller_popserver(void *param) {
 		if (is_timeout) {
 			continue; // timeout or interrupted system call
 		}
+		INVARIANT(connfd != -1);
+
+		// disable timeout for popserver.subthread.connfd
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+		int res = setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+		INVARIANT(res >= 0);
 
 		// NOTE: subthreadidx != serveridx
 		controller_popserver_subthread_param_t param;
@@ -527,6 +537,9 @@ void *run_controller_evictserver(void *param) {
 }
 
 void *run_controller_snapshotclient(void *param) {
+	char *recvbuf = new char[MAX_LARGE_BUFSIZE]; // SNAPSHOT_SERVERSIDE/snapshotdata from switchos
+	INVARIANT(recvbuf != NULL);
+	memset(recvbuf, 0, MAX_LARGE_BUFSIZE);
 	printf("[controller.snapshotclient] ready\n");
 	controller_ready_threads++;
 
@@ -534,7 +547,6 @@ void *run_controller_snapshotclient(void *param) {
 
 	// NOTE: as messages are sent among end-hosts (controller, switchos, and server), we do not perform endian conversion
 	uint32_t last_duration = 0; // ms
-	char recvbuf[MAX_BUFSIZE]; // SNAPSHOT_SERVERSIDE/snapshotdata from switchos
 	uint32_t cur_recv_bytes = 0;
 	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
 	int control_type_phase0 = -1;
@@ -558,6 +570,7 @@ void *run_controller_snapshotclient(void *param) {
 		}
 
 		// send SNAPSHOT_START (little-endian) to switchos
+		printf("[controller.snapshotclient] send SNAPSHOT_START\n");
 		tcpsend(controller_snapshotclient_tcpsock, (char *)&SNAPSHOT_START, sizeof(int), "controlelr.snapshotclient");
 
 		// wait for SNAPSHOT_SERVERSIDE from switchos
@@ -668,6 +681,8 @@ void *run_controller_snapshotclient(void *param) {
 		last_duration = GET_MICROSECOND(t3) / 1000; // us -> ms
 	} // while (controller_running)
 
+	delete [] recvbuf;
+	recvbuf = NULL;
 	close(controller_snapshotclient_tcpsock);
 	pthread_exit(nullptr);
 }

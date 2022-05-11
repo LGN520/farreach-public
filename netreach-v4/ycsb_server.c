@@ -272,7 +272,7 @@ void *run_load_sfg(void * param) {
 
 	COUT_THIS("[loading.worker " << uint32_t(thread_id) << "] Ready.");
 
-	transaction_ready_threads++;
+	load_ready_threads++;
 
 #if !defined(NDEBUGGING_LOG)
   std::string logname;

@@ -42,7 +42,7 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 	bool is_timeout = false;
 	recvsize = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
 	if (recvsize < 0) {
-		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR)) {
+		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
 			is_timeout = true;
 		}
 		else {
@@ -180,7 +180,7 @@ bool tcpaccept(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int &connf
 
 	connfd = accept(sockfd, addr, addrlen);
 	if (connfd == -1) {
-		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR)) {
+		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
 			is_timeout = true;
 		}
 		else {

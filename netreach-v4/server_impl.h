@@ -934,6 +934,9 @@ void *run_server_consnapshotserver(void *param) {
 	//struct sockaddr_in controller_addr;
 	//unsigned int controller_addr_len = sizeof(struct sockaddr);
 	
+	char *recvbuf = new char[MAX_LARGE_BUFSIZE];
+	INVARIANT(recvbuf != NULL);
+	memset(recvbuf, 0, MAX_LARGE_BUFSIZE);
 	printf("[server.consnapshotserver] ready\n");
 	transaction_ready_threads++;
 
@@ -942,7 +945,6 @@ void *run_server_consnapshotserver(void *param) {
 	int connfd = -1;
 	tcpaccept(server_consnapshotserver_tcpsock, NULL, NULL, connfd, "server.consnapshotserver");
 
-	char recvbuf[MAX_LARGE_BUFSIZE];
 	int cur_recv_bytes = 0;
 	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
 	int control_type_phase0 = -1;
@@ -1056,6 +1058,8 @@ void *run_server_consnapshotserver(void *param) {
 			}
 		}
 	}
+	delete [] recvbuf;
+	recvbuf = NULL;
 	close(server_consnapshotserver_tcpsock);
 	pthread_exit(nullptr);
 }

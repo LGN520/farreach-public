@@ -189,19 +189,37 @@ int main(int argc, char **argv) {
 		COUT_N_EXIT("Error: " << ret);
 	}
 
+	pthread_t snapshotdataserver_thread;
+	ret = pthread_create(&snapshotdataserver_thread, nullptr, run_switchos_snapshotdataserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
 	pthread_t popworker_thread;
 	ret = pthread_create(&popworker_thread, nullptr, run_switchos_popworker, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error: " << ret);
 	}
 
+	pthread_t snapshotserver_thread;
+	ret = pthread_create(&snapshotserver_thread, nullptr, run_switchos_snapshotserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
+	pthread_t specialcaseserver_thread;
+	ret = pthread_create(&specialcaseserver_thread, nullptr, run_switchos_specialcaseserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
 	while (switchos_ready_threads < switchos_expected_ready_threads) sleep(1);
+	printf("[switchos] all threads ready\n");
 
 	switchos_running = true;
 
 	// connection from controller
 	while (!switchos_popserver_finish) {}
-	printf("[switchos] all threads ready\n");
 
 	switchos_running = false;
 
@@ -214,7 +232,19 @@ int main(int argc, char **argv) {
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
+	rc = pthread_join(snapshotdataserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
 	rc = pthread_join(popworker_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
+	rc = pthread_join(snapshotserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
+	rc = pthread_join(specialcaseserver_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
@@ -510,6 +540,9 @@ void *run_switchos_paramserver(void *param) {
 }
 
 void *run_switchos_snapshotdataserver(void *param) {
+	char *buf = new char[MAX_LARGE_BUFSIZE];
+	INVARIANT(buf != NULL);
+	memset(buf, 0, MAX_LARGE_BUFSIZE);
 	printf("[switchos.snapshotdataserver] ready\n");
 	switchos_ready_threads++;
 
@@ -526,9 +559,16 @@ void *run_switchos_snapshotdataserver(void *param) {
 		if (is_timeout) {
 			continue; // timeout or interrupted system call
 		}
+		INVARIANT(connfd != -1);
+
+		// disable timeout for snapshotdataserver.connfd
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+		int res = setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+		INVARIANT(res >= 0);
 
 		// Receive snapshot data from switchos.ptf
-		char buf[MAX_LARGE_BUFSIZE];
 		int cur_recv_bytes = 0;
 		int total_bytesnum = -1;
 		while (true) {
@@ -586,6 +626,9 @@ void *run_switchos_snapshotdataserver(void *param) {
 			}
 		}
 	}
+
+	delete [] buf;
+	buf = NULL;
 	close(switchos_snapshotdataserver_port);
 	pthread_exit(nullptr);
 }
@@ -771,6 +814,15 @@ void *run_switchos_snapshotserver(void *param) {
 	// Not used
 	//struct sockaddr_in controller_addr;
 	//unsigned int controller_addr_len = sizeof(struct sockaddr);
+	char *tmp_sendbuf_list[server_num];
+	for (uint16_t i = 0; i < server_num; i++) {
+		tmp_sendbuf_list[i] = new char[MAX_LARGE_BUFSIZE];
+		INVARIANT(tmp_sendbuf_list[i] != NULL);
+		memset(tmp_sendbuf_list[i], 0, MAX_LARGE_BUFSIZE);
+	}
+	char *sendbuf = new char[MAX_LARGE_BUFSIZE];
+	INVARIANT(sendbuf != NULL);
+	memset(sendbuf, 0, MAX_LARGE_BUFSIZE);
 	printf("[switchos.snapshotserver] ready");
 	switchos_ready_threads++;
 
@@ -786,12 +838,10 @@ void *run_switchos_snapshotserver(void *param) {
 	int control_type_phase0 = -1;
 	int control_type_phase1 = -1;
 	// TODO: a large sendbuf to controller
-	char tmp_sendbuf_list[server_num][MAX_LARGE_BUFSIZE];
 	int tmp_send_bytes[server_num];
 	memset((void *)tmp_send_bytes, 0, server_num*sizeof(int));
 	int tmp_record_cnts[server_num];
 	memset((void *)tmp_record_cnts, 0, server_num*sizeof(int));
-	char sendbuf[MAX_LARGE_BUFSIZE];
 	while (switchos_running) {
 		int recvsize = 0;
 		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "switchos.snapshotserver");
@@ -809,7 +859,9 @@ void *run_switchos_snapshotserver(void *param) {
 		if (phase == 0) {
 			if (control_type_phase0 == -1 && cur_recv_bytes >= int(sizeof(int))) {
 				control_type_phase0 = *((int *)recvbuf);
+				printf("control_type_phase0: %d\n", control_type_phase0); // TMPDEBUG
 				INVARIANT(control_type_phase0 == SNAPSHOT_START);
+				printf("[switchos.snapshotserver] receive SNAPSHOT_START\n");
 
 				// NOTE: popserver/specialcaseserver will not touch speicalcases_ptr now, as both is_snapshot/is_snapshot_end are false
 				INVARIANT(switchos_specialcases_ptr == NULL);
@@ -967,6 +1019,12 @@ void *run_switchos_snapshotserver(void *param) {
 		} // phase == 1
 	} // while (switchos_running)
 
+	for (uint16_t i = 0; i < server_num; i++) {
+		delete [] tmp_sendbuf_list[i];
+		tmp_sendbuf_list[i] = NULL;
+	}
+	delete [] sendbuf;
+	sendbuf = NULL;
 	close(switchos_snapshotserver_tcpsock);
 	pthread_exit(nullptr);
 }

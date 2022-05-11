@@ -177,9 +177,9 @@ short IniparserWrapper::get_switchos_paramserver_port() {
 }
 
 const char* IniparserWrapper::get_switchos_ip() {
-	const char *switchos_ip = iniparser_getstring(ini, "switchos:switchos_ip", nullptr);
+	const char *switchos_ip = iniparser_getstring(ini, "switch:switchos_ip", nullptr);
 	if (switchos_ip == nullptr) {
-		printf("Invalid entry of [switchos:switchos_ip]\n");
+		printf("Invalid entry of [switch:switchos_ip]\n");
 		exit(-1);
 	}
 	return switchos_ip;

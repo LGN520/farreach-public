@@ -61,15 +61,23 @@ void *run_reflector_popserver(void *param) {
 	while (!transaction_running) {}
 
 	while (transaction_running) {
-		int recvsize = 0;
+		int recvsize = -1;
+		bool is_timeout = true;
 		if (!reflector_with_switchos_popworker_addr) {
-			udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, (socklen_t *)&reflector_switchos_popworker_addr_len, recvsize, "reflector.popserver");
+			is_timeout = udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, (socklen_t *)&reflector_switchos_popworker_addr_len, recvsize, "reflector.popserver");
 			memory_fence();
-			reflector_with_switchos_popworker_addr = true;
+			if (!is_timeout) {
+				reflector_with_switchos_popworker_addr = true;
+			}
 		}
 		else {
-			udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.popserver");
+			is_timeout = udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.popserver");
 		}
+
+		if (is_timeout) {
+			continue;
+		}
+		INVARIANT(recvsize >= 0);
 
 		// send CACHE_POP_INSWITCH to data plane
 		//cache_pop_inswitch_t tmp_cache_pop_inswitch_pkt(buf, recv_size); // TODO: check whether buf is CACHE_POP_INSWITCH
