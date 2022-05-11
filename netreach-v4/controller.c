@@ -114,11 +114,13 @@ int main(int argc, char **argv) {
 	}
 
 	while (controller_ready_threads < controller_expected_ready_threads) sleep(1);
+	printf("[controller] all threads ready\n");
 
 	controller_running = true;
 
 	// connections from servers
 	while (controller_finish_subthreads < controller_expected_finish_subthreads) sleep(1);
+	printf("[controlelr] all popserver.subthreads finish\n");
 
 	controller_running = false;
 
@@ -140,10 +142,13 @@ int main(int argc, char **argv) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
 
+	printf("[controller] all threads end\n");
 	close_controller();
 }
 
 void prepare_controller() {
+	printf("[controller] prepare start\n");
+
 	controller_running =false;
 
 	// Prepare for cache population
@@ -188,10 +193,13 @@ void prepare_controller() {
 	create_tcpsock(controller_snapshotclient_consnapshotclient_tcpsock, "controller.snapshotclient.consnapshotclient");
 
 	memory_fence();
+
+	printf("[controller] prepare end\n");
 }
 
 void *run_controller_popserver(void *param) {
 	uint32_t subthreadidx = 0;
+	printf("[controller.popserver] ready\n");
 	controller_ready_threads++;
 
 	while (!controller_running) {}
@@ -342,6 +350,7 @@ void *run_controller_popserver_subthread(void *param) {
 }
 
 void *run_controller_popclient(void *param) {
+	printf("[controller.popclient] ready\n");
 	controller_ready_threads++;
 
 	while (!controller_running) {}
@@ -377,6 +386,7 @@ void *run_controller_evictserver(void *param) {
 	//struct sockaddr_in switchos_addr;
 	//unsigned int switchos_addr_len = sizeof(struct sockaddr);
 
+	printf("[controller.evictserver] ready\n");
 	controller_ready_threads++;
 
 	while (!controller_running) {}
@@ -517,6 +527,7 @@ void *run_controller_evictserver(void *param) {
 }
 
 void *run_controller_snapshotclient(void *param) {
+	printf("[controller.snapshotclient] ready\n");
 	controller_ready_threads++;
 
 	while (!controller_running) {}

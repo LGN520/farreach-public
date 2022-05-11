@@ -201,6 +201,7 @@ int main(int argc, char **argv) {
 
 	// connection from controller
 	while (!switchos_popserver_finish) {}
+	printf("[switchos] all threads ready\n");
 
 	switchos_running = false;
 
@@ -218,6 +219,7 @@ int main(int argc, char **argv) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
 
+	printf("[switchos] all threads end\n");
 	close_switchos();
 }
 
@@ -280,6 +282,8 @@ inline void parse_control_ini(const char* config_file) {
 }
 
 void prepare_switchos() {
+	printf("[switchos] prepare start\n");
+
 	// prepare popserver socket
 	prepare_tcpserver(switchos_popserver_tcpsock, false, switchos_popserver_port, 1, "switchos.popserver"); // MAX_PENDING_CONNECTION = 1
 
@@ -317,12 +321,15 @@ void prepare_switchos() {
 	prepare_tcpserver(switchos_snapshotdataserver_tcpsock, true, switchos_snapshotdataserver_port, 1, "switchos.snapshotdataserver");
 
 	memory_fence();
+
+	printf("[switchos] prepare end\n");
 }
 
 void *run_switchos_popserver(void *param) {
 	// Not used
 	//struct sockaddr_in controller_addr;
 	//unsigned int controller_addr_len = sizeof(struct sockaddr);
+	printf("[switchos.popserver] ready\n");
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
@@ -419,6 +426,7 @@ void *run_switchos_popserver(void *param) {
 
 void *run_switchos_paramserver(void *param) {
 	char buf[MAX_BUFSIZE];
+	printf("[switchos.paramserver] ready\n");
 	switchos_ready_threads++;
 	while (!switchos_running) {}
 
@@ -502,6 +510,7 @@ void *run_switchos_paramserver(void *param) {
 }
 
 void *run_switchos_snapshotdataserver(void *param) {
+	printf("[switchos.snapshotdataserver] ready\n");
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
@@ -587,6 +596,7 @@ void *run_switchos_popworker(void *param) {
 	set_sockaddr(reflector_popserver_addr, inet_addr(reflector_ip_for_switchos), reflector_popserver_port);
 	int reflector_popserver_addr_len = sizeof(struct sockaddr);
 
+	printf("[switchos.popworker] ready\n");
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
@@ -761,6 +771,7 @@ void *run_switchos_snapshotserver(void *param) {
 	// Not used
 	//struct sockaddr_in controller_addr;
 	//unsigned int controller_addr_len = sizeof(struct sockaddr);
+	printf("[switchos.snapshotserver] ready");
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
@@ -966,6 +977,7 @@ void *run_switchos_specialcaseserver(void *param) {
 	//unsigned int reflector_addr_len = sizeof(struct sockaddr);
 
 	char buf[MAX_BUFSIZE];
+	printf("[switchos.specialcaseserver] ready\n");
 	switchos_ready_threads++;
 	while (!switchos_running) {}
 

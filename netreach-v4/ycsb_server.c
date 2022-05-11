@@ -102,10 +102,17 @@ int main(int argc, char **argv) {
   signal(SIGTERM, SIG_IGN); // Ignore SIGTERM for subthreads
 
   /* (2) loading phase */
+  printf("[main] loading phase start\n");
+
   //prepare_load_server();
   loading_main(tab_xi);
 
   /* (3) transaction phase */
+  printf("[main] transaction phase start\n");
+
+  // update transaction_expected_ready_threads
+  transaction_expected_ready_threads = server_num + 3 + 2;
+
   prepare_reflector();
   prepare_server();
   transaction_main(tab_xi);
@@ -153,7 +160,7 @@ void prepare_dpdk() {
 }
 
 /*
- * Loading phase
+ * Prepare phase
  */
 
 void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {
@@ -200,6 +207,10 @@ void load(std::vector<index_key_t> &keys, std::vector<val_t> &vals) {
 	COUT_N_EXIT("Keys are sorted!");*/
 }
 
+/*
+ * Loading phase
+ */
+
 void loading_main(xindex_t *table) {
 	unsigned lcoreid = 1;
 
@@ -229,11 +240,10 @@ void loading_main(xindex_t *table) {
 		}
 	}
 
-	COUT_THIS("[local client] prepare server foreground threads...")
 	while (load_ready_threads < load_n) sleep(1);
+	COUT_THIS("[loading] all loading threads ready");
 
 	load_running = true;
-	COUT_THIS("[local client] start running...")
 
 	void *status;
 	for (size_t i = 0; i < server_num; i++) {
@@ -242,7 +252,7 @@ void loading_main(xindex_t *table) {
 			COUT_N_EXIT("Error:unable to join," << rc);
 		}
 	}
-	COUT_THIS("[local client] finish loading phase...")
+	COUT_THIS("[loading] loading phase finish");
 }
 
 void *run_load_sfg(void * param) {
@@ -260,9 +270,8 @@ void *run_load_sfg(void * param) {
 	index_key_t tmpkey;
 	val_t tmpval;
 
-	COUT_THIS("[local client " << uint32_t(thread_id) << "] Ready.");
+	COUT_THIS("[loading.worker " << uint32_t(thread_id) << "] Ready.");
 
-	// TODO: update server_expected_ready_threads
 	transaction_ready_threads++;
 
 #if !defined(NDEBUGGING_LOG)
@@ -335,7 +344,7 @@ void transaction_main(xindex_t *table) {
 	if (ret) {
 		COUT_N_EXIT("Error of launching server.receiver:" << ret);
 	}
-	COUT_THIS("[transaction phase] Launch receiver with ret code " << ret);
+	//COUT_THIS("[transaction phase] Launch receiver with ret code " << ret);
 	lcoreid++;
 
 	// launch workers (processing normal packets)
@@ -364,7 +373,7 @@ void transaction_main(xindex_t *table) {
 			lcoreid = 1;
 		}
 	}
-	COUT_THIS("[tranasaction phase] prepare server worker threads...")
+	//COUT_THIS("[tranasaction phase] prepare server worker threads...")
 
 	// launch evictserver
 	pthread_t evictserver_thread;
@@ -383,7 +392,7 @@ void transaction_main(xindex_t *table) {
 	while (transaction_ready_threads < transaction_expected_ready_threads) sleep(1);
 
 	transaction_running = true;
-	COUT_THIS("[transaction phase] start running...")
+	COUT_THIS("[transaction.main] all threads ready");
 
 	signal(SIGTERM, kill); // Set for main thread (kill -15)
 
@@ -432,6 +441,7 @@ void transaction_main(xindex_t *table) {
 		COUT_N_EXIT("Error: unable to join consnapshotserver " << rc);
 	}
 	rte_eal_mp_wait_lcore();
+	printf("[transaction.main] all threads end");
 }
 
 void kill(int signum) {

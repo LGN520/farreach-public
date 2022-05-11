@@ -25,6 +25,8 @@ void *run_reflector_dpdkserver(void *param);
 void close_reflector();
 
 void prepare_reflector() {
+	printf("[reflector] prepare start\n");
+
 	// prepare popserver socket
 	prepare_udpserver(reflector_popserver_udpsock, true, reflector_popserver_port, "reflector.popserver");
 
@@ -40,6 +42,8 @@ void prepare_reflector() {
 	create_udpsock(reflector_dpdkserver_specialcaseclient_udpsock, "reflector.dpdkserver.specialcaseclient");
 
 	memory_fence();
+
+	printf("[reflector] prepare end\n");
 }
 
 void *run_reflector_popserver(void *param) {
@@ -51,6 +55,7 @@ void *run_reflector_popserver(void *param) {
 	INVARIANT(res == 0);
 
 	char buf[MAX_BUFSIZE];
+	printf("[reflector.popserver] ready\n");
 	transaction_ready_threads++;
 
 	while (!transaction_running) {}
@@ -97,6 +102,7 @@ void *run_reflector_dpdkserver(void *param) {
 	set_sockaddr(reflector_switchos_specialcaseserver_addr, inet_addr(switchos_ip), switchos_specialcaseserver_port);
 	unsigned int reflector_switchos_specialcaseserver_addr_len = sizeof(struct sockaddr);
 
+	printf("[reflector.dpdkserver] ready\n");
 	transaction_ready_threads++;
 
 	while (!transaction_running) {}

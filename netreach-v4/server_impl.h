@@ -67,6 +67,8 @@ void *run_server_consnapshotserver(void *param);
 void close_server();
 
 void prepare_server() {
+	printf("[server] prepare start\n");
+
 	// Prepare pkts and stats for receiver (based on ring buffer)
 	// From receiver to each server
 	//pkts = new volatile struct rte_mbuf*[server_num];
@@ -125,6 +127,8 @@ void prepare_server() {
 	server_deleted_sets = new deleted_set_t[server_num];
 
 	memory_fence();
+
+	printf("[server] prepare end\n");
 }
 
 void close_server() {
@@ -182,6 +186,7 @@ void close_server() {
 
 static int run_receiver(void *param) {
 	//receiver_param_t &receiver_param = *((receiver_param_t *)param);
+	printf("[server.receiver] ready\n");
 	transaction_ready_threads++;
 
 	while (!transaction_running)
@@ -324,6 +329,7 @@ static int run_server_worker(void * param) {
   uint16_t srcport;
   uint16_t unused_dstport; // we use server_port_start instead of received dstport to hide server-side partition for client
 
+  printf("[server.worker%d] ready\n", int(serveridx));
   transaction_ready_threads++;
 
   while (!transaction_running) {
@@ -800,6 +806,7 @@ void *run_server_evictserver(void *param) {
 	//struct sockaddr_in controller_addr;
 	//unsigned int controller_addr_len = sizeof(struct sockaddr);
 	
+	printf("[server.evictserver] ready\n");
 	transaction_ready_threads++;
 
 	while (!transaction_running) {}
@@ -927,6 +934,7 @@ void *run_server_consnapshotserver(void *param) {
 	//struct sockaddr_in controller_addr;
 	//unsigned int controller_addr_len = sizeof(struct sockaddr);
 	
+	printf("[server.consnapshotserver] ready\n");
 	transaction_ready_threads++;
 
 	while (!transaction_running) {}
