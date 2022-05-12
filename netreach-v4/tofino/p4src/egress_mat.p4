@@ -127,8 +127,8 @@ table lastclone_tbl {
 
 action update_getreq_inswitch_to_getreq() {
 	modify_field(op_hdr.optype, GETREQ);
-	modify_field(shadowtype_hdr.shadowtype, GETREQ);
 
+	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
 
 	//modify_field(eg_intr_md.egress_port, eport);
@@ -136,8 +136,8 @@ action update_getreq_inswitch_to_getreq() {
 
 action update_getreq_inswitch_to_getreq_pop() {
 	modify_field(op_hdr.optype, GETREQ_POP);
-	modify_field(shadowtype_hdr.shadowtype, GETREQ_POP);
 
+	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
 
 	//modify_field(eg_intr_md.egress_port, eport);
@@ -145,8 +145,8 @@ action update_getreq_inswitch_to_getreq_pop() {
 
 action update_getreq_inswitch_to_getreq_nlatest() {
 	modify_field(op_hdr.optype, GETREQ_NLATEST);
-	modify_field(shadowtype_hdr.shadowtype, GETREQ_NLATEST);
 
+	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
 
 	//modify_field(eg_intr_md.egress_port, eport);
@@ -349,7 +349,6 @@ action forward_getres_deleted_seq_inswitch_case1() {
 //action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(sid, port) {
 action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(sid) {
 	modify_field(op_hdr.optype, CACHE_POP_INSWITCH_ACK);
-	modify_field(shadowtype_hdr.shadowtype, CACHE_POP_INSWITCH_ACK);
 	//modify_field(meta.clonenum_for_pktloss, 1); // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone)
 	modify_field(meta.clonenum_for_pktloss, 2); // 3 ACKs (drop w/ 2 -> clone w/ 1 -> clone w/ 0 -> no clone)
 
@@ -370,6 +369,7 @@ action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(sid
 	remove_header(val14_hdr);
 	remove_header(val15_hdr);
 	remove_header(val16_hdr);
+	remove_header(shadowtype_hdr);
 	remove_header(seq_hdr);
 	remove_header(inswitch_hdr);
 

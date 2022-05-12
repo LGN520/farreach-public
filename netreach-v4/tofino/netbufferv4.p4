@@ -94,13 +94,19 @@
 //#define KV_BUCKET_COUNT 32768
 #define KV_BUCKET_COUNT 1
 
+// 64K * 2B counter
+//#define CM_BUCKET_COUNT 65536
+//#define HH_THRESHOLD 100
+#define CM_BUCKET_COUNT 1
+#define HH_THRESHOLD 1
+
+// 32K * 4B counter
+//#define SEQ_BUCKET_COUNT 32768
+#define SEQ_BUCKET_COUNT 1
+
 // egress_pipeline_num * kv_bucket_count
 //#define LOOKUP_ENTRY_COUNT 65536
 #define LOOKUP_ENTRY_COUNT 32768
-
-// 64K * 2B counter
-#define CM_BUCKET_COUNT 65536
-#define HH_THRESHOLD 100
 
 #define MAX_SERVER_NUM 128
 // RANGE_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM
@@ -112,9 +118,6 @@
 
 // hash partition range
 #define PARTITION_COUNT 32768
-
-// 32K * 4B counter
-#define SEQ_BUCKET_COUNT 32768
 
 // NOTE: you should change the two macros according to maximum val length
 // SEQ_PKTLEN: sizeof(seq_hdr), e.g., PUTREQ -> PUTREQ_RECIR, PUTREQ_RECIR -> PUTREQ_POP/PUTREQ
