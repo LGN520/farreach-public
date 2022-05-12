@@ -26,13 +26,15 @@ const char *IniparserWrapper::get_workload_name() {
 	return workload_name;
 }
 
-uint32_t IniparserWrapper::get_max_vallen() {
+//uint32_t IniparserWrapper::get_max_vallen() {
+uint16_t IniparserWrapper::get_max_vallen() {
 	int tmp = iniparser_getint(ini, "global:max_vallen", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [global:max_vallen]: %d\n", tmp);
 		exit(-1);
 	}
-	return uint32_t(tmp);
+	//return uint32_t(tmp);
+	return uint16_t(tmp);
 }
 
 // Client
@@ -149,13 +151,15 @@ uint32_t IniparserWrapper::get_switch_kv_bucket_num() {
 	return uint32_t(tmp);
 }
 
-uint32_t IniparserWrapper::get_switch_max_vallen() {
+//uint32_t IniparserWrapper::get_switch_max_vallen() {
+uint16_t IniparserWrapper::get_switch_max_vallen() {
 	int tmp = iniparser_getint(ini, "switch:switch_max_vallen", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switch:switch_max_vallen]: %d\n", tmp);
 		exit(-1);
 	}
-	return uint32_t(tmp);
+	//return uint32_t(tmp);
+	return uint16_t(tmp);
 }
 
 short IniparserWrapper::get_switchos_popserver_port() {

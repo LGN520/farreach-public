@@ -261,12 +261,14 @@ void *run_controller_popserver_subthread(void *param) {
 	int cur_recv_bytes = 0;
 	uint8_t optype = 0;
 	bool with_optype = false;
-	uint32_t vallen = 0;
+	//uint32_t vallen = 0;
+	uint16_t vallen = 0;
 	bool with_vallen = false;
 	bool is_cached_before = false; // TODO: remove
 	//index_key_t tmpkey(0, 0, 0, 0);
 	const int arrive_optype_bytes = sizeof(uint8_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	while (true) {
 		int recvsize = 0;
@@ -290,9 +292,11 @@ void *run_controller_popserver_subthread(void *param) {
 
 		// Get vallen
 		if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
-			//tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
-			vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
-			vallen = ntohl(vallen);
+			////tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
+			//vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
+			//vallen = ntohl(vallen);
+			vallen = *((uint16_t *)(buf + arrive_vallen_bytes - sizeof(uint16_t)));
+			vallen = ntohs(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
 			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(uint16_t);
@@ -410,13 +414,15 @@ void *run_controller_evictserver(void *param) {
 	int cur_recv_bytes = 0;
 	uint8_t optype = 0;
 	bool with_optype = false;
-	//index_key_t tmpkey = index_key_t();
-	uint32_t vallen = 0;
+	////index_key_t tmpkey = index_key_t();
+	//uint32_t vallen = 0;
+	uint16_t vallen = 0;
 	bool with_vallen = false;
 	//uint16_t tmpserveridx = 0;
 	bool is_waitack = false;
 	const int arrive_optype_bytes = sizeof(uint8_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	char evictclient_buf[MAX_BUFSIZE];
 	int evictclient_cur_recv_bytes = 0;
@@ -454,9 +460,11 @@ void *run_controller_evictserver(void *param) {
 
 		// Get vallen
 		if (!with_optype && with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
-			//tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
-			vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
-			vallen = ntohl(vallen);
+			////tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
+			//vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
+			//vallen = ntohl(vallen);
+			vallen = *((uint16_t *)(buf + arrive_vallen_bytes - sizeof(uint16_t)));
+			vallen = ntohs(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
 			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
@@ -654,7 +662,8 @@ void *run_controller_snapshotclient(void *param) {
 
 				// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
 				// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
-				// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
+				//// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
+				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 				if (control_type_phase1 != -1 && cur_recv_bytes >= sizeof(int) + total_bytes) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
 					// NOTE: per-server_bytes is used for sending snapshot data to different server.consnapshotservers (not used now)
 					

@@ -11,13 +11,13 @@ class Val {
 
  public:
 
-  static uint32_t MAX_VALLEN; // max # of bytes
-  static uint32_t SWITCH_MAX_VALLEN; // max # of bytes in switch
-  static uint32_t get_padding_size(uint32_t vallen);
+  static uint16_t MAX_VALLEN; // max # of bytes
+  static uint16_t SWITCH_MAX_VALLEN; // max # of bytes in switch
+  static uint16_t get_padding_size(uint16_t vallen);
 
   Val();
   ~Val();
-  Val(const char* buf, uint32_t length);
+  Val(const char* buf, uint16_t length);
   Val(const Val &other);
   Val(const volatile Val &other);
   Val &operator=(const Val &other);
@@ -39,11 +39,12 @@ class Val {
   uint32_t deserialize_val(const char *buf, uint32_t buflen);
   uint32_t serialize(char *buf, uint32_t buflen);
 
-  uint32_t get_bytesnum() const;
+  uint16_t get_bytesnum() const;
 
   std::string to_string() const; // For print
 
-  uint32_t val_length; // val_length (# of bytes)
+  //uint32_t val_length; // val_length (# of bytes)
+  uint16_t val_length; // val_length (# of bytes)
   char *val_data;
 } PACKED;
 

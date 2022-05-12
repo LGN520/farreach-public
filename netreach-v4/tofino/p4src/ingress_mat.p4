@@ -4,7 +4,9 @@ field_list hash_fields {
 	op_hdr.keylolo;
 	op_hdr.keylohi;
 	op_hdr.keyhilo;
-	op_hdr.keyhihi;
+	//op_hdr.keyhihi;
+	op_hdr.keyhihilo;
+	op_hdr.keyhihihi;
 }
 
 field_list_calculation hash_calc {
@@ -81,7 +83,8 @@ action range_partition(udpport, eport) {
 table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
-		op_hdr.keyhihi: range;
+		//op_hdr.keyhihi: range;
+		op_hdr.keyhihihi: range;
 		ig_intr_md.ingress_port: exact;
 		meta.need_recirculate: exact;
 	}
@@ -128,8 +131,10 @@ action range_partition_for_scan(udpport, eport, max_scannum) {
 table range_partition_for_scan_tbl {
 	reads {
 		op_hdr.optype: exact;
-		op_hdr.keyhihi: range;
-		scan_hdr.keyhihi: range;
+		//op_hdr.keyhihi: range;
+		//scan_hdr.keyhihi: range;
+		op_hdr.keyhihihi: range;
+		scan_hdr.keyhihihi: range;
 		meta.need_recirculate: exact;
 	}
 	actions {
@@ -184,7 +189,9 @@ table cache_lookup_tbl {
 		op_hdr.keylolo: exact;
 		op_hdr.keylohi: exact;
 		op_hdr.keyhilo: exact;
-		op_hdr.keyhihi: exact;
+		//op_hdr.keyhihi: exact;
+		op_hdr.keyhihilo: exact;
+		op_hdr.keyhihihi: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {

@@ -239,20 +239,34 @@ uint32_t Key::deserialize(const char* buf, uint32_t buflen) {
 	memcpy((char *)&keylolo, buf, sizeof(uint32_t));
 	memcpy((char *)&keylohi, buf+4, sizeof(uint32_t));
 	memcpy((char *)&keyhilo, buf+8, sizeof(uint32_t));
-	memcpy((char *)&keyhihi, buf+12, sizeof(uint32_t));
+	//memcpy((char *)&keyhihi, buf+12, sizeof(uint32_t));
+	uint16_t bigendian_keyhihilo = 0;
+	uint16_t bigendian_keyhihihi = 0;
+	memcpy((char *)&bigendian_keyhihilo, buf+12, sizeof(uint16_t));
+	memcpy((char *)&bigendian_keyhihihi, buf+14, sizeof(uint16_t));
 	// Big-endian to little-endian
 	keylolo = ntohl(keylolo);
 	keylohi = ntohl(keylohi);
 	keyhilo = ntohl(keyhilo);
-	keyhihi = ntohl(keyhihi);
+	//keyhihi = ntohl(keyhihi);
+	uint16_t keyhihilo = ntohs(bigendian_keyhihilo);
+	uint16_t keyhihihi = ntohs(bigendian_keyhihihi);
+	keyhihi = (uint32_t(keyhihihi) << 16) | uint32_t(keyhihilo);
 	return 16;
 #else
 	INVARIANT(buf != nullptr && buflen >= 8);
 	memcpy((char *)&keylo, buf, sizeof(uint32_t));
-	memcpy((char *)&keyhi, buf+4, sizeof(uint32_t));
+	//memcpy((char *)&keyhi, buf+4, sizeof(uint32_t));
+	uint16_t bigendian_keyhilo = 0;
+	uint16_t bigendian_keyhihi = 0;
+	memcpy((char *)&bigendian_keyhilo, buf+4, sizeof(uint16_t));
+	memcpy((char *)&bigendian_keyhihi, buf+6, sizeof(uint16_t));
 	// Big-endian to little-endian
 	keylo = ntohl(keylo);
-	keyhi = ntohl(keyhi);
+	//keyhi = ntohl(keyhi);
+	uint16_t keyhilo = ntohs(bigendian_keyhilo);
+	uint16_t keyhihi = ntohs(bigendian_keyhihi);
+	keyhi = (uint32_t(keyhihi) << 16) | uint32_t(keyhilo);
 	return 8;
 #endif
 }
@@ -264,19 +278,31 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) {
 	uint32_t bigendian_keylolo = htonl(keylolo);
 	uint32_t bigendian_keylohi = htonl(keylohi);
 	uint32_t bigendian_keyhilo = htonl(keyhilo);
-	uint32_t bigendian_keyhihi = htonl(keyhihi);
+	//uint32_t bigendian_keyhihi = htonl(keyhihi);
+	uint16_t keyhihilo = uint16_t(keyhihi & 0xFFFF);
+	uint16_t keyhihihi = uint16_t((keyhihi >> 16) & 0xFFFF);
+	uint16_t bigendian_keyhihilo = htons(keyhihilo);
+	uint16_t bigendian_keyhihihi = htons(keyhihihi);
 	memcpy(buf, (char *)&bigendian_keylolo, sizeof(uint32_t));
 	memcpy(buf+4, (char *)&bigendian_keylohi, sizeof(uint32_t));
 	memcpy(buf+8, (char *)&bigendian_keyhilo, sizeof(uint32_t));
-	memcpy(buf+12, (char *)&bigendian_keyhihi, sizeof(uint32_t));
+	//memcpy(buf+12, (char *)&bigendian_keyhihi, sizeof(uint32_t));
+	memcpy(buf+12, (char *)&bigendian_keyhihilo, sizeof(uint16_t));
+	memcpy(buf+14, (char *)&bigendian_keyhihihi, sizeof(uint16_t)); // the highest 2 bytes will be used for range matching
 	return 16;
 #else
 	INVARIANT(buf != nullptr && buflen >= 8);
 	// Little-endian to big-endian
 	uint32_t bigendian_keylo = htonl(keylo);
-	uint32_t bigendian_keyhi = htonl(keyhi);
+	//uint32_t bigendian_keyhi = htonl(keyhi);
+	uint16_t keyhilo = uint16_t(keyhi & 0xFFFF);
+	uint16_t keyhihi = uint16_t((keyhi >> 16) & 0xFFFF);
+	uint16_t bigendian_keyhilo = htons(keyhilo);
+	uint16_t bigendian_keyhihi = htons(keyhihi);
 	memcpy(buf, (char *)&bigendian_keylo, sizeof(uint32_t));
-	memcpy(buf+4, (char *)&bigendian_keyhi, sizeof(uint32_t));
+	//memcpy(buf+4, (char *)&bigendian_keyhi, sizeof(uint32_t));
+	memcpy(buf+4, (char *)&bigendian_keyhilo, sizeof(uint16_t));
+	memcpy(buf+6, (char *)&bigendian_keyhihi, sizeof(uint16_t)); // the highest 2 bytes will be used for range matching
 	return 8;
 #endif
 }
@@ -289,19 +315,31 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) volatile {
 	uint32_t bigendian_keylolo = htonl(keylolo);
 	uint32_t bigendian_keylohi = htonl(keylohi);
 	uint32_t bigendian_keyhilo = htonl(keyhilo);
-	uint32_t bigendian_keyhihi = htonl(keyhihi);
+	//uint32_t bigendian_keyhihi = htonl(keyhihi);
+	uint16_t keyhihilo = uint16_t(keyhihi & 0xFFFF);
+	uint16_t keyhihihi = uint16_t((keyhihi >> 16) & 0xFFFF);
+	uint16_t bigendian_keyhihilo = htons(keyhihilo);
+	uint16_t bigendian_keyhihihi = htons(keyhihihi);
 	memcpy(buf, (char *)&bigendian_keylolo, sizeof(uint32_t));
 	memcpy(buf+4, (char *)&bigendian_keylohi, sizeof(uint32_t));
 	memcpy(buf+8, (char *)&bigendian_keyhilo, sizeof(uint32_t));
-	memcpy(buf+12, (char *)&bigendian_keyhihi, sizeof(uint32_t));
+	//memcpy(buf+12, (char *)&bigendian_keyhihi, sizeof(uint32_t));
+	memcpy(buf+12, (char *)&bigendian_keyhihilo, sizeof(uint16_t));
+	memcpy(buf+14, (char *)&bigendian_keyhihihi, sizeof(uint16_t)); // the highest 2 bytes will be used for range matching
 	return 16;
 #else
 	INVARIANT(buf != nullptr && buflen >= 8);
 	// Little-endian to big-endian
 	uint32_t bigendian_keylo = htonl(keylo);
-	uint32_t bigendian_keyhi = htonl(keyhi);
+	//uint32_t bigendian_keyhi = htonl(keyhi);
+	uint16_t keyhilo = uint16_t(keyhi & 0xFFFF);
+	uint16_t keyhihi = uint16_t((keyhi >> 16) & 0xFFFF);
+	uint16_t bigendian_keyhilo = htons(keyhilo);
+	uint16_t bigendian_keyhihi = htons(keyhihi);
 	memcpy(buf, (char *)&bigendian_keylo, sizeof(uint32_t));
-	memcpy(buf+4, (char *)&bigendian_keyhi, sizeof(uint32_t));
+	//memcpy(buf+4, (char *)&bigendian_keyhi, sizeof(uint32_t));
+	memcpy(buf+4, (char *)&bigendian_keyhilo, sizeof(uint16_t));
+	memcpy(buf+6, (char *)&bigendian_keyhihi, sizeof(uint16_t)); // the highest 2 bytes will be used for range matching
 	return 8;
 #endif
 }

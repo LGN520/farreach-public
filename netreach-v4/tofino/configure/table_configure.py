@@ -298,22 +298,27 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # # Table: range_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
                 # Table: range_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring range_partition_tbl"
-                key_range_per_server = pow(2, 32) / server_num
+                #key_range_per_server = pow(2, 32) / server_num
+                key_range_per_server = pow(2, 16) / server_num
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
                     for iport in self.devPorts:
-                        #key_start = -pow(2, 31) # [-2^31, 2^31-1]
-                        key_start = 0 # [0, 2^32-1]
+                        ##key_start = -pow(2, 31) # [-2^31, 2^31-1]
+                        #key_start = 0 # [0, 2^32-1]
+                        key_start = 0 # [0, 2^16-1]
                         for i in range(server_num):
                             if i == server_num - 1:
-                                #key_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
-                                key_end = pow(2, 32) - 1
+                                ##key_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
+                                #key_end = pow(2, 32) - 1
+                                key_end = pow(2, 16) - 1
                             else:
                                 key_end = key_start + key_range_per_server - 1
                             # NOTE: both start and end are included
                             matchspec0 = netbufferv4_range_partition_tbl_match_spec_t(\
                                     op_hdr_optype = tmpoptype,
-                                    op_hdr_keyhihi_start = convert_u32_to_i32(key_start),
-                                    op_hdr_keyhihi_end = convert_u32_to_i32(key_end),
+                                    #op_hdr_keyhihi_start = convert_u32_to_i32(key_start),
+                                    #op_hdr_keyhihi_end = convert_u32_to_i32(key_end),
+                                    op_hdr_keyhihihi_start = convert_u16_to_i16(key_start),
+                                    op_hdr_keyhihihi_end = convert_u16_to_i16(key_end),
                                     ig_intr_md_ingress_port = iport,
                                     meta_need_recirculate = 0)
                             # Forward to the egress pipeline of server
@@ -345,30 +350,38 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # Table: range_partition_for_scan_tbl (default: nop; size <= 2 * 128)
                 # TODO: limit max_scannum <= constant (e.g., 32)
                 print "Configuring range_partition_for_scan_tbl"
-                key_range_per_server = pow(2, 32) / server_num
+                #key_range_per_server = pow(2, 32) / server_num
+                key_range_per_server = pow(2, 16) / server_num
                 for iport in self.devPorts:
-                    #startkey_start = -pow(2, 31) # [-2^31, 2^31-1]
-                    startkey_start = 0 # [0, 2^32-1]
+                    ##startkey_start = -pow(2, 31) # [-2^31, 2^31-1]
+                    #startkey_start = 0 # [0, 2^32-1]
+                    startkey_start = 0 # [0, 2^16-1]
                     for i in range(server_num):
                         if i == server_num - 1:
-                            #startkey_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
-                            startkey_end = pow(2, 32) - 1
+                            ##startkey_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
+                            #startkey_end = pow(2, 32) - 1
+                            startkey_end = pow(2, 16) - 1
                         else:
                             startkey_end = startkey_start + key_range_per_server - 1
                         endkey_start = startkey_start
                         for j in range(i, server_num):
                             if j == server_num - 1:
-                                #endkey_end = pow(2, 31) - 1
-                                endkey_end = pow(2, 32) - 1
+                                ##endkey_end = pow(2, 31) - 1
+                                #endkey_end = pow(2, 32) - 1
+                                endkey_end = pow(2, 16) - 1
                             else:
                                 endkey_end = endkey_start + key_range_per_server - 1
                             # NOTE: both start and end are included
                             matchspec0 = netbufferv4_range_partition_for_scan_tbl_match_spec_t(\
                                     op_hdr_optype = SCANREQ,
-                                    op_hdr_keyhihi_start = convert_u32_to_i32(startkey_start),
-                                    op_hdr_keyhihi_end = convert_u32_to_i32(startkey_end),
-                                    scan_hdr_keyhihi_start = convert_u32_to_i32(endkey_start),
-                                    scan_hdr_keyhihi_end = convert_u32_to_i32(endkey_end),
+                                    #op_hdr_keyhihi_start = convert_u32_to_i32(startkey_start),
+                                    #op_hdr_keyhihi_end = convert_u32_to_i32(startkey_end),
+                                    #scan_hdr_keyhihi_start = convert_u32_to_i32(endkey_start),
+                                    #scan_hdr_keyhihi_end = convert_u32_to_i32(endkey_end),
+                                    op_hdr_keyhihihi_start = convert_u32_to_i32(startkey_start),
+                                    op_hdr_keyhihihi_end = convert_u32_to_i32(startkey_end),
+                                    scan_hdr_keyhihihi_start = convert_u32_to_i32(endkey_start),
+                                    scan_hdr_keyhihihi_end = convert_u32_to_i32(endkey_end),
                                     meta_need_recirculate = 0)
                             # Forward to the egress pipeline of server
                             # serveridx = i to j
@@ -1501,9 +1514,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     vallen_end = (i-1)*8+8 # 8, 16, ..., 128
                     aligned_vallen = vallen_end # 8, 16, ..., 128
                 # NOTE: including 1B debug_hdr
-                val_stat_udplen = aligned_vallen + 30
-                val_seq_inswitch_stat_udplen = aligned_vallen + 43
-                val_seq_udplen = aligned_vallen + 33
+                val_stat_udplen = aligned_vallen + 28
+                val_seq_inswitch_stat_udplen = aligned_vallen + 41
+                val_seq_udplen = aligned_vallen + 31
                 matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
                         op_hdr_optype=GETRES,
                         vallen_hdr_vallen_start=vallen_start,
@@ -1512,7 +1525,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # TODO: check parameter 0
                 self.client.update_udplen_tbl_table_add_with_update_udplen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-                for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTRES_SEQ_INSWITCH_CASE1, DELRES_SEQ_INSWITCH_CASE1]:
+                for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1]:
                     matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,

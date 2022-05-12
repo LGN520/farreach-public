@@ -76,6 +76,8 @@
 	+ setsockopt() for SO_RCVTIMEO is used to set timeout for all input functions, e.g., accept and receive
 - NOTE for parser/deparser
 	+ We must invoke add_header() explicitly for each new header even if the parser/deparser has indicated that we need the new header; otherwise, the new header will not be embedded into the packet
+- NOTE for range match
+	+ The maximum length of field for range matching is 20 bits
 
 ## Overview
 
@@ -662,7 +664,7 @@
 			+ (1) Not select vallen, directly return parse_val_len16 -> length = 4 -> SUCCESS
 				* NODO: pad (not align) small value (vallen <= 128B) to 128 bytes in client side and use vallen to identify the real bytes in server side
 			+ (2) Introduce op_hdr.optype2 -> limited length of chain of the same packet header -> FAIL
-			+ (3) Introduce shadowtype_hdr.shadowtype -> SUCCESS
+			+ (3) Introduce shadowtype_hdr.shadowtype (only except SCANREQ/SCANREQ_SPLIT/SCANRES_SPLIT and CACHE_POP/CACHE_EVICT and ophdr-only packets) -> SUCCESS
 				* Introduce shadowtype in packet_format.h
 				* Keep shadowtype the same as optype in p4
 	* Fix placement issue of cache_lookup_tbl and hash_for_seq_tbl -> check visulatization -> update p4src/ingress.p4 and configure.py
@@ -682,6 +684,9 @@
 		- NOTE: Use 0 instead of -1 to initialize (ycsb_remote_client, server_impl, controller, switchos, common_impl)
 	* Fix syntax issue in ptf
 	* Fix signedness issue in ptf.Thrift
+	* Fix field length limitation in P4
+		- Use 16-bit keyhihilo and 116-bit keyhihihi for 32-bit keyhihi (ingress_mat.p4, header.p4, remove_cache_lookup.py, add_cache_lookup.py, configure.py, key, server_impl.h)
+		- Use uint16_t instead of uint32_t for vallen (egress_mat.p4 (udp.hdrlen), header.p4, netbufferv4.p4 (one comment), configure.py (udp.hdrlen), load_snapshot_data.py, get_evictdata.py, val, switchos.c, controller.c, iniparser_wrapper.c, packet_format_impl.h (size))
 
 ## Run
 
@@ -717,6 +722,8 @@
 		* No key in cache_lookup_tbl, cm=1, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
 	+ Case 3: read(k1,v1)-write(k1,v2)-read(k1,v2) (GETREQ/PUTREQ_SEQ_POP/GETREQ_POP arrive at server; ignore cache population here)
 		* No key in cache_lookup_tbl, cm=3, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
+	+ Case 4: single delete (DELREQ arrives at server)
+		* No key in cache_lookup_tbl, {cm, cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
 - TODO
 	+ Case 3: read-after-write
 		* Write value of k1 and then read k1

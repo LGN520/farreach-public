@@ -1,5 +1,5 @@
 register vallen_reg {
-	width: 32;
+	width: 16;
 	instance_count: KV_BUCKET_COUNT;
 }
 

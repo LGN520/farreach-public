@@ -14,7 +14,8 @@ class IniparserWrapper {
 
 		// global
 		const char *get_workload_name();
-		uint32_t get_max_vallen();
+		//uint32_t get_max_vallen();
+		uint16_t get_max_vallen();
 
 		// client
 		size_t get_client_num();
@@ -44,7 +45,8 @@ class IniparserWrapper {
 
 		// switch
 		uint32_t get_switch_kv_bucket_num();
-		uint32_t get_switch_max_vallen();
+		//uint32_t get_switch_max_vallen();
+		uint16_t get_switch_max_vallen();
 		short get_switchos_popserver_port();
 		short get_switchos_paramserver_port();
 		const char *get_switchos_ip();

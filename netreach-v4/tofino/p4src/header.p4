@@ -41,7 +41,9 @@ header_type op_t {
 		keylolo: 32;
 		keylohi: 32;
 		keyhilo: 32;
-		keyhihi: 32;
+		//keyhihi: 32;
+		keyhihilo: 16;
+		keyhihihi: 16;
 	}
 }
 
@@ -51,7 +53,9 @@ header_type scan_t {
 		keylolo: 32;
 		keylohi: 32;
 		keyhilo: 32;
-		keyhihi: 32;
+		//keyhihi: 32;
+		keyhihilo: 16;
+		keyhihihi: 16;
 	}
 }
 header_type split_t {
@@ -65,7 +69,7 @@ header_type split_t {
 // Used by PUTREQ and GETRES to save PHV
 header_type vallen_t {
 	fields {
-		vallen: 32;
+		vallen: 16;
 	}
 }
 

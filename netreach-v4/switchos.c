@@ -115,6 +115,7 @@ int switchos_popworker_evictclient_tcpsock = -1;
 bool volatile switchos_with_evictdata = false;
 uint16_t volatile switchos_evictidx = 0;
 //uint32_t volatile switchos_evictvallen = 0;
+//uint16_t volatile switchos_evictvallen = 0;
 //char * volatile switchos_evictvalbytes = NULL;
 val_t volatile switchos_evictvalue = val_t();
 uint32_t volatile switchos_evictseq = 0;
@@ -373,12 +374,14 @@ void *run_switchos_popserver(void *param) {
 	int cur_recv_bytes = 0;
 	uint8_t optype = 0;
 	bool with_optype = false;
-	uint32_t vallen = 0;
+	//uint32_t vallen = 0;
+	uint16_t vallen = 0;
 	bool with_vallen = false;
 	bool is_cached_before = false; // TODO: remove
 	//index_key_t tmpkey(0, 0, 0, 0);
 	const int arrive_optype_bytes = sizeof(uint8_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	while (switchos_running) {
 		int recvsize = 0;
@@ -401,9 +404,11 @@ void *run_switchos_popserver(void *param) {
 
 		// Get vallen
 		if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
-			//tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
-			vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
-			vallen = ntohl(vallen);
+			////tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
+			//vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
+			//vallen = ntohl(vallen);
+			vallen = *((uint16_t *)(buf + arrive_vallen_bytes - sizeof(uint16_t)));
+			vallen = ntohs(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
 			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(uint16_t);
@@ -498,7 +503,8 @@ void *run_switchos_paramserver(void *param) {
 			// ptf set evict data -> popworker get evictdata from ptf framework
 			switchos_evictidx = *((uint16_t *)curptr);
 			curptr += sizeof(uint16_t);
-			/*switchos_evictvallen = *((uint32_t *)curptr);
+			/*//switchos_evictvallen = *((uint32_t *)curptr);
+			switchos_evictvallen = *((uint16_t *)curptr);
 			curptr += sizeof(uint32_t);
 			uint32_t tmp_valbytesnum = switchos_evictvallen + val_t::get_padding_size(switchos_evictvallen);
 			memcpy(switchos_evictvalbytes, curptr, tmp_valbytesnum);
@@ -942,7 +948,8 @@ void *run_switchos_snapshotserver(void *param) {
 
 				// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
 				// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
-				// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
+				//// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
+				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 				for (uint32_t tmpidx = 0; tmpidx < switchos_cached_empty_index_backup; tmpidx++) { // prepare per-server per-record data
 					uint16_t tmp_serveridx = switchos_cached_serveridxarray_backup[tmpidx];
 					char * tmpptr = tmp_sendbuf_list[tmp_serveridx];

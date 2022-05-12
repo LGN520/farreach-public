@@ -811,20 +811,20 @@ action update_onlyop_udplen() {
 
 // GETRES
 action update_val_stat_udplen(aligned_vallen) {
-	// 6(udphdr) + 17(ophdr) + 4(vallen) + aligned_vallen(val) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
-	add(udp_hdr.hdrlen, aligned_vallen, 30);
+	// 6(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
+	add(udp_hdr.hdrlen, aligned_vallen, 28);
 }
 
 // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 action update_val_seq_inswitch_stat_udplen(aligned_vallen) {
-	// 6(udphdr) + 17(ophdr) + 4(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 9(inswitch) + 1(stat) + 1(debug_hdr)
-	add(udp_hdr.hdrlen, aligned_vallen, 43);
+	// 6(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 9(inswitch) + 1(stat) + 1(debug_hdr)
+	add(udp_hdr.hdrlen, aligned_vallen, 41);
 }
 
 // PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3
 action update_val_seq_udplen(aligned_vallen) {
-	// 6(udphdr) + 17(ophdr) + 4(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 1(debug_hdr)
-	add(udp_hdr.hdrlen, aligned_vallen, 33);
+	// 6(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 1(debug_hdr)
+	add(udp_hdr.hdrlen, aligned_vallen, 31);
 }
 
 // PUTRES, DELRES

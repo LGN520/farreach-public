@@ -70,14 +70,17 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
         recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
         # TODO: Check correctness of key
-        keylolo, keylohi, keyhilo, keyhihi, freeidx = struct,unpack("!4I=H", recvbuf)
+        #keylolo, keylohi, keyhilo, keyhihi, freeidx = struct,unpack("!4I=H", recvbuf)
+        keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx = struct,unpack("!3I2H=H", recvbuf)
 
         print "Add {},{},{},{} {} into cache_lookup_tbl".format(keyhihi, keyhilo, keylohi, keylolo, freeidx)
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
                 op_hdr_keylohi = convert_u32_to_i32(keylohi),
                 op_hdr_keyhilo = convert_u32_to_i32(keyhilo),
-                op_hdr_keyhihi = convert_u32_to_i32(keyhihi),
+                #op_hdr_keyhihi = convert_u32_to_i32(keyhihi),
+                op_hdr_keyhihilo = convert_u16_to_i16(keyhihilo),
+                op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi),
                 meta_need_recirculate = 0)
         actnspec0 = netbufferv4_cached_action_action_spec_t(freeidx)
         self.client.cache_lookup_tbl_table_add_with_cached_action(\

@@ -83,7 +83,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         # TODO: check len of vallen_list
         vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, self.dev_tgt, start_index, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt]
         for i in range(len(vallen_list)):
-            vallen_list[i] = convert_i32_to_u32(vallen_list[i])
+            #vallen_list[i] = convert_i32_to_u32(vallen_list[i])
+            vallen_list[i] = convert_i16_to_u16(vallen_list[i])
         vallo_list_list = []
         valhi_list_list = []
         for i in range(switch_max_vallen/8): # 128 bytes / 8 = 16 register arrays
@@ -105,10 +106,12 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
         print "Prepare sendbuf to switchos.snapshotdataserver"
         sendbuf = bytes()
-        # <total_bytesnum, records> -> for each record: <uint32_t vallen (big-endian for Val::deserialize), valbytes (same order), uint32_t seq (little-endian), result>
+        ## <total_bytesnum, records> -> for each record: <uint32_t vallen (big-endian for Val::deserialize), valbytes (same order), uint32_t seq (little-endian), result>
+        # <total_bytesnum, records> -> for each record: <uint16_t vallen (big-endian for Val::deserialize), valbytes (same order), uint32_t seq (little-endian), result>
         for i in range(record_cnt):
             tmpvallen = vallen_list[i]
-            sendbuf = sendbuf + struct.pack("!I", tmpvallen)
+            #sendbuf = sendbuf + struct.pack("!I", tmpvallen)
+            sendbuf = sendbuf + struct.pack("!H", tmpvallen)
             tmp_eightbyte_cnt = (tmpvallen + 7) / 8
             for j in range(tmp_eightbyte_cnt):
                 # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts

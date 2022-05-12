@@ -102,7 +102,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         else:
             print "Invalid tmp_deleted: {}".format(tmp_deleted)
             exit(-1)
-        evictvallen = convert_i32_to_u32(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
+        #evictvallen = convert_i32_to_u32(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
+        evictvallen = convert_i16_to_u16(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
         eightbyte_cnt = (evictvallen+7) / 8;
         val_list = []
         for i in range(1, eightbyte_cnt+1):
@@ -120,8 +121,10 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
         print "Set evictdata to paramserver"
         ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # <int type, int16_t evictidx, uint32_t vallen (big-endian for Val::deserialize), valbytes (same order), int32_t savedseq (little-endian), bool status>
-        sendbuf = struct.pack("=iH!I={}cI?".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
+        ## <int type, int16_t evictidx, uint32_t vallen (big-endian for Val::deserialize), valbytes (same order), int32_t savedseq (little-endian), bool status>
+        #sendbuf = struct.pack("=iH!I={}cI?".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
+        # <int type, int16_t evictidx, uint16_t vallen (big-endian for Val::deserialize), valbytes (same order), int32_t savedseq (little-endian), bool status>
+        sendbuf = struct.pack("=iH!H={}cI?".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
         ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
 
         self.conn_mgr.complete_operations(self.sess_hdl)
