@@ -1489,107 +1489,81 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.scan_forward_tbl_table_add_with_forward_scanreq_split(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
+            # Table: update_udplen_tbl (default: nop; 158)
+            print "Configuring update_udplen_tbl"
+            for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
+                if i == 0:
+                    vallen_start = 0
+                    vallen_end = 0
+                    aligned_vallen = 0
+                else:
+                    vallen_start = (i-1)*8+1 # 1, 9, ..., 121
+                    vallen_end = (i-1)*8+8 # 8, 16, ..., 128
+                    aligned_vallen = vallen_end # 8, 16, ..., 128
+                # NOTE: including 1B debug_hdr
+                val_stat_udplen = aligned_vallen + 30
+                val_seq_inswitch_stat_udplen = aligned_vallen + 43
+                val_seq_udplen = aligned_vallen + 33
+                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+                        op_hdr_optype=GETRES,
+                        vallen_hdr_vallen_start=vallen_start,
+                        vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
+                actnspec0 = netbufferv4_update_udplen_action_spec_t(val_stat_udplen)
+                # TODO: check parameter 0
+                self.client.update_udplen_tbl_table_add_with_update_udplen(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTRES_SEQ_INSWITCH_CASE1, DELRES_SEQ_INSWITCH_CASE1]:
+                    matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+                            op_hdr_optype=tmpoptype,
+                            vallen_hdr_vallen_start=vallen_start,
+                            vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
+                    actnspec0 = netbufferv4_update_udplen_action_spec_t(val_seq_inswitch_stat_udplen)
+                    # TODO: check parameter 0
+                    self.client.update_udplen_tbl_table_add_with_update_udplen(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3]:
+                    matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+                            op_hdr_optype=tmpoptype,
+                            vallen_hdr_vallen_start=vallen_start,
+                            vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
+                    actnspec0 = netbufferv4_update_udplen_action_spec_t(val_seq_udplen)
+                    # TODO: check parameter 0
+                    self.client.update_udplen_tbl_table_add_with_update_udplen(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+            onlyop_udplen = 24
+            stat_udplen = 26
+            seq_udplen = 29
+            matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+                    op_hdr_optype=CACHE_POP_INSWITCH_ACK,
+                    vallen_hdr_vallen_start=0,
+                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+            actnspec0 = netbufferv4_update_udplen_action_spec_t(onlyop_udplen)
+            # TODO: check parameter 0
+            self.client.update_udplen_tbl_table_add_with_update_udplen(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+            for tmpoptype in [PUTRES, DELRES]:
+                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+                        op_hdr_optype=tmpoptype,
+                        vallen_hdr_vallen_start=0,
+                        vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+                actnspec0 = netbufferv4_update_udplen_action_spec_t(stat_udplen)
+                # TODO: check parameter 0
+                self.client.update_udplen_tbl_table_add_with_update_udplen(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+            for tmpoptype in [DELREQ_SEQ, DELREQ_SEQ_CASE3]:
+                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+                        op_hdr_optype=tmpoptype,
+                        vallen_hdr_vallen_start=0,
+                        vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+                actnspec0 = netbufferv4_update_udplen_action_spec_t(seq_udplen)
+                # TODO: check parameter 0
+                self.client.update_udplen_tbl_table_add_with_update_udplen(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
 
 
-            # Stage 4
 
-#            # Table: update_udplen_tbl (default: nop; 145)
-#            print "Configuring update_udplen_tbl"
-#            for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
-#                if i == 0:
-#                    vallen_start = 0
-#                    vallen_end = 0
-#                    aligned_vallen = 0
-#                else:
-#                    vallen_start = (i-1)*8+1 # 1, ..., 121
-#                    vallen_end = (i-1)*8+8 # 8, ..., 128
-#                    aligned_vallen = vallen_end # 8, ..., 128
-#                # NOTE: if vallen of GETRES > 128B, it must be issued by server which has already set correct udplen
-#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                        op_hdr_optype=GETRES_TYPE,
-#                        vallen_hdr_vallen_start=vallen_start,
-#                        vallen_hdr_vallen_end=vallen_end)
-#                actnspec0 = netbufferv4_update_getres_udplen_action_spec_t(\
-#                        aligned_vallen)
-#                self.client.update_udplen_tbl_table_add_with_update_getres_udplen(\
-#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                        op_hdr_optype=GETRES_POP_EVICT_TYPE,
-#                        vallen_hdr_vallen_start=vallen_start,
-#                        vallen_hdr_vallen_end=vallen_end)
-#                actnspec0 = netbufferv4_update_getres_pop_evict_udplen_action_spec_t(\
-#                        aligned_vallen)
-#                self.client.update_udplen_tbl_table_add_with_update_getres_pop_evict_udplen(\
-#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                        op_hdr_optype=GETRES_POP_EVICT_CASE2_TYPE,
-#                        vallen_hdr_vallen_start=vallen_start,
-#                        vallen_hdr_vallen_end=vallen_end)
-#                actnspec0 = netbufferv4_update_getres_pop_evict_case2_udplen_action_spec_t(\
-#                        aligned_vallen)
-#                self.client.update_udplen_tbl_table_add_with_update_getres_pop_evict_case2_udplen(\
-#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                        op_hdr_optype=PUTREQ_POP_EVICT_TYPE,
-#                        vallen_hdr_vallen_start=vallen_start,
-#                        vallen_hdr_vallen_end=vallen_end)
-#                actnspec0 = netbufferv4_update_putreq_pop_evict_udplen_action_spec_t(\
-#                        aligned_vallen)
-#                self.client.update_udplen_tbl_table_add_with_update_putreq_pop_evict_udplen(\
-#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                        op_hdr_optype=PUTREQ_POP_EVICT_CASE2_TYPE,
-#                        vallen_hdr_vallen_start=vallen_start,
-#                        vallen_hdr_vallen_end=vallen_end)
-#                actnspec0 = netbufferv4_update_putreq_pop_evict_case2_udplen_action_spec_t(\
-#                        aligned_vallen)
-#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                        op_hdr_optype=PUTREQ_LARGE_EVICT_TYPE,
-#                        vallen_hdr_vallen_start=vallen_start,
-#                        vallen_hdr_vallen_end=vallen_end)
-#                actnspec0 = netbufferv4_update_putreq_large_evict_udplen_action_spec_t(\
-#                        aligned_vallen)
-#                self.client.update_udplen_tbl_table_add_with_update_putreq_large_evict_udplen(\
-#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                        op_hdr_optype=PUTREQ_LARGE_EVICT_CASE2_TYPE,
-#                        vallen_hdr_vallen_start=vallen_start,
-#                        vallen_hdr_vallen_end=vallen_end)
-#                actnspec0 = netbufferv4_update_putreq_large_evict_case2_udplen_action_spec_t(\
-#                        aligned_vallen)
-#                self.client.update_udplen_tbl_table_add_with_update_putreq_large_evict_case2_udplen(\
-#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                        op_hdr_optype=PUTREQ_CASE1_TYPE,
-#                        vallen_hdr_vallen_start=vallen_start,
-#                        vallen_hdr_vallen_end=vallen_end)
-#                actnspec0 = netbufferv4_update_putreq_case1_udplen_action_spec_t(\
-#                        aligned_vallen)
-#                self.client.update_udplen_tbl_table_add_with_update_putreq_case1_udplen(\
-#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-#                matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                        op_hdr_optype=DELREQ_CASE1_TYPE,
-#                        vallen_hdr_vallen_start=vallen_start,
-#                        vallen_hdr_vallen_end=vallen_end)
-#                actnspec0 = netbufferv4_update_delreq_case1_udplen_action_spec_t(\
-#                        aligned_vallen)
-#                self.client.update_udplen_tbl_table_add_with_update_delreq_case1_udplen(\
-#                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
-#            # NOTE: switch never directly responds PUTREQ_LARGE even if savedseq>seq, its PUTRES must be issued by server which has already set correct udplen
-#            matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                    op_hdr_optype=PUTRES_TYPE,
-#                    vallen_hdr_vallen_start=0,
-#                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-#            self.client.update_udplen_tbl_table_add_with_update_putres_udplen(\
-#                    self.sess_hdl, self.dev_tgt, matchspec0)
-#            # NOTE: DELREQ does not have value -> vallen must be 0
-#            matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
-#                    op_hdr_optype=DELRES_TYPE,
-#                    vallen_hdr_vallen_start=0,
-#                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-#            self.client.update_udplen_tbl_table_add_with_update_delres_udplen(\
-#                    self.sess_hdl, self.dev_tgt, matchspec0)
-#
+
+
 #            # Table: update_macaddr_tbl (default: nop; 5)
 #            print "Configuring update_macaddr_tbl"
 #            actnspec0 = netbufferv4_update_macaddr_s2c_action_spec_t(\

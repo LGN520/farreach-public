@@ -713,11 +713,11 @@
 - Test cases of normal operations: See directory of "testcases/normal"
 	+ Case 1: single read (GETREQ arrives at server)
 		* No key in cache_lookup_tbl, cm=1, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
+	+ Case 2: single write (PUTREQ arrives at server)
+		* No key in cache_lookup_tbl, cm=1, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
+	+ Case 3: read(k1,v1)-write(k1,v2)-read(k1,v2) (GETREQ/PUTREQ_SEQ_POP/GETREQ_POP arrive at server; ignore cache population here)
+		* No key in cache_lookup_tbl, cm=3, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
 - TODO
-	+ Case 2: single write (PUT evicts invalid)
-		* Write new value for a given key
-		* It should write the value into switch by recirculation and sendback PUTRES (no PUTREQ_POP)
-		* In-switch result: non-zero key, vallen, and val, seq = 1, savedseq = 0, lock = 0, valid = 1, vote = 1
 	+ Case 3: read-after-write
 		* Write value of k1 and then read k1
 		* It should write the value in switch and read the value from switch (not touch server)

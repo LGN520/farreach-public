@@ -802,93 +802,68 @@ table scan_forward_tbl {
 #endif
 
 
-
-
-
-
-/*action update_getres_udplen(aligned_vallen) {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen
-	add(udp_hdr.hdrLen, aligned_vallen, 29);
+// NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
+/*// CACHE_POP_INSWITCH_ACK
+action update_onlyop_udplen() {
+	// 6(udphdr) + 17(ophdr) + 1(debug_hdr)
+	modify_field(udp_hdr.hdrlen, 24);
 }
 
-action update_getres_pop_evict_udplen(aligned_vallen) {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq)
-	add(udp_hdr.hdrLen, aligned_vallen, 33);
+// GETRES
+action update_val_stat_udplen(aligned_vallen) {
+	// 6(udphdr) + 17(ophdr) + 4(vallen) + aligned_vallen(val) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
+	add(udp_hdr.hdrlen, aligned_vallen, 30);
 }
 
-action update_getres_pop_evict_case2_udplen(aligned_vallen) {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq) + 1(other)
-	add(udp_hdr.hdrLen, aligned_vallen, 34);
+// GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
+action update_val_seq_inswitch_stat_udplen(aligned_vallen) {
+	// 6(udphdr) + 17(ophdr) + 4(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 9(inswitch) + 1(stat) + 1(debug_hdr)
+	add(udp_hdr.hdrlen, aligned_vallen, 43);
 }
 
-action update_putres_udplen() {
-	// 6(udphdr) + 19(ophdr) + 1(stat)
-	modify_field(udp_hdr.hdrLen, 26);
+// PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3
+action update_val_seq_udplen(aligned_vallen) {
+	// 6(udphdr) + 17(ophdr) + 4(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 1(debug_hdr)
+	add(udp_hdr.hdrlen, aligned_vallen, 33);
 }
 
-action update_putreq_pop_evict_udplen() {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq)
-	add(udp_hdr.hdrLen, aligned_vallen, 33);
+// PUTRES, DELRES
+action update_stat_udplen() {
+	// 6(udphdr) + 17(ophdr) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
+	modify_field(udp_hdr.hdrlen, 26);
 }
 
-action update_putreq_pop_evict_case2_udplen() {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq) + 1(other)
-	add(udp_hdr.hdrLen, aligned_vallen, 34);
+// DELREQ_SEQ, DELREQ_SEQ_CASE3
+action update_seq_udplen() {
+	// 6(udphdr) + 17(ophdr) + 1(shadowtype) + 4(seq) + 1(debug_hdr)
+	modify_field(udp_hdr.hdrlen, 29);
+}*/
+
+action update_udplen(udplen) {
+	modify_field(udp_hdr.hdrlen, udplen);
 }
 
-action update_putreq_large_evict_udplen() {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq)
-	add(udp_hdr.hdrLen, aligned_vallen, 33);
-}
-
-// NOTE: PUTREQ_LARGE_EVICT_CASE2 does not need other_hdr.isvalid
-action update_putreq_large_evict_case2_udplen() {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen + 4(seq)
-	add(udp_hdr.hdrLen, aligned_vallen, 33);
-}
-
-action update_putreq_case1_udplen() {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen
-	// NOTE: case 1 does not need seq, as it is sent from switch to switch OS in design without packet loss
-	// and we do not need to save it in server-side KVS and hence not need to cope with overwrite
-	add(udp_hdr.hdrLen, aligned_vallen, 29);
-}
-
-action update_delres_udplen() {
-	// 6(udphdr) + 19(ophdr) + 1(stat)
-	modify_field(udp_hdr.hdrLen, 26);
-}
-
-action update_delreq_case1_udplen() {
-	// 6(udphdr) + 19(ophdr) + 4(vallen) + aligned_vallen
-	// NOTE: case 1 does not need seq, as it is sent from switch to switch OS in design without packet loss
-	// and we do not need to save it in server-side KVS and hence not need to cope with overwrite
-	add(udp_hdr.hdrLen, aligned_vallen, 29);
-}
-
+@pragma stage 11
 table update_udplen_tbl {
 	reads {
 		op_hdr.optype: exact;
 		vallen_hdr.vallen: range;
 	}
 	actions {
-		update_getres_udplen;
-		update_getres_pop_evict_udplen;
-		update_getres_pop_evict_case2_udplen;
-		update_putres_udplen;
-		update_putreq_pop_evict_udplen;
-		update_putreq_pop_evict_case2_udplen;
-		update_putreq_large_evict_udplen;
-		update_putreq_large_evict_case2_udplen;
-		update_putreq_case1_udplen;
-		update_delreq_udplen;
-		update_delreq_case1_udplen;
+		/*update_onlyop_udplen;
+		update_val_stat_udplen;
+		update_val_seq_inswitch_stat_udplen;
+		update_val_seq_udplen;
+		update_stat_udplen;
+		update_seq_udplen;*/
+		update_udplen;
+		nop;
 	}
-	default_action: nop(); // not change udp_hdr.hdrLen
+	default_action: nop(); // not change udp_hdr.hdrlen (GETREQ/GETREQ_POP/GETREQ_NLATEST)
 	size: 256;
 }
 
-action update_macaddr_s2c(tmp_srcmac, tmp_dstmac) {
+/*action update_macaddr_s2c(tmp_srcmac, tmp_dstmac) {
 	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
 	modify_field(ethernet_hdr.srcAddr, tmp_dstmac);
 }

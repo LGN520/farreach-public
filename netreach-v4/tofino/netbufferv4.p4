@@ -270,9 +270,6 @@ control egress {
 	apply(update_valhi15_tbl);
 	apply(update_vallo16_tbl);
 	apply(update_valhi16_tbl);
-
-	// Stage 4
-	// The same stage
-	//apply(update_udplen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
+	apply(update_udplen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
 	//apply(update_macaddr_tbl); // Update mac addr for responses and PUTREQ_GS/GS_CASE2
 }
