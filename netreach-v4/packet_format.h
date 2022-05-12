@@ -13,6 +13,9 @@
 // # of bytes before idx in inswitch_hdr
 #define INSWITCH_PREV_BYTES 7
 
+// # of bytes in debug_hdr
+#define DEBUG_BYTES 1
+
 // op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr
 
 // (1) vallen&value: mask 0b0001; seq: mask 0b0010; inswitch_hdr: mask 0b0100; stat: mask 0b1000;

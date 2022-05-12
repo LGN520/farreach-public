@@ -127,13 +127,20 @@ header_type metadata_t {
 		cm2_predicate: 4;
 		cm3_predicate: 4;
 		cm4_predicate: 4;
-		is_hot: 1;
 		validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;
 		clonenum_for_pktloss: 8;
+	}
+}
+
+header_type debug_t {
+	fields {
+		// 8-bit container
+		is_hot: 1;
 		is_lastclone_for_pktloss: 1;
+		padding: 6;
 	}
 }
 
@@ -169,3 +176,4 @@ header seq_t seq_hdr;
 header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
 metadata metadata_t meta;
+header debug_t debug_hdr;

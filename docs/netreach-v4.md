@@ -74,6 +74,8 @@
 - NOTE for socket timeout
 	+ select() is used to set timeout for all output functions, e.g., connect and send
 	+ setsockopt() for SO_RCVTIMEO is used to set timeout for all input functions, e.g., accept and receive
+- NOTE for parser/deparser
+	+ We must invoke add_header() explicitly for each new header even if the parser/deparser has indicated that we need the new header; otherwise, the new header will not be embedded into the packet
 
 ## Overview
 
@@ -711,8 +713,7 @@
 - Test cases of normal operations: See directory of "testcases/normal"
 	+ Case 1: single read (GETREQ arrives at server)
 		* No key in cache_lookup_tbl, cm=1, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
-
-
+- TODO
 	+ Case 2: single write (PUT evicts invalid)
 		* Write new value for a given key
 		* It should write the value into switch by recirculation and sendback PUTRES (no PUTREQ_POP)
@@ -755,7 +756,7 @@
 		* It first gets value of k1 from server and stores it in switch, then it deletes k1 (set vallen=0 without changing valid and vote), the 2nd GET
 		of k1 gets a value of size 0 
 		* In-switch result: non-zero key, vallen=0, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 1, vote = 2
-- Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
+- TODO: Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
 	+ NOTE: remember to set bucket_num in config.ini, otherwise the hashidx will be incorrect sent by phase2 ptf
 	+ NOTE: if data in backup is not dirty, it will incur duplicate results for range query -> we leave the deduplication in client-side
 		* If data in backup is dirty, it will incur inconsistent results (from KVS and backup) for range query -> we leave it in client-side, i.e., client treats data from backup with higher priority

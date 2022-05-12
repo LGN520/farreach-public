@@ -76,11 +76,11 @@ table is_last_scansplit_tbl {
 #endif
 
 action set_is_hot() {
-	modify_field(meta.is_hot, 1);
+	modify_field(debug_hdr.is_hot, 1);
 }
 
 action reset_is_hot() {
-	modify_field(meta.is_hot, 0);
+	modify_field(debug_hdr.is_hot, 0);
 }
 
 @pragma stage 1
@@ -102,11 +102,11 @@ table is_hot_tbl {
 // Stage 9
 
 action set_is_lastclone() {
-	modify_field(meta.is_lastclone_for_pktloss, 1);
+	modify_field(debug_hdr.is_lastclone_for_pktloss, 1);
 }
 
 action reset_is_lastclone() {
-	modify_field(meta.is_lastclone_for_pktloss, 0);
+	modify_field(debug_hdr.is_lastclone_for_pktloss, 0);
 }
 
 @pragma stage 9
@@ -720,13 +720,13 @@ table eg_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		meta.is_hot: exact;
+		debug_hdr.is_hot: exact;
 		meta.validvalue: exact;
 		meta.is_latest: exact;
 		meta.is_deleted: exact;
 		//inswitch_hdr.is_wrong_pipeline: exact;
 		inswitch_hdr.sid: exact;
-		meta.is_lastclone_for_pktloss: exact;
+		debug_hdr.is_lastclone_for_pktloss: exact;
 		inswitch_hdr.snapshot_flag: exact;
 		meta.is_case1: exact;
 	}

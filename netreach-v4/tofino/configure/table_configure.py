@@ -995,13 +995,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = GETREQ_INSWITCH,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = sid,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     if is_cached == 0:
@@ -1099,13 +1099,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = GETRES_LATEST_SEQ,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = 0,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     # TODO: check if we need to set egress port for packet cloned by clone_i2e
@@ -1119,13 +1119,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = 0,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     if is_cached == 1 and validvalue == 1 and is_latest == 0 and snapshot_flag == 1 and is_case1 == 0:
@@ -1148,13 +1148,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH_CASE1,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = 0,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     if is_lastclone_for_pktloss == 0:
@@ -1173,13 +1173,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = GETRES_DELETED_SEQ,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = 0,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     # TODO: check if we need to set egress port for packet cloned by clone_i2e
@@ -1193,13 +1193,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = 0,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     if is_cached == 1 and validvalue == 1 and is_latest == 0 and snapshot_flag == 1 and is_case1 == 0:
@@ -1222,13 +1222,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH_CASE1,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = 0,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     if is_lastclone_for_pktloss == 0:
@@ -1247,13 +1247,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = CACHE_POP_INSWITCH,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = 0,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     # Update CACHE_POP_INSWITCH as CACHE_POP_INSWITCH_ACK to reflector (w/ clone)
@@ -1268,13 +1268,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = CACHE_POP_INSWITCH_ACK,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = 0,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     # TODO: check if we need to set egress port for packet cloned by clone_e2e
@@ -1293,13 +1293,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = PUTREQ_INSWITCH,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = sid,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     if is_cached == 0:
@@ -1360,13 +1360,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = PUTREQ_SEQ_INSWITCH_CASE1,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = sid,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     if is_lastclone_for_pktloss == 0:
@@ -1393,13 +1393,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = DELREQ_INSWITCH,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = sid,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     if is_cached == 0:
@@ -1450,13 +1450,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = DELREQ_SEQ_INSWITCH_CASE1,
                                                         inswitch_hdr_is_cached = is_cached,
-                                                        meta_is_hot = is_hot,
+                                                        debug_hdr_is_hot = is_hot,
                                                         meta_validvalue = validvalue,
                                                         meta_is_latest = is_latest,
                                                         meta_is_deleted = is_deleted,
                                                         #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                         inswitch_hdr_sid = sid,
-                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        debug_hdr_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                         inswitch_hdr_snapshot_flag = snapshot_flag,
                                                         meta_is_case1 = is_case1)
                                                     if is_lastclone_for_pktloss == 0:
