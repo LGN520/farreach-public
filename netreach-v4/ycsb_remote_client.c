@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <random>
@@ -25,9 +24,18 @@
 #include "crc32.h"
 
 #include "common_impl.h"
+#include "latency_helper.h"
 
-struct alignas(CACHELINE_SIZE) FGParam;
-
+struct alignas(CACHELINE_SIZE) FGParam {
+	uint16_t thread_id;
+	std::vector<double> req_latency_list;
+	std::vector<double> rsp_latency_list;
+	std::vector<double> wait_latency_list;
+#ifdef TEST_DPDK_POLLING
+	std::vector<double> wait_list; // TMPTMP: To count dpdk polling time
+#endif
+	//double sum_latency;
+};
 typedef FGParam fg_param_t;
 
 void load();
@@ -46,6 +54,10 @@ struct rte_mbuf*** volatile pkts_list;
 uint32_t* volatile heads;
 uint32_t* volatile tails;
 
+std::vector<double> receiver_latency_list;
+#ifdef TEST_DPDK_POLLING
+double receiver_sum_latency = 0.0; // TMPTMP
+#endif
 
 // SCAN split
 size_t get_server_idx(index_key_t key) {
@@ -78,18 +90,6 @@ volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
 std::atomic<size_t> finish_threads(0);
 
-struct alignas(CACHELINE_SIZE) FGParam {
-	uint16_t thread_id;
-	std::vector<double> latency_list;
-#ifdef TEST_DPDK_POLLING
-	std::vector<double> wait_list; // TMPTMP: To count dpdk polling time
-#endif
-	double sum_latency;
-};
-#ifdef TEST_DPDK_POLLING
-double receiver_sum_latency = 0.0; // TMPTMP
-#endif
-
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
 
@@ -121,7 +121,7 @@ void prepare_dpdk() {
 	dpdk_argv[i] = new char[20];
 	memset(dpdk_argv[i], '\0', 20);
 	}
-	std::string arg_proc = "./client";
+	std::string arg_proc = "./ycsb_remote_client";
 	std::string arg_iovamode = "--iova-mode";
 	std::string arg_iovamode_val = "pa";
 	std::string arg_file_prefix = "--file-prefix";
@@ -189,11 +189,13 @@ void run_benchmark() {
 	// Launch workers
 	for (uint16_t worker_i = 0; worker_i < client_num; worker_i++) {
 		fg_params[worker_i].thread_id = worker_i;
-		fg_params[worker_i].latency_list.clear();
+		fg_params[worker_i].req_latency_list.clear();
+		fg_params[worker_i].rsp_latency_list.clear();
+		fg_params[worker_i].wait_latency_list.clear();
 #ifdef TEST_DPDK_POLLING
 		fg_params[worker_i].wait_list.clear();
 #endif
-		fg_params[worker_i].sum_latency = 0.0;
+		//fg_params[worker_i].sum_latency = 0.0;
 		/*int ret = pthread_create(&threads[worker_i], nullptr, run_fg,
 														 (void *)&fg_params[worker_i]);*/
 	ret = rte_eal_remote_launch(run_fg, (void *)&fg_params[worker_i], lcoreid);
@@ -218,30 +220,24 @@ void run_benchmark() {
 	COUT_THIS("[client] processing statistics");
 
 	// Dump latency statistics
-	std::vector<double> latency_list;
+	std::vector<double> req_latency_list, rsp_latency_list, wait_latency_list;
 #ifdef TEST_DPDK_POLLING
 	std::vector<double> wait_list; // TMPTMP
 #endif
-	double sum_latency = 0.0;
+	//double sum_latency = 0.0;
 	for (size_t i = 0; i < client_num; i++) {
-		latency_list.insert(latency_list.end(), fg_params[i].latency_list.begin(), fg_params[i].latency_list.end());
+		req_latency_list.insert(req_latency_list.end(), fg_params[i].req_latency_list.begin(), fg_params[i].req_latency_list.end());
+		rsp_latency_list.insert(rsp_latency_list.end(), fg_params[i].rsp_latency_list.begin(), fg_params[i].rsp_latency_list.end());
+		wait_latency_list.insert(wait_latency_list.end(), fg_params[i].wait_latency_list.begin(), fg_params[i].wait_latency_list.end());
 #ifdef TEST_DPDK_POLLING
 		wait_list.insert(wait_list.end(), fg_params[i].wait_list.begin(), fg_params[i].wait_list.end()); // TMPTMP
 #endif
-		sum_latency += fg_params[i].sum_latency;
+		//sum_latency += fg_params[i].sum_latency;
 	}
-	double min_latency, max_latency, avg_latency, tail90_latency, tail99_latency, median_latency;
-	std::sort(latency_list.begin(), latency_list.end());
-	min_latency = latency_list[0];
-	max_latency = latency_list[latency_list.size()-1];
-	tail90_latency = latency_list[latency_list.size()*0.9];
-	tail99_latency = latency_list[latency_list.size()*0.99];
-	median_latency = latency_list[latency_list.size()/2];
-	avg_latency = sum_latency / double(latency_list.size());
-	COUT_THIS("[Latency Statistics]")
-	COUT_THIS("| min | max | avg | 90th | 99th | median | sum |");
-	COUT_THIS("| " << min_latency << " | " << max_latency << " | " << avg_latency << " | " << tail90_latency \
-			<< " | " << tail99_latency << " | " << median_latency << " | " << sum_latency << " |");
+	dump_latency(req_latency_list, "req_latency_list");
+	dump_latency(rsp_latency_list, "rsp_latency_list");
+	dump_latency(wait_latency_list, "wait_latency_list");
+	dump_latency(receiver_latency_list, "receiver_latency_list");
 #ifdef TEST_DPDK_POLLING
 	// TMPTMP
 	double avg_receiver_latency = receiver_sum_latency / double(wait_list.size());
@@ -254,9 +250,9 @@ void run_benchmark() {
 	// median_wait: dpdk overhead + client-side packet dispatching + schedule cost for PMD
 	// min_watt: dpdk overhead
 	// avg_receiver_latency: client-side packet dispatching
-	COUT_THIS("Ddpdk polling time: " << (median_wait - min_wait - avg_receiver_latency)); // schedule cost for PMD
+	COUT_THIS("dpdk polling time: " << (median_wait - min_wait - avg_receiver_latency)); // schedule cost for PMD
 #endif
-	COUT_THIS("Client-side throughput: " << latency_list.size());
+	COUT_THIS("Client-side throughput: " << req_latency_list.size());
 
 
 
@@ -277,14 +273,11 @@ static int run_receiver(void *param) {
 		;
 
 	struct rte_mbuf *received_pkts[32];
-#ifdef TEST_DPDK_POLLING
 	struct timespec receiver_t1, receiver_t2, receiver_t3;
-#endif
 	while (running) {
-#ifdef TEST_DPDK_POLLING
 		CUR_TIME(receiver_t1);
-#endif
-		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
+		//uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
+		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 1);
 		if (n_rx == 0) {
 			continue;
 		}
@@ -312,9 +305,10 @@ static int run_receiver(void *param) {
 					if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
 						pkts_list[idx][heads[idx]] = received_pkts[i];
 						heads[idx] = (heads[idx] + 1) % MQ_SIZE;
-#ifdef TEST_DPDK_POLLING
 						CUR_TIME(receiver_t2);
 						DELTA_TIME(receiver_t2, receiver_t1, receiver_t3);
+						receiver_latency_list.push_back(GET_MICROSECOND(receiver_t3));
+#ifdef TEST_DPDK_POLLING
 						receiver_sum_latency += GET_MICROSECOND(receiver_t3);
 #endif
 					}
@@ -564,7 +558,9 @@ static int run_fg(void *param) {
 		DELTA_TIME(req_t2, req_t1, req_t3);
 		DELTA_TIME(rsp_t2, rsp_t1, rsp_t3);
 		DELTA_TIME(wait_t2, wait_t1, wait_t3);
-		SUM_TIME(req_t3, rsp_t3, final_t3); // time of sending req and receiving rsp
+		//SUM_TIME(req_t3, rsp_t3, final_t3); // time of sending req and receiving rsp
+		double req_time = GET_MICROSECOND(req_t3);
+		double rsp_time = GET_MICROSECOND(rsp_t3);
 		double wait_time = GET_MICROSECOND(wait_t3);
 		double final_time = GET_MICROSECOND(final_t3);
 		if (wait_time > dpdk_polling_time) {
@@ -572,8 +568,10 @@ static int run_fg(void *param) {
 			final_time += (wait_time - dpdk_polling_time); // time of in-switch queuing and server-side latency
 		}
 
-		thread_param.sum_latency += final_time;
-		thread_param.latency_list.push_back(final_time);
+		//thread_param.sum_latency += final_time;
+		thread_param.req_latency_list.push_back(req_time);
+		thread_param.rsp_latency_list.push_back(rsp_time);
+		thread_param.wait_latency_list.push_back(wait_time);
 #ifdef TEST_DPDK_POLLING
 		thread_param.wait_list.push_back(wait_time); // TMPTMP
 #endif

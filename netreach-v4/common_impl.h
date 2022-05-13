@@ -57,7 +57,8 @@ typedef CacheEvictCase2<index_key_t, val_t> cache_evict_case2_t;
  * Constants
  */
 
-const double dpdk_polling_time = 21.82; // Test by enabling TEST_DPDK_POLLING, and only transmit packets between client and switch
+//const double dpdk_polling_time = 21.82; // Test by enabling TEST_DPDK_POLLING, and only transmit packets between client and switch
+const double dpdk_polling_time = 0.0;
 const size_t max_sending_rate = size_t(1.2 * 1024 * 1024); // 1.2 MQPS; limit sending rate to x (e.g., the aggregate rate of servers)
 const size_t rate_limit_period = 10 * 1000; // 10 * 1000us
 

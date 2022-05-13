@@ -43,6 +43,7 @@
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
 #include "common_impl.h"
+#include "latency_helper.h"
 
 /* class and alias */
 
@@ -360,6 +361,7 @@ void transaction_main(xindex_t *table) {
 		server_worker_params[worker_i].table = table;
 		server_worker_params[worker_i].serveridx = worker_i;
 		server_worker_params[worker_i].throughput = 0;
+		server_worker_params[worker_i].latency_list.clear();
 #ifdef TEST_AGG_THPT
 		server_worker_params[worker_i].sum_latency = 0.0;
 #endif
@@ -415,13 +417,23 @@ void transaction_main(xindex_t *table) {
 	for (size_t i = 0; i < load_balance_ratio_list.size(); i++) {
 		COUT_THIS("Load balance ratio of server " << i << ": " << load_balance_ratio_list[i]);
 	}
+	std::vector<double> worker_latency_list;
+	for (size_t i = 0; i < server_num; i++) {
+		worker_latency_list.insert(worker_latency_list.end(), server_worker_params[i].latency_list.begin(), server_worker_params[i].latency_list.end());
+	}
+	dump_latency(worker_latency_list, "worker_latency_list");
+	dump_latency(receiver_latency_list, "receiver_latency_list");
 #ifdef TEST_AGG_THPT
 	double max_agg_thpt = 0.0;
+	double avg_latency = 0.0;
 	for (size_t i = 0; i < server_num; i++) {
 		max_agg_thpt += (double(server_worker_params[i].throughput) / server_worker_params[i].sum_latency * 1000 * 1000);
+		avg_latency += server_worker_params[i].sum_latency;
 	}
 	max_agg_thpt /= double(1024 * 1024);
+	avg_latency /= overall_thpt;
 	COUT_THIS("Max server-side aggregate throughput: " << max_agg_thpt << " MQPS");
+	COUT_THIS("Average latency: " << avg_latency << "us");
 #endif
 
 	transaction_running = false;

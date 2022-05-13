@@ -148,12 +148,12 @@ CLEAN += split_workload.o split_workload
 #DEPS += ycsb_local_client.d
 #CLEAN += ycsb_local_client.o ycsb_local_client
 
-ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o
+ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o latency_helper.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += ycsb_remote_client.d
 CLEAN += ycsb_remote_client.o ycsb_remote_client
 
-ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o ycsb/parser.o socket_helper.o $(INIPARSER_OBJECTS)
+ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o ycsb/parser.o socket_helper.o $(INIPARSER_OBJECTS) latency_helper.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += ycsb_server.d
 CLEAN += ycsb_server.o ycsb_server
