@@ -23,3 +23,5 @@ ycsb_server
 *.pcap
 switchos
 controller
+dpdktest_client
+dpdktest_server

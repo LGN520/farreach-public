@@ -139,6 +139,9 @@
 		* Configure huge page
 			- `sudo sysctl -w vm.nr_hugepages=1024`
 			- Run `cat /proc/meminfo | grep Huge` or `cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages` to check huge page size
+			- Not necessary
+				+ `mkdir -p /mnt/huge_2mb`
+				+ `sudo mount -t hugetlbfs none /mnt/huge_2mb -o pagesize=2MB`
 		* Configure environment for DPDK
 			- Add `export RTE_SDK=/home/ssy/dpdk/dpdk-20.08` into /etc/profile
 			- Add `export RTE_TARGET=x86_64-native-linuxapp-gcc` into /etc/profile

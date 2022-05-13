@@ -3,7 +3,7 @@
 #include <arpa/inet.h>
 
 uint16_t Val::MAX_VALLEN = 128;
-uint16_t Val::SWITCH_MAX_VALLEN = 256;
+uint16_t Val::SWITCH_MAX_VALLEN = 128;
 
 uint16_t Val::get_padding_size(uint16_t vallen) {
 	uint16_t padding_size = 0;

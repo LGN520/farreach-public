@@ -89,7 +89,7 @@ include mk/recipes.mk
 DEPS :=
 CLEAN :=
 #TARGETS := prepare split_workload ycsb_local_client ycsb_remote_client ycsb_server
-TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_server switchos controller
+TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_server switchos controller dpdktest_client dpdktest_server
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
@@ -167,6 +167,16 @@ controller: controller.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += controller.d
 CLEAN += controller.o controller
+
+dpdktest_client: dpdktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += dpdktest_client.d
+CLEAN += dpdktest_client.o dpdktest_client
+
+dpdktest_server: dpdktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += dpdktest_server.d
+CLEAN += dpdktest_server.o dpdktest_server
 
 ##############################################################################
 # Top level targets
