@@ -219,7 +219,7 @@ control egress {
 	apply(access_cache_frequency_tbl);
 	apply(access_validvalue_tbl);
 	apply(access_seq_tbl);
-	apply(save_client_srcport_tbl);
+	apply(save_client_port_tbl);
 
 	// Stage 2
 	apply(access_latest_tbl);

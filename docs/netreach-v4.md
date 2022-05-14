@@ -812,6 +812,44 @@
 
 ## Fixed issues
 
+- Process of fixing latency issue
+	+ Survey
+		+ Read source code of l3fwd
+			* l3fwd maintains an application-level buffer of 32 packets over DPDK; if buffer exceeds 32 packets or time exceeds BURST_TX_DRAIN_US, it invokes rte_eth_tx_burst to send out packets immediately
+		+ Read source code of vhost
+			* BURST_TX_DRAIN_US is an application-level parameter, which is used to drain tx_mbuf->mbuf_table periodically
+			* BURST_RX_WAIT_US is an application-level parameter, which periodically waits for available entries of vhost such that it can place the packets from guest.rte_eth_rx_burst into vhost
+		+ Read source code of lib/librte_ethdev/rte_ethdev.h::rte_eth_rx_burst (i.e., dev->rx_pkt_burst) -> drivers/net/i40e/i40e_rxtx_vec_neon.c::_recv_raw_pkts_vec -> drivers/net/i40e/i40e_rxtx.c::i40e_recv_pkts
+			* i40e_recv_pkts
+			* RTE_I40E_DESCS_PER_LOOP
+		+ TX latency
+			* NOTE: pkt -> tx_ring (hardware ring mapped with tx_queue)
+			* As user must know # of packets to be sent out, DPDK does not maintain internal buffer for rte_eth_tx_burst
+				- If nb_pkts > # of packets in rte_mbufs, it may incur buffer overflow
+				- We can set nb_pkts=1 in rte_eth_tx_burst for low TX latency
+			* If for high thpt, we can maintain an application-level buffer as in l3fwd or vhost or use rte_eth_tx_buffer
+		+ RX latency
+			* NOTE: pkt -> rx_ring (hardware ring mapped with rx_queue) -> sw_ring (software ring) -> RSS
+			* Try to set nv_pkts=1 in  rte_eth_rx_burst -> FAIL
+				- Even if nb_pkts > 1, i40e_recv_pkts should return if encountering a desc w/ DD bit = 0
+	+ Failed trials
+		- set RTE_I40E_DESCS_PER_LOOP=1 in drivers/net/i40e/i40e_rxtx.h in dpdk-18.11 to support rx_burst=1 -> FAIL
+				+ avg latency: 30us for rx_burst=32; 28us for rx_burst=4; 28us for rx_burst=1
+			- Implement break-down latency test in both client (req + rsp + wait (including receiver)) and server (process + receiver)
+				- client: 0.4us to process request; 0.3us to process response; 26.4us for polling (0.4us for message queue)
+				- server: 0.4us for message queue; 3us for in-memory KVS
+				- -> 26.4-3.4=23us for DPDK overhead (dominant) + transmission latency
+		- Use a simple dpdk-based echo program (dpdktest_client-to-dpdktest_server w/o receiver) -> message queue overhead -> FAIL
+			- client-side wait_latency is still around 28us
+			- One-to-one manner also implies that it is not due to cross-NUMA overhead
+		- Use a simple P4 forwarding program as switch -> tofino overhead -> FAIL
+			- client-side wait_latency is still around 27us
+		- Mount hugelbfs to enable 2MB hugepage -> TLB overhead -> FAIL
+			- client-side wait_latency is still around 27us
+		- Check dpdk-related part in NetCache source code
+			- only provide a simple simulator based on udp socket and bmv2 w/o dpdk module and tofino module -> FAIL
+		- TODO: Test cache hit latency
+
 ## Future work
 
 - For PUTREQ_LARGE
