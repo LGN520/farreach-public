@@ -42,22 +42,17 @@ void load();
 void run_benchmark();
 //void *run_fg(void *param); // sender
 void prepare_dpdk();
-void prepare_receiver();
+//void prepare_receiver();
 
 // DPDK
 static int run_fg(void *param); // sender
-static int run_receiver(__attribute__((unused)) void *param); // receiver
+//static int run_receiver(__attribute__((unused)) void *param); // receiver
 struct rte_mempool *mbuf_pool = NULL;
-//volatile struct rte_mbuf **pkts;
-//volatile bool *stats;
-struct rte_mbuf*** volatile pkts_list;
-uint32_t* volatile heads;
-uint32_t* volatile tails;
 
-std::vector<double> receiver_latency_list;
-#ifdef TEST_DPDK_POLLING
-double receiver_sum_latency = 0.0; // TMPTMP
-#endif
+/*struct rte_mbuf*** volatile pkts_list;
+uint32_t* volatile heads;
+uint32_t* volatile tails;*/
+//std::vector<double> receiver_latency_list;
 
 // SCAN split
 size_t get_server_idx(index_key_t key) {
@@ -97,17 +92,17 @@ int main(int argc, char **argv) {
 	prepare_dpdk();
 
 	// Prepare pkts and stats for receiver (based on ring buffer)
-	prepare_receiver();
+	//prepare_receiver();
 
 	run_benchmark();
 
 	// Free DPDK mbufs
-	for (size_t i = 0; i < client_num; i++) {
+	/*for (size_t i = 0; i < client_num; i++) {
 		while (heads[i] != tails[i]) {
 			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[i][tails[i]]);
 			tails[i] += 1;
 		}
-	}
+	}*/
 	dpdk_free();
 
 	exit(0);
@@ -136,10 +131,15 @@ void prepare_dpdk() {
 	//memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
 	//memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
 	rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
-	dpdk_init(&mbuf_pool, client_num, 1);
+	//dpdk_init(&mbuf_pool, client_num, 1);
+
+	dpdk_init(&mbuf_pool, client_num, client_num);
+	for (uint16_t idx = 0; idx < client_num; idx++) {
+		generate_udp_fdir_rule(0, idx, client_port_start+idx);
+	}
 }
 
-void prepare_receiver() {
+/*void prepare_receiver() {
 	//pkts = new volatile struct rte_mbuf*[client_num];
 	//stats = new volatile bool[client_num];
 	//memset((void *)pkts, 0, sizeof(struct rte_mbuf *)*client_num);
@@ -160,7 +160,7 @@ void prepare_receiver() {
 		}
 		//res = rte_pktmbuf_alloc_bulk(mbuf_pool, pkts_list[i], MQ_SIZE);
 	}
-}
+}*/
 
 void run_benchmark() {
 	int ret = 0;
@@ -169,12 +169,12 @@ void run_benchmark() {
 	running = false;
 
 	// Launch receiver
-	ret = rte_eal_remote_launch(run_receiver, NULL, lcoreid);
+	/*ret = rte_eal_remote_launch(run_receiver, NULL, lcoreid);
 	if (ret) {
 		COUT_N_EXIT("Error:" << ret);
 	}
 	COUT_THIS("[client] Launch receiver at lcore " << lcoreid)
-	lcoreid++;
+	lcoreid++;*/
 
 	// Prepare fg params
 	//pthread_t threads[client_num];
@@ -237,7 +237,7 @@ void run_benchmark() {
 	dump_latency(req_latency_list, "req_latency_list");
 	dump_latency(rsp_latency_list, "rsp_latency_list");
 	dump_latency(wait_latency_list, "wait_latency_list");
-	dump_latency(receiver_latency_list, "receiver_latency_list");
+	//dump_latency(receiver_latency_list, "receiver_latency_list");
 #ifdef TEST_DPDK_POLLING
 	// TMPTMP
 	double avg_receiver_latency = receiver_sum_latency / double(wait_list.size());
@@ -268,15 +268,14 @@ void run_benchmark() {
 	rte_eal_mp_wait_lcore();
 }
 
-static int run_receiver(void *param) {
+/*static int run_receiver(void *param) {
 	while (!running)
 		;
 
-	struct rte_mbuf *received_pkts[32];
+	struct rte_mbuf *received_pkts[1];
 	struct timespec receiver_t1, receiver_t2, receiver_t3;
 	while (running) {
 		CUR_TIME(receiver_t1);
-		//uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 32);
 		uint16_t n_rx = rte_eth_rx_burst(0, 0, received_pkts, 1);
 		if (n_rx == 0) {
 			continue;
@@ -294,14 +293,6 @@ static int run_receiver(void *param) {
 					continue;
 				}
 				else {
-					/*if (unlikely(stats[idx])) {
-						COUT_THIS("Invalid stas[" << idx << "] which is true!")
-						continue;
-					}
-					else {
-						pkts[idx] = received_pkts[i];
-						stats[idx] = true;
-					}*/
 					if (((heads[idx] + 1) % MQ_SIZE) != tails[idx]) {
 						pkts_list[idx][heads[idx]] = received_pkts[i];
 						heads[idx] = (heads[idx] + 1) % MQ_SIZE;
@@ -321,7 +312,7 @@ static int run_receiver(void *param) {
 		}
 	}
 	return 0;
-}
+}*/
 
 static int run_fg(void *param) {
 	fg_param_t &thread_param = *(fg_param_t *)param;
@@ -353,6 +344,7 @@ static int run_fg(void *param) {
 	char buf[MAX_BUFSIZE];
 	int req_size = 0;
 	int recv_size = 0;
+	struct rte_mbuf *rx_pkts[1] = {NULL};
 
 #if !defined(NDEBUGGING_LOG)
 	std::string logname;
@@ -389,21 +381,21 @@ static int run_fg(void *param) {
 			INVARIANT(res == 1);
 			CUR_TIME(req_t2);
 
-			/*while (!stats[thread_id])
-				;
-			stats[thread_id] = false;
-			recv_size = get_payload(pkts[thread_id], buf);
-			rte_pktmbuf_free((struct rte_mbuf*)pkts[thread_id]);*/
 			CUR_TIME(wait_t1);
-			while (heads[thread_id] == tails[thread_id])
-				;
-			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+			//while (heads[thread_id] == tails[thread_id])
+			//	;
+			//INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+			receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id);
 			CUR_TIME(wait_t2);
 
 			CUR_TIME(rsp_t1);
-			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
-			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
-			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
+			//recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
+			//rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
+			//pkts_list[thread_id][tails[thread_id]] = NULL;
+			//tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
+			recv_size = get_payload(rx_pkts[0], buf);
+			rte_pktmbuf_free((struct rte_mbuf*)rx_pkts[0]);
+			rx_pkts[0] = NULL;
 			INVARIANT(recv_size != -1);
 
 			get_response_t rsp(buf, recv_size);
@@ -436,15 +428,20 @@ static int run_fg(void *param) {
 			CUR_TIME(req_t2);
 
 			CUR_TIME(wait_t1);
-			while (heads[thread_id] == tails[thread_id])
+			/*while (heads[thread_id] == tails[thread_id])
 				;
-			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);*/
+			receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id);
 			CUR_TIME(wait_t2);
 
 			CUR_TIME(rsp_t1);
-			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
-			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
-			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
+			//recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
+			//rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
+			//pkts_list[thread_id][tails[thread_id]] = NULL;
+			//tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
+			recv_size = get_payload(rx_pkts[0], buf);
+			rte_pktmbuf_free((struct rte_mbuf*)rx_pkts[0]);
+			rx_pkts[0] = NULL;
 			INVARIANT(recv_size != -1);
 
 			put_response_t rsp(buf, recv_size);
@@ -465,15 +462,20 @@ static int run_fg(void *param) {
 			CUR_TIME(req_t2);
 
 			CUR_TIME(wait_t1);
-			while (heads[thread_id] == tails[thread_id])
+			/*while (heads[thread_id] == tails[thread_id])
 				;
-			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);*/
+			receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id);
 			CUR_TIME(wait_t2);
 
 			CUR_TIME(rsp_t1);
-			recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
-			rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
-			tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
+			//recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
+			//rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
+			//pkts_list[thread_id][tails[thread_id]] = NULL;
+			//tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
+			recv_size = get_payload(rx_pkts[0], buf);
+			rte_pktmbuf_free((struct rte_mbuf*)rx_pkts[0]);
+			rx_pkts[0] = NULL;
 			INVARIANT(recv_size != -1);
 
 			del_response_t rsp(buf, recv_size);
@@ -507,15 +509,20 @@ static int run_fg(void *param) {
 			bool with_max_scannum = false;
 			while (true) {
 				CUR_TIME(scan_wait_t1);
-				while (heads[thread_id] == tails[thread_id])
+				/*while (heads[thread_id] == tails[thread_id])
 					;
-				INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
+				INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);*/
+				receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id);
 				CUR_TIME(scan_wait_t2);
 
 				CUR_TIME(scan_rsp_t1);
-				recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
-				rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
-				tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
+				//recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
+				//rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
+				//pkts_list[thread_id][tails[thread_id]] = NULL;
+				//tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
+				recv_size = get_payload(rx_pkts[0], buf);
+				rte_pktmbuf_free((struct rte_mbuf*)rx_pkts[0]);
+				rx_pkts[0] = NULL;
 				INVARIANT(recv_size != -1);
 
 				scan_response_split_t rsp(buf, recv_size);

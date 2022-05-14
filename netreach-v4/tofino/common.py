@@ -20,6 +20,7 @@ egress_pipeidx = int(config.get("hardware", "egress_pipeidx"))
 switchos_paramserver_port = int(config.get("switch", "switchos_paramserver_port"))
 switchos_sample_cnt = int(config.get("switch", "switchos_sample_cnt"))
 switchos_snapshotdataserver_port = int(config.get("switch", "switchos_snapshotdataserver_port"))
+reflector_port = int(config.get("reflector", "reflector_port"))
 
 control_config = ConfigParser.ConfigParser()
 with open(os.path.join(os.path.dirname(this_dir), "control_type.ini"), "r") as f:

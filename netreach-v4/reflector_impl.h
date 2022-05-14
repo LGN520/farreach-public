@@ -11,9 +11,9 @@ int reflector_popserver_udpsock = -1;
 
 // data plane -> receiver -> (message) -> reflector.dpdkserver -> switchos.popworker
 // for cache population ack and special cases of snapshot
-struct rte_mbuf* volatile * reflector_pkts_for_popack_snapshot; // pkts from receiver to reflector.dpdkserver
+/*struct rte_mbuf* volatile * reflector_pkts_for_popack_snapshot; // pkts from receiver to reflector.dpdkserver
 uint32_t volatile reflector_head_for_popack_snapshot;
-uint32_t volatile reflector_tail_for_popack_snapshot;
+uint32_t volatile reflector_tail_for_popack_snapshot;*/
 int reflector_dpdkserver_popclient_udpsock = -1;
 
 // reflector.dpdkserver -> switchos.specialcaseserver
@@ -31,12 +31,12 @@ void prepare_reflector() {
 	prepare_udpserver(reflector_popserver_udpsock, true, reflector_popserver_port, "reflector.popserver");
 
 	// From receiver to reflector.dpdkserver
-	reflector_pkts_for_popack_snapshot = new struct rte_mbuf*[MQ_SIZE];
+	/*reflector_pkts_for_popack_snapshot = new struct rte_mbuf*[MQ_SIZE];
 	for (size_t i = 0; i < MQ_SIZE; i++) {
 		reflector_pkts_for_popack_snapshot[i] = nullptr;
 	}
 	reflector_head_for_popack_snapshot = 0;
-	reflector_tail_for_popack_snapshot = 0;
+	reflector_tail_for_popack_snapshot = 0;*/
 	create_udpsock(reflector_dpdkserver_popclient_udpsock, "reflector.dpdkserver.popclient");
 
 	create_udpsock(reflector_dpdkserver_specialcaseclient_udpsock, "reflector.dpdkserver.specialcaseclient");
@@ -105,6 +105,7 @@ void *run_reflector_popserver(void *param) {
 void *run_reflector_dpdkserver(void *param) {
 	char buf[MAX_BUFSIZE];
 	uint32_t recvsize = 0;
+	struct rte_mbuf *rx_pkts[1];
 
 	struct sockaddr_in reflector_switchos_specialcaseserver_addr;
 	set_sockaddr(reflector_switchos_specialcaseserver_addr, inet_addr(switchos_ip), switchos_specialcaseserver_port);
@@ -116,53 +117,60 @@ void *run_reflector_dpdkserver(void *param) {
 	while (!transaction_running) {}
 
 	while (transaction_running) {
-		if (reflector_tail_for_popack_snapshot != reflector_head_for_popack_snapshot) {
-			INVARIANT(reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot] != NULL);
-			recvsize = get_payload(reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot], buf);
+		//if (reflector_tail_for_popack_snapshot != reflector_head_for_popack_snapshot) { // from receiver
+		
+		receive_pkts(0, server_num, rx_pkts, 1, reflector_port);
+	
+		//INVARIANT(reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot] != NULL);
+		//recvsize = get_payload(reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot], buf);
+		recvsize = get_payload(rx_pkts[0], buf);
 
-			packet_type_t pkt_type = get_packet_type(buf, recvsize);
-			switch (pkt_type) {
-				case packet_type_t::CACHE_POP_INSWITCH_ACK:
-					{
-						INVARIANT(reflector_with_switchos_popworker_addr == true);
-						// send CACHE_POP_INSWITCH_ACK to switchos.popworker
-						// NOTE: not use popserver.popclient due to duplicate packets for packet loss issued by switch
-						udpsendto(reflector_dpdkserver_popclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, "reflector.dpdkserver.popclient");
-						break;
-					}
-				case packet_type_t::GETRES_LATEST_SEQ_INSWITCH_CASE1:
-				case packet_type_t::GETRES_DELETED_SEQ_INSWITCH_CASE1:
-				case packet_type_t::PUTREQ_SEQ_INSWITCH_CASE1:
-				case packet_type_t::DELREQ_SEQ_INSWITCH_CASE1:
-					{
-						// send CASE1 to switchos.specialcaseserver
-						udpsendto(reflector_dpdkserver_specialcaseclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_specialcaseserver_addr, reflector_switchos_specialcaseserver_addr_len, "reflector.dpdkserver.specialcaseclient");
-						break;
-					}
-				default:
-					{
-						printf("[reflector.dpdkserver] invalid packet type: %d\n", int(pkt_type));
-						break;
-					}
-			}
-
-			rte_pktmbuf_free(reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot]);
-			reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot] = NULL;
-			reflector_tail_for_popack_snapshot = (reflector_tail_for_popack_snapshot + 1) % MQ_SIZE;
+		packet_type_t pkt_type = get_packet_type(buf, recvsize);
+		switch (pkt_type) {
+			case packet_type_t::CACHE_POP_INSWITCH_ACK:
+				{
+					INVARIANT(reflector_with_switchos_popworker_addr == true);
+					// send CACHE_POP_INSWITCH_ACK to switchos.popworker
+					// NOTE: not use popserver.popclient due to duplicate packets for packet loss issued by switch
+					udpsendto(reflector_dpdkserver_popclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, "reflector.dpdkserver.popclient");
+					break;
+				}
+			case packet_type_t::GETRES_LATEST_SEQ_INSWITCH_CASE1:
+			case packet_type_t::GETRES_DELETED_SEQ_INSWITCH_CASE1:
+			case packet_type_t::PUTREQ_SEQ_INSWITCH_CASE1:
+			case packet_type_t::DELREQ_SEQ_INSWITCH_CASE1:
+				{
+					// send CASE1 to switchos.specialcaseserver
+					udpsendto(reflector_dpdkserver_specialcaseclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_specialcaseserver_addr, reflector_switchos_specialcaseserver_addr_len, "reflector.dpdkserver.specialcaseclient");
+					break;
+				}
+			default:
+				{
+					printf("[reflector.dpdkserver] invalid packet type: %d\n", int(pkt_type));
+					break;
+				}
 		}
+
+		//rte_pktmbuf_free(reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot]);
+		//reflector_pkts_for_popack_snapshot[reflector_tail_for_popack_snapshot] = NULL;
+		//reflector_tail_for_popack_snapshot = (reflector_tail_for_popack_snapshot + 1) % MQ_SIZE;
+		rte_pktmbuf_free(rx_pkts[0]);
+		rx_pkts[0] = NULL;
 	}
+	
+	//} // wait for receiver
 
 	close(reflector_dpdkserver_popclient_udpsock);
 	pthread_exit(nullptr);
 }
 
 void close_reflector() {
-	for (size_t i = 0; i < MQ_SIZE; i++) {
+	/*for (size_t i = 0; i < MQ_SIZE; i++) {
 		if (reflector_pkts_for_popack_snapshot[i] != nullptr) {
 			rte_pktmbuf_free(reflector_pkts_for_popack_snapshot[i]);
 			reflector_pkts_for_popack_snapshot[i] = nullptr;
 		}
-	}
+	}*/
 }
 
 #endif

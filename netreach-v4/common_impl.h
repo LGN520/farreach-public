@@ -112,6 +112,7 @@ short switchos_snapshotdataserver_port = -1;
 
 // reflector
 const char *reflector_ip_for_switchos = nullptr;
+short reflector_port = -1;
 short reflector_popserver_port = -1;
 
 // others (xindex)
@@ -244,8 +245,10 @@ inline void parse_ini(const char* config_file) {
 
 	// reflector
 	reflector_ip_for_switchos = ini.get_reflector_ip_for_switchos();
+	reflector_port = ini.get_reflector_port();
 	reflector_popserver_port = ini.get_reflector_popserver_port();
 	printf("reflector ip for switchos: %s\n", reflector_ip_for_switchos);
+	COUT_VAR(reflector_port);
 	COUT_VAR(reflector_popserver_port);
 }
 

@@ -22,6 +22,9 @@
 #define NUM_MBUFS 4096 * 64
 #define MBUF_CACHE_SIZE 128
 
+#define MAX_PATTERN_NUM 4
+#define MAX_ACTION_NUM 2
+
 // Internal var
 // Designated initializer is not suported by g++ 7.5.0
 /*static const struct rte_eth_conf port_conf_default = {
@@ -49,5 +52,8 @@ int get_payload(struct rte_mbuf * volatile mbuf, char *payload);
 int8_t get_optype(struct rte_mbuf * volatile mbuf);
 bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num);
 void set_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num);
+
+void generate_udp_fdir_rule(uint16_t port_id, uint16_t rx_queue_id, uint16_t dst_port);
+void receive_pkts(uint16_t port_id, uint16_t rx_queue_id, struct rte_mbuf ** rx_pkts, uint16_t nb_pkts, uint16_t expected_udp_dstport);
 
 #endif

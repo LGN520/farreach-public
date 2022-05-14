@@ -41,6 +41,7 @@ class IniparserWrapper {
 
 		// reflector
 		const char *get_reflector_ip_for_switchos();
+		short get_reflector_port();
 		short get_reflector_popserver_port();
 
 		// switch

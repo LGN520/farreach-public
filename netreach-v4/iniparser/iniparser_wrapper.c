@@ -283,6 +283,15 @@ const char* IniparserWrapper::get_reflector_ip_for_switchos() {
 	return reflector_ip_for_switchos;
 }
 
+short IniparserWrapper::get_reflector_port() {
+	int tmp = iniparser_getint(ini, "reflector:reflector_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [reflector:reflector_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 short IniparserWrapper::get_reflector_popserver_port() {
 	int tmp = iniparser_getint(ini, "reflector:reflector_popserver_port", -1);
 	if (tmp == -1) {

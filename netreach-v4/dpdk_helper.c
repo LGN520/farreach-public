@@ -1,6 +1,7 @@
 #include "dpdk_helper.h" 
 #include "helper.h"
 #include "packet_format.h"
+
 static struct rte_eth_conf port_conf_default;
 
 static inline void dump_buf(char *buf, uint32_t bufsize)
@@ -503,3 +504,69 @@ bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey) 
 	UNUSED(tmp_endkeysize);
 	// *(int32_t*)(data + sizeof(ether_hdr) + sizeof(ipv4_hdr) + 40) = *num;
 }*/
+
+void generate_udp_fdir_rule(uint16_t port_id, uint16_t rx_queue_id, uint16_t dst_port) {
+	struct rte_flow_attr attr;
+    struct rte_flow_item pattern[MAX_PATTERN_NUM];
+    struct rte_flow_action action[MAX_ACTION_NUM];
+    struct rte_flow_action_queue queue;
+	queue.index = rx_queue_id;
+    struct rte_flow_item_udp udp_spec;
+    struct rte_flow_item_udp udp_mask;
+
+	// only check ingress packet
+    memset(&attr, 0, sizeof(struct rte_flow_attr));
+    attr.ingress = 1;
+
+	// place into the specific queue
+	INVARIANT(MAX_ACTION_NUM >= 2);
+	action[0].type = RTE_FLOW_ACTION_TYPE_QUEUE;
+    action[0].conf = &queue;
+    action[1].type = RTE_FLOW_ACTION_TYPE_END;
+
+	INVARIANT(MAX_PATTERN_NUM >= 4);
+	// first-level pattern: allow all ethernet header
+	pattern[0].type = RTE_FLOW_ITEM_TYPE_ETH;
+	// second-level pattern: allow all ipv4 header
+	pattern[1].type = RTE_FLOW_ITEM_TYPE_IPV4;
+	// third-level pattern: match udp.dstport
+	pattern[2].type = RTE_FLOW_ITEM_TYPE_UDP;
+	memset(&udp_spec, 0, sizeof(struct rte_flow_item_udp));
+	memset(&udp_mask, 0, sizeof(struct rte_flow_item_udp));
+	udp_spec.hdr.src_port = 0;
+	udp_mask.hdr.src_port = 0; // allow all src ports
+	udp_spec.hdr.dst_port = htons(dst_port);
+	udp_mask.hdr.dst_port = 0xFFFF; // only allow specific destination port
+	pattern[2].spec = &udp_spec;
+	pattern[2].mask = &udp_mask;
+	pattern[2].last = 0; // disable range match
+	// last-level pattern: end of pattern list
+	pattern[3].type = RTE_FLOW_ITEM_TYPE_END;
+
+	struct rte_flow_error error;
+	int res = rte_flow_validate(port_id, &attr, pattern, action, &error);
+	if (res != 0) {
+		printf("[dpdk helper] flow validate error: type %d, message %s\n", error.type, error.message ? error.message : "(no stated reason)");
+    	rte_exit(EXIT_FAILURE, "flow validate error");
+	}
+
+	struct rte_flow *flow = NULL;
+	flow = rte_flow_create(port_id, &attr, pattern, action, &error);
+	if (flow == NULL) {
+		printf("[dpdk helper] flow create error: type %d, message %s\n", error.type, error.message ? error.message : "(no stated reason)");
+    	rte_exit(EXIT_FAILURE, "flow create error");
+	}
+}
+
+void receive_pkts(uint16_t port_id, uint16_t rx_queue_id, struct rte_mbuf ** rx_pkts, uint16_t nb_pkts, uint16_t expected_udp_dstport) {
+	while (true) {
+		uint16_t n_rx = rte_eth_rx_burst(port_id, rx_queue_id, rx_pkts, nb_pkts);
+		if (n_rx == 0) {
+			continue;
+		}
+		INVARIANT(n_rx == 1);
+		INVARIANT(rx_pkts[0] != NULL);
+		INVARIANT(get_dstport(rx_pkts[0]) == expected_udp_dstport);
+		break;
+	}
+}

@@ -136,6 +136,7 @@ header_type metadata_t {
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;
 		clonenum_for_pktloss: 8;
+		client_port: 16;
 	}
 }
 

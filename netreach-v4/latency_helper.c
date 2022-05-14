@@ -4,6 +4,8 @@
 #include "helper.h"
 
 void dump_latency(std::vector<double> latency_list, std::string label) {
+	if (latency_list.size() == 0) return;
+
 	double sum_latency = 0.0;
 	for (size_t i = 0; i < latency_list.size(); i++) {
 		sum_latency += latency_list[i];

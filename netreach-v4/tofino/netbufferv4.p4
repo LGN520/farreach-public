@@ -212,10 +212,14 @@ control egress {
 #endif
 
 	// Stage 1
+#ifdef RANGE_SUPPORT
+	apply(is_last_scansplit);
+#endif
 	apply(is_hot_tbl);
 	apply(access_cache_frequency_tbl);
 	apply(access_validvalue_tbl);
 	apply(access_seq_tbl);
+	apply(save_client_srcport_tbl);
 
 	// Stage 2
 	apply(access_latest_tbl);

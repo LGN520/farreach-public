@@ -157,7 +157,13 @@ void prepare_dpdk() {
   //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
   //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
   rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
-  dpdk_init(&mbuf_pool, server_num+1, 1); // tx: server_num server.workers + one reflector; rx: one receiver
+
+  //dpdk_init(&mbuf_pool, server_num+1, 1); // tx: server_num server.workers + one reflector; rx: one receiver
+  dpdk_init(&mbuf_pool, server_num+1, server_num+1); // tx:rx server_num server.workers + one reflector
+  for (uint16_t idx = 0; idx < server_num; idx++) {
+	generate_udp_fdir_rule(0, idx, server_port_start+idx);
+  }
+  generate_udp_fdir_rule(0, server_num, reflector_port);
 }
 
 /*
@@ -315,11 +321,14 @@ void *run_load_sfg(void * param) {
 
 void transaction_main(xindex_t *table) {
 	// reflector: popserver + dpdkserver
-	// server: server_num workers + receiver + evictserver + consnapshotserver
-	transaction_expected_ready_threads = server_num + 5;
+	//// server: server_num workers + receiver + evictserver + consnapshotserver
+	// server: server_num workers + evictserver + consnapshotserver
+	transaction_expected_ready_threads = server_num + 4;
 
 	int ret = 0;
-	unsigned lcoreid = 1; // 0: master lcore; 1: slave lcore for receiver; 2~: slave lcores for workers
+	//// 0: master lcore; 1: slave lcore for receiver; 2~: slave lcores for workers
+	// 0: master lcore; 1~: slave lcores for workers
+	unsigned lcoreid = 1;
 
 	transaction_running = false;
 
@@ -338,15 +347,12 @@ void transaction_main(xindex_t *table) {
 	}
 
 	// launch receiver
-	//receiver_param_t receiver_param;
-	//receiver_param.overall_thpt = 0;
-	//ret = rte_eal_remote_launch(run_receiver, (void*)&receiver_param, lcoreid);
-	ret = rte_eal_remote_launch(run_receiver, NULL, lcoreid);
+	/*ret = rte_eal_remote_launch(run_receiver, NULL, lcoreid);
 	if (ret) {
 		COUT_N_EXIT("Error of launching server.receiver:" << ret);
 	}
 	//COUT_THIS("[transaction phase] Launch receiver with ret code " << ret);
-	lcoreid++;
+	lcoreid++;*/
 
 	// launch workers (processing normal packets)
 	//pthread_t threads[server_num];
@@ -422,7 +428,7 @@ void transaction_main(xindex_t *table) {
 		worker_latency_list.insert(worker_latency_list.end(), server_worker_params[i].latency_list.begin(), server_worker_params[i].latency_list.end());
 	}
 	dump_latency(worker_latency_list, "worker_latency_list");
-	dump_latency(receiver_latency_list, "receiver_latency_list");
+	//dump_latency(receiver_latency_list, "receiver_latency_list");
 #ifdef TEST_AGG_THPT
 	double max_agg_thpt = 0.0;
 	double avg_latency = 0.0;
