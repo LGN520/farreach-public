@@ -898,7 +898,7 @@ table update_udplen_tbl {
 	size: 256;
 }
 
-/*action update_macaddr_s2c(tmp_srcmac, tmp_dstmac) {
+action update_macaddr_s2c(tmp_srcmac, tmp_dstmac) {
 	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
 	modify_field(ethernet_hdr.srcAddr, tmp_dstmac);
 }
@@ -919,4 +919,4 @@ table update_macaddr_tbl {
 	}
 	default_action: nop();
 	size: 8;
-}*/
+}
