@@ -16,6 +16,7 @@ class Key {
 #else
   typedef std::array<double, 2> model_key_t;
 #endif
+  //static uint32_t KEYLEN;
 
  public:
   static constexpr size_t model_key_size() { // # of 4B doulbes

@@ -267,8 +267,8 @@ void *run_controller_popserver_subthread(void *param) {
 	bool is_cached_before = false; // TODO: remove
 	//index_key_t tmpkey(0, 0, 0, 0);
 	const int arrive_optype_bytes = sizeof(uint8_t);
-	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint16_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	while (true) {
 		int recvsize = 0;
@@ -305,6 +305,8 @@ void *run_controller_popserver_subthread(void *param) {
 
 		// Get one complete CACHE_POP
 		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes) {
+			printf("[controller.popserver.subthread] cur_recv_bytes: %d, arrive_serveridx_bytes: %d\n", cur_recv_bytes, arrive_serveridx_bytes); // TMPDEBUG
+			dump_buf(buf, cur_recv_bytes);
 			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by controller.popclient
 
 			//is_cached_before = (controller_cached_keyset_list[tmp_cache_pop_ptr->serveridx()].find(tmp_cache_pop_ptr->key()) != controller_cached_keyset_list[tmp_cache_pop_ptr->serveridx()].end());
@@ -329,7 +331,7 @@ void *run_controller_popserver_subthread(void *param) {
 				}*/
 				bool res = controller_cache_pop_ptr_queue.write(tmp_cache_pop_ptr);
 				if (!res) {
-					printf("[controller] message queue overflow of controller.controller_cache_pop_ptr_queue!");
+					printf("[controller.popserver] message queue overflow of controller.controller_cache_pop_ptr_queue!");
 				}
 				/*if ((controller_head_for_pop+1)%MQ_SIZE != controller_tail_for_pop) {
 					controller_cache_pop_ptrs[controller_head_for_pop] = tmp_cache_pop_ptr;
@@ -383,6 +385,8 @@ void *run_controller_popclient(void *param) {
 			// send CACHE_POP to switch os
 			uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
 			tcpsend(controller_popclient_tcpsock, buf, popsize, "controller.popclient");
+			printf("[controller.popclient] popsize: %d\n", int(popsize)); // TMPDEBUG
+			dump_buf(buf, popsize);
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;
 			tmp_cache_pop_ptr = NULL;
@@ -421,12 +425,12 @@ void *run_controller_evictserver(void *param) {
 	//uint16_t tmpserveridx = 0;
 	bool is_waitack = false;
 	const int arrive_optype_bytes = sizeof(uint8_t);
-	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint16_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	char evictclient_buf[MAX_BUFSIZE];
 	int evictclient_cur_recv_bytes = 0;
-	const int evictclient_arrive_key_bytes = arrive_optype_bytes + sizeof(key_t);
+	const int evictclient_arrive_key_bytes = arrive_optype_bytes + sizeof(index_key_t);
 	while (controller_running) {
 		int recvsize = 0;
 		bool is_broken = tcprecv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "controller.evictserver");

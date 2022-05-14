@@ -2,6 +2,12 @@
 #include <sstream>
 #include <arpa/inet.h> // endian conversion
 
+/*#ifdef LARGE_KEY
+uint32_t Key::KEYLEN = 16;
+#else
+uint32_t Key::KEYLEN = 8;
+#endif*/
+
 Key Key::max() {
 #ifdef LARGE_KEY
     static Key max_key(std::numeric_limits<uint32_t>::max(),

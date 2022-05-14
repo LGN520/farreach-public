@@ -63,7 +63,7 @@ uint32_t GetRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(uint8_t));
 	begin += tmp_keysize;
 	memset(begin, 0, sizeof(DEBUG_BYTES));
-	return my_size + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + DEBUG_BYTES;
 }
 
 template<class key_t>
@@ -419,7 +419,7 @@ uint32_t DelResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
 	memset(begin, 0, sizeof(DEBUG_BYTES));
-	return sizeof(uint8_t) + tmp_keysize + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
 }
 
 template<class key_t>
@@ -498,7 +498,7 @@ uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t 
 	uint32_t bigendian_pairnum = htonl(uint32_t(this->_pairnum));
 	memcpy(begin, (void *)&bigendian_pairnum, sizeof(int32_t));
 	begin += sizeof(int32_t);
-	uint32_t totalsize = my_size;
+	uint32_t totalsize = sizeof(uint8_t) + tmp_keysize + tmp_endkeysize + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int32_t);
 	for (uint32_t pair_i = 0; pair_i < this->_pairs.size(); pair_i++) {
 		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.serialize(begin, max_size - totalsize);
 		begin += tmp_pair_keysize;
@@ -607,7 +607,7 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::serialize(char * const data, uint32
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
 	begin += sizeof(uint32_t);
 	memset(begin, 0, sizeof(DEBUG_BYTES));
-	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint32_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + DEBUG_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -697,7 +697,7 @@ uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::serialize(char * const
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
 	memset(begin, 0, sizeof(DEBUG_BYTES));
-	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + DEBUG_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -1052,7 +1052,7 @@ uint32_t CachePop<key_t, val_t>::serialize(char * const data, uint32_t max_size)
 	begin += sizeof(uint32_t);
 	uint16_t bigendian_serveridx = htons(uint16_t(this->_serveridx));
 	memcpy(begin, (void *)&bigendian_serveridx, sizeof(uint16_t)); // little-endian to big-endian
-	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(bool) + sizeof(uint32_t) + sizeof(uint16_t);
+	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint32_t) + sizeof(uint16_t);
 }
 
 template<class key_t, class val_t>
@@ -1118,7 +1118,7 @@ uint32_t CachePopInswitch<key_t, val_t>::serialize(char * const data, uint32_t m
 	memcpy(begin, (void *)&bigendian_freeidx, sizeof(uint16_t)); // little-endian to big-endian
 	begin += sizeof(uint16_t);
 	memset(begin, 0, sizeof(DEBUG_BYTES));
-	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(bool) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES;
 }
 
 template<class key_t, class val_t>

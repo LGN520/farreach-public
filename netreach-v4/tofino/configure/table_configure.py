@@ -332,7 +332,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             actnspec0 = netbufferv4_hash_partition_action_spec_t(\
                                     server_port + i, eport)
                             self.client.range_partition_tbl_table_add_with_range_partition(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                             key_start = key_end + 1
             else:
                 # Table: hash_for_partition_tbl (default: nop; size: 4)
@@ -388,7 +388,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             actnspec0 = netbufferv4_range_partition_for_scan_action_spec_t(\
                                     server_port + i, self.devPorts[1], j-i+1)
                             self.client.range_partition_for_scan_tbl_table_add_with_range_partition_for_scan(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                             endkey_start = endkey_end + 1
                         startkey_start = startkey_end + 1
             else:
@@ -422,7 +422,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             actnspec0 = netbufferv4_hash_partition_action_spec_t(\
                                     server_port + i, eport)
                             self.client.hash_partition_tbl_table_add_with_hash_partition(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                             hash_start = hash_end + 1
 
             # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
@@ -1530,27 +1530,24 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         vallen_hdr_vallen_start=vallen_start,
                         vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
                 actnspec0 = netbufferv4_update_udplen_action_spec_t(val_stat_udplen)
-                # TODO: check parameter 0
                 self.client.update_udplen_tbl_table_add_with_update_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                 for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1]:
                     matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,
                             vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
                     actnspec0 = netbufferv4_update_udplen_action_spec_t(val_seq_inswitch_stat_udplen)
-                    # TODO: check parameter 0
                     self.client.update_udplen_tbl_table_add_with_update_udplen(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                 for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3]:
                     matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,
                             vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
                     actnspec0 = netbufferv4_update_udplen_action_spec_t(val_seq_udplen)
-                    # TODO: check parameter 0
                     self.client.update_udplen_tbl_table_add_with_update_udplen(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             onlyop_udplen = 24
             stat_udplen = 26
             seq_udplen = 29
@@ -1559,18 +1556,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     vallen_hdr_vallen_start=0,
                     vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
             actnspec0 = netbufferv4_update_udplen_action_spec_t(onlyop_udplen)
-            # TODO: check parameter 0
             self.client.update_udplen_tbl_table_add_with_update_udplen(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             for tmpoptype in [PUTRES, DELRES]:
                 matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
                         vallen_hdr_vallen_start=0,
                         vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
                 actnspec0 = netbufferv4_update_udplen_action_spec_t(stat_udplen)
-                # TODO: check parameter 0
                 self.client.update_udplen_tbl_table_add_with_update_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             for tmpoptype in [DELREQ_SEQ, DELREQ_SEQ_CASE3]:
                 matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
@@ -1579,7 +1574,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec0 = netbufferv4_update_udplen_action_spec_t(seq_udplen)
                 # TODO: check parameter 0
                 self.client.update_udplen_tbl_table_add_with_update_udplen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0)
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
 
 

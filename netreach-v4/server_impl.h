@@ -589,8 +589,7 @@ static int run_server_worker(void * param) {
 				sent_pkt_idx++;
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				//if (tmp_stat) {
-				if (false) {
+				if (tmp_stat) {
 					bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
@@ -618,8 +617,7 @@ static int run_server_worker(void * param) {
 				sent_pkt_idx++;
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				//if (tmp_stat) { // successful put
-				if (false) {
+				if (tmp_stat) { // successful put
 					bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
@@ -672,8 +670,7 @@ static int run_server_worker(void * param) {
 				sent_pkt_idx++;
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				//if (tmp_stat) { // successful put
-				if (false) {
+				if (tmp_stat) { // successful put
 					bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());

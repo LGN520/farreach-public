@@ -369,7 +369,7 @@ void *run_switchos_popserver(void *param) {
 	int connfd = -1;
 	tcpaccept(switchos_popserver_tcpsock, NULL, NULL, connfd, "switchos.popserver");
 
-	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
+	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx, debug_hdr>
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
 	uint8_t optype = 0;
@@ -380,8 +380,8 @@ void *run_switchos_popserver(void *param) {
 	bool is_cached_before = false; // TODO: remove
 	//index_key_t tmpkey(0, 0, 0, 0);
 	const int arrive_optype_bytes = sizeof(uint8_t);
-	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint32_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(key_t) + sizeof(uint16_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	while (switchos_running) {
 		int recvsize = 0;
@@ -400,6 +400,7 @@ void *run_switchos_popserver(void *param) {
 		if (!with_optype && cur_recv_bytes >= arrive_optype_bytes) {
 			optype = *((uint8_t *)buf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_POP);
+			with_optype = true;
 		}
 
 		// Get vallen
@@ -412,10 +413,13 @@ void *run_switchos_popserver(void *param) {
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
 			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(uint16_t);
+			with_vallen = true;
 		}
 
 		// Get one complete CACHE_POP
 		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes) {
+			printf("[switchos.popserver] cur_recv_bytes: %d, arrive_serveridx_bytes: %d\n", cur_recv_bytes, arrive_serveridx_bytes); // TMPDEBUG
+			dump_buf(buf, cur_recv_bytes);
 			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by switchos.popworker
 
 			//is_cached_before = (switchos_cached_keyset.find(tmp_cache_pop_ptr->key()) != switchos_cached_keyset.end());
@@ -655,7 +659,7 @@ void *run_switchos_popworker(void *param) {
 		uint32_t pktsize = 0;
 		char evictclient_buf[MAX_BUFSIZE];
 		int evictclient_cur_recv_bytes = 0;
-		const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(key_t);
+		const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(index_key_t);
 		if (is_snapshot_prepare && !popworker_know_snapshot_prepare) {
 			popworker_know_snapshot_prepare = true;
 		}
@@ -763,6 +767,7 @@ void *run_switchos_popworker(void *param) {
 				/* cache population for new record */
 
 				INVARIANT(switchos_freeidx >= 0 && switchos_freeidx < switch_kv_bucket_num);
+				printf("[switchos.popworker] switchos_cached_empty_index: %d, switchos_freeidx: %d\n", int(switchos_cached_empty_index), int(switchos_freeidx)); // TMPDEBUG
 
 				// set valid=0 for atomicity
 				system("bash tofino/setvalid0.sh");
@@ -865,9 +870,7 @@ void *run_switchos_snapshotserver(void *param) {
 		if (phase == 0) {
 			if (control_type_phase0 == -1 && cur_recv_bytes >= int(sizeof(int))) {
 				control_type_phase0 = *((int *)recvbuf);
-				printf("control_type_phase0: %d\n", control_type_phase0); // TMPDEBUG
 				INVARIANT(control_type_phase0 == SNAPSHOT_START);
-				printf("[switchos.snapshotserver] receive SNAPSHOT_START\n");
 
 				// NOTE: popserver/specialcaseserver will not touch speicalcases_ptr now, as both is_snapshot/is_snapshot_end are false
 				INVARIANT(switchos_specialcases_ptr == NULL);

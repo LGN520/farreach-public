@@ -72,7 +72,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         sampled_idxes = random.sample(range(0, kv_bucket_num), switchos_sample_cnt)
 
         print "Load frequency counters for sampled indexes"
-        # TODO: Check register API
         frequency_counters = []
         for i in range(len(sampled_idxes)):
             tmp_frequency_counter = convert_i32_to_u32(self.client.register_read_cache_frequency_reg(self.sess_hdl, self.dev_tgt, sampled_idxes[i], flags)[egress_pipeidx])
@@ -87,13 +86,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 evictidx = i
 
         print "Set validvalue[{}] = 3 for atomicity".format(evictidx)
-        # TODO: check API of register set
         index = evictidx
         value = 3
-        self.client.register_set_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value, flags)
+        self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
 
         print "Load evicted data"
-        # TODO: Check register API
         tmp_deleted = self.client.register_read_deleted_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
         if tmp_deleted == 0:
             evictstat = True

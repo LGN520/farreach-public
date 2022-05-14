@@ -26,6 +26,7 @@
 #include <iostream>
 #include <sstream>
 #include <time.h>
+#include <execinfo.h> // backtrace
 
 #if !defined(HELPER_H)
 #define HELPER_H
@@ -106,6 +107,7 @@
   if (!(cond)) {                   \
     COUT_THIS(#cond << " failed"); \
     COUT_POS();                    \
+	print_stacktrace(); \
     abort();                       \
   }
 #else
@@ -220,6 +222,27 @@ inline uint8_t cmpxchgb(uint8_t *object, uint8_t expected,
                : "cc");
   fence();
   return expected;
+}
+
+inline void print_stacktrace()
+{
+    int size = 16;
+    void * array[size];
+    int stack_num = backtrace(array, size);
+    char ** stacktrace = backtrace_symbols(array, stack_num);
+    for (int i = 0; i < stack_num; ++i)
+    {
+        printf("%s\n", stacktrace[i]);
+    }
+    free(stacktrace);
+}
+
+static inline void dump_buf(char *buf, uint32_t bufsize)
+{
+	for (uint32_t byteidx = 0; byteidx < bufsize; byteidx++) {
+		printf("0x%02x ", uint8_t(buf[byteidx]));
+	}
+	printf("\n");
 }
 
 #endif  // HELPER_H

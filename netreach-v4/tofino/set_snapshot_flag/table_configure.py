@@ -104,7 +104,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.snapshot_flag_tbl_table_add_with_set_snapshot_flag(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-        # TODO: check API for delete_all_entries or modify_by_match_spec 
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
         for tmppipeidx in pipeidx_ports_map.keys():
             if tmppipeidx != ingress_pipeidx:

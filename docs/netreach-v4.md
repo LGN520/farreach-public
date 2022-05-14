@@ -615,7 +615,7 @@
 		* TODO: We free each entry in the final merged data array if try_to_free returns true (i.e., is_free = true)
 - TODO: If cache crashes, server should reset all seq as zero after recovery such that switch-assigned seq (>=1) must be larger
 - TODO: If with parser limitation, we can introduce hint of next header in the previous header
-- TODO: Check APIs of register access 
+- Check APIs of register access; check parameter 0 of MAT configuration w/ range matched fields 
 
 ## Implementation log
 
@@ -715,54 +715,20 @@
 ## Simple test
 
 - NOTE: set switch_kv_bucket_num, KV_BUCKET_COUNT, CM_BUCKET_COUNT, HH_THRESHOLD, SEQ_BUCKET_COUNT as 1 before test
-- Test cases of normal operations: See directory of "testcases/normal"
+- Test cases of normal operations: see directory of "testcases/normal"
 	+ Case 1: single read (GETREQ arrives at server)
 		* No key in cache_lookup_tbl, cm=1, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
 	+ Case 2: single write (PUTREQ arrives at server)
 		* No key in cache_lookup_tbl, cm=1, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
-	+ Case 3: read(k1,v1)-write(k1,v2)-read(k1,v2) (GETREQ/PUTREQ_SEQ_POP/GETREQ_POP arrive at server; ignore cache population here)
+	+ Case 3: read(k1,v1)-write(k1,v2)-read(k1,v2) (GETREQ-PUTREQ_SEQ_POP-GETREQ_POP arrive at server; ignore cache population here)
 		* No key in cache_lookup_tbl, cm=3, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
 	+ Case 4: single delete (DELREQ arrives at server)
 		* No key in cache_lookup_tbl, {cm, cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
-- TODO
-	+ Case 3: read-after-write
-		* Write value of k1 and then read k1
-		* It should write the value in switch and read the value from switch (not touch server)
-		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, vote = 2
-	+ Case 4: read-after-two-writes
-		* Write value of k1 twice, and then read k1
-		* It should write the value in switch and read the value from switch (not touch server)
-		* In-switch result: non-zero key, vallen, and val of k1, seq = 2, savedseq = 2, lock = 0, valid = 1, vote = 3
-	+ Case 5: write-after-read1
-		* Read value of k1 and then write k1
-		* It reads the value of k1 from server and store it in switch, PUT increases vote, updates vallen & val, and does not touch server
-		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 1, lock = 0, valid = 1, vote = 2
-	+ Case 6: write-after-read2
-		* Read value of k1 and then write k2
-		* It should read the value of k1 from server and store it in switch, k2 will decrease vote and be forwarded to server (no cache update)
-		* In-switch result: non-zero key, vallen, and val of k1, seq = 1, savedseq = 0, lock = 0, valid = 1, vote = 0
-	+ Case 7: two-writes-after-read (PUT evicts GET)
-		* Read value of k1 and then write k2 twice
-		* It should read the value of k1 from server and store it in switch, k2 will replace k1 finally (PUTs touch server only once)
-		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 2, savedseq = 0, lock = 0, valid = 1, vote = 1
-	+ Case 8: read-after-two-writes-after-write (PUT evicts PUT)
-		* Write value of k1, write k2 twice, and then read k2
-		* PUT of k1 writes the value in switch and sendback PUTRES, 1st PUT of k2 is forwarded to server, 2nd PUT of k2 evicts k1, GET
-		is directly processed by switch
-		* In-switch result: non-zero key, vallen, and val of 2nd k2, seq = 3, savedseq = 0, lock = 0, valid = 1, vote = 2
-	+ Case 9: two-reads-after-write (GET evicts PUT)
-		* Write value of k1, read k2 twice
-		* It writes value of k1 in switch, GETs of k2 evicted k1 (the evicted data touches server)
-		* In-switch result: non-zero key, vallen, and val of k2, seq = 1, savedseq = 0, lock = 0, valid = 1, vote = 1
-	+ Case 10: two-reads-after-read (GET evicts GET)
-		* Read value of k1, read k2 twice
-		* It first gets value of k1 from server and stores it in switch, the 2nd GET of k2 replaces k1 in switch
-		* In-switch result: non-zero key, vallen, and val of k2, seq = 0, savedseq = 0, lock = 0, valid = 1, vote = 1
-	+ Case 11: read-delete-read
-		* Read value of k1, delete k1, and then read k1 again
-		* It first gets value of k1 from server and stores it in switch, then it deletes k1 (set vallen=0 without changing valid and vote), the 2nd GET
-		of k1 gets a value of size 0 
-		* In-switch result: non-zero key, vallen=0, and val of k1, seq = 0, savedseq = 0, lock = 0, valid = 1, vote = 2
+	+ Case 5: read(k1,v1)-delete(k1)-read(k1,none) (GETREQ-DELREQ_SEQ-GETREQ_POP arrive at server; ignore cache population here)
+		* No key in cache_lookup_tbl, cm=2, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
+- Test cases of cache population: see directory of "testcases/population"
+	+ Case 1: read(k1,v1)-read(k1,v1) (GETREQ-GETREQ_POP arrive at server)
+
 - TODO: Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
 	+ NOTE: remember to set bucket_num in config.ini, otherwise the hashidx will be incorrect sent by phase2 ptf
 	+ NOTE: if data in backup is not dirty, it will incur duplicate results for range query -> we leave the deduplication in client-side

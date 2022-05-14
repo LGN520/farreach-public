@@ -67,16 +67,14 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Get freeidx from paramserver"
         ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sendbuf = struct.pack("=i", SWITCHOS_GET_FREEIDX) # 4-byte int
-        ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
+        ptf_sock.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
         recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
         freeidx = struct.unpack("=H", recvbuf)[0]
 
-        # TODO: check API of register set
         print "Set validvalue_reg as 0"
         index = freeidx
         value = 0
-        flags = netbufferv4_register_flags_t(read_hw_sync=True)
-        self.client.register_set_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value, flags)
+        self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
         self.conn_mgr.client_cleanup(self.sess_hdl) # close session

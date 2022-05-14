@@ -26,6 +26,7 @@ control_config = ConfigParser.ConfigParser()
 with open(os.path.join(os.path.dirname(this_dir), "control_type.ini"), "r") as f:
     control_config.readfp(f)
 
+SWITCHOS_GET_FREEIDX = int(control_config.get("switchos", "switchos_get_freeidx"))
 SWITCHOS_GET_KEY_FREEIDX = int(control_config.get("switchos", "switchos_get_key_freeidx"))
 SWITCHOS_SET_EVICTDATA = int(control_config.get("switchos", "switchos_set_evictdata"))
 SWITCHOS_GETCACHEDEMPTYINDEX = int(control_config.get("switchos", "switchos_get_cachedemptyindex"))

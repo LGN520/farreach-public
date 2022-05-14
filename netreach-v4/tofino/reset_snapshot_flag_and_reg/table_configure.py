@@ -84,7 +84,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #    print "Invalid cached_empty_index_backup: {}".format(cached_empty_index_backup)
         #    exit(-1)
 
-        # TODO: check API of register set
         print "Reset case1_reg"
         self.client.register_reset_all_case1_reg(self.sess_hdl, self.dev_tgt)
 
