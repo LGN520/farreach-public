@@ -816,7 +816,7 @@ table eg_port_forward_tbl {
 	}
 	default_action: nop();
 #ifdef DEBUG
-	size: 8192;
+	size: 8192; // assign more entries for debugging
 #else
 	size: 2048;
 #endif
