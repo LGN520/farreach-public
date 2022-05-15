@@ -188,7 +188,7 @@ control ingress {
 
 	// Stgae 3
 	apply(snapshot_flag_tbl); // for snapshot (access inswitch_hdr.snapshot_flag)
-	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.sid)
+	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
 	// Stage 4

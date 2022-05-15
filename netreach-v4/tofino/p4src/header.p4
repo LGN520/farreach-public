@@ -103,7 +103,7 @@ header_type inswitch_t {
 		//eport_for_res: 9;
 		padding: 5;
 		// two 16-bit containers
-		sid: 10; // clone_e2e sets eg_intr_md_for_mb.mirror_id w/ 10 bits
+		client_sid: 10; // clone to client for cache hit; NOTE: clone_e2e sets eg_intr_md_for_mb.mirror_id w/ 10 bits
 		hashval_for_cm: 22; // at most 64K
 		// 16-bit container
 		hashval_for_seq: 16; // at most 32K
@@ -131,6 +131,7 @@ header_type metadata_t {
 		cm2_predicate: 4;
 		cm3_predicate: 4;
 		cm4_predicate: 4;
+		server_sid: 10; // clone to server for SCANREQ_SPLIT
 		validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted

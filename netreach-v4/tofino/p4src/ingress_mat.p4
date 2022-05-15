@@ -270,17 +270,17 @@ table snapshot_flag_tbl {
 	size: 2;
 }
 
-/*action set_sid(sid, eport) {
-	modify_field(inswitch_hdr.sid, sid);
-	// NOTE: eport_for_res and sid must be in the same group for ALU access; as compiler aims to place them into the same container, they must come from the same source (action parameter or PHV)
+/*action set_client_sid(client_sid, eport) {
+	modify_field(inswitch_hdr.client_sid, client_sid);
+	// NOTE: eport_for_res and client_sid must be in the same group for ALU access; as compiler aims to place them into the same container, they must come from the same source (action parameter or PHV)
 	//modify_field(inswitch_hdr.eport_for_res, ig_intr_md.ingress_port);
 	modify_field(inswitch_hdr.eport_for_res, eport);
 }*/
 
 // NOTE: eg_intr_md.egress_port is a read-only field (we cannot directly set egress port in egress pipeline even if w/ correct pipeline)
-// NOTE: using inswitch_hdr.sid for clone_e2e in ALU needs to maintain inswitch_hdr.sid and eg_intr_md_for_md.mirror_id into the same group, which violates PHV allocation constraints -> but MAU can access different groups
-action set_sid(sid) {
-	modify_field(inswitch_hdr.sid, sid);
+// NOTE: using inswitch_hdr.client_sid for clone_e2e in ALU needs to maintain inswitch_hdr.client_sid and eg_intr_md_for_md.mirror_id into the same group, which violates PHV allocation constraints -> but MAU can access different groups
+action set_client_sid(client_sid) {
+	modify_field(inswitch_hdr.client_sid, client_sid);
 }
 
 @pragma stage 3
@@ -291,20 +291,20 @@ table prepare_for_cachehit_tbl {
 		meta.need_recirculate: exact;
 	}
 	actions {
-		set_sid;
+		set_client_sid;
 		nop;
 	}
-	default_action: set_sid(0); // deprecated: configured as set_sid(sids[0]) in ptf
-	size: 8;
+	default_action: set_client_sid(0); // deprecated: configured as set_client_sid(sids[0]) in ptf
+	size: 4;
 }
 
 action forward_normal_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
-action forward_special_get_response(sid) {
+action forward_special_get_response(client_sid) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
-	clone_ingress_pkt_to_egress(sid); // Cloned packet enter the egress pipeline to corresponding client
+	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding client
 }
 
 @pragma stage 3
