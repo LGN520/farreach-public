@@ -398,7 +398,7 @@ action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(sid
 	remove_header(inswitch_hdr);
 
 	//modify_field(eg_intr_md.egress_port, port); // set eport to switchos
-	//modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring // TODO: see if we can get cloned packet
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
 	clone_egress_pkt_to_egress(sid, clone_field_list_for_pktloss); // clone to switchos
 }
 

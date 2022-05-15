@@ -246,15 +246,30 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #    self.devport_mgr.devport_mgr_set_copy_to_cpu(0, True, i)
 
             # Bind sid with platform port for packet mirror
-            print "Binding sid {} with port {}".format(self.sids[0], self.devPorts[0]) # clone to client
+            print "Binding sid {} with port {} for ingress mirroring".format(self.sids[0], self.devPorts[0]) # clone to client
             info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
                                   Direction_e.PD_DIR_INGRESS,
                                   self.sids[0],
                                   self.devPorts[0],
                                   True)
-            print "Binding sid {} with port {}".format(self.sids[1], self.devPorts[1]) # clone to server
+            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+            print "Binding sid {} with port {} for egress mirroring".format(self.sids[0], self.devPorts[0]) # clone to client
+            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                  Direction_e.PD_DIR_EGRESS,
+                                  self.sids[0],
+                                  self.devPorts[0],
+                                  True)
+            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+            print "Binding sid {} with port {} for ingress mirroring".format(self.sids[1], self.devPorts[1]) # clone to server
             info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
                                   Direction_e.PD_DIR_INGRESS,
+                                  self.sids[1],
+                                  self.devPorts[1],
+                                  True)
+            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+            print "Binding sid {} with port {} for egress mirroring".format(self.sids[1], self.devPorts[1]) # clone to server
+            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                  Direction_e.PD_DIR_EGRESS,
                                   self.sids[1],
                                   self.devPorts[1],
                                   True)

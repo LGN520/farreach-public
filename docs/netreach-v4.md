@@ -80,6 +80,8 @@
 	+ The maximum length of field for range matching is 20 bits
 - NOTE for counter
 	+ We can use direct/indirect counter for debugging, which does not occupy stateful ALU
+- NOTE for mirroring
+	+ We need to create mirror_session in ptf for both ingress direction and egress direction explicitly
 
 ## Overview
 
