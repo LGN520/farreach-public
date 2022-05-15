@@ -78,6 +78,8 @@
 	+ We must invoke add_header() explicitly for each new header even if the parser/deparser has indicated that we need the new header; otherwise, the new header will not be embedded into the packet
 - NOTE for range match
 	+ The maximum length of field for range matching is 20 bits
+- NOTE for counter
+	+ We can use direct/indirect counter for debugging, which does not occupy stateful ALU
 
 ## Overview
 
@@ -655,6 +657,10 @@
 - Compile in C
 	+ Implement concurrent map and fix volatile issue
 - Compile in Tofino
+	* Fix PHV allocation issue (using inswitch_hdr.sid in MAU instead of ALU)
+		- If clone_e2e(inswitch_hdr.sid), inswitch_hdr.sid is used in the same ALU of eg_intr_md.mirror_id, which must be placed in the same PHV group; as inswitch_hdr.sid must be placed in the same PHV container with other inswitch_hdr fields, all of them cannot be placed in the same PHV group of eg_intr_md
+		- Instead, we match inswitch_hdr.sid in MAT reads (i.e., used by MAU) and pass it into the action as an action paramter, as it is just used by MAU instead of ALU, it does not need to be placed in the same PHV of eg_intr_md
+			+ NOTE: MAU can match different PHV containers from different PHV groups
 	* Fix parser issue: parse_vallen cannot use switch expression due to the limited chain length of the same packet header
 		- GUESS1: maybe due to limited # of selects -> reduce selects of ethernet and ipv4 -> FAIL
 		- GUESS2: maybe due to limited # of branches -> reduce branches of vallen by byte alignment and those of optype by careful coding -> FAIL
@@ -687,6 +693,28 @@
 	* Fix field length limitation in P4
 		- Use 16-bit keyhihilo and 116-bit keyhihihi for 32-bit keyhihi (ingress_mat.p4, header.p4, remove_cache_lookup.py, add_cache_lookup.py, configure.py, key, server_impl.h)
 		- Use uint16_t instead of uint32_t for vallen (egress_mat.p4 (udp.hdrlen), header.p4, netbufferv4.p4 (one comment), configure.py (udp.hdrlen), load_snapshot_data.py, get_evictdata.py, val, switchos.c, controller.c, iniparser_wrapper.c, packet_format_impl.h (size))
+	* Fix software bugs when launching controller, switchos, and server successfully
+		- Use new to allocate large buf in heap instead of stack to fix segmentation error
+		- Invoke parse_control_ini in each main file
+		- Fix configuration issue of controller_ip_for_server (should not be dpdk NIC)
+		- Fix EAGAIN issue of tcpsocket after accept()
+	* Pass correctness test for normal requests w/o cache hit (client -> server -> client)
+		- Pass case1 of single GETREQ
+			- Introduce debug_hdr for debugging (TODO: remove it due to direct counter for debugging)
+				+ Move meta.is_hot/is_lastclone_for_pktloss into debug_hdr (*.p4, configure.py)
+				+ Add debug_hdr at the end of each packet (only except SCANREQ/SCANREQ_SPLIT and CACHE_POP/CACHE_EVICT) (parser.p4, configure.py, packet_format)
+			- Fix unmatched action (GETREQ_INSWITCH -> GETREQ) issue due to w/o add_header(shadowtype_hdr)
+		- Pass case2 and case3 of PUTREQ (comment cache population temporarily)
+			- Fix width limitation of range matched field (<= 20bits)
+			- Fix incorrect seq issue due to unchanged udphdr.hdrLen
+		- Pass case4 and case5 of DELREQ
+	* Use DPDK flow director instead of custom receiver
+	* Pass correctness test for cache population and cache hit
+		* Update reflector_port in P4
+		* Fix udp.dstport issue for cache hit in P4
+		* Issue: server cannot receive CACHE_POP_INSWITCH_ACK
+			+ Update destination macaddr for cache hit, cache pop ack, and case1
+			+ Introduce direct counter for debugging
 
 ## Run
 

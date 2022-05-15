@@ -6,6 +6,9 @@
 // Uncomment it if support range query, or comment it otherwise
 //#define RANGE_SUPPORT
 
+// Uncomment it before evaluation
+#define DEBUG
+
 // NOTE: 1B optype does not need endian conversion
 // 0b0001
 #define PUTREQ 0x01

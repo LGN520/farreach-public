@@ -1584,9 +1584,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             actnspec1 = netbufferv4_update_macaddr_c2s_action_spec_t(\
                     macAddr_to_string(src_mac), \
                     macAddr_to_string(dst_mac))
-            matchspec0 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_TYPE)
-            matchspec1 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES_TYPE)
-            matchspec2 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES_TYPE)
+            matchspec0 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES)
+            matchspec1 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES)
+            matchspec2 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\

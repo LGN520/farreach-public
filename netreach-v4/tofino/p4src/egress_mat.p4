@@ -398,7 +398,7 @@ action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(sid
 	remove_header(inswitch_hdr);
 
 	//modify_field(eg_intr_md.egress_port, port); // set eport to switchos
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+	//modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring // TODO: see if we can get cloned packet
 	clone_egress_pkt_to_egress(sid, clone_field_list_for_pktloss); // clone to switchos
 }
 
@@ -751,6 +751,14 @@ action update_delreq_inswitch_to_delreq_seq_case3() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter eg_port_forward_counter {
+	type : packets_and_bytes;
+	direct: eg_port_forward_tbl;
+}
+#endif
+
 table eg_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -807,7 +815,11 @@ table eg_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
+#ifdef DEBUG
+	size: 8192;
+#else
 	size: 2048;
+#endif
 }
 
 #ifdef RANGE_SUPPORT

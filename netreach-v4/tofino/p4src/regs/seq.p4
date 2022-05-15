@@ -32,7 +32,8 @@ table access_seq_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	//size: 2;
+	size: 32; // use seq_req for debugging (check whether some packet type enters the egress pipeline)
 }
 
 register savedseq_reg {
