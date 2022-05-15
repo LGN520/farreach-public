@@ -118,6 +118,13 @@ header_type stat_t {
 	}
 }
 
+header_type clone_t {
+	fields {
+		clonenum_for_pktloss: 8;
+		client_udpport: 16;
+	}
+}
+
 header_type metadata_t {
 	fields {
 		need_recirculate: 1;
@@ -136,8 +143,6 @@ header_type metadata_t {
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;
-		clonenum_for_pktloss: 8;
-		client_port: 16;
 	}
 }
 
@@ -181,5 +186,6 @@ header shadowtype_t shadowtype_hdr;
 header seq_t seq_hdr;
 header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
+header clone_t clone_hdr;
 metadata metadata_t meta;
 header debug_t debug_hdr;

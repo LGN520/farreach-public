@@ -672,12 +672,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.access_seq_tbl_table_add_with_assign_seq(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: save_client_port_tbl (default: nop; size: 4)
-            print "Configuring save_client_port_tbl"
+            # Table: save_client_udpport_tbl (default: nop; size: 4)
+            print "Configuring save_client_udpport_tbl"
             for tmpoptype in[GETREQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH]:
-                matchspec0 = netbufferv4_save_client_port_tbl_match_spec_t(\
+                matchspec0 = netbufferv4_save_client_udpport_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype)
-                self.client.save_client_port_tbl_table_add_with_save_client_port(\
+                self.client.save_client_udpport_tbl_table_add_with_save_client_udpport(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stgae 2
@@ -1011,7 +1011,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1]:
                 matchspec0 = netbufferv4_lastclone_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
-                        meta_clonenum_for_pktloss = 0)
+                        clone_hdr_clonenum_for_pktloss = 0)
                 self.client.lastclone_tbl_table_add_with_set_is_lastclone(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 

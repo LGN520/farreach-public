@@ -52,11 +52,12 @@ parser parse_udp {
 	return parse_op;
 }
 
-// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr
+// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr
 
 parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
+		CACHE_POP_INSWITCH_ACK: parse_clone;
 		1 mask 0x01: parse_vallen;
 		/*2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
@@ -310,7 +311,19 @@ parser parse_inswitch {
 
 parser parse_stat {
 	extract(stat_hdr);
-	return parse_debug; // GETRES, PUTRES, DELRES, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
+	return select(shadowtype_hdr.shadowtype) {
+		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_clone;
+		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_clone;
+		PUTREQ_SEQ_INSWITCH_CASE1: parse_clone;
+		DELREQ_SEQ_INSWITCH_CASE1: parse_clone;
+		default: parse_debug;
+	}
+	//return parse_debug; // GETRES, PUTRES, DELRES, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
+}
+
+parser parse_clone {
+	extract(clone_hdr);
+	return parse_debug; // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, CACHE_POP_INSWITCH_ACK, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 }
 
 parser parse_debug {

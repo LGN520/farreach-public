@@ -13,10 +13,13 @@
 // # of bytes before idx in inswitch_hdr
 #define INSWITCH_PREV_BYTES 7
 
+// # of bytes in clone_hdr
+#define CLONE_BYTES 3
+
 // # of bytes in debug_hdr
 #define DEBUG_BYTES 1
 
-// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr
+// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr
 
 // (1) vallen&value: mask 0b0001; seq: mask 0b0010; inswitch_hdr: mask 0b0100; stat: mask 0b1000;
 // (2) scan/split: specific value (X + 0b0000); not parsed optypes: X + 0b0000
@@ -231,7 +234,7 @@ class GetResponseLatestSeq : public Packet<key_t> { // ophdr + val + shadowtype 
 };
 
 template<class key_t, class val_t>
-class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
+class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat + clone_hdr
 	public: 
 		GetResponseLatestSeqInswitchCase1();
 		GetResponseLatestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat);
@@ -258,7 +261,7 @@ class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // oph
 };
 
 template<class key_t, class val_t>
-class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
+class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat + clone_hdr
 	public: 
 		GetResponseDeletedSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat);
 		GetResponseDeletedSeqInswitchCase1(const char * data, uint32_t recv_size);
@@ -285,7 +288,7 @@ class PutRequestPopSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + s
 };
 
 template<class key_t, class val_t>
-class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
+class PutRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat + clone_hdr
 	public: 
 		PutRequestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat);
 		PutRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
@@ -324,7 +327,7 @@ class DelRequestSeq : public Packet<key_t> { // ophdr + shadowtype + seq
 };
 
 template<class key_t, class val_t>
-class DelRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat
+class DelRequestSeqInswitchCase1 : public GetResponseLatestSeqInswitchCase1<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat + clone_hdr
 	public: 
 		DelRequestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat);
 		DelRequestSeqInswitchCase1(const char * data, uint32_t recv_size);
@@ -389,7 +392,7 @@ class CachePopInswitch : public GetResponseLatestSeq<key_t, val_t> { // ophdr + 
 };
 
 template<class key_t>
-class CachePopInswitchAck : public GetRequest<key_t> { // ophdr
+class CachePopInswitchAck : public GetRequest<key_t> { // ophdr + clone_hdr
 	public: 
 		CachePopInswitchAck(const char * data, uint32_t recv_size);
 
