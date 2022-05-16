@@ -88,6 +88,7 @@ short server_port_start = -1;
 // switch os simulator for processing special cases and packet loss handling (and tcp servers for workers)
 const char* server_ip = nullptr;
 uint8_t server_macaddr[6];
+const char* server_ip_for_controller = nullptr;
 short server_evictserver_port_start = -1;
 short server_consnapshotserver_port = -1;
 uint64_t perserver_keyrange = 0; // use size_t to avoid int overflow
@@ -191,6 +192,7 @@ inline void parse_ini(const char* config_file) {
 	server_port_start = ini.get_server_port();
 	server_ip = ini.get_server_ip();
 	ini.get_server_mac(server_macaddr);
+	server_ip_for_controller = ini.get_server_ip_for_controller();
 	server_evictserver_port_start = ini.get_server_evictserver_port();
 	server_consnapshotserver_port = ini.get_server_consnapshotserver_port();
 	perserver_keyrange = 4ll*1024ll*1024ll*1024ll / int64_t(server_num); // 2^32 / server_num

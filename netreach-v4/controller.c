@@ -306,7 +306,8 @@ void *run_controller_popserver_subthread(void *param) {
 		// Get one complete CACHE_POP
 		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes) {
 			printf("[controller.popserver.subthread] cur_recv_bytes: %d, arrive_serveridx_bytes: %d\n", cur_recv_bytes, arrive_serveridx_bytes); // TMPDEBUG
-			dump_buf(buf, cur_recv_bytes);
+			printf("receive CACHE_POP from server\n");
+			dump_buf(buf, arrive_serveridx_bytes);
 			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by controller.popclient
 
 			//is_cached_before = (controller_cached_keyset_list[tmp_cache_pop_ptr->serveridx()].find(tmp_cache_pop_ptr->key()) != controller_cached_keyset_list[tmp_cache_pop_ptr->serveridx()].end());
@@ -384,9 +385,10 @@ void *run_controller_popclient(void *param) {
 			//cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptrs[controller_tail_for_pop];
 			// send CACHE_POP to switch os
 			uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
+			printf("send CACHE_POP to switchos\n");
+			dump_buf(buf, popsize);
 			tcpsend(controller_popclient_tcpsock, buf, popsize, "controller.popclient");
 			printf("[controller.popclient] popsize: %d\n", int(popsize)); // TMPDEBUG
-			dump_buf(buf, popsize);
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;
 			tmp_cache_pop_ptr = NULL;
@@ -440,13 +442,14 @@ void *run_controller_evictserver(void *param) {
 		
 		/*if (!is_controller_evictserver_evictclients_connected) {
 			for (size_t i = 0; i < server_num; i++) {
-				tcpconnect(controller_evictserver_evictclient_tcpsock_list[i], server_ip, server_evictserver_port_start+i, "controller.evictserver.evictclient", "server.evictserver");
+				tcpconnect(controller_evictserver_evictclient_tcpsock_list[i], server_ip_for_controlelr, server_evictserver_port_start+i, "controller.evictserver.evictclient", "server.evictserver");
 			}
 			is_controller_evictserver_evictclients_connected = true;
 		}*/
 
 		if (!is_controller_evictserver_evictclient_connected) {
-			tcpconnect(controller_evictserver_evictclient_tcpsock, server_ip, server_evictserver_port_start, "controller.evictserver.evictclient", "server.evictserver");
+			tcpconnect(controller_evictserver_evictclient_tcpsock, server_ip_for_controller, server_evictserver_port_start, "controller.evictserver.evictclient", "server.evictserver");
+			is_controller_snapshotclient_connected = true;
 		}
 
 		cur_recv_bytes += recvsize;
@@ -463,7 +466,7 @@ void *run_controller_evictserver(void *param) {
 		}
 
 		// Get vallen
-		if (!with_optype && with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
+		if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
 			////tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
 			//vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
 			//vallen = ntohl(vallen);
@@ -484,6 +487,8 @@ void *run_controller_evictserver(void *param) {
 			//tmpserveridx = uint16_t(ntohs(uint16_t(tmpserveridx)));
 			//INVARIANT(tmpserveridx >= 0 && tmpserveridx < server_num);
 			//tcpsend(controller_evictserver_evictclient_tcpsock_list[tmpserveridx], buf, arrive_serveridx_bytes, "controller.evictserver.evictclient");
+			printf("receive CACHE_EVICT from switchos and send to server\n");
+			dump_buf(buf, arrive_serveridx_bytes);
 			tcpsend(controller_evictserver_evictclient_tcpsock, buf, arrive_serveridx_bytes, "controller.evictserver.evictclient");
 
 			is_waitack = true;
@@ -515,6 +520,8 @@ void *run_controller_evictserver(void *param) {
 				// TODO: update metadata if any (no metadata now)
 
 				// send CACHE_EVICT_ACK to switchos.popworker.evictclient
+				printf("receive CACHE_EVICT_ACK from server and send to switchos\n");
+				dump_buf(evictclient_buf, evictclient_arrive_key_bytes);
 				tcpsend(connfd, evictclient_buf, evictclient_arrive_key_bytes, "controller.evictserver");
 
 				// move remaining bytes and reset metadata
@@ -607,7 +614,7 @@ void *run_controller_snapshotclient(void *param) {
 
 					// connect server.consnapshotserver
 					if (!is_controller_snapshotclient_consnapshotclient_connected) {
-						tcpconnect(controller_snapshotclient_consnapshotclient_tcpsock, server_ip, server_consnapshotserver_port, "controller.snapshotclient.consnapshotclient", "server.consnapshotserver");
+						tcpconnect(controller_snapshotclient_consnapshotclient_tcpsock, server_ip_for_controller, server_consnapshotserver_port, "controller.snapshotclient.consnapshotclient", "server.consnapshotserver");
 						is_controller_snapshotclient_consnapshotclient_connected = true;
 					}
 

@@ -762,18 +762,27 @@
 		* Key k1 in cache_lookup_tbl, cm=2, v1 in vallen and val, valid=1, {cache_frequency, seq, savedseq, latest, deleted, case1}=0
 	+ Case 2: put(k1,v1)-put(k1,v2) (PUTREQ-PUTREQ_POP arrive at server, which sends CACHE_POP_INSWITCH and waits for CACHE_POP_INSWITCH_ACK)
 		* Key k1 in cache_lookup_tbl, cm=2, v2 in vallen and val, valid=1, seq=2, savedseq=2, {cache_frequency, latest, deleted, case1}=0
-	+ TODO: Case 3: read(k1,v1)-read(k1,v1)-put(k2,v2) (GETREQ-GETREQ_POP-PUTREQ_POP, where GETREQ_POP triggers cache population, while PUTREQ_POP triggers cache eviction)
+	+ Case 3: read(k1,v1)-read(k1,v1)-put(k2,v2) (GETREQ-GETREQ_POP-PUTREQ_POP, where GETREQ_POP triggers cache population, while PUTREQ_POP triggers cache eviction)
 		* Key k2 in cache_lookup_tbl, cm=3, v2 in vallen and val, valid=1, seq=1, savedseq=1, {cache_frequency, latest, deleted, case1}=0
 - Test cases of conservative read
 	+ Case 1
 		* Step 1: case 1/2/3 of cache population
 		* Step 2: read(k1,v1) (GETREQ_NLATEST arrive at server, which sends GETRES_LATEST_SEQ and hence GETRES)
 			- Key k1 in cache_lookup_tbl, cm=2, v1 in vallen and val, valid=1, cache_frequency=1, latest=1, {seq, savedseq, deleted, case1}=0
+	+ TODO: Case 2
+		* Step 1: case 1/2/3 of cache population + DELREQ (arrive before finishing cache population)
+			- Key k1 in cache_lookup_tbl, cm=2, v1 in vallen and val, valid=1, cache_frequency=1, latest=1, seq=1, {deleted, savedseq, case1}=0
+		* Step 2: read(k1,deleted) (GETREQ_NLATEST arrive at server, which sends GETRES_DELETED_SEQ and hence GETRES)
+			- Key k1 in cache_lookup_tbl, cm=2, vallen=0, valid=1, cache_frequency=1, latest=1, deleted=1, seq=1, savedseq=1, {case1}=0
 - Test cases of cache hit
 	+ Case 1
-		* Step 1: case 1/2/3 of conservative read
+		* Step 1: case 1 of conservative read
 		* Step 2: read(k1,v1) (GETREQ arrive at switch, which sends GETRES to client)
 			- Key k1 in cache_lookup_tbl, cm=2, v1 in vallen and val, valid=1, cache_frequency=2, latest=1, {seq, savedseq, deleted, case1}=0
+	+ TODO: Case 2
+		* Step 1: case 2 of conservative read
+		* Step 2: read(k1, deleted) (GETREQ arrive at switch, which sends GETRES w/ stat=0 to client)
+			- Key k1 in cache_lookup_tbl, cm=2, vallen=0, valid=1, cache_frequency=2, latest=1, deleted=1, seq=1, savedseq=1, {case1}=0
 - Test cases of latency
 	+ Case 1: latency between client and server
 		* 1000 read(k1,v1)

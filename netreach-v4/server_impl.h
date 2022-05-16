@@ -337,15 +337,10 @@ static int run_server_worker(void * param) {
 
 	n_rx = receive_pkts(0, serveridx, rx_pkts, RX_BURST_SIZE, server_port_start + serveridx); // maybe multiple requests to a server
 
-	if (n_rx == 0) {
-		continue;
-	}
-
-	struct timespec t1, t2, t3;
-	CUR_TIME(t1);
-
 	//if (server_worker_heads[serveridx] != server_worker_tails[serveridx]) {
-	for (uint16_t i = 0; i < n_rx; i++) {
+	for (uint16_t i = 0; i < n_rx; i++) { // n_rx != 0
+		struct timespec t1, t2, t3;
+		CUR_TIME(t1);
 		
 		// DPDK
 		sent_pkt = sent_pkts[sent_pkt_idx];
@@ -603,6 +598,8 @@ static int run_server_worker(void * param) {
 							// Send CACHE_POP to controller.popserver
 							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, serveridx);
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+							printf("send CACHE_POP to controller\n");
+							dump_buf(buf, popsize);
 							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
 						}
 					}
@@ -631,6 +628,8 @@ static int run_server_worker(void * param) {
 							// Send CACHE_POP to controller.popserver
 							cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+							printf("send CACHE_POP to controller\n");
+							dump_buf(buf, popsize);
 							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
 						}
 					}
@@ -820,7 +819,8 @@ void *run_server_evictserver(void *param) {
 	bool with_vallen = false;
 	bool is_waitack = false;
 	const int arrive_optype_bytes = sizeof(uint8_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint32_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	uint16_t tmp_serveridx = 0;
 	while (transaction_running) {
@@ -846,8 +846,10 @@ void *run_server_evictserver(void *param) {
 		// Get key and vallen
 		if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
 			tmpkey.deserialize(recvbuf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
-			vallen = *((uint32_t *)(recvbuf + arrive_vallen_bytes - sizeof(uint32_t)));
-			vallen = ntohl(vallen);
+			//vallen = *((uint32_t *)(recvbuf + arrive_vallen_bytes - sizeof(uint32_t)));
+			//vallen = ntohl(vallen);
+			vallen = *((uint16_t *)(recvbuf + arrive_vallen_bytes - sizeof(uint16_t)));
+			vallen = ntohs(vallen);
 			INVARIANT(vallen >= 0);
 			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
 			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
@@ -856,6 +858,8 @@ void *run_server_evictserver(void *param) {
 
 		// Get one complete CACHE_EVICT/_CASE2 (only need serveridx here)
 		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
+			printf("receive CACHE_EVICT from controller\n");
+			dump_buf(recvbuf, arrive_serveridx_bytes);
 			bool res = false;
 			// send CACHE_EVICT to server.worker 
 			if (packet_type_t(optype) == packet_type_t::CACHE_EVICT) {
@@ -884,7 +888,7 @@ void *run_server_evictserver(void *param) {
 		}
 
 		// wait for CACHE_EVICT_ACK from server.worker
-		if (is_waitack) {
+		while (is_waitack) {
 			cache_evict_ack_t *tmp_cache_evict_ack_ptr = server_cache_evict_ack_ptr_queue_list[tmp_serveridx].read();
 			if (tmp_cache_evict_ack_ptr != NULL) {
 				INVARIANT(tmp_cache_evict_ack_ptr->key() == tmpkey);
@@ -892,6 +896,8 @@ void *run_server_evictserver(void *param) {
 				// send CACHE_EVICT_ACK to controller.evictserver.evictclient
 				char sendbuf[MAX_BUFSIZE];
 				int sendsize = tmp_cache_evict_ack_ptr->serialize(sendbuf, MAX_BUFSIZE);
+				printf("send CACHE_EVICT_ACK to controller\n");
+				dump_buf(sendbuf, sendsize);
 				tcpsend(connfd, sendbuf, sendsize, "server.evictserver");
 
 				// move remaining bytes and reset metadata

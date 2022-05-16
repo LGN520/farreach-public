@@ -122,6 +122,15 @@ void IniparserWrapper::get_server_mac(uint8_t *macaddr) {
 	parse_mac(macaddr, server_mac);
 }
 
+const char *IniparserWrapper::get_server_ip_for_controller() {
+	const char *server_ip = iniparser_getstring(ini, "server:server_ip_for_controller", nullptr);
+	if (server_ip == nullptr) {
+		printf("Invalid entry of [server:server_ip_for_controller]\n");
+		exit(-1);
+	}
+	return server_ip;
+}
+
 short IniparserWrapper::get_server_evictserver_port() {
 	int tmp = iniparser_getint(ini, "server:server_evictserver_port", -1);
 	if (tmp == -1) {

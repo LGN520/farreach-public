@@ -29,6 +29,7 @@ class IniparserWrapper {
 		short get_server_port();
 		const char *get_server_ip();
 		void get_server_mac(uint8_t* macaddr);
+		const char *get_server_ip_for_controller();
 		short get_server_evictserver_port();
 		short get_server_consnapshotserver_port();
 
