@@ -44,7 +44,7 @@ void DeletedSet<key_t, seq_t>::add(key_t key, seq_t seq) {
 }
 
 template<class key_t, class seq_t>
-bool DeletedSet<key_t, seq_t>::check_and_remove(key_t key, seq_t seq) {
+bool DeletedSet<key_t, seq_t>::check_and_remove(key_t key, seq_t seq, seq_t *deleted_seq_ptr) {
 	/*while (true) {
 		if (mutex_lock.try_lock()) break;
 	}*/
@@ -58,6 +58,9 @@ bool DeletedSet<key_t, seq_t>::check_and_remove(key_t key, seq_t seq) {
 	}
 
 	seq_t oldseq = iter->second;
+	if (deleted_seq_ptr != NULL) {
+		*deleted_seq_ptr = oldseq;
+	}
 	INVARIANT(oldseq != seq);
 	if (oldseq < seq) {
 		records_sorted_bykey.erase(iter);

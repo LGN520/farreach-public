@@ -395,6 +395,13 @@ static int run_server_worker(void * param) {
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
 					else { // key not exist
+						if (tmp_seq == 0) { // TODO: before treating del as a speical put, xindex cannot get the seqnum of a removed record
+							uint32_t deleted_seq = 0;
+							bool is_deleted = server_deleted_sets[serveridx].check_and_remove(req.key(), tmp_seq, &deleted_seq);
+							INVARIANT(is_deleted == true && deleted_seq >= tmp_seq);
+							tmp_seq = deleted_seq;
+						}
+
 						get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq);
 						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 					}
@@ -578,7 +585,7 @@ static int run_server_worker(void * param) {
 					get_request_pop_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
-					uint32_t tmp_seq;
+					uint32_t tmp_seq = 0;
 					bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					

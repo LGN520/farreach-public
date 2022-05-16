@@ -16,7 +16,7 @@ class DeletedSet {
 		DeletedSet(uint32_t c=10, uint32_t rtt=10);
 
 		void add(key_t key, seq_t seq);
-		bool check_and_remove(key_t key, seq_t seq); // check if isdeleted
+		bool check_and_remove(key_t key, seq_t seq, seq_t *deleted_seq_ptr=NULL); // check if isdeleted
 
 	private:
 		std::map<key_t, seq_t> records_sorted_bykey;
