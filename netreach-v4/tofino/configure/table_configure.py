@@ -59,6 +59,7 @@ sampled_list = [0, 1]
 lastclone_list = [0, 1]
 snapshot_flag_list = [0, 1]
 case1_list = [0, 1]
+need_update_val_list = [0, 1]
 
 
 if test_param_get("arch") == "tofino":
@@ -116,50 +117,82 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv4"])
 
     def configure_update_val_tbl(self, valname):
-        # size: 30
-        for is_cached in cached_list:
-            for validvalue in validvalue_list:
-                for is_latest in latest_list:
-                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                            op_hdr_optype = GETREQ_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            meta_validvalue = validvalue,
-                            meta_is_latest = is_latest)
-                    if is_cached == 1:
-                        eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
-                    for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
-                        matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                                op_hdr_optype = tmpoptype,
-                                inswitch_hdr_is_cached = is_cached,
-                                meta_validvalue = validvalue,
-                                meta_is_latest = is_latest)
-                        if is_cached == 1 and validvalue == 1 and is_latest == 0:
-                            eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                            op_hdr_optype = PUTREQ_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            meta_validvalue = validvalue,
-                            meta_is_latest = is_latest)
-                    if is_cached == 1 and validvalue == 1:
-                        eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
-                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                            op_hdr_optype = DELREQ_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            meta_validvalue = validvalue,
-                            meta_is_latest = is_latest)
-                    if is_cached == 1 and validvalue == 1:
-                        eval("self.client.update_val{}_tbl_table_add_with_reset_and_get_val{}".format(valname, valname))(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
-                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                            op_hdr_optype = CACHE_POP_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            meta_validvalue = validvalue,
-                            meta_is_latest = is_latest)
+#        # size: 30
+#        for is_cached in cached_list:
+#            for validvalue in validvalue_list:
+#                for is_latest in latest_list:
+#                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+#                            op_hdr_optype = GETREQ_INSWITCH,
+#                            inswitch_hdr_is_cached = is_cached,
+#                            meta_validvalue = validvalue,
+#                            meta_is_latest = is_latest)
+#                    if is_cached == 1:
+#                        eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
+#                                self.sess_hdl, self.dev_tgt, matchspec0)
+#                    for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
+#                        matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+#                                op_hdr_optype = tmpoptype,
+#                                inswitch_hdr_is_cached = is_cached,
+#                                meta_validvalue = validvalue,
+#                                meta_is_latest = is_latest)
+#                        if is_cached == 1 and validvalue == 1 and is_latest == 0:
+#                            eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
+#                                    self.sess_hdl, self.dev_tgt, matchspec0)
+#                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+#                            op_hdr_optype = PUTREQ_INSWITCH,
+#                            inswitch_hdr_is_cached = is_cached,
+#                            meta_validvalue = validvalue,
+#                            meta_is_latest = is_latest)
+#                    if is_cached == 1 and validvalue == 1:
+#                        eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
+#                                self.sess_hdl, self.dev_tgt, matchspec0)
+#                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+#                            op_hdr_optype = DELREQ_INSWITCH,
+#                            inswitch_hdr_is_cached = is_cached,
+#                            meta_validvalue = validvalue,
+#                            meta_is_latest = is_latest)
+#                    if is_cached == 1 and validvalue == 1:
+#                        eval("self.client.update_val{}_tbl_table_add_with_reset_and_get_val{}".format(valname, valname))(\
+#                                self.sess_hdl, self.dev_tgt, matchspec0)
+#                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+#                            op_hdr_optype = CACHE_POP_INSWITCH,
+#                            inswitch_hdr_is_cached = is_cached,
+#                            meta_validvalue = validvalue,
+#                            meta_is_latest = is_latest)
+#                    eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
+#                            self.sess_hdl, self.dev_tgt, matchspec0)
+        # size: 6
+        for need_update_val in need_update_val_list:
+            matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+                    op_hdr_optype = GETREQ_INSWITCH,
+                    meta_need_update_val = need_update_val)
+            if need_update_val == 0:
+                eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+            for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
+                matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+                        op_hdr_optype = tmpoptype,
+                        meta_need_update_val = need_update_val)
+                if need_update_val == 1:
                     eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+                    op_hdr_optype = PUTREQ_INSWITCH,
+                    meta_need_update_val = need_update_val)
+            if need_update_val == 1:
+                eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+                    op_hdr_optype = DELREQ_INSWITCH,
+                    meta_need_update_val = need_update_val)
+            if need_update_val == 1:
+                eval("self.client.update_val{}_tbl_table_add_with_reset_and_get_val{}".format(valname, valname))(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
+                    op_hdr_optype = CACHE_POP_INSWITCH,
+                    meta_need_update_val = need_update_val)
+            eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
     def setUp(self):
         print '\nSetup'
@@ -789,7 +822,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: update_vallen_tbl (default: nop; 30)
+            # Table: update_vallen_tbl (default: reset_need_update_val; 30)
             print "Configuring update_vallen_tbl"
             for is_cached in cached_list:
                 for validvalue in validvalue_list:
@@ -1639,6 +1672,29 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec4, actnspec1)
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
                     self.sess_hdl, self.dev_tgt, matchspec5, actnspec1)
+
+            # Table: add_and_remove_value_header_tbl (deafult: remove_all; 17*9=153)
+            print "Configuring add_and_remove_value_header_tbl"
+            # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_INSWITCH
+            # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
+            for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES]:
+                for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
+                    if i == 0:
+                        vallen_start = 0
+                        vallen_end = 0
+                    else:
+                        vallen_start = (i-1)*8+1 # 1, 9, ..., 121
+                        vallen_end = (i-1)*8+8 # 8, 16, ..., 128
+                    matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+                            op_hdr_optype=tmpoptype,
+                            vallen_hdr_vallen_start=vallen_start,
+                            vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
+                    if i == 0:
+                        self.client.add_and_remove_value_header_tbl_table_add_with_add_only_vallen(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0)
+                    else:
+                        eval("self.client.add_and_remove_value_header_tbl_table_add_with_add_to_val{}".format(i))(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0)
 
             
 

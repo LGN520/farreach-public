@@ -949,3 +949,393 @@ table update_macaddr_tbl {
 	default_action: nop();
 	size: 8;
 }
+
+action add_only_vallen() {
+	add_header(vallen_hdr);
+	remove_header(val1_hdr);
+	remove_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val1() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	remove_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val2() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val3() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val4() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val5() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val6() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val7() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val8() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val9() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val10() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val11() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val12() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val13() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val14() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val15() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+action add_to_val16() {
+	add_header(vallen_hdr);
+	add_header(val1_hdr);
+	add_header(val2_hdr);
+	add_header(val3_hdr);
+	add_header(val4_hdr);
+	add_header(val5_hdr);
+	add_header(val6_hdr);
+	add_header(val7_hdr);
+	add_header(val8_hdr);
+	add_header(val9_hdr);
+	add_header(val10_hdr);
+	add_header(val11_hdr);
+	add_header(val12_hdr);
+	add_header(val13_hdr);
+	add_header(val14_hdr);
+	add_header(val15_hdr);
+	add_header(val16_hdr);
+}
+
+action remove_all() {
+	remove_header(vallen_hdr);
+	remove_header(val1_hdr);
+	remove_header(val2_hdr);
+	remove_header(val3_hdr);
+	remove_header(val4_hdr);
+	remove_header(val5_hdr);
+	remove_header(val6_hdr);
+	remove_header(val7_hdr);
+	remove_header(val8_hdr);
+	remove_header(val9_hdr);
+	remove_header(val10_hdr);
+	remove_header(val11_hdr);
+	remove_header(val12_hdr);
+	remove_header(val13_hdr);
+	remove_header(val14_hdr);
+	remove_header(val15_hdr);
+	remove_header(val16_hdr);
+}
+
+@pragma stage 11
+table add_and_remove_value_header_tbl {
+	reads {
+		op_hdr.optype: exact;
+		vallen_hdr.vallen: range;
+	}
+	actions {
+		add_only_vallen;
+		add_to_val1;
+		add_to_val2;
+		add_to_val3;
+		add_to_val4;
+		add_to_val5;
+		add_to_val6;
+		add_to_val7;
+		add_to_val8;
+		add_to_val9;
+		add_to_val10;
+		add_to_val11;
+		add_to_val12;
+		add_to_val13;
+		add_to_val14;
+		add_to_val15;
+		add_to_val16;
+		remove_all;
+	}
+	default_action: remove_all();
+	size: 256;
+}

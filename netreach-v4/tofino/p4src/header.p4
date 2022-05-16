@@ -143,6 +143,7 @@ header_type metadata_t {
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;
+		need_update_val: 1;
 	}
 }
 

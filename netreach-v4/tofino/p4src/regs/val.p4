@@ -14,6 +14,7 @@ blackbox stateful_alu get_vallen_alu {
 
 action get_vallen() {
 	get_vallen_alu.execute_stateful_alu(inswitch_hdr.idx);
+	modify_field(meta.need_update_val, 0);
 }
 
 blackbox stateful_alu set_and_get_vallen_alu {
@@ -27,6 +28,7 @@ blackbox stateful_alu set_and_get_vallen_alu {
 
 action set_and_get_vallen() {
 	set_and_get_vallen_alu.execute_stateful_alu(inswitch_hdr.idx);
+	modify_field(meta.need_update_val, 1);
 }
 
 blackbox stateful_alu reset_and_get_vallen_alu {
@@ -40,6 +42,11 @@ blackbox stateful_alu reset_and_get_vallen_alu {
 
 action reset_and_get_vallen() {
 	reset_and_get_vallen_alu.execute_stateful_alu(inswitch_hdr.idx);
+	modify_field(meta.need_update_val, 1);
+}
+
+action reset_need_update_val() {
+	modify_field(meta.need_update_val, 0);
 }
 
 @pragma stage 3
@@ -54,9 +61,10 @@ table update_vallen_tbl {
 		get_vallen;
 		set_and_get_vallen;
 		reset_and_get_vallen;
+		reset_need_update_val;
 		nop;
 	}
-	default_action: nop();
+	default_action: reset_need_update_val();
 	size: 32;
 }
 
@@ -107,9 +115,10 @@ action reset_and_get_vallo1() {
 table update_vallo1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo1;
@@ -168,9 +177,10 @@ action reset_and_get_valhi1() {
 table update_valhi1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi1;
@@ -229,9 +239,10 @@ action reset_and_get_vallo2() {
 table update_vallo2_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo2;
@@ -290,9 +301,10 @@ action reset_and_get_valhi2() {
 table update_valhi2_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi2;
@@ -351,9 +363,10 @@ action reset_and_get_vallo3() {
 table update_vallo3_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo3;
@@ -412,9 +425,10 @@ action reset_and_get_valhi3() {
 table update_valhi3_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi3;
@@ -473,9 +487,10 @@ action reset_and_get_vallo4() {
 table update_vallo4_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo4;
@@ -534,9 +549,10 @@ action reset_and_get_valhi4() {
 table update_valhi4_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi4;
@@ -595,9 +611,10 @@ action reset_and_get_vallo5() {
 table update_vallo5_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo5;
@@ -656,9 +673,10 @@ action reset_and_get_valhi5() {
 table update_valhi5_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi5;
@@ -717,9 +735,10 @@ action reset_and_get_vallo6() {
 table update_vallo6_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo6;
@@ -778,9 +797,10 @@ action reset_and_get_valhi6() {
 table update_valhi6_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi6;
@@ -839,9 +859,10 @@ action reset_and_get_vallo7() {
 table update_vallo7_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo7;
@@ -900,9 +921,10 @@ action reset_and_get_valhi7() {
 table update_valhi7_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi7;
@@ -961,9 +983,10 @@ action reset_and_get_vallo8() {
 table update_vallo8_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo8;
@@ -1022,9 +1045,10 @@ action reset_and_get_valhi8() {
 table update_valhi8_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi8;
@@ -1083,9 +1107,10 @@ action reset_and_get_vallo9() {
 table update_vallo9_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo9;
@@ -1144,9 +1169,10 @@ action reset_and_get_valhi9() {
 table update_valhi9_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi9;
@@ -1205,9 +1231,10 @@ action reset_and_get_vallo10() {
 table update_vallo10_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo10;
@@ -1266,9 +1293,10 @@ action reset_and_get_valhi10() {
 table update_valhi10_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi10;
@@ -1327,9 +1355,10 @@ action reset_and_get_vallo11() {
 table update_vallo11_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo11;
@@ -1388,9 +1417,10 @@ action reset_and_get_valhi11() {
 table update_valhi11_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi11;
@@ -1449,9 +1479,10 @@ action reset_and_get_vallo12() {
 table update_vallo12_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo12;
@@ -1510,9 +1541,10 @@ action reset_and_get_valhi12() {
 table update_valhi12_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi12;
@@ -1571,9 +1603,10 @@ action reset_and_get_vallo13() {
 table update_vallo13_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo13;
@@ -1632,9 +1665,10 @@ action reset_and_get_valhi13() {
 table update_valhi13_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi13;
@@ -1693,9 +1727,10 @@ action reset_and_get_vallo14() {
 table update_vallo14_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo14;
@@ -1754,9 +1789,10 @@ action reset_and_get_valhi14() {
 table update_valhi14_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi14;
@@ -1815,9 +1851,10 @@ action reset_and_get_vallo15() {
 table update_vallo15_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo15;
@@ -1876,9 +1913,10 @@ action reset_and_get_valhi15() {
 table update_valhi15_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi15;
@@ -1937,9 +1975,10 @@ action reset_and_get_vallo16() {
 table update_vallo16_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_vallo16;
@@ -1998,9 +2037,10 @@ action reset_and_get_valhi16() {
 table update_valhi16_tbl {
 	reads {
 		op_hdr.optype: exact;
-		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
-		meta.is_latest: exact;
+		//inswitch_hdr.is_cached: exact;
+		//meta.validvalue: exact;
+		//meta.is_latest: exact;
+		meta.need_update_val: exact;
 	}
 	actions {
 		get_valhi16;
