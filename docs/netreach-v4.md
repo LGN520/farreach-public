@@ -82,6 +82,7 @@
 	+ We can use direct/indirect counter for debugging, which does not occupy stateful ALU
 - NOTE for mirroring
 	+ We need to create mirror_session in ptf for both ingress direction and egress direction explicitly
+	+ NOTE: EGRESS will replace INGRESS, so we need to use BOTH
 
 ## Overview
 
@@ -757,7 +758,24 @@
 	+ Case 5: read(k1,v1)-delete(k1)-read(k1,none) (GETREQ-DELREQ_SEQ-GETREQ_POP arrive at server; ignore cache population here)
 		* No key in cache_lookup_tbl, cm=2, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
 - Test cases of cache population: see directory of "testcases/population"
-	+ Case 1: read(k1,v1)-read(k1,v1) (GETREQ-GETREQ_POP arrive at server)
+	+ Case 1: read(k1,v1)-read(k1,v1) (GETREQ-GETREQ_POP arrive at server, which sends CACHE_POP_INSWITCH and waits for CACHE_POP_INSWITCH_ACK)
+		* Key k1 in cache_lookup_tbl, cm=2, v1 in vallen and val, valid=1, {cache_frequency, seq, savedseq, latest, deleted, case1}=0
+- Test cases of conservative read
+	+ Case 1
+		* Step 1: case 1 of cache population
+		* Step 2: read(k1,v1) (GETREQ_NLATEST arrive at server, which sends GETRES_LATEST_SEQ and hence GETRES)
+			- Key k1 in cache_lookup_tbl, cm=2, v1 in vallen and val, valid=1, cache_frequency=1, latest=1, {seq, savedseq, deleted, case1}=0
+- Test cases of cache hit
+	+ Case 1
+		* Step 1: case 1 of conservative read
+		* Step 2: read(k1,v1) (GETREQ arrive at switch, which sends GETRES to client)
+			- Key k1 in cache_lookup_tbl, cm=2, v1 in vallen and val, valid=1, cache_frequency=2, latest=1, {seq, savedseq, deleted, case1}=0
+- Test cases of latency
+	+ Case 1: latency between client and server
+		* 1000 read(k1,v1)
+	+ Case 2: latency between client and switch
+		* Step 1: case 1 of conservative read
+		* Step 2: 1000 read(k1,v1)
 
 - TODO: Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
 	+ NOTE: remember to set bucket_num in config.ini, otherwise the hashidx will be incorrect sent by phase2 ptf

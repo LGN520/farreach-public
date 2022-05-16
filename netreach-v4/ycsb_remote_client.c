@@ -202,14 +202,14 @@ void run_benchmark() {
 		if (ret) {
 			COUT_N_EXIT("Error:" << ret);
 	}
-	COUT_THIS("[client] Lanuch worker [" << worker_i << "] at lcore " << lcoreid)
+	COUT_THIS("[client] Lanuch client [" << worker_i << "] at lcore " << lcoreid)
 	lcoreid++;
 	if (lcoreid >= MAX_LCORE_NUM) {
 		lcoreid = 1;
 	}
 	}
 
-	COUT_THIS("[client] prepare workers ...");
+	COUT_THIS("[client] prepare clients ...");
 	while (ready_threads < client_num) sleep(1);
 
 	running = true;
@@ -344,7 +344,9 @@ static int run_fg(void *param) {
 	char buf[MAX_BUFSIZE];
 	int req_size = 0;
 	int recv_size = 0;
-	struct rte_mbuf *rx_pkts[1] = {NULL};
+	struct rte_mbuf *rx_pkts[RX_BURST_SIZE];
+	memset(rx_pkts, 0, sizeof(struct rte_mbuf *) * RX_BURST_SIZE);
+	uint16_t n_rx = 0;
 
 #if !defined(NDEBUGGING_LOG)
 	std::string logname;
@@ -385,7 +387,12 @@ static int run_fg(void *param) {
 			//while (heads[thread_id] == tails[thread_id])
 			//	;
 			//INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);
-			receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id);
+			while (true) {
+				n_rx = receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id); // at most 1 response
+				if (n_rx > 0) {
+					break;
+				}
+			}
 			CUR_TIME(wait_t2);
 
 			CUR_TIME(rsp_t1);
@@ -431,7 +438,12 @@ static int run_fg(void *param) {
 			/*while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);*/
-			receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id);
+			while (true) {
+				n_rx = receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id); // at most 1 response
+				if (n_rx > 0) {
+					break;
+				}
+			}
 			CUR_TIME(wait_t2);
 
 			CUR_TIME(rsp_t1);
@@ -465,7 +477,12 @@ static int run_fg(void *param) {
 			/*while (heads[thread_id] == tails[thread_id])
 				;
 			INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);*/
-			receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id);
+			while (true) {
+				n_rx = receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id); // at most 1 response
+				if (n_rx > 0) {
+					break;
+				}
+			}
 			CUR_TIME(wait_t2);
 
 			CUR_TIME(rsp_t1);
@@ -512,27 +529,42 @@ static int run_fg(void *param) {
 				/*while (heads[thread_id] == tails[thread_id])
 					;
 				INVARIANT(pkts_list[thread_id][tails[thread_id]] != nullptr);*/
-				receive_pkts(0, thread_id, rx_pkts, 1, client_port_start + thread_id);
+				n_rx = receive_pkts(0, thread_id, rx_pkts, RX_BURST_SIZE, client_port_start + thread_id); // maybe multiple responses
 				CUR_TIME(scan_wait_t2);
 
-				CUR_TIME(scan_rsp_t1);
-				//recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
-				//rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
-				//pkts_list[thread_id][tails[thread_id]] = NULL;
-				//tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
-				recv_size = get_payload(rx_pkts[0], buf);
-				rte_pktmbuf_free((struct rte_mbuf*)rx_pkts[0]);
-				rx_pkts[0] = NULL;
-				INVARIANT(recv_size != -1);
+				DELTA_TIME(scan_wait_t2, scan_wait_t1, scan_wait_t3);
+				double tmp_scan_wait_latency = GET_MICROSECOND(scan_wait_t3);
+				scan_wait_latency += tmp_scan_wait_latency;
+				/*if (scan_wait_latency == 0.0 || tmp_scan_wait_latency < scan_wait_latency) {
+					scan_wait_latency = tmp_scan_wait_latency;
+					wait_t1 = scan_wait_t1;
+					wait_t2 = scan_wait_t2;
+				}*/
 
-				scan_response_split_t rsp(buf, recv_size);
-				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
-						<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
-				received_scannum += 1;
-				if (!with_max_scannum) {
-					max_scannum = rsp.max_scannum();
-					INVARIANT(max_scannum >= 1 && max_scannum <= server_num);
-					with_max_scannum = true;
+				if (n_rx == 0) {
+					continue;
+				}
+
+				CUR_TIME(scan_rsp_t1);
+				for (uint16_t i = 0; i < n_rx; i++) { // n_rx != 0
+					//recv_size = get_payload(pkts_list[thread_id][tails[thread_id]], buf);
+					//rte_pktmbuf_free((struct rte_mbuf*)pkts_list[thread_id][tails[thread_id]]);
+					//pkts_list[thread_id][tails[thread_id]] = NULL;
+					//tails[thread_id] = (tails[thread_id] + 1) % MQ_SIZE;
+					recv_size = get_payload(rx_pkts[i], buf);
+					rte_pktmbuf_free((struct rte_mbuf*)rx_pkts[i]);
+					rx_pkts[i] = NULL;
+					INVARIANT(recv_size != -1);
+
+					scan_response_split_t rsp(buf, recv_size);
+					FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
+							<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
+					received_scannum += 1;
+					if (!with_max_scannum) {
+						max_scannum = rsp.max_scannum();
+						INVARIANT(max_scannum >= 1 && max_scannum <= server_num);
+						with_max_scannum = true;
+					}
 				}
 				CUR_TIME(scan_rsp_t2);
 
@@ -543,14 +575,6 @@ static int run_fg(void *param) {
 					scan_rsp_latency = tmp_scan_rsp_latency;
 					rsp_t1 = scan_rsp_t1;
 					rsp_t2 = scan_rsp_t2;
-				}*/
-				DELTA_TIME(scan_wait_t2, scan_wait_t1, scan_wait_t3);
-				double tmp_scan_wait_latency = GET_MICROSECOND(scan_wait_t3);
-				scan_wait_latency += tmp_scan_wait_latency;
-				/*if (scan_wait_latency == 0.0 || tmp_scan_wait_latency < scan_wait_latency) {
-					scan_wait_latency = tmp_scan_wait_latency;
-					wait_t1 = scan_wait_t1;
-					wait_t2 = scan_wait_t2;
 				}*/
 
 				if (received_scannum >= max_scannum) {

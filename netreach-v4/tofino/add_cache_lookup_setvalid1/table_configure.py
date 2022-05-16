@@ -67,13 +67,15 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Get key and freeidx from paramserver"
         ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sendbuf = struct.pack("=i", SWITCHOS_GET_KEY_FREEIDX) # 4-byte int
-        ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
+        ptf_sock.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
         recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
         # TODO: Check correctness of key
-        #keylolo, keylohi, keyhilo, keyhihi, freeidx = struct,unpack("!4I=H", recvbuf)
-        keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx = struct,unpack("!3I2H=H", recvbuf)
+        ##keylolo, keylohi, keyhilo, keyhihi, freeidx = struct.unpack("!4I=H", recvbuf)
+        #keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx = struct.unpack("!3I2H=H", recvbuf)
+        keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, remainbuf = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
+        freeidx = struct.unpack("=H", remainbuf)[0]
 
-        print "Add {},{},{},{} {} into cache_lookup_tbl".format(keyhihi, keyhilo, keylohi, keylolo, freeidx)
+        print "Add {}, {} into cache_lookup_tbl".format(recvbuf[0:16], freeidx)
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
                 op_hdr_keylohi = convert_u32_to_i32(keylohi),

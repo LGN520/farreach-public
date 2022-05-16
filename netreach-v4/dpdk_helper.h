@@ -16,6 +16,8 @@
 
 #include "key.h"
 
+#define RX_BURST_SIZE 32
+
 #define RX_RING_SIZE 512
 #define TX_RING_SIZE 512
 
@@ -54,6 +56,6 @@ bool get_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, 
 void set_scan_keys(struct rte_mbuf * volatile mbuf, Key *startkey, Key *endkey, uint32_t *num);
 
 void generate_udp_fdir_rule(uint16_t port_id, uint16_t rx_queue_id, uint16_t dst_port);
-void receive_pkts(uint16_t port_id, uint16_t rx_queue_id, struct rte_mbuf ** rx_pkts, uint16_t nb_pkts, uint16_t expected_udp_dstport);
+uint16_t receive_pkts(uint16_t port_id, uint16_t rx_queue_id, struct rte_mbuf ** rx_pkts, uint16_t nb_pkts, uint16_t expected_udp_dstport);
 
 #endif

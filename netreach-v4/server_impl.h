@@ -305,7 +305,9 @@ static int run_server_worker(void * param) {
   char buf[MAX_BUFSIZE];
   int recv_size = 0;
   int rsp_size = 0;
-  struct rte_mbuf *rx_pkts[1];
+  struct rte_mbuf *rx_pkts[RX_BURST_SIZE];
+  memset(rx_pkts, 0, sizeof(struct rte_mbuf *) * RX_BURST_SIZE);
+  uint16_t n_rx = 0;
 
   // packet headers
   uint8_t srcmac[6];
@@ -333,216 +335,155 @@ static int run_server_worker(void * param) {
 		}
 	}*/
 
-	receive_pkts(0, serveridx, rx_pkts, 1, server_port_start + serveridx);
+	n_rx = receive_pkts(0, serveridx, rx_pkts, RX_BURST_SIZE, server_port_start + serveridx); // maybe multiple requests to a server
+
+	if (n_rx == 0) {
+		continue;
+	}
 
 	struct timespec t1, t2, t3;
 	CUR_TIME(t1);
 
 	//if (server_worker_heads[serveridx] != server_worker_tails[serveridx]) {
-	
-	// DPDK
-	sent_pkt = sent_pkts[sent_pkt_idx];
+	for (uint16_t i = 0; i < n_rx; i++) {
+		
+		// DPDK
+		sent_pkt = sent_pkts[sent_pkt_idx];
 
-	//INVARIANT(server_worker_pkts_list[serveridx][server_worker_tails[serveridx]] != nullptr);
-	memset(srcip, '\0', 16);
-	memset(dstip, '\0', 16);
-	memset(srcmac, 0, 6);
-	memset(dstmac, 0, 6);
-	//recv_size = decode_mbuf(server_worker_pkts_list[serveridx][server_worker_tails[serveridx]], srcmac, dstmac, srcip, dstip, &srcport, &unused_dstport, buf);
-	//rte_pktmbuf_free((struct rte_mbuf*)server_worker_pkts_list[serveridx][server_worker_tails[serveridx]]);
-	//server_worker_pkts_list[serveridx][server_worker_tails[serveridx]] = NULL;
-	//server_worker_tails[serveridx] = (server_worker_tails[serveridx] + 1) % MQ_SIZE;
-	recv_size = decode_mbuf(rx_pkts[0], srcmac, dstmac, srcip, dstip, &srcport, &unused_dstport, buf);
-	rte_pktmbuf_free((struct rte_mbuf*)rx_pkts[0]);
-	rx_pkts[0] = NULL;
+		//INVARIANT(server_worker_pkts_list[serveridx][server_worker_tails[serveridx]] != nullptr);
+		memset(srcip, '\0', 16);
+		memset(dstip, '\0', 16);
+		memset(srcmac, 0, 6);
+		memset(dstmac, 0, 6);
+		//recv_size = decode_mbuf(server_worker_pkts_list[serveridx][server_worker_tails[serveridx]], srcmac, dstmac, srcip, dstip, &srcport, &unused_dstport, buf);
+		//rte_pktmbuf_free((struct rte_mbuf*)server_worker_pkts_list[serveridx][server_worker_tails[serveridx]]);
+		//server_worker_pkts_list[serveridx][server_worker_tails[serveridx]] = NULL;
+		//server_worker_tails[serveridx] = (server_worker_tails[serveridx] + 1) % MQ_SIZE;
+		recv_size = decode_mbuf(rx_pkts[i], srcmac, dstmac, srcip, dstip, &srcport, &unused_dstport, buf);
+		rte_pktmbuf_free((struct rte_mbuf*)rx_pkts[i]);
+		rx_pkts[i] = NULL;
 
-	/*if ((debug_idx + 1) % 10001 == 0) {
-		COUT_VAR((t0 - prevt0) / 10000.0);
-		prevt0 = t0;
-	}*/
+		/*if ((debug_idx + 1) % 10001 == 0) {
+			COUT_VAR((t0 - prevt0) / 10000.0);
+			prevt0 = t0;
+		}*/
 
-	packet_type_t pkt_type = get_packet_type(buf, recv_size);
-	switch (pkt_type) {
-		case packet_type_t::GETREQ: 
-			{
-				get_request_t req(buf, recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				val_t tmp_val;
-				uint32_t tmp_seq = 0;
-				bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
-				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				get_response_t rsp(req.key(), tmp_val, tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				
-				// DPDK
-				encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
-				res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
-				sent_pkt_idx++;
-				break;
-			}
-		case packet_type_t::GETREQ_NLATEST:
-			{
-				get_request_nlatest_t req(buf, recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				val_t tmp_val;
-				uint32_t tmp_seq = 0;
-				bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
-				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				if (tmp_stat) { // key exists
-					get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_seq);
+		packet_type_t pkt_type = get_packet_type(buf, recv_size);
+		switch (pkt_type) {
+			case packet_type_t::GETREQ: 
+				{
+					get_request_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					val_t tmp_val;
+					uint32_t tmp_seq = 0;
+					bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
+					//COUT_THIS("[server] val = " << tmp_val.to_string())
+					get_response_t rsp(req.key(), tmp_val, tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
 				}
-				else { // key not exist
-					get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq);
+			case packet_type_t::GETREQ_NLATEST:
+				{
+					get_request_nlatest_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					val_t tmp_val;
+					uint32_t tmp_seq = 0;
+					bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
+					//COUT_THIS("[server] val = " << tmp_val.to_string())
+					if (tmp_stat) { // key exists
+						get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_seq);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					}
+					else { // key not exist
+						get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq);
+						rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					}
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::PUTREQ_SEQ:
+				{
+					put_request_seq_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					put_response_t rsp(req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
 				}
-				
-				// DPDK
-				encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
-				res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
-				sent_pkt_idx++;
-				break;
-			}
-		case packet_type_t::PUTREQ_SEQ:
-			{
-				put_request_seq_t req(buf, recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-				bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
-				//COUT_THIS("[server] stat = " << tmp_stat)
-				put_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				
-				// DPDK
-				encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
-				res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
-				sent_pkt_idx++;
-				break;
-			}
-		case packet_type_t::DELREQ_SEQ:
-			{
-				del_request_seq_t req(buf, recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				bool tmp_stat = table->remove(req.key(), serveridx, req.seq());
-				//COUT_THIS("[server] stat = " << tmp_stat)
-				del_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				
-				// DPDK
-				encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
-				res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
-				sent_pkt_idx++;
+			case packet_type_t::DELREQ_SEQ:
+				{
+					del_request_seq_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					bool tmp_stat = table->remove(req.key(), serveridx, req.seq());
+					//COUT_THIS("[server] stat = " << tmp_stat)
+					del_response_t rsp(req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
 
-				// NOTE: no matter tmp_stat is true (key is deleted) or false (no such key or key has been deleted before), we should always treat the key does not exist (i.e., being deleted), so a reordered eviction will never overwrite this result for linearizability -> we should always update the corresponding deleted set
-				server_deleted_sets[serveridx].add(req.key(), req.seq());
-				break;
-			}
-		case packet_type_t::SCANREQ_SPLIT:
-			{
-				scan_request_split_t req(buf, recv_size);
-				
-				// get verified key range
-				INVARIANT(req.key() <= max_endkey);
-				INVARIANT(req.endkey() >= min_startkey);
-				index_key_t cur_startkey = req.key();
-				index_key_t cur_endkey = req.endkey();
-				if (cur_startkey < min_startkey) {
-					cur_startkey = min_startkey;
+					// NOTE: no matter tmp_stat is true (key is deleted) or false (no such key or key has been deleted before), we should always treat the key does not exist (i.e., being deleted), so a reordered eviction will never overwrite this result for linearizability -> we should always update the corresponding deleted set
+					server_deleted_sets[serveridx].add(req.key(), req.seq());
+					break;
 				}
-				if (cur_endkey > max_endkey) {
-					cur_endkey = max_endkey;
-				}
-
-				// get results from in-memory snapshot in [cur_startkey, cur_endkey]
-				//COUT_THIS("[server.worker] startkey: " << cur_startkey << "endkey: " << cur_endkey().to_string()
-				//		<< "min_startkey: " << min_startkey << "max_endkey: " << max_endkey; // << " num = " << req.num())
-				std::vector<std::pair<index_key_t, snapshot_record_t>> inmemory_results;
-				//size_t tmp_num = table->scan(req.key(), req.num(), results, serveridx);
-				size_t inmemory_num = table->range_scan(cur_startkey, cur_endkey, inmemory_results, serveridx);
-				UNUSED(inmemory_num);
-
-				// get results from in-switch snapshot in [cur_startkey, cur_endkey]
-				//std::map<index_key_t, snapshot_record_t> *tmp_server_snapshot_maps = server_snapshot_maps;
-				concurrent_snapshot_map_t *tmp_server_snapshot_maps = server_snapshot_maps;
-				std::vector<std::pair<index_key_t, snapshot_record_t>> inswitch_results;
-				if (tmp_server_snapshot_maps != NULL) {
-					/*std::map<index_key_t, snapshot_record_t>::iterator iter = tmp_server_snapshot_maps[serveridx].lower_bound(cur_startkey);
-					for (; iter != tmp_server_snapshot_maps[serveridx].end() && iter->first <= cur_endkey; iter++) {
-						//inmemory_results.push_back(*iter);
-						inswitch_results.push_back(*iter);
-					}*/
-					tmp_server_snapshot_maps[serveridx].range_scan(cur_startkey, cur_endkey, inswitch_results);
-				}
-
-				// merge sort w/ seq comparison
-				std::vector<std::pair<index_key_t, val_t>> results;
-				if (inmemory_results.size() == 0) {
-					for (uint32_t inswitch_idx = 0; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
-						index_key_t &tmpkey = inswitch_results[inswitch_idx].first;
-						snapshot_record_t &tmprecord = inswitch_results[inswitch_idx].second;
-						if (tmprecord.stat) {
-							results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
-						}
+			case packet_type_t::SCANREQ_SPLIT:
+				{
+					scan_request_split_t req(buf, recv_size);
+					
+					// get verified key range
+					INVARIANT(req.key() <= max_endkey);
+					INVARIANT(req.endkey() >= min_startkey);
+					index_key_t cur_startkey = req.key();
+					index_key_t cur_endkey = req.endkey();
+					if (cur_startkey < min_startkey) {
+						cur_startkey = min_startkey;
 					}
-				}
-				else if (inswitch_results.size() == 0) {
-					for (uint32_t inmemory_idx = 0; inmemory_idx < inmemory_results.size(); inmemory_idx++) {
-						index_key_t &tmpkey = inmemory_results[inmemory_idx].first;
-						snapshot_record_t &tmprecord = inmemory_results[inmemory_idx].second;
-						if (tmprecord.stat) {
-							results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
-						}
+					if (cur_endkey > max_endkey) {
+						cur_endkey = max_endkey;
 					}
-				}
-				else {
-					uint32_t inmemory_idx = 0;
-					uint32_t inswitch_idx = 0;
-					bool remain_inmemory = false;
-					bool remain_inswitch = false;
-					while (true) {
-						index_key_t &tmp_inmemory_key = inmemory_results[inmemory_idx].first;
-						snapshot_record_t &tmp_inmemory_record = inmemory_results[inmemory_idx].second;
-						index_key_t &tmp_inswitch_key = inswitch_results[inswitch_idx].first;
-						snapshot_record_t &tmp_inswitch_record = inswitch_results[inswitch_idx].second;
-						if ((tmp_inmemory_key < tmp_inswitch_key) && tmp_inmemory_record.stat) {
-							results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
-							inmemory_idx += 1;
-						}
-						else if ((tmp_inswitch_key < tmp_inmemory_key) && tmp_inswitch_record.stat) {
-							results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
-							inswitch_idx += 1;
-						}
-						else if (tmp_inmemory_key == tmp_inswitch_key) {
-							if (tmp_inmemory_record.stat && tmp_inswitch_record.stat) {
-								if (tmp_inmemory_record.seq >= tmp_inswitch_record.seq) {
-									results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
-									inmemory_idx += 1;
-								}
-								else {
-									results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
-									inswitch_idx += 1;
-								}
-							}
-							else if (tmp_inmemory_record.stat) {
-								results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
-								inmemory_idx += 1;
-							}
-							else if (tmp_inswitch_record.stat) {
-								results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
-								inswitch_idx += 1;
-							}
-						}
 
-						if (inmemory_idx >= inmemory_results.size()) {
-							remain_inswitch = true;
-							break;
-						}
-						else if (inswitch_idx >= inswitch_results.size()) {
-							remain_inmemory = true;
-							break;
-						}
-					} // while (true)
-					if (remain_inswitch) {
-						for (; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
+					// get results from in-memory snapshot in [cur_startkey, cur_endkey]
+					//COUT_THIS("[server.worker] startkey: " << cur_startkey << "endkey: " << cur_endkey().to_string()
+					//		<< "min_startkey: " << min_startkey << "max_endkey: " << max_endkey; // << " num = " << req.num())
+					std::vector<std::pair<index_key_t, snapshot_record_t>> inmemory_results;
+					//size_t tmp_num = table->scan(req.key(), req.num(), results, serveridx);
+					size_t inmemory_num = table->range_scan(cur_startkey, cur_endkey, inmemory_results, serveridx);
+					UNUSED(inmemory_num);
+
+					// get results from in-switch snapshot in [cur_startkey, cur_endkey]
+					//std::map<index_key_t, snapshot_record_t> *tmp_server_snapshot_maps = server_snapshot_maps;
+					concurrent_snapshot_map_t *tmp_server_snapshot_maps = server_snapshot_maps;
+					std::vector<std::pair<index_key_t, snapshot_record_t>> inswitch_results;
+					if (tmp_server_snapshot_maps != NULL) {
+						/*std::map<index_key_t, snapshot_record_t>::iterator iter = tmp_server_snapshot_maps[serveridx].lower_bound(cur_startkey);
+						for (; iter != tmp_server_snapshot_maps[serveridx].end() && iter->first <= cur_endkey; iter++) {
+							//inmemory_results.push_back(*iter);
+							inswitch_results.push_back(*iter);
+						}*/
+						tmp_server_snapshot_maps[serveridx].range_scan(cur_startkey, cur_endkey, inswitch_results);
+					}
+
+					// merge sort w/ seq comparison
+					std::vector<std::pair<index_key_t, val_t>> results;
+					if (inmemory_results.size() == 0) {
+						for (uint32_t inswitch_idx = 0; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
 							index_key_t &tmpkey = inswitch_results[inswitch_idx].first;
 							snapshot_record_t &tmprecord = inswitch_results[inswitch_idx].second;
 							if (tmprecord.stat) {
@@ -550,8 +491,8 @@ static int run_server_worker(void * param) {
 							}
 						}
 					}
-					else if (remain_inmemory) {
-						for (; inmemory_idx < inmemory_results.size(); inmemory_idx++) {
+					else if (inswitch_results.size() == 0) {
+						for (uint32_t inmemory_idx = 0; inmemory_idx < inmemory_results.size(); inmemory_idx++) {
 							index_key_t &tmpkey = inmemory_results[inmemory_idx].first;
 							snapshot_record_t &tmprecord = inmemory_results[inmemory_idx].second;
 							if (tmprecord.stat) {
@@ -559,175 +500,242 @@ static int run_server_worker(void * param) {
 							}
 						}
 					}
-				} // both inmemory_results and inswitch_results are not empty
-				//COUT_THIS("results size: " << results.size());
+					else {
+						uint32_t inmemory_idx = 0;
+						uint32_t inswitch_idx = 0;
+						bool remain_inmemory = false;
+						bool remain_inswitch = false;
+						while (true) {
+							index_key_t &tmp_inmemory_key = inmemory_results[inmemory_idx].first;
+							snapshot_record_t &tmp_inmemory_record = inmemory_results[inmemory_idx].second;
+							index_key_t &tmp_inswitch_key = inswitch_results[inswitch_idx].first;
+							snapshot_record_t &tmp_inswitch_record = inswitch_results[inswitch_idx].second;
+							if ((tmp_inmemory_key < tmp_inswitch_key) && tmp_inmemory_record.stat) {
+								results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+								inmemory_idx += 1;
+							}
+							else if ((tmp_inswitch_key < tmp_inmemory_key) && tmp_inswitch_record.stat) {
+								results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+								inswitch_idx += 1;
+							}
+							else if (tmp_inmemory_key == tmp_inswitch_key) {
+								if (tmp_inmemory_record.stat && tmp_inswitch_record.stat) {
+									if (tmp_inmemory_record.seq >= tmp_inswitch_record.seq) {
+										results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+										inmemory_idx += 1;
+									}
+									else {
+										results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+										inswitch_idx += 1;
+									}
+								}
+								else if (tmp_inmemory_record.stat) {
+									results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+									inmemory_idx += 1;
+								}
+								else if (tmp_inswitch_record.stat) {
+									results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+									inswitch_idx += 1;
+								}
+							}
 
-				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), results.size(), results);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				
-				// DPDK
-				encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
-				res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
-				sent_pkt_idx++;
-				break;
-			}
-		case packet_type_t::GETREQ_POP: 
-			{
-				get_request_pop_t req(buf, recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				val_t tmp_val;
-				uint32_t tmp_seq;
-				bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
-				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				
-				get_response_t rsp(req.key(), tmp_val, tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				
-				// DPDK
-				encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
-				res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
-				sent_pkt_idx++;
+							if (inmemory_idx >= inmemory_results.size()) {
+								remain_inswitch = true;
+								break;
+							}
+							else if (inswitch_idx >= inswitch_results.size()) {
+								remain_inmemory = true;
+								break;
+							}
+						} // while (true)
+						if (remain_inswitch) {
+							for (; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
+								index_key_t &tmpkey = inswitch_results[inswitch_idx].first;
+								snapshot_record_t &tmprecord = inswitch_results[inswitch_idx].second;
+								if (tmprecord.stat) {
+									results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
+								}
+							}
+						}
+						else if (remain_inmemory) {
+							for (; inmemory_idx < inmemory_results.size(); inmemory_idx++) {
+								index_key_t &tmpkey = inmemory_results[inmemory_idx].first;
+								snapshot_record_t &tmprecord = inmemory_results[inmemory_idx].second;
+								if (tmprecord.stat) {
+									results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
+								}
+							}
+						}
+					} // both inmemory_results and inswitch_results are not empty
+					//COUT_THIS("results size: " << results.size());
 
-				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat) {
-					bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
-					if (!is_cached_before) {
-						server_cached_keyset_list[serveridx].insert(req.key());
-						// Send CACHE_POP to controller.popserver
-						cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, serveridx);
-						uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-						tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+					scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), results.size(), results);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
+				}
+			case packet_type_t::GETREQ_POP: 
+				{
+					get_request_pop_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					val_t tmp_val;
+					uint32_t tmp_seq;
+					bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
+					//COUT_THIS("[server] val = " << tmp_val.to_string())
+					
+					get_response_t rsp(req.key(), tmp_val, tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
+
+					// Trigger cache population if necessary (key exist and not being cached)
+					if (tmp_stat) {
+						bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
+						if (!is_cached_before) {
+							server_cached_keyset_list[serveridx].insert(req.key());
+							// Send CACHE_POP to controller.popserver
+							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, serveridx);
+							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+						}
 					}
+					break;
 				}
-				break;
-			}
-		case packet_type_t::PUTREQ_POP_SEQ: 
-			{
-				put_request_pop_seq_t req(buf, recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
-				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				
-				put_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				
-				// DPDK
-				encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
-				res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
-				sent_pkt_idx++;
+			case packet_type_t::PUTREQ_POP_SEQ: 
+				{
+					put_request_pop_seq_t req(buf, recv_size);
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
+					//COUT_THIS("[server] val = " << tmp_val.to_string())
+					
+					put_response_t rsp(req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
 
-				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat) { // successful put
-					bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
-					if (!is_cached_before) {
-						server_cached_keyset_list[serveridx].insert(req.key());
-						// Send CACHE_POP to controller.popserver
-						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
-						uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-						tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+					// Trigger cache population if necessary (key exist and not being cached)
+					if (tmp_stat) { // successful put
+						bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
+						if (!is_cached_before) {
+							server_cached_keyset_list[serveridx].insert(req.key());
+							// Send CACHE_POP to controller.popserver
+							cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
+							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+						}
 					}
+					break;
 				}
-				break;
-			}
-		case packet_type_t::PUTREQ_SEQ_CASE3:
-			{
-				COUT_THIS("PUTREQ_SEQ_CASE3")
-				put_request_seq_case3_t req(buf, recv_size);
+			case packet_type_t::PUTREQ_SEQ_CASE3:
+				{
+					COUT_THIS("PUTREQ_SEQ_CASE3")
+					put_request_seq_case3_t req(buf, recv_size);
 
-				if (!server_issnapshot) {
-					table->make_snapshot();
-				}
-
-				bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
-				//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				put_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				
-				// DPDK
-				encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
-				res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
-				sent_pkt_idx++;
-				break;
-			}
-		case packet_type_t::PUTREQ_POP_SEQ_CASE3: 
-			{
-				COUT_THIS("PUTREQ_POP_SEQ_CASE3")
-				put_request_pop_seq_case3_t req(buf, recv_size);
-
-				if (!server_issnapshot) {
-					table->make_snapshot();
-				}
-
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
-				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				put_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				
-				// DPDK
-				encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
-				res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
-				sent_pkt_idx++;
-
-				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat) { // successful put
-					bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
-					if (!is_cached_before) {
-						server_cached_keyset_list[serveridx].insert(req.key());
-						// Send CACHE_POP to controller.popserver
-						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
-						uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-						tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+					if (!server_issnapshot) {
+						table->make_snapshot();
 					}
+
+					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
+					//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
+					put_response_t rsp(req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
+					break;
 				}
-				break;
-			}
-		case packet_type_t::DELREQ_SEQ_CASE3:
-			{
-				COUT_THIS("DELREQ_SEQ_CASE3")
-				del_request_seq_case3_t req(buf, recv_size);
+			case packet_type_t::PUTREQ_POP_SEQ_CASE3: 
+				{
+					COUT_THIS("PUTREQ_POP_SEQ_CASE3")
+					put_request_pop_seq_case3_t req(buf, recv_size);
 
-				if (!server_issnapshot) {
-					table->make_snapshot();
+					if (!server_issnapshot) {
+						table->make_snapshot();
+					}
+
+					//COUT_THIS("[server] key = " << req.key().to_string())
+					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
+					//COUT_THIS("[server] val = " << tmp_val.to_string())
+					put_response_t rsp(req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
+
+					// Trigger cache population if necessary (key exist and not being cached)
+					if (tmp_stat) { // successful put
+						bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
+						if (!is_cached_before) {
+							server_cached_keyset_list[serveridx].insert(req.key());
+							// Send CACHE_POP to controller.popserver
+							cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
+							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+						}
+					}
+					break;
 				}
+			case packet_type_t::DELREQ_SEQ_CASE3:
+				{
+					COUT_THIS("DELREQ_SEQ_CASE3")
+					del_request_seq_case3_t req(buf, recv_size);
 
-				bool tmp_stat = table->remove(req.key(), serveridx, req.seq());
-				//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				del_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				
-				// DPDK
-				encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
-				res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
-				sent_pkt_idx++;
+					if (!server_issnapshot) {
+						table->make_snapshot();
+					}
 
-				// NOTE: no matter tmp_stat is true (key is deleted) or false (no such key or key has been deleted before), we should always treat the key does not exist (i.e., being deleted), so a reordered eviction will never overwrite this result for linearizability -> we should always update the corresponding deleted set
-				server_deleted_sets[serveridx].add(req.key(), req.seq());
-				break;
-			}
-		default:
-			{
-				COUT_THIS("[server.worker] Invalid packet type: " << int(pkt_type))
-				std::cout << std::flush;
-				exit(-1);
-			}
-	}
-	CUR_TIME(t2);
-	DELTA_TIME(t2, t1, t3);
-	thread_param.latency_list.push_back(GET_MICROSECOND(t3));
+					bool tmp_stat = table->remove(req.key(), serveridx, req.seq());
+					//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
+					del_response_t rsp(req.key(), tmp_stat);
+					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+					
+					// DPDK
+					encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, rsp_size);
+					res = rte_eth_tx_burst(0, serveridx, &sent_pkt, 1);
+					sent_pkt_idx++;
+
+					// NOTE: no matter tmp_stat is true (key is deleted) or false (no such key or key has been deleted before), we should always treat the key does not exist (i.e., being deleted), so a reordered eviction will never overwrite this result for linearizability -> we should always update the corresponding deleted set
+					server_deleted_sets[serveridx].add(req.key(), req.seq());
+					break;
+				}
+			default:
+				{
+					COUT_THIS("[server.worker] Invalid packet type: " << int(pkt_type))
+					std::cout << std::flush;
+					exit(-1);
+				}
+		}
+		CUR_TIME(t2);
+		DELTA_TIME(t2, t1, t3);
+		thread_param.latency_list.push_back(GET_MICROSECOND(t3));
 #ifdef TEST_AGG_THPT
-	thread_param.sum_latency += GET_MICROSECOND(t3);
+		thread_param.sum_latency += GET_MICROSECOND(t3);
 #endif
-	//backup_rcu[serveridx]++;
-	server_snapshot_rcus[serveridx]++;
-	thread_param.throughput++;
+		//backup_rcu[serveridx]++;
+		server_snapshot_rcus[serveridx]++;
+		thread_param.throughput++;
 
-	if (sent_pkt_idx >= burst_size) {
-		sent_pkt_idx = 0;
-		res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
-		INVARIANT(res == 0);
-	}
+		if (sent_pkt_idx >= burst_size) {
+			sent_pkt_idx = 0;
+			res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+			INVARIANT(res == 0);
+		}
 	
+	} // End for n_rx pkts
 	//} // End for mbuf from receiver to server
 
 	cache_evict_t *tmp_cache_evict_ptr = server_cache_evict_or_case2_ptr_queue_list[serveridx].read();

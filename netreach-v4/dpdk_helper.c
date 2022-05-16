@@ -310,8 +310,8 @@ void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const 
 	iphdr->hdr_checksum = checksum((uint16_t *)iphdr, sizeof(struct ipv4_hdr));
 	//udphdr->dgram_cksum = udp4_checksum(iphdr, udphdr, payload, payload_size);
 
-	printf("pktsize: %d\n", pktsize);
-	dump_buf(data, pktsize);
+	//printf("pktsize: %d\n", pktsize);
+	//dump_buf(data, pktsize);
 
 	mbuf->data_len = pktsize;
 	mbuf->pkt_len = pktsize;
@@ -377,8 +377,8 @@ int get_dstport(struct rte_mbuf *volatile mbuf) {
 
 	data = rte_pktmbuf_mtod(mbuf, char *);
 
-	printf("pktsize: %d\n", mbuf->pkt_len);
-	dump_buf(data, mbuf->pkt_len);
+	//printf("pktsize: %d\n", mbuf->pkt_len);
+	//dump_buf(data, mbuf->pkt_len);
 
 	/*ethhdr = (struct ether_hdr *)data;
 	if (ethhdr->ether_type != 0x0008) {
@@ -550,15 +550,22 @@ void generate_udp_fdir_rule(uint16_t port_id, uint16_t rx_queue_id, uint16_t dst
 	}
 }
 
-void receive_pkts(uint16_t port_id, uint16_t rx_queue_id, struct rte_mbuf ** rx_pkts, uint16_t nb_pkts, uint16_t expected_udp_dstport) {
-	while (true) {
-		uint16_t n_rx = rte_eth_rx_burst(port_id, rx_queue_id, rx_pkts, nb_pkts);
-		if (n_rx == 0) {
-			continue;
-		}
-		INVARIANT(n_rx == 1);
-		INVARIANT(rx_pkts[0] != NULL);
-		INVARIANT(get_dstport(rx_pkts[0]) == expected_udp_dstport);
-		break;
+// NOTE: for i40e driver, due to vetor instruction, even if we set rx_burst_size=1 after changing RTE_I40E_DESCS_PER_LOOP, it can still return more than 1 packet
+// NOTE: as driver returns immediately as long as it encounters a DD_BIT=1, rx_burst_size does not affect latency obviously
+uint16_t receive_pkts(uint16_t port_id, uint16_t rx_queue_id, struct rte_mbuf ** rx_pkts, uint16_t nb_pkts, uint16_t expected_udp_dstport) {
+	//while (true) {
+	uint16_t n_rx = rte_eth_rx_burst(port_id, rx_queue_id, rx_pkts, nb_pkts);
+	//if (n_rx == 0) {
+	//	continue;
+	//}
+#ifdef DEBUG_ASSERT
+	INVARIANT(n_rx <= nb_pkts);
+	for (uint16_t i = 0; i < n_rx; i++) {
+		INVARIANT(rx_pkts[i] != NULL);
+		INVARIANT(get_dstport(rx_pkts[i]) == expected_udp_dstport);
 	}
+#endif
+	return n_rx;
+	//}
+	//return 0; // never arrive
 }

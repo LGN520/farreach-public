@@ -785,17 +785,17 @@ void *run_switchos_popworker(void *param) {
 					}
 				}
 				// (1) add new <key, value> pair into cache_lookup_tbl; (2) and set valid=1 to enable the entry
-				system("bash add_cache_lookup_setvalid1.sh");
+				system("bash tofino/add_cache_lookup_setvalid1.sh");
+
+				switchos_cached_keyarray[switchos_freeidx] = tmp_cache_pop_ptr->key();
+				switchos_cached_serveridxarray[switchos_freeidx] = tmp_cache_pop_ptr->serveridx();
+				//switchos_cached_key_idx_map.insert(std::pair<index_key_t, uint16_t>(tmp_cache_pop_ptr->key(), switchos_freeidx));
 
 				// free CACHE_POP
 				delete tmp_cache_pop_ptr;
 				tmp_cache_pop_ptr = NULL;
 				//switchos_cache_pop_ptrs[switchos_tail_for_pop] = NULL;
 				//switchos_tail_for_pop = (switchos_tail_for_pop + 1) % MQ_SIZE;
-
-				switchos_cached_keyarray[switchos_freeidx] = tmp_cache_pop_ptr->key();
-				switchos_cached_serveridxarray[switchos_freeidx] = tmp_cache_pop_ptr->serveridx();
-				//switchos_cached_key_idx_map.insert(std::pair<index_key_t, uint16_t>(tmp_cache_pop_ptr->key(), switchos_freeidx));
 
 				// reset intermediate data for paramserver
 				// for cache population

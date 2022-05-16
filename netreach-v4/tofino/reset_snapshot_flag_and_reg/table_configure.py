@@ -77,7 +77,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #print "Get cached_empty_index_backup from paramserver"
         #ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         #sendbuf = struct.pack("=i", SWITCHOS_GET_CACHEDEMPTYINDEX) # 4-byte int
-        #ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
+        #ptf_sock.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
         #recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
         #cached_empty_index_backup = struct.unpack("=I", recvbuf)[0] # must > 0
         #if cached_empty_index_backup <= 0 or cached_empty_index_backup > kv_bucket_num:

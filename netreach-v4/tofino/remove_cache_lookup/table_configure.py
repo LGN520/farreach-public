@@ -67,14 +67,14 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Get evictkey from paramserver"
         ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sendbuf = struct.pack("=i", SWITCHOS_GET_EVICTKEY) # 4-byte int
-        ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
+        ptf_sock.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
         recvbuf, switchos_paramserver_addr = ptf_sock.recvfrom(1024)
         # TODO: Check correctness of key
         #keylolo, keylohi, keyhilo, keyhihi = struct.unpack("!4I", recvbuf)
         keylolo, keylohi, keyhilo, keyhihilo, keyhihihi = struct.unpack("!3I2H", recvbuf)
-        #keylolo, keylohi, keyhilo, keyhihi, evictidx = struct,unpack("!4I=H", recvbuf)
+        #keylolo, keylohi, keyhilo, keyhihi, evictidx = struct.unpack("!4I=H", recvbuf)
 
-        print "Remove {},{},{},{} from cache_lookup_tbl".format(keyhihi, keyhilo, keylohi, keylolo, freeidx)
+        print "Remove {} from cache_lookup_tbl".format(recvbuf)
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
                 op_hdr_keylohi = convert_u32_to_i32(keylohi),

@@ -121,8 +121,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         ## <int type, int16_t evictidx, uint32_t vallen (big-endian for Val::deserialize), valbytes (same order), int32_t savedseq (little-endian), bool status>
         #sendbuf = struct.pack("=iH!I={}cI?".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
         # <int type, int16_t evictidx, uint16_t vallen (big-endian for Val::deserialize), valbytes (same order), int32_t savedseq (little-endian), bool status>
-        sendbuf = struct.pack("=iH!H={}cI?".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
-        ptf_sockfd.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
+        #sendbuf = struct.pack("=ih!h={}ci?".format(len(evictvalbytes)), switchos_set_evictdata, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
+        sendbuf = struct.pack("=ih", switchos_set_evictdata, evictidx)
+        sendbuf = sendbuf + struct.pack("!h", evictvallen)
+        sendbuf = struct.pack("={}ci?", evictvalbytes, evictseq, evictstat)
+        ptf_sock.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
 
         self.conn_mgr.complete_operations(self.sess_hdl)
         self.conn_mgr.client_cleanup(self.sess_hdl) # close session
