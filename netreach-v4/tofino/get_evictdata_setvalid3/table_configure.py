@@ -68,8 +68,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
         # NOTE: cache must be full (i.e., all idxes are valid) when cache eviction
         print "Get sampled indexes for in-switch"
+        cur_sample_cnt = switchos_sample_cnt
+        if kv_bucket_num < cur_sample_cnt:
+            cur_sample_cnt = kv_bucket_num
         random.seed(time.time())
-        sampled_idxes = random.sample(range(0, kv_bucket_num), switchos_sample_cnt)
+        sampled_idxes = random.sample(range(0, kv_bucket_num), cur_sample_cnt)
 
         print "Load frequency counters for sampled indexes"
         frequency_counters = []
@@ -110,7 +113,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             val_list.append(tmp_vallo)
             val_list.append(tmp_valhi)
         evictvalbytes = bytes()
-        for i in range(val_list):
+        for i in range(len(val_list)):
             # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
             evictvalbytes = evictvalbytes + struct.pack("!i", val_list[i])
         # load savedseq
@@ -119,12 +122,12 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Set evictdata to paramserver"
         ptf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         ## <int type, int16_t evictidx, uint32_t vallen (big-endian for Val::deserialize), valbytes (same order), int32_t savedseq (little-endian), bool status>
-        #sendbuf = struct.pack("=iH!I={}cI?".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
+        #sendbuf = struct.pack("=iH!I={}sI?".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
         # <int type, int16_t evictidx, uint16_t vallen (big-endian for Val::deserialize), valbytes (same order), int32_t savedseq (little-endian), bool status>
-        #sendbuf = struct.pack("=ih!h={}ci?".format(len(evictvalbytes)), switchos_set_evictdata, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
-        sendbuf = struct.pack("=ih", switchos_set_evictdata, evictidx)
-        sendbuf = sendbuf + struct.pack("!h", evictvallen)
-        sendbuf = struct.pack("={}ci?", evictvalbytes, evictseq, evictstat)
+        #sendbuf = struct.pack("=iH!H={}sI?".format(len(evictvalbytes)), SWITCHOS_SET_EVICTDATA, evictidx, evictvallen, evictvalbytes, evictseq, evictstat)
+        sendbuf = struct.pack("=iH", SWITCHOS_SET_EVICTDATA, evictidx)
+        sendbuf = sendbuf + struct.pack("!H", evictvallen)
+        sendbuf = sendbuf + struct.pack("={}sI?".format(len(evictvalbytes)), evictvalbytes, evictseq, evictstat)
         ptf_sock.sendto(sendbuf, ("127.0.0.1", switchos_paramserver_port))
 
         self.conn_mgr.complete_operations(self.sess_hdl)

@@ -757,17 +757,21 @@
 		* No key in cache_lookup_tbl, {cm, cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
 	+ Case 5: read(k1,v1)-delete(k1)-read(k1,none) (GETREQ-DELREQ_SEQ-GETREQ_POP arrive at server; ignore cache population here)
 		* No key in cache_lookup_tbl, cm=2, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
-- Test cases of cache population: see directory of "testcases/population"
+- Test cases of cache population/eviction: see directory of "testcases/population"
 	+ Case 1: read(k1,v1)-read(k1,v1) (GETREQ-GETREQ_POP arrive at server, which sends CACHE_POP_INSWITCH and waits for CACHE_POP_INSWITCH_ACK)
 		* Key k1 in cache_lookup_tbl, cm=2, v1 in vallen and val, valid=1, {cache_frequency, seq, savedseq, latest, deleted, case1}=0
+	+ Case 2: put(k1,v1)-put(k1,v2) (PUTREQ-PUTREQ_POP arrive at server, which sends CACHE_POP_INSWITCH and waits for CACHE_POP_INSWITCH_ACK)
+		* Key k1 in cache_lookup_tbl, cm=2, v2 in vallen and val, valid=1, seq=2, savedseq=2, {cache_frequency, latest, deleted, case1}=0
+	+ TODO: Case 3: read(k1,v1)-read(k1,v1)-put(k2,v2) (GETREQ-GETREQ_POP-PUTREQ_POP, where GETREQ_POP triggers cache population, while PUTREQ_POP triggers cache eviction)
+		* Key k2 in cache_lookup_tbl, cm=3, v2 in vallen and val, valid=1, seq=1, savedseq=1, {cache_frequency, latest, deleted, case1}=0
 - Test cases of conservative read
 	+ Case 1
-		* Step 1: case 1 of cache population
+		* Step 1: case 1/2/3 of cache population
 		* Step 2: read(k1,v1) (GETREQ_NLATEST arrive at server, which sends GETRES_LATEST_SEQ and hence GETRES)
 			- Key k1 in cache_lookup_tbl, cm=2, v1 in vallen and val, valid=1, cache_frequency=1, latest=1, {seq, savedseq, deleted, case1}=0
 - Test cases of cache hit
 	+ Case 1
-		* Step 1: case 1 of conservative read
+		* Step 1: case 1/2/3 of conservative read
 		* Step 2: read(k1,v1) (GETREQ arrive at switch, which sends GETRES to client)
 			- Key k1 in cache_lookup_tbl, cm=2, v1 in vallen and val, valid=1, cache_frequency=2, latest=1, {seq, savedseq, deleted, case1}=0
 - Test cases of latency
@@ -776,6 +780,9 @@
 	+ Case 2: latency between client and switch
 		* Step 1: case 1 of conservative read
 		* Step 2: 1000 read(k1,v1)
+
+
+
 
 - TODO: Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
 	+ NOTE: remember to set bucket_num in config.ini, otherwise the hashidx will be incorrect sent by phase2 ptf
