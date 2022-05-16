@@ -143,7 +143,7 @@ header_type metadata_t {
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;
-		need_update_val: 1;
+		access_val_mode: 4; // 0: not access val_reg; 1: get; 2: set_and_get; 3: reset_and_get
 	}
 }
 

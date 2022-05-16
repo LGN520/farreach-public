@@ -449,7 +449,7 @@ void *run_controller_evictserver(void *param) {
 
 		if (!is_controller_evictserver_evictclient_connected) {
 			tcpconnect(controller_evictserver_evictclient_tcpsock, server_ip_for_controller, server_evictserver_port_start, "controller.evictserver.evictclient", "server.evictserver");
-			is_controller_snapshotclient_connected = true;
+			is_controller_evictserver_evictclient_connected = true;
 		}
 
 		cur_recv_bytes += recvsize;
@@ -487,6 +487,7 @@ void *run_controller_evictserver(void *param) {
 			//tmpserveridx = uint16_t(ntohs(uint16_t(tmpserveridx)));
 			//INVARIANT(tmpserveridx >= 0 && tmpserveridx < server_num);
 			//tcpsend(controller_evictserver_evictclient_tcpsock_list[tmpserveridx], buf, arrive_serveridx_bytes, "controller.evictserver.evictclient");
+			
 			printf("receive CACHE_EVICT from switchos and send to server\n");
 			dump_buf(buf, arrive_serveridx_bytes);
 			tcpsend(controller_evictserver_evictclient_tcpsock, buf, arrive_serveridx_bytes, "controller.evictserver.evictclient");

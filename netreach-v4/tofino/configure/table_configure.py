@@ -59,7 +59,7 @@ sampled_list = [0, 1]
 lastclone_list = [0, 1]
 snapshot_flag_list = [0, 1]
 case1_list = [0, 1]
-need_update_val_list = [0, 1]
+access_val_mode_list = [0, 1, 2, 3]
 
 
 if test_param_get("arch") == "tofino":
@@ -161,38 +161,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 #                            meta_is_latest = is_latest)
 #                    eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
 #                            self.sess_hdl, self.dev_tgt, matchspec0)
-        # size: 6
-        for need_update_val in need_update_val_list:
+        # size: 3
+        for access_val_mode in access_val_mode_list:
             matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                    op_hdr_optype = GETREQ_INSWITCH,
-                    meta_need_update_val = need_update_val)
-            if need_update_val == 0:
+                    meta_access_val_mode = access_val_mode)
+            # NOTE: not access val_reg if access_val_mode == 0
+            if access_val_mode == 1:
                 eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
-            for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH]:
-                matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                        op_hdr_optype = tmpoptype,
-                        meta_need_update_val = need_update_val)
-                if need_update_val == 1:
-                    eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                    op_hdr_optype = PUTREQ_INSWITCH,
-                    meta_need_update_val = need_update_val)
-            if need_update_val == 1:
+            elif access_val_mode == 2:
                 eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                    op_hdr_optype = DELREQ_INSWITCH,
-                    meta_need_update_val = need_update_val)
-            if need_update_val == 1:
+            elif access_val_mode == 3:
                 eval("self.client.update_val{}_tbl_table_add_with_reset_and_get_val{}".format(valname, valname))(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
-                    op_hdr_optype = CACHE_POP_INSWITCH,
-                    meta_need_update_val = need_update_val)
-            eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
 
     def setUp(self):
         print '\nSetup'
@@ -822,7 +804,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: update_vallen_tbl (default: reset_need_update_val; 30)
+            # Table: update_vallen_tbl (default: reset_access_val_mode; 30)
             print "Configuring update_vallen_tbl"
             for is_cached in cached_list:
                 for validvalue in validvalue_list:
@@ -1065,7 +1047,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 10
 
-            # Table: eg_port_forward_tbl (default: nop; size: 1184)
+            # Table: eg_port_forward_tbl (default: nop; size: 932)
             print "Configuring eg_port_forward_tbl"
             for is_cached in cached_list:
                 for is_hot in hot_list:
@@ -1203,7 +1185,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                 # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), tmp_client_sid=0 (not need mirroring for res), is_lastclone_for_pktloss should be 0 for GETRES_LATEST_SEQ_INSWITCH
-                                                # size: 128
+                                                # size: 128 -> 2
                                                 #if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
                                                 if is_hot == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0:
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
@@ -1227,10 +1209,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             #actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.switchos_sid, self.devPorts[1], 0)
                                                             actnspec0 = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.switchos_sid, 0, reflector_port)
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    else:
-                                                        # Drop GETRES_LATEST_SEQ_INSWITCH
-                                                        self.client.eg_port_forward_tbl_table_add_with_drop_getres_latest_seq_inswitch(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    # Keep GETERS_LATEST_SEQ_INSWITCH unchanged, and resort to drop_tbl to drop it
+                                                    #else:
+                                                    #    # Drop GETRES_LATEST_SEQ_INSWITCH
+                                                    #    self.client.eg_port_forward_tbl_table_add_with_drop_getres_latest_seq_inswitch(\
+                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
                                                 # is_cached=1, is_wrong_pipeline=0, tmp_client_sid=0, and snapshot_flag=1 (same inswitch_hdr as GETRES_LATEST_SEQ_INSWITCH); is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_case1 should be 0 for GETRES_LATEST_SEQ_INSWITCH_CASE1
                                                 # size: 2
                                                 #if is_cached == 1 and is_wrong_pipeline == 0 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
@@ -1277,7 +1260,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                 # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), tmp_client_sid=0 (not need mirroring for res), is_lastclone_for_pktloss should be 0 for GETRES_DELETED_SEQ_INSWITCH
-                                                # size: 128
+                                                # size: 128 -> 2
                                                 #if is_hot == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0:
                                                 if is_hot == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0:
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
@@ -1301,10 +1284,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             #actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.switchos_sid, self.devPorts[1], 0)
                                                             actnspec0 = netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.switchos_sid, 0, reflector_port)
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    else:
-                                                        # Drop GETRES_DELETED_SEQ_INSWITCH
-                                                        self.client.eg_port_forward_tbl_table_add_with_drop_getres_deleted_seq_inswitch(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    # Keep GETERS_DELETED_SEQ_INSWITCH unchanged, and resort to drop_tbl to drop it
+                                                    #else:
+                                                    #    # Drop GETRES_DELETED_SEQ_INSWITCH
+                                                    #    self.client.eg_port_forward_tbl_table_add_with_drop_getres_deleted_seq_inswitch(\
+                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
                                                 # is_cached=1, is_wrong_pipeline=0, tmp_client_sid=0, and snapshot_flag=1 (same inswitch_hdr as GETRES_LATEST_SEQ_INSWITCH); is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_case1 should be 0 for GETRES_DELETED_SEQ_INSWITCH_CASE1
                                                 # size: 2
                                                 #if is_cached == 1 and is_wrong_pipeline == 0 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
@@ -1673,7 +1657,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
                     self.sess_hdl, self.dev_tgt, matchspec5, actnspec1)
 
-            # Table: add_and_remove_value_header_tbl (deafult: remove_all; 17*9=153)
+            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*9=153)
             print "Configuring add_and_remove_value_header_tbl"
             # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
@@ -1695,6 +1679,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     else:
                         eval("self.client.add_and_remove_value_header_tbl_table_add_with_add_to_val{}".format(i))(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0)
+
+            # Table: drop_tbl (default: nop; size: 2)
+            print "Configuring drop_tbl"
+            matchspec0 = netbufferv4_drop_tbl_match_spec_t(\
+                    op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH)
+            self.client.drop_tbl_table_add_with_drop_getres_latest_seq_inswitch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netbufferv4_drop_tbl_match_spec_t(\
+                    op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH)
+            self.client.drop_tbl_table_add_with_drop_getres_deleted_seq_inswitch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             
 
