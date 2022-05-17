@@ -50,7 +50,8 @@ GetRequest<key_t>::GetRequest(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 uint32_t GetRequest<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(key_t) + DEBUG_BYTES;
+	//return sizeof(uint8_t) + sizeof(key_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + sizeof(key_t);
 }
 
 template<class key_t>
@@ -61,9 +62,10 @@ uint32_t GetRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(uint8_t));
-	begin += tmp_keysize;
-	memset(begin, 0, DEBUG_BYTES);
-	return sizeof(uint8_t) + tmp_keysize + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize;
+	//begin += tmp_keysize;
+	//memset(begin, 0, DEBUG_BYTES);
+	//return sizeof(uint8_t) + tmp_keysize + DEBUG_BYTES;
 }
 
 template<class key_t>
@@ -105,7 +107,8 @@ val_t PutRequest<key_t, val_t>::val() const {
 
 template<class key_t, class val_t>
 uint32_t PutRequest<key_t, val_t>::size() { // not used
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + DEBUG_BYTES;
+	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(uint8_t);
 }
 
 template<class key_t, class val_t>
@@ -120,9 +123,10 @@ uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-sizeof(uint8_t)-tmp_keysize);
 	begin += tmp_valsize;
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t)); // shadowtype
-	begin += sizeof(uint8_t);
-	memset(begin, 0, DEBUG_BYTES);
-	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t);
+	//begin += sizeof(uint8_t);
+	//memset(begin, 0, DEBUG_BYTES);
+	//return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + DEBUG_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -161,7 +165,8 @@ DelRequest<key_t>::DelRequest(const char * data, uint32_t recv_size) {
 
 template<class key_t>
 uint32_t DelRequest<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(key_t) + DEBUG_BYTES;
+	//return sizeof(uint8_t) + sizeof(key_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + sizeof(key_t);
 }
 
 template<class key_t>
@@ -172,9 +177,10 @@ uint32_t DelRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t));
 	begin += sizeof(uint8_t);
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - sizeof(uint8_t));
-	begin += tmp_keysize;
-	memset(begin, 0, DEBUG_BYTES);
-	return sizeof(uint8_t) + tmp_keysize + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize;
+	//begin += tmp_keysize;
+	//memset(begin, 0, DEBUG_BYTES);
+	//return sizeof(uint8_t) + tmp_keysize + DEBUG_BYTES;
 }
 
 template<class key_t>
@@ -290,7 +296,8 @@ bool GetResponse<key_t, val_t>::stat() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() { // unused
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
+	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(bool);
 }
 
 template<class key_t, class val_t>
@@ -307,9 +314,10 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t)); // shadowtype
 	begin += sizeof(uint8_t);
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
-	begin += sizeof(bool);
-	memset(begin, 0, DEBUG_BYTES);
-	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(bool);
+	//begin += sizeof(bool);
+	//memset(begin, 0, DEBUG_BYTES);
+	//return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -348,7 +356,8 @@ bool PutResponse<key_t>::stat() const {
 
 template<class key_t>
 uint32_t PutResponse<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
+	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + sizeof(bool);
 }
 
 template<class key_t>
@@ -363,9 +372,10 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t)); // shadowtype
 	begin += sizeof(uint8_t);
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
-	begin += sizeof(bool);
-	memset(begin, 0, DEBUG_BYTES);
-	return sizeof(uint8_t) + tmp_keysize + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + sizeof(uint8_t) + sizeof(bool);
+	//begin += sizeof(bool);
+	//memset(begin, 0, DEBUG_BYTES);
+	//return sizeof(uint8_t) + tmp_keysize + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
 }
 
 template<class key_t>
@@ -402,7 +412,8 @@ bool DelResponse<key_t>::stat() const {
 
 template<class key_t>
 uint32_t DelResponse<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
+	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + sizeof(bool);
 }
 
 template<class key_t>
@@ -417,9 +428,10 @@ uint32_t DelResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	memcpy(begin, (void *)&this->_type, sizeof(uint8_t)); // shadowtype
 	begin += sizeof(uint8_t);
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
-	begin += sizeof(bool);
-	memset(begin, 0, DEBUG_BYTES);
-	return sizeof(uint8_t) + tmp_keysize + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + sizeof(uint8_t) + sizeof(bool);
+	//begin += sizeof(bool);
+	//memset(begin, 0, DEBUG_BYTES);
+	//return sizeof(uint8_t) + tmp_keysize + sizeof(uint8_t) + sizeof(bool) + DEBUG_BYTES;
 }
 
 template<class key_t>
@@ -605,9 +617,10 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::serialize(char * const data, uint32
 	begin += sizeof(uint8_t);
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
-	begin += sizeof(uint32_t);
-	memset(begin, 0, DEBUG_BYTES);
-	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t);
+	//begin += sizeof(uint32_t);
+	//memset(begin, 0, DEBUG_BYTES);
+	//return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + DEBUG_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -622,7 +635,8 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::seq() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeq<key_t, val_t>::size() { // unused
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + DEBUG_BYTES;
+	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t);
 }
 
 template<class key_t, class val_t>
@@ -670,7 +684,8 @@ bool GetResponseLatestSeqInswitchCase1<key_t, val_t>::stat() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::size() { // unused
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(bool) + DEBUG_BYTES;
+	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(bool);
 }
 
 template<class key_t, class val_t>
@@ -697,9 +712,10 @@ uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::serialize(char * const
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
 	memset(begin, 0, CLONE_BYTES);
-	begin += CLONE_BYTES;
-	memset(begin, 0, DEBUG_BYTES);
-	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + CLONE_BYTES + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + CLONE_BYTES;
+	//begin += CLONE_BYTES;
+	//memset(begin, 0, DEBUG_BYTES);
+	//return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + CLONE_BYTES + DEBUG_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -896,7 +912,8 @@ uint32_t DelRequestSeq<key_t>::seq() const {
 
 template<class key_t>
 uint32_t DelRequestSeq<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + sizeof(uint32_t) + DEBUG_BYTES;
+	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + sizeof(uint32_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint8_t) + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -1118,9 +1135,10 @@ uint32_t CachePopInswitch<key_t, val_t>::serialize(char * const data, uint32_t m
 	begin += INSWITCH_PREV_BYTES;
 	uint16_t bigendian_freeidx = htons(uint16_t(this->_freeidx));
 	memcpy(begin, (void *)&bigendian_freeidx, sizeof(uint16_t)); // little-endian to big-endian
-	begin += sizeof(uint16_t);
-	memset(begin, 0, DEBUG_BYTES);
-	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t);
+	//begin += sizeof(uint16_t);
+	//memset(begin, 0, DEBUG_BYTES);
+	//return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -1130,7 +1148,8 @@ uint16_t CachePopInswitch<key_t, val_t>::freeidx() const {
 
 template<class key_t, class val_t>
 uint32_t CachePopInswitch<key_t, val_t>::size() { // unused
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES;
+	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES;
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t);
 }
 
 template<class key_t, class val_t>

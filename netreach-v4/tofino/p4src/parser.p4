@@ -69,7 +69,8 @@ parser parse_op {
 		SCANREQ: parse_scan;
 		SCANREQ_SPLIT: parse_scan;
 #endif
-		default: parse_debug;
+		default: ingress;
+		//default: parse_debug;
 		
 		/*GETREQ_INSWITCH: parse_inswitch;
 		GETRES: parse_vallen;
@@ -97,7 +98,8 @@ parser parse_op {
 		SCANREQ: parse_scan;
 		SCANREQ_SPLIT: parse_scan;
 #endif
-		default: parse_debug; // GETREQ, GETREQ_POP, GETREQ_NLATEST, DELREQ*/
+		default: ingress;
+		//default: parse_debug; // GETREQ, GETREQ_POP, GETREQ_NLATEST, DELREQ*/
 	}
 }
 
@@ -163,7 +165,8 @@ parser parse_vallen {
 		2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
 		8 mask 0x08: parse_stat;
-		default: parse_debug;
+		default: ingress;
+		//default: parse_debug;
 		
 		//GETRES: parse_stat;
 		//GETRES_LATEST_SEQ: parse_seq;
@@ -181,7 +184,8 @@ parser parse_vallen {
 		//PUTREQ_POP_SEQ_CASE3: parse_seq;
 		//DELREQ_INSWITCH: parse_inswitch;
 		//DELREQ_SEQ_INSWITCH_CASE1: parse_seq;
-		//default: parse_debug; // PUTREQ
+		//default: ingress; // PUTREQ
+		////default: parse_debug; // PUTREQ
 	}
 }*/
 
@@ -272,7 +276,8 @@ parser parse_shadowtype {
 		2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
 		8 mask 0x08: parse_stat;
-		default: parse_debug;
+		default: ingress;
+		//default: parse_debug;
 	}
 }
 
@@ -281,7 +286,8 @@ parser parse_seq {
 	//return select(op_hdr.optype) {
 	return select(shadowtype_hdr.shadowtype) {
 		4 mask 0x04: parse_inswitch;
-		default: parse_debug;
+		default: ingress;
+		//default: parse_debug;
 		
 		/*GETRES_LATEST_SEQ_INSWITCH: parse_inswitch;
 		GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_inswitch;
@@ -290,7 +296,8 @@ parser parse_seq {
 		CACHE_POP_INSWITCH: parse_inswitch; // inswitch_hdr is set by switchos
 		PUTREQ_SEQ_INSWITCH_CASE1: parse_inswitch;
 		DELREQ_SEQ_INSWITCH_CASE1: parse_inswitch;
-		default: parse_debug; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ, DELREQ_SEQ_CASE3 */
+		default: ingress;
+		//default: parse_debug; // GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ, DELREQ_SEQ_CASE3 */
 	}
 }
 
@@ -299,13 +306,15 @@ parser parse_inswitch {
 	//return select(op_hdr.optype) {
 	return select(shadowtype_hdr.shadowtype) {
 		8 mask 0x08: parse_stat;
-		default: parse_debug;
+		default: ingress;
+		//default: parse_debug;
 		
 		/*GETRES_LATEST_SEQ_INSWITCH_CASE1: parse_stat;
 		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_stat;
 		PUTREQ_SEQ_INSWITCH_CASE1: parse_stat;
 		DELREQ_SEQ_INSWITCH_CASE1: parse_stat;
-		default: parse_debug; // GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH, CACHE_POP_INSWITCH */
+		default: ingress;
+		//default: parse_debug; // GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH, CACHE_POP_INSWITCH */
 	}
 }
 
@@ -316,17 +325,20 @@ parser parse_stat {
 		GETRES_DELETED_SEQ_INSWITCH_CASE1: parse_clone;
 		PUTREQ_SEQ_INSWITCH_CASE1: parse_clone;
 		DELREQ_SEQ_INSWITCH_CASE1: parse_clone;
-		default: parse_debug;
+		default: ingress;
+		//default: parse_debug;
 	}
-	//return parse_debug; // GETRES, PUTRES, DELRES, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
+	//return ingress;
+	////return parse_debug; // GETRES, PUTRES, DELRES, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 }
 
 parser parse_clone {
 	extract(clone_hdr);
-	return parse_debug; // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, CACHE_POP_INSWITCH_ACK, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
+	return ingress;
+	//return parse_debug; // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, CACHE_POP_INSWITCH_ACK, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 }
 
-parser parse_debug {
+/*parser parse_debug {
 	extract(debug_hdr);
 	return ingress;
-}
+}*/

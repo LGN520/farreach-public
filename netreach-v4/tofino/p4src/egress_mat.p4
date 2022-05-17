@@ -76,11 +76,13 @@ table is_last_scansplit_tbl {
 #endif
 
 action set_is_hot() {
-	modify_field(debug_hdr.is_hot, 1);
+	modify_field(meta.is_hot, 1);
+	//modify_field(debug_hdr.is_hot, 1);
 }
 
 action reset_is_hot() {
-	modify_field(debug_hdr.is_hot, 0);
+	modify_field(meta.is_hot, 0);
+	//modify_field(debug_hdr.is_hot, 0);
 }
 
 @pragma stage 1
@@ -119,11 +121,13 @@ table save_client_udpport_tbl {
 // Stage 9
 
 action set_is_lastclone() {
-	modify_field(debug_hdr.is_lastclone_for_pktloss, 1);
+	modify_field(meta.is_lastclone_for_pktloss, 1);
+	//modify_field(debug_hdr.is_lastclone_for_pktloss, 1);
 }
 
 action reset_is_lastclone() {
-	modify_field(debug_hdr.is_lastclone_for_pktloss, 0);
+	modify_field(meta.is_lastclone_for_pktloss, 0);
+	//modify_field(debug_hdr.is_lastclone_for_pktloss, 0);
 }
 
 @pragma stage 9
@@ -772,13 +776,15 @@ table eg_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		debug_hdr.is_hot: exact;
+		meta.is_hot: exact;
+		//debug_hdr.is_hot: exact;
 		meta.validvalue: exact;
 		meta.is_latest: exact;
 		meta.is_deleted: exact;
 		//inswitch_hdr.is_wrong_pipeline: exact;
 		inswitch_hdr.client_sid: exact;
-		debug_hdr.is_lastclone_for_pktloss: exact;
+		meta.is_lastclone_for_pktloss: exact;
+		//debug_hdr.is_lastclone_for_pktloss: exact;
 		inswitch_hdr.snapshot_flag: exact;
 		meta.is_case1: exact;
 	}
@@ -862,37 +868,43 @@ table scan_forward_tbl {
 /*// CACHE_POP_INSWITCH_ACK
 action update_onlyop_udplen() {
 	// 6(udphdr) + 17(ophdr) + 1(debug_hdr)
-	modify_field(udp_hdr.hdrlen, 24);
+	//modify_field(udp_hdr.hdrlen, 24);
+	modify_field(udp_hdr.hdrlen, 23);
 }
 
 // GETRES
 action update_val_stat_udplen(aligned_vallen) {
 	// 6(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
-	add(udp_hdr.hdrlen, aligned_vallen, 28);
+	//add(udp_hdr.hdrlen, aligned_vallen, 28);
+	add(udp_hdr.hdrlen, aligned_vallen, 27);
 }
 
 // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 action update_val_seq_inswitch_stat_udplen(aligned_vallen) {
 	// 6(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 9(inswitch) + 1(stat) + 1(debug_hdr)
-	add(udp_hdr.hdrlen, aligned_vallen, 41);
+	//add(udp_hdr.hdrlen, aligned_vallen, 41);
+	add(udp_hdr.hdrlen, aligned_vallen, 40);
 }
 
 // PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3
 action update_val_seq_udplen(aligned_vallen) {
 	// 6(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 1(debug_hdr)
-	add(udp_hdr.hdrlen, aligned_vallen, 31);
+	//add(udp_hdr.hdrlen, aligned_vallen, 31);
+	add(udp_hdr.hdrlen, aligned_vallen, 30);
 }
 
 // PUTRES, DELRES
 action update_stat_udplen() {
 	// 6(udphdr) + 17(ophdr) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
-	modify_field(udp_hdr.hdrlen, 26);
+	//modify_field(udp_hdr.hdrlen, 26);
+	modify_field(udp_hdr.hdrlen, 25);
 }
 
 // DELREQ_SEQ, DELREQ_SEQ_CASE3
 action update_seq_udplen() {
 	// 6(udphdr) + 17(ophdr) + 1(shadowtype) + 4(seq) + 1(debug_hdr)
-	modify_field(udp_hdr.hdrlen, 29);
+	//modify_field(udp_hdr.hdrlen, 29);
+	modify_field(udp_hdr.hdrlen, 28);
 }*/
 
 action update_udplen(udplen) {

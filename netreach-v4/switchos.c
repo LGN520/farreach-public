@@ -372,7 +372,7 @@ void *run_switchos_popserver(void *param) {
 	int connfd = -1;
 	tcpaccept(switchos_popserver_tcpsock, NULL, NULL, connfd, "switchos.popserver");
 
-	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx, debug_hdr>
+	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
 	uint8_t optype = 0;
@@ -663,7 +663,8 @@ void *run_switchos_popworker(void *param) {
 		uint32_t pktsize = 0;
 		char evictclient_buf[MAX_BUFSIZE];
 		int evictclient_cur_recv_bytes = 0;
-		const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(index_key_t) + DEBUG_BYTES;
+		//const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(index_key_t) + DEBUG_BYTES;
+		const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(index_key_t);
 		if (is_snapshot_prepare && !popworker_know_snapshot_prepare) {
 			popworker_know_snapshot_prepare = true;
 		}

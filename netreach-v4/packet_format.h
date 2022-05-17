@@ -17,7 +17,7 @@
 #define CLONE_BYTES 3
 
 // # of bytes in debug_hdr
-#define DEBUG_BYTES 1
+//#define DEBUG_BYTES 1
 
 // op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr
 
@@ -421,7 +421,7 @@ class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + 
 
 // NOTE: only used in end-hosts
 template<class key_t>
-class CacheEvictAck : public GetRequest<key_t> { // ophdr + debug_hdr
+class CacheEvictAck : public GetRequest<key_t> { // ophdr
 	public: 
 		CacheEvictAck(key_t key);
 		CacheEvictAck(const char * data, uint32_t recv_size);

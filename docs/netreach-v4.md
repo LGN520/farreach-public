@@ -705,7 +705,7 @@
 		- Pass case1 of single GETREQ
 			- Introduce debug_hdr for debugging (TODO: remove it due to direct counter for debugging)
 				+ Move meta.is_hot/is_lastclone_for_pktloss into debug_hdr (*.p4, configure.py)
-				+ Add debug_hdr at the end of each packet (only except SCANREQ/SCANREQ_SPLIT and CACHE_POP/CACHE_EVICT) (parser.p4, configure.py, packet_format)
+				+ Add debug_hdr at the end of each packet (only except SCANREQ/SCANREQ_SPLIT and CACHE_POP/CACHE_EVICT) (header.p4, parser.p4, egress.p4, configure.py, packet_format, switchos.c, controller.c)
 			- Fix unmatched action (GETREQ_INSWITCH -> GETREQ) issue due to w/o add_header(shadowtype_hdr)
 		- Pass case2 and case3 of PUTREQ (comment cache population temporarily)
 			- Fix width limitation of range matched field (<= 20bits)

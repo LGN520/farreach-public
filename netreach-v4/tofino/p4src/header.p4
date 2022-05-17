@@ -138,6 +138,8 @@ header_type metadata_t {
 		cm2_predicate: 4;
 		cm3_predicate: 4;
 		cm4_predicate: 4;
+		is_hot: 1;
+		is_lastclone_for_pktloss: 1;
 		server_sid: 10; // clone to server for SCANREQ_SPLIT
 		validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
@@ -147,14 +149,14 @@ header_type metadata_t {
 	}
 }
 
-header_type debug_t {
+/*header_type debug_t {
 	fields {
 		// 8-bit container
 		is_hot: 1;
 		is_lastclone_for_pktloss: 1;
 		padding: 6;
 	}
-}
+}*/
 
 // Header instances
 
@@ -189,4 +191,5 @@ header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
 header clone_t clone_hdr;
 metadata metadata_t meta;
-header debug_t debug_hdr;
+
+//header debug_t debug_hdr;

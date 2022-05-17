@@ -433,7 +433,8 @@ void *run_controller_evictserver(void *param) {
 	int arrive_serveridx_bytes = -1;
 	char evictclient_buf[MAX_BUFSIZE];
 	int evictclient_cur_recv_bytes = 0;
-	const int evictclient_arrive_key_bytes = arrive_optype_bytes + sizeof(index_key_t) + DEBUG_BYTES;
+	//const int evictclient_arrive_key_bytes = arrive_optype_bytes + sizeof(index_key_t) + DEBUG_BYTES;
+	const int evictclient_arrive_key_bytes = arrive_optype_bytes + sizeof(index_key_t);
 	while (controller_running) {
 		int recvsize = 0;
 		bool is_broken = tcprecv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "controller.evictserver");
