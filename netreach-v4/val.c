@@ -247,19 +247,25 @@ uint32_t Val::deserialize_vallen(const char *buf, uint32_t buflen) {
 uint32_t Val::deserialize_val(const char *buf, uint32_t buflen) {
 	INVARIANT(buf != nullptr);
 
-	uint16_t padding_size = get_padding_size(val_length); // padding for value <= 128B 
-	uint32_t deserialize_size = val_length + padding_size;
-	INVARIANT(deserialize_size >= 0 && buflen >= deserialize_size);
-
 	if (val_data != nullptr) {
 		delete [] val_data;
+		val_data = NULL;
 	}
 
-	// Deep copy
-	val_data = new char[val_length];
-	INVARIANT(val_data != nullptr);
-	memcpy(val_data, buf, val_length);
-	return deserialize_size; // vallen + [padding size]
+	if (val_length > 0) {
+		uint16_t padding_size = get_padding_size(val_length); // padding for value <= 128B 
+		uint32_t deserialize_size = val_length + padding_size;
+		INVARIANT(deserialize_size >= 0 && buflen >= deserialize_size);
+
+		// Deep copy
+		val_data = new char[val_length];
+		INVARIANT(val_data != nullptr);
+		memcpy(val_data, buf, val_length);
+		return deserialize_size; // vallen + [padding size]
+	}
+	else {
+		return 0;
+	}
 }
 
 uint32_t Val::serialize(char *buf, uint32_t buflen) {

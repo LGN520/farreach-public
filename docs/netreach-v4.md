@@ -801,15 +801,15 @@
 	+ Case 3: controller sends SNAPSHOT_START -> switchos sets snapshot flag -> put(k1,v1) (PUTREQ_SEQ_CASE3) -> put(k1,v2) (PUTREQ_POP_SEQ_CASE3 -> cache population) -> del(k3) (DELREQ_SEQ_CASE3) -> swichos loads snapshot and finishes
 		* No case 2 as cache is not full and hence no eviction
 		* Snapshot data: no cached record in switch
-	+ TODO: Case 2: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> switchos sets snapshot flag -> put(k2,v2) (PUTREQ_POP_SEQ_CASE3 -> cache eviction w/ CACHE_EVICT_CASE2) -> put(k3,v3) (PUTREQ_POP_SEQ_CASE3 -> cache eviction w/ CACHE_EVICT_CASE2) -> swichos loads snapshot and finishes
+	+ Case 2: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> switchos sets snapshot flag -> put(k2,v2) (PUTREQ_POP_SEQ_CASE3 -> cache eviction w/ CACHE_EVICT_CASE2) -> put(k3,v3) (PUTREQ_POP_SEQ_CASE3 -> cache eviction w/ CACHE_EVICT_CASE2) -> swichos loads snapshot and finishes
 		* Snapshot data: <k1, v3> (before rollback) -> <k1, v1> (after rollback)
-	+ TODO: Case 1-1: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> switchos sets snapshot flag -> del(k1) (DELREQ_SEQ_INSWITCH_CASE1 and DELRES) -> swichos loads snapshot and finishes
+	+ Case 1-1: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> switchos sets snapshot flag -> del(k1) (DELREQ_SEQ_INSWITCH_CASE1 and DELRES) -> swichos loads snapshot and finishes
 		* Snapshot data: <k1, deleted> (before rollback) -> <k1, v1> (after rollback)
-	+ TODO: Case 1-2: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> delete(k1) in switch -> switchos sets snapshot flag -> put(k1,v2) (PUTREQ_SEQ_INSWITCH_CASE1 and PUTRES) -> swichos loads snapshot and finishes
+	+ Case 1-2: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> delete(k1) in switch -> switchos sets snapshot flag -> put(k1,v2) (PUTREQ_SEQ_INSWITCH_CASE1 and PUTRES) -> swichos loads snapshot and finishes
 		* Snapshot data: <k1, v2> (before rollback) -> <k1, deleted> (after rollback)
-	+ TODO: Case 1-3: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> put(k1,v2) in server -> switchos sets snapshot flag -> read(k1,v2) (GETRES_LATEST_SEQ_INSWITCH_CASE1 and GETRES) -> swichos loads snapshot and finishes
+	+ Case 1-3: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> put(k1,v2) in server -> switchos sets snapshot flag -> read(k1,v2) (GETRES_LATEST_SEQ_INSWITCH_CASE1 and GETRES) -> swichos loads snapshot and finishes
 		* Snapshot data: <k1, v2> (before rollback) -> <k1, v1> (after rollback)
-	+ TODO: Case 1-4: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> del(k1) in server -> switchos sets snapshot flag -> read(k1,deleted) (GETRES_DELETED_SEQ_INSWITCH_CASE1 and GETRES) -> swichos loads snapshot and finishes
+	+ Case 1-4: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> del(k1) in server -> switchos sets snapshot flag -> read(k1,deleted) (GETRES_DELETED_SEQ_INSWITCH_CASE1 and GETRES) -> swichos loads snapshot and finishes
 		* Snapshot data: <k1, deleted> (before rollback) -> <k1, v1> (after rollback)
 
 ## Fixed issues

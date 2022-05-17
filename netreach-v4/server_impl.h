@@ -977,18 +977,18 @@ void *run_server_consnapshotserver(void *param) {
 				printf("[server.snapshotserver] receive SNAPSHOT_SERVERISDE from controller\n"); // TMPDEBUG
 				control_type_phase0 = *((int *)recvbuf);
 				INVARIANT(control_type_phase0 == SNAPSHOT_SERVERSIDE);
+
+				// make server-side snapshot (simulate distributed in-memory KVS by concurrent one)
+				if (!server_issnapshot) {
+					table->make_snapshot();
+				}
+
+				// send SNAPSHOT_SERVERSIDE_ACK to controller
+				printf("[server.snapshotserver] send SNAPSHOT_SERVERSIDE_ACK to controller\n"); // TMPDEBUG
+				tcpsend(connfd, (char *)&SNAPSHOT_SERVERSIDE_ACK, sizeof(int), "server.consnapshotserver");
+
+				phase = 1; // wait for crash-consistent snapshot data
 			}
-
-			// make server-side snapshot (simulate distributed in-memory KVS by concurrent one)
-			if (!server_issnapshot) {
-				table->make_snapshot();
-			}
-
-			// send SNAPSHOT_SERVERSIDE_ACK to controller
-			printf("[server.snapshotserver] send SNAPSHOT_SERVERSIDE_ACK to controller\n"); // TMPDEBUG
-			tcpsend(connfd, (char *)&SNAPSHOT_SERVERSIDE_ACK, sizeof(int), "server.consnapshotserver");
-
-			phase = 1; // wait for crash-consistent snapshot data
 		}
 		else if (phase == 1) {
 			// NOTE: skip sizeof(int) for SNAPSHOT_SERVERSIDE

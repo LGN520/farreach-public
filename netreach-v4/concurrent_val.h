@@ -79,9 +79,10 @@ struct ConcurrentVal {
 	  if (likely(get_version(status) ==
 				 get_version(current_status))) {  // check version
 		val = tmpval; 
+		return true;
 	  }
     }
-	return true;
+	return false; // never arrive
   }
   bool update(const val_t &val) {
     lock();
