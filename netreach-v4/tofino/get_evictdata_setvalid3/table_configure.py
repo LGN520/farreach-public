@@ -105,17 +105,18 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #evictvallen = convert_i32_to_u32(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
         evictvallen = convert_i16_to_u16(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
         eightbyte_cnt = (evictvallen+7) / 8;
-        val_list = []
-        for i in range(1, eightbyte_cnt+1):
+        vallo_list = []
+        valhi_list = []
+        for i in range(1, eightbyte_cnt+1): # val1 to val16
             # int32_t
             tmp_vallo = eval("self.client.register_read_vallo{}_reg".format(i))(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
             tmp_valhi = eval("self.client.register_read_valhi{}_reg".format(i))(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
-            val_list.append(tmp_vallo)
-            val_list.append(tmp_valhi)
+            vallo_list.append(tmp_vallo)
+            valhi_list.append(tmp_valhi)
         evictvalbytes = bytes()
-        for i in range(len(val_list)):
+        for i in range(len(vallo_list)): # 0 to 15
             # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
-            evictvalbytes = evictvalbytes + struct.pack("!i", val_list[i])
+            evictvalbytes = evictvalbytes + struct.pack("!2i", vallo_list[len(vallo_list)-1-i], valhi_list[len(vallo_list)-1-i])
         # load savedseq
         evictseq = convert_i32_to_u32(self.client.register_read_savedseq_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
 

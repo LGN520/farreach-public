@@ -421,7 +421,7 @@ class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + 
 
 // NOTE: only used in end-hosts
 template<class key_t>
-class CacheEvictAck : public GetRequest<key_t> { // ophdr
+class CacheEvictAck : public GetRequest<key_t> { // ophdr + debug_hdr
 	public: 
 		CacheEvictAck(key_t key);
 		CacheEvictAck(const char * data, uint32_t recv_size);

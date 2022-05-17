@@ -273,6 +273,7 @@ inline void parse_ini(const char* config_file) {
 	controller_evictserver_port = ini.get_controller_evictserver_port();
 	switchos_snapshotserver_port = ini.get_switchos_snapshotserver_port();
 	switchos_specialcaseserver_port = ini.get_switchos_specialcaseserver_port();
+	switchos_snapshotdataserver_port = ini.get_switchos_snapshotdataserver_port();
 	
 	COUT_VAR(server_num);
 	COUT_VAR(switchos_popserver_port);
@@ -287,6 +288,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(controller_evictserver_port);
 	COUT_VAR(switchos_snapshotserver_port);
 	COUT_VAR(switchos_specialcaseserver_port);
+	COUT_VAR(switchos_snapshotdataserver_port);
 }
 
 inline void parse_control_ini(const char* config_file) {
@@ -661,7 +663,7 @@ void *run_switchos_popworker(void *param) {
 		uint32_t pktsize = 0;
 		char evictclient_buf[MAX_BUFSIZE];
 		int evictclient_cur_recv_bytes = 0;
-		const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(index_key_t);
+		const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(index_key_t) + DEBUG_BYTES;
 		if (is_snapshot_prepare && !popworker_know_snapshot_prepare) {
 			popworker_know_snapshot_prepare = true;
 		}
@@ -883,6 +885,10 @@ void *run_switchos_snapshotserver(void *param) {
 				// NOTE: popserver/specialcaseserver will not touch speicalcases_ptr now, as both is_snapshot/is_snapshot_end are false
 				INVARIANT(switchos_specialcases_ptr == NULL);
 				switchos_specialcases_ptr = new concurrent_specicalcase_map_t();
+				
+				// TMPDEBUG
+				printf("Type to prepare snapshot, set snapshot flag, and backup metadata...\n");
+				getchar();
 
 				// stop cache population/eviction
 				is_snapshot_prepare = true;
@@ -890,10 +896,6 @@ void *run_switchos_snapshotserver(void *param) {
 				// wait until popworker_know_snapshot_prepare = true
 				while (!popworker_know_snapshot_prepare) {}
 				// by now, cache population/eviction is temporarily stopped -> snapshotserver can backup cache metadata atomically
-				
-				// TMPDEBUG
-				printf("Type to set snapshot flag...\n");
-				getchar();
 
 				// ptf sets snapshot flag as true atomically
 				system("bash tofino/set_snapshot_flag.sh");
@@ -966,6 +968,7 @@ void *run_switchos_snapshotserver(void *param) {
 					switchos_snapshot_seqs[iter->first] = iter->second._seq;
 					switchos_snapshot_stats[iter->first] = iter->second._valid;
 				}*/
+				printf("before enumerate concurrent_specicalcase_map_t\n"); // TMPDEBUG
 				INVARIANT(switchos_specialcases_ptr != NULL);
 				concurrent_specicalcase_map_t::DataSource source(0, (concurrent_specicalcase_map_t *)switchos_specialcases_ptr);
 				source.advance_to_next_valid();
@@ -977,6 +980,7 @@ void *run_switchos_snapshotserver(void *param) {
 					switchos_snapshot_stats[source.get_key()] = tmpcase._valid;
 					source.advance_to_next_valid();
 				}
+				printf("after enumerate concurrent_specicalcase_map_t\n"); // TMPDEBUG
 
 				// TMPDEBUG
 				printf("[after rollback] snapshot size: %d\n", switchos_cached_empty_index_backup);

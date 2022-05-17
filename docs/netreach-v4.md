@@ -802,7 +802,7 @@
 		* No case 2 as cache is not full and hence no eviction
 		* Snapshot data: no cached record in switch
 	+ TODO: Case 2: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> switchos sets snapshot flag -> put(k2,v2) (PUTREQ_POP_SEQ_CASE3 -> cache eviction w/ CACHE_EVICT_CASE2) -> put(k3,v3) (PUTREQ_POP_SEQ_CASE3 -> cache eviction w/ CACHE_EVICT_CASE2) -> swichos loads snapshot and finishes
-		* Snapshot data: <k3, v3> (before rollback) -> <k1, v1> (after rollback)
+		* Snapshot data: <k1, v3> (before rollback) -> <k1, v1> (after rollback)
 	+ TODO: Case 1-1: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> switchos sets snapshot flag -> del(k1) (DELREQ_SEQ_INSWITCH_CASE1 and DELRES) -> swichos loads snapshot and finishes
 		* Snapshot data: <k1, deleted> (before rollback) -> <k1, v1> (after rollback)
 	+ TODO: Case 1-2: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> delete(k1) in switch -> switchos sets snapshot flag -> put(k1,v2) (PUTREQ_SEQ_INSWITCH_CASE1 and PUTRES) -> swichos loads snapshot and finishes

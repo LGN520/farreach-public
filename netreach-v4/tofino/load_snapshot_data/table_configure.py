@@ -88,8 +88,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         vallo_list_list = []
         valhi_list_list = []
         for i in range(switch_max_vallen/8): # 128 bytes / 8 = 16 register arrays
-            vallo_list_list.append(eval("self.client.register_range_read_vallo{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt])
-            valhi_list_list.append(eval("self.client.register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, bucket_count, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt])
+            vallo_list_list.append(eval("self.client.register_range_read_vallo{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt])
+            valhi_list_list.append(eval("self.client.register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt])
         deleted_list = self.client.register_range_read_deleted_reg(self.sess_hdl, self.dev_tgt, start_index, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt]
         stat_list = []
         for i in range(len(deleted_list)):
@@ -115,8 +115,9 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             tmp_eightbyte_cnt = (tmpvallen + 7) / 8
             for j in range(tmp_eightbyte_cnt):
                 # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
-                sendbuf = sendbuf + struct.pack("!2i", vallo_list_list[j][i], valhi_list_list[j][i])
-            sendbuf = sendbuf + struct.packet("=I?", savedseq_list[i], stat_list[i])
+                # NOTE: deparser valbytes from val16 to val1
+                sendbuf = sendbuf + struct.pack("!2i", vallo_list_list[tmp_eightbyte_cnt-1-j][i], valhi_list_list[tmp_eightbyte_cnt-1-j][i])
+            sendbuf = sendbuf + struct.pack("=I?", savedseq_list[i], stat_list[i])
         total_bytesnum = 4 + len(sendbuf) # total # of bytes in sendbuf including total_bytesnum itself
         sendbuf = struct.pack("=i", total_bytesnum) + sendbuf
 
