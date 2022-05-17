@@ -1,5 +1,6 @@
 #include <getopt.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -877,6 +878,7 @@ void *run_switchos_snapshotserver(void *param) {
 			if (control_type_phase0 == -1 && cur_recv_bytes >= int(sizeof(int))) {
 				control_type_phase0 = *((int *)recvbuf);
 				INVARIANT(control_type_phase0 == SNAPSHOT_START);
+				printf("[switchos.snapshotserver] receive SNAPSHOT_START\n"); // TMPDEBUG
 
 				// NOTE: popserver/specialcaseserver will not touch speicalcases_ptr now, as both is_snapshot/is_snapshot_end are false
 				INVARIANT(switchos_specialcases_ptr == NULL);
@@ -888,6 +890,10 @@ void *run_switchos_snapshotserver(void *param) {
 				// wait until popworker_know_snapshot_prepare = true
 				while (!popworker_know_snapshot_prepare) {}
 				// by now, cache population/eviction is temporarily stopped -> snapshotserver can backup cache metadata atomically
+				
+				// TMPDEBUG
+				printf("Type to set snapshot flag...\n");
+				getchar();
 
 				// ptf sets snapshot flag as true atomically
 				system("bash tofino/set_snapshot_flag.sh");
@@ -908,15 +914,20 @@ void *run_switchos_snapshotserver(void *param) {
 				is_snapshot = true; // notify popworker and specialcaseserver to collect special cases
 				is_snapshot_prepare = false; // resume cache population/eviction
 
+				// TMPDEBUG
+				printf("Type to load snapshot data...\n");
+				getchar();
+
 				// load vallen, value, deleted, and savedseq in [0, switchos_cached_empty_index_backup-1]
 				if (switchos_cached_empty_index_backup > 0) {
 					system("bash tofino/load_snapshot_data.sh"); // load snapshot (maybe inconsistent -> need rollback later)
+
+					// wait for switchos.snapshotdataserver
+					while (!switchos_with_snapshotdata) {}
 				}
 
-				// wait for switchos.snapshotdataserver
-				while (!switchos_with_snapshotdata) {}
-
 				// send SNAPSHOT_SERVERSIDE to controller to notify servers for server-side snapshot
+				printf("[switchos.snapshotserver] send SNAPSHOT_SERVERSIDE to controller\n"); // TMPDEBUG
 				tcpsend(connfd, (char *)&SNAPSHOT_SERVERSIDE, sizeof(int), "switchos.snapshotserver");
 
 				phase = 1; // wait for SNAPSHOT_SERVERSIDE_ACK
@@ -925,8 +936,9 @@ void *run_switchos_snapshotserver(void *param) {
 		else if (phase == 1) { // wait for SNAPSHOT_SERVERSIDE_ACK
 			// NOTE: skip sizeof(int) for SNAPSHOT_START
 			if (control_type_phase1 == -1 && cur_recv_bytes >= int(sizeof(int) + sizeof(int))) {
-				control_type_phase1 = *((int *)recvbuf);
+				control_type_phase1 = *((int *)(recvbuf + sizeof(int)));
 				INVARIANT(control_type_phase1 == SNAPSHOT_SERVERSIDE_ACK);
+				printf("[switchos.snapshotserver] receive SNAPSHOT_SERVERSIDE_ACK from controller\n"); // TMPDEBUG
 
 				// finish snapshot
 				system("bash tofino/reset_snapshot_flag_and_reg");
@@ -935,6 +947,17 @@ void *run_switchos_snapshotserver(void *param) {
 
 				// wait for case2 from popworker and case1 from specialcaseserver
 				while (!popworker_know_snapshot_end || !specialcaseserver_know_snapshot_end) {}
+
+				// TMPDEBUG
+				printf("[before rollback] snapshot size: %d\n", switchos_cached_empty_index_backup);
+				for (size_t debugi = 0; debugi < switchos_cached_empty_index_backup; debugi++) {
+					char debugbuf[MAX_BUFSIZE];
+					uint32_t debugkeysize = switchos_cached_keyarray_backup[debugi].serialize(debugbuf, MAX_BUFSIZE);
+					uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
+					printf("serialized debug key-value[%d]:\n", debugi);
+					dump_buf(debugbuf, debugkeysize+debugvalsize);
+					printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
+				}
 
 				// perform rollback (now both popserver/specicalserver will not touch specialcases; snapshotdataserver will not touch snapshot data)
 				/*for (std::map<uint16_t, special_case_t>::iterator iter = switchos_specialcases.begin(); iter != switchos_specialcases.end(); iter++) {
@@ -953,6 +976,17 @@ void *run_switchos_snapshotserver(void *param) {
 					switchos_snapshot_seqs[source.get_key()] = tmpcase._seq;
 					switchos_snapshot_stats[source.get_key()] = tmpcase._valid;
 					source.advance_to_next_valid();
+				}
+
+				// TMPDEBUG
+				printf("[after rollback] snapshot size: %d\n", switchos_cached_empty_index_backup);
+				for (size_t debugi = 0; debugi < switchos_cached_empty_index_backup; debugi++) {
+					char debugbuf[MAX_BUFSIZE];
+					uint32_t debugkeysize = switchos_cached_keyarray_backup[debugi].serialize(debugbuf, MAX_BUFSIZE);
+					uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
+					printf("serialized debug key-value[%d]:\n", debugi);
+					dump_buf(debugbuf, debugkeysize+debugvalsize);
+					printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
 				}
 
 				// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
@@ -991,6 +1025,7 @@ void *run_switchos_snapshotserver(void *param) {
 				INVARIANT(total_bytes <= MAX_LARGE_BUFSIZE);
 
 				// send rollbacked snapshot data to controller.snapshotclient
+				printf("[switchos.snapshotserver] send snapshot data to controller\n"); // TMPDEBUG
 				tcpsend(connfd, sendbuf, total_bytes, "switchos.snapshotserver");
 
 				// reset metadata for next snapshot

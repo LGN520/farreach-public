@@ -67,7 +67,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         flags = netbufferv4_register_flags_t(read_hw_sync=True)
 
         print "Reset snapshot_flag=0 for all ingress pipelines"
-        for tmpoptype in [PUTREQ, DELREQ]:
+        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
             matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
                     op_hdr_optype = tmpoptype,
                     meta_need_recirculate = 0)

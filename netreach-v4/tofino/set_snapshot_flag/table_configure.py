@@ -67,6 +67,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
         # get the device ports from front panel ports
+        self.devPorts = []
         for fpPort in fp_ports:
             port, chnl = fpPort.split("/")
             devPort = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))

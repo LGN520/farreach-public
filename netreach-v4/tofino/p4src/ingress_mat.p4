@@ -267,7 +267,7 @@ table snapshot_flag_tbl {
 		reset_snapshot_flag;
 	}
 	default_action: reset_snapshot_flag();
-	size: 2;
+	size: 8;
 }
 
 /*action set_client_sid(client_sid, eport) {

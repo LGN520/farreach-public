@@ -1,5 +1,6 @@
 #include <getopt.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -34,8 +35,8 @@ typedef ControllerPopserverSubthreadParam controller_popserver_subthread_param_t
 
 bool volatile controller_running = false;
 std::atomic<size_t> controller_ready_threads(0);
-//const size_t controller_expected_ready_threads = 4;
-const size_t controller_expected_ready_threads = 3;
+const size_t controller_expected_ready_threads = 4;
+//const size_t controller_expected_ready_threads = 3;
 
 // Per-server popclient <-> one popserver.subthread in controller
 // NOTE: subthreadidx != serveridx
@@ -109,11 +110,11 @@ int main(int argc, char **argv) {
 		COUT_N_EXIT("Error: " << ret);
 	}
 
-	/*pthread_t snapshotclient_thread;
+	pthread_t snapshotclient_thread;
 	ret = pthread_create(&snapshotclient_thread, nullptr, run_controller_snapshotclient, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error: " << ret);
-	}*/
+	}
 
 	while (controller_ready_threads < controller_expected_ready_threads) sleep(1);
 	printf("[controller] all threads ready\n");
@@ -589,6 +590,10 @@ void *run_controller_snapshotclient(void *param) {
 			is_controller_snapshotclient_connected = true;
 		}
 
+		// TMPDEBUG
+		printf("Type to send SNAPSHOT_START...\n");
+		getchar();
+
 		// send SNAPSHOT_START (little-endian) to switchos
 		printf("[controller.snapshotclient] send SNAPSHOT_START\n");
 		tcpsend(controller_snapshotclient_tcpsock, (char *)&SNAPSHOT_START, sizeof(int), "controlelr.snapshotclient");
@@ -620,6 +625,7 @@ void *run_controller_snapshotclient(void *param) {
 					}
 
 					// send SNAPSHOT_SERVERSIDE to server for server-side snapshot
+					printf("[controller.snapshotclient] receive SNAPSHOT_SERVERSIDE from switchos and send to server\n"); // TMPDEBUG
 					tcpsend(controller_snapshotclient_consnapshotclient_tcpsock, (char *)&SNAPSHOT_SERVERSIDE, sizeof(int), "controller.snapshotclient.consnapshotclient");
 
 					// wait for SNAPSHOT_SERVERSIDE_ACK from server, and send it to switchos
@@ -643,6 +649,7 @@ void *run_controller_snapshotclient(void *param) {
 							INVARIANT(ack_control_type_phase0 == SNAPSHOT_SERVERSIDE_ACK);
 
 							// send SNAPSHOT_SERVERSIDE_ACK to switchos
+							printf("[controller.snapshotclient] receive SNAPSHOT_SERVERSIDE_ACK from server and send to switchos\n"); // TMPDEBUG
 							tcpsend(controller_snapshotclient_tcpsock, (char *)&SNAPSHOT_SERVERSIDE_ACK, sizeof(int), "controller.snapshotclient");
 						}
 
@@ -680,6 +687,7 @@ void *run_controller_snapshotclient(void *param) {
 					// NOTE: per-server_bytes is used for sending snapshot data to different server.consnapshotservers (not used now)
 					
 					// send snapshot data to server.consnapshotserver
+					printf("[controller.snapshotclient] receive snapshot data from switchos and send to server\n"); // TMPDEBUG
 					tcpsend(controller_snapshotclient_consnapshotclient_tcpsock, recvbuf + sizeof(int), total_bytes, "controller.snapshotclient.consnapshotclient");
 
 					// Move remaining bytes and reset metadata

@@ -497,7 +497,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=2)
+            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=4)
             #print "Configuring snapshot_flag_tbl"
             #for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
             #    matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\

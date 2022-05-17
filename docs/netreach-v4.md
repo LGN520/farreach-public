@@ -797,56 +797,20 @@
 	+ Case 2: latency between client and switch
 		* Step 1: case 1 of conservative read
 		* Step 2: 1000 read(k1,v1)
-
-
-
-
-- TODO: Test cases of crash-consistent backup and range query: See "testcases/backup" (with only 1 bucket in sketch)
-	+ NOTE: remember to set bucket_num in config.ini, otherwise the hashidx will be incorrect sent by phase2 ptf
-	+ NOTE: if data in backup is not dirty, it will incur duplicate results for range query -> we leave the deduplication in client-side
-		* If data in backup is dirty, it will incur inconsistent results (from KVS and backup) for range query -> we leave it in client-side, i.e., client treats data from backup with higher priority
-		* If data in backup with vallen of 0, it is deleted which should not be the result of range query -> we leave the removal of deleted data in client-side
-	+ Phase1: reset regs and set flag as 1
-	+ Case 1-1: undirty + PUT case1
-		* Get <k1, v1> -> Run phase1 -> PUT <k1, v2> -> Run phase2
-		* Result: receive PUTREQ_CASE1 with <k1, v1>, receive backup with <k1, v2>, final backup after rollback with <k1, v1>
-	+ Case 1-2: dirty + PUT case1
-		* PUT <k1, v1> -> Run phase1 -> PUT <k1, v2> -> Run phase2
-		* Result: receive PUTREQ_CASE1 with <k1, v1>, receive backup with <k1, v2>, final backup after rollback with <k1, v1>
-	+ Case 1-3: undirty + DEL case1
-		* Get <k1, v1> -> Run phase1 -> DEL k1 -> Run phase2
-		* Result: receive DELREQ_CASE1 with <k1, v1>, receive backup with <k1, vallen=0>, final backup after rollback with <k1, v1>
-	+ Case 1-4: dirty + DEL case1
-		* PUT <k1, v1> -> Run phase1 -> DEL k1 -> Run phase2
-		* Result: receive DELREQ_CASE1 with <k1, v1>, receive backup with <k1, vallen=0>, final backup after rollback with <k1, v1>
-	+ Case 2-1: invalid + GETRES_POP case2
-		* Run phase1 -> GET <k1, v1> -> Run phase2
-		* Result: receive GETRES_POP_EVICT_CASE2 with <0, vallen=0>, receive backup with <k1, v1>, final backup after rollback without k1 
-		* NOTE: GETRES_NS will not trigger cache update and hence no special case
-	+ Case 2-2: undirty + GETRES_POP case2
-		* GET <k1, v1> -> Run phase1 -> GET <k2, v2> -> Get <k3, v3> -> Run phase2
-		* Result: receive GETRES_POP_EVICT_CASE2 with <k1, v1>, receive backup with <k3, v3>, final backup after rollback with <k1, v1>
-	+ Case 2-3: dirty + GETRES_POP case2
-		* PUT <k1, v1> -> Run phase1 -> GET <k2, v2> -> GET <k3, v3> -> Run phase2
-		* Result: receive GETRES_POP_EVICT_CASE2 with <k1, v1>, receive backup with <k3, v3>, final backup after rollback with <k1, v1>
-	+ Case 2-4: invalid + PUTREQ_POP case2
-		* Run phase1 -> PUT <k1, v1> -> Run phase2
-		* Result: receive PUTREQ_POP_EVICT_CASE2 with <0, vallen=0>, receive backup with <k1, v1>, final backup after rollback without k1
-	+ Case 2-5: undirty + PUTREQ_POP case2 + PUTREQ case3
-		* GET <k1, v1> -> Run phase1 -> PUT <k2, v2> -> PUT <k3, v3> -> Run phase2
-		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_POP_EVICT_CASE2 with <k2, v2>, receive backup with <k3, v3>, final 
-		backup after rollback with <k1, v1>
-	+ Case 2-6: dirty + PUTPS case2 + PUTREQ case3
-		* PUT <k1, v1> -> Run phase1 -> PUT <k2, v2> -> PUT <k3, v3> -> Run phase2
-		* Result: receive PUTREQ_CASE3 with <k2, v2> and PUTREQ_POP_EVICT_CASE2 with <k2, v2>, receive backup with <k3, v3>, final 
-		backup after rollback with <k1, v1>
-	+ Case 3-1: DELREQ case3
-		* PUT <k1, v1> -> Run phase1 -> DEL <k2, v2> -> Run phase2
-		* Result: receive DELREQ_CASE3 with k2, receive backup with <k1, v1>, final backup after rollback with <k1, v1>
-	+ Case 4-1: range query
-		* DEL <k1, v1> -> PUT <k1, v2> -> Run phase1 -> PUT <k1, v3> -> Run phase2 -> SCAN
-		* Result: receive PUTREQ_CASE1 with <k1, v2>, receive bakup with <k1, v3>, final backup after rollback with <k1, v2>, SCAN
-		result with <k1, v2>
+- Test crash-consistent snapshot
+	+ Case 3: controller sends SNAPSHOT_START -> switchos sets snapshot flag -> put(k1,v1) (PUTREQ_SEQ_CASE3) -> put(k1,v2) (PUTREQ_POP_SEQ_CASE3 -> cache population) -> del(k3) (DELREQ_SEQ_CASE3) -> swichos loads snapshot and finishes
+		* No case 2 as cache is not full and hence no eviction
+		* Snapshot data: no cached record in switch
+	+ TODO: Case 2: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> switchos sets snapshot flag -> put(k2,v2) (PUTREQ_POP_SEQ_CASE3 -> cache eviction w/ CACHE_EVICT_CASE2) -> put(k3,v3) (PUTREQ_POP_SEQ_CASE3 -> cache eviction w/ CACHE_EVICT_CASE2) -> swichos loads snapshot and finishes
+		* Snapshot data: <k3, v3> (before rollback) -> <k1, v1> (after rollback)
+	+ TODO: Case 1-1: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> switchos sets snapshot flag -> del(k1) (DELREQ_SEQ_INSWITCH_CASE1 and DELRES) -> swichos loads snapshot and finishes
+		* Snapshot data: <k1, deleted> (before rollback) -> <k1, v1> (after rollback)
+	+ TODO: Case 1-2: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> delete(k1) in switch -> switchos sets snapshot flag -> put(k1,v2) (PUTREQ_SEQ_INSWITCH_CASE1 and PUTRES) -> swichos loads snapshot and finishes
+		* Snapshot data: <k1, v2> (before rollback) -> <k1, deleted> (after rollback)
+	+ TODO: Case 1-3: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> put(k1,v2) in server -> switchos sets snapshot flag -> read(k1,v2) (GETRES_LATEST_SEQ_INSWITCH_CASE1 and GETRES) -> swichos loads snapshot and finishes
+		* Snapshot data: <k1, v2> (before rollback) -> <k1, v1> (after rollback)
+	+ TODO: Case 1-4: controller sends SNAPSHOT_START -> read(k1,v1) (GETREQ) -> read(k1,v1) (GETREQ_POP) -> del(k1) in server -> switchos sets snapshot flag -> read(k1,deleted) (GETRES_DELETED_SEQ_INSWITCH_CASE1 and GETRES) -> swichos loads snapshot and finishes
+		* Snapshot data: <k1, deleted> (before rollback) -> <k1, v1> (after rollback)
 
 ## Fixed issues
 

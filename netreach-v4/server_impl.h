@@ -974,6 +974,7 @@ void *run_server_consnapshotserver(void *param) {
 		if (phase == 0) {
 			// process SNAPSHOT_SERVERSIDE for server-side snapshot
 			if (control_type_phase0 == -1 && cur_recv_bytes >= int(sizeof(int))) {
+				printf("[server.snapshotserver] receive SNAPSHOT_SERVERISDE from controller\n"); // TMPDEBUG
 				control_type_phase0 = *((int *)recvbuf);
 				INVARIANT(control_type_phase0 == SNAPSHOT_SERVERSIDE);
 			}
@@ -984,6 +985,7 @@ void *run_server_consnapshotserver(void *param) {
 			}
 
 			// send SNAPSHOT_SERVERSIDE_ACK to controller
+			printf("[server.snapshotserver] send SNAPSHOT_SERVERSIDE_ACK to controller\n"); // TMPDEBUG
 			tcpsend(connfd, (char *)&SNAPSHOT_SERVERSIDE_ACK, sizeof(int), "server.consnapshotserver");
 
 			phase = 1; // wait for crash-consistent snapshot data
@@ -1033,6 +1035,23 @@ void *run_server_consnapshotserver(void *param) {
 					}
 				}
 
+				// TMPDEBUG
+				printf("[server.snapshotserver] receive snapshot data from controller\n");
+				for (size_t debugi = 0; debugi < server_num; debugi++) {
+					printf("snapshot of serveridx: %d\n", int(debugi));
+					std::vector<std::pair<index_key_t, snapshot_record_t>> debugvec;
+					new_server_snapshot_maps[debugi].range_scan(index_key_t::min(), index_key_t::max(), debugvec);
+					printf("debugvec size: %d\n", debugvec.size());
+					for (size_t veci = 0; veci < debugvec.size(); veci++) {
+						char debugbuf[MAX_BUFSIZE];
+						uint32_t debugkeysize = debugvec[veci].first.serialize(debugbuf, MAX_BUFSIZE);
+						uint32_t debugvalsize = debugvec[veci].second.val.serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
+						printf("serialized debugvec[%d]:\n", veci);
+						dump_buf(debugbuf, debugkeysize+debugvalsize);
+						printf("seq: %d, stat %d\n", debugvec[veci].second.seq, debugvec[veci].second.stat?1:0);
+					}
+				}
+
 				// replace old snapshot data based on RCU
 				//std::map<index_key_t, snapshot_record_t> *old_server_snapshot_maps = server_snapshot_maps;
 				concurrent_snapshot_map_t *old_server_snapshot_maps = server_snapshot_maps;
@@ -1062,6 +1081,7 @@ void *run_server_consnapshotserver(void *param) {
 				control_type_phase1 = -1;
 				total_bytes = -1;
 
+				table->stop_snapshot();
 				server_issnapshot = false;
 			}
 		}
