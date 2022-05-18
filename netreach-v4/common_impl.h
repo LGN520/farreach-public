@@ -141,6 +141,8 @@ int SWITCHOS_LOAD_SNAPSHOT_DATA = -1;
 int SWITCHOS_LOAD_SNAPSHOT_DATA_ACK = -1;
 int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = -1;
 int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = -1;
+int SWITCHOS_PTF_POPSERVER_END = -1;
+int SWITCHOS_PTF_SNAPSHOTSERVER_END = -1;
 
 // Packet types used by switchos/controller/server for snapshot
 int SNAPSHOT_START = -1;
@@ -311,6 +313,8 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_LOAD_SNAPSHOT_DATA_ACK = ini.get_switchos_load_snapshot_data_ack();
 	SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = ini.get_switchos_reset_snapshot_flag_and_reg();
 	SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = ini.get_switchos_reset_snapshot_flag_and_reg_ack();
+	SWITCHOS_PTF_POPSERVER_END = ini.get_switchos_ptf_popserver_end();
+	SWITCHOS_PTF_SNAPSHOTSERVER_END = ini.get_switchos_ptf_snapshotserver_end();
 }
 
 /*inline void parse_args(int argc, char **argv) {

@@ -84,6 +84,8 @@ int SWITCHOS_LOAD_SNAPSHOT_DATA = -1;
 int SWITCHOS_LOAD_SNAPSHOT_DATA_ACK = -1;
 int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = -1;
 int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = -1;
+int SWITCHOS_PTF_POPSERVER_END = -1;
+int SWITCHOS_PTF_SNAPSHOTSERVER_END = -1;
 
 // Packet types used by switchos/controller/server for snapshot
 int SNAPSHOT_START = -1;
@@ -291,6 +293,8 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_LOAD_SNAPSHOT_DATA_ACK = ini.get_switchos_load_snapshot_data_ack();
 	SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = ini.get_switchos_reset_snapshot_flag_and_reg();
 	SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = ini.get_switchos_reset_snapshot_flag_and_reg_ack();
+	SWITCHOS_PTF_POPSERVER_END = ini.get_switchos_ptf_popserver_end();
+	SWITCHOS_PTF_SNAPSHOTSERVER_END = ini.get_switchos_ptf_snapshotserver_end();
 }
 
 void prepare_switchos() {
@@ -672,6 +676,10 @@ void *run_switchos_popworker(void *param) {
 		}
 	}
 
+	// send SWITCHOS_PTF_POPSERVER_END to ptf.popserver
+	memcpy(ptfbuf, &SWITCHOS_PTF_POPSERVER_END, sizeof(int));
+	udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+
 	close(switchos_popworker_popclient_udpsock);
 	close(switchos_popworker_evictclient_tcpsock);
 	close(switchos_popworker_popclient_for_ptf_udpsock);
@@ -771,7 +779,7 @@ void *run_switchos_snapshotserver(void *param) {
 				ptf_sendsize = serialize_set_snapshot_flag(ptfbuf);
 				tcpsend(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, ptf_sendsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 				is_broken = wait_for_set_snapshot_flag_ack(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, MAX_LARGE_BUFSIZE, "switchos.snapshotserver.snapshotclient_for_ptf");
-				if (!is_broken) break;
+				if (is_broken) break;
 
 				// backup cache metadata (freed later)
 				memory_fence();
@@ -806,7 +814,7 @@ void *run_switchos_snapshotserver(void *param) {
 					is_broken = wait_for_load_snapshot_data_ack(\
 							switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, MAX_LARGE_BUFSIZE, "switchos.snapshotserver.snapshotclient_for_ptf", \
 							switchos_snapshot_values, switchos_snapshot_seqs, switchos_snapshot_stats, switchos_cached_empty_index_backup);
-					if (!is_broken) break;
+					if (is_broken) break;
 				}
 
 				// send SNAPSHOT_SERVERSIDE to controller to notify servers for server-side snapshot
@@ -830,7 +838,7 @@ void *run_switchos_snapshotserver(void *param) {
 				ptf_sendsize = serialize_reset_snapshot_flag_and_reg(ptfbuf);
 				tcpsend(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, ptf_sendsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 				is_broken = wait_for_reset_snapshot_flag_and_reg_ack(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, MAX_LARGE_BUFSIZE, "switchos.snapshotserver.snapshotclient_for_ptf");
-				if (!is_broken) break;
+				if (is_broken) break;
 
 				// finish snapshot
 				is_snapshot = false;
@@ -974,6 +982,10 @@ void *run_switchos_snapshotserver(void *param) {
 		} // phase == 1
 	} // while (switchos_running)
 
+	// send SWITCHOS_PTF_SNAPSHOTSERVER_END to ptf.snapshotserver
+	memcpy(ptfbuf, &SWITCHOS_PTF_SNAPSHOTSERVER_END, sizeof(int));
+	tcpsend(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, sizeof(int), "switchos.snapshotserver.snapshotclient_for_ptf");
+
 	for (uint16_t i = 0; i < server_num; i++) {
 		delete [] tmp_sendbuf_list[i];
 		tmp_sendbuf_list[i] = NULL;
@@ -982,6 +994,7 @@ void *run_switchos_snapshotserver(void *param) {
 	delete [] ptfbuf;
 	sendbuf = NULL;
 	close(switchos_snapshotserver_tcpsock);
+	close(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock);
 	pthread_exit(nullptr);
 }
 
@@ -1186,10 +1199,10 @@ inline bool wait_for_set_snapshot_flag_ack(int tcpsock, char *buf, uint32_t bufl
 			int control_type = *((int *)buf);
 			INVARIANT(control_type == SWITCHOS_SET_SNAPSHOT_FLAG_ACK);
 			INVARIANT(cur_recv_bytes == 4);
-			return true;
+			return false;
 		}
 	}
-	return false;
+	return true;
 }
 
 inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx) {
@@ -1244,10 +1257,10 @@ inline bool wait_for_load_snapshot_data_ack(\
 			INVARIANT(cur_recv_bytes == total_bytesnum);
 			//cur_recv_bytes = 0;
 			//total_bytesnum = -1;
-			return true;
+			return false;
 		}
 	}
-	return false;
+	return true;
 }
 
 inline uint32_t serialize_reset_snapshot_flag_and_reg(char *buf) {
@@ -1272,10 +1285,10 @@ inline bool wait_for_reset_snapshot_flag_and_reg_ack(int tcpsock, char *buf, uin
 
 		if (cur_recv_bytes >= 4) {
 			int control_type = *((int *)buf);
-			INVARIANT(control_type == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG);
+			INVARIANT(control_type == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK);
 			INVARIANT(cur_recv_bytes == 4);
-			return true;
+			return false;
 		}
 	}
-	return false;
+	return true;
 }

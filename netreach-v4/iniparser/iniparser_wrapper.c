@@ -503,6 +503,24 @@ int IniparserWrapper::get_switchos_reset_snapshot_flag_and_reg_ack() {
 	return tmp;
 }
 
+int IniparserWrapper::get_switchos_ptf_popserver_end() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_ptf_popserver_end", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_ptf_popserver_end]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_ptf_snapshotserver_end() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_ptf_snapshotserver_end", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_ptf_snapshotserver_end]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
 // snapshot
 
 int IniparserWrapper::get_snapshot_start() {

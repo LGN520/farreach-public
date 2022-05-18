@@ -47,6 +47,8 @@ SWITCHOS_LOAD_SNAPSHOT_DATA = int(control_config.get("switchos", "SWITCHOS_LOAD_
 SWITCHOS_LOAD_SNAPSHOT_DATA_ACK = int(control_config.get("switchos", "SWITCHOS_LOAD_SNAPSHOT_DATA_ACK"))
 SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = int(control_config.get("switchos", "SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG"))
 SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = int(control_config.get("switchos", "SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK"))
+SWITCHOS_PTF_POPSERVER_END = int(control_config.get("switchos", "SWITCHOS_PTF_POPSERVER_END"))
+SWITCHOS_PTF_SNAPSHOTSERVER_END = int(control_config.get("switchos", "SWITCHOS_PTF_SNAPSHOTSERVER_END"))
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.

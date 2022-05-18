@@ -81,6 +81,8 @@ class IniparserWrapper {
 		int get_switchos_load_snapshot_data_ack();
 		int get_switchos_reset_snapshot_flag_and_reg();
 		int get_switchos_reset_snapshot_flag_and_reg_ack();
+		int get_switchos_ptf_popserver_end();
+		int get_switchos_ptf_snapshotserver_end();
 
 		// snapshot
 		int get_snapshot_start();

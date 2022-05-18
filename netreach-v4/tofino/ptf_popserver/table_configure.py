@@ -218,9 +218,10 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 sendbuf = struct.pack("=i", SWITCHOS_REMOVE_CACHE_LOOKUP_ACK)
                 switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_PTF_POPSERVER_END:
+                print("[ptf.popserver] END")
                 break;
             else:
-                printf("Invalid control type {}".format(control_type))
+                print("Invalid control type {}".format(control_type))
                 exit(-1)
 
         self.conn_mgr.complete_operations(self.sess_hdl)

@@ -209,7 +209,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 elif control_type == SWITCHOS_LOAD_SNAPSHOT_DATA:
                     if len(recvbuf) >= 4:
                         # parse empty index
-                        cached_empty_index_backup, recvbuf = struct.unpack("=I{]s}".format(len(recvbuf) - 4), recvbuf) # must > 0
+                        cached_empty_index_backup, recvbuf = struct.unpack("=I{}s".format(len(recvbuf) - 4), recvbuf) # must > 0
                         if cached_empty_index_backup <= 0 or cached_empty_index_backup > kv_bucket_num:
                             print "Invalid cached_empty_index_backup: {}".format(cached_empty_index_backup)
                             exit(-1)
@@ -226,12 +226,15 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                     self.reset_snapshot_flag_and_reg()
 
                     # send back SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK
-                    sendbuf = struct.pack("=i", SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG)
+                    sendbuf = struct.pack("=i", SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK)
                     connfd.sendall(sendbuf)
 
                     control_type = -1
+                elif control_type == SWITCHOS_PTF_SNAPSHOTSERVER_END:
+                    print("[ptf.snapshotserver] END")
+                    break;
                 else:
-                    printf("Invalid control type {}".format(control_type))
+                    print("Invalid control type {}".format(control_type))
                     exit(-1)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
