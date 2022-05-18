@@ -819,6 +819,8 @@ void *run_server_evictserver(void *param) {
 	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
 	char recvbuf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
+	bool direct_parse = false;
+	bool is_broken = false;
 	uint8_t optype = 0;
 	bool with_optype = false;
 	index_key_t tmpkey = index_key_t();
@@ -831,22 +833,25 @@ void *run_server_evictserver(void *param) {
 	int arrive_serveridx_bytes = -1;
 	uint16_t tmp_serveridx = 0;
 	while (transaction_running) {
-		int recvsize = 0;
-		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.evictserver");
-		if (is_broken) {
-			break;
-		}
+		if (!direct_parse) {
+			int recvsize = 0;
+			is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.evictserver");
+			if (is_broken) {
+				break;
+			}
 
-		cur_recv_bytes += recvsize;
-		if (cur_recv_bytes >= MAX_BUFSIZE) {
-			printf("[server.evictserver] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
-            exit(-1);
+			cur_recv_bytes += recvsize;
+			if (cur_recv_bytes >= MAX_BUFSIZE) {
+				printf("[server.evictserver] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
+				exit(-1);
+			}
 		}
 
 		// Get optype
 		if (!with_optype && cur_recv_bytes >= arrive_optype_bytes) {
 			optype = *((uint8_t *)recvbuf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_EVICT || packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2);
+			direct_parse = false;
 			with_optype = true;
 		}
 
@@ -915,6 +920,13 @@ void *run_server_evictserver(void *param) {
 				else {
 					cur_recv_bytes = 0;
 				}
+				if (cur_recv_bytes >= arrive_optype_bytes) {
+					direct_parse = true;
+				}
+				else {
+					direct_parse = false;
+				}
+				is_broken = false;
 				optype = 0;
 				with_optype = false;
 				tmpkey = index_key_t();
@@ -954,21 +966,25 @@ void *run_server_consnapshotserver(void *param) {
 	tcpaccept(server_consnapshotserver_tcpsock, NULL, NULL, connfd, "server.consnapshotserver");
 
 	int cur_recv_bytes = 0;
+	bool direct_parse = false;
+	bool is_broken = false;
 	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
 	int control_type_phase0 = -1;
 	int control_type_phase1 = -1;
 	int total_bytes = -1;
 	while (transaction_running) {
-		int recvsize = 0;
-		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
-		if (is_broken) {
-			break;
-		}
+		if (!direct_parse) {
+			int recvsize = 0;
+			is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
+			if (is_broken) {
+				break;
+			}
 
-		cur_recv_bytes += recvsize;
-		if (cur_recv_bytes >= MAX_LARGE_BUFSIZE) {
-			printf("[server.consnapshotserver] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_LARGE_BUFSIZE);
-            exit(-1);
+			cur_recv_bytes += recvsize;
+			if (cur_recv_bytes >= MAX_LARGE_BUFSIZE) {
+				printf("[server.consnapshotserver] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_LARGE_BUFSIZE);
+				exit(-1);
+			}
 		}
 
 		if (phase == 0) {
@@ -987,10 +1003,12 @@ void *run_server_consnapshotserver(void *param) {
 				printf("[server.snapshotserver] send SNAPSHOT_SERVERSIDE_ACK to controller\n"); // TMPDEBUG
 				tcpsend(connfd, (char *)&SNAPSHOT_SERVERSIDE_ACK, sizeof(int), "server.consnapshotserver");
 
+				direct_parse = false;
 				phase = 1; // wait for crash-consistent snapshot data
 			}
 		}
-		else if (phase == 1) {
+		
+		if (phase == 1) {
 			// NOTE: skip sizeof(int) for SNAPSHOT_SERVERSIDE
 			if (control_type_phase1 == -1 && cur_recv_bytes >= int(sizeof(int) + sizeof(int) + sizeof(int32_t))) { // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
 				control_type_phase1 = *((int *)(recvbuf + sizeof(int)));
@@ -1076,6 +1094,13 @@ void *run_server_consnapshotserver(void *param) {
 				else {
 					cur_recv_bytes = 0;
 				}
+				if (cur_recv_bytes >= int(sizeof(int))) {
+					direct_parse = true;
+				}
+				else {
+					direct_parse = false;
+				}
+				is_broken = false;
 				phase = 0;
 				control_type_phase0 = -1;
 				control_type_phase1 = -1;

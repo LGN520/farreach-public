@@ -52,7 +52,7 @@ typedef ConcurrentMap<uint16_t, special_case_t> concurrent_specicalcase_map_t;
 
 bool volatile switchos_running = false;
 std::atomic<size_t> switchos_ready_threads(0);
-const size_t switchos_expected_ready_threads = 6;
+const size_t switchos_expected_ready_threads = 4;
 bool volatile switchos_popserver_finish = false;
 
 // Parameters
@@ -70,20 +70,20 @@ short switchos_ptf_popserver_port = -1;
 short switchos_ptf_snapshotserver_port = -1;
 
 // Packet types used by switchos and ptf framework
-int SWITCHOS_SET_VALID0 = -1
-int SWITCHOS_SET_VALID0_ACK = -1
-int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = -1
-int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = -1
-int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1
-int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1
-int SWITCHOS_REMOVE_CACHE_LOOKUP = -1
-int SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = -1
-int SWITCHOS_SET_SNAPSHOT_FLAG = -1
-int SWITCHOS_SET_SNAPSHOT_FLAG_ACK = -1
-int SWITCHOS_LOAD_SNAPSHOT_DATA = -1
-int SWITCHOS_LOAD_SNAPSHOT_DATA_ACK = -1
-int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = -1
-int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = -1
+int SWITCHOS_SETVALID0 = -1;
+int SWITCHOS_SETVALID0_ACK = -1;
+int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = -1;
+int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = -1;
+int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
+int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
+int SWITCHOS_REMOVE_CACHE_LOOKUP = -1;
+int SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = -1;
+int SWITCHOS_SET_SNAPSHOT_FLAG = -1;
+int SWITCHOS_SET_SNAPSHOT_FLAG_ACK = -1;
+int SWITCHOS_LOAD_SNAPSHOT_DATA = -1;
+int SWITCHOS_LOAD_SNAPSHOT_DATA_ACK = -1;
+int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = -1;
+int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = -1;
 
 // Packet types used by switchos/controller/server for snapshot
 int SNAPSHOT_START = -1;
@@ -111,7 +111,7 @@ int switchos_popworker_popclient_udpsock = -1;
 
 // Cache eviction
 
-//bool volatile is_switchos_popworker_evictclient_connected = false;
+bool volatile is_switchos_popworker_evictclient_connected = false;
 int switchos_popworker_evictclient_tcpsock = -1;
 
 // Snapshot
@@ -149,7 +149,7 @@ bool volatile specialcaseserver_know_snapshot_end = false; // ensure current cas
 // switchos.popworker <-> ptf.popserver
 int switchos_popworker_popclient_for_ptf_udpsock = -1; 
 // switchos.snapshotserver <-> ptf.snapshotserver
-//bool is_switchos_snapshotserver_snapshotclient_for_ptf_connected = false;
+bool is_switchos_snapshotserver_snapshotclient_for_ptf_connected = false;
 int switchos_snapshotserver_snapshotclient_for_ptf_tcpsock = -1; 
 
 inline void parse_ini(const char *config_file);
@@ -163,17 +163,17 @@ void process_specialcase(const uint16_t &tmpidx, const index_key_t &tmpkey, cons
 void close_switchos();
 
 // switchos <-> ptf.popserver
-inline uint32_t serialize_set_valid0(char *buf, uint16_t &freeidx);
-inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, index_key_t &key, uint16_t &freeidx);
+inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx);
+inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, index_key_t key, uint16_t freeidx);
 inline uint32_t serialize_get_evictdata_setvalid3(char *buf);
-inline void parse_evictdata(char *buf, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
-inline uint32_t serialize_remove_cache_lookup(char *buf, index_key_t &key);
+inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
+inline uint32_t serialize_remove_cache_lookup(char *buf, index_key_t key);
 inline uint32_t serialize_set_snapshot_flag(char *buf);
-inline bool wait_for_set_snapshot_flag_ack(int tcpsock, char *buf, uint32_t buflen, char *role);
-inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t &emptyidx);
-inline bool wait_for_load_snapshot_data_ack(int tcpsock, char *buf, uint32_t buflen, char *role, val_t *values, uint32_t *seqs, bool *stats, uint32_t record_cnt);
+inline bool wait_for_set_snapshot_flag_ack(int tcpsock, char *buf, uint32_t buflen, const char *role);
+inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx);
+inline bool wait_for_load_snapshot_data_ack(int tcpsock, char *buf, uint32_t buflen, const char *role, val_t *values, uint32_t *seqs, bool *stats, uint32_t record_cnt);
 inline uint32_t serialize_reset_snapshot_flag_and_reg(char *buf);
-inline bool wait_for_reset_snapshot_flag_and_reg_ack(int tcpsock, char *buf, uint32_t buflen, char *role);
+inline bool wait_for_reset_snapshot_flag_and_reg_ack(int tcpsock, char *buf, uint32_t buflen, const char *role);
 
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
@@ -277,8 +277,8 @@ inline void parse_control_ini(const char* config_file) {
 	IniparserWrapper ini;
 	ini.load(config_file);
 
-	SWITCHOS_SET_VALID0 = ini.get_switchos_set_valid0();
-	SWITCHOS_SET_VALID0_ACK = ini.get_switchos_set_valid0_ack();
+	SWITCHOS_SETVALID0 = ini.get_switchos_setvalid0();
+	SWITCHOS_SETVALID0_ACK = ini.get_switchos_setvalid0_ack();
 	SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = ini.get_switchos_add_cache_lookup_setvalid1();
 	SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = ini.get_switchos_add_cache_lookup_setvalid1_ack();
 	SWITCHOS_GET_EVICTDATA_SETVALID3 = ini.get_switchos_get_evictdata_setvalid3();
@@ -352,6 +352,8 @@ void *run_switchos_popserver(void *param) {
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
 	uint8_t optype = 0;
+	bool direct_parse = false;
+	bool is_broken = false;
 	bool with_optype = false;
 	//uint32_t vallen = 0;
 	uint16_t vallen = 0;
@@ -363,22 +365,25 @@ void *run_switchos_popserver(void *param) {
 	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	while (switchos_running) {
-		int recvsize = 0;
-		bool is_broken = tcprecv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "switchos.popserver");
-		if (is_broken) {
-			break;
-		}
+		if (!direct_parse) {
+			int recvsize = 0;
+			is_broken = tcprecv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "switchos.popserver");
+			if (is_broken) {
+				break;
+			}
 
-		cur_recv_bytes += recvsize;
-		if (cur_recv_bytes >= MAX_BUFSIZE) {
-			printf("[switch os] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
-            exit(-1);
+			cur_recv_bytes += recvsize;
+			if (cur_recv_bytes >= MAX_BUFSIZE) {
+				printf("[switch os] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
+				exit(-1);
+			}
 		}
 
 		// Get optype
 		if (!with_optype && cur_recv_bytes >= arrive_optype_bytes) {
 			optype = *((uint8_t *)buf);
 			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_POP);
+			direct_parse = false;
 			with_optype = true;
 		}
 
@@ -428,6 +433,13 @@ void *run_switchos_popserver(void *param) {
 			else {
 				cur_recv_bytes = 0;
 			}
+			if (cur_recv_bytes >= arrive_optype_bytes) {
+				direct_parse = true;
+			}
+			else {
+				direct_parse = false;
+			}
+			is_broken = false;
 			optype = 0;
 			with_optype = false;
 			vallen = 0;
@@ -459,16 +471,11 @@ void *run_switchos_popworker(void *param) {
 
 	while (!switchos_running) {}
 
-	/*if (!is_switchos_popworker_evictclient_connected) {
-		// used by tcp socket for cache eviction
-		tcpconnect(switchos_popworker_evictclient_tcpsock, controller_ip_for_switchos, controller_evictserver_port, "switchos.popworker.evictclient", "controller.evictserver");
-		is_switchos_popworker_evictclient_connected = true;
-	}*/
-	tcpconnect(switchos_popworker_evictclient_tcpsock, controller_ip_for_switchos, controller_evictserver_port, "switchos.popworker.evictclient", "controller.evictserver");
-
 	// (1) communicate with controller.evictserver
 	char evictclient_buf[MAX_BUFSIZE];
 	int evictclient_cur_recv_bytes = 0;
+	bool evictclient_direct_parse = false;
+	bool evictclient_is_broken = false;
 	//const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(index_key_t) + DEBUG_BYTES;
 	const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(index_key_t);
 	// send/recv CACHE_POP_INSWITCH/_ACK and CACHE_EVICT/_ACK to/from controller
@@ -477,7 +484,7 @@ void *run_switchos_popworker(void *param) {
 	// (2) communicate with ptf.popserver
 	char ptfbuf[MAX_BUFSIZE];
 	uint32_t ptf_sendsize = 0;
-	uint32_t ptf_recvsize = 0;
+	int ptf_recvsize = 0;
 	uint16_t switchos_freeidx = 0;
 	// load evictdata from ptf
 	uint16_t switchos_evictidx = 0;
@@ -492,9 +499,14 @@ void *run_switchos_popworker(void *param) {
 		//if (switchos_tail_for_pop != switchos_head_for_pop) {
 			cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptr_queue.read();
 			if (tmp_cache_pop_ptr != NULL) {
-
 				//cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptrs[switchos_tail_for_pop];
 				//INVARIANT(tmp_cache_pop_ptr != NULL);
+				
+				if (!is_switchos_popworker_evictclient_connected) {
+					// used by tcp socket for cache eviction
+					tcpconnect(switchos_popworker_evictclient_tcpsock, controller_ip_for_switchos, controller_evictserver_port, "switchos.popworker.evictclient", "controller.evictserver");
+					is_switchos_popworker_evictclient_connected = true;
+				}
 
 				// assign switchos_freeidx for new record 
 				if (switchos_cached_empty_index < switch_kv_bucket_num) { // With free idx
@@ -508,10 +520,10 @@ void *run_switchos_popworker(void *param) {
 					// get evictdata from ptf framework 
 					//system("bash tofino/get_evictdata_setvalid3.sh");
 					ptf_sendsize = serialize_get_evictdata_setvalid3(ptfbuf);
-					udpsendto(switchos_popworker_popclient_for_ptf_udpsock. ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 					INVARIANT(*((int *)ptfbuf) == SWITCHOS_GET_EVICTDATA_SETVALID3_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
-					parse_evictdata(ptfbuf, switchos_evictidx, switchos_evictvalue, switchos_evictseq, switchos_evictstat);
+					parse_evictdata(ptfbuf, ptf_recvsize, switchos_evictidx, switchos_evictvalue, switchos_evictseq, switchos_evictstat);
 
 					// switchos.popworker.evictclient sends CACHE_EVICT to controller.evictserver
 					INVARIANT(switchos_evictidx >= 0 && switchos_evictidx < switch_kv_bucket_num);
@@ -538,16 +550,18 @@ void *run_switchos_popworker(void *param) {
 
 					// wait for CACHE_EVICT_ACK from controller.evictserver
 					while (true) {
-						int evictclient_recvsize = 0;
-						bool evictclient_is_broken = tcprecv(switchos_popworker_evictclient_tcpsock, evictclient_buf + evictclient_cur_recv_bytes, MAX_BUFSIZE - evictclient_cur_recv_bytes, 0, evictclient_recvsize, "switchos.popworker.evictclient");
-						if (evictclient_is_broken) {
-							break;
-						}
+						if (!evictclient_direct_parse) {
+							int evictclient_recvsize = 0;
+							evictclient_is_broken = tcprecv(switchos_popworker_evictclient_tcpsock, evictclient_buf + evictclient_cur_recv_bytes, MAX_BUFSIZE - evictclient_cur_recv_bytes, 0, evictclient_recvsize, "switchos.popworker.evictclient");
+							if (evictclient_is_broken) {
+								break;
+							}
 
-						evictclient_cur_recv_bytes += evictclient_recvsize;
-						if (evictclient_cur_recv_bytes >= MAX_BUFSIZE) {
-							printf("[switchos.popworker.evictclient] Overflow: cur received bytes (%d), maxbufsize (%d)\n", evictclient_cur_recv_bytes, MAX_BUFSIZE);
-							exit(-1);
+							evictclient_cur_recv_bytes += evictclient_recvsize;
+							if (evictclient_cur_recv_bytes >= MAX_BUFSIZE) {
+								printf("[switchos.popworker.evictclient] Overflow: cur received bytes (%d), maxbufsize (%d)\n", evictclient_cur_recv_bytes, MAX_BUFSIZE);
+								exit(-1);
+							}
 						}
 
 						// get CACHE_EVICT_ACK from controller.evictserver
@@ -565,6 +579,14 @@ void *run_switchos_popworker(void *param) {
 							else {
 								evictclient_cur_recv_bytes = 0;
 							}
+							if (evictclient_cur_recv_bytes >= evictclient_arrive_key_bytes) {
+								evictclient_direct_parse = true;
+							}
+							else {
+								evictclient_direct_parse = false;
+							}
+							evictclient_is_broken = false;
+							pktsize = 0;
 							break;
 						}
 					}
@@ -581,7 +603,7 @@ void *run_switchos_popworker(void *param) {
 					//system("bash tofino/remove_cache_lookup.sh");
 					////switchos_cached_key_idx_map.erase(cur_evictkey);
 					ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, switchos_cached_keyarray[switchos_evictidx]);
-					udpsendto(switchos_popworker_popclient_for_ptf_udpsock. ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 					INVARIANT(*((int *)ptfbuf) == SWITCHOS_REMOVE_CACHE_LOOKUP_ACK); // wait for SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
 
@@ -600,10 +622,10 @@ void *run_switchos_popworker(void *param) {
 
 				// set valid=0 for atomicity
 				//system("bash tofino/setvalid0.sh");
-				ptf_sendsize = serialize_set_valid0(ptfbuf, switchos_freeidx);
-				udpsendto(switchos_popworker_popclient_for_ptf_udpsock. ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+				ptf_sendsize = serialize_setvalid0(ptfbuf, switchos_freeidx);
+				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
-				INVARIANT(*((int *)ptfbuf) == SWITCHOS_SET_VALID0_ACK); // wait for SWITCHOS_SET_VALID0_ACK
+				INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID0_ACK); // wait for SWITCHOS_SETVALID0_ACK
 
 				// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
 				cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx);
@@ -621,7 +643,7 @@ void *run_switchos_popworker(void *param) {
 				// (1) add new <key, value> pair into cache_lookup_tbl; (2) and set valid=1 to enable the entry
 				//system("bash tofino/add_cache_lookup_setvalid1.sh");
 				ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx);
-				udpsendto(switchos_popworker_popclient_for_ptf_udpsock. ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 				INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
 
@@ -634,16 +656,6 @@ void *run_switchos_popworker(void *param) {
 				tmp_cache_pop_ptr = NULL;
 				//switchos_cache_pop_ptrs[switchos_tail_for_pop] = NULL;
 				//switchos_tail_for_pop = (switchos_tail_for_pop + 1) % MQ_SIZE;
-				
-				// reset metadata for evictclient
-				pktsize = 0;
-				if (evictclient_cur_recv_bytes > evictclient_arrive_key_bytes) {
-					memcpy(evictclient_buf, evictclient_buf + evictclient_arrive_key_bytes, evictclient_cur_recv_bytes - evictclient_arrive_key_bytes);
-					evictclient_cur_recv_bytes -= evictclient_arrive_key_bytes;
-				}
-				else {
-					evictclient_cur_recv_bytes = 0;
-				}
 
 				// reset metadata for popclient_for_ptf
 				ptf_sendsize = 0;
@@ -693,12 +705,11 @@ void *run_switchos_snapshotserver(void *param) {
 	int connfd = -1;
 	tcpaccept(switchos_snapshotserver_tcpsock, NULL, NULL, connfd, "switchos.snapshotserver");
 
-	// connect to ptf.snapshotserver
-	tcpconnect(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, "127.0.0.1", switchos_ptf_snapshotserver_port, "switchos.snapshotserver.snapshotclient_for_ptf", "ptf.snapshotserver");
-
 	// (1) communicate with controller.snapshotclient
 	char recvbuf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
+	bool direct_parse = false;
+	bool is_broken = false;
 	int phase = 0; // 0: wait for SNAPSHOT_START; 1: wait for SNAPSHOT_SERVERSIDE_ACK;
 	int control_type_phase0 = -1;
 	int control_type_phase1 = -1;
@@ -713,16 +724,24 @@ void *run_switchos_snapshotserver(void *param) {
 	uint32_t * switchos_snapshot_seqs = NULL;
 	bool * switchos_snapshot_stats = NULL;
 	while (switchos_running) {
-		int recvsize = 0;
-		bool is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "switchos.snapshotserver");
-		if (is_broken) {
-			break;
-		}
+		if (!direct_parse) {
+			int recvsize = 0;
+			is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "switchos.snapshotserver");
+			if (is_broken) {
+				break;
+			}
 
-		cur_recv_bytes += recvsize;
-		if (cur_recv_bytes >= MAX_BUFSIZE) {
-			printf("[switchos.snapshotserver] overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
-            exit(-1);
+			if (!is_switchos_snapshotserver_snapshotclient_for_ptf_connected) {
+				// connect to ptf.snapshotserver
+				tcpconnect(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, "127.0.0.1", switchos_ptf_snapshotserver_port, "switchos.snapshotserver.snapshotclient_for_ptf", "ptf.snapshotserver");
+				is_switchos_snapshotserver_snapshotclient_for_ptf_connected = true;
+			}
+
+			cur_recv_bytes += recvsize;
+			if (cur_recv_bytes >= MAX_BUFSIZE) {
+				printf("[switchos.snapshotserver] overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
+				exit(-1);
+			}
 		}
 
 		// wait for SNAPSHOT_START from controller.snapshotclient
@@ -750,7 +769,7 @@ void *run_switchos_snapshotserver(void *param) {
 				// ptf sets snapshot flag as true atomically
 				//system("bash tofino/set_snapshot_flag.sh");
 				ptf_sendsize = serialize_set_snapshot_flag(ptfbuf);
-				tcpsend(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock. ptfbuf, ptf_sendsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+				tcpsend(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, ptf_sendsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 				is_broken = wait_for_set_snapshot_flag_ack(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, MAX_LARGE_BUFSIZE, "switchos.snapshotserver.snapshotclient_for_ptf");
 				if (!is_broken) break;
 
@@ -783,7 +802,7 @@ void *run_switchos_snapshotserver(void *param) {
 
 					//system("bash tofino/load_snapshot_data.sh"); // load snapshot (maybe inconsistent -> need rollback later)
 					ptf_sendsize = serialize_load_snapshot_data(ptfbuf, switchos_cached_empty_index_backup);
-					tcpsend(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock. ptfbuf, ptf_sendsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+					tcpsend(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, ptf_sendsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 					is_broken = wait_for_load_snapshot_data_ack(\
 							switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, MAX_LARGE_BUFSIZE, "switchos.snapshotserver.snapshotclient_for_ptf", \
 							switchos_snapshot_values, switchos_snapshot_seqs, switchos_snapshot_stats, switchos_cached_empty_index_backup);
@@ -795,9 +814,11 @@ void *run_switchos_snapshotserver(void *param) {
 				tcpsend(connfd, (char *)&SNAPSHOT_SERVERSIDE, sizeof(int), "switchos.snapshotserver");
 
 				phase = 1; // wait for SNAPSHOT_SERVERSIDE_ACK
+				direct_parse = false;
 			} // receive a SNAPSHOT_START
 		} // phase == 0
-		else if (phase == 1) { // wait for SNAPSHOT_SERVERSIDE_ACK
+	
+		if (phase == 1) { // wait for SNAPSHOT_SERVERSIDE_ACK
 			// NOTE: skip sizeof(int) for SNAPSHOT_START
 			if (control_type_phase1 == -1 && cur_recv_bytes >= int(sizeof(int) + sizeof(int))) {
 				control_type_phase1 = *((int *)(recvbuf + sizeof(int)));
@@ -807,7 +828,7 @@ void *run_switchos_snapshotserver(void *param) {
 				// reset snapshot flag as false in data plane
 				//system("bash tofino/reset_snapshot_flag_and_reg.sh");
 				ptf_sendsize = serialize_reset_snapshot_flag_and_reg(ptfbuf);
-				tcpsend(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock. ptfbuf, ptf_sendsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+				tcpsend(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, ptf_sendsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 				is_broken = wait_for_reset_snapshot_flag_and_reg_ack(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, ptfbuf, MAX_LARGE_BUFSIZE, "switchos.snapshotserver.snapshotclient_for_ptf");
 				if (!is_broken) break;
 
@@ -824,7 +845,7 @@ void *run_switchos_snapshotserver(void *param) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_cached_keyarray_backup[debugi].serialize(debugbuf, MAX_BUFSIZE);
 					uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
-					printf("serialized debug key-value[%d]:\n", debugi);
+					printf("serialized debug key-value[%d]:\n", int(debugi));
 					dump_buf(debugbuf, debugkeysize+debugvalsize);
 					printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
 				}
@@ -856,7 +877,7 @@ void *run_switchos_snapshotserver(void *param) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_cached_keyarray_backup[debugi].serialize(debugbuf, MAX_BUFSIZE);
 					uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
-					printf("serialized debug key-value[%d]:\n", debugi);
+					printf("serialized debug key-value[%d]:\n", int(debugi));
 					dump_buf(debugbuf, debugkeysize+debugvalsize);
 					printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
 				}
@@ -933,6 +954,13 @@ void *run_switchos_snapshotserver(void *param) {
 				else {
 					cur_recv_bytes = 0;
 				}
+				if (cur_recv_bytes >= int(sizeof(int))) {
+					direct_parse = true;
+				}
+				else {
+					direct_parse = false;
+				}
+				is_broken = false;
 				phase = 0;
 				control_type_phase0 = -1;
 				control_type_phase1 = -1;
@@ -1028,7 +1056,7 @@ void process_specialcase(const uint16_t &tmpidx, const index_key_t &tmpkey, cons
 	uint16_t tmpidx = key_idx_map_iter->second;*/
 
 	INVARIANT(tmpidx >= 0 && tmpidx < switch_kv_bucket_num);
-	if (tmpidx < switchos_cacehd_empty_index_backup && switchos_cached_keyarray_backup[tmpidx] == tmpkey) { 
+	if (tmpidx < switchos_cached_empty_index_backup && switchos_cached_keyarray_backup[tmpidx] == tmpkey) { 
 		//switchos_mutex_for_specialcases.lock(); 
 		//std::map<uint16_t, special_case_t>::iterator specialcase_iter = switchos_specialcases.find(tmpidx); 
 		special_case_t tmpcase;
@@ -1091,18 +1119,6 @@ void close_switchos() {
 		delete [] switchos_cached_serveridxarray_backup;
 		switchos_cached_serveridxarray_backup = NULL;
 	}
-	if (switchos_snapshot_values != NULL) {
-		delete [] switchos_snapshot_values;
-		switchos_snapshot_values = NULL;
-	}
-	if (switchos_snapshot_seqs != NULL) {
-		delete [] switchos_snapshot_seqs;
-		switchos_snapshot_seqs = NULL;
-	}
-	if (switchos_snapshot_stats != NULL) {
-		delete [] switchos_snapshot_stats;
-		switchos_snapshot_stats = NULL;
-	}
 	if (switchos_specialcases_ptr != NULL) {
 		delete switchos_specialcases_ptr;
 		switchos_specialcases_ptr = NULL;
@@ -1111,13 +1127,13 @@ void close_switchos() {
 
 // switchos <-> ptf.popserver
 
-inline uint32_t serialize_set_valid0(char *buf, uint16_t &freeidx) {
-	memcpy(buf, &SWITCHOS_SET_VALID0, sizeof(int));
+inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx) {
+	memcpy(buf, &SWITCHOS_SETVALID0, sizeof(int));
 	memcpy(buf + sizeof(int), &freeidx, sizeof(uint16_t));
 	return sizeof(int) + sizeof(uint16_t);
 }
 
-inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, index_key_t &key, uint16_t &freeidx) {
+inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, index_key_t key, uint16_t freeidx) {
 	memcpy(buf, &SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1, sizeof(int));
 	uint32_t tmp_keysize = key.serialize(buf + sizeof(int), MAX_BUFSIZE - sizeof(int));
 	memcpy(buf + sizeof(int) + tmp_keysize, &freeidx, sizeof(uint16_t));
@@ -1129,18 +1145,18 @@ inline uint32_t serialize_get_evictdata_setvalid3(char *buf) {
 	return sizeof(int);
 }
 
-inline void parse_evictdata(char *buf, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat) {
+inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat) {
 	char * curptr = buf + sizeof(int);
 	switchos_evictidx = *((uint16_t *)curptr);
 	curptr += sizeof(uint16_t);
-	uint32_t tmp_valsize = switchos_evictvalue.deserialize(curptr, recv_size - sizeof(int) - sizeof(uint16_t));
+	uint32_t tmp_valsize = switchos_evictvalue.deserialize(curptr, recvsize - sizeof(int) - sizeof(uint16_t));
 	curptr += tmp_valsize;
 	switchos_evictseq = *((uint32_t *)curptr);
 	curptr += sizeof(uint32_t);
 	switchos_evictstat = *((bool *)curptr);
 }
 
-inline uint32_t serialize_remove_cache_lookup(char *buf, index_key_t &key) {
+inline uint32_t serialize_remove_cache_lookup(char *buf, index_key_t key) {
 	memcpy(buf, &SWITCHOS_REMOVE_CACHE_LOOKUP, sizeof(int));
 	uint32_t tmp_keysize = key.serialize(buf + sizeof(int), MAX_BUFSIZE - sizeof(int));
 	return sizeof(int) + tmp_keysize;
@@ -1151,7 +1167,7 @@ inline uint32_t serialize_set_snapshot_flag(char *buf) {
 	return sizeof(int);
 }
 
-inline bool wait_for_set_snapshot_flag_ack(int tcpsock, char *buf, uint32_t buflen, char * role) {
+inline bool wait_for_set_snapshot_flag_ack(int tcpsock, char *buf, uint32_t buflen, const char * role) {
 	int cur_recv_bytes = 0;
 	while (true) {
 		int recvsize = 0;
@@ -1161,7 +1177,7 @@ inline bool wait_for_set_snapshot_flag_ack(int tcpsock, char *buf, uint32_t bufl
 		}
 
 		cur_recv_bytes += recvsize;
-		if (cur_recv_bytes >= buflen) {
+		if (cur_recv_bytes >= int(buflen)) {
 			printf("[%s] overflow: cur received bytes (%d), maxbufsize (%d)\n", role, cur_recv_bytes, buflen);
             exit(-1);
 		}
@@ -1176,14 +1192,14 @@ inline bool wait_for_set_snapshot_flag_ack(int tcpsock, char *buf, uint32_t bufl
 	return false;
 }
 
-inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t &emptyidx) {
+inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx) {
 	memcpy(buf, &SWITCHOS_LOAD_SNAPSHOT_DATA, sizeof(int));
 	memcpy(buf + sizeof(int), &emptyidx, sizeof(uint32_t));
 	return sizeof(int) + sizeof(uint32_t);
 }
 
 inline bool wait_for_load_snapshot_data_ack(\
-		int tcpsock, char *buf, uint32_t buflen, char *role, \
+		int tcpsock, char *buf, uint32_t buflen, const char *role, \
 		val_t *values, uint32_t *seqs, bool *stats, uint32_t record_cnt) {
 	int cur_recv_bytes = 0;
 	int total_bytesnum = -1;
@@ -1195,7 +1211,7 @@ inline bool wait_for_load_snapshot_data_ack(\
 		}
 
 		cur_recv_bytes += recvsize;
-		if (cur_recv_bytes >= buflen) {
+		if (cur_recv_bytes >= int(buflen)) {
 			printf("[%s] overflow: cur received bytes (%d), maxbufsize (%d)\n", role, cur_recv_bytes, buflen);
             exit(-1);
 		}
@@ -1205,7 +1221,7 @@ inline bool wait_for_load_snapshot_data_ack(\
 			int control_type = *((int *)buf);
 			INVARIANT(control_type == SWITCHOS_LOAD_SNAPSHOT_DATA_ACK);
 			total_bytesnum = *((int32_t *)(buf + sizeof(int)));
-			INVARIANT(total_bytesnum <= buflen);
+			INVARIANT(total_bytesnum <= int(buflen));
 		}
 
 		// Receive all snapshot data
@@ -1239,7 +1255,7 @@ inline uint32_t serialize_reset_snapshot_flag_and_reg(char *buf) {
 	return sizeof(int);
 }
 
-inline bool wait_for_reset_snapshot_flag_ack_and_reg(int tcpsock, char *buf, uint32_t buflen, char * role) {
+inline bool wait_for_reset_snapshot_flag_and_reg_ack(int tcpsock, char *buf, uint32_t buflen, const char * role) {
 	int cur_recv_bytes = 0;
 	while (true) {
 		int recvsize = 0;
@@ -1249,7 +1265,7 @@ inline bool wait_for_reset_snapshot_flag_ack_and_reg(int tcpsock, char *buf, uin
 		}
 
 		cur_recv_bytes += recvsize;
-		if (cur_recv_bytes >= buflen) {
+		if (cur_recv_bytes >= int(buflen)) {
 			printf("[%s] overflow: cur received bytes (%d), maxbufsize (%d)\n", role, cur_recv_bytes, buflen);
             exit(-1);
 		}

@@ -68,15 +68,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         elif re.search("0x2234|0x3234", hex(board_type)):
             self.platform_type = "montara"
 
-    @staticmethod
-    def set_valid0(freeidx):
+    def set_valid0(self, freeidx):
         print "Set validvalue_reg as 0"
         index = freeidx
         value = 0
         self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
 
-    @staticmethod
-    def add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx):
+    def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx):
         print "Add key into cache_lookup_tbl"
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
@@ -95,8 +93,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         value = 1
         self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
 
-    @staticmethod
-    def get_evictdata_setvalid3():
+    def get_evictdata_setvalid3(self):
         # NOTE: cache must be full (i.e., all idxes are valid) when cache eviction
         print "Get sampled indexes for in-switch cache eviction"
         cur_sample_cnt = switchos_sample_cnt
@@ -156,8 +153,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         sendbuf = sendbuf + struct.pack("={}sI?".format(len(evictvalbytes)), evictvalbytes, evictseq, evictstat)
         return sendbuf
 
-    @staticmethod
-    def remove_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi):
+    def remove_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi):
         print "Remove key from cache_lookup_tbl"
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
@@ -178,10 +174,10 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         while True:
             # receive control packet
             if with_switchos_addr == False:
-                recvbuf, switchos_addr = swithcos_ptf_popserver_udpsock.recvfrom(1024)
+                recvbuf, switchos_addr = switchos_ptf_popserver_udpsock.recvfrom(1024)
                 with_switchos_addr = True
             else:
-                recvbuf, _ = swithcos_ptf_popserver_udpsock.recvfrom(1024)
+                recvbuf, _ = switchos_ptf_popserver_udpsock.recvfrom(1024)
             control_type, recvbuf = struct.unpack("=i{}s".format(len(recvbuf) - 4), recvbuf)
 
             if control_type == SWITCHOS_SETVALID0:
@@ -189,7 +185,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 freeidx = struct.unpack("=H", recvbuf)[0]
 
                 # set valid = 0
-                set_valid0(freeidx)
+                self.set_valid0(freeidx)
 
                 # send back SWITCHOS_SETVALID0_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_SETVALID0_ACK)
@@ -200,14 +196,14 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 freeidx = struct.unpack("=H", recvbuf)[0]
 
                 # add <key, idx> into cache_lookup_tbl, and set valid = 1
-                add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx)
+                self.add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx)
 
                 # send back SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK)
                 switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_GET_EVICTDATA_SETVALID3:
                 # calculate sample index, set valid = 3, and load evict data from data plane
-                sendbuf = get_evictdata_setvalid3()
+                sendbuf = self.get_evictdata_setvalid3()
 
                 # send back SWITCHOS_GET_EVICTDATA_SETVALID3_ACK
                 switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
@@ -216,7 +212,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 keylolo, keylohi, keyhilo, keyhihilo, keyhihihi = struct.unpack("!3I2H", recvbuf)
 
                 # remove key from cache_lookup_tbl
-                remove_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi)
+                self.remove_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi)
 
                 # send back SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_REMOVE_CACHE_LOOKUP_ACK)

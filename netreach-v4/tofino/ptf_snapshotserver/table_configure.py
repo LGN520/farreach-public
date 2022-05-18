@@ -89,8 +89,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             if self.devPorts[1] not in pipeidx_ports_map[egress_pipeidx]:
                 pipeidx_ports_map[egress_pipeidx].append(self.devPorts[1])
 
-    @staticmethod
-    def set_snapshot_flag():
+    def set_snapshot_flag(self):
         print "Set need_recirculate=1 for iports in different ingress pipelines"
         for tmppipeidx in pipeidx_ports_map.keys():
             if tmppipeidx != ingress_pipeidx:
@@ -125,8 +124,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.need_recirculate_tbl_table_delete_by_match_spec(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-    @staticmethod
-    def load_snapshot_data(cached_empty_index_backup):
+    def load_snapshot_data(self, cached_empty_index_backup):
         start_index = 0
         end_index = cached_empty_index_backup - 1
         print "Load snapshot data in [{}, {}] from data plane".format(start_index, end_index)
@@ -172,8 +170,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         sendbuf = struct.pack("=2i", SWITCHOS_LOAD_SNAPSHOT_DATA_ACK, total_bytesnum) + sendbuf
         return sendbuf
 
-    @staticmethod
-    def reset_snapshot_flag_and_reg():
+    def reset_snapshot_flag_and_reg(self):
         print "Reset snapshot_flag=0 for all ingress pipelines"
         for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
             matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
@@ -202,7 +199,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             if control_type != -1:
                 if control_type == SWITCHOS_SET_SNAPSHOT_FLAG:
                     # set snapshot_flag as true atomically
-                    set_snapshot_flag()
+                    self.set_snapshot_flag()
 
                     # send back SWITCHOS_SET_SNAPSHOT_FLAG_ACK
                     sendbuf = struct.pack("=i", SWITCHOS_SET_SNAPSHOT_FLAG_ACK)
@@ -218,7 +215,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                             exit(-1)
 
                         # load snapshot data from data plane
-                        sendbuf = load_snapshot_data(cached_empty_index_backup)
+                        sendbuf = self.load_snapshot_data(cached_empty_index_backup)
 
                         # send back snapshot data
                         connfd.sendall(sendbuf)
@@ -226,7 +223,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                         control_type = -1
                 elif control_type == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG:
                     # reset snapshot_flag and case1_reg
-                    reset_snapshot_flag_and_reg()
+                    self.reset_snapshot_flag_and_reg()
 
                     # send back SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK
                     sendbuf = struct.pack("=i", SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG)

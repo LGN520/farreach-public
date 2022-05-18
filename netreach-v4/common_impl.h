@@ -104,12 +104,14 @@ uint32_t controller_snapshot_period = 0; // ms
 // switch
 uint32_t switch_kv_bucket_num;
 short switchos_popserver_port = -1;
-short switchos_paramserver_port = -1;
+//short switchos_paramserver_port = -1;
 const char *switchos_ip = nullptr;
 uint32_t switchos_sample_cnt = 0;
 short switchos_snapshotserver_port = -1;
 short switchos_specialcaseserver_port = -1;
-short switchos_snapshotdataserver_port = -1;
+//short switchos_snapshotdataserver_port = -1;
+short switchos_ptf_popserver_port = -1;
+short switchos_ptf_snapshotserver_port = -1;
 
 // reflector
 const char *reflector_ip_for_switchos = nullptr;
@@ -120,11 +122,25 @@ short reflector_popserver_port = -1;
 size_t bg_n = 1;
 
 // Packet types used by switchos.paramserver and ptf framework
-int SWITCHOS_GET_FREEIDX = -1; // ptf get freeidx from paramserver
+/*int SWITCHOS_GET_FREEIDX = -1; // ptf get freeidx from paramserver
 int SWITCHOS_GET_KEY_FREEIDX = -1; // ptf get key and freeidx from paramserver
 int SWITCHOS_SET_EVICTDATA = -1; // ptf set evictidx, evictvallen, evictval, evictstat, and evictseq to paramserver
 int SWITCHOS_GET_EVICTKEY = -1; // ptf get evictkey
-int SWITCHOS_GET_CACHEDEMPTYINDEX = -1; // ptf get cached_empty_index
+int SWITCHOS_GET_CACHEDEMPTYINDEX = -1; // ptf get cached_empty_index*/
+int SWITCHOS_SETVALID0 = -1;
+int SWITCHOS_SETVALID0_ACK = -1;
+int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = -1;
+int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = -1;
+int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
+int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
+int SWITCHOS_REMOVE_CACHE_LOOKUP = -1;
+int SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = -1;
+int SWITCHOS_SET_SNAPSHOT_FLAG = -1;
+int SWITCHOS_SET_SNAPSHOT_FLAG_ACK = -1;
+int SWITCHOS_LOAD_SNAPSHOT_DATA = -1;
+int SWITCHOS_LOAD_SNAPSHOT_DATA_ACK = -1;
+int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = -1;
+int SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = -1;
 
 // Packet types used by switchos/controller/server for snapshot
 int SNAPSHOT_START = -1;
@@ -226,24 +242,28 @@ inline void parse_ini(const char* config_file) {
 	// switch
 	switch_kv_bucket_num = ini.get_switch_kv_bucket_num();
 	switchos_popserver_port = ini.get_switchos_popserver_port();
-	switchos_paramserver_port = ini.get_switchos_paramserver_port();
+	//switchos_paramserver_port = ini.get_switchos_paramserver_port();
 	switchos_ip = ini.get_switchos_ip();
 	switchos_sample_cnt = ini.get_switchos_sample_cnt();
 	switchos_snapshotserver_port = ini.get_switchos_snapshotserver_port();
 	switchos_specialcaseserver_port = ini.get_switchos_specialcaseserver_port();
-	switchos_snapshotdataserver_port = ini.get_switchos_snapshotdataserver_port();
+	switchos_ptf_popserver_port = ini.get_switchos_popserver_port();
+	switchos_ptf_snapshotserver_port = ini.get_switchos_snapshotserver_port();
+	//switchos_snapshotdataserver_port = ini.get_switchos_snapshotdataserver_port();
 	COUT_VAR(switch_kv_bucket_num);
 #ifndef ORIGINAL_XINDEX
 	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 #endif
 	COUT_VAR(switchos_popserver_port);
-	COUT_VAR(switchos_paramserver_port);
+	//COUT_VAR(switchos_paramserver_port);
 	printf("switchos ip: %s\n", switchos_ip);
 	COUT_VAR(switchos_sample_cnt);
 	COUT_VAR(switchos_snapshotserver_port);
 	COUT_VAR(switchos_specialcaseserver_port);
-	COUT_VAR(switchos_snapshotdataserver_port);
+	//COUT_VAR(switchos_snapshotdataserver_port);
+	COUT_VAR(switchos_popserver_port);
+	COUT_VAR(switchos_snapshotserver_port);
 
 	// reflector
 	reflector_ip_for_switchos = ini.get_reflector_ip_for_switchos();
@@ -258,7 +278,7 @@ inline void parse_control_ini(const char* config_file) {
 	IniparserWrapper ini;
 	ini.load(config_file);
 
-	SWITCHOS_GET_FREEIDX = ini.get_switchos_get_freeidx();
+	/*SWITCHOS_GET_FREEIDX = ini.get_switchos_get_freeidx();
 	SWITCHOS_GET_KEY_FREEIDX = ini.get_switchos_get_key_freeidx();
 	SWITCHOS_SET_EVICTDATA = ini.get_switchos_set_evictdata();
 	SWITCHOS_GET_EVICTKEY = ini.get_switchos_get_evictkey();
@@ -275,7 +295,22 @@ inline void parse_control_ini(const char* config_file) {
 	COUT_VAR(SNAPSHOT_START);
 	COUT_VAR(SNAPSHOT_SERVERSIDE);
 	COUT_VAR(SNAPSHOT_SERVERSIDE_ACK);
-	COUT_VAR(SNAPSHOT_DATA);
+	COUT_VAR(SNAPSHOT_DATA);*/
+
+	SWITCHOS_SETVALID0 = ini.get_switchos_setvalid0();
+	SWITCHOS_SETVALID0_ACK = ini.get_switchos_setvalid0_ack();
+	SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = ini.get_switchos_add_cache_lookup_setvalid1();
+	SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = ini.get_switchos_add_cache_lookup_setvalid1_ack();
+	SWITCHOS_GET_EVICTDATA_SETVALID3 = ini.get_switchos_get_evictdata_setvalid3();
+	SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
+	SWITCHOS_REMOVE_CACHE_LOOKUP = ini.get_switchos_remove_cache_lookup();
+	SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = ini.get_switchos_remove_cache_lookup_ack();
+	SWITCHOS_SET_SNAPSHOT_FLAG = ini.get_switchos_set_snapshot_flag();
+	SWITCHOS_SET_SNAPSHOT_FLAG_ACK = ini.get_switchos_set_snapshot_flag_ack();
+	SWITCHOS_LOAD_SNAPSHOT_DATA = ini.get_switchos_load_snapshot_data();
+	SWITCHOS_LOAD_SNAPSHOT_DATA_ACK = ini.get_switchos_load_snapshot_data_ack();
+	SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG = ini.get_switchos_reset_snapshot_flag_and_reg();
+	SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK = ini.get_switchos_reset_snapshot_flag_and_reg_ack();
 }
 
 /*inline void parse_args(int argc, char **argv) {

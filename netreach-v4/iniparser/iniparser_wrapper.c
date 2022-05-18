@@ -377,19 +377,19 @@ int IniparserWrapper::get_switchos_get_cachedemptyindex() {
 	return tmp;
 }*/
 
-int IniparserWrapper::get_switchos_set_valid0() {
-	int tmp = iniparser_getint(ini, "switchos:switchos_set_valid0", -1);
+int IniparserWrapper::get_switchos_setvalid0() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_setvalid0", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [switchos:switchos_set_valid0]: %d\n", tmp);
+		printf("Invalid entry of [switchos:switchos_setvalid0]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;
 }
 
-int IniparserWrapper::get_switchos_set_valid0_ack() {
-	int tmp = iniparser_getint(ini, "switchos:switchos_set_valid0_ack", -1);
+int IniparserWrapper::get_switchos_setvalid0_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_setvalid0_ack", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [switchos:switchos_set_valid0_ack]: %d\n", tmp);
+		printf("Invalid entry of [switchos:switchos_setvalid0_ack]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;
