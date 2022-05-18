@@ -180,14 +180,14 @@ short IniparserWrapper::get_switchos_popserver_port() {
 	return short(tmp);
 }
 
-short IniparserWrapper::get_switchos_paramserver_port() {
+/*short IniparserWrapper::get_switchos_paramserver_port() {
 	int tmp = iniparser_getint(ini, "switch:switchos_paramserver_port", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switch:switchos_paramserver_port]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);
-}
+}*/
 
 const char* IniparserWrapper::get_switchos_ip() {
 	const char *switchos_ip = iniparser_getstring(ini, "switch:switchos_ip", nullptr);

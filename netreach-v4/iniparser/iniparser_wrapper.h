@@ -50,7 +50,7 @@ class IniparserWrapper {
 		//uint32_t get_switch_max_vallen();
 		uint16_t get_switch_max_vallen();
 		short get_switchos_popserver_port();
-		short get_switchos_paramserver_port();
+		//short get_switchos_paramserver_port();
 		const char *get_switchos_ip();
 		uint32_t get_switchos_sample_cnt();
 		short get_switchos_snapshotserver_port();
