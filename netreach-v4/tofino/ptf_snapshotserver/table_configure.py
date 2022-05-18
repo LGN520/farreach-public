@@ -156,7 +156,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             savedseq_list[i] = convert_i32_to_u32(savedseq_list[i])
 
         print "Prepare sendbuf to switchos.snapshotdataserver"
-        sendbuf = struct.pack("=i", SWITCHOS_LOAD_SNAPSHOT_DATA_ACK)
+        sendbuf = bytes()
         # <SWITCHOS_LOAD_SNAPSHOT_DATA_ACK, total_bytesnum, records> -> for each record: <uint16_t vallen (big-endian for Val::deserialize), valbytes (same order), uint32_t seq (little-endian), result>
         for i in range(record_cnt):
             tmpvallen = vallen_list[i]
@@ -168,8 +168,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 # NOTE: deparser valbytes from val16 to val1
                 sendbuf = sendbuf + struct.pack("!2i", vallo_list_list[tmp_eightbyte_cnt-1-j][i], valhi_list_list[tmp_eightbyte_cnt-1-j][i])
             sendbuf = sendbuf + struct.pack("=I?", savedseq_list[i], stat_list[i])
-        total_bytesnum = 4 + len(sendbuf) # total # of bytes in sendbuf including total_bytesnum itself
-        sendbuf = struct.pack("=i", total_bytesnum) + sendbuf
+        total_bytesnum = 4 + 4 + len(sendbuf) # total # of bytes in sendbuf including total_bytesnum itself
+        sendbuf = struct.pack("=2i", SWITCHOS_LOAD_SNAPSHOT_DATA_ACK, total_bytesnum) + sendbuf
         return sendbuf
 
     @staticmethod

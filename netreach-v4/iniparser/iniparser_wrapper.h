@@ -55,7 +55,7 @@ class IniparserWrapper {
 		uint32_t get_switchos_sample_cnt();
 		short get_switchos_snapshotserver_port();
 		short get_switchos_specialcaseserver_port();
-		short get_switchos_snapshotdataserver_port();
+		//short get_switchos_snapshotdataserver_port();
 		short get_switchos_ptf_popserver_port();
 		short get_switchos_ptf_snapshotserver_port();
 
