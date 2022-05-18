@@ -56,15 +56,31 @@ class IniparserWrapper {
 		short get_switchos_snapshotserver_port();
 		short get_switchos_specialcaseserver_port();
 		short get_switchos_snapshotdataserver_port();
+		short get_switchos_ptf_popserver_port();
+		short get_switchos_ptf_snapshotserver_port();
 
 		/* control_type.ini */
 
 		// switchos
-		int get_switchos_get_freeidx();
+		/*int get_switchos_get_freeidx();
 		int get_switchos_get_key_freeidx();
 		int get_switchos_set_evictdata();
 		int get_switchos_get_evictkey();
-		int get_switchos_get_cachedemptyindex();
+		int get_switchos_get_cachedemptyindex();*/
+		int get_switchos_set_valid0_ack();
+		int get_switchos_set_valid0();
+		int get_switchos_add_cache_lookup_setvalid1();
+		int get_switchos_add_cache_lookup_setvalid1_ack();
+		int get_switchos_get_evictdata_setvalid3();
+		int get_switchos_get_evictdata_setvalid3_ack();
+		int get_switchos_remove_cache_lookup();
+		int get_switchos_remove_cache_lookup_ack();
+		int get_switchos_set_snapshot_flag();
+		int get_switchos_set_snapshot_flag_ack();
+		int get_switchos_load_snapshot_data();
+		int get_switchos_load_snapshot_data_ack();
+		int get_switchos_reset_snapshot_flag_and_reg();
+		int get_switchos_reset_snapshot_flag_and_reg_ack();
 
 		// snapshot
 		int get_snapshot_start();

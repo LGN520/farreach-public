@@ -45,7 +45,7 @@ from common import *
 
 switchos_ptf_popserver_udpsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 switchos_ptf_popserver_udpsock.bind(("127.0.0.1", switchos_ptf_popserver_port))
-switchos_paramserver_addr = ("127.0.0.1", switchos_paramserver_port)
+
 flags = netbufferv4_register_flags_t(read_hw_sync=True)
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
@@ -77,7 +77,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     @staticmethod
     def add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx):
-        print "Add %b, %d into cache_lookup_tbl" % (recvbuf[0:16], freeidx)
+        print "Add key into cache_lookup_tbl"
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
                 op_hdr_keylohi = convert_u32_to_i32(keylohi),
@@ -156,12 +156,32 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         sendbuf = sendbuf + struct.pack("={}sI?".format(len(evictvalbytes)), evictvalbytes, evictseq, evictstat)
         return sendbuf
 
+    @staticmethod
+    def remove_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi):
+        print "Remove key from cache_lookup_tbl"
+        matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
+                op_hdr_keylolo = convert_u32_to_i32(keylolo),
+                op_hdr_keylohi = convert_u32_to_i32(keylohi),
+                op_hdr_keyhilo = convert_u32_to_i32(keyhilo),
+                #op_hdr_keyhihi = convert_u32_to_i32(keyhihi),
+                op_hdr_keyhihilo = convert_u16_to_i16(keyhihilo),
+                op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi),
+                meta_need_recirculate = 0)
+        #actnspec0 = netbufferv4_cached_action_action_spec_t(evictidx)
+        self.client.cache_lookup_tbl_table_delete_by_match_spec(\
+                self.sess_hdl, self.dev_tgt, matchspec0)
+
     def runTest(self):
+        with_switchos_addr = False
         print "[ptf.popserver] ready"
 
         while True:
             # receive control packet
-            recvbuf, _ = swithcos_ptf_popserver_udpsock.recvfrom(1024)
+            if with_switchos_addr == False:
+                recvbuf, switchos_addr = swithcos_ptf_popserver_udpsock.recvfrom(1024)
+                with_switchos_addr = True
+            else:
+                recvbuf, _ = swithcos_ptf_popserver_udpsock.recvfrom(1024)
             control_type, recvbuf = struct.unpack("=i{}s".format(len(recvbuf) - 4), recvbuf)
 
             if control_type == SWITCHOS_SETVALID0:
@@ -173,7 +193,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
                 # send back SWITCHOS_SETVALID0_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_SETVALID0_ACK)
-                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_paramserver_addr)
+                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1:
                 # parse key and freeidx
                 keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, recvbuf = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
@@ -184,13 +204,28 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
                 # send back SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK)
-                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_paramserver_addr)
+                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_GET_EVICTDATA_SETVALID3:
                 # calculate sample index, set valid = 3, and load evict data from data plane
                 sendbuf = get_evictdata_setvalid3()
 
                 # send back SWITCHOS_GET_EVICTDATA_SETVALID3_ACK
-                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_paramserver_addr)
+                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
+            elif control_type == SWITCHOS_REMOVE_CACHE_LOOKUP:
+                # parse key
+                keylolo, keylohi, keyhilo, keyhihilo, keyhihihi = struct.unpack("!3I2H", recvbuf)
+
+                # remove key from cache_lookup_tbl
+                remove_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi)
+
+                # send back SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
+                sendbuf = struct.pack("=i", SWITCHOS_REMOVE_CACHE_LOOKUP_ACK)
+                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
+            elif control_type == SWITCHOS_PTF_POPSERVER_END:
+                break;
+            else:
+                printf("Invalid control type {}".format(control_type))
+                exit(-1)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
         self.conn_mgr.client_cleanup(self.sess_hdl) # close session

@@ -234,6 +234,24 @@ short IniparserWrapper::get_switchos_snapshotdataserver_port() {
 	return short(tmp);
 }
 
+short IniparserWrapper::get_switchos_ptf_popserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_ptf_popserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_ptf_popserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+short IniparserWrapper::get_switchos_ptf_snapshotserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_ptf_snapshotserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_ptf_snapshotserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 // Controller
 
 const char* IniparserWrapper::get_controller_ip_for_server() {
@@ -313,8 +331,8 @@ short IniparserWrapper::get_reflector_popserver_port() {
 /* control_type.ini */
 
 // switchos
-//
-int IniparserWrapper::get_switchos_get_freeidx() {
+
+/*int IniparserWrapper::get_switchos_get_freeidx() {
 	int tmp = iniparser_getint(ini, "switchos:switchos_get_freeidx", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switchos:switchos_get_freeidx]: %d\n", tmp);
@@ -354,6 +372,132 @@ int IniparserWrapper::get_switchos_get_cachedemptyindex() {
 	int tmp = iniparser_getint(ini, "switchos:switchos_get_cachedemptyindex", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switchos:switchos_get_cachedemptyindex]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}*/
+
+int IniparserWrapper::get_switchos_set_valid0() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_set_valid0", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_set_valid0]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_set_valid0_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_set_valid0_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_set_valid0_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_add_cache_lookup_setvalid1() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_add_cache_lookup_setvalid1", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_add_cache_lookup_setvalid1]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_add_cache_lookup_setvalid1_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_add_cache_lookup_setvalid1_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_add_cache_lookup_setvalid1_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_get_evictdata_setvalid3() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_get_evictdata_setvalid3", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_get_evictdata_setvalid3]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_get_evictdata_setvalid3_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_get_evictdata_setvalid3_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_get_evictdata_setvalid3_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_remove_cache_lookup() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_remove_cache_lookup", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_remove_cache_lookup]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_remove_cache_lookup_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_remove_cache_lookup_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_remove_cache_lookup_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_set_snapshot_flag() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_set_snapshot_flag", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_set_snapshot_flag]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_set_snapshot_flag_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_set_snapshot_flag_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_set_snapshot_flag_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_load_snapshot_data() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_load_snapshot_data", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_load_snapshot_data]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_load_snapshot_data_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_load_snapshot_data_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_load_snapshot_data_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_reset_snapshot_flag_and_reg() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_reset_snapshot_flag_and_reg", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_reset_snapshot_flag_and_reg]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_reset_snapshot_flag_and_reg_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_reset_snapshot_flag_and_reg_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_reset_snapshot_flag_and_reg_ack]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;
