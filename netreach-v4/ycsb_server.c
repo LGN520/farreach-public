@@ -253,10 +253,10 @@ void loading_main(xindex_t *table) {
 	load_running = true;
 
 	void *status;
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < load_n; i++) {
 		int rc = pthread_join(threads[i], &status);
 		if (rc) {
-			COUT_N_EXIT("Error:unable to join," << rc);
+			COUT_N_EXIT("Error:unable to join " << rc);
 		}
 	}
 	COUT_THIS("[loading] loading phase finish");
