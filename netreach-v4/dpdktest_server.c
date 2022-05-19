@@ -24,7 +24,7 @@
 #include "latency_helper.h"
 
 struct rte_mempool *mbuf_pool = NULL;
-size_t pktcnt = 100;
+size_t pktcnt = 10000;
 std::vector<double> wait_latency_list;
 std::vector<double> process_latency_list;
 
