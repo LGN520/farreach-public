@@ -702,6 +702,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.access_seq_tbl_table_add_with_assign_seq(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
+            # Stgae 2
+
             # Table: save_client_udpport_tbl (default: nop; size: 4)
             print "Configuring save_client_udpport_tbl"
             for tmpoptype in[GETREQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH]:
@@ -709,8 +711,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         op_hdr_optype = tmpoptype)
                 self.client.save_client_udpport_tbl_table_add_with_save_client_udpport(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Stgae 2
 
             # Table: access_latest_tbl (default: reset_is_latest; size: 18)
             print "Configuring access_latest_tbl"

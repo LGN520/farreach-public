@@ -101,11 +101,13 @@ table is_hot_tbl {
 	size: 1;
 }
 
+// Stage 2
+
 action save_client_udpport() {
 	modify_field(clone_hdr.client_udpport, udp_hdr.srcPort);
 }
 
-@pragma stage 1
+@pragma stage 2
 table save_client_udpport_tbl {
 	reads {
 		op_hdr.optype: exact;

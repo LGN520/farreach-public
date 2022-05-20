@@ -16,9 +16,11 @@
 
 #include "key.h"
 
-//#define NUM_MBUFS 4096 * 64
-#define NUM_MBUFS 4096
+#define NUM_MBUFS 4096 * 64
+//#define NUM_MBUFS 4096
 #define MEMPOOL_CACHE_SIZE 256
+#define CORE_MAX_BUF_SIZE 1536
+#define MCORE_MAX_BUF_SIZE (CORE_MAX_BUF_SIZE + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM)
 
 #define RX_RING_DESCS 1024
 #define TX_RING_DESCS 1024

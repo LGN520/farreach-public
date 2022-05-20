@@ -202,3 +202,10 @@
 	+ Re-configure dpdk
 	+ Run `~/bf-sde-8.9.1/install/bin/bf_kdrv_mod_load $SDE_INSTALL` and `~/bf-sde-8.9.1/install/bin/bf_knet_mod_load $SDE_INSTALL` in Tofino
 	+ `sudo service redis restart` to restart redis
+- Enable swap space to avoid being killed by OOM killer
+	+ `sudo fallocate -l 64g /mnt/64BiB.swap`
+	+ `sudo mkswap /mnt/64BiB.swap`
+	+ `sudo swapon /mnt/64BiB.swap`
+	+ After using
+		* `sudo swapoff /mnt/64BiB.swap`
+		* `sudo rm /mnt/64BiB.swap`

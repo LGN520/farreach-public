@@ -165,9 +165,9 @@ inline void parse_ini(const char* config_file) {
 	// global
 	workload_name = ini.get_workload_name();
 	printf("workload_name: %s\n", workload_name);
+#ifndef ORIGINAL_XINDEX
 	val_t::MAX_VALLEN = ini.get_max_vallen();
 	COUT_VAR(val_t::MAX_VALLEN);
-#ifndef ORIGINAL_XINDEX
 	val_t::MAX_VALLEN = ini.get_max_vallen();
 	COUT_VAR(val_t::MAX_VALLEN);
 #endif

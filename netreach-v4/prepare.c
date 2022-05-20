@@ -20,7 +20,7 @@ inline void prepare();
 void save();
 
 // parameters
-double insert_ratio = 0;
+//double insert_ratio = 0;
 size_t table_size = 10 * 1000 * 1000; // 10MB
 
 std::vector<index_key_t> exist_keys;
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 
 inline void parse_args(int argc, char **argv) {
   struct option long_options[] = {
-      {"insert", required_argument, 0, 'b'},
+      //{"insert", required_argument, 0, 'b'},
       {"table-size", required_argument, 0, 'f'},
       {0, 0, 0, 0}};
   std::string ops = "b:f:";
@@ -49,10 +49,10 @@ inline void parse_args(int argc, char **argv) {
         if (long_options[option_index].flag != 0) break;
         abort();
         break;
-      case 'b':
+      /*case 'b':
         insert_ratio = strtod(optarg, NULL);
         INVARIANT(insert_ratio >= 0 && insert_ratio <= 1);
-        break;
+        break;*/
       case 'f':
         table_size = strtoul(optarg, NULL, 10);
         INVARIANT(table_size > 0);
@@ -62,7 +62,8 @@ inline void parse_args(int argc, char **argv) {
     }
   }
 
-  COUT_THIS("[prepare] Table size:Insert ratio = " << table_size << ":" << insert_ratio)
+  //COUT_THIS("[prepare] Table size:Insert ratio = " << table_size << ":" << insert_ratio)
+  COUT_VAR(table_size);
 }
 
 inline void prepare() {
@@ -86,7 +87,8 @@ inline void prepare() {
 #endif
   }
 
-  if (insert_ratio > 0) {
+  //if (insert_ratio > 0) {
+  if (true) {
     non_exist_keys.reserve(table_size);
     for (size_t i = 0; i < table_size; ++i) {
 #ifdef LARGE_KEY

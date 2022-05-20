@@ -72,12 +72,15 @@ struct BGInfo {
 };
 struct IndexConfig {
   double root_error_bound = 32;
+  //double root_error_bound = 32 * 10240; // avoid memory overflow in large-scale in-memory KVS
   double root_memory_constraint = 1024 * 1024;
   double group_error_bound = 32;
+  //double group_error_bound = 32 * 10240; // avoid memory overflow in large-scale in-memory KVS
   double group_error_tolerance = 4;
-  size_t buffer_size_bound = 256;
+  size_t buffer_size_bound = 256; // avoid memory overflow in large-scale in-memory KVS
   double buffer_size_tolerance = 3;
   size_t buffer_compact_threshold = 256 * 1024; // 256K * (16+128)B kvpair
+  //size_t buffer_compact_threshold = 256 * 1024 * 10240; // 256K * (16+128)B kvpair; avoid memory overflow in large-scale in-memory KVS
   size_t worker_n = 0;
   std::unique_ptr<rcu_status_t[]> rcu_status;
   volatile bool exited = false;

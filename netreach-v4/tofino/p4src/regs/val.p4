@@ -115,6 +115,7 @@ action reset_and_get_vallo1() {
 	reset_and_get_vallo1_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 4
 table update_vallo1_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -177,6 +178,7 @@ action reset_and_get_valhi1() {
 	reset_and_get_valhi1_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 4
 table update_valhi1_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -239,6 +241,7 @@ action reset_and_get_vallo2() {
 	reset_and_get_vallo2_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 4
 table update_vallo2_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -301,6 +304,7 @@ action reset_and_get_valhi2() {
 	reset_and_get_valhi2_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 4
 table update_valhi2_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -363,6 +367,7 @@ action reset_and_get_vallo3() {
 	reset_and_get_vallo3_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 5
 table update_vallo3_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -425,6 +430,7 @@ action reset_and_get_valhi3() {
 	reset_and_get_valhi3_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 5
 table update_valhi3_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -487,6 +493,7 @@ action reset_and_get_vallo4() {
 	reset_and_get_vallo4_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 5
 table update_vallo4_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -549,6 +556,7 @@ action reset_and_get_valhi4() {
 	reset_and_get_valhi4_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 5
 table update_valhi4_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -611,6 +619,7 @@ action reset_and_get_vallo5() {
 	reset_and_get_vallo5_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 6
 table update_vallo5_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -673,6 +682,7 @@ action reset_and_get_valhi5() {
 	reset_and_get_valhi5_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 6
 table update_valhi5_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -735,6 +745,7 @@ action reset_and_get_vallo6() {
 	reset_and_get_vallo6_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 6
 table update_vallo6_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -797,6 +808,7 @@ action reset_and_get_valhi6() {
 	reset_and_get_valhi6_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 6
 table update_valhi6_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -859,6 +871,7 @@ action reset_and_get_vallo7() {
 	reset_and_get_vallo7_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 7
 table update_vallo7_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -921,6 +934,7 @@ action reset_and_get_valhi7() {
 	reset_and_get_valhi7_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 7
 table update_valhi7_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -983,6 +997,7 @@ action reset_and_get_vallo8() {
 	reset_and_get_vallo8_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 7
 table update_vallo8_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1045,6 +1060,7 @@ action reset_and_get_valhi8() {
 	reset_and_get_valhi8_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 7
 table update_valhi8_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1107,6 +1123,7 @@ action reset_and_get_vallo9() {
 	reset_and_get_vallo9_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 8
 table update_vallo9_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1169,6 +1186,7 @@ action reset_and_get_valhi9() {
 	reset_and_get_valhi9_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 8
 table update_valhi9_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1231,6 +1249,7 @@ action reset_and_get_vallo10() {
 	reset_and_get_vallo10_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 8
 table update_vallo10_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1293,6 +1312,7 @@ action reset_and_get_valhi10() {
 	reset_and_get_valhi10_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 8
 table update_valhi10_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1355,6 +1375,7 @@ action reset_and_get_vallo11() {
 	reset_and_get_vallo11_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 9
 table update_vallo11_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1417,6 +1438,7 @@ action reset_and_get_valhi11() {
 	reset_and_get_valhi11_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 9
 table update_valhi11_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1479,6 +1501,7 @@ action reset_and_get_vallo12() {
 	reset_and_get_vallo12_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 9
 table update_vallo12_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1541,6 +1564,7 @@ action reset_and_get_valhi12() {
 	reset_and_get_valhi12_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 9
 table update_valhi12_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1603,6 +1627,7 @@ action reset_and_get_vallo13() {
 	reset_and_get_vallo13_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 10
 table update_vallo13_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1665,6 +1690,7 @@ action reset_and_get_valhi13() {
 	reset_and_get_valhi13_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 10
 table update_valhi13_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1727,6 +1753,7 @@ action reset_and_get_vallo14() {
 	reset_and_get_vallo14_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 10
 table update_vallo14_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1789,6 +1816,7 @@ action reset_and_get_valhi14() {
 	reset_and_get_valhi14_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 10
 table update_valhi14_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1851,6 +1879,7 @@ action reset_and_get_vallo15() {
 	reset_and_get_vallo15_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 11
 table update_vallo15_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1913,6 +1942,7 @@ action reset_and_get_valhi15() {
 	reset_and_get_valhi15_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 11
 table update_valhi15_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -1975,6 +2005,7 @@ action reset_and_get_vallo16() {
 	reset_and_get_vallo16_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 11
 table update_vallo16_tbl {
 	reads {
 		//op_hdr.optype: exact;
@@ -2037,6 +2068,7 @@ action reset_and_get_valhi16() {
 	reset_and_get_valhi16_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
+@pragma stage 11
 table update_valhi16_tbl {
 	reads {
 		//op_hdr.optype: exact;

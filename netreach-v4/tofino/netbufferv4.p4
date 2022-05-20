@@ -7,7 +7,7 @@
 //#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
-#define DEBUG
+//#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
 // 0b0001
@@ -92,20 +92,25 @@
 #define CACHE_EVICT_CASE2 0x21
 */
 
+#ifndef DEBUG
+
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
 // 32K * (2B vallen + 128B value + 4B frequency + 1B status)
-//#define KV_BUCKET_COUNT 32768
-#define KV_BUCKET_COUNT 1
-
+#define KV_BUCKET_COUNT 32768
 // 64K * 2B counter
-//#define CM_BUCKET_COUNT 65536
-//#define HH_THRESHOLD 100
+#define CM_BUCKET_COUNT 65536
+#define HH_THRESHOLD 100
+// 32K * 4B counter
+#define SEQ_BUCKET_COUNT 32768
+
+#else
+
+#define KV_BUCKET_COUNT 1
 #define CM_BUCKET_COUNT 1
 #define HH_THRESHOLD 1
-
-// 32K * 4B counter
-//#define SEQ_BUCKET_COUNT 32768
 #define SEQ_BUCKET_COUNT 1
+
+#endif
 
 // egress_pipeline_num * kv_bucket_count
 //#define LOOKUP_ENTRY_COUNT 65536
@@ -121,18 +126,6 @@
 
 // hash partition range
 #define PARTITION_COUNT 32768
-
-// NOTE: you should change the two macros according to maximum val length
-// SEQ_PKTLEN: sizeof(seq_hdr), e.g., PUTREQ -> PUTREQ_RECIR, PUTREQ_RECIR -> PUTREQ_POP/PUTREQ
-// STAT_PKTLEN: sizeof(stat), e.g., DELREQ -> DELRES
-// SEQ_PKTLEN_MINUS_STAT: sizeof(seq) - sizeof(stat), e.g., DELREQ_RECIR -> DELRES
-// OTHER_PKTLEN: sizeof(other), e.g., PUTREQ -> PUTREQ_MAY_CASE3
-// SEQ_PKTLEN_MINUS_OTHER: sizeof(seq) - sizeof(other), e.g., PUTREQ_RECIR -> PUTREQ_MAY_CASE3
-#define SEQ_PKTLEN 4
-#define STAT_PKTLEN 1
-#define SEQ_PKTLEN_MINUS_STAT 3
-#define OTHER_PKTLEN 1
-#define SEQ_PKTLEN_MINUS_OTHER 3
 
 //#define CPU_PORT 192
 
@@ -222,10 +215,10 @@ control egress {
 	apply(access_cache_frequency_tbl);
 	apply(access_validvalue_tbl);
 	apply(access_seq_tbl);
-	apply(save_client_udpport_tbl);
 
 	// Stage 2
 	apply(access_latest_tbl);
+	apply(save_client_udpport_tbl);
 
 	// Stage 3
 	apply(access_deleted_tbl);

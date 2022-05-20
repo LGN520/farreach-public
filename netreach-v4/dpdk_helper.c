@@ -113,17 +113,25 @@ void dpdk_eal_init(int *argc, char ***argv) {
 
 	port_conf_default.link_speeds = ETH_LINK_SPEED_40G;
 	struct rte_eth_rxmode tmp_rxmode;
-	tmp_rxmode.max_rx_pkt_len = ETHER_MAX_LEN;
+	tmp_rxmode.mq_mode = ETH_MQ_RX_NONE;
+	//tmp_rxmode.max_rx_pkt_len = ETHER_MAX_LEN;
+	tmp_rxmode.max_rx_pkt_len = CORE_MAX_BUF_SIZE;
 	tmp_rxmode.split_hdr_size = 0;
+	tmp_rxmode.offloads = DEV_RX_OFFLOAD_JUMBO_FRAME;
 	port_conf_default.rxmode = tmp_rxmode;
-	/*struct rte_eth_txmode tmp_txmode;
+
+	struct rte_eth_txmode tmp_txmode;
+	tmp_txmode.mq_mode = ETH_MQ_TX_NONE;
 	tmp_txmode.offloads = DEV_TX_OFFLOAD_VLAN_INSERT |
+				DEV_TX_OFFLOAD_IPV4_CKSUM |
+				DEV_TX_OFFLOAD_MBUF_FAST_FREE;
+	/*tmp_txmode.offloads = DEV_TX_OFFLOAD_VLAN_INSERT |
 				DEV_TX_OFFLOAD_IPV4_CKSUM  |
 				DEV_TX_OFFLOAD_UDP_CKSUM   |
 				DEV_TX_OFFLOAD_TCP_CKSUM   |
 				DEV_TX_OFFLOAD_SCTP_CKSUM  |
-				DEV_TX_OFFLOAD_TCP_TSO;
-	port_conf_default.txmode = tmp_txmode;*/
+				DEV_TX_OFFLOAD_TCP_TSO;*/
+	port_conf_default.txmode = tmp_txmode;
 }
 
 void dpdk_port_init(uint16_t portid, uint16_t n_txring, uint16_t n_rxring) {
@@ -160,15 +168,7 @@ void dpdk_port_init(uint16_t portid, uint16_t n_txring, uint16_t n_rxring) {
 
 	struct rte_eth_dev_info dev_info;
 	rte_eth_dev_info_get(portid, &dev_info);
-	if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE)
-		port_conf.txmode.offloads |=
-			DEV_TX_OFFLOAD_MBUF_FAST_FREE;
-
-	/* Configure the Ethernet device. */
-	printf("Initialize port %u with %u TX rings and %u RX rings\n", portid, n_txring, n_rxring);
-	retval = rte_eth_dev_configure(portid, n_rxring, n_txring, &port_conf);
-	if (retval != 0)
-		rte_exit(EXIT_FAILURE, "Cannot configure port\n");
+	port_conf.txmode.offloads &= dev_info.tx_offload_capa;
 
 	uint16_t nb_rxd = RX_RING_DESCS;
 	uint16_t nb_txd = TX_RING_DESCS;
@@ -176,9 +176,11 @@ void dpdk_port_init(uint16_t portid, uint16_t n_txring, uint16_t n_rxring) {
 	if (retval != 0)
 		rte_exit(EXIT_FAILURE, "Cannot adjust desc number\n");
 
-	/* Enable RX in promiscuous mode for the Ethernet device. */
-	rte_eth_promiscuous_enable(portid);
-
+	/* Configure the Ethernet device. */
+	printf("Initialize port %u with %u TX rings and %u RX rings\n", portid, n_txring, n_rxring);
+	retval = rte_eth_dev_configure(portid, n_rxring, n_txring, &port_conf);
+	if (retval != 0)
+		rte_exit(EXIT_FAILURE, "Cannot configure port\n");
 }
 
 void dpdk_queue_setup(uint16_t portid, uint16_t queueid, struct rte_mempool ** tx_mbufpool_ptr) {
@@ -187,16 +189,16 @@ void dpdk_queue_setup(uint16_t portid, uint16_t queueid, struct rte_mempool ** t
 
 	struct rte_eth_dev_info dev_info;
 	rte_eth_dev_info_get(portid, &dev_info);
-	if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE)
-		port_conf.txmode.offloads |=
-			DEV_TX_OFFLOAD_MBUF_FAST_FREE;
+	port_conf.txmode.offloads &= dev_info.tx_offload_capa;
 
 	/* Creates a new mempool in memory to hold the mbufs. */
 	char txname[256];
 	memset(txname, '\0', 256);
 	sprintf(txname, "MBUF_POOL_TX_QUEUE_%d", int(queueid));
+	//*tx_mbufpool_ptr = rte_pktmbuf_pool_create(txname, NUM_MBUFS,
+	//	MEMPOOL_CACHE_SIZE, RTE_MBUF_PRIV_ALIGN, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 	*tx_mbufpool_ptr = rte_pktmbuf_pool_create(txname, NUM_MBUFS,
-		MEMPOOL_CACHE_SIZE, RTE_MBUF_PRIV_ALIGN, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+		MEMPOOL_CACHE_SIZE, RTE_MBUF_PRIV_ALIGN, MCORE_MAX_BUF_SIZE, rte_socket_id());
 	if (*tx_mbufpool_ptr == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot create mbuf pool for TX queue\n");
 
@@ -213,14 +215,19 @@ void dpdk_queue_setup(uint16_t portid, uint16_t queueid, struct rte_mempool ** t
 	char rxname[256];
 	memset(rxname, '\0', 256);
 	sprintf(rxname, "MBUF_POOL_RX_QUEUE_%d", int(queueid));
+	//struct rte_mempool *rx_mbufpool = rte_pktmbuf_pool_create(rxname, NUM_MBUFS,
+	//	MEMPOOL_CACHE_SIZE, RTE_MBUF_PRIV_ALIGN, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 	struct rte_mempool *rx_mbufpool = rte_pktmbuf_pool_create(rxname, NUM_MBUFS,
-		MEMPOOL_CACHE_SIZE, RTE_MBUF_PRIV_ALIGN, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+		MEMPOOL_CACHE_SIZE, RTE_MBUF_PRIV_ALIGN, MCORE_MAX_BUF_SIZE, rte_socket_id());
 	if (rx_mbufpool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot create mbuf pool for RX queue\n");
 
 	struct rte_eth_rxconf rxconf;
 	rxconf = dev_info.default_rxconf;
 	rxconf.offloads = port_conf.rxmode.offloads;
+	rxconf.rx_thresh.pthresh = 16;
+	rxconf.rx_thresh.hthresh = 8;
+	rxconf.rx_thresh.wthresh = 0;
 	/* Allocate and set up 1 RX queue per Ethernet port. */
 	retval = rte_eth_rx_queue_setup(portid, queueid, RX_RING_DESCS,
 			rte_eth_dev_socket_id(portid), &rxconf, rx_mbufpool);
@@ -230,6 +237,9 @@ void dpdk_queue_setup(uint16_t portid, uint16_t queueid, struct rte_mempool ** t
 
 void dpdk_port_start(uint16_t portid) {
 	int retval;
+
+	/* Enable RX in promiscuous mode for the Ethernet device. */
+	rte_eth_promiscuous_enable(portid);
 
 	/* Start the Ethernet port. */
 	retval = rte_eth_dev_start(portid);
