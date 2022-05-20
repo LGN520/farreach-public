@@ -89,7 +89,7 @@ include mk/recipes.mk
 DEPS :=
 CLEAN :=
 #TARGETS := prepare split_workload ycsb_local_client ycsb_remote_client ycsb_server
-TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_server switchos controller dpdktest_client dpdktest_server
+TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_server switchos controller dpdktest_client dpdktest_server socktest_client socktest_server
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
@@ -111,6 +111,9 @@ CLEAN += socket_helper.o
 #BACKUP_OBJECTS := backup_data.o special_case.o
 DEPS += special_case.d
 CLEAN += special_case.o
+
+DEPS += latency_helper.d
+CLEAN += latency_helper.o
 
 INIPARSER_OBJECTS := iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
 DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
@@ -177,6 +180,16 @@ dpdktest_server: dpdktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += dpdktest_server.d
 CLEAN += dpdktest_server.o dpdktest_server
+
+socktest_client: socktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += socktest_client.d
+CLEAN += socktest_client.o socktest_client
+
+socktest_server: socktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+DEPS += socktest_server.d
+CLEAN += socktest_server.o socktest_server
 
 ##############################################################################
 # Top level targets

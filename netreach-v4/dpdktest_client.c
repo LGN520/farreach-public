@@ -22,7 +22,8 @@
 #include "common_impl.h"
 #include "latency_helper.h"
 
-struct rte_mempool *mbuf_pool = NULL;
+//#define KEYVALUE
+
 size_t pktcnt = 10000;
 std::vector<double> req_latency_list;
 std::vector<double> rsp_latency_list;
@@ -53,8 +54,8 @@ void prepare_dpdk() {
 	char **dpdk_argv;
 	dpdk_argv = new char *[dpdk_argc];
 	for (int i = 0; i < dpdk_argc; i++) {
-	dpdk_argv[i] = new char[20];
-	memset(dpdk_argv[i], '\0', 20);
+		dpdk_argv[i] = new char[20];
+		memset(dpdk_argv[i], '\0', 20);
 	}
 	std::string arg_proc = "./ycsb_remote_client";
 	std::string arg_iovamode = "--iova-mode";
@@ -70,28 +71,40 @@ void prepare_dpdk() {
 	memcpy(dpdk_argv[4], arg_file_prefix_val.c_str(), arg_file_prefix_val.size());
 	//memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
 	//memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
-	rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
-	dpdk_init(&mbuf_pool, 1, 1);
+	
+	dpdk_eal_init(&dpdk_argc, &dpdk_argv); // Init DPDK
+	dpdk_port_init(0, 1, 1);
 }
 
 void run_benchmark() {
+#ifdef KEYVALUE
 	index_key_t testkey(1, 1, 1, 1);
 	char valbytes[Val::SWITCH_MAX_VALLEN];
 	memset(valbytes, 0xff, Val::SWITCH_MAX_VALLEN);
 	val_t testval(valbytes, Val::SWITCH_MAX_VALLEN);
+#else
+	int nohit_payload = 0;
+	int hit_payload = 1;
+	//int payloadvalue = nohit_payload;
+	int payloadvalue = hit_payload;
+#endif
 
 	int res = 0;
+	short src_port = client_port_start;
 
 	// DPDK
-	short src_port = client_port_start;
+	struct rte_mempool *tx_mbufpool = NULL;
+	dpdk_queue_setup(0, 0, &tx_mbufpool);
+	INVARIANT(tx_mbufpool != NULL);
 	// Optimize mbuf allocation
 	uint16_t burst_size = 256;
 	struct rte_mbuf *sent_pkts[burst_size];
 	uint16_t sent_pkt_idx = 0;
 	struct rte_mbuf *sent_pkt = NULL;
-	res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+	res = rte_pktmbuf_alloc_bulk(tx_mbufpool, sent_pkts, burst_size);
 	INVARIANT(res == 0);
 	struct rte_mbuf *received_pkts[1];
+	dpdk_port_start(0);
 
 	// exsiting keys fall within range [delete_i, insert_i)
 	char buf[MAX_BUFSIZE];
@@ -105,10 +118,17 @@ void run_benchmark() {
 		struct timespec wait_t1, wait_t2, wait_t3;
 
 		CUR_TIME(req_t1);
+#ifdef KEYVALUE
 		if (pkttype == 0) { // GETREQ
 			get_request_t req(testkey);
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 		}
+#else
+		int bigendian_payloadvalue = int(ntohl(uint32_t(payloadvalue)));
+		memcpy(buf, (char *)&bigendian_payloadvalue, sizeof(int));
+		req_size = sizeof(int);
+#endif
+
 		// DPDK
 		encode_mbuf(sent_pkt, client_macaddr, server_macaddr, client_ip, server_ip, src_port, server_port_start, buf, req_size);
 		res = rte_eth_tx_burst(0, 0, &sent_pkt, 1);
@@ -134,9 +154,14 @@ void run_benchmark() {
 		rte_pktmbuf_free((struct rte_mbuf*)received_pkts[0]);
 		received_pkts[0] = NULL;
 		INVARIANT(recv_size != -1);
+#ifdef KEYVALUE
 		if (pkttype == 0) { // GETREQ
 			get_response_t rsp(buf, recv_size);
 		}
+#else
+		INVARIANT(recv_size == sizeof(int));
+		INVARIANT(*((int *)buf) == bigendian_payloadvalue);
+#endif
 		CUR_TIME(rsp_t2);
 
 		DELTA_TIME(req_t2, req_t1, req_t3);
@@ -152,7 +177,7 @@ void run_benchmark() {
 		sent_pkt_idx++;
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;
-			res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+			res = rte_pktmbuf_alloc_bulk(tx_mbufpool, sent_pkts, burst_size);
 			if (res < 0) {
 				COUT_N_EXIT("rte_pktmbuf_alloc_bulk fails: " << res);
 			}

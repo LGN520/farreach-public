@@ -251,6 +251,23 @@ static int run_server_worker(void * param) {
   uint16_t serveridx = thread_param.serveridx; // [0, server_num-1]
   xindex_t *table = thread_param.table;
 
+  int res = 0;
+
+  // DPDK
+  struct rte_mempool *tx_mbufpool = NULL;
+  dpdk_queue_setup(0, serveridx, &tx_mbufpool);
+  generate_udp_fdir_rule(0, serveridx, server_port_start + serveridx);
+  INVARIANT(tx_mbufpool != NULL);
+  //struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(tx_mbufpool); // Send to DPDK port
+  //struct rte_mbuf *sent_pkt_wrapper[1] = {sent_pkt};
+  // Optimize mbuf allocation
+  uint16_t burst_size = 256;
+  struct rte_mbuf *sent_pkts[burst_size];
+  uint16_t sent_pkt_idx = 0;
+  struct rte_mbuf *sent_pkt = NULL;
+  res = rte_pktmbuf_alloc_bulk(tx_mbufpool, sent_pkts, burst_size);
+  INVARIANT(res == 0);
+
   // scan.startkey <= max_startkey; scan.endkey >= min_startkey
   // use size_t to avoid int overflow
   uint64_t min_startkeyhihi = serveridx * perserver_keyrange;
@@ -264,19 +281,6 @@ static int run_server_worker(void * param) {
   // NOTE: controller and switchos should have been launched before servers
   tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
   //tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port_start + serveridx, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
-
-  int res = 0;
-
-  // DPDK
-  //struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(mbuf_pool); // Send to DPDK port
-  //struct rte_mbuf *sent_pkt_wrapper[1] = {sent_pkt};
-  // Optimize mbuf allocation
-  uint16_t burst_size = 256;
-  struct rte_mbuf *sent_pkts[burst_size];
-  uint16_t sent_pkt_idx = 0;
-  struct rte_mbuf *sent_pkt = NULL;
-  res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
-  INVARIANT(res == 0);
 
   // prepare socket
   /*int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -737,7 +741,7 @@ static int run_server_worker(void * param) {
 
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;
-			res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+			res = rte_pktmbuf_alloc_bulk(tx_mbufpool, sent_pkts, burst_size);
 			INVARIANT(res == 0);
 		}
 	

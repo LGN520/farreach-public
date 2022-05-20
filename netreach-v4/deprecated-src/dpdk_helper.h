@@ -16,14 +16,13 @@
 
 #include "key.h"
 
-//#define NUM_MBUFS 4096 * 64
-#define NUM_MBUFS 4096
-#define MEMPOOL_CACHE_SIZE 256
-
-#define RX_RING_DESCS 1024
-#define TX_RING_DESCS 1024
-
 #define RX_BURST_SIZE 32
+
+#define RX_RING_SIZE 512
+#define TX_RING_SIZE 512
+
+#define NUM_MBUFS 4096 * 64
+#define MBUF_CACHE_SIZE 128
 
 #define MAX_PATTERN_NUM 4
 #define MAX_ACTION_NUM 2
@@ -42,10 +41,8 @@
 //static inline uint16_t udp4_checksum (struct ipv4_hdr* iph, struct udp_hdr* udph, char *payload, int payloadlen);
 //static inline int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring);
 
-void dpdk_eal_init(int *argc, char ***argv);
-void dpdk_port_init(uint16_t portid, uint16_t n_txring, uint16_t n_rxring);
-void dpdk_queue_setup(uint16_t portid, uint16_t queueid, struct rte_mempool ** tx_mbufpool_ptr);
-void dpdk_port_start(uint16_t portid);
+void rte_eal_init_helper(int *argc, char ***argv);
+void dpdk_init(struct rte_mempool **mbuf_pool_ptr, uint16_t n_txring, uint16_t n_rxring);
 void dpdk_free();
 
 void encode_mbuf(struct rte_mbuf *mbuf, uint8_t *srcmac, uint8_t *dstmac, const char *srcip, const char *dstip, uint16_t srcport, uint16_t dstport, char *payload, uint32_t payload_size);

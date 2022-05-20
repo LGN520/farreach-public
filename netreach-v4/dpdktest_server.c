@@ -23,7 +23,8 @@
 #include "common_impl.h"
 #include "latency_helper.h"
 
-struct rte_mempool *mbuf_pool = NULL;
+//#define KEYVALUE
+
 size_t pktcnt = 10000;
 std::vector<double> wait_latency_list;
 std::vector<double> process_latency_list;
@@ -68,8 +69,9 @@ void prepare_dpdk() {
   memcpy(dpdk_argv[4], arg_file_prefix_val.c_str(), arg_file_prefix_val.size());
   //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
   //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
-  rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
-  dpdk_init(&mbuf_pool, 1, 1); // tx: server_num server.workers + one reflector; rx: one receiver
+  
+  dpdk_eal_init(&dpdk_argc, &dpdk_argv); // Init DPDK
+  dpdk_port_init(0, 1, 1);
 }
 
 void run_server() {
@@ -80,14 +82,19 @@ void run_server() {
 
   int res = 0;
 
+  // DPDK
+  struct rte_mempool *tx_mbufpool = NULL;
+  dpdk_queue_setup(0, 0, &tx_mbufpool);
+  INVARIANT(tx_mbufpool != NULL);
   // Optimize mbuf allocation
   uint16_t burst_size = 256;
   struct rte_mbuf *sent_pkts[burst_size];
   uint16_t sent_pkt_idx = 0;
   struct rte_mbuf *sent_pkt = NULL;
-  res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+  res = rte_pktmbuf_alloc_bulk(tx_mbufpool, sent_pkts, burst_size);
   INVARIANT(res == 0);
   struct rte_mbuf *received_pkts[1];
+  dpdk_port_start(0);
 
   char buf[MAX_BUFSIZE];
   int recv_size = 0;
@@ -130,6 +137,7 @@ void run_server() {
 	rte_pktmbuf_free((struct rte_mbuf*)received_pkts[0]);
 	received_pkts[0] = NULL;
 
+#ifdef KEYVALUE
 	packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
@@ -157,6 +165,12 @@ void run_server() {
 				break;
 			}
 	}
+#else
+	// DPDK
+	encode_mbuf(sent_pkt, dstmac, srcmac, dstip, srcip, server_port_start, srcport, buf, recv_size);
+	res = rte_eth_tx_burst(0, 0, &sent_pkt, 1);
+	sent_pkt_idx++;
+#endif
 	CUR_TIME(t2);
 
 	DELTA_TIME(wait_t2, wait_t1, wait_t3);
@@ -166,7 +180,7 @@ void run_server() {
 
 	if (sent_pkt_idx >= burst_size) {
 		sent_pkt_idx = 0;
-		res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+		res = rte_pktmbuf_alloc_bulk(tx_mbufpool, sent_pkts, burst_size);
 		INVARIANT(res == 0);
 	}
 

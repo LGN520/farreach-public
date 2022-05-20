@@ -25,3 +25,5 @@ switchos
 controller
 dpdktest_client
 dpdktest_server
+socktest_client
+socktest_server

@@ -47,7 +47,6 @@ void prepare_dpdk();
 // DPDK
 static int run_fg(void *param); // sender
 //static int run_receiver(__attribute__((unused)) void *param); // receiver
-struct rte_mempool *mbuf_pool = NULL;
 
 /*struct rte_mbuf*** volatile pkts_list;
 uint32_t* volatile heads;
@@ -130,13 +129,12 @@ void prepare_dpdk() {
 	memcpy(dpdk_argv[4], arg_file_prefix_val.c_str(), arg_file_prefix_val.size());
 	//memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
 	//memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
-	rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
-	//dpdk_init(&mbuf_pool, client_num, 1);
-
-	dpdk_init(&mbuf_pool, client_num, client_num);
-	for (uint16_t idx = 0; idx < client_num; idx++) {
+	
+	dpdk_eal_init(&dpdk_argc, &dpdk_argv); // Init DPDK
+	dpdk_port_init(0, client_num, client_num);
+	/*for (uint16_t idx = 0; idx < client_num; idx++) {
 		generate_udp_fdir_rule(0, idx, client_port_start+idx);
-	}
+	}*/
 }
 
 /*void prepare_receiver() {
@@ -211,6 +209,8 @@ void run_benchmark() {
 
 	COUT_THIS("[client] prepare clients ...");
 	while (ready_threads < client_num) sleep(1);
+
+	dpdk_port_start(0);
 
 	running = true;
 	while (finish_threads < client_num) sleep(1);
@@ -318,27 +318,32 @@ static int run_fg(void *param) {
 	fg_param_t &thread_param = *(fg_param_t *)param;
 	uint16_t thread_id = thread_param.thread_id;
 
-	char load_filename[256];
-	memset(load_filename, '\0', 256);
-	GET_SPLIT_WORKLOAD(load_filename, client_workload_dir, thread_id);
-
-	Parser parser(load_filename);
-	ParserIterator iter = parser.begin();
-	index_key_t tmpkey;
-	val_t tmpval;
-
 	int res = 0;
-
-	// DPDK
 	short src_port = client_port_start + thread_id;
 	//short server_port = server_port_start + thread_id;
+
+	// DPDK
+	struct rte_mempool *tx_mbufpool = NULL;
+	dpdk_queue_setup(0, thread_id, &tx_mbufpool);
+	generate_udp_fdir_rule(0, thread_id, src_port);
+	INVARIANT(tx_mbufpool != NULL);
 	// Optimize mbuf allocation
 	uint16_t burst_size = 256;
 	struct rte_mbuf *sent_pkts[burst_size];
 	uint16_t sent_pkt_idx = 0;
 	struct rte_mbuf *sent_pkt = NULL;
-	res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+	res = rte_pktmbuf_alloc_bulk(tx_mbufpool, sent_pkts, burst_size);
 	INVARIANT(res == 0);
+
+	// ycsb parser
+	char load_filename[256];
+	memset(load_filename, '\0', 256);
+	GET_SPLIT_WORKLOAD(load_filename, client_workload_dir, thread_id);
+	Parser parser(load_filename);
+	ParserIterator iter = parser.begin();
+	index_key_t tmpkey;
+	val_t tmpval;
+
 
 	// exsiting keys fall within range [delete_i, insert_i)
 	char buf[MAX_BUFSIZE];
@@ -621,7 +626,7 @@ static int run_fg(void *param) {
 		sent_pkt_idx++;
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;
-			res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+			res = rte_pktmbuf_alloc_bulk(tx_mbufpool, sent_pkts, burst_size);
 			if (res < 0) {
 				COUT_N_EXIT("rte_pktmbuf_alloc_bulk fails: " << res);
 			}

@@ -57,8 +57,6 @@ typedef LoadSFGParam load_sfg_param_t;
 
 /* variables */
 
-// prepare phase
-struct rte_mempool *mbuf_pool = NULL;
 // loading phase
 volatile bool load_running = false;
 std::atomic<size_t> load_ready_threads(0);
@@ -156,14 +154,13 @@ void prepare_dpdk() {
   memcpy(dpdk_argv[4], arg_file_prefix_val.c_str(), arg_file_prefix_val.size());
   //memcpy(dpdk_argv[3], arg_whitelist.c_str(), arg_whitelist.size());
   //memcpy(dpdk_argv[4], arg_whitelist_val.c_str(), arg_whitelist_val.size());
-  rte_eal_init_helper(&dpdk_argc, &dpdk_argv); // Init DPDK
-
-  //dpdk_init(&mbuf_pool, server_num+1, 1); // tx: server_num server.workers + one reflector; rx: one receiver
-  dpdk_init(&mbuf_pool, server_num+1, server_num+1); // tx:rx server_num server.workers + one reflector
-  for (uint16_t idx = 0; idx < server_num; idx++) {
+  
+  dpdk_eal_init(&dpdk_argc, &dpdk_argv); // Init DPDK
+  dpdk_port_init(0, server_num+1, server_num+1); // tx:rx server_num server.workers + one reflector
+  /*for (uint16_t idx = 0; idx < server_num; idx++) {
 	generate_udp_fdir_rule(0, idx, server_port_start+idx);
   }
-  generate_udp_fdir_rule(0, server_num, reflector_port);
+  generate_udp_fdir_rule(0, server_num, reflector_port);*/
 }
 
 /*
@@ -398,6 +395,8 @@ void transaction_main(xindex_t *table) {
 	}
 
 	while (transaction_ready_threads < transaction_expected_ready_threads) sleep(1);
+
+	dpdk_port_start(0);
 
 	transaction_running = true;
 	COUT_THIS("[transaction.main] all threads ready");

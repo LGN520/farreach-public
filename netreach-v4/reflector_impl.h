@@ -48,10 +48,14 @@ void prepare_reflector() {
 
 void *run_reflector_popserver(void *param) {
 	// DPDK
+	struct rte_mempool *tx_mbufpool = NULL;
+	dpdk_queue_setup(0, server_num, &tx_mbufpool);
+	generate_udp_fdir_rule(0, server_num, reflector_port);
+	INVARIANT(tx_mbufpool != NULL);
 	uint16_t burst_size = 256;
 	struct rte_mbuf *sent_pkts[burst_size];
 	uint16_t sent_pkt_idx = 0;
-	int res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+	int res = rte_pktmbuf_alloc_bulk(tx_mbufpool, sent_pkts, burst_size);
 	INVARIANT(res == 0);
 
 	char buf[MAX_BUFSIZE];
@@ -87,7 +91,7 @@ void *run_reflector_popserver(void *param) {
 
 		if (sent_pkt_idx >= burst_size) {
 			sent_pkt_idx = 0;
-			res = rte_pktmbuf_alloc_bulk(mbuf_pool, sent_pkts, burst_size);
+			res = rte_pktmbuf_alloc_bulk(tx_mbufpool, sent_pkts, burst_size);
 			INVARIANT(res == 0);
 		}
 	}

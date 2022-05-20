@@ -795,10 +795,12 @@
 			- Key k1 in cache_lookup_tbl, cm=2, vallen=0, valid=1, cache_frequency=0, latest=1, deleted=1, seq=1, savedseq=1, {case1}=0
 - Test cases of latency
 	+ Case 1: latency between client and server
-		* 1000 read(k1,v1)
+		* 1000 GET/PUT/DEL w/o cache hit
 	+ Case 2: latency between client and switch
 		* Step 1: case 1 of conservative read
-		* Step 2: 1000 read(k1,v1)
+		* Step 2: 1000 GET/PUT/DEL w/ cache hit
+	+ Case 3: latency with cache population delay
+		* Same as case 1 but not disable cache population
 - Test crash-consistent snapshot
 	+ Case 3: controller sends SNAPSHOT_START -> switchos sets snapshot flag -> put(k1,v1) (PUTREQ_SEQ_CASE3) -> put(k1,v2) (PUTREQ_POP_SEQ_CASE3 -> cache population) -> del(k3) (DELREQ_SEQ_CASE3) -> swichos loads snapshot and finishes
 		* No case 2 as cache is not full and hence no eviction
@@ -852,7 +854,6 @@
 			- client-side wait_latency is still around 27us
 		- Check dpdk-related part in NetCache source code
 			- only provide a simple simulator based on udp socket and bmv2 w/o dpdk module and tofino module -> FAIL
-		- TODO: Test cache hit latency
 
 ## Future work
 
