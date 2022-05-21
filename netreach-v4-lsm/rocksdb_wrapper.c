@@ -47,6 +47,22 @@ bool RocksdbWrapper::open(uint16_t workerid) {
 	return is_existing;
 }
 
+bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
+	rocksdb::Status s;
+	std::string valstr = val.to_string_for_rocksdb(seq);
+	rocksdb::WriteOptions write_options;
+	write_options.sync = SYNC_WRITE; // Write through for persistency
+	rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
+
+	s = txn->Put(keystr, valstr);
+	s = txn->Commit();
+	INVARIANT(s.ok());
+
+	delete txn;
+	txn = NULL;
+	return true;
+}
+
 bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t &seq) {
 	rocksdb::Status s;
 	std::string valstr;

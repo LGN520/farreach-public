@@ -228,8 +228,6 @@ void *run_sfg(void * param) {
   sfg_param_t &thread_param = *(sfg_param_t *)param;
   uint16_t thread_id = thread_param.thread_id;
 
-  bool is_existing = db_wrappers[thread_id].open(thread_id);
-
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<> ratio_dis(0, 1);
@@ -256,8 +254,15 @@ void *run_sfg(void * param) {
   char dummy_value_data[128] = {12, 34};
   val_t dummy_value = val_t(dummy_value_data, 128);
   size_t query_i = 0, insert_i = op_keys_size / 2, delete_i = 0, update_i = 0, scan_i = 0;
-  COUT_THIS("[localtest " << uint32_t(thread_id) << "] Ready.");
 
+  bool is_existing = db_wrappers[thread_id].open(thread_id);
+  if (!is_existing) {
+	  for (size_t i = exist_key_start; i < exist_key_end; i++) {
+		db_wrappers[thread_id].force_put(exist_keys[i], init_val);
+	  }
+  }
+
+  COUT_THIS("[localtest " << uint32_t(thread_id) << "] Ready.");
   ready_threads++;
 
 #if !defined(NDEBUGGING_LOG)

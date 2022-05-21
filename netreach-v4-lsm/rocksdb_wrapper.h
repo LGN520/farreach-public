@@ -35,6 +35,7 @@ class RocksdbWrapper {
 		//RocksdbWrapper(uint16_t workerid);
 		
 		bool open(uint16_t workerid);
+		bool force_put(netreach_key_t key, val_t val);
 		bool get(netreach_key_t key, val_t &val, uint32_t &seq);
 		bool put(netreach_key_t key, val_t val, uint32_t seq);
 		bool remove(netreach_key_t key, uint32_t seq);
