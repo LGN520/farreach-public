@@ -184,8 +184,8 @@
 	+ `tar -xvf v6.22.1.tar`
 	+ `cd rocksdb-6.22.1`
 	+ `PORTABLE=1 make static_lib`
-		* Comment -Wstrict-prototype and -Werror if compilation fails due to warnings
-		* Add PORTABLE=1 if with runtime error of illegal instruction
+		* Comment -Wstrict-prototype and -Werror if compilation fails due to strict-alias warning
+		* Add PORTABLE=1 if with runtime error of illegal instruction when open()
 	+ Issues
 		* Error: Compression type Snappy is not linked with the binary
 			- Install libsnappy and remake static lib of rocksdb

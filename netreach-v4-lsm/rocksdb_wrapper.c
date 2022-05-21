@@ -49,11 +49,12 @@ bool RocksdbWrapper::open(uint16_t workerid) {
 
 bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
 	rocksdb::Status s;
-	std::string valstr = val.to_string_for_rocksdb(seq);
+	std::string valstr = val.to_string_for_rocksdb(0);
 	rocksdb::WriteOptions write_options;
 	write_options.sync = SYNC_WRITE; // Write through for persistency
 	rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
 
+	std::string keystr = key.to_string_for_rocksdb();
 	s = txn->Put(keystr, valstr);
 	s = txn->Commit();
 	INVARIANT(s.ok());
@@ -110,7 +111,6 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq) {
 	std::string keystr = key.to_string_for_rocksdb();
 	std::string tmp_valstr;
 	s = txn->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
-	INVARIANT(s.ok());
 	uint32_t tmp_seq = 0;
 	if (tmp_valstr != "") {
 		val_t tmp_val;
@@ -149,7 +149,6 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq) {
 	std::string keystr = key.to_string_for_rocksdb();
 	std::string tmp_valstr;
 	s = txn->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
-	INVARIANT(s.ok());
 	uint32_t tmp_seq = 0;
 	if (tmp_valstr != "") {
 		val_t tmp_val;
@@ -201,7 +200,7 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 		iter->Next();
 	}
 	s = txn->Commit();
-	delete txn;
 	INVARIANT(s.ok());
+	delete txn;
 	return num;
 }
