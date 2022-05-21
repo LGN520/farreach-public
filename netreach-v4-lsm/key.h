@@ -11,21 +11,20 @@
 #define LARGE_KEY
 
 class Key {
-#ifdef LARGE_KEY
+/*#ifdef LARGE_KEY
   typedef std::array<double, 4> model_key_t;
 #else
   typedef std::array<double, 2> model_key_t;
-#endif
-  //static uint32_t KEYLEN;
+#endif*/
 
  public:
-  static constexpr size_t model_key_size() { // # of 4B doulbes
+  /*static constexpr size_t model_key_size() { // # of 4B doulbes
 #ifdef LARGE_KEY
 	return 4;
 #else
 	return 2; 
 #endif
-  }
+  }*/
   static Key max();
   static Key min();
 
@@ -41,14 +40,17 @@ class Key {
   Key &operator=(const Key volatile &other);
   void operator=(const Key &other) volatile; // suppress warning of implicit deference of volatile type
 
-  /*rocksdb::Slice to_slice() const;
-  void from_slice(rocksdb::Slice& slice);*/
+  // not use Slice due to shallow copy
+  //rocksdb::Slice to_slice() const;
+  //void from_slice(rocksdb::Slice& slice);
+  std::string to_string_for_rocksdb() const;
+  void from_string_for_rocksdb(std::string& keystr);
 
-  model_key_t to_model_key() const;
+  //model_key_t to_model_key_for_train() const; // for xindex
 
-  int64_t to_int() const; // For hash
+  int64_t to_int_for_hash() const; // for hash
 
-  std::string to_string() const; // For print
+  std::string to_string_for_print() const; // for print
 
   friend bool operator<(const Key &l, const Key &r);
   friend bool operator>(const Key &l, const Key &r);
@@ -61,7 +63,6 @@ class Key {
   uint32_t deserialize(const char *buf, uint32_t buflen);
   uint32_t serialize(char *buf, uint32_t buflen);
   uint32_t serialize(char *buf, uint32_t buflen) volatile;
-  //uint32_t size() const;
 
 #ifdef LARGE_KEY
   uint32_t keylolo;
@@ -73,5 +74,7 @@ class Key {
   uint32_t keyhi;
 #endif
 } PACKED;
+
+typedef Key netreach_key_t;
 
 #endif

@@ -175,7 +175,37 @@ void Val::from_slice(rocksdb::Slice& slice) {
 }
 */
 
-void Val::from_string(std::string& str) {
+
+std::string Val::to_string_for_rocksdb(uint32_t seq) {
+	char tmpbuf[256];
+	if (val_length > 0) {
+		INVARIANT(val_data != NULL);
+		memcpy(tmpbuf, val_data, val_length);
+	}
+	memcpy(tmpbuf + val_length, &seq, sizeof(uint32_t));
+	return std::string(tmpbuf, val_length + sizeof(uint32_t));
+}
+
+uint32_t Val::from_string_for_rocksdb(std::string valstr) {
+	val_length = valstr.size() - sizeof(uint32_t);
+	INVARIANT(val_length >= 0);
+	if (val_data != NULL) {
+		delete [] val_data;
+		val_data = NULL;
+	}
+
+	if (val_length > 0) {
+		val_data = new char[val_length];
+		INVARIANT(val_data != NULL);
+		memcpy(val_data, valstr.data(), val_length);
+	}
+
+	uint32_t seq = 0;
+	memcpy(&seq, valstr.data() + val_length, sizeof(uint32_t));
+	return seq;
+}
+
+/*void Val::from_string(std::string& str) {
 	INVARIANT(uint16_t(str.length()) <= MAX_VALLEN);
 	if (str.data() != nullptr && str.length() != 0) {
 		// Deep copy
@@ -189,9 +219,9 @@ void Val::from_string(std::string& str) {
 		val_length = 0;
 		val_data = nullptr;
 	}
-}
+}*/
 
-std::string Val::to_string() const { // For print
+std::string Val::to_string_for_print() const { // For print
 	std::stringstream ss;
 	for (uint16_t i = 0; i < val_length; i++) {
 		ss << uint8_t(val_data[i]);

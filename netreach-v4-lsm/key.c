@@ -125,11 +125,9 @@ void Key::operator=(const Key &other) volatile {
 	memory_fence();
 }
 
-/*
-rocksdb::Slice Key::to_slice() const {
+/*rocksdb::Slice Key::to_slice() const {
 #ifdef LARGE_KEY
-	// NOTE: keylo-keyhi, in rocksdb/include/slice.h, we compare two slices from end to beginning
-	// NOTE: slice is a shallow copy, where we cannot give slice a local varialbe!!!
+	// NOTE: slice is a shallow copy, where we cannot give slice a local variable!!! (yet UserKey -> InternalKey in rocksdb is a deep copy)
 	// NOTE: addr of this = addr of keylo due to packed
 	rocksdb::Slice result((char *)this, 16); 
 #else
@@ -148,10 +146,70 @@ void Key::from_slice(rocksdb::Slice& slice) {
 	keylo = *(uint32_t*)slice.data_;
 	keyhi = *(uint32_t*)(slice.data_+4);
 #endif
-}
-*/
+}*/
 
-Key::model_key_t Key::to_model_key() const {
+// NOTE: to match default ByteWiseComparator (aka Slice::compare in rocksdb/include/slice.h), we convert key into slice from the most significant byte to the least significant byte
+// NOTE: ByteWiseComparator uses memcmp which does not care about per-byte signedness (treat each byte as uint8_t)
+std::string Key::to_string_for_rocksdb() const {
+#ifdef LARGE_KEY
+	uint16_t keyhihilo = uint16_t(keyhihi & 0xFFFF);
+	uint16_t keyhihihi = uint16_t((keyhihi >> 16) & 0xFFFF);
+	uint8_t data[16];
+	data[0] = uint8_t((keyhihihi >> 8) & 0xFF);
+	data[1] = uint8_t(keyhihihi & 0xFF);
+	data[2] = uint8_t((keyhihilo >> 8) & 0xFF);
+	data[3] = uint8_t(keyhihilo & 0xFF);
+	data[4] = uint8_t((keyhilo >> 24) & 0xFF);
+	data[5] = uint8_t((keyhilo >> 16) & 0xFF);
+	data[6] = uint8_t((keyhilo >> 8) & 0xFF);
+	data[7] = uint8_t(keyhilo & 0xFF);
+	data[8] = uint8_t((keylohi >> 24) & 0xFF);
+	data[9] = uint8_t((keylohi >> 16) & 0xFF);
+	data[10] = uint8_t((keylohi >> 8) & 0xFF);
+	data[11] = uint8_t(keylohi & 0xFF);
+	data[12] = uint8_t((keylolo >> 24) & 0xFF);
+	data[13] = uint8_t((keylolo >> 16) & 0xFF);
+	data[14] = uint8_t((keylolo >> 8) & 0xFF);
+	data[15] = uint8_t(keylolo & 0xFF);
+	std::string result((char *)data, 16);
+#else
+	uint16_t keyhilo = uint16_t(keyhi & 0xFFFF);
+	uint16_t keyhihi = uint16_t((keyhi >> 16) & 0xFFFF);
+	uint8_t data[8];
+	data[0] = uint8_t((keyhihi >> 8) & 0xFF);
+	data[1] = uint8_t(keyhihi & 0xFF);
+	data[2] = uint8_t((keyhilo >> 8) & 0xFF);
+	data[3] = uint8_t(keyhilo & 0xFF);
+	data[4] = uint8_t((keylo >> 24) & 0xFF);
+	data[5] = uint8_t((keylo >> 16) & 0xFF);
+	data[6] = uint8_t((keylo >> 8) & 0xFF);
+	data[7] = uint8_t(keylo & 0xFF);
+	std::string result((char *)data, 8);
+#endif
+	return result;
+}
+
+void Key::from_string_for_rocksdb(std::string& keystr) {
+#ifdef LARGE_KEY
+	uint16_t keyhihihi = (uint16_t(uint8_t(keystr[0])) << 8) | (uint16_t(uint8_t(keystr[1])));
+	uint16_t keyhihilo = (uint16_t(uint8_t(keystr[2])) << 8) | (uint16_t(uint8_t(keystr[3])));
+	keyhihi = (uint32_t(keyhihihi) << 16) | uint32_t(keyhihilo);
+	keyhilo = (uint32_t(uint8_t(keystr[4])) << 24) | (uint32_t(uint8_t(keystr[5])) << 16) |\
+			  (uint32_t(uint8_t(keystr[6])) << 8) | uint32_t(uint8_t(keystr[7]));
+	keylohi = (uint32_t(uint8_t(keystr[8])) << 24) | (uint32_t(uint8_t(keystr[9])) << 16) |\
+			  (uint32_t(uint8_t(keystr[10])) << 8) | uint32_t(uint8_t(keystr[11]));
+	keylolo = (uint32_t(uint8_t(keystr[12])) << 24) | (uint32_t(uint8_t(keystr[13])) << 16) |\
+			  (uint32_t(uint8_t(keystr[14])) << 8) | uint32_t(uint8_t(keystr[15]));
+#else
+	uint16_t keyhihi = (uint16_t(uint8_t(keystr[0])) << 8) | (uint16_t(uint8_t(keystr[1])));
+	uint16_t keyhilo = (uint16_t(uint8_t(keystr[2])) << 8) | (uint16_t(uint8_t(keystr[3])));
+	keyhi = (uint32_t(keyhihi) << 16) | uint32_t(keyhilo);
+	keylo = (uint32_t(uint8_t(keystr[4])) << 24) | (uint32_t(uint8_t(keystr[5])) << 16) |\
+			  (uint32_t(uint8_t(keystr[6])) << 8) | uint32_t(uint8_t(keystr[7]));
+#endif
+}
+
+/*Key::model_key_t Key::to_model_key_for_train() const {
     Key::model_key_t model_key;
 #ifdef LARGE_KEY
 	model_key[0] = keylolo;
@@ -163,9 +221,9 @@ Key::model_key_t Key::to_model_key() const {
 	model_key[1] = keyhi; // higher priority	
 #endif
     return model_key;
-}
+}*/
 
-int64_t Key::to_int() const {
+int64_t Key::to_int_for_hash() const {
 #ifdef LARGE_KEY
 	return ((int64_t(keylohi)<<32) | int64_t(keylolo)) ^ ((int64_t(keyhihi)<<32) | int64_t(keyhilo));
 #else
@@ -173,7 +231,7 @@ int64_t Key::to_int() const {
 #endif
 }
 
-std::string Key::to_string() const {
+std::string Key::to_string_for_print() const {
 	std::stringstream ss;
 #ifdef LARGE_KEY
 	ss << keyhihi << "," << keyhilo << "," << keylohi << "," << keylolo;
@@ -349,10 +407,3 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) volatile {
 	return 8;
 #endif
 }
-
-/*uint32_t Key::size() const {
-#ifdef LARGE_KEY
-	return 16;
-#else
-	return 8;
-}*/

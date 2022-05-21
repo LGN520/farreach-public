@@ -29,8 +29,10 @@ class Val {
 
   /*rocksdb::Slice to_slice() const; // NOTE: slice is shallow copy
   void from_slice(rocksdb::Slice& slice);*/
+  std::string to_string_for_rocksdb(uint32_t seq);
+  uint32_t from_string_for_rocksdb(std::string valstr); // return seq
 
-  void from_string(std::string& str);
+  //void from_string(std::string& str);
 
   // operation on packet buf (1B vallength + valdata)
   uint32_t deserialize(const char *buf, uint32_t buflen);
@@ -41,11 +43,13 @@ class Val {
 
   uint16_t get_bytesnum() const;
 
-  std::string to_string() const; // For print
+  std::string to_string_for_print() const; // For print
 
   //uint32_t val_length; // val_length (# of bytes)
   uint16_t val_length; // val_length (# of bytes)
   char *val_data;
 } PACKED;
+
+typedef Val val_t;
 
 #endif

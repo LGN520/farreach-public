@@ -1,25 +1,3 @@
-/*
- * The code is part of the XIndex project.
- *
- *    Copyright (C) 2020 Institute of Parallel and Distributed Systems (IPADS), Shanghai Jiao Tong University.
- *    All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * For more about XIndex, visit:
- *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
- */
-
 #include <cassert>
 #include <chrono>
 #include <cstring>
@@ -136,37 +114,6 @@
 // 0: not test
 #if 1
 #define TEST_AGG_THPT
-#endif
-
-// 1: original xindex with fixed 8B value and no snapshot
-// 0: extended version with variable length value and snapshot
-#if 0
-#define ORIGINAL_XINDEX
-#endif
-
-#ifndef ORIGINAL_XINDEX
-// v1: extended_xindex: max memory for varlen value + multi-versioning snapshot
-
-// v2: extended_xindex_dynamic: extended_xindex + dynamic memory for varlen value (xindex_util.h)
-// 1: use dynamic memory for variable-length value to save space by read-write locking
-// 0: use max memory for vaiable-length value to trade space for performance by optimistic locking
-#if 1
-#define DYNAMIC_MEMORY
-#endif
-
-// v3: extended_xindex_dynamic_seq: extended_xindex_dynamic + seq mechanism for serializability (xindex*.h)
-// 1: use seq mechanism for serizability under potential packet loss
-#ifdef DYNAMIC_MEMORY
-#if 1
-#define SEQ_MECHANISM
-#endif
-#endif
-
-// For each version: affect extended_xindex/xindex_group*.h + xindex_root*.h
-// 1: use bloom filter to optimize operation on newly inserted data in buffer
-#if 0
-#define BF_OPTIMIZATION
-#endif
 #endif
 
 #if defined(NDEBUGGING)

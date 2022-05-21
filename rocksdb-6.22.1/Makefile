@@ -412,7 +412,7 @@ WARNING_FLAGS = -W -Wextra -Wall -Wsign-compare -Wshadow \
   -Wunused-parameter
 
 ifeq (,$(filter amd64, $(MACHINE)))
-	C_WARNING_FLAGS = -Wstrict-prototypes
+	#C_WARNING_FLAGS = -Wstrict-prototypes
 endif
 
 ifdef USE_CLANG
@@ -425,7 +425,7 @@ ifeq ($(PLATFORM), OS_OPENBSD)
 endif
 
 ifndef DISABLE_WARNING_AS_ERROR
-	WARNING_FLAGS += -Werror
+	#WARNING_FLAGS += -Werror
 endif
 
 

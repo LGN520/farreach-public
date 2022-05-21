@@ -54,16 +54,17 @@ LDDIR += $(DPDK_LDDIR)
 ##############################################################################
 # RocksDB configuration
 
-#ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
-#ROCKSDB_LDDIR += -L../rocksdb-6.22.1
+ROCKSDB_INCDIR += -I../rocksdb-6.22.1/include
+ROCKSDB_LDDIR += -L../rocksdb-6.22.1
 # V2: Bourbon
 #ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
 #ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
-#ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
 
-#INCDIR += $(ROCKSDB_INCDIR)
-#LDDIR += $(ROCKSDB_LDDIR)
-#LDLIBS += $(ROCKSDB_LDLIBS)
+ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
+
+INCDIR += $(ROCKSDB_INCDIR)
+LDDIR += $(ROCKSDB_LDDIR)
+LDLIBS += $(ROCKSDB_LDLIBS)
 
 ##############################################################################
 # MKL configuration
@@ -115,6 +116,9 @@ CLEAN += special_case.o
 DEPS += latency_helper.d
 CLEAN += latency_helper.o
 
+DEPS += rocksdb_wrapper.d
+CLEAN += rocksdb_wrapper.o
+
 INIPARSER_OBJECTS := iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
 DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
 CLEAN += iniparser/iniparser.o iniparser/dictionary.o iniparser/iniparser_wrapper.o
@@ -136,7 +140,7 @@ CLEAN += prepare.o prepare
 #DEPS += server.d
 #CLEAN += server.o server
 
-localtest: localtest.o key.o val.o $(INIPARSER_OBJECTS)
+localtest: localtest.o key.o val.o $(INIPARSER_OBJECTS) rocksdb_wrapper.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += localtest.d
 CLEAN += localtest.o localtest
