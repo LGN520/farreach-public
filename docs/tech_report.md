@@ -56,8 +56,11 @@
 	+ Xindex with tofino-based transmission delay (DPDK) + in-memory KVS + variable length value w/ snapshot + YCSB
 - [netreach-voting-v3-memory](./netreach-voting-v3-memory.md)
 	+ Xindex with tofino-based netbuffer (DPDK) + in-memory KVS + variable length value w/ snapshot + YCSB + majority voting + data-plane-based eviction optimization
-- [netreach-v4](./netreach-voting-v4.md)
-	+ Xindex with tofino-based netbuffer (DPDK) + in-memory KVS + variable length value w/ snapshot + YCSB + control-plane-based cache update (cope from netreach-voting-v3-memory, refer to netreach-voting-v2)
+- [netreach-v4-xindex](./netreach-v4-xindex.md)
+	+ Xindex with tofino-based netbuffer (DPDK) + in-memory KVS (XIndex) + variable length value w/ snapshot + YCSB + control-plane-based cache update (copy from netreach-voting-v3-memory, refer to netreach-voting-v2)
+- [netreach-v4-lsm](./netreach-v4-lsm.md)
+	+ Xindex with tofino-based netbuffer (DPDK) + LSM-based KVS (rocksdb) + variable length value w/ snapshot + YCSB + control-plane-based cache update (copy from netreach-v4-xindex)
+	+ NOTE: netreach-v4-lsm should have the same in-switch implementation as in netreach-v4-xindex, which only changes server-side implementation
 
 ## Global Configuration
 
