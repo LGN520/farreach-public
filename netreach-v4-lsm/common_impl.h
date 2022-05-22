@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "key.h"
+#include "val.h"
 #include "packet_format_impl.h"
 #include "socket_helper.h"
 #include "message_queue_impl.h"
@@ -15,43 +16,35 @@
  * Class and alias
  */
 
-typedef Key index_key_t;
-#ifdef ORIGINAL_XINDEX
-typedef uint64_t val_t;
-#else
-#include "val.h"
-typedef Val val_t;
-#endif
-
-typedef GetRequest<index_key_t> get_request_t;
-typedef PutRequest<index_key_t, val_t> put_request_t;
-typedef DelRequest<index_key_t> del_request_t;
-typedef ScanRequest<index_key_t> scan_request_t;
-typedef GetResponse<index_key_t, val_t> get_response_t;
-typedef PutResponse<index_key_t> put_response_t;
-typedef DelResponse<index_key_t> del_response_t;
-typedef ScanResponseSplit<index_key_t, val_t> scan_response_split_t;
-typedef GetRequestPOP<index_key_t> get_request_pop_t;
-typedef GetRequestNLatest<index_key_t> get_request_nlatest_t;
-typedef GetResponseLatestSeq<index_key_t, val_t> get_response_latest_seq_t;
-typedef GetResponseLatestSeqInswitchCase1<index_key_t, val_t> get_response_latest_seq_inswitch_case1_t;
-typedef GetResponseDeletedSeq<index_key_t, val_t> get_response_deleted_seq_t;
-typedef GetResponseDeletedSeqInswitchCase1<index_key_t, val_t> get_response_deleted_seq_inswitch_case1_t;
-typedef PutRequestSeq<index_key_t, val_t> put_request_seq_t;
-typedef PutRequestPopSeq<index_key_t, val_t> put_request_pop_seq_t;
-typedef PutRequestSeqInswitchCase1<index_key_t, val_t> put_request_seq_inswitch_case1_t;
-typedef PutRequestSeqCase3<index_key_t, val_t> put_request_seq_case3_t;
-typedef PutRequestPopSeqCase3<index_key_t, val_t> put_request_pop_seq_case3_t;
-typedef DelRequestSeq<index_key_t> del_request_seq_t;
-typedef DelRequestSeqInswitchCase1<index_key_t, val_t> del_request_seq_inswitch_case1_t;
-typedef DelRequestSeqCase3<index_key_t> del_request_seq_case3_t;
-typedef ScanRequestSplit<index_key_t> scan_request_split_t;
-typedef CachePop<index_key_t, val_t> cache_pop_t;
-typedef CachePopInswitch<index_key_t, val_t> cache_pop_inswitch_t;
-typedef CachePopInswitchAck<index_key_t> cache_pop_inswitch_ack_t;
-typedef CacheEvict<index_key_t, val_t> cache_evict_t;
-typedef CacheEvictAck<index_key_t> cache_evict_ack_t;
-typedef CacheEvictCase2<index_key_t, val_t> cache_evict_case2_t;
+typedef GetRequest<netreach_key_t> get_request_t;
+typedef PutRequest<netreach_key_t, val_t> put_request_t;
+typedef DelRequest<netreach_key_t> del_request_t;
+typedef ScanRequest<netreach_key_t> scan_request_t;
+typedef GetResponse<netreach_key_t, val_t> get_response_t;
+typedef PutResponse<netreach_key_t> put_response_t;
+typedef DelResponse<netreach_key_t> del_response_t;
+typedef ScanResponseSplit<netreach_key_t, val_t> scan_response_split_t;
+typedef GetRequestPOP<netreach_key_t> get_request_pop_t;
+typedef GetRequestNLatest<netreach_key_t> get_request_nlatest_t;
+typedef GetResponseLatestSeq<netreach_key_t, val_t> get_response_latest_seq_t;
+typedef GetResponseLatestSeqInswitchCase1<netreach_key_t, val_t> get_response_latest_seq_inswitch_case1_t;
+typedef GetResponseDeletedSeq<netreach_key_t, val_t> get_response_deleted_seq_t;
+typedef GetResponseDeletedSeqInswitchCase1<netreach_key_t, val_t> get_response_deleted_seq_inswitch_case1_t;
+typedef PutRequestSeq<netreach_key_t, val_t> put_request_seq_t;
+typedef PutRequestPopSeq<netreach_key_t, val_t> put_request_pop_seq_t;
+typedef PutRequestSeqInswitchCase1<netreach_key_t, val_t> put_request_seq_inswitch_case1_t;
+typedef PutRequestSeqCase3<netreach_key_t, val_t> put_request_seq_case3_t;
+typedef PutRequestPopSeqCase3<netreach_key_t, val_t> put_request_pop_seq_case3_t;
+typedef DelRequestSeq<netreach_key_t> del_request_seq_t;
+typedef DelRequestSeqInswitchCase1<netreach_key_t, val_t> del_request_seq_inswitch_case1_t;
+typedef DelRequestSeqCase3<netreach_key_t> del_request_seq_case3_t;
+typedef ScanRequestSplit<netreach_key_t> scan_request_split_t;
+typedef CachePop<netreach_key_t, val_t> cache_pop_t;
+typedef CachePopInswitch<netreach_key_t, val_t> cache_pop_inswitch_t;
+typedef CachePopInswitchAck<netreach_key_t> cache_pop_inswitch_ack_t;
+typedef CacheEvict<netreach_key_t, val_t> cache_evict_t;
+typedef CacheEvictAck<netreach_key_t> cache_evict_ack_t;
+typedef CacheEvictCase2<netreach_key_t, val_t> cache_evict_case2_t;
 
 /*
  * Constants
@@ -78,9 +71,11 @@ char client_workload_dir[256];
 size_t per_client_per_period_max_sending_rate;
 
 // server: loading phase
-uint32_t split_n;
-uint32_t load_n;
+//uint32_t split_n;
+//uint32_t load_n;
 char server_load_workload_dir[256];
+char raw_load_workload_filename[256]; // used by split_workload for loading phase
+char raw_run_workload_filename[256]; // used by split_workload for transaction phase
 
 // server: transaction phase
 uint32_t server_num = 1;
@@ -165,12 +160,10 @@ inline void parse_ini(const char* config_file) {
 	// global
 	workload_name = ini.get_workload_name();
 	printf("workload_name: %s\n", workload_name);
-#ifndef ORIGINAL_XINDEX
 	val_t::MAX_VALLEN = ini.get_max_vallen();
 	COUT_VAR(val_t::MAX_VALLEN);
 	val_t::MAX_VALLEN = ini.get_max_vallen();
 	COUT_VAR(val_t::MAX_VALLEN);
-#endif
 
 	// client
 	client_num = ini.get_client_num();
@@ -191,22 +184,22 @@ inline void parse_ini(const char* config_file) {
 	printf("client_workload_dir: %s\n", client_workload_dir);
 
 	// server: loading phase
-	split_n = ini.get_split_num();
-	INVARIANT(split_n >= 2);
-	load_n = split_n - 1;
-	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(split_n)); // get the split directory for loading phase
-	struct stat dir_stat;
-	if (!(stat(server_load_workload_dir, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode))) {
-		printf("Output directory does not exist: %s\n", server_load_workload_dir);
-		exit(-1);
-	}
-	COUT_VAR(split_n);
-	COUT_VAR(load_n);
+	//split_n = ini.get_split_num();
+	//INVARIANT(split_n >= 2);
+	//load_n = split_n - 1;
+	//LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(split_n)); // get the split directory for loading phase
+	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(server_num)); // get the split directory for loading phase
+	LOAD_RAW_WORKLOAD(raw_load_workload_filename, workload_name);
+	RUN_RAW_WORKLOAD(raw_run_workload_filename, workload_name);
+	//COUT_VAR(split_n);
+	//COUT_VAR(load_n);
 	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);
+	printf("raw_load_workload_filename for loading phase: %s\n", raw_load_workload_filename);
+	printf("raw_run_workload_filename for transaction phase: %s\n", raw_run_workload_filename);
 
 	// server: transaction phase
 	server_num = ini.get_server_num();
-	INVARIANT(server_num >= load_n);
+	//INVARIANT(server_num >= load_n);
 	server_port_start = ini.get_server_port();
 	server_ip = ini.get_server_ip();
 	ini.get_server_mac(server_macaddr);
@@ -253,10 +246,8 @@ inline void parse_ini(const char* config_file) {
 	switchos_ptf_snapshotserver_port = ini.get_switchos_snapshotserver_port();
 	//switchos_snapshotdataserver_port = ini.get_switchos_snapshotdataserver_port();
 	COUT_VAR(switch_kv_bucket_num);
-#ifndef ORIGINAL_XINDEX
 	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
-#endif
 	COUT_VAR(switchos_popserver_port);
 	//COUT_VAR(switchos_paramserver_port);
 	printf("switchos ip: %s\n", switchos_ip);

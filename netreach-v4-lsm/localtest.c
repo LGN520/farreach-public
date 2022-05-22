@@ -13,12 +13,9 @@
 #include <sys/time.h> // struct timeval
 
 #include "helper.h"
-#include "key.h"
-#include "val.h"
-#include "iniparser/iniparser_wrapper.h"
+#include "rocksdb_wrapper.h"
 
 #include "common_impl.h"
-#include "rocksdb_wrapper.h"
 
 struct alignas(CACHELINE_SIZE) SFGParam {
   uint64_t throughput;

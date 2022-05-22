@@ -77,14 +77,14 @@ void IniparserWrapper::get_client_mac(uint8_t *macaddr) {
 
 // Server
 
-uint32_t IniparserWrapper::get_split_num() {
+/*uint32_t IniparserWrapper::get_split_num() {
 	int tmp = iniparser_getint(ini, "server:split_num", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [server:split_num]: %d\n", tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);
-}
+}*/
 
 uint32_t IniparserWrapper::get_server_num() {
 	int tmp = iniparser_getint(ini, "server:server_num", -1);

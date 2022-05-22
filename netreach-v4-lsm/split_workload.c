@@ -5,7 +5,8 @@
 #include <sys/stat.h>
 #include "ycsb/parser.h"
 #include "helper.h"
-#include "iniparser/iniparser_wrapper.h"
+
+#include "common_impl.h"
 
 int main(int argc, char **argv) {
 
@@ -14,21 +15,19 @@ int main(int argc, char **argv) {
 		exit(-1);
 	}
 
-	int op = 0; // load
-	if (strcmp(argv[1], "run") == 0) {
+	int op = -1;
+	if (strcmp(argv[1], "load") == 0) {
+		op = 0; // load
+	}
+	else if (strcmp(argv[1], "run") == 0) {
 		op = 1; // run
 	}
-
-	IniparserWrapper ini;
-	ini.load("config.ini");
-	const char *workload_name = ini.get_workload_name();
-	uint32_t splitnum = 0;
-	if (op == 0) {
-		splitnum = ini.get_split_num();
-	}
 	else {
-		splitnum = ini.get_client_num();
+		printf("Usage: ./split_workload load/run\n");
+		exit(-1);
 	}
+
+	parse_ini("config.ini");
 
 	/*char prefix[256];
 	memset(prefix, '\0', 256);
@@ -40,16 +39,20 @@ int main(int argc, char **argv) {
 		strncpy(prefix, filename, delimiter - filename);
 	}*/
 
+	uint32_t splitnum;
 	char output_dir[256];
 	char filename[256];
-	if (op == 0) {
-		LOAD_SPLIT_DIR(output_dir, workload_name, splitnum);
-		LOAD_RAW_WORKLOAD(filename, workload_name);
+	if (op == 0) { // load
+		splitnum = server_num;
+		memcpy(output_dir, server_load_workload_dir, 256);
+		memcpy(filename, raw_load_workload_filename, 256);
 	}
-	else {
-		RUN_SPLIT_DIR(output_dir, workload_name, splitnum);
-		RUN_RAW_WORKLOAD(filename, workload_name);
+	else if (op == 1) { // transaction / run
+		splitnum = client_num;
+		memcpy(output_dir, client_workload_dir, 256);
+		memcpy(filename, raw_run_workload_filename, 256);
 	}
+
 	struct stat dir_stat;
 	if (stat(output_dir, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode)) {
 		printf("Output directory exists: %s\n", output_dir);
@@ -62,7 +65,6 @@ int main(int argc, char **argv) {
 			exit(-1);
 		}
 	}
-
 
 	char *output_names[splitnum] = {nullptr};
 	FILE *fps[splitnum] = {nullptr};
@@ -91,7 +93,7 @@ int main(int argc, char **argv) {
 	}
 
 	for (uint32_t i = 0; i < splitnum; i++) {
-		delete output_names[i];
+		delete [] output_names[i];
 		output_names[i] = nullptr;
 		fclose(fps[i]);
 		fps[i] = nullptr;

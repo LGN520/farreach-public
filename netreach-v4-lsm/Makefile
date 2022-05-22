@@ -60,11 +60,10 @@ ROCKSDB_LDDIR += -L../rocksdb-6.22.1
 #ROCKSDB_INCDIR += -I../rocksdb-6.22.1-model-v2/include
 #ROCKSDB_LDDIR += -L../rocksdb-6.22.1-model-v2
 
-ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz
+ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz -ldl
 
 INCDIR += $(ROCKSDB_INCDIR)
 LDDIR += $(ROCKSDB_LDDIR)
-LDLIBS += $(ROCKSDB_LDLIBS)
 
 ##############################################################################
 # MKL configuration
@@ -89,8 +88,7 @@ include mk/recipes.mk
 
 DEPS :=
 CLEAN :=
-#TARGETS := prepare split_workload ycsb_local_client ycsb_remote_client ycsb_server
-TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_server switchos controller dpdktest_client dpdktest_server socktest_client socktest_server
+TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_loader ycsb_server switchos controller dpdktest_client dpdktest_server socktest_client socktest_server
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
@@ -141,19 +139,19 @@ CLEAN += prepare.o prepare
 #CLEAN += server.o server
 
 localtest: localtest.o key.o val.o $(INIPARSER_OBJECTS) rocksdb_wrapper.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += localtest.d
 CLEAN += localtest.o localtest
 
 split_workload: split_workload.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += split_workload.d
 CLEAN += split_workload.o split_workload
 
-#ycsb_local_client: ycsb_local_client.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-#DEPS += ycsb_local_client.d
-#CLEAN += ycsb_local_client.o ycsb_local_client
+ycsb_loader: ycsb_loader.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) rocksdb_wrapper.o
+	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
+DEPS += ycsb_loader.d
+CLEAN += ycsb_loader.o ycsb_loader
 
 ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o latency_helper.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@

@@ -9,7 +9,7 @@ microbench
 prepare
 localtest
 split_workload
-ycsb_local_client
+ycsb_loader
 ycsb_remote_client
 ycsb_server
 *.log

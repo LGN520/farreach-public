@@ -20,25 +20,7 @@
 #include "helper.h"
 #include "dpdk_helper.h"
 #include "ycsb/parser.h"
-
-#ifdef ORIGINAL_XINDEX
-#include "original_xindex/xindex.h"
-#include "original_xindex/xindex_impl.h"
-#else
 #include "val.h"
-#ifdef DYNAMIC_MEMORY
-#ifdef SEQ_MECHANISM
-#include "extended_xindex_dynamic_seq/xindex.h"
-#include "extended_xindex_dynamic_seq/xindex_impl.h"
-#else
-#include "extended_xindex_dynamic/xindex.h"
-#include "extended_xindex_dynamic/xindex_impl.h"
-#endif
-#else
-#include "extended_xindex/xindex.h"
-#include "extended_xindex/xindex_impl.h"
-#endif
-#endif
 
 #define MAX_VERSION 0xFFFFFFFFFFFFFFFF
 
@@ -47,10 +29,7 @@
 
 /* class and alias */
 
-typedef xindex::XIndex<index_key_t, val_t> xindex_t;
-
 struct alignas(CACHELINE_SIZE) LoadSFGParam {
-	xindex_t *table;
 	uint16_t thread_id;
 };
 typedef LoadSFGParam load_sfg_param_t;
@@ -83,8 +62,6 @@ void kill(int signum);
 int main(int argc, char **argv) {
   parse_ini("config.ini");
   parse_control_ini("control_type.ini");
-  //parse_args(argc, argv);
-  //xindex::init_options(); // init options of rocksdb
   
   /* (1) prepare phase */
 
