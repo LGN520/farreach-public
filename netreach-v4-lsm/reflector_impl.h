@@ -50,7 +50,7 @@ void *run_reflector_popserver(void *param) {
 	// DPDK
 	struct rte_mempool *tx_mbufpool = NULL;
 	dpdk_queue_setup(0, server_num, &tx_mbufpool);
-	generate_udp_fdir_rule(0, server_num, reflector_port);
+	//generate_udp_fdir_rule(0, server_num, reflector_port);
 	INVARIANT(tx_mbufpool != NULL);
 	uint16_t burst_size = 256;
 	struct rte_mbuf *sent_pkts[burst_size];

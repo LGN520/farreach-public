@@ -75,7 +75,7 @@ void prepare_dpdk() {
 }
 
 void run_server() {
-  index_key_t testkey(1, 1, 1, 1);
+  netreach_key_t testkey(1, 1, 1, 1);
   char valbytes[Val::SWITCH_MAX_VALLEN];
   memset(valbytes, 0xff, Val::SWITCH_MAX_VALLEN);
   val_t testval(valbytes, Val::SWITCH_MAX_VALLEN);

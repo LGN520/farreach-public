@@ -23,7 +23,6 @@
 #include <mutex>
 
 #include "helper.h"
-#include "snapshot_helper.h"
 
 #include "common_impl.h"
 
@@ -47,8 +46,8 @@ size_t controller_expected_finish_subthreads = 0;
 
 // Keep atomicity for the following variables
 std::mutex mutex_for_pop;
-//std::set<index_key_t> * volatile controller_cached_keyset_list = NULL; // TODO: Comment it after checking server.cached_keyset_list
-//std::map<index_key_t, uint16_t> volatile controller_cachedkey_serveridx_map; // TODO: Evict removes the corresponding kv pair
+//std::set<netreach_key_t> * volatile controller_cached_keyset_list = NULL; // TODO: Comment it after checking server.cached_keyset_list
+//std::map<netreach_key_t, uint16_t> volatile controller_cachedkey_serveridx_map; // TODO: Evict removes the corresponding kv pair
 //std::map<uint16_t, uint32_t> volatile controller_serveridx_subthreadidx_map; // Not used
 // Message queue between controller.popservers with controller.popclient (connected with switchos.popserver)
 MessagePtrQueue<cache_pop_t> controller_cache_pop_ptr_queue(MQ_SIZE);
@@ -161,7 +160,7 @@ void prepare_controller() {
 	// prepare popserver socket
 	prepare_tcpserver(controller_popserver_tcpsock, true, controller_popserver_port, server_num, "controller.popserver"); // MAX_PENDING_CONNECTION = server num
 
-	/*controller_cached_keyset_list = new std::set<index_key_t>[server_num];
+	/*controller_cached_keyset_list = new std::set<netreach_key_t>[server_num];
 	for (size_t i = 0; i < server_num; i++) {
 		controller_cached_keyset_list[i].clear();
 	}*/
@@ -268,10 +267,10 @@ void *run_controller_popserver_subthread(void *param) {
 	uint16_t vallen = 0;
 	bool with_vallen = false;
 	bool is_cached_before = false; // TODO: remove
-	//index_key_t tmpkey(0, 0, 0, 0);
+	//netreach_key_t tmpkey(0, 0, 0, 0);
 	const int arrive_optype_bytes = sizeof(uint8_t);
-	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint32_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint16_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	while (true) {
 		if (!direct_parse) {
@@ -321,7 +320,7 @@ void *run_controller_popserver_subthread(void *param) {
 				// Add key into cached keyset (TODO: need to be protected by mutex lock)
 				//controller_cached_keyset_list[tmp_cache_pop_ptr->serveridx()].insert(tmp_cache_pop_ptr->key());
 				/*if (controller_cachedkey_serveridx_map.find(tmp_cache_pop->key()) == controller_cachedkey_serveridx_map.end()) {
-					controller_cachedkey_serveridx_map.insert(std::pair<index_key_t, uint32_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
+					controller_cachedkey_serveridx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
 				}
 				else {
 					printf("[controller] Receive duplicate key from server %ld!", tmp_cache_pop_ptr->serveridx());
@@ -435,20 +434,20 @@ void *run_controller_evictserver(void *param) {
 	bool is_broken = false;
 	uint8_t optype = 0;
 	bool with_optype = false;
-	////index_key_t tmpkey = index_key_t();
+	////netreach_key_t tmpkey = netreach_key_t();
 	//uint32_t vallen = 0;
 	uint16_t vallen = 0;
 	bool with_vallen = false;
 	//uint16_t tmpserveridx = 0;
 	bool is_waitack = false;
 	const int arrive_optype_bytes = sizeof(uint8_t);
-	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint32_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint16_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	char evictclient_buf[MAX_BUFSIZE];
 	int evictclient_cur_recv_bytes = 0;
-	//const int evictclient_arrive_key_bytes = arrive_optype_bytes + sizeof(index_key_t) + DEBUG_BYTES;
-	const int evictclient_arrive_key_bytes = arrive_optype_bytes + sizeof(index_key_t);
+	//const int evictclient_arrive_key_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + DEBUG_BYTES;
+	const int evictclient_arrive_key_bytes = arrive_optype_bytes + sizeof(netreach_key_t);
 	while (controller_running) {
 		if (!direct_parse) {
 			int recvsize = 0;
@@ -561,7 +560,7 @@ void *run_controller_evictserver(void *param) {
 				is_broken = false;
 				optype = 0;
 				with_optype = false;
-				//tmpkey = index_key_t();
+				//tmpkey = netreach_key_t();
 				vallen = 0;
 				with_vallen = false;
 				//tmpserveridx = -1;

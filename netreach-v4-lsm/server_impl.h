@@ -5,16 +5,18 @@
 
 #include <vector>
 #include "helper.h"
+#include "key.h"
+#include "val.h"
 
 #include "deleted_set_impl.h"
-#include "snapshot_helper.h"
+#include "snapshot_record.h"
 #include "concurrent_map_impl.h"
+#include "rocksdb_wrapper.h"
 
-typedef DeletedSet<index_key_t, uint32_t> deleted_set_t;
-typedef ConcurrentMap<index_key_t, snapshot_record_t> concurrent_snapshot_map_t;
+typedef DeletedSet<netreach_key_t, uint32_t> deleted_set_t;
+typedef ConcurrentMap<netreach_key_t, snapshot_record_t> concurrent_snapshot_map_t;
 
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
-  xindex_t *table;
   uint16_t serveridx;
   size_t throughput;
   std::vector<double> latency_list;
@@ -23,6 +25,8 @@ struct alignas(CACHELINE_SIZE) ServerWorkerParam {
 #endif
 };
 typedef ServerWorkerParam server_worker_param_t;
+
+RocksdbWrapper *db_wrappers = NULL;
 
 // server.receiver in transaction phase
 // NOTE: DPDK does not support struct rte_mbuf* volatile, thus receiver/worker must ensure the change of memory during write/read pkts_list
@@ -33,7 +37,7 @@ std::vector<double> receiver_latency_list;*/
 
 // Per-server popclient <-> one popserver in controller
 int * server_popclient_tcpsock_list = NULL;
-std::set<index_key_t> * server_cached_keyset_list = NULL;
+std::set<netreach_key_t> * server_cached_keyset_list = NULL;
 
 // server.evictservers <-> controller.evictserver.evictclients
 //int * server_evictserver_tcpsock_list = NULL;
@@ -46,7 +50,7 @@ MessagePtrQueue<cache_evict_ack_t> * server_cache_evict_ack_ptr_queue_list = NUL
 // snapshot
 int server_consnapshotserver_tcpsock = -1;
 // per-server snapshot_map and snapshot_rcu
-//std::map<index_key_t, snapshot_record_t> * volatile server_snapshot_maps = NULL;
+//std::map<netreach_key_t, snapshot_record_t> * volatile server_snapshot_maps = NULL;
 concurrent_snapshot_map_t * volatile server_snapshot_maps = NULL;
 uint32_t volatile * server_snapshot_rcus = NULL;
 bool volatile server_issnapshot = false; // TODO: it should be atomic
@@ -66,6 +70,11 @@ void close_server();
 void prepare_server() {
 	printf("[server] prepare start\n");
 
+	RocksdbWrapper::prepare_rocksdb();
+
+	db_wrappers = new RocksdbWrapper[server_num];
+	INVARIANT(db_wrappers != NULL);
+
 	// Prepare pkts and stats for receiver (based on ring buffer)
 	// From receiver to each server
 	/*server_worker_pkts_list = new struct rte_mbuf* volatile *[server_num];
@@ -84,7 +93,7 @@ void prepare_server() {
 
 	// Prepare for cache population
 	server_popclient_tcpsock_list = new int[server_num];
-	server_cached_keyset_list = new std::set<index_key_t>[server_num];
+	server_cached_keyset_list = new std::set<netreach_key_t>[server_num];
 	for (size_t i = 0; i < server_num; i++) {
 		create_tcpsock(server_popclient_tcpsock_list[i], "server.popclient");
 
@@ -182,7 +191,7 @@ void close_server() {
 
 	struct rte_mbuf *received_pkts[32];
 	memset((void *)received_pkts, 0, 32*sizeof(struct rte_mbuf *));
-	index_key_t startkey, endkey;
+	netreach_key_t startkey, endkey;
 	struct timespec receiver_t1, receiver_t2, receiver_t3;
 	while (transaction_running) {
 		CUR_TIME(receiver_t1);
@@ -249,14 +258,16 @@ static int run_server_worker(void * param) {
   // Parse param
   server_worker_param_t &thread_param = *(server_worker_param_t *)param;
   uint16_t serveridx = thread_param.serveridx; // [0, server_num-1]
-  xindex_t *table = thread_param.table;
+
+  bool is_existing = db_wrappers[serveridx].open(serveridx);
+  INVARIANT(is_existing);
 
   int res = 0;
 
   // DPDK
   struct rte_mempool *tx_mbufpool = NULL;
   dpdk_queue_setup(0, serveridx, &tx_mbufpool);
-  generate_udp_fdir_rule(0, serveridx, server_port_start + serveridx);
+  //generate_udp_fdir_rule(0, serveridx, server_port_start + serveridx);
   INVARIANT(tx_mbufpool != NULL);
   //struct rte_mbuf *sent_pkt = rte_pktmbuf_alloc(tx_mbufpool); // Send to DPDK port
   //struct rte_mbuf *sent_pkt_wrapper[1] = {sent_pkt};
@@ -275,8 +286,8 @@ static int run_server_worker(void * param) {
   INVARIANT(min_startkeyhihi >= std::numeric_limits<uint32_t>::min() && min_startkeyhihi <= std::numeric_limits<uint32_t>::max());
   INVARIANT(max_endkeyhihi >= std::numeric_limits<uint32_t>::min() && max_endkeyhihi <= std::numeric_limits<uint32_t>::max());
   INVARIANT(max_endkeyhihi >= min_startkeyhihi);
-  index_key_t min_startkey(0, 0, 0, min_startkeyhihi);
-  index_key_t max_endkey(std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), max_endkeyhihi);
+  netreach_key_t min_startkey(0, 0, 0, min_startkeyhihi);
+  netreach_key_t max_endkey(std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), max_endkeyhihi);
 
   // NOTE: controller and switchos should have been launched before servers
   tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
@@ -375,7 +386,7 @@ static int run_server_worker(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					uint32_t tmp_seq = 0;
-					bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
+					bool tmp_stat = db_wrappers[serveridx].get(req.key(), tmp_val, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					get_response_t rsp(req.key(), tmp_val, tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -392,7 +403,7 @@ static int run_server_worker(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					uint32_t tmp_seq = 0;
-					bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
+					bool tmp_stat = db_wrappers[serveridx].get(req.key(), tmp_val, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					if (tmp_stat) { // key exists
 						get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_seq);
@@ -420,7 +431,7 @@ static int run_server_worker(void * param) {
 				{
 					put_request_seq_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
+					bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					put_response_t rsp(req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -435,7 +446,7 @@ static int run_server_worker(void * param) {
 				{
 					del_request_seq_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
-					bool tmp_stat = table->remove(req.key(), serveridx, req.seq());
+					bool tmp_stat = db_wrappers[serveridx].remove(req.key(), req.seq());
 					//COUT_THIS("[server] stat = " << tmp_stat)
 					del_response_t rsp(req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -456,8 +467,8 @@ static int run_server_worker(void * param) {
 					// get verified key range
 					INVARIANT(req.key() <= max_endkey);
 					INVARIANT(req.endkey() >= min_startkey);
-					index_key_t cur_startkey = req.key();
-					index_key_t cur_endkey = req.endkey();
+					netreach_key_t cur_startkey = req.key();
+					netreach_key_t cur_endkey = req.endkey();
 					if (cur_startkey < min_startkey) {
 						cur_startkey = min_startkey;
 					}
@@ -468,17 +479,16 @@ static int run_server_worker(void * param) {
 					// get results from in-memory snapshot in [cur_startkey, cur_endkey]
 					//COUT_THIS("[server.worker] startkey: " << cur_startkey << "endkey: " << cur_endkey().to_string()
 					//		<< "min_startkey: " << min_startkey << "max_endkey: " << max_endkey; // << " num = " << req.num())
-					std::vector<std::pair<index_key_t, snapshot_record_t>> inmemory_results;
-					//size_t tmp_num = table->scan(req.key(), req.num(), results, serveridx);
-					size_t inmemory_num = table->range_scan(cur_startkey, cur_endkey, inmemory_results, serveridx);
+					std::vector<std::pair<netreach_key_t, snapshot_record_t>> inmemory_results;
+					size_t inmemory_num = db_wrappers[serveridx].range_scan(cur_startkey, cur_endkey, inmemory_results);
 					UNUSED(inmemory_num);
 
 					// get results from in-switch snapshot in [cur_startkey, cur_endkey]
-					//std::map<index_key_t, snapshot_record_t> *tmp_server_snapshot_maps = server_snapshot_maps;
+					//std::map<netreach_key_t, snapshot_record_t> *tmp_server_snapshot_maps = server_snapshot_maps;
 					concurrent_snapshot_map_t *tmp_server_snapshot_maps = server_snapshot_maps;
-					std::vector<std::pair<index_key_t, snapshot_record_t>> inswitch_results;
+					std::vector<std::pair<netreach_key_t, snapshot_record_t>> inswitch_results;
 					if (tmp_server_snapshot_maps != NULL) {
-						/*std::map<index_key_t, snapshot_record_t>::iterator iter = tmp_server_snapshot_maps[serveridx].lower_bound(cur_startkey);
+						/*std::map<netreach_key_t, snapshot_record_t>::iterator iter = tmp_server_snapshot_maps[serveridx].lower_bound(cur_startkey);
 						for (; iter != tmp_server_snapshot_maps[serveridx].end() && iter->first <= cur_endkey; iter++) {
 							//inmemory_results.push_back(*iter);
 							inswitch_results.push_back(*iter);
@@ -487,22 +497,22 @@ static int run_server_worker(void * param) {
 					}
 
 					// merge sort w/ seq comparison
-					std::vector<std::pair<index_key_t, val_t>> results;
+					std::vector<std::pair<netreach_key_t, val_t>> results;
 					if (inmemory_results.size() == 0) {
 						for (uint32_t inswitch_idx = 0; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
-							index_key_t &tmpkey = inswitch_results[inswitch_idx].first;
+							netreach_key_t &tmpkey = inswitch_results[inswitch_idx].first;
 							snapshot_record_t &tmprecord = inswitch_results[inswitch_idx].second;
 							if (tmprecord.stat) {
-								results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
+								results.push_back(std::pair<netreach_key_t, val_t>(tmpkey, tmprecord.val));
 							}
 						}
 					}
 					else if (inswitch_results.size() == 0) {
 						for (uint32_t inmemory_idx = 0; inmemory_idx < inmemory_results.size(); inmemory_idx++) {
-							index_key_t &tmpkey = inmemory_results[inmemory_idx].first;
+							netreach_key_t &tmpkey = inmemory_results[inmemory_idx].first;
 							snapshot_record_t &tmprecord = inmemory_results[inmemory_idx].second;
 							if (tmprecord.stat) {
-								results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
+								results.push_back(std::pair<netreach_key_t, val_t>(tmpkey, tmprecord.val));
 							}
 						}
 					}
@@ -512,37 +522,53 @@ static int run_server_worker(void * param) {
 						bool remain_inmemory = false;
 						bool remain_inswitch = false;
 						while (true) {
-							index_key_t &tmp_inmemory_key = inmemory_results[inmemory_idx].first;
+							netreach_key_t &tmp_inmemory_key = inmemory_results[inmemory_idx].first;
 							snapshot_record_t &tmp_inmemory_record = inmemory_results[inmemory_idx].second;
-							index_key_t &tmp_inswitch_key = inswitch_results[inswitch_idx].first;
+							netreach_key_t &tmp_inswitch_key = inswitch_results[inswitch_idx].first;
 							snapshot_record_t &tmp_inswitch_record = inswitch_results[inswitch_idx].second;
-							if ((tmp_inmemory_key < tmp_inswitch_key) && tmp_inmemory_record.stat) {
-								results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+							if (tmp_inmemory_key < tmp_inswitch_key) {
+								if (tmp_inmemory_record.stat) {
+									results.push_back(std::pair<netreach_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+								}
 								inmemory_idx += 1;
 							}
-							else if ((tmp_inswitch_key < tmp_inmemory_key) && tmp_inswitch_record.stat) {
-								results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+							else if (tmp_inswitch_key < tmp_inmemory_key) {
+								if (tmp_inswitch_record.stat) {
+									results.push_back(std::pair<netreach_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+								}
 								inswitch_idx += 1;
 							}
 							else if (tmp_inmemory_key == tmp_inswitch_key) {
-								if (tmp_inmemory_record.stat && tmp_inswitch_record.stat) {
+								/*if (tmp_inmemory_record.stat && tmp_inswitch_record.stat) {
 									if (tmp_inmemory_record.seq >= tmp_inswitch_record.seq) {
-										results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+										results.push_back(std::pair<netreach_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
 										inmemory_idx += 1;
 									}
 									else {
-										results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+										results.push_back(std::pair<netreach_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
 										inswitch_idx += 1;
 									}
 								}
 								else if (tmp_inmemory_record.stat) {
-									results.push_back(std::pair<index_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+									results.push_back(std::pair<netreach_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
 									inmemory_idx += 1;
 								}
 								else if (tmp_inswitch_record.stat) {
-									results.push_back(std::pair<index_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+									results.push_back(std::pair<netreach_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
 									inswitch_idx += 1;
+								}*/
+								if (tmp_inmemory_record.seq >= tmp_inswitch_record.seq) {
+									if (tmp_inmemory_record.stat) {
+										results.push_back(std::pair<netreach_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
+									}
 								}
+								else {
+									if (tmp_inswitch_record.stat) {
+										results.push_back(std::pair<netreach_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
+									}
+								}
+								inmemory_idx += 1;
+								inswitch_idx += 1;
 							}
 
 							if (inmemory_idx >= inmemory_results.size()) {
@@ -556,19 +582,19 @@ static int run_server_worker(void * param) {
 						} // while (true)
 						if (remain_inswitch) {
 							for (; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
-								index_key_t &tmpkey = inswitch_results[inswitch_idx].first;
+								netreach_key_t &tmpkey = inswitch_results[inswitch_idx].first;
 								snapshot_record_t &tmprecord = inswitch_results[inswitch_idx].second;
 								if (tmprecord.stat) {
-									results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
+									results.push_back(std::pair<netreach_key_t, val_t>(tmpkey, tmprecord.val));
 								}
 							}
 						}
 						else if (remain_inmemory) {
 							for (; inmemory_idx < inmemory_results.size(); inmemory_idx++) {
-								index_key_t &tmpkey = inmemory_results[inmemory_idx].first;
+								netreach_key_t &tmpkey = inmemory_results[inmemory_idx].first;
 								snapshot_record_t &tmprecord = inmemory_results[inmemory_idx].second;
 								if (tmprecord.stat) {
-									results.push_back(std::pair<index_key_t, val_t>(tmpkey, tmprecord.val));
+									results.push_back(std::pair<netreach_key_t, val_t>(tmpkey, tmprecord.val));
 								}
 							}
 						}
@@ -590,7 +616,7 @@ static int run_server_worker(void * param) {
 					//COUT_THIS("[server] key = " << req.key().to_string())
 					val_t tmp_val;
 					uint32_t tmp_seq = 0;
-					bool tmp_stat = table->get(req.key(), tmp_val, serveridx, tmp_seq);
+					bool tmp_stat = db_wrappers[serveridx].get(req.key(), tmp_val, tmp_seq);
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
 					get_response_t rsp(req.key(), tmp_val, tmp_stat);
@@ -620,7 +646,7 @@ static int run_server_worker(void * param) {
 				{
 					put_request_pop_seq_t req(buf, recv_size);
 					//COUT_THIS("[server] key = " << req.key().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
+					bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					
 					put_response_t rsp(req.key(), tmp_stat);
@@ -652,10 +678,10 @@ static int run_server_worker(void * param) {
 					put_request_seq_case3_t req(buf, recv_size);
 
 					if (!server_issnapshot) {
-						table->make_snapshot();
+						db_wrappers[serveridx].make_snapshot();
 					}
 
-					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
+					bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 					//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
 					put_response_t rsp(req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -672,11 +698,11 @@ static int run_server_worker(void * param) {
 					put_request_pop_seq_case3_t req(buf, recv_size);
 
 					if (!server_issnapshot) {
-						table->make_snapshot();
+						db_wrappers[serveridx].make_snapshot();
 					}
 
 					//COUT_THIS("[server] key = " << req.key().to_string())
-					bool tmp_stat = table->put(req.key(), req.val(), serveridx, req.seq());
+					bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 					//COUT_THIS("[server] val = " << tmp_val.to_string())
 					put_response_t rsp(req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -705,10 +731,10 @@ static int run_server_worker(void * param) {
 					del_request_seq_case3_t req(buf, recv_size);
 
 					if (!server_issnapshot) {
-						table->make_snapshot();
+						db_wrappers[serveridx].make_snapshot();
 					}
 
-					bool tmp_stat = table->remove(req.key(), serveridx, req.seq());
+					bool tmp_stat = db_wrappers[serveridx].remove(req.key(), req.seq());
 					//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
 					del_response_t rsp(req.key(), tmp_stat);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -757,7 +783,7 @@ static int run_server_worker(void * param) {
 		if (tmp_cache_evict_ptr->type() == packet_type_t::CACHE_EVICT_CASE2) {
 			printf("CACHE_EVICT_CASE2!\n");
 			if (!server_issnapshot) {
-				table->make_snapshot();
+				db_wrappers[serveridx].make_snapshot();
 			}
 		}
 
@@ -768,10 +794,10 @@ static int run_server_worker(void * param) {
 		bool is_deleted_before = server_deleted_sets[serveridx].check_and_remove(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->seq());
 		if (!is_deleted_before) {
 			if (tmp_cache_evict_ptr->stat()) { // put
-				table->put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), serveridx, tmp_cache_evict_ptr->seq());
+				db_wrappers[serveridx].put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq());
 			}
 			else { // del
-				table->remove(tmp_cache_evict_ptr->key(), serveridx, tmp_cache_evict_ptr->seq());
+				db_wrappers[serveridx].remove(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->seq());
 			}
 		}
 
@@ -827,13 +853,13 @@ void *run_server_evictserver(void *param) {
 	bool is_broken = false;
 	uint8_t optype = 0;
 	bool with_optype = false;
-	index_key_t tmpkey = index_key_t();
+	netreach_key_t tmpkey = netreach_key_t();
 	uint32_t vallen = 0;
 	bool with_vallen = false;
 	bool is_waitack = false;
 	const int arrive_optype_bytes = sizeof(uint8_t);
-	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint32_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(index_key_t) + sizeof(uint16_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
 	uint16_t tmp_serveridx = 0;
 	while (transaction_running) {
@@ -933,7 +959,7 @@ void *run_server_evictserver(void *param) {
 				is_broken = false;
 				optype = 0;
 				with_optype = false;
-				tmpkey = index_key_t();
+				tmpkey = netreach_key_t();
 				vallen = 0;
 				with_vallen = false;
 				is_waitack = false;
@@ -951,8 +977,6 @@ void *run_server_evictserver(void *param) {
 }
 
 void *run_server_consnapshotserver(void *param) {
-	xindex_t *table = (xindex_t *)param;
-	INVARIANT(table != NULL);
 
 	// Not used
 	//struct sockaddr_in controller_addr;
@@ -1000,7 +1024,8 @@ void *run_server_consnapshotserver(void *param) {
 
 				// make server-side snapshot (simulate distributed in-memory KVS by concurrent one)
 				if (!server_issnapshot) {
-					table->make_snapshot();
+					// TODO
+					//table->make_snapshot();
 				}
 
 				// send SNAPSHOT_SERVERSIDE_ACK to controller
@@ -1029,7 +1054,7 @@ void *run_server_consnapshotserver(void *param) {
 				
 				// save snapshot data of servers
 				int tmp_offset = sizeof(int) + sizeof(int) + sizeof(int32_t); // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
-				//std::map<index_key_t, snapshot_record_t> *new_server_snapshot_maps = new std::map<index_key_t, snapshot_record_t>[server_num];
+				//std::map<netreach_key_t, snapshot_record_t> *new_server_snapshot_maps = new std::map<netreach_key_t, snapshot_record_t>[server_num];
 				concurrent_snapshot_map_t *new_server_snapshot_maps = new concurrent_snapshot_map_t[server_num];
 				const int tmp_maxbytes = sizeof(int) + total_bytes;
 				while (true) {
@@ -1039,7 +1064,7 @@ void *run_server_consnapshotserver(void *param) {
 					int32_t tmp_recordcnt = *((int32_t *)(recvbuf + tmp_offset));
 					tmp_offset += sizeof(int32_t);
 					for (int32_t tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {
-						index_key_t tmp_key;
+						netreach_key_t tmp_key;
 						snapshot_record_t tmp_record;
 						uint32_t tmp_keysize = tmp_key.deserialize(recvbuf + tmp_offset, tmp_maxbytes - tmp_offset);
 						tmp_offset += tmp_keysize;
@@ -1049,7 +1074,7 @@ void *run_server_consnapshotserver(void *param) {
 						tmp_offset += sizeof(uint32_t);
 						tmp_record.stat = *((bool *)(recvbuf + tmp_offset));
 						tmp_offset += sizeof(bool);
-						//new_server_snapshot_maps[tmp_serveridx].insert(std::pair<index_key_t, snapshot_record_t>(tmp_key, tmp_record));
+						//new_server_snapshot_maps[tmp_serveridx].insert(std::pair<netreach_key_t, snapshot_record_t>(tmp_key, tmp_record));
 						new_server_snapshot_maps[tmp_serveridx].insert(tmp_key, tmp_record);
 					}
 					if (tmp_offset >= tmp_maxbytes) {
@@ -1061,8 +1086,8 @@ void *run_server_consnapshotserver(void *param) {
 				printf("[server.snapshotserver] receive snapshot data from controller\n");
 				for (size_t debugi = 0; debugi < server_num; debugi++) {
 					printf("snapshot of serveridx: %d\n", int(debugi));
-					std::vector<std::pair<index_key_t, snapshot_record_t>> debugvec;
-					new_server_snapshot_maps[debugi].range_scan(index_key_t::min(), index_key_t::max(), debugvec);
+					std::vector<std::pair<netreach_key_t, snapshot_record_t>> debugvec;
+					new_server_snapshot_maps[debugi].range_scan(netreach_key_t::min(), netreach_key_t::max(), debugvec);
 					printf("debugvec size: %d\n", debugvec.size());
 					for (size_t veci = 0; veci < debugvec.size(); veci++) {
 						char debugbuf[MAX_BUFSIZE];
@@ -1075,7 +1100,7 @@ void *run_server_consnapshotserver(void *param) {
 				}
 
 				// replace old snapshot data based on RCU
-				//std::map<index_key_t, snapshot_record_t> *old_server_snapshot_maps = server_snapshot_maps;
+				//std::map<netreach_key_t, snapshot_record_t> *old_server_snapshot_maps = server_snapshot_maps;
 				concurrent_snapshot_map_t *old_server_snapshot_maps = server_snapshot_maps;
 				server_snapshot_maps = new_server_snapshot_maps;
 				if (old_server_snapshot_maps != NULL) {
@@ -1110,7 +1135,8 @@ void *run_server_consnapshotserver(void *param) {
 				control_type_phase1 = -1;
 				total_bytes = -1;
 
-				table->stop_snapshot();
+				// TODO
+				//table->stop_snapshot();
 				server_issnapshot = false;
 			}
 		}

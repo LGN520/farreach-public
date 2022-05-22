@@ -10,8 +10,8 @@
 
 int main(int argc, char **argv) {
 
-	if (argc != 2) {
-		printf("Usage: ./split_workload load/run\n");
+	if (argc != 3) {
+		printf("Usage: ./split_workload load/run linenum\n");
 		exit(-1);
 	}
 
@@ -26,6 +26,8 @@ int main(int argc, char **argv) {
 		printf("Usage: ./split_workload load/run\n");
 		exit(-1);
 	}
+	int linenum = atoi(argv[2]);
+	printf("op: %d, linenum: %d\n", op, linenum);
 
 	parse_ini("config.ini");
 
@@ -66,19 +68,78 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	char *output_names[splitnum] = {nullptr};
-	FILE *fps[splitnum] = {nullptr};
-	for (uint32_t i = 0; i < splitnum; i++) {
-		output_names[i] = new char[256];
-		GET_SPLIT_WORKLOAD(output_names[i], output_dir, i);
-		fps[i] = fopen(output_names[i], "w+");
-		if (fps[i] == nullptr) {
-			printf("Fail to open %s!\n", output_names[i]);
-			exit(-1);
+	int line_startidx = 1;
+	int line_endidx = 0;
+	char command[256];
+	if (op == 0) {
+		int per_loader_linenum = linenum / splitnum / load_factor;
+		char *output_names[splitnum * load_factor] = {nullptr};
+		//FILE *fps[splitnum * load_factor] = {nullptr};
+		for (uint32_t i = 0; i < splitnum * load_factor; i++) {
+			if (i == splitnum * load_factor - 1) {
+				line_endidx = linenum;
+			}
+			else {
+				line_endidx = line_startidx + per_loader_linenum - 1;
+			}
+
+			output_names[i] = new char[256];
+			LOAD_SPLIT_WORKLOAD(output_names[i], output_dir, i/load_factor, i);
+
+			sprintf(command, "sed -n \'%d,%dp\' %s > %s", line_startidx, line_endidx, filename, output_names[i]);
+			system(command);
+			/*fps[i] = fopen(output_names[i], "w+");
+			if (fps[i] == nullptr) {
+				printf("Fail to open %s!\n", output_names[i]);
+				exit(-1);
+			}*/
+
+			line_startidx = line_endidx + 1;
+		}
+
+		for (uint32_t i = 0; i < splitnum * load_factor; i++) {
+			delete [] output_names[i];
+			output_names[i] = nullptr;
+			//close(fps[i]);
+			//fps[i] = nullptr;
+		}
+	}
+	else if (op == 1) {
+		int per_client_linenum = linenum / splitnum;
+
+		char *output_names[splitnum] = {nullptr};
+		//FILE *fps[splitnum] = {nullptr};
+		for (uint32_t i = 0; i < splitnum; i++) {
+			if (i == splitnum - 1) {
+				line_endidx = linenum;
+			}
+			else {
+				line_endidx = line_startidx + per_client_linenum - 1;
+			}
+
+			output_names[i] = new char[256];
+			RUN_SPLIT_WORKLOAD(output_names[i], output_dir, i);
+
+			sprintf(command, "sed -n \'%d,%dp\' %s > %s", line_startidx, line_endidx, filename, output_names[i]);
+			system(command);
+			/*fps[i] = fopen(output_names[i], "w+");
+			if (fps[i] == nullptr) {
+				printf("Fail to open %s!\n", output_names[i]);
+				exit(-1);
+			}*/
+
+			line_startidx = line_endidx + 1;
+		}
+
+		for (uint32_t i = 0; i < splitnum; i++) {
+			delete [] output_names[i];
+			output_names[i] = nullptr;
+			//close(fps[i]);
+			//fps[i] = nullptr;
 		}
 	}
 
-	Parser parser(filename);
+	/*Parser parser(filename);
 	ParserIterator iter = parser.begin();
 	uint32_t line_idx = 0;
 	while (true) {
@@ -90,12 +151,5 @@ int main(int argc, char **argv) {
 		if (!iter.next()) {
 			break;
 		}
-	}
-
-	for (uint32_t i = 0; i < splitnum; i++) {
-		delete [] output_names[i];
-		output_names[i] = nullptr;
-		fclose(fps[i]);
-		fps[i] = nullptr;
-	}
+	}*/
 }

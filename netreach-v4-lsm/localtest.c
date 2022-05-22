@@ -14,6 +14,7 @@
 
 #include "helper.h"
 #include "rocksdb_wrapper.h"
+#include "snapshot_record.h"
 
 #include "common_impl.h"
 
@@ -27,6 +28,7 @@ inline void parse_ini(const char * config_file);
 inline void parse_args(int, char **);
 void load();
 void run_server(size_t sec);
+void *run_loader(void *param);
 void *run_sfg(void *param);
 
 // parameters
@@ -45,17 +47,8 @@ std::atomic<size_t> ready_threads(0);
 
 RocksdbWrapper *db_wrappers = NULL;
 
-std::map<netreach_key_t, val_t>* volatile backup_data = nullptr;
-
 char init_val_data[128] = {1};
 val_t init_val(init_val_data, 128);
-
-void test_merge_latency() {
-	backup_data = new std::map<netreach_key_t, val_t>;
-	for (size_t i = 0; i < switch_kv_bucket_num; i++) {
-		backup_data->insert(std::pair<netreach_key_t, val_t>(exist_keys[i], init_val));
-	}
-}
 
 int main(int argc, char **argv) {
 
@@ -72,6 +65,9 @@ int main(int argc, char **argv) {
   //test_merge_latency(); // DEBUG test
 
   run_server(runtime);
+
+  delete [] db_wrappers;
+  db_wrappers = NULL;
 
   COUT_THIS("[localtest] Exit successfully")
   exit(0);
@@ -165,6 +161,33 @@ void run_server(size_t sec) {
 
 	running = false;
 
+	bool is_existing = false;
+	for (size_t i = 0; i < server_num; i++) {
+  		is_existing = db_wrappers[i].open(i);
+	}
+
+	// Launch loaders
+	if (!is_existing) {
+		pthread_t loader_threads[server_num * load_factor];
+		size_t loader_ids[server_num * load_factor];
+		for (size_t loader_i = 0; loader_i < server_num * load_factor; loader_i++) {
+			loader_ids[loader_i] = loader_i;
+			ret = pthread_create(&loader_threads[loader_i], nullptr, run_loader, (void *)&loader_ids[loader_i]);
+			if (ret) {
+			  COUT_N_EXIT("Error:" << ret);
+			}
+		}
+
+		// wait for loaders
+		void *loader_status;
+		for (size_t i = 0; i < server_num * load_factor; i++) {
+			int loader_rc = pthread_join(loader_threads[i], &loader_status);
+			if (loader_rc) {
+			  COUT_N_EXIT("Error:unable to join," << loader_rc);
+			}
+		}
+	}
+
 	// Prepare fg params
 	pthread_t threads[server_num];
 	sfg_param_t sfg_params[server_num];
@@ -220,6 +243,25 @@ void run_server(size_t sec) {
 	}
 }
 
+void *run_loader(void * param) {
+  // Parse param
+  size_t loader_id = *((size_t *)param);
+  uint16_t worker_id = static_cast<uint16_t>(loader_id/load_factor);
+  printf("loader_id: %d, worker_id: %d\n", int(loader_id), int(worker_id));
+
+  size_t exist_key_n_per_thread = exist_keys.size() / server_num;
+  size_t exist_key_n_per_loader = exist_keys.size() / server_num / load_factor;
+  size_t exist_key_start = worker_id * exist_key_n_per_thread + loader_id * exist_key_n_per_loader;
+  size_t exist_key_end = exist_key_start + exist_key_n_per_loader;
+
+  //bool is_existing = db_wrappers[worker_id].open(worker_id);
+  std::vector<val_t> init_vals(exist_key_n_per_loader, init_val);
+  db_wrappers[worker_id].force_multiput(exist_keys.data() + exist_key_start, init_vals.data(), exist_key_n_per_loader);
+
+  pthread_exit(nullptr);
+  return 0;
+}
+
 void *run_sfg(void * param) {
   // Parse param
   sfg_param_t &thread_param = *(sfg_param_t *)param;
@@ -252,12 +294,15 @@ void *run_sfg(void * param) {
   val_t dummy_value = val_t(dummy_value_data, 128);
   size_t query_i = 0, insert_i = op_keys_size / 2, delete_i = 0, update_i = 0, scan_i = 0;
 
-  bool is_existing = db_wrappers[thread_id].open(thread_id);
-  if (!is_existing) {
-	  for (size_t i = exist_key_start; i < exist_key_end; i++) {
-		db_wrappers[thread_id].force_put(exist_keys[i], init_val);
-	  }
-  }
+  //bool is_existing = db_wrappers[thread_id].open(thread_id);
+  //UNUSED(is_existing);
+  /*if (!is_existing) {
+	  //for (size_t i = exist_key_start; i < exist_key_end; i++) {
+	  //db_wrappers[thread_id].force_put(exist_keys[i], init_val);
+	  //}
+	  std::vector<val_t> init_vals(exist_keys.size(), init_val);
+	  db_wrappers[thread_id].force_multiput(exist_keys.data(), init_vals.data(), exist_keys.size());
+  }*/
 
   COUT_THIS("[localtest " << uint32_t(thread_id) << "] Ready.");
   ready_threads++;
@@ -366,57 +411,15 @@ void *run_sfg(void * param) {
 	  else {
 		  endkey = non_exist_keys[endkeyidx - op_exist_keys_size];
 	  }
-	  std::vector<std::pair<netreach_key_t, val_t>> results;
+	  std::vector<std::pair<netreach_key_t, snapshot_record_t>> results;
 	  size_t tmp_num = db_wrappers[thread_id].range_scan(startkey, endkey, results);
 	  FDEBUG_THIS(ofs, "[localtest " << uint32_t(thread_id) << "] key = " << startkey << " num = " << tmp_num);
 	  for (uint32_t val_i = 0; val_i < tmp_num; val_i++) {
 		  FDEBUG_THIS(ofs, results[val_i].first.to_string_for_print());
-		  FDEBUG_THIS(ofs, results[val_i].second.to_string_for_print());
+		  FDEBUG_THIS(ofs, results[val_i].second.val.to_string_for_print());
+		  FDEBUG_THIS(ofs, results[val_i].second.seq);
+		  FDEBUG_THIS(ofs, results[val_i].second.stat);
 	  }
-
-		// Add kv pairs of backup data into results
-		//std::vector<std::pair<netreach_key_t, val_t>> merge_results;
-		std::map<netreach_key_t, val_t> *kvdata = backup_data;
-		if (kvdata != nullptr) {
-			std::map<netreach_key_t, val_t>::iterator kviter = kvdata->lower_bound(startkey);
-			for (; kviter != kvdata->end() && kviter->first < endkey; kviter++) {
-				results.push_back(*kviter);
-			}
-
-			/*uint32_t result_idx = 0;
-			if (kvdata->size() != 0 && results.size() != 0) {
-				for (; kviter != kvdata->end(); kviter++) {
-					if (kviter->first >= results[result_idx].first) {
-						merge_results.push_back(results[result_idx]);
-						result_idx++;
-						if (result_idx >= results.size()) {
-							break;
-						}
-					}
-					else {
-						merge_results.push_back(*kviter);
-					}
-					if (merge_results.size() == targetnum) {
-						break;
-					}
-				}
-			}
-			if (merge_results.size() < targetnum) {
-				// Only enter one loop
-				for (; result_idx < results.size(); result_idx++) {
-					merge_results.push_back(results[result_idx]);
-					if (merge_results.size() == targetnum) {
-						break;
-					}
-				}
-				for (; kviter != kvdata->end(); kviter++) {
-					merge_results.push_back(*kviter);
-					if (merge_results.size() == targetnum) {
-						break;
-					}
-				}
-			}*/
-		}
       scan_i++;
       if (unlikely(scan_i == op_keys_size / 2)) {
         scan_i = 0;

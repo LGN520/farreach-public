@@ -696,6 +696,7 @@
 	* Fix field length limitation in P4
 		- Use 16-bit keyhihilo and 116-bit keyhihihi for 32-bit keyhihi (ingress_mat.p4, header.p4, remove_cache_lookup.py, add_cache_lookup.py, configure.py, key, server_impl.h)
 		- Use uint16_t instead of uint32_t for vallen (egress_mat.p4 (udp.hdrlen), header.p4, netbufferv4.p4 (one comment), configure.py (udp.hdrlen), load_snapshot_data.py, get_evictdata.py, val, switchos.c, controller.c, iniparser_wrapper.c, packet_format_impl.h (size))
+- Test corrcetness of normal requests
 	* Fix software bugs when launching controller, switchos, and server successfully
 		- Use new to allocate large buf in heap instead of stack to fix segmentation error
 		- Invoke parse_control_ini in each main file
@@ -712,12 +713,84 @@
 			- Fix incorrect seq issue due to unchanged udphdr.hdrLen
 		- Pass case4 and case5 of DELREQ
 	* Use DPDK flow director instead of custom receiver
-	* Pass correctness test for cache population and cache hit
-		* Update reflector_port in P4
-		* Fix udp.dstport issue for cache hit in P4
-		* Issue: server cannot receive CACHE_POP_INSWITCH_ACK
-			+ Update destination macaddr for cache hit, cache pop ack, and case1
-			+ Introduce direct counter for debugging
+- Test correctness of cache population/eviction
+	* Update reflector_port in P4
+	* Fix udp.dstport issue for cache hit in P4
+	* Issue: server cannot receive CACHE_POP_INSWITCH_ACK
+		+ Update destination macaddr for cache hit, cache pop ack, and case1
+		+ Introduce direct counter for debugging
+	- Issue: server cannot receive CACHE_POP_INSWITCH_ACK
+		+ Update destination macaddr for cache hit, cache pop ack, and case1
+		+ Introduce direct counter for debugging
+		+ Update configuration to enable egress-direction mirroring
+	- Issue: meta.clonenum_for_pktloss in clone field list is ignored by Tofino due to unclear reason
+		+ Distinguish client_sid, server_sid, and switchos_sid
+			* Use inswitch_hdr.client_sid for response of cache hit; use client_sid as action parameter in eg_port_forward_tbl (header.p4, netbufferv4.p4, ingress.p4, egress.p4, configure.py)
+			* Use meta.server_sid for scanreq_split; use server_sid as action parameter in process_scanreq_tbl, process_cloned_scanreq_split, and scan_forward_tbl (egress.p4, configure.py)
+			* Use switchos_sid as action parameter in eg_port_forward_tbl
+		+ Introduce clone_hdr including clonenum_for_pktloss and client_port (header.p4, parser.p4, egress.p4, configure.py, packet_format)
+	- Issue: i40e driver still returns multiple packets under a receive burst even if nb_pkts=1 after setting RTE_I40E_DESCS_PER_LOOP=1 (due to vector instruction?)
+		+ Use RX_BURST_SIZE instead of 1 for server, reflector, and SCANRES, where we may receive multiple packets once a time
+	- Fix python.struct pack/unpack issue (only the first character of format string can be used as byte order)
+	- Issue: incorrect val15 and val16 due to optype changed by eg_port_forward_tbl
+		+ Update meta.access_val_mode if we need to access vallen; use access_val_mode w/o optype to access val_reg; introduce drop_tbl to place drop() in the last stage -> run cachepop.case1 and check val16_reg, and then PUTREQ w/ cache hit and check val16_reg
+	- Pass case1, case2, case3
+		+ Fix cache eviction issue
+- Test correctness of other features
+	* Test conservative read
+		- Pass case1, case2
+	* Test cache hit
+		- Pass case1, case2, case3, case4
+		- Add add_and_remove_value_header_tbl in stage 11 for correct deparse -> run cachehit.case2 and check pktsize
+	* Test crash-consistent snapshot
+		- case3, case2, case1
+			+ Fix concurrent map issue: concurrent_val::read does not return in while loop
+	* Remove debug_hdr
+- Reduce delay of cache population/eviction and snapshot
+	* Check whether we can maintain two persistent ptf sessions
+		- Implement ptf.popserver by persistent ptf session to reduce session create/destroy overhead
+		- Implement ptf.snapshotserver by persistent ptf session to reduce session create/destroy overhead
+	* Re-test cache population/eviction and snapshot
+	* Send END to ptf.popserver and ptf.snapshotserver
+* Test multi-clients and multi-servers
+* Test latency
+	- Try to fix latency issue (may be caused by dpdk issue or transmission issue)
+		+ Try rte_rdtsc -> result not change
+		+ Change dpdk settings
+			+ Disable promisc mode -> result not change
+			+ Allocate exclusive mempool for RX quque -> result not change
+			+ Allocate more mbuf structures for TX_RING and RX_RING -> result not change
+		+ Test Tofino latency by dpdktest-tofino -> 0xa84b - 0xa750 < 256ns
+		+ Implement socktest_client, socktest_server, socktest-tofino to check latency difference between w/o hit and w/ hit
+			* DPDK w/ key-value pair: client-server of 28us; client-switch of 23us
+			* socket w/ payloadvalue: client-server of 42us; client-switch of 14us
+			* DPDK w/ payloadvalue: client-server of 28us; client-switch of 23us
+		+ Check DPDK configuration -> FAIL
+			* Allocate huge page in exclusive memory for each numa node -> no change
+			* Enable jumbo frame offloading -> no change
+			* Set rx_thresh to setup rx_queue -> no change
+* Pass P4 compilation w/ maximum # of record entries
+* Support general KVS
+	- Our main contribution is to avoid server-side overhead for PUT request, instead of reducing transmission latency for GET request; and we should target general KVS
+		+ Try to test RTT latency for GET/PUT/DEL request in small-scale in-memory KVS
+			* same key w/o cache hit
+				- GET: 28us; PUT: 29us; DEL: 28us
+			* same key w/ cache hit
+				- GET: 23us; PUT: 23us, DEL: 23us
+			* same key in practice (cache population delay)
+				- GET: 23us; PUT: 22us; DEL: 22us
+		+ Try large-scale in-memory KVS and test latency
+			* Enable swap space to avoid being killed by OOM killer
+			* Use localtest to get larger server-side latency first
+				- w/o using swap space: ~2us
+				- w/ using swap space: 10-500us
+			* NOTE: we should not use xindex
+				- xindex trades memory for query time -> memory-consuming (such as model parameters and concurrency control metadata)
+					+ Original xindex (16B key + 8B value + w/o snapshot): 50M records (~1G data) -> 10G memory cost
+					+ Extened xindex (16B key + 128B value + w/ snapshot): 50M records (~1G data) -> 60G memory cost
+				- If we introduce swap space to increase server-side overhead, xindex cannot support large # of records -> we cannot argue that we target large-scale in-memory KVS
+				- We only require that server-side KVS can support snapshot and range query
+					+ LSM tree, e.g., rocksdb, can support both snapshot and range query, which should be our server-side KVS
 
 ## Run
 

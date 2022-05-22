@@ -27,7 +27,10 @@
 #define RUN_SPLIT_DIR(buf, workload, threadnum) \
 	sprintf(buf, "%s-run-%d", workload, threadnum)
 
-#define GET_SPLIT_WORKLOAD(buf, dir, threadid) \
+#define LOAD_SPLIT_WORKLOAD(buf, dir, threadid, loaderid) \
+	sprintf(buf, "%s/%u-%u.out", dir, threadid, loaderid);
+
+#define RUN_SPLIT_WORKLOAD(buf, dir, threadid) \
 	sprintf(buf, "%s/%u.out", dir, threadid);
 
 #define GET_DATAPATH(buf, workload_name, group_idx) \

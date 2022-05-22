@@ -5,6 +5,8 @@
 #include <map>
 #include <mutex>
 
+#include "snapshot_record.h"
+
 template <class key_t, class seq_t>
 class DeletedSet {
 	// tell compiler that map::iterator is a type instead of a static member
@@ -16,8 +18,9 @@ class DeletedSet {
 		DeletedSet(uint32_t c=10, uint32_t rtt=10);
 
 		void add(key_t key, seq_t seq);
-		bool getseq(key_t key, seq_t &seq);
+		//bool getseq(key_t key, seq_t &seq);
 		bool check_and_remove(key_t key, seq_t seq, seq_t *deleted_seq_ptr=NULL); // check if isdeleted
+		size_t range_scan(key_t startkey, key_t endkey, std::vector<std::pair<key_t, snapshot_record_t>> &results);
 
 	private:
 		std::map<key_t, seq_t> records_sorted_bykey;

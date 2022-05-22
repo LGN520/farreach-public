@@ -121,6 +121,9 @@ INIPARSER_OBJECTS := iniparser/iniparser_wrapper.o iniparser/iniparser.o inipars
 DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
 CLEAN += iniparser/iniparser.o iniparser/dictionary.o iniparser/iniparser_wrapper.o
 
+DEPS += snapshot_record.d
+CLEAN += snapshot_record.o
+
 prepare: prepare.o key.o val.o
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += prepare.d
@@ -138,8 +141,8 @@ CLEAN += prepare.o prepare
 #DEPS += server.d
 #CLEAN += server.o server
 
-localtest: localtest.o key.o val.o $(INIPARSER_OBJECTS) rocksdb_wrapper.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) $(ROCKSDB_LDLIBS) -o $@
+localtest: localtest.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) rocksdb_wrapper.o snapshot_record.o
+	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += localtest.d
 CLEAN += localtest.o localtest
 
@@ -148,7 +151,7 @@ split_workload: split_workload.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
 DEPS += split_workload.d
 CLEAN += split_workload.o split_workload
 
-ycsb_loader: ycsb_loader.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) rocksdb_wrapper.o
+ycsb_loader: ycsb_loader.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) rocksdb_wrapper.o snapshot_record.o
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += ycsb_loader.d
 CLEAN += ycsb_loader.o ycsb_loader
@@ -158,8 +161,8 @@ ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o
 DEPS += ycsb_remote_client.d
 CLEAN += ycsb_remote_client.o ycsb_remote_client
 
-ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o ycsb/parser.o socket_helper.o $(INIPARSER_OBJECTS) latency_helper.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o ycsb/parser.o socket_helper.o $(INIPARSER_OBJECTS) latency_helper.o rocksdb_wrapper.o snapshot_record.o
+	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += ycsb_server.d
 CLEAN += ycsb_server.o ycsb_server
 
@@ -168,27 +171,27 @@ switchos: switchos.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS) special_ca
 DEPS += switchos.d
 CLEAN += switchos.o switchos
 
-controller: controller.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS)
+controller: controller.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS) ycsb/parser.o
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += controller.d
 CLEAN += controller.o controller
 
-dpdktest_client: dpdktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o
+dpdktest_client: dpdktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o ycsb/parser.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += dpdktest_client.d
 CLEAN += dpdktest_client.o dpdktest_client
 
-dpdktest_server: dpdktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o
+dpdktest_server: dpdktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o ycsb/parser.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += dpdktest_server.d
 CLEAN += dpdktest_server.o dpdktest_server
 
-socktest_client: socktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o
+socktest_client: socktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o ycsb/parser.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += socktest_client.d
 CLEAN += socktest_client.o socktest_client
 
-socktest_server: socktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o
+socktest_server: socktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o ycsb/parser.o
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += socktest_server.d
 CLEAN += socktest_server.o socktest_server

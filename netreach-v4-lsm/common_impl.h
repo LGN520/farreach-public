@@ -11,6 +11,7 @@
 #include "socket_helper.h"
 #include "message_queue_impl.h"
 #include "iniparser/iniparser_wrapper.h"
+#include "ycsb/parser.h"
 
 /*
  * Class and alias
@@ -71,6 +72,7 @@ char client_workload_dir[256];
 size_t per_client_per_period_max_sending_rate;
 
 // server: loading phase
+uint32_t load_factor = 1;
 //uint32_t split_n;
 //uint32_t load_n;
 char server_load_workload_dir[256];
@@ -161,9 +163,11 @@ inline void parse_ini(const char* config_file) {
 	workload_name = ini.get_workload_name();
 	printf("workload_name: %s\n", workload_name);
 	val_t::MAX_VALLEN = ini.get_max_vallen();
+	ParserIterator::load_batch_size = ini.get_load_batch_size();
 	COUT_VAR(val_t::MAX_VALLEN);
 	val_t::MAX_VALLEN = ini.get_max_vallen();
 	COUT_VAR(val_t::MAX_VALLEN);
+	COUT_VAR(ParserIterator::load_batch_size);
 
 	// client
 	client_num = ini.get_client_num();
@@ -184,6 +188,7 @@ inline void parse_ini(const char* config_file) {
 	printf("client_workload_dir: %s\n", client_workload_dir);
 
 	// server: loading phase
+	load_factor = ini.get_load_factor();
 	//split_n = ini.get_split_num();
 	//INVARIANT(split_n >= 2);
 	//load_n = split_n - 1;
@@ -191,6 +196,7 @@ inline void parse_ini(const char* config_file) {
 	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(server_num)); // get the split directory for loading phase
 	LOAD_RAW_WORKLOAD(raw_load_workload_filename, workload_name);
 	RUN_RAW_WORKLOAD(raw_run_workload_filename, workload_name);
+	COUT_VAR(load_factor);
 	//COUT_VAR(split_n);
 	//COUT_VAR(load_n);
 	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);

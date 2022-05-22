@@ -1,11 +1,7 @@
-DIRNAME="netreach-v4"
-REMOTEPATH="~/NetBuffer"
-REMOTEHOST="ssy@bf1"
-ssh $REMOTEHOST "rm -rf $REMOTEPATH/$DIRNAME"
-scp -r ./$DIRNAME $REMOTEHOST:$REMOTEPATH/$DIRNAME
+DIRNAME="netreach-v4-lsm"
 
-DIRNAME="netreach-v4"
-REMOTEPATH="~/projects/NetBuffer"
-REMOTEHOST="ssy@dl13"
-ssh $REMOTEHOST "rm -rf $REMOTEPATH/$DIRNAME"
-scp -r ./$DIRNAME $REMOTEHOST:$REMOTEPATH/$DIRNAME
+ssh ssy@bf1 "rm -rf NetBuffer/$DIRNAME"
+ssh ssy@dl13 "rm -rf projects/NetBuffer/$DIRNAME"
+
+rsync -av -e ssh --exclude "*.out" --exclude "*.bak" ./$DIRNAME ssy@bf1:~/NetBuffer
+rsync -av -e ssh --exclude "*.out" --exclude "*.bak" ./$DIRNAME ssy@dl13:~/projects/NetBuffer

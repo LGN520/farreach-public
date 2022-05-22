@@ -43,7 +43,7 @@ void DeletedSet<key_t, seq_t>::add(key_t key, seq_t seq) {
 	//mutex_lock.unlock();
 }
 
-template<class key_t, class seq_t>
+/*template<class key_t, class seq_t>
 bool DeletedSet<key_t, seq_t>::getseq(key_t key, seq_t &seq) {
 	iterator_bykey_t iter = records_sorted_bykey.find(key);
 	if (iter == records_sorted_bykey.end()) {
@@ -53,7 +53,7 @@ bool DeletedSet<key_t, seq_t>::getseq(key_t key, seq_t &seq) {
 		seq = iter->second;
 		return true;
 	}
-}
+}*/
 
 template<class key_t, class seq_t>
 bool DeletedSet<key_t, seq_t>::check_and_remove(key_t key, seq_t seq, seq_t *deleted_seq_ptr) {
@@ -85,6 +85,20 @@ bool DeletedSet<key_t, seq_t>::check_and_remove(key_t key, seq_t seq, seq_t *del
 
 	//mutex_lock.unlock();
 	return isdeleted;
+}
+
+template<class key_t, class seq_t>
+size_t DeletedSet<key_t, seq_t>::range_scan(key_t startkey, key_t endkey, std::vector<std::pair<key_t, snapshot_record_t>> &results) {
+	results.clear();
+	typename std::map<key_t, seq_t>::iterator iter = records_sorted_bykey.lower_bound(startkey);
+	for (; iter != records_sorted_bykey.end() && iter->first <= endkey; iter++) {
+		snapshot_record_t tmprecord;
+		tmprecord.seq = iter->second;
+		tmprecord.stat = false;
+
+		results.push_back(std::pair<key_t, snapshot_record_t>(iter->first, tmprecord));
+	}
+	return results.size();
 }
 
 #endif

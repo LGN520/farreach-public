@@ -54,7 +54,7 @@ uint32_t* volatile tails;*/
 //std::vector<double> receiver_latency_list;
 
 // SCAN split
-size_t get_server_idx(index_key_t key) {
+size_t get_server_idx(netreach_key_t key) {
 #ifdef LARGE_KEY
 	size_t server_idx = key.keyhihi / perserver_keyrange;
 #else
@@ -69,8 +69,8 @@ size_t get_server_idx(index_key_t key) {
 const uint32_t range_gap = 1024; // add 2^10 to keylo of startkey
 //const uint32_t range_gap = 0x80000000; // add 2^31 to keylo of startkey
 const int range_num = 10; // max number of returned kv pairs
-index_key_t generate_endkey(index_key_t &startkey) {
-	index_key_t endkey = startkey;
+netreach_key_t generate_endkey(netreach_key_t &startkey) {
+	netreach_key_t endkey = startkey;
 	if (std::numeric_limits<uint32_t>::max() - endkey.keylolo > range_gap) {
 		endkey.keylolo += range_gap;
 	}
@@ -338,10 +338,9 @@ static int run_fg(void *param) {
 	// ycsb parser
 	char load_filename[256];
 	memset(load_filename, '\0', 256);
-	GET_SPLIT_WORKLOAD(load_filename, client_workload_dir, thread_id);
-	Parser parser(load_filename);
-	ParserIterator iter = parser.begin();
-	index_key_t tmpkey;
+	RUN_SPLIT_WORKLOAD(load_filename, client_workload_dir, thread_id);
+	ParserIterator iter(load_filename);
+	netreach_key_t tmpkey;
 	val_t tmpval;
 
 
@@ -370,6 +369,10 @@ static int run_fg(void *param) {
 		;
 
 	while (running) {
+		if (!iter.next()) {
+			break;
+		}
+
 		sent_pkt = sent_pkts[sent_pkt_idx];
 
 		tmpkey = iter.key();
@@ -377,7 +380,7 @@ static int run_fg(void *param) {
 		struct timespec wait_t1, wait_t2, wait_t3;
 		if (iter.type() == uint8_t(packet_type_t::GETREQ)) { // get
 			CUR_TIME(req_t1);
-			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 			get_request_t req(tmpkey);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -418,7 +421,7 @@ static int run_fg(void *param) {
 			tmpval = iter.val();
 
 			CUR_TIME(req_t1);
-			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 			INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -467,7 +470,7 @@ static int run_fg(void *param) {
 		}
 		else if (iter.type() == uint8_t(packet_type_t::DELREQ)) {
 			CUR_TIME(req_t1);
-			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 			del_request_t req(tmpkey);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 			req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -505,13 +508,13 @@ static int run_fg(void *param) {
 			CUR_TIME(rsp_t2);
 		}
 		else if (iter.type() == uint8_t(packet_type_t::SCANREQ)) {
-			index_key_t endkey = generate_endkey(tmpkey);
+			netreach_key_t endkey = generate_endkey(tmpkey);
 			/*size_t first_server_idx = get_server_idx(tmpkey);
 			size_t last_server_idx = get_server_idx(endkey);
 			size_t split_num = last_server_idx - first_server_idx + 1;*/
 
 			CUR_TIME(req_t1);
-			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), index_key_t::model_key_size() * 8) % kv_bucket_num);
+			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 			//scan_request_t req(tmpkey, endkey, range_num);
 			scan_request_t req(tmpkey, endkey);
 			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
@@ -630,10 +633,6 @@ static int run_fg(void *param) {
 			if (res < 0) {
 				COUT_N_EXIT("rte_pktmbuf_alloc_bulk fails: " << res);
 			}
-		}
-
-		if (!iter.next()) {
-			break;
 		}
 	}
 

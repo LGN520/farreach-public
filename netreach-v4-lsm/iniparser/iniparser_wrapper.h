@@ -16,6 +16,7 @@ class IniparserWrapper {
 		const char *get_workload_name();
 		//uint32_t get_max_vallen();
 		uint16_t get_max_vallen();
+		uint32_t get_load_batch_size();
 
 		// client
 		size_t get_client_num();
@@ -24,6 +25,7 @@ class IniparserWrapper {
 		void get_client_mac(uint8_t* macaddr);
 		
 		// server
+		uint32_t get_load_factor();
 		//uint32_t get_split_num();
 		uint32_t get_server_num();
 		short get_server_port();

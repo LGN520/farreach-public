@@ -37,6 +37,15 @@ uint16_t IniparserWrapper::get_max_vallen() {
 	return uint16_t(tmp);
 }
 
+uint32_t IniparserWrapper::get_load_batch_size() {
+	int tmp = iniparser_getint(ini, "global:load_batch_size", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [global:load_batch_size]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
 // Client
 
 size_t IniparserWrapper::get_client_num() {
@@ -76,6 +85,15 @@ void IniparserWrapper::get_client_mac(uint8_t *macaddr) {
 }
 
 // Server
+
+uint32_t IniparserWrapper::get_load_factor() {
+	int tmp = iniparser_getint(ini, "server:load_factor", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:load_factor]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
 
 /*uint32_t IniparserWrapper::get_split_num() {
 	int tmp = iniparser_getint(ini, "server:split_num", -1);

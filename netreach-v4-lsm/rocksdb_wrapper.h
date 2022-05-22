@@ -11,6 +11,7 @@
 #include "key.h"
 #include "val.h"
 #include "deleted_set_impl.h"
+#include "snapshot_record.h"
 
 #define MEMTABLE_SIZE 4 * 1024 * 1024
 #define MAX_MEMTABLE_NUM 2
@@ -33,13 +34,17 @@ class RocksdbWrapper {
 
 		RocksdbWrapper();
 		//RocksdbWrapper(uint16_t workerid);
+		~RocksdbWrapper();
 		
 		bool open(uint16_t workerid);
-		bool force_put(netreach_key_t key, val_t val);
+		bool force_put(netreach_key_t key, val_t val); // for multi-thread in loading phase
+		bool force_multiput(netreach_key_t *keys, val_t *vals, int maxidx); // for multi-thread in loading phase
 		bool get(netreach_key_t key, val_t &val, uint32_t &seq);
 		bool put(netreach_key_t key, val_t val, uint32_t seq);
 		bool remove(netreach_key_t key, uint32_t seq);
-		size_t range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, val_t>> &results);
+		size_t range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results);
+		void make_snapshot();
+		void stop_snapshot();
 
 	private:
 		static rocksdb::Options rocksdb_options;

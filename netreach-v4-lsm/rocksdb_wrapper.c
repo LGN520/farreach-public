@@ -21,10 +21,20 @@ void RocksdbWrapper::prepare_rocksdb() {
   rocksdb_options.num_levels = LEVEL_NUM; // level number
   rocksdb_options.max_bytes_for_level_base = LEVEL1_TOTAL_SIZE; // byte number in level1
   rocksdb_options.max_bytes_for_level_multiplier = LEVEL_MULTIPLIER;
+  
+  rocksdb_options.enable_write_thread_adaptive_yield = true;
+  rocksdb_options.allow_concurrent_memtable_write = true;
 }
 
 RocksdbWrapper::RocksdbWrapper() {
 	db_ptr = NULL;
+}
+
+RocksdbWrapper::~RocksdbWrapper() {
+	if (db_ptr != NULL) {
+		delete db_ptr;
+		db_ptr = NULL;
+	}
 }
 
 /*RocksdbWrapper::RocksdbWrapper(uint16_t workerid) {
@@ -45,6 +55,25 @@ bool RocksdbWrapper::open(uint16_t workerid) {
 	INVARIANT(db_ptr != NULL);
 
 	return is_existing;
+}
+
+bool RocksdbWrapper::force_multiput(netreach_key_t *keys, val_t *vals, int maxidx) {
+	rocksdb::Status s;
+	rocksdb::WriteOptions write_options;
+	write_options.sync = SYNC_WRITE; // Write through for persistency
+	rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
+
+	for (int i = 0; i < maxidx; i++) {
+		std::string keystr = keys[i].to_string_for_rocksdb();
+		std::string valstr = vals[i].to_string_for_rocksdb(0);
+		s = txn->Put(keystr, valstr);
+	}
+	s = txn->Commit();
+	INVARIANT(s.ok());
+
+	delete txn;
+	txn = NULL;
+	return true;
 }
 
 bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
@@ -173,17 +202,18 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq) {
 	return true;
 }
 
-size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, val_t>> &results) {
+size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results) {
 	rocksdb::Status s;
 	rocksdb::Transaction* txn = db_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	// TODO: use snapshot
 	rocksdb::Iterator* iter = txn->GetIterator(rocksdb::ReadOptions());
 	INVARIANT(iter!=nullptr);
-
 	results.clear();
+
+	std::vector<std::pair<netreach_key_t, snapshot_record_t>> db_results;
 	std::string startkeystr = startkey.to_string_for_rocksdb();
 	std::string endkeystr = endkey.to_string_for_rocksdb();
 	iter->Seek(startkeystr);
-	size_t num = 0;
 	while (iter->Valid()) {
 		std::string tmpkeystr = iter->key().ToString();
 		netreach_key_t tmpkey;
@@ -192,15 +222,91 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 			break;
 		}
 		std::string tmpvalstr = iter->value().ToString();
-		val_t tmpval;
-		tmpval.from_string_for_rocksdb(tmpvalstr);
+		INVARIANT(tmpvalstr != "");
 
-		results.push_back(std::pair<netreach_key_t, val_t>(tmpkey, tmpval));
-		num += 1;
+		val_t tmpval;
+		uint32_t tmpseq = 0;
+		bool tmpstat = false;
+	
+		//if (tmpvalstr != "") {
+		tmpseq = tmpval.from_string_for_rocksdb(tmpvalstr);
+		tmpstat = true;
+		//}
+
+		snapshot_record_t tmprecord;
+		tmprecord.val = tmpval;
+		tmprecord.seq = tmpseq;
+		tmprecord.stat = tmpstat;
+
+		db_results.push_back(std::pair<netreach_key_t, snapshot_record_t>(tmpkey, tmprecord));
 		iter->Next();
 	}
 	s = txn->Commit();
 	INVARIANT(s.ok());
 	delete txn;
-	return num;
+
+	std::vector<std::pair<netreach_key_t, snapshot_record_t>> deleted_results;
+	deleted_set.range_scan(startkey, endkey, deleted_results);
+
+	// merge sort
+	if (db_results.size() == 0) {
+		results = deleted_results;
+	}
+	else if (deleted_results.size() == 0) {
+		results = db_results;
+	}
+	else {
+		uint32_t db_idx = 0;
+		uint32_t deleted_idx = 0;
+		bool remain_db = false;
+		bool remain_deleted = false;
+		while (true) {
+			netreach_key_t &tmp_db_key = db_results[db_idx].first;
+			snapshot_record_t &tmp_db_record = db_results[db_idx].second;
+			netreach_key_t &tmp_deleted_key = deleted_results[deleted_idx].first;
+			snapshot_record_t &tmp_deleted_record = deleted_results[deleted_idx].second;
+			if (tmp_db_key < tmp_deleted_key) {
+				results.push_back(db_results[db_idx]);
+				db_idx += 1;
+			}
+			else if (tmp_db_key > tmp_deleted_key) {
+				results.push_back(deleted_results[deleted_idx]);
+				deleted_idx += 1;
+			}
+			else {
+				printf("[RocksdbWrapper] deleted set and database cannot have the same key!\n");
+				exit(-1);
+			}
+			if (db_idx >= db_results.size()) {
+				remain_deleted = true;
+				break;
+			}
+			if (deleted_idx >= deleted_results.size()) {
+				remain_db = true;
+				break;
+			}
+		}
+		if (remain_db) {
+			for (; db_idx < db_results.size(); db_idx++) {
+				results.push_back(db_results[db_idx]);
+			}
+		}
+		else if (remain_deleted) {
+			for (; deleted_idx < deleted_results.size(); deleted_idx++) {
+				results.push_back(deleted_results[deleted_idx]);
+			}
+		}
+	}
+
+	return results.size();
+}
+
+void RocksdbWrapper::make_snapshot() {
+	printf("TODO: implement make_snapshot()\n");
+	return;
+}
+
+void RocksdbWrapper::stop_snapshot() {
+	printf("TODO: implement stop_snapshot()\n");
+	return;
 }
