@@ -635,8 +635,8 @@ static int run_server_worker(void * param) {
 							// Send CACHE_POP to controller.popserver
 							cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, serveridx);
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-							printf("send CACHE_POP to controller\n");
-							dump_buf(buf, popsize);
+							//printf("send CACHE_POP to controller\n");
+							//dump_buf(buf, popsize);
 							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
 						}
 					}
@@ -665,8 +665,8 @@ static int run_server_worker(void * param) {
 							// Send CACHE_POP to controller.popserver
 							cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
 							uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-							printf("send CACHE_POP to controller\n");
-							dump_buf(buf, popsize);
+							//printf("send CACHE_POP to controller\n");
+							//dump_buf(buf, popsize);
 							tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
 						}
 					}
@@ -900,8 +900,8 @@ void *run_server_evictserver(void *param) {
 
 		// Get one complete CACHE_EVICT/_CASE2 (only need serveridx here)
 		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
-			printf("receive CACHE_EVICT from controller\n");
-			dump_buf(recvbuf, arrive_serveridx_bytes);
+			//printf("receive CACHE_EVICT from controller\n");
+			//dump_buf(recvbuf, arrive_serveridx_bytes);
 			bool res = false;
 			// send CACHE_EVICT to server.worker 
 			if (packet_type_t(optype) == packet_type_t::CACHE_EVICT) {
@@ -938,8 +938,8 @@ void *run_server_evictserver(void *param) {
 				// send CACHE_EVICT_ACK to controller.evictserver.evictclient
 				char sendbuf[MAX_BUFSIZE];
 				int sendsize = tmp_cache_evict_ack_ptr->serialize(sendbuf, MAX_BUFSIZE);
-				printf("send CACHE_EVICT_ACK to controller\n");
-				dump_buf(sendbuf, sendsize);
+				//printf("send CACHE_EVICT_ACK to controller\n");
+				//dump_buf(sendbuf, sendsize);
 				tcpsend(connfd, sendbuf, sendsize, "server.evictserver");
 
 				// move remaining bytes and reset metadata

@@ -88,7 +88,7 @@ include mk/recipes.mk
 
 DEPS :=
 CLEAN :=
-TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_loader ycsb_server switchos controller dpdktest_client dpdktest_server socktest_client socktest_server
+TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_loader ycsb_server switchos controller dpdktest_client dpdktest_server socktest_client socktest_server skewness_check
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
@@ -195,6 +195,11 @@ socktest_server: socktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS
 	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 DEPS += socktest_server.d
 CLEAN += socktest_server.o socktest_server
+
+skewness_check: skewness_check.o  key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += skewness_check.d
+CLEAN += skewness_check.o skewness_check
 
 ##############################################################################
 # Top level targets

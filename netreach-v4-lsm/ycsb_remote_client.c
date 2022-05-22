@@ -597,11 +597,13 @@ static int run_fg(void *param) {
 		DELTA_TIME(req_t2, req_t1, req_t3);
 		DELTA_TIME(rsp_t2, rsp_t1, rsp_t3);
 		DELTA_TIME(wait_t2, wait_t1, wait_t3);
-		//SUM_TIME(req_t3, rsp_t3, final_t3); // time of sending req and receiving rsp
 		double req_time = GET_MICROSECOND(req_t3);
 		double rsp_time = GET_MICROSECOND(rsp_t3);
 		double wait_time = GET_MICROSECOND(wait_t3);
-		double final_time = GET_MICROSECOND(final_t3);
+
+		//SUM_TIME(req_t3, rsp_t3, final_t3); // time of sending req and receiving rsp
+		//double final_time = GET_MICROSECOND(final_t3);
+		double final_time = req_time + rsp_time;
 		if (wait_time > dpdk_polling_time) {
 			// wait_time: in-switch queuing + server-side latency + dpdk overhead + client-side packet dispatching (receiver) + schedule cost for PMD (unnecessary)
 			final_time += (wait_time - dpdk_polling_time); // time of in-switch queuing and server-side latency
@@ -618,13 +620,13 @@ static int run_fg(void *param) {
 		// Rate limit (within each rate_limit_period, we can send at most per_client_per_period_max_sending_rate reqs)
 		cur_sending_rate++;
 		cur_sending_time += final_time;
-		if (cur_sending_rate >= per_client_per_period_max_sending_rate) {
+		/*if (cur_sending_rate >= per_client_per_period_max_sending_rate) {
 			if (cur_sending_time < rate_limit_period) {
 				usleep(rate_limit_period - cur_sending_time);
 			}
 			cur_sending_rate = 0;
 			cur_sending_time = 0.0;
-		}
+		}*/
 
 		sent_pkt_idx++;
 		if (sent_pkt_idx >= burst_size) {

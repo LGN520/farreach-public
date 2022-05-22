@@ -406,9 +406,9 @@ void *run_switchos_popserver(void *param) {
 
 		// Get one complete CACHE_POP
 		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes) {
-			printf("[switchos.popserver] cur_recv_bytes: %d, arrive_serveridx_bytes: %d\n", cur_recv_bytes, arrive_serveridx_bytes); // TMPDEBUG
-			printf("receive CACHE_POP from controller\n");
-			dump_buf(buf, cur_recv_bytes);
+			//printf("[switchos.popserver] cur_recv_bytes: %d, arrive_serveridx_bytes: %d\n", cur_recv_bytes, arrive_serveridx_bytes); // TMPDEBUG
+			//printf("receive CACHE_POP from controller\n");
+			//dump_buf(buf, cur_recv_bytes);
 			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by switchos.popworker
 
 			//is_cached_before = (switchos_cached_keyset.find(tmp_cache_pop_ptr->key()) != switchos_cached_keyset.end());
@@ -548,8 +548,8 @@ void *run_switchos_popworker(void *param) {
 								switchos_cached_serveridxarray[switchos_evictidx]);
 						pktsize = tmp_cache_evict_case2.serialize(pktbuf, MAX_BUFSIZE);
 					}
-					printf("send CACHE_EVICT to controller\n");
-					dump_buf(pktbuf, pktsize);
+					//printf("send CACHE_EVICT to controller\n");
+					//dump_buf(pktbuf, pktsize);
 					tcpsend(switchos_popworker_evictclient_tcpsock, pktbuf, pktsize, "switchos.popworker.evictclient");
 
 					// wait for CACHE_EVICT_ACK from controller.evictserver
@@ -570,8 +570,8 @@ void *run_switchos_popworker(void *param) {
 
 						// get CACHE_EVICT_ACK from controller.evictserver
 						if (evictclient_cur_recv_bytes >= evictclient_arrive_key_bytes) {
-							printf("receive CACHE_EVICT_ACK from controller\n");
-							dump_buf(evictclient_buf, evictclient_arrive_key_bytes);
+							//printf("receive CACHE_EVICT_ACK from controller\n");
+							//dump_buf(evictclient_buf, evictclient_arrive_key_bytes);
 							uint8_t evictclient_optype = *((uint8_t *)evictclient_buf);
 							INVARIANT(packet_type_t(evictclient_optype) == packet_type_t::CACHE_EVICT_ACK);
 
@@ -622,7 +622,7 @@ void *run_switchos_popworker(void *param) {
 				/* cache population for new record */
 
 				INVARIANT(switchos_freeidx >= 0 && switchos_freeidx < switch_kv_bucket_num);
-				printf("[switchos.popworker] switchos_cached_empty_index: %d, switchos_freeidx: %d\n", int(switchos_cached_empty_index), int(switchos_freeidx)); // TMPDEBUG
+				//printf("[switchos.popworker] switchos_cached_empty_index: %d, switchos_freeidx: %d\n", int(switchos_cached_empty_index), int(switchos_freeidx)); // TMPDEBUG
 
 				// set valid=0 for atomicity
 				//system("bash tofino/setvalid0.sh");
@@ -853,8 +853,8 @@ void *run_switchos_snapshotserver(void *param) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_cached_keyarray_backup[debugi].serialize(debugbuf, MAX_BUFSIZE);
 					uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
-					printf("serialized debug key-value[%d]:\n", int(debugi));
-					dump_buf(debugbuf, debugkeysize+debugvalsize);
+					//printf("serialized debug key-value[%d]:\n", int(debugi));
+					//dump_buf(debugbuf, debugkeysize+debugvalsize);
 					printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
 				}
 
@@ -885,8 +885,8 @@ void *run_switchos_snapshotserver(void *param) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_cached_keyarray_backup[debugi].serialize(debugbuf, MAX_BUFSIZE);
 					uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
-					printf("serialized debug key-value[%d]:\n", int(debugi));
-					dump_buf(debugbuf, debugkeysize+debugvalsize);
+					//printf("serialized debug key-value[%d]:\n", int(debugi));
+					//dump_buf(debugbuf, debugkeysize+debugvalsize);
 					printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
 				}
 

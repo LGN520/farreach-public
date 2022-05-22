@@ -13,7 +13,7 @@ ycsb_loader
 ycsb_remote_client
 ycsb_server
 *.log
-*.out
+*.out*
 *.pyc
 *.a
 *.o
@@ -27,3 +27,4 @@ dpdktest_client
 dpdktest_server
 socktest_client
 socktest_server
+skewness_check

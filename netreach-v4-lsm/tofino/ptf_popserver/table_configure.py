@@ -69,13 +69,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
     def set_valid0(self, freeidx):
-        print "Set validvalue_reg as 0"
+        #print "Set validvalue_reg as 0"
         index = freeidx
         value = 0
         self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
 
     def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx):
-        print "Add key into cache_lookup_tbl"
+        #print "Add key into cache_lookup_tbl"
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
                 op_hdr_keylohi = convert_u32_to_i32(keylohi),
@@ -88,27 +88,27 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         self.client.cache_lookup_tbl_table_add_with_cached_action(\
                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-        print "Set validvalue_reg as 1"
+        #print "Set validvalue_reg as 1"
         index = freeidx
         value = 1
         self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
 
     def get_evictdata_setvalid3(self):
         # NOTE: cache must be full (i.e., all idxes are valid) when cache eviction
-        print "Get sampled indexes for in-switch cache eviction"
+        #print "Get sampled indexes for in-switch cache eviction"
         cur_sample_cnt = switchos_sample_cnt
         if kv_bucket_num < cur_sample_cnt:
             cur_sample_cnt = kv_bucket_num
         random.seed(time.time())
         sampled_idxes = random.sample(range(0, kv_bucket_num), cur_sample_cnt)
 
-        print "Load frequency counters for sampled indexes"
+        #print "Load frequency counters for sampled indexes"
         frequency_counters = []
         for i in range(len(sampled_idxes)):
             tmp_frequency_counter = convert_i32_to_u32(self.client.register_read_cache_frequency_reg(self.sess_hdl, self.dev_tgt, sampled_idxes[i], flags)[egress_pipeidx])
             frequency_counters.append(tmp_frequency_counter)
 
-        print "Get evictidx by approximate LRF"
+        #print "Get evictidx by approximate LRF"
         min_frequency = frequency_counters[0]
         evictidx = 0
         for i in range(1, len(frequency_counters)):
@@ -116,12 +116,12 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 min_frequency = frequency_counters[i]
                 evictidx = i
 
-        print "Set validvalue[{}] = 3 for atomicity".format(evictidx)
+        #print "Set validvalue[{}] = 3 for atomicity".format(evictidx)
         index = evictidx
         value = 3
         self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
 
-        print "Load evicted data"
+        #print "Load evicted data"
         tmp_deleted = self.client.register_read_deleted_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
         if tmp_deleted == 0:
             evictstat = True
@@ -147,14 +147,14 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         # load savedseq
         evictseq = convert_i32_to_u32(self.client.register_read_savedseq_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
 
-        print "Serialize evicted data"
+        #print "Serialize evicted data"
         sendbuf = struct.pack("=iH", SWITCHOS_GET_EVICTDATA_SETVALID3_ACK, evictidx)
         sendbuf = sendbuf + struct.pack("!H", evictvallen)
         sendbuf = sendbuf + struct.pack("={}sI?".format(len(evictvalbytes)), evictvalbytes, evictseq, evictstat)
         return sendbuf
 
     def remove_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi):
-        print "Remove key from cache_lookup_tbl"
+        #print "Remove key from cache_lookup_tbl"
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
                 op_hdr_keylohi = convert_u32_to_i32(keylohi),

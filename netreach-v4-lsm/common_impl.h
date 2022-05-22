@@ -53,8 +53,8 @@ typedef CacheEvictCase2<netreach_key_t, val_t> cache_evict_case2_t;
 
 //const double dpdk_polling_time = 21.82; // Test by enabling TEST_DPDK_POLLING, and only transmit packets between client and switch
 const double dpdk_polling_time = 0.0;
-const size_t max_sending_rate = size_t(1.2 * 1024 * 1024); // 1.2 MQPS; limit sending rate to x (e.g., the aggregate rate of servers)
-const size_t rate_limit_period = 10 * 1000; // 10 * 1000us
+size_t max_sending_rate = size_t(20 * 1024); // limit sending rate to x (e.g., the aggregate rate of servers)
+const size_t rate_limit_period = 1000 * 1000; // 1s
 
 /*
  * Parameters
@@ -175,6 +175,7 @@ inline void parse_ini(const char* config_file) {
 	client_ip = ini.get_client_ip();
 	ini.get_client_mac(client_macaddr);
 	RUN_SPLIT_DIR(client_workload_dir, workload_name, int(client_num));
+	max_sending_rate *= server_num;
 	per_client_per_period_max_sending_rate = max_sending_rate / client_num / (1 * 1000 * 1000 / rate_limit_period);
 	COUT_VAR(client_num);
 	COUT_VAR(client_port_start);
