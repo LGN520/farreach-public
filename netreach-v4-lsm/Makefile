@@ -88,7 +88,9 @@ include mk/recipes.mk
 
 DEPS :=
 CLEAN :=
-TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_loader ycsb_server switchos controller dpdktest_client dpdktest_server socktest_client socktest_server skewness_check
+TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_loader ycsb_server switchos controller skewness_check
+#dpdktest_client dpdktest_server socktest_client socktest_server
+##client server
 
 DEPS += dpdk_helper.d
 CLEAN += dpdk_helper.o
@@ -156,8 +158,10 @@ ycsb_loader: ycsb_loader.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) rocksd
 DEPS += ycsb_loader.d
 CLEAN += ycsb_loader.o ycsb_loader
 
-ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o latency_helper.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+#ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o latency_helper.o
+#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+ycsb_remote_client: ycsb_remote_client.o socket_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o latency_helper.o
+	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += ycsb_remote_client.d
 CLEAN += ycsb_remote_client.o ycsb_remote_client
 
@@ -176,25 +180,25 @@ controller: controller.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS) ycsb/p
 DEPS += controller.d
 CLEAN += controller.o controller
 
-dpdktest_client: dpdktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o ycsb/parser.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-DEPS += dpdktest_client.d
-CLEAN += dpdktest_client.o dpdktest_client
+#dpdktest_client: dpdktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o ycsb/parser.o
+#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+#DEPS += dpdktest_client.d
+#CLEAN += dpdktest_client.o dpdktest_client
 
-dpdktest_server: dpdktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o ycsb/parser.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-DEPS += dpdktest_server.d
-CLEAN += dpdktest_server.o dpdktest_server
+#dpdktest_server: dpdktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o ycsb/parser.o
+#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
+#DEPS += dpdktest_server.d
+#CLEAN += dpdktest_server.o dpdktest_server
 
-socktest_client: socktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o ycsb/parser.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-DEPS += socktest_client.d
-CLEAN += socktest_client.o socktest_client
+#socktest_client: socktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o ycsb/parser.o
+#	$(LINK) $^ $(LDLIBS) -o $@
+#DEPS += socktest_client.d
+#CLEAN += socktest_client.o socktest_client
 
-socktest_server: socktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o ycsb/parser.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-DEPS += socktest_server.d
-CLEAN += socktest_server.o socktest_server
+#socktest_server: socktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o ycsb/parser.o
+#	$(LINK) $^ $(LDLIBS) -o $@
+#DEPS += socktest_server.d
+#CLEAN += socktest_server.o socktest_server
 
 skewness_check: skewness_check.o  key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@

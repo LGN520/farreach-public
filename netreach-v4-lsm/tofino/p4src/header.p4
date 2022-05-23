@@ -32,6 +32,7 @@ header_type udp_t {
 		srcPort: 16;
 		dstPort: 16;
 		hdrlen: 16;
+		checksum: 16;
 	}
 }
 

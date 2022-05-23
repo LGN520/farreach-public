@@ -16,6 +16,8 @@
 
 #include "key.h"
 
+#define MAX_LCORE_NUM 72
+
 #define NUM_MBUFS 4096 * 64
 //#define NUM_MBUFS 4096
 #define MEMPOOL_CACHE_SIZE 256

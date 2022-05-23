@@ -17,6 +17,12 @@ void create_udpsock(int &sockfd, const char* role) {
 		printf("[%s] fail to create udp socket, errno: %d!\n", role, errno);
 		exit(-1);
 	}
+	// Disable udp/tcp check
+	int disable = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+		printf("[%s] disable tcp checksum failed, errno: %d!\n", role, errno);
+		exit(-1);
+	}
 }
 
 void udpsendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, const char* role) {
@@ -64,12 +70,6 @@ void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const 
 		printf("[%s] fail to setsockopt, errno: %d!\n", role, errno);
 		exit(-1);
 	}
-	// Disable udp/tcp check
-	int disable = 1;
-	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-		printf("[%s] disable udp checksum failed, errno: %d!", role, errno);
-		exit(-1);
-	}
 	// Set timeout for recvfrom/accept of udp/tcp
 	if (need_timeout) {
 		struct timeval tv;
@@ -93,6 +93,12 @@ void create_tcpsock(int &sockfd, const char* role) {
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd == -1) {
 		printf("[%s] fail to create tcp socket, errno: %d!\n", role, errno);
+		exit(-1);
+	}
+	// Disable udp/tcp check
+	int disable = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
+		printf("[%s] disable tcp checksum failed, errno: %d!\n", role, errno);
 		exit(-1);
 	}
 }
@@ -135,12 +141,6 @@ void prepare_tcpserver(int &sockfd, bool need_timeout, short server_port, int ma
 	const int trueFlag = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
 		printf("[%s] fail to setsockopt, errno: %d!\n", role, errno);
-		exit(-1);
-	}
-	// Disable udp/tcp check
-	int disable = 1;
-	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-		printf("[%s] disable tcp checksum failed, errno: %d!\n", role, errno);
 		exit(-1);
 	}
 	// Set timeout for recvfrom/accept of udp/tcp

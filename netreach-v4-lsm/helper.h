@@ -109,9 +109,9 @@
 
 // 1: test dpdk polling time to reduce it from normal RTT
 // 0: not test
-#if 0
-#define TEST_DPDK_POLLING
-#endif
+//#if 0
+//#define TEST_DPDK_POLLING
+//#endif
 
 // 1: test aggregate throughput
 // 0: not test
@@ -142,7 +142,6 @@
 
 #define MAX_BUFSIZE 4096 // 4KB; TODO: increase for large value
 #define MAX_LARGE_BUFSIZE 8388608 // 8MB
-#define MAX_LCORE_NUM 72
 
 #define MQ_SIZE 256 // in-memory message queue
 #define SINGLE_MQ_SIZE 2 // single-message message queue
