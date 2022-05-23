@@ -3,7 +3,10 @@
 
 #include <sys/socket.h> // socket API
 #include <netinet/in.h> // struct sockaddr_in
-#include <errno.h>
+#include <errno.h> // errno
+#include <net/if.h> // struct ifreq; ifname -> ifidx
+//#include <sys/ioctl.h> // ioctl
+#include <netpacket/packet.h> // sockaddr_ll
 
 #include "helper.h"
 
@@ -12,6 +15,7 @@
 // tcp client: create_tcpsock -> tcpconnect -> tcpsend
 // tcp server: prepare_tcpserver -> tcpaccept -> tcprecv
 
+// NOTE: we use uint32_t for ipaddr due to htonl(INADDR_ANY)
 void set_sockaddr(sockaddr_in &addr, uint32_t bigendian_saddr, short littleendian_port);
 
 // udp

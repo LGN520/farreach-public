@@ -5,9 +5,6 @@
 #include <string>
 #include <inttypes.h>
 #include <rte_eal.h>
-#include <rte_ip.h>
-#include <rte_udp.h>
-#include <rte_ethdev.h>
 #include <rte_cycles.h>
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
@@ -15,6 +12,7 @@
 #include <arpa/inet.h>
 
 #include "key.h"
+#include "checksum_helper.h"
 
 #define MAX_LCORE_NUM 72
 
@@ -42,8 +40,6 @@
 //static struct rte_eth_conf port_conf_default;
 
 // Internal funcs
-//static inline uint16_t checksum (uint16_t *addr, int len);
-//static inline uint16_t udp4_checksum (struct ipv4_hdr* iph, struct udp_hdr* udph, char *payload, int payloadlen);
 //static inline int port_init(uint16_t port, struct rte_mempool *mbuf_pool, uint16_t n_txring);
 
 void dpdk_eal_init(int *argc, char ***argv);

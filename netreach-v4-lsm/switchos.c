@@ -1049,7 +1049,7 @@ void *run_switchos_specialcaseserver(void *param) {
 					}
 				default:
 					{
-						printf("[switchos.specialcaseserver] Invalid packet type from reflector.dpdkserver.specialcaseclient!\n");
+						printf("[switchos.specialcaseserver] Invalid packet type from reflector.worker.specialcaseclient!\n");
 						exit(-1);
 					}
 			} // end of switch

@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
  */
 
 void transaction_main() {
-	// reflector: popserver + dpdkserver
+	// reflector: popserver + worker
 	//// server: server_num workers + receiver + evictserver + consnapshotserver
 	// server: server_num workers + evictserver + consnapshotserver
 	transaction_expected_ready_threads = server_num + 4;
@@ -88,18 +88,18 @@ void transaction_main() {
 
 	transaction_running = false;
 
-	// launch popserver
-	pthread_t popserver_thread;
-	ret = pthread_create(&popserver_thread, nullptr, run_reflector_popserver, nullptr);
+	// launch reflector.popserver
+	pthread_t reflector_popserver_thread;
+	ret = pthread_create(&reflector_popserver_thread, nullptr, run_reflector_popserver, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error of launching reflector.popserver: " << ret);
 	}
 
-	// launch dpdkserver
-	pthread_t dpdkserver_thread;
-	ret = pthread_create(&dpdkserver_thread, nullptr, run_reflector_dpdkserver, nullptr);
+	// launch reflector.worker
+	pthread_t reflector_worker_thread;
+	ret = pthread_create(&reflector_worker_thread, nullptr, run_reflector_worker, nullptr);
 	if (ret) {
-		COUT_N_EXIT("Error of launching reflector.dpdkserver: " << ret);
+		COUT_N_EXIT("Error of launching reflector.worker: " << ret);
 	}
 
 	// launch workers (processing normal packets)
@@ -118,7 +118,7 @@ void transaction_main() {
 #ifdef TEST_AGG_THPT
 		server_worker_params[worker_i].sum_latency = 0.0;
 #endif
-		int ret = pthread_create(&threads[worker_i], nullptr, run_server_worker, (void *)&server_worker_params[worker_i]);
+		int ret = pthread_create(&worker_threads[worker_i], nullptr, run_server_worker, (void *)&server_worker_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.worker:" << ret);
 		}
@@ -200,7 +200,6 @@ void transaction_main() {
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join consnapshotserver " << rc);
 	}
-	rte_eal_mp_wait_lcore();
 	printf("[transaction.main] all threads end");
 }
 

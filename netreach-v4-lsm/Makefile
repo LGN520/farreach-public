@@ -1,5 +1,10 @@
 -include Makefile.local
 
+include mk/recipes.mk
+
+DEPS :=
+CLEAN :=
+
 ##############################################################################
 # Compile, link, and install flags
 
@@ -48,6 +53,10 @@ DPDK_LDLIBS += \
   -ldl \
   $(EXTRA_LIBS_DPDK)
 
+DEPS += dpdk_helper.d
+CLEAN += dpdk_helper.o
+DPDK_OBJECTS += dpdk_helper.o
+
 INCDIR += $(DPDK_INCDIR)
 LDDIR += $(DPDK_LDDIR)
 
@@ -62,10 +71,15 @@ ROCKSDB_LDDIR += -L../rocksdb-6.22.1
 
 ROCKSDB_LDLIBS = -lrocksdb -lzstd -lbz2 -llz4 -lsnappy -lz -ldl
 
+DEPS += rocksdb_wrapper.d
+CLEAN += rocksdb_wrapper.o
+ROCKSDB_OBJECTS += rocksdb_wrapper.o
+
 INCDIR += $(ROCKSDB_INCDIR)
 LDDIR += $(ROCKSDB_LDDIR)
 
 ##############################################################################
+
 # MKL configuration
 MKL_INCDIR += -I/opt/intel/mkl/include
 MKL_LDDIR += -L/opt/intel/mkl/lib/intel64 -Wl,-rpath=/opt/intel/mkl/lib/intel64
@@ -73,7 +87,44 @@ MKL_LDLIBS += -lmkl_rt
 
 INCDIR += $(MKL_INCDIR)
 LDDIR += $(MKL_LDDIR)
-LDLIBS += $(MKL_LDLIBS)
+
+##############################################################################
+
+# Utils
+
+UTILS_OBJETS :=
+
+DEPS += key.d val.d
+CLEAN += key.o val.o
+UTILS_OBJETS += key.o val.o
+
+DEPS += socket_helper.d checksum_helper.d
+CLEAN += socket_helper.o checksum_helper.o
+UTILS_OBJETS += socket_helper.o checksum_helper.o
+
+DEPS += ycsb/parser.d
+CLEAN += ycsb/parser.o
+UTILS_OBJETS += ycsb/parser.o
+
+DEPS += crc32.d
+CLEAN += crc32.o
+UTILS_OBJETS += crc32.o
+
+DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
+CLEAN += iniparser/iniparser.o iniparser/dictionary.o iniparser/iniparser_wrapper.o
+UTILS_OBJETS += iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
+
+DEPS += special_case.d
+CLEAN += special_case.o
+UTILS_OBJETS += special_case.o
+
+DEPS += snapshot_record.d
+CLEAN += snapshot_record.o
+UTILS_OBJETS += snapshot_record.o
+
+DEPS += latency_helper.d
+CLEAN += latency_helper.o
+UTILS_OBJETS += latency_helper.o
 
 ##############################################################################
 
@@ -84,49 +135,11 @@ LDFLAGS += $(EXTRA_LDFLAGS)
 
 ##############################################################################
 
-include mk/recipes.mk
-
-DEPS :=
-CLEAN :=
 TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_loader ycsb_server switchos controller skewness_check
 #dpdktest_client dpdktest_server socktest_client socktest_server
 ##client server
 
-DEPS += dpdk_helper.d
-CLEAN += dpdk_helper.o
-
-DEPS += key.d val.d
-CLEAN += key.o val.o
-
-DEPS += ycsb/parser.d
-CLEAN += ycsb/parser.o
-
-DEPS += crc32.d
-CLEAN += crc32.o
-
-DEPS += socket_helper.d
-CLEAN += socket_helper.o
-
-#DEPS += backup_data.d special_case.d
-#CLEAN += backup_data.d backup_data.o special_case.d special_case.o
-#BACKUP_OBJECTS := backup_data.o special_case.o
-DEPS += special_case.d
-CLEAN += special_case.o
-
-DEPS += latency_helper.d
-CLEAN += latency_helper.o
-
-DEPS += rocksdb_wrapper.d
-CLEAN += rocksdb_wrapper.o
-
-INIPARSER_OBJECTS := iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
-DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
-CLEAN += iniparser/iniparser.o iniparser/dictionary.o iniparser/iniparser_wrapper.o
-
-DEPS += snapshot_record.d
-CLEAN += snapshot_record.o
-
-prepare: prepare.o key.o val.o
+prepare: prepare.o $(UTILS_OBJETS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += prepare.d
 CLEAN += prepare.o prepare
@@ -143,39 +156,39 @@ CLEAN += prepare.o prepare
 #DEPS += server.d
 #CLEAN += server.o server
 
-localtest: localtest.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) rocksdb_wrapper.o snapshot_record.o
+localtest: localtest.o $(UTILS_OBJETS) $(ROCKSDB_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += localtest.d
 CLEAN += localtest.o localtest
 
-split_workload: split_workload.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
+split_workload: split_workload.o $(UTILS_OBJETS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += split_workload.d
 CLEAN += split_workload.o split_workload
 
-ycsb_loader: ycsb_loader.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) rocksdb_wrapper.o snapshot_record.o
+ycsb_loader: ycsb_loader.o $(UTILS_OBJETS) $(ROCKSDB_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += ycsb_loader.d
 CLEAN += ycsb_loader.o ycsb_loader
 
-#ycsb_remote_client: ycsb_remote_client.o dpdk_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o latency_helper.o
-#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-ycsb_remote_client: ycsb_remote_client.o socket_helper.o key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS) crc32.o latency_helper.o
+ycsb_remote_client: ycsb_remote_client.o $(UTILS_OBJETS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += ycsb_remote_client.d
 CLEAN += ycsb_remote_client.o ycsb_remote_client
 
-ycsb_server: ycsb_server.o dpdk_helper.o key.o val.o ycsb/parser.o socket_helper.o $(INIPARSER_OBJECTS) latency_helper.o rocksdb_wrapper.o snapshot_record.o
-	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) $(ROCKSDB_LDLIBS) -o $@
+#ycsb_server: ycsb_server.o $(UTILS_OBJETS) $(ROCKSDB_OBJECTS) $(DPDK_OBJECTS)
+	#$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) $(DPDK_LDLIBS) -o $@
+ycsb_server: ycsb_server.o $(UTILS_OBJETS) $(ROCKSDB_OBJECTS)
+	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += ycsb_server.d
 CLEAN += ycsb_server.o ycsb_server
 
-switchos: switchos.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS) special_case.o
+switchos: switchos.o $(UTILS_OBJETS)
 	$(CC) -pthread -g $(LDDIR) $^ -lpthread -o $@
 DEPS += switchos.d
 CLEAN += switchos.o switchos
 
-controller: controller.o key.o val.o socket_helper.o $(INIPARSER_OBJECTS) ycsb/parser.o
+controller: controller.o $(UTILS_OBJETS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += controller.d
 CLEAN += controller.o controller
@@ -200,7 +213,7 @@ CLEAN += controller.o controller
 #DEPS += socktest_server.d
 #CLEAN += socktest_server.o socktest_server
 
-skewness_check: skewness_check.o  key.o val.o ycsb/parser.o $(INIPARSER_OBJECTS)
+skewness_check: skewness_check.o $(UTILS_OBJETS) 
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += skewness_check.d
 CLEAN += skewness_check.o skewness_check

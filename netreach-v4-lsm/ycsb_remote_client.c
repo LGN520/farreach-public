@@ -358,6 +358,7 @@ void *run_fg(void *param) {
 		}*/
 	}
 
+	close(clientsock);
 #if !defined(NDEBUGGING_LOG)
 	ofs.close();
 #endif

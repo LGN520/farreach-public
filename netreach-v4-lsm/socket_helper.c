@@ -1,6 +1,8 @@
 #include "socket_helper.h"
 
-#include <arpa/inet.h> // inetaddr conversion
+#include <arpa/inet.h> // inetaddr conversion; endianess conversion
+
+// udp/tcp sockaddr
 
 void set_sockaddr(sockaddr_in &addr, uint32_t bigendian_saddr, short littleendian_port) {
 	memset((void *)&addr, 0, sizeof(addr));
@@ -20,7 +22,7 @@ void create_udpsock(int &sockfd, const char* role) {
 	// Disable udp/tcp check
 	int disable = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
-		printf("[%s] disable tcp checksum failed, errno: %d!\n", role, errno);
+		printf("[%s] disable checksum failed, errno: %d!\n", role, errno);
 		exit(-1);
 	}
 }
