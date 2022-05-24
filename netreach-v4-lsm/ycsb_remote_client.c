@@ -160,7 +160,7 @@ void *run_fg(void *param) {
 	int req_size = 0;
 	int recv_size = 0;
 	int clientsock = -1;
-	create_udpsock(clientsock, "ycsb_remote_client");
+	create_udpsock(clientsock, true, "ycsb_remote_client"); // enable timeout for client-side retry if pktloss
 	struct sockaddr_in server_addr;
 	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
@@ -181,151 +181,173 @@ void *run_fg(void *param) {
 	while (!running)
 		;
 
+	bool is_timeout = false;
 	while (running) {
 		if (!iter.next()) {
 			break;
 		}
 
-		tmpkey = iter.key();
 		struct timespec req_t1, req_t2, req_t3, rsp_t1, rsp_t2, rsp_t3, final_t3, wait_t1, wait_t2, wait_t3;
-		if (iter.type() == uint8_t(packet_type_t::GETREQ)) { // get
-			CUR_TIME(req_t1);
-			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
-			get_request_t req(tmpkey);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
-			req_size = req.serialize(buf, MAX_BUFSIZE);
-			udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
-			CUR_TIME(req_t2);
-
-			CUR_TIME(wait_t1);
-			udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
-			INVARIANT(recv_size > 0);
-			CUR_TIME(wait_t2);
-
-			CUR_TIME(rsp_t1);
-			get_response_t rsp(buf, recv_size);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
-			CUR_TIME(rsp_t2);
-		}
-		else if (iter.type() == uint8_t(packet_type_t::PUTREQ)) { // update or insert
-			tmpval = iter.val();
-
-			CUR_TIME(req_t1);
-			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
-
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
-			INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
-			put_request_t req(tmpkey, tmpval);
-			req_size = req.serialize(buf, MAX_BUFSIZE);
-			/*if (tmpval.val_length <= val_t::SWITCH_MAX_VALLEN) {
-				put_request_t req(hashidx, tmpkey, tmpval);
+		while (true) {
+			tmpkey = iter.key();
+			if (iter.type() == uint8_t(packet_type_t::GETREQ)) { // get
+				CUR_TIME(req_t1);
+				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
+				get_request_t req(tmpkey);
+				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
+				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
+				CUR_TIME(req_t2);
+
+				CUR_TIME(wait_t1);
+				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+				if (is_timeout) {
+					continue;
+				}
+				INVARIANT(recv_size > 0);
+				CUR_TIME(wait_t2);
+
+				CUR_TIME(rsp_t1);
+				get_response_t rsp(buf, recv_size);
+				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
+				CUR_TIME(rsp_t2);
+			}
+			else if (iter.type() == uint8_t(packet_type_t::PUTREQ)) { // update or insert
+				tmpval = iter.val();
+
+				CUR_TIME(req_t1);
+				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
+
+				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
+				INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
+				put_request_t req(tmpkey, tmpval);
+				req_size = req.serialize(buf, MAX_BUFSIZE);
+				/*if (tmpval.val_length <= val_t::SWITCH_MAX_VALLEN) {
+					put_request_t req(hashidx, tmpkey, tmpval);
+					req_size = req.serialize(buf, MAX_BUFSIZE);
+				}
+				else {
+					put_request_large_t req(hashidx, tmpkey, tmpval);
+					req_size = req.serialize(buf, MAX_BUFSIZE);
+				}*/
+
+				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
+				CUR_TIME(req_t2);
+
+				CUR_TIME(wait_t1);
+				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+				if (is_timeout) {
+					continue;
+				}
+				INVARIANT(recv_size > 0);
+				CUR_TIME(wait_t2);
+
+				CUR_TIME(rsp_t1);
+				put_response_t rsp(buf, recv_size);
+				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+				CUR_TIME(rsp_t2);
+			}
+			else if (iter.type() == uint8_t(packet_type_t::DELREQ)) {
+				CUR_TIME(req_t1);
+				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
+				del_request_t req(tmpkey);
+				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
+				req_size = req.serialize(buf, MAX_BUFSIZE);
+				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
+				CUR_TIME(req_t2);
+
+				CUR_TIME(wait_t1);
+				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+				if (is_timeout) {
+					continue;
+				}
+				INVARIANT(recv_size > 0);
+				CUR_TIME(wait_t2);
+
+				CUR_TIME(rsp_t1);
+				del_response_t rsp(buf, recv_size);
+				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+				CUR_TIME(rsp_t2);
+			}
+			else if (iter.type() == uint8_t(packet_type_t::SCANREQ)) {
+				netreach_key_t endkey = generate_endkey(tmpkey);
+				/*size_t first_server_idx = get_server_idx(tmpkey);
+				size_t last_server_idx = get_server_idx(endkey);
+				size_t split_num = last_server_idx - first_server_idx + 1;*/
+
+				CUR_TIME(req_t1);
+				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
+				//scan_request_t req(tmpkey, endkey, range_num);
+				scan_request_t req(tmpkey, endkey);
+				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
+						<< "endkey = " << endkey.to_string());
+				req_size = req.serialize(buf, MAX_BUFSIZE);
+				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
+				CUR_TIME(req_t2);
+
+				struct timespec scan_rsp_t1, scan_rsp_t2, scan_rsp_t3;
+				struct timespec scan_wait_t1, scan_wait_t2, scan_wait_t3;
+				double scan_rsp_latency = 0.0, scan_wait_latency = 0.0;
+				//for (size_t tmpsplit = 0; tmpsplit < split_num; tmpsplit++) {
+				uint16_t received_scannum = 0;
+				uint16_t max_scannum = 0;
+				bool with_max_scannum = false;
+				bool split_is_timeout = false;
+				while (true) {
+					CUR_TIME(scan_wait_t1);
+					split_is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					if (split_is_timeout) {
+						is_timeout = true;
+						break;
+					}
+					INVARIANT(recv_size > 0);
+					CUR_TIME(scan_wait_t2);
+
+					DELTA_TIME(scan_wait_t2, scan_wait_t1, scan_wait_t3);
+					double tmp_scan_wait_latency = GET_MICROSECOND(scan_wait_t3);
+					scan_wait_latency += tmp_scan_wait_latency;
+					/*if (scan_wait_latency == 0.0 || tmp_scan_wait_latency < scan_wait_latency) {
+						scan_wait_latency = tmp_scan_wait_latency;
+						wait_t1 = scan_wait_t1;
+						wait_t2 = scan_wait_t2;
+					}*/
+
+					CUR_TIME(scan_rsp_t1);
+					scan_response_split_t rsp(buf, recv_size);
+					FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
+							<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
+					received_scannum += 1;
+					if (!with_max_scannum) {
+						max_scannum = rsp.max_scannum();
+						INVARIANT(max_scannum >= 1 && max_scannum <= server_num);
+						with_max_scannum = true;
+					}
+					CUR_TIME(scan_rsp_t2);
+
+					DELTA_TIME(scan_rsp_t2, scan_rsp_t1, scan_rsp_t3);
+					double tmp_scan_rsp_latency = GET_MICROSECOND(scan_rsp_t3);
+					scan_rsp_latency += tmp_scan_rsp_latency;
+					/*if (scan_rsp_latency == 0.0 || tmp_scan_rsp_latency < scan_rsp_latency) {
+						scan_rsp_latency = tmp_scan_rsp_latency;
+						rsp_t1 = scan_rsp_t1;
+						rsp_t2 = scan_rsp_t2;
+					}*/
+
+					if (received_scannum >= max_scannum) {
+						break;
+					}
+				}
+				if (is_timeout) {
+					continue;
+				}
 			}
 			else {
-				put_request_large_t req(hashidx, tmpkey, tmpval);
-				req_size = req.serialize(buf, MAX_BUFSIZE);
-			}*/
-
-			udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
-			CUR_TIME(req_t2);
-
-			CUR_TIME(wait_t1);
-			udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
-			INVARIANT(recv_size > 0);
-			CUR_TIME(wait_t2);
-
-			CUR_TIME(rsp_t1);
-			put_response_t rsp(buf, recv_size);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
-			CUR_TIME(rsp_t2);
-		}
-		else if (iter.type() == uint8_t(packet_type_t::DELREQ)) {
-			CUR_TIME(req_t1);
-			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
-			del_request_t req(tmpkey);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
-			req_size = req.serialize(buf, MAX_BUFSIZE);
-			udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
-			CUR_TIME(req_t2);
-
-			CUR_TIME(wait_t1);
-			udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
-			INVARIANT(recv_size > 0);
-			CUR_TIME(wait_t2);
-
-			CUR_TIME(rsp_t1);
-			del_response_t rsp(buf, recv_size);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
-			CUR_TIME(rsp_t2);
-		}
-		else if (iter.type() == uint8_t(packet_type_t::SCANREQ)) {
-			netreach_key_t endkey = generate_endkey(tmpkey);
-			/*size_t first_server_idx = get_server_idx(tmpkey);
-			size_t last_server_idx = get_server_idx(endkey);
-			size_t split_num = last_server_idx - first_server_idx + 1;*/
-
-			CUR_TIME(req_t1);
-			//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
-			//scan_request_t req(tmpkey, endkey, range_num);
-			scan_request_t req(tmpkey, endkey);
-			FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
-					<< "endkey = " << endkey.to_string());
-			req_size = req.serialize(buf, MAX_BUFSIZE);
-			udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
-			CUR_TIME(req_t2);
-
-			struct timespec scan_rsp_t1, scan_rsp_t2, scan_rsp_t3;
-			struct timespec scan_wait_t1, scan_wait_t2, scan_wait_t3;
-			double scan_rsp_latency = 0.0, scan_wait_latency = 0.0;
-			//for (size_t tmpsplit = 0; tmpsplit < split_num; tmpsplit++) {
-			uint16_t received_scannum = 0;
-			uint16_t max_scannum = 0;
-			bool with_max_scannum = false;
-			while (true) {
-				CUR_TIME(scan_wait_t1);
-				udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
-				INVARIANT(recv_size > 0);
-				CUR_TIME(scan_wait_t2);
-
-				DELTA_TIME(scan_wait_t2, scan_wait_t1, scan_wait_t3);
-				double tmp_scan_wait_latency = GET_MICROSECOND(scan_wait_t3);
-				scan_wait_latency += tmp_scan_wait_latency;
-				/*if (scan_wait_latency == 0.0 || tmp_scan_wait_latency < scan_wait_latency) {
-					scan_wait_latency = tmp_scan_wait_latency;
-					wait_t1 = scan_wait_t1;
-					wait_t2 = scan_wait_t2;
-				}*/
-
-				CUR_TIME(scan_rsp_t1);
-				scan_response_split_t rsp(buf, recv_size);
-				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
-						<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
-				received_scannum += 1;
-				if (!with_max_scannum) {
-					max_scannum = rsp.max_scannum();
-					INVARIANT(max_scannum >= 1 && max_scannum <= server_num);
-					with_max_scannum = true;
-				}
-				CUR_TIME(scan_rsp_t2);
-
-				DELTA_TIME(scan_rsp_t2, scan_rsp_t1, scan_rsp_t3);
-				double tmp_scan_rsp_latency = GET_MICROSECOND(scan_rsp_t3);
-				scan_rsp_latency += tmp_scan_rsp_latency;
-				/*if (scan_rsp_latency == 0.0 || tmp_scan_rsp_latency < scan_rsp_latency) {
-					scan_rsp_latency = tmp_scan_rsp_latency;
-					rsp_t1 = scan_rsp_t1;
-					rsp_t2 = scan_rsp_t2;
-				}*/
-
-				if (received_scannum >= max_scannum) {
-					break;
-				}
+				printf("Invalid request type: %u\n", uint32_t(iter.type()));
+				exit(-1);
 			}
 		}
-		else {
-			printf("Invalid request type: %u\n", uint32_t(iter.type()));
-			exit(-1);
-		}
+		is_timeout = false;
+
 		DELTA_TIME(req_t2, req_t1, req_t3);
 		DELTA_TIME(rsp_t2, rsp_t1, rsp_t3);
 		DELTA_TIME(wait_t2, wait_t1, wait_t3);

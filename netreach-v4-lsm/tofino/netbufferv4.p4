@@ -271,7 +271,7 @@ control egress {
 	apply(update_vallo16_tbl);
 	apply(update_valhi16_tbl);
 	apply(update_udplen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
-	apply(update_macaddr_tbl); // Update mac addr for responses and PUTREQ_GS/GS_CASE2
+	apply(update_ipmac_srcport_tbl); // Update ip, mac, and srcport for RES to client and notification to switchos
 	apply(add_and_remove_value_header_tbl); // Add or remove vallen and val according to optype and vallen
 	apply(drop_tbl); // drop GETRES_LATEST_SEQ_INSWITCH and GETRES_DELETED_SEQ_INSWITCH
 }

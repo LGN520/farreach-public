@@ -536,7 +536,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: ipv4_forward_tbl (default: nop; size: 5)
             print "Configuring ipv4_forward_tbl"
-            ipv4addr0 = ipv4Addr_to_i32(src_ip)
+            ipv4addr0 = ipv4Addr_to_i32(client_ip)
             for tmpoptype in [GETRES, PUTRES, DELRES]:
                 matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
@@ -1637,31 +1637,41 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.update_udplen_tbl_table_add_with_update_udplen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
-            # Table: update_macaddr_tbl (default: nop; 6)
-            print "Configuring update_macaddr_tbl"
-            actnspec0 = netbufferv4_update_macaddr_s2c_action_spec_t(\
-                    macAddr_to_string(src_mac), \
-                    macAddr_to_string(dst_mac))
-            actnspec1 = netbufferv4_update_macaddr_c2s_action_spec_t(\
-                    macAddr_to_string(src_mac), \
-                    macAddr_to_string(dst_mac))
-            matchspec0 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES)
-            matchspec1 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=PUTRES)
-            matchspec2 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=DELRES)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
+            # Table: update_ipmac_srcport_tbl (default: nop; 6)
+            print "Configuring update_ipmac_srcport_tbl"
+            actnspec0 = netbufferv4_update_ipmac_srcport_server2client_action_spec_t(\
+                    macAddr_to_string(client_mac), \
+                    macAddr_to_string(server_mac), \
+                    ipv4Addr_to_i32(client_ip), \
+                    ipv4Addr_to_i32(server_ip), \
+                    server_port)
+            # Here we use server_mac/ip to simulate reflector_mac/ip = switchos_mac/ip
+            actnspec1 = netbufferv4_update_ipmac_srcport_client2switch_action_spec_t(\
+                    macAddr_to_string(client_mac), \
+                    macAddr_to_string(server_mac), \
+                    ipv4Addr_to_i32(client_ip), \
+                    ipv4Addr_to_i32(server_ip), \
+                    client_port)
+            matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=GETRES)
+            matchspec1 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=PUTRES)
+            matchspec2 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=DELRES)
+            matchspec3 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=SCANRES_SPLIT)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client_s2c(\
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client_s2c(\
                     self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_s2c(\
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client_s1c(\
                     self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
-            matchspec3 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_LATEST_SEQ_INSWITCH_CASE1)
-            matchspec4 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=GETRES_DELETED_SEQ_INSWITCH_CASE1)
-            matchspec5 = netbufferv4_update_macaddr_tbl_match_spec_t(op_hdr_optype=CACHE_POP_INSWITCH_ACK)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client_s1c(\
+                    self.sess_hdl, self.dev_tgt, matchspec3, actnspec0)
+            matchspec3 = netbufferv4_update_ipmac_srcport_client2switch_tbl_match_spec_t(op_hdr_optype=GETRES_LATEST_SEQ_INSWITCH_CASE1)
+            matchspec4 = netbufferv4_update_ipmac_srcport_client2switch_tbl_match_spec_t(op_hdr_optype=GETRES_DELETED_SEQ_INSWITCH_CASE1)
+            matchspec5 = netbufferv4_update_ipmac_srcport_client2switch_tbl_match_spec_t(op_hdr_optype=CACHE_POP_INSWITCH_ACK)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
                     self.sess_hdl, self.dev_tgt, matchspec3, actnspec1)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
                     self.sess_hdl, self.dev_tgt, matchspec4, actnspec1)
-            self.client.update_macaddr_tbl_table_add_with_update_macaddr_c2s(\
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
                     self.sess_hdl, self.dev_tgt, matchspec5, actnspec1)
 
             # Table: add_and_remove_value_header_tbl (default: remove_all; 17*9=153)

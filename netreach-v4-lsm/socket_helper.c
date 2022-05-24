@@ -13,7 +13,7 @@ void set_sockaddr(sockaddr_in &addr, uint32_t bigendian_saddr, short littleendia
 
 // udp
 
-void create_udpsock(int &sockfd, const char* role) {
+void create_udpsock(int &sockfd, bool need_timeout, const char* role) {
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd == -1) {
 		printf("[%s] fail to create udp socket, errno: %d!\n", role, errno);
@@ -24,6 +24,14 @@ void create_udpsock(int &sockfd, const char* role) {
 	if (setsockopt(sockfd, SOL_SOCKET, SO_NO_CHECK, (void*)&disable, sizeof(disable)) < 0) {
 		printf("[%s] disable checksum failed, errno: %d!\n", role, errno);
 		exit(-1);
+	}
+	// Set timeout for recvfrom/accept of udp/tcp
+	if (need_timeout) {
+		struct timeval tv;
+		tv.tv_sec = 1;
+		tv.tv_usec =  0;
+		int res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+		INVARIANT(res >= 0);
 	}
 }
 
@@ -65,20 +73,12 @@ void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const 
 	INVARIANT(role != NULL);
 
 	// create socket
-	create_udpsock(sockfd, role);
+	create_udpsock(sockfd, need_timeout, role);
 	// reuse the occupied port for the last created socket instead of being crashed
 	const int trueFlag = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
 		printf("[%s] fail to setsockopt, errno: %d!\n", role, errno);
 		exit(-1);
-	}
-	// Set timeout for recvfrom/accept of udp/tcp
-	if (need_timeout) {
-		struct timeval tv;
-		tv.tv_sec = 1;
-		tv.tv_usec =  0;
-		int res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-		INVARIANT(res >= 0);
 	}
 	// Set listen address
 	sockaddr_in listen_addr;

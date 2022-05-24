@@ -49,7 +49,7 @@ void run_benchmark() {
 	int payloadvalue = hit_payload;
 
 	int sockfd = -1;
-	create_udpsock(sockfd, "socktest.client");
+	create_udpsock(sockfd, false, "socktest.client");
 	struct sockaddr_in server_addr;
 	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);

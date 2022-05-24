@@ -42,9 +42,9 @@ void prepare_reflector() {
 	}
 	reflector_head_for_popack_snapshot = 0;
 	reflector_tail_for_popack_snapshot = 0;*/
-	create_udpsock(reflector_worker_popclient_udpsock, "reflector.worker.popclient");
+	create_udpsock(reflector_worker_popclient_udpsock, false, "reflector.worker.popclient");
 
-	create_udpsock(reflector_worker_specialcaseclient_udpsock, "reflector.worker.specialcaseclient");
+	create_udpsock(reflector_worker_specialcaseclient_udpsock, false, "reflector.worker.specialcaseclient");
 
 	memory_fence();
 

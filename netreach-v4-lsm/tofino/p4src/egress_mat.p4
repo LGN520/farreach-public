@@ -933,23 +933,32 @@ table update_udplen_tbl {
 	size: 256;
 }
 
-action update_macaddr_s2c(tmp_srcmac, tmp_dstmac) {
-	modify_field(ethernet_hdr.dstAddr, tmp_srcmac);
-	modify_field(ethernet_hdr.srcAddr, tmp_dstmac);
+action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, server_ip, server_port) {
+	modify_field(ethernet_hdr.srcAddr, server_mac);
+	modify_field(ethernet_hdr.dstAddr, client_mac);
+	modify_field(ip_hdr.srcAddr, server_ip);
+	modify_field(ip_hdr.dstAddr, client_ip);
+	modify_field(udp_hdr.srcPort, server_port);
 }
 
-action update_macaddr_c2s(tmp_srcmac, tmp_dstmac) {
-	modify_field(ethernet_hdr.srcAddr, tmp_srcmac);
-	modify_field(ethernet_hdr.dstAddr, tmp_dstmac);
+// NOTE: as we use software link, switch_mac/ip = reflector_mac/ip
+// NOTE: although we use client_port to update srcport here, reflector does not care about the specific value of srcport
+action update_ipmac_srcport_client2switch(client_mac, switch_mac, client_ip, switch_ip, client_port) {
+	modify_field(ethernet_hdr.srcAddr, client_mac);
+	modify_field(ethernet_hdr.dstAddr, switch_mac);
+	modify_field(ip_hdr.srcAddr, client_ip);
+	modify_field(ip_hdr.dstAddr, switch_ip);
+	modify_field(udp_hdr.srcPort, client_port);
 }
 
-table update_macaddr_tbl {
+// NOTE: dstport of REQ, RES, and notification has been updated in partition_tbl, server, and eg_port_forwardtbl
+table update_ipmac_srcport_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		update_macaddr_s2c;
-		update_macaddr_c2s;
+		update_ipmac_srcport_server2client;
+		update_ipmac_srcport_client2switch;
 		nop;
 	}
 	default_action: nop();

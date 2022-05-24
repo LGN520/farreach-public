@@ -308,7 +308,7 @@ void prepare_switchos() {
 	//switchos_head_for_pop = 0;
 	//switchos_tail_for_pop = 0;
 
-	create_udpsock(switchos_popworker_popclient_udpsock, "switchos.popworker");
+	create_udpsock(switchos_popworker_popclient_udpsock, false, "switchos.popworker");
 	switchos_cached_keyarray = new index_key_t[switch_kv_bucket_num]();
 	switchos_cached_serveridxarray = new uint16_t[switch_kv_bucket_num];
 	for (size_t i = 0; i < switch_kv_bucket_num; i++) {
@@ -331,7 +331,7 @@ void prepare_switchos() {
 	//switchos_specialcases->clear();
 
 	// prepare for switchos <-> ptf
-	create_udpsock(switchos_popworker_popclient_for_ptf_udpsock, "switchos.popworker.popclient_for_ptf");
+	create_udpsock(switchos_popworker_popclient_for_ptf_udpsock, false, "switchos.popworker.popclient_for_ptf");
 	create_tcpsock(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, "switchos.snapshotserver.snapshotclient_for_ptf");
 
 	memory_fence();

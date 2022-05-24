@@ -19,7 +19,7 @@
 void set_sockaddr(sockaddr_in &addr, uint32_t bigendian_saddr, short littleendian_port);
 
 // udp
-void create_udpsock(int &sockfd, const char* role = "sockethelper.udpsock");
+void create_udpsock(int &sockfd, bool need_timeout, const char* role = "sockethelper.udpsock");
 void udpsendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, const char* role = "sockethelper.udpsendto");
 void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const char* role = "sockethelper.udpserver");
 bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role = "sockethelper.udprecvfrom");
