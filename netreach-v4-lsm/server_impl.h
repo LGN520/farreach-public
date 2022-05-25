@@ -10,12 +10,14 @@
 
 #include "snapshot_record.h"
 #include "concurrent_map_impl.h"
+#include "concurrent_set_impl.h"
 #include "rocksdb_wrapper.h"
 
 #define DUMP_BUF
 
 typedef DeletedSet<netreach_key_t, uint32_t> deleted_set_t;
 typedef ConcurrentMap<netreach_key_t, snapshot_record_t> concurrent_snapshot_map_t;
+typedef ConcurrentSet<netreach_key_t> concurrent_set_t;
 
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   uint16_t serveridx;
@@ -32,15 +34,12 @@ int * server_worker_udpsock_list = NULL;
 
 // Per-server popclient <-> one popserver in controller
 int * server_popclient_tcpsock_list = NULL;
-std::set<netreach_key_t> * server_cached_keyset_list = NULL;
+concurrent_set_t * server_cached_keyset_list = NULL;
 
 // server.evictservers <-> controller.evictserver.evictclients
 //int * server_evictserver_tcpsock_list = NULL;
 // server.evictserver <-> controller.evictserver.evictclient
 int server_evictserver_tcpsock = -1;
-// single-message queues is sufficient between server.evictclients and server.workers
-MessagePtrQueue<cache_evict_t> * server_cache_evict_or_case2_ptr_queue_list = NULL;
-MessagePtrQueue<cache_evict_ack_t> * server_cache_evict_ack_ptr_queue_list = NULL;
 
 // snapshot
 int server_consnapshotserver_tcpsock = -1;
@@ -88,11 +87,9 @@ void prepare_server() {
 
 	// Prepare for cache population
 	server_popclient_tcpsock_list = new int[server_num];
-	server_cached_keyset_list = new std::set<netreach_key_t>[server_num];
+	server_cached_keyset_list = new concurrent_set_t[server_num];
 	for (size_t i = 0; i < server_num; i++) {
 		create_tcpsock(server_popclient_tcpsock_list[i], "server.popclient");
-
-		server_cached_keyset_list[i].clear();
 	}
 
 	// prepare for cache eviction
@@ -101,12 +98,6 @@ void prepare_server() {
 		prepare_tcpserver(server_evictserver_tcpksock_list[i], false, server_evictserver_port_start+i, 1, "server.evictserver"); // MAX_PENDING_NUM = 1
 	}*/
 	prepare_tcpserver(server_evictserver_tcpsock, false, server_evictserver_port_start, 1, "server.evictserver"); // MAX_PENDING_NUM = 1
-	server_cache_evict_or_case2_ptr_queue_list = new MessagePtrQueue<cache_evict_t>[server_num];
-	server_cache_evict_ack_ptr_queue_list = new MessagePtrQueue<cache_evict_ack_t>[server_num];
-	for (size_t i = 0; i < server_num; i++) {
-		server_cache_evict_or_case2_ptr_queue_list[i].init(SINGLE_MQ_SIZE);
-		server_cache_evict_ack_ptr_queue_list[i].init(SINGLE_MQ_SIZE);
-	}
 
 	// prepare for crash-consistent snapshot
 	prepare_tcpserver(server_consnapshotserver_tcpsock, false, server_consnapshotserver_port, 1, "server.consnapshotserver"); // MAX_PENDING_NUM = 1
@@ -139,14 +130,6 @@ void close_server() {
 		delete [] server_evictserver_tcpsock_list;
 		server_evictserver_tcpsock_list = NULL;
 	}*/
-	if (server_cache_evict_or_case2_ptr_queue_list != NULL) {
-		delete [] server_cache_evict_or_case2_ptr_queue_list;
-		server_cache_evict_or_case2_ptr_queue_list = NULL;
-	}
-	if (server_cache_evict_ack_ptr_queue_list != NULL) {
-		delete [] server_cache_evict_ack_ptr_queue_list;
-		server_cache_evict_ack_ptr_queue_list = NULL;
-	}
 	if (server_snapshot_rcus != NULL) {
 		delete [] server_snapshot_rcus;
 		server_snapshot_rcus = NULL;
@@ -167,8 +150,6 @@ void *run_server_worker(void * param) {
 	  printf("You need to run ycsb_loader before ycsb_server\n");
 	  exit(-1);
   }
-
-  int res = 0;
 
   // scan.startkey <= max_startkey; scan.endkey >= min_startkey
   // use size_t to avoid int overflow
@@ -466,8 +447,11 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
+				printf("tmp_stat: %d\n", tmp_stat?1:0);
 				if (tmp_stat) {
-					bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
+				//if (false) {
+					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
+					printf("is_cached_before: %d\n", is_cached_before?1:0);
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
 						// Send CACHE_POP to controller.popserver
@@ -498,8 +482,11 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
+				printf("tmp_stat: %d\n", tmp_stat?1:0);
 				if (tmp_stat) { // successful put
-					bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
+				//if (false) {
+					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
+					printf("is_cached_before: %d\n", is_cached_before?1:0);
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
 						// Send CACHE_POP to controller.popserver
@@ -557,8 +544,11 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
+				printf("tmp_stat: %d\n", tmp_stat?1:0);
 				if (tmp_stat) { // successful put
-					bool is_cached_before = (server_cached_keyset_list[serveridx].find(req.key()) != server_cached_keyset_list[serveridx].end());
+				//if (false) {
+					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
+					printf("is_cached_before: %d\n", is_cached_before?1:0);
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
 						// Send CACHE_POP to controller.popserver
@@ -608,45 +598,7 @@ void *run_server_worker(void * param) {
 	server_snapshot_rcus[serveridx]++;
 	thread_param.throughput++;
 
-
-
-	cache_evict_t *tmp_cache_evict_ptr = server_cache_evict_or_case2_ptr_queue_list[serveridx].read();
-	if (tmp_cache_evict_ptr != NULL) {
-		INVARIANT(tmp_cache_evict_ptr->serveridx() == serveridx);
-		INVARIANT(server_cached_keyset_list[serveridx].find(tmp_cache_evict_ptr->key()) != server_cached_keyset_list[serveridx].end());
-
-		// make server-side snapshot for CACHE_EVICT_CASE2
-		if (tmp_cache_evict_ptr->type() == packet_type_t::CACHE_EVICT_CASE2) {
-			printf("CACHE_EVICT_CASE2!\n");
-			if (!server_issnapshot) {
-				db_wrappers[serveridx].make_snapshot();
-			}
-		}
-
-		// remove from cached keyset
-		server_cached_keyset_list[serveridx].erase(tmp_cache_evict_ptr->key()); // NOTE: no contention
-
-		// update in-memory KVS if necessary
-		if (tmp_cache_evict_ptr->stat()) { // put
-			db_wrappers[serveridx].put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq());
-		}
-		else { // del
-			db_wrappers[serveridx].remove(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->seq());
-		}
-
-		// send CACHE_EVICT_ACK to server.evictserver
-		cache_evict_ack_t *tmp_cache_evict_ack_ptr = new cache_evict_ack_t(tmp_cache_evict_ptr->key()); // freed by server.evictserver
-		bool res = server_cache_evict_ack_ptr_queue_list[serveridx].write(tmp_cache_evict_ack_ptr);
-		if (!res) {
-			printf("[server.worker] error: more than one CACHE_EVICT_ACK!\n");
-			exit(-1);
-		}
-
-		// free CACHE_EVIT
-		delete tmp_cache_evict_ptr;
-		tmp_cache_evict_ptr = NULL;
-	}
-  }
+  } // end of while(transaction_running)
 
   close(server_worker_udpsock_list[serveridx]);
   close(server_popclient_tcpsock_list[serveridx]);
@@ -677,15 +629,13 @@ void *run_server_evictserver(void *param) {
 	bool is_broken = false;
 	uint8_t optype = 0;
 	bool with_optype = false;
-	netreach_key_t tmpkey = netreach_key_t();
 	uint32_t vallen = 0;
 	bool with_vallen = false;
-	bool is_waitack = false;
 	const int arrive_optype_bytes = sizeof(uint8_t);
 	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint32_t);
 	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint16_t);
 	int arrive_serveridx_bytes = -1;
-	uint16_t tmp_serveridx = 0;
+	char sendbuf[MAX_BUFSIZE]; // used to send CACHE_EVICT_ACK to control;er
 	while (transaction_running) {
 		if (!direct_parse) {
 			int recvsize = 0;
@@ -709,9 +659,8 @@ void *run_server_evictserver(void *param) {
 			with_optype = true;
 		}
 
-		// Get key and vallen
+		// Skip key and get vallen
 		if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
-			tmpkey.deserialize(recvbuf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
 			//vallen = *((uint32_t *)(recvbuf + arrive_vallen_bytes - sizeof(uint32_t)));
 			//vallen = ntohl(vallen);
 			vallen = *((uint16_t *)(recvbuf + arrive_vallen_bytes - sizeof(uint16_t)));
@@ -723,77 +672,76 @@ void *run_server_evictserver(void *param) {
 		}
 
 		// Get one complete CACHE_EVICT/_CASE2 (only need serveridx here)
-		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes && !is_waitack) {
+		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes) {
 			//printf("receive CACHE_EVICT from controller\n");
 			//dump_buf(recvbuf, arrive_serveridx_bytes);
-			bool res = false;
-			// send CACHE_EVICT to server.worker 
+			
+			cache_evict_t *tmp_cache_evict_ptr;
 			if (packet_type_t(optype) == packet_type_t::CACHE_EVICT) {
-				cache_evict_t *tmp_cache_evict_ptr = new cache_evict_t(recvbuf, arrive_serveridx_bytes); // freed by server.worker
-				//INVARIANT(tmp_cache_evict_ptr->serveridx() == serveridx);
-				tmp_serveridx = tmp_cache_evict_ptr->serveridx();
-				res = server_cache_evict_or_case2_ptr_queue_list[tmp_serveridx].write(tmp_cache_evict_ptr);
+				tmp_cache_evict_ptr = new cache_evict_t(recvbuf, arrive_serveridx_bytes);
 			}
 			else if (packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2) {
-				cache_evict_case2_t *tmp_cache_evict_case2_ptr = new cache_evict_case2_t(recvbuf, arrive_serveridx_bytes); // freed by server.worker
-				//INVARIANT(tmp_cache_evict_case2_ptr->serveridx() == serveridx);
-				tmp_serveridx = tmp_cache_evict_case2_ptr->serveridx();
-				res = server_cache_evict_or_case2_ptr_queue_list[tmp_serveridx].write((cache_evict_t *)tmp_cache_evict_case2_ptr);
+				tmp_cache_evict_ptr = new cache_evict_case2_t(recvbuf, arrive_serveridx_bytes);
 			}
 			else {
 				printf("[server.evictserver] error: invalid optype: %d\n", int(optype));
 				exit(-1);
 			}
-			
-			if (!res) {
-				printf("[server.evictserver] error: more than one CACHE_EVICT/_CASE2!\n");
-				exit(-1);
+
+			uint16_t tmp_serveridx = tmp_cache_evict_ptr->serveridx();
+			//INVARIANT(tmp_serveridx == serveridx);
+			INVARIANT(server_cached_keyset_list[tmp_serveridx].is_exist(tmp_cache_evict_ptr->key()));
+
+			// make server-side snapshot for CACHE_EVICT_CASE2
+			if (packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2) {
+				printf("CACHE_EVICT_CASE2!\n");
+				if (!server_issnapshot) {
+					db_wrappers[tmp_serveridx].make_snapshot();
+				}
 			}
 
-			is_waitack = true;
-		}
+			// remove from cached keyset
+			server_cached_keyset_list[tmp_serveridx].erase(tmp_cache_evict_ptr->key()); // NOTE: no contention
 
-		// wait for CACHE_EVICT_ACK from server.worker
-		while (is_waitack) {
-			cache_evict_ack_t *tmp_cache_evict_ack_ptr = server_cache_evict_ack_ptr_queue_list[tmp_serveridx].read();
-			if (tmp_cache_evict_ack_ptr != NULL) {
-				INVARIANT(tmp_cache_evict_ack_ptr->key() == tmpkey);
-
-				// send CACHE_EVICT_ACK to controller.evictserver.evictclient
-				char sendbuf[MAX_BUFSIZE];
-				int sendsize = tmp_cache_evict_ack_ptr->serialize(sendbuf, MAX_BUFSIZE);
-				//printf("send CACHE_EVICT_ACK to controller\n");
-				//dump_buf(sendbuf, sendsize);
-				tcpsend(connfd, sendbuf, sendsize, "server.evictserver");
-
-				// move remaining bytes and reset metadata
-				if (cur_recv_bytes > arrive_serveridx_bytes) {
-					memcpy(recvbuf, recvbuf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
-					cur_recv_bytes = cur_recv_bytes - arrive_serveridx_bytes;
-				}
-				else {
-					cur_recv_bytes = 0;
-				}
-				if (cur_recv_bytes >= arrive_optype_bytes) {
-					direct_parse = true;
-				}
-				else {
-					direct_parse = false;
-				}
-				is_broken = false;
-				optype = 0;
-				with_optype = false;
-				tmpkey = netreach_key_t();
-				vallen = 0;
-				with_vallen = false;
-				is_waitack = false;
-				arrive_serveridx_bytes = -1;
-				tmp_serveridx = 0;
-
-				// free CACHE_EVIT_ACK
-				delete tmp_cache_evict_ack_ptr;
-				tmp_cache_evict_ack_ptr = NULL;
+			// update in-memory KVS if necessary
+			if (tmp_cache_evict_ptr->stat()) { // put
+				db_wrappers[tmp_serveridx].put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq());
 			}
+			else { // del
+				db_wrappers[tmp_serveridx].remove(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->seq());
+			}
+
+			// send CACHE_EVICT_ACK to controller.evictserver.evictclient
+			cache_evict_ack_t tmp_cache_evict_ack(tmp_cache_evict_ptr->key());
+			int sendsize = tmp_cache_evict_ack.serialize(sendbuf, MAX_BUFSIZE);
+			//printf("send CACHE_EVICT_ACK to controller\n");
+			//dump_buf(sendbuf, sendsize);
+			tcpsend(connfd, sendbuf, sendsize, "server.evictserver");
+
+			// free CACHE_EVIT
+			delete tmp_cache_evict_ptr;
+			tmp_cache_evict_ptr = NULL;
+
+			// move remaining bytes and reset metadata
+			if (cur_recv_bytes > arrive_serveridx_bytes) {
+				memcpy(recvbuf, recvbuf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
+				cur_recv_bytes = cur_recv_bytes - arrive_serveridx_bytes;
+			}
+			else {
+				cur_recv_bytes = 0;
+			}
+			if (cur_recv_bytes >= arrive_optype_bytes) {
+				direct_parse = true;
+			}
+			else {
+				direct_parse = false;
+			}
+			is_broken = false;
+			optype = 0;
+			with_optype = false;
+			vallen = 0;
+			with_vallen = false;
+			arrive_serveridx_bytes = -1;
 		}
 	}
 	close(server_evictserver_tcpsock);

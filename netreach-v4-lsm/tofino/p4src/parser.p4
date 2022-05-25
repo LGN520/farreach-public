@@ -342,3 +342,37 @@ parser parse_clone {
 	extract(debug_hdr);
 	return ingress;
 }*/
+
+// checksum calculation (deparser phase)
+
+field_list ipv4_field_list {
+    ipv4_hdr.version;
+    ipv4_hdr.ihl;
+    ipv4_hdr.diffserv;
+    ipv4_hdr.totalLen;
+    ipv4_hdr.identification;
+    ipv4_hdr.flags;
+    ipv4_hdr.fragOffset;
+    ipv4_hdr.ttl;
+    ipv4_hdr.protocol;
+    ipv4_hdr.srcAddr;
+    ipv4_hdr.dstAddr;
+}
+
+field_list_calculation ipv4_chksum_calc {
+    input {
+        ipv4_field_list;
+    }
+#ifndef __p4c__
+    algorithm : csum16;
+#else
+    algorithm : crc16;
+#endif
+    output_width: 16;
+}
+
+// NOTE: verify means check the calculated_field at packet ingress (aka parser)
+// NOTE: update means change the calculated_field at packet egress (akak deparser)
+calculated_field ipv4_hdr.hdrChecksum {
+    update ipv4_chksum_calc;
+}

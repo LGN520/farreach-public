@@ -57,6 +57,8 @@ bool RocksdbWrapper::open(uint16_t workerid) {
 	return is_existing;
 }
 
+// loading phase
+
 bool RocksdbWrapper::force_multiput(netreach_key_t *keys, val_t *vals, int maxidx) {
 	rocksdb::Status s;
 	rocksdb::WriteOptions write_options;
@@ -93,7 +95,11 @@ bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
 	return true;
 }
 
+// transaction phase
+
 bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t &seq) {
+	mutexlock.lock();
+
 	rocksdb::Status s;
 	std::string valstr;
 	rocksdb::Transaction* txn = db_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
@@ -102,6 +108,8 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t &seq) {
 	//read_options.fill_cache = false; // Bypass OS-cache (page cache), use block cache only
 	s = txn->Get(rocksdb::ReadOptions(), key.to_string_for_rocksdb(), &valstr);
 	s = txn->Commit();
+	delete txn;
+	txn = NULL;
 
 	bool stat = false;
 	if (valstr != "") {
@@ -118,16 +126,18 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t &seq) {
 		stat = false;
 	}
 
-	delete txn;
-	txn = NULL;
+	mutexlock.unlock();
 	return stat;
 }
 
 bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq) {
+	mutexlock.lock();
+
 	uint32_t deleted_seq = 0;
 	bool is_deleted = deleted_set.check_and_remove(key, seq, &deleted_seq);
 	if (is_deleted) {
 		INVARIANT(deleted_seq > seq);
+		mutexlock.unlock();
 		return true;
 	}
 
@@ -149,6 +159,8 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq) {
 			INVARIANT(s.ok());
 			delete txn;
 			txn = NULL;
+
+			mutexlock.unlock();
 			return true;
 		}
 	}
@@ -156,17 +168,21 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq) {
 	s = txn->Put(keystr, valstr);
 	s = txn->Commit();
 	INVARIANT(s.ok());
-
 	delete txn;
 	txn = NULL;
+
+	mutexlock.unlock();
 	return true;
 }
 
 bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq) {
+	mutexlock.lock();
+
 	uint32_t deleted_seq = 0;
 	bool is_deleted = deleted_set.check_and_remove(key, seq, &deleted_seq);
 	if (is_deleted) {
 		INVARIANT(deleted_seq > seq);
+		mutexlock.unlock();
 		return true;
 	}
 
@@ -187,6 +203,8 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq) {
 			INVARIANT(s.ok());
 			delete txn;
 			txn = NULL;
+
+			mutexlock.unlock();
 			return true;
 		}
 	}
@@ -194,15 +212,18 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq) {
 	s = txn->Delete(keystr);
 	s = txn->Commit();
 	INVARIANT(s.ok());
+	delete txn;
+	txn = NULL;
 
 	deleted_set.add(key, seq);
 
-	delete txn;
-	txn = NULL;
+	mutexlock.unlock();
 	return true;
 }
 
 size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results) {
+	mutexlock.lock();
+
 	rocksdb::Status s;
 	rocksdb::Transaction* txn = db_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
 	// TODO: use snapshot
@@ -244,6 +265,7 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 	s = txn->Commit();
 	INVARIANT(s.ok());
 	delete txn;
+	txn = NULL;
 
 	std::vector<std::pair<netreach_key_t, snapshot_record_t>> deleted_results;
 	deleted_set.range_scan(startkey, endkey, deleted_results);
@@ -298,6 +320,7 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 		}
 	}
 
+	mutexlock.unlock();
 	return results.size();
 }
 
