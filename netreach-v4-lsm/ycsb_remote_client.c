@@ -371,6 +371,7 @@ void *run_fg(void *param) {
 				printf("Invalid request type: %u\n", uint32_t(iter.type()));
 				exit(-1);
 			}
+			break;
 		}
 		is_timeout = false;
 

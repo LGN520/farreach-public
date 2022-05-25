@@ -794,7 +794,16 @@
 
 ## Run
 
-- Software
+- Hardware configure
+	+ DPDK
+		* Follow [tech_report](./tech_report.md) to confiure dpdk
+	+ UDP socket
+		* Configure ipv4 address of NICs in client and server
+			- client: `sudo ifconfig enp129s0f1 10.0.1.11/24`
+			- server: `sudo ifconfig enp129s0f0 10.0.1.13/24`
+		* Configure arp
+			- client: `sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8`
+			- server: `sudo arp -s 10.0.1.11 3c:fd:fe:bb:ca:79`
 - Prepare YCSB workload for loading or transaction phase
 	+ For example:
 	+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > workloada-load.out`

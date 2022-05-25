@@ -868,65 +868,78 @@ table scan_forward_tbl {
 
 // NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
 /*// CACHE_POP_INSWITCH_ACK
-action update_onlyop_udplen() {
-	// 6(udphdr) + 17(ophdr) + 1(debug_hdr)
-	//modify_field(udp_hdr.hdrlen, 24);
-	modify_field(udp_hdr.hdrlen, 23);
+action update_onlyop_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 17(ophdr) + 1(debug_hdr)
+	//modify_field(udp_hdr.hdrlen, 26);
+	//modify_field(ipv4_hdr.totalLen, 46)
+	modify_field(udp_hdr.hdrlen, 25);
+	modify_field(ipv4_hdr.totalLen, 45);
 }
 
 // GETRES
-action update_val_stat_udplen(aligned_vallen) {
-	// 6(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 28);
-	add(udp_hdr.hdrlen, aligned_vallen, 27);
+action update_val_stat_pktlen(aligned_vallen) {
+	// 20[iphdr] + 8(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 30);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 50);
+	add(udp_hdr.hdrlen, aligned_vallen, 29);
+	add(ipv4_hdr.totalLen, aligned_vallen, 49);
 }
 
 // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
-action update_val_seq_inswitch_stat_udplen(aligned_vallen) {
-	// 6(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 9(inswitch) + 1(stat) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 41);
-	add(udp_hdr.hdrlen, aligned_vallen, 40);
+action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
+	// [20(iphdr)] + 8(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 9(inswitch) + 1(stat) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 43);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 63);
+	add(udp_hdr.hdrlen, aligned_vallen, 42);
+	add(ipv4_hdr.totalLen, aligned_vallen, 62);
 }
 
 // PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3
-action update_val_seq_udplen(aligned_vallen) {
-	// 6(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 31);
-	add(udp_hdr.hdrlen, aligned_vallen, 30);
+action update_val_seq_pktlen(aligned_vallen) {
+	// [20(iphdr)] + 8(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 33);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 53);
+	add(udp_hdr.hdrlen, aligned_vallen, 32);
+	add(ipv4_hdr.totalLen, aligned_vallen, 52);
 }
 
 // PUTRES, DELRES
-action update_stat_udplen() {
-	// 6(udphdr) + 17(ophdr) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
-	//modify_field(udp_hdr.hdrlen, 26);
-	modify_field(udp_hdr.hdrlen, 25);
+action update_stat_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 17(ophdr) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
+	//modify_field(udp_hdr.hdrlen, 28);
+	//modify_field(ipv4_hdr.totalLen, 48);
+	modify_field(udp_hdr.hdrlen, 27);
+	modify_field(ipv4_hdr.totalLen, 47);
 }
 
 // DELREQ_SEQ, DELREQ_SEQ_CASE3
-action update_seq_udplen() {
-	// 6(udphdr) + 17(ophdr) + 1(shadowtype) + 4(seq) + 1(debug_hdr)
-	//modify_field(udp_hdr.hdrlen, 29);
-	modify_field(udp_hdr.hdrlen, 28);
+action update_seq_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 17(ophdr) + 1(shadowtype) + 4(seq) + 1(debug_hdr)
+	//modify_field(udp_hdr.hdrlen, 31);
+	/modify_field(ipv4_hdr.totalLen, 51);
+	modify_field(udp_hdr.hdrlen, 30);
+	modify_field(ipv4_hdr.totalLen, 50);
 }*/
 
-action update_udplen(udplen) {
+action update_pktlen(udplen, iplen) {
 	modify_field(udp_hdr.hdrlen, udplen);
+	modify_field(ipv4_hdr.totalLen, iplen);
 }
 
 @pragma stage 11
-table update_udplen_tbl {
+table update_pktlen_tbl {
 	reads {
 		op_hdr.optype: exact;
 		vallen_hdr.vallen: range;
 	}
 	actions {
-		/*update_onlyop_udplen;
-		update_val_stat_udplen;
-		update_val_seq_inswitch_stat_udplen;
-		update_val_seq_udplen;
-		update_stat_udplen;
-		update_seq_udplen;*/
-		update_udplen;
+		/*update_onlyop_pktlen;
+		update_val_stat_pktlen;
+		update_val_seq_inswitch_stat_pktlen;
+		update_val_seq_pktlen;
+		update_stat_pktlen;
+		update_seq_pktlen;*/
+		update_pktlen;
 		nop;
 	}
 	default_action: nop(); // not change udp_hdr.hdrlen (GETREQ/GETREQ_POP/GETREQ_NLATEST)

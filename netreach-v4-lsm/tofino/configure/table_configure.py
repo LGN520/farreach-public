@@ -317,6 +317,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Ingress pipeline
 
             # Stage 0
+
+            # Table: l2_forward_tbl (default: nop; size: 2)
+            #print "Configuring l2_forward_tbl"
+            #matchspec0 = netbufferv4_l2_forward_tbl_match_spec_t(\
+            #        ig_intr_md_ingress_port = self.devPorts[0])
+            #actnspec0 = netbufferv4_l2_forward_action_spec_t(self.devPorts[1])
+            #self.client.l2_forward_tbl_table_add_with_l2_forward(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            #matchspec0 = netbufferv4_l2_forward_tbl_match_spec_t(\
+            #        ig_intr_md_ingress_port = self.devPorts[1])
+            #actnspec0 = netbufferv4_l2_forward_action_spec_t(self.devPorts[0])
+            #self.client.l2_forward_tbl_table_add_with_l2_forward(\
+            #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             
             # Table: need_recirculate_tbl (default: reset_need_recirculate; size: <=8)
             #print "Configuring need_recirculate_tbl"
@@ -1564,8 +1577,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.scan_forward_tbl_table_add_with_forward_scanreq_split(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-            # Table: update_udplen_tbl (default: nop; 158)
-            print "Configuring update_udplen_tbl"
+            # Table: update_pktlen_tbl (default: nop; 158)
+            print "Configuring update_pktlen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
                     vallen_start = 0
@@ -1576,17 +1589,23 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     vallen_end = (i-1)*8+8 # 8, 16, ..., 128
                     aligned_vallen = vallen_end # 8, 16, ..., 128
                 ## DEPRECATED: including 1B debug_hdr
-                #val_stat_udplen = aligned_vallen + 28
-                #val_seq_inswitch_stat_udplen = aligned_vallen + 41
-                #val_seq_udplen = aligned_vallen + 31
-                val_stat_udplen = aligned_vallen + 27
-                val_seq_inswitch_stat_udplen = aligned_vallen + 40
-                val_seq_udplen = aligned_vallen + 30
+                #val_stat_udplen = aligned_vallen + 30
+                #val_stat_iplen = aligned_vallen + 50
+                #val_seq_inswitch_stat_udplen = aligned_vallen + 43
+                #val_seq_inswitch_stat_iplen = aligned_vallen + 63
+                #val_seq_udplen = aligned_vallen + 33
+                #val_seq_iplen = aligned_vallen + 53
+                val_stat_udplen = aligned_vallen + 29
+                val_stat_iplen = aligned_vallen + 49
+                val_seq_inswitch_stat_udplen = aligned_vallen + 42
+                val_seq_inswitch_stat_iplen = aligned_vallen + 62
+                val_seq_udplen = aligned_vallen + 32
+                val_seq_iplen = aligned_vallen + 52
                 matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
                         op_hdr_optype=GETRES,
                         vallen_hdr_vallen_start=vallen_start,
                         vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
-                actnspec0 = netbufferv4_update_udplen_action_spec_t(val_stat_udplen)
+                actnspec0 = netbufferv4_update_udplen_action_spec_t(val_stat_udplen, val_stat_iplen)
                 self.client.update_udplen_tbl_table_add_with_update_udplen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                 for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1]:
@@ -1594,7 +1613,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,
                             vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
-                    actnspec0 = netbufferv4_update_udplen_action_spec_t(val_seq_inswitch_stat_udplen)
+                    actnspec0 = netbufferv4_update_udplen_action_spec_t(val_seq_inswitch_stat_udplen, val_seq_inswitch_stat_iplen)
                     self.client.update_udplen_tbl_table_add_with_update_udplen(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                 for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3]:
@@ -1602,21 +1621,27 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,
                             vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
-                    actnspec0 = netbufferv4_update_udplen_action_spec_t(val_seq_udplen)
+                    actnspec0 = netbufferv4_update_udplen_action_spec_t(val_seq_udplen, val_seq_iplen)
                     self.client.update_udplen_tbl_table_add_with_update_udplen(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             ## DEPRECATED: including 1B debug_hdr
-            #onlyop_udplen = 24
-            #stat_udplen = 26
-            #seq_udplen = 29
-            onlyop_udplen = 23
-            stat_udplen = 25
-            seq_udplen = 28
+            #onlyop_udplen = 26
+            #onlyop_iplen = 46
+            #stat_udplen = 28
+            #stat_iplen = 48
+            #seq_udplen = 31
+            #seq_iplen = 51
+            onlyop_udplen = 25
+            onlyop_iplen = 45
+            stat_udplen = 27
+            stat_iplen = 47
+            seq_udplen = 30
+            seq_iplen = 50
             matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
                     op_hdr_optype=CACHE_POP_INSWITCH_ACK,
                     vallen_hdr_vallen_start=0,
                     vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-            actnspec0 = netbufferv4_update_udplen_action_spec_t(onlyop_udplen)
+            actnspec0 = netbufferv4_update_udplen_action_spec_t(onlyop_udplen, onlyop_iplen)
             self.client.update_udplen_tbl_table_add_with_update_udplen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             for tmpoptype in [PUTRES, DELRES]:
@@ -1624,7 +1649,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         op_hdr_optype=tmpoptype,
                         vallen_hdr_vallen_start=0,
                         vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-                actnspec0 = netbufferv4_update_udplen_action_spec_t(stat_udplen)
+                actnspec0 = netbufferv4_update_udplen_action_spec_t(stat_udplen, stat_iplen)
                 self.client.update_udplen_tbl_table_add_with_update_udplen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             for tmpoptype in [DELREQ_SEQ, DELREQ_SEQ_CASE3]:
@@ -1632,7 +1657,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         op_hdr_optype=tmpoptype,
                         vallen_hdr_vallen_start=0,
                         vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-                actnspec0 = netbufferv4_update_udplen_action_spec_t(seq_udplen)
+                actnspec0 = netbufferv4_update_udplen_action_spec_t(seq_udplen, seq_iplen)
                 # TODO: check parameter 0
                 self.client.update_udplen_tbl_table_add_with_update_udplen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
@@ -1686,7 +1711,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     else:
                         vallen_start = (i-1)*8+1 # 1, 9, ..., 121
                         vallen_end = (i-1)*8+8 # 8, 16, ..., 128
-                    matchspec0 = netbufferv4_update_udplen_tbl_match_spec_t(\
+                    matchspec0 = netbufferv4_add_and_reemove_value_header_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,
                             vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]

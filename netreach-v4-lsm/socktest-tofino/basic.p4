@@ -40,7 +40,7 @@ header_type udp_t {
 		srcPort: 16;
 		dstPort: 16;
 		hdrLength: 16;
-		//checksum: 16; // uncomment for socktest_client/server; comment for dpdktest_client/server w/o KEYVALUE
+		checksum: 16; // uncomment for socktest_client/server; comment for dpdktest_client/server w/o KEYVALUE
 	}
 }
 

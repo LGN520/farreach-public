@@ -225,10 +225,10 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[serveridx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				get_response_t rsp(req.key(), tmp_val, tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
@@ -243,6 +243,9 @@ void *run_server_worker(void * param) {
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[serveridx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				if (tmp_stat) { // key exists
 					get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_seq);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -251,9 +254,6 @@ void *run_server_worker(void * param) {
 					get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
@@ -267,10 +267,10 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] stat = " << tmp_stat)
 				put_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
@@ -284,10 +284,10 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[serveridx].remove(req.key(), req.seq());
 				//COUT_THIS("[server] stat = " << tmp_stat)
 				del_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
@@ -436,10 +436,10 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("results size: " << results.size());
 
 				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), results.size(), results);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
@@ -456,10 +456,10 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				
 				get_response_t rsp(req.key(), tmp_val, tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
@@ -488,10 +488,10 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				
 				put_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
@@ -524,10 +524,10 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
 				put_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
@@ -547,10 +547,10 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				put_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
@@ -581,10 +581,10 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[serveridx].remove(req.key(), req.seq());
 				//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
 				del_response_t rsp(req.key(), tmp_stat);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);

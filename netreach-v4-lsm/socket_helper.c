@@ -59,6 +59,7 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 	recvsize = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
 	if (recvsize < 0) {
 		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
+			recvsize = 0;
 			is_timeout = true;
 		}
 		else {
@@ -66,7 +67,6 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 			exit(-1);
 		}
 	}
-	recvsize = 0;
 	return is_timeout;
 }
 
@@ -201,6 +201,7 @@ bool tcprecv(int sockfd, void *buf, size_t len, int flags, int &recvsize, const 
 		// Errno 32 means broken pipe, i.e., server.client is closed
 		if (errno == 32) {
 			printf("[%s] remote client is closed\n", role);
+			recvsize = 0;
 			is_broken = true;
 		}
 		else {
@@ -208,6 +209,5 @@ bool tcprecv(int sockfd, void *buf, size_t len, int flags, int &recvsize, const 
 			exit(-1);
 		}
 	}
-	recvsize = 0;
 	return is_broken;
 }

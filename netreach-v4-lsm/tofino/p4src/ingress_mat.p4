@@ -22,6 +22,23 @@ action nop() {}
 
 // Stage 0
 
+/*action l2_forward(eport) {
+	modify_field(eg_intr_md_for_tm.ucast_egress_port, eport);
+}
+
+@pragma stage 0
+table l2_forward_tbl {
+	reads {
+		ig_intr_md.ingress_port: exact;
+	}
+	action {
+		l2_forward;
+		nop;
+	}
+	default_action: nop();
+	size: 4;
+}*/
+
 action set_need_recirculate() {
 	modify_field(meta.need_recirculate, 1);
 }
