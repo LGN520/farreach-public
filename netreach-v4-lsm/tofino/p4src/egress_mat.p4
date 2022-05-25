@@ -936,8 +936,8 @@ table update_udplen_tbl {
 action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, server_ip, server_port) {
 	modify_field(ethernet_hdr.srcAddr, server_mac);
 	modify_field(ethernet_hdr.dstAddr, client_mac);
-	modify_field(ip_hdr.srcAddr, server_ip);
-	modify_field(ip_hdr.dstAddr, client_ip);
+	modify_field(ipv4_hdr.srcAddr, server_ip);
+	modify_field(ipv4_hdr.dstAddr, client_ip);
 	modify_field(udp_hdr.srcPort, server_port);
 }
 
@@ -946,8 +946,8 @@ action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, ser
 action update_ipmac_srcport_client2switch(client_mac, switch_mac, client_ip, switch_ip, client_port) {
 	modify_field(ethernet_hdr.srcAddr, client_mac);
 	modify_field(ethernet_hdr.dstAddr, switch_mac);
-	modify_field(ip_hdr.srcAddr, client_ip);
-	modify_field(ip_hdr.dstAddr, switch_ip);
+	modify_field(ipv4_hdr.srcAddr, client_ip);
+	modify_field(ipv4_hdr.dstAddr, switch_ip);
 	modify_field(udp_hdr.srcPort, client_port);
 }
 

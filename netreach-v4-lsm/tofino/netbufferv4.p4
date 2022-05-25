@@ -7,7 +7,7 @@
 //#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
-//#define DEBUG
+#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
 // 0b0001

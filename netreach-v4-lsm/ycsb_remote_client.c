@@ -26,6 +26,8 @@
 
 #include "common_impl.h"
 
+#define DUMP_BUF
+
 struct alignas(CACHELINE_SIZE) FGParam {
 	uint16_t thread_id;
 	std::vector<double> req_latency_list;
@@ -196,11 +198,17 @@ void *run_fg(void *param) {
 				get_request_t req(tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, req_size);
+#endif
 				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(req_t2);
 
 				CUR_TIME(wait_t1);
 				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				if (is_timeout) {
 					continue;
 				}
@@ -231,11 +239,17 @@ void *run_fg(void *param) {
 					req_size = req.serialize(buf, MAX_BUFSIZE);
 				}*/
 
+#ifdef DUMP_BUF
+				dump_buf(buf, req_size);
+#endif
 				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(req_t2);
 
 				CUR_TIME(wait_t1);
 				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				if (is_timeout) {
 					continue;
 				}
@@ -253,11 +267,17 @@ void *run_fg(void *param) {
 				del_request_t req(tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, req_size);
+#endif
 				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(req_t2);
 
 				CUR_TIME(wait_t1);
 				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				if (is_timeout) {
 					continue;
 				}
@@ -282,6 +302,9 @@ void *run_fg(void *param) {
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
 						<< "endkey = " << endkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, req_size);
+#endif
 				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(req_t2);
 
@@ -296,6 +319,9 @@ void *run_fg(void *param) {
 				while (true) {
 					CUR_TIME(scan_wait_t1);
 					split_is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+#ifdef DUMP_BUF
+					dump_buf(buf, recv_size);
+#endif
 					if (split_is_timeout) {
 						is_timeout = true;
 						break;

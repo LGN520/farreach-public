@@ -28,7 +28,7 @@ void create_udpsock(int &sockfd, bool need_timeout, const char* role) {
 	// Set timeout for recvfrom/accept of udp/tcp
 	if (need_timeout) {
 		struct timeval tv;
-		tv.tv_sec = 1;
+		tv.tv_sec = SOCKET_TIMEOUT;
 		tv.tv_usec =  0;
 		int res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 		INVARIANT(res >= 0);
@@ -66,6 +66,7 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 			exit(-1);
 		}
 	}
+	recvsize = 0;
 	return is_timeout;
 }
 
@@ -148,7 +149,7 @@ void prepare_tcpserver(int &sockfd, bool need_timeout, short server_port, int ma
 	// Set timeout for recvfrom/accept of udp/tcp
 	if (need_timeout) {
 		struct timeval tv;
-		tv.tv_sec = 1;
+		tv.tv_sec = SOCKET_TIMEOUT;
 		tv.tv_usec =  0;
 		int res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 		INVARIANT(res >= 0);
@@ -207,5 +208,6 @@ bool tcprecv(int sockfd, void *buf, size_t len, int flags, int &recvsize, const 
 			exit(-1);
 		}
 	}
+	recvsize = 0;
 	return is_broken;
 }

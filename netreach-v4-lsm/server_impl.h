@@ -12,6 +12,8 @@
 #include "concurrent_map_impl.h"
 #include "rocksdb_wrapper.h"
 
+#define DUMP_BUF
+
 typedef DeletedSet<netreach_key_t, uint32_t> deleted_set_t;
 typedef ConcurrentMap<netreach_key_t, snapshot_record_t> concurrent_snapshot_map_t;
 
@@ -161,7 +163,10 @@ void *run_server_worker(void * param) {
   uint16_t serveridx = thread_param.serveridx; // [0, server_num-1]
 
   bool is_existing = db_wrappers[serveridx].open(serveridx);
-  INVARIANT(is_existing);
+  if (!is_existing) {
+	  printf("You need to run ycsb_loader before ycsb_server\n");
+	  exit(-1);
+  }
 
   int res = 0;
 
@@ -221,7 +226,13 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				get_response_t rsp(req.key(), tmp_val, tmp_stat);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
 				break;
 			}
 		case packet_type_t::GETREQ_NLATEST:
@@ -240,7 +251,13 @@ void *run_server_worker(void * param) {
 					get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
 				break;
 			}
 		case packet_type_t::PUTREQ_SEQ:
@@ -251,7 +268,13 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] stat = " << tmp_stat)
 				put_response_t rsp(req.key(), tmp_stat);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
 				break;
 			}
 		case packet_type_t::DELREQ_SEQ:
@@ -262,7 +285,13 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] stat = " << tmp_stat)
 				del_response_t rsp(req.key(), tmp_stat);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
 				break;
 			}
 		case packet_type_t::SCANREQ_SPLIT:
@@ -408,7 +437,13 @@ void *run_server_worker(void * param) {
 
 				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), results.size(), results);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
 				break;
 			}
 		case packet_type_t::GETREQ_POP: 
@@ -422,7 +457,13 @@ void *run_server_worker(void * param) {
 				
 				get_response_t rsp(req.key(), tmp_val, tmp_stat);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
 				if (tmp_stat) {
@@ -448,7 +489,13 @@ void *run_server_worker(void * param) {
 				
 				put_response_t rsp(req.key(), tmp_stat);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
 				if (tmp_stat) { // successful put
@@ -478,7 +525,13 @@ void *run_server_worker(void * param) {
 				//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
 				put_response_t rsp(req.key(), tmp_stat);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
 				break;
 			}
 		case packet_type_t::PUTREQ_POP_SEQ_CASE3: 
@@ -495,7 +548,13 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				put_response_t rsp(req.key(), tmp_stat);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
 				if (tmp_stat) { // successful put
@@ -523,7 +582,13 @@ void *run_server_worker(void * param) {
 				//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
 				del_response_t rsp(req.key(), tmp_stat);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
 				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
 				break;
 			}
 		default:

@@ -147,6 +147,16 @@ CACHE_EVICT_CASE2 = 0xc0
 #CACHE_EVICT_ACK = 0x20
 #CACHE_EVICT_CASE2 = 0x21
 
+# u8val in [0, 255] -> i8val in [-128, 127]
+def convert_u8_to_i8(u8val):
+    if u8val < 0 or u8val >= 256:
+        print "Invalid u8val: {}".format(u8val)
+    if u8val >= 128: # [128, 255] -> [-128, -1]
+        i8val = u8val - 256
+    else:
+        i8val = u8val
+    return i8val
+
 # u16val in [0, 2^16-1] -> i16val in [-2^15, 2^15-1]
 def convert_u16_to_i16(u16val):
     if u16val < 0 or u16val >= pow(2, 16):
