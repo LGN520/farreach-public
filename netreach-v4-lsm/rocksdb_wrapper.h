@@ -1,13 +1,16 @@
 #ifndef ROCKSDB_WRAPPER_H
 #define ROCKSDB_WRAPPER_H
 
-#include <mutex>
+//#include <mutex>
+//#include <atomic>
+#include <boost/thread/shared_mutex.hpp>
 
 #include "rocksdb/db.h"
 #include "rocksdb/cache.h"
 #include "rocksdb/table.h"
 #include "rocksdb/utilities/transaction.h"
 #include "rocksdb/utilities/transaction_db.h"
+#include "rocksdb/utilities/checkpoint.h"
 
 #include "helper.h"
 #include "key.h"
@@ -35,32 +38,50 @@ class RocksdbWrapper {
 		static void prepare_rocksdb();
 
 		RocksdbWrapper();
-		//RocksdbWrapper(uint16_t workerid);
+		//RocksdbWrapper(uint16_t tmpworkerid);
 		~RocksdbWrapper();
 
-		bool open(uint16_t workerid);
+		bool open(uint16_t tmpworkerid);
 
-		// loading phase (only touch rocksdb instead of deleted_set; not need mutex for atomicity)
+		// loading phase (per-server loaders only touch rocksdb instead of deleted set; not need mutex for atomicity)
 		bool force_put(netreach_key_t key, val_t val);
 		bool force_multiput(netreach_key_t *keys, val_t *vals, int maxidx);
 		
-		// transaction phase (touch both rocksdb and deleted; need mutex for atomicity)
+		// transaction phase (per-server worker and evictserver touch both rocksdb and deleted set; need mutex for atomicity)
 		bool get(netreach_key_t key, val_t &val, uint32_t &seq);
 		bool put(netreach_key_t key, val_t val, uint32_t seq);
 		bool remove(netreach_key_t key, uint32_t seq);
-		size_t range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results);
 
+		// transaction phase (per-server worker, evictserver, and consnapshotserver touch both rocksdb and deleted set; need mutex for atomicity)
 		void make_snapshot();
 		void stop_snapshot();
+		// TODO: based on snapshot
+		size_t range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results);
 
 	private:
 		static rocksdb::Options rocksdb_options;
+		uint16_t workerid;
 
+		// NOTE: we provide thread safety between per-server worker and evictserver; and there is no contention across workers of different servers
 		// NOTE: lock overhead is ignorable compared with that of rocksdb
-		std::mutex mutexlock; // fix contention between per-server worker and evictserver; no contention across workers
-		rocksdb::TransactionDB *db_ptr;
+		
+		boost::shared_mutex rwlock; // protect db_ptr and deleted_set in get/put/remove/make_snapshot
+		//std::mutex mutexlock; // protect db_ptr and deleted_set in get/put/remove/make_snapshot
+		rocksdb::TransactionDB *db_ptr = NULL;
 		deleted_set_t deleted_set;
 
+		boost::shared_mutex rwlock_for_snapshot; // protect snapshotdata in range_scan/make_snapshot/stop_snapshot
+		bool is_snapshot = false;
+  		//std::atomic_flag is_snapshot = ATOMIC_FLAG_INIT;
+		int snapshotid = -1; // to locate snapshot files
+		rocksdb::TransactionDB *snapshotdb_ptr = NULL;
+		deleted_set_t snapshot_deleted_set; // read-only, only used for range query
+
+		inline void get_db_path(std::string &db_path, uint16_t tmpworkerid);
+		inline void get_deletedset_path(std::string &deletedset_path, uint16_t tmpworkerid);
+		inline void get_snapshotid_path(std::string &snapshotid_path, uint16_t tmpworkerid);
+		inline void get_snapshotdb_path(std::string &snapshotdb_path, uint16_t tmpworkerid, uint32_t tmpsnapshotid);
+		inline void get_snapshotdeletedset_path(std::string &snapshotdeletedset_path, uint16_t tmpworkerid, uint32_t tmpsnapshotid);
 };
 
 typedef RocksdbWrapper rocksdb_wrapper_t;

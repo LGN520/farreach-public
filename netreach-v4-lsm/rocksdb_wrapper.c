@@ -1,4 +1,6 @@
 #include <unistd.h>
+
+#include "helper.h"
 #include "rocksdb_wrapper.h"
 
 rocksdb::Options RocksdbWrapper::rocksdb_options = rocksdb::Options();
@@ -28,31 +30,99 @@ void RocksdbWrapper::prepare_rocksdb() {
 
 RocksdbWrapper::RocksdbWrapper() {
 	db_ptr = NULL;
+	snapshotid = -1;
+	snapshotdb_ptr = NULL;
 }
 
 RocksdbWrapper::~RocksdbWrapper() {
+	// close runtime database
 	if (db_ptr != NULL) {
 		delete db_ptr;
 		db_ptr = NULL;
 	}
+
+	// store runtime delete set into disk
+	std::string deletedset_path;
+	get_deletedset_path(deletedset_path, workerid);
+	rmfiles(deletedset_path.c_str());
+	deleted_set.store(deletedset_path);
+
+	// close snapshot database
+	if (snapshotdb_ptr != NULL) {
+		delete snapshotdb_ptr;
+		snapshotdb_ptr = NULL;
+	}
 }
 
-/*RocksdbWrapper::RocksdbWrapper(uint16_t workerid) {
-	open(workerid);
+/*RocksdbWrapper::RocksdbWrapper(uint16_t tmpworkerid) {
+	open(tmpworkerid);
 }*/
 
-bool RocksdbWrapper::open(uint16_t workerid) {
+bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 	bool is_existing = false;
+	workerid = tmpworkerid;
 
+	// open database
 	std::string db_path;
-	GET_STRING(db_path, "/tmp/netreach-v4-lsm/worker" << workerid << ".db");
+	get_db_path(db_path, tmpworkerid);
 	if (access(db_path.c_str(), F_OK) == 0) {
 		is_existing = true;
 	}
-
 	rocksdb::Status s = rocksdb::TransactionDB::Open(rocksdb_options, rocksdb::TransactionDBOptions(), db_path, &db_ptr);
 	INVARIANT(s.ok());
 	INVARIANT(db_ptr != NULL);
+
+	// load deleted set
+	std::string deletedset_path;
+	get_deletedset_path(deletedset_path, tmpworkerid);
+	if (is_existing) {
+		INVARIANT(access(deletedset_path.c_str(), F_OK) == 0);
+		deleted_set.load(deletedset_path);
+	}
+	else {
+		INVARIANT(access(deletedset_path.c_str(), F_OK) != 0);
+		deleted_set.clear();
+	}
+
+	// load snapshot id
+	std::string snapshotid_path;
+	get_snapshotid_path(snapshotid_path, tmpworkerid);
+	if (is_existing) {
+		INVARIANT(access(snapshotid_path.c_str(), F_OK) == 0);
+		FILE *snapshotfd = fopen(snapshotid_path.c_str(), "rb");
+		fread(&snapshotid, sizeof(int), 1, snapshotfd);
+		fclose(snapshotfd);
+	}
+	else {
+		INVARIANT(access(snapshotid_path.c_str(), F_OK) != 0);
+		snapshotid = -1;
+	}
+
+	// open snapshot database
+	std::string snapshotdb_path;
+	get_snapshotdb_path(snapshotdb_path, tmpworkerid, snapshotid);
+	if (is_existing) {
+		INVARIANT(access(snapshotdb_path.c_str(), F_OK) == 0);
+		rocksdb::Status s = rocksdb::TransactionDB::Open(rocksdb_options, rocksdb::TransactionDBOptions(), snapshotdb_path, &snapshotdb_ptr);
+		INVARIANT(s.ok());
+		INVARIANT(snapshotdb_ptr != NULL);
+	}
+	else {
+		INVARIANT(access(snapshotdb_path.c_str(), F_OK) != 0);
+		snapshotdb_ptr = NULL;
+	}
+
+	// load deleted set snapshot
+	std::string snapshotdeletedset_path;
+	get_snapshotdeletedset_path(snapshotdeletedset_path, tmpworkerid, snapshotid);
+	if (is_existing) {
+		INVARIANT(access(snapshotdeletedset_path.c_str(), F_OK) == 0);
+		snapshot_deleted_set.load(snapshotdeletedset_path);
+	}
+	else {
+		INVARIANT(access(snapshotdeletedset_path.c_str(), F_OK) != 0);
+		snapshot_deleted_set.clear();
+	}
 
 	return is_existing;
 }
@@ -98,7 +168,10 @@ bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
 // transaction phase
 
 bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t &seq) {
-	mutexlock.lock();
+	//mutexlock.lock();
+	while (true) {
+		if (rwlock.try_lock_shared()) break;
+	}
 
 	rocksdb::Status s;
 	std::string valstr;
@@ -126,18 +199,23 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t &seq) {
 		stat = false;
 	}
 
-	mutexlock.unlock();
+	//mutexlock.unlock();
+	rwlock.unlock_shared();
 	return stat;
 }
 
 bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq) {
-	mutexlock.lock();
+	//mutexlock.lock();
+	while (true) {
+		if (rwlock.try_lock()) break;
+	}
 
 	uint32_t deleted_seq = 0;
 	bool is_deleted = deleted_set.check_and_remove(key, seq, &deleted_seq);
 	if (is_deleted) {
 		INVARIANT(deleted_seq > seq);
-		mutexlock.unlock();
+		//mutexlock.unlock();
+		rwlock.unlock();
 		return true;
 	}
 
@@ -160,7 +238,8 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq) {
 			delete txn;
 			txn = NULL;
 
-			mutexlock.unlock();
+			//mutexlock.unlock();
+			rwlock.unlock();
 			return true;
 		}
 	}
@@ -171,18 +250,23 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq) {
 	delete txn;
 	txn = NULL;
 
-	mutexlock.unlock();
+	//mutexlock.unlock();
+	rwlock.unlock();
 	return true;
 }
 
 bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq) {
-	mutexlock.lock();
+	//mutexlock.lock();
+	while (true) {
+		if (rwlock.try_lock()) break;
+	}
 
 	uint32_t deleted_seq = 0;
 	bool is_deleted = deleted_set.check_and_remove(key, seq, &deleted_seq);
 	if (is_deleted) {
 		INVARIANT(deleted_seq > seq);
-		mutexlock.unlock();
+		//mutexlock.unlock();
+		rwlock.unlock();
 		return true;
 	}
 
@@ -204,7 +288,8 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq) {
 			delete txn;
 			txn = NULL;
 
-			mutexlock.unlock();
+			//mutexlock.unlock();
+			rwlock.unlock();
 			return true;
 		}
 	}
@@ -217,16 +302,21 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq) {
 
 	deleted_set.add(key, seq);
 
-	mutexlock.unlock();
+	//mutexlock.unlock();
+	rwlock.unlock();
 	return true;
 }
 
 size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results) {
-	mutexlock.lock();
+	//mutexlock.lock();
+	while (true) {
+		if (rwlock_for_snapshot.try_lock_shared()) break;
+	}
+
+	INVARIANT(snapshotdb_ptr != NULL);
 
 	rocksdb::Status s;
-	rocksdb::Transaction* txn = db_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
-	// TODO: use snapshot
+	rocksdb::Transaction* txn = snapshotdb_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
 	rocksdb::Iterator* iter = txn->GetIterator(rocksdb::ReadOptions());
 	INVARIANT(iter!=nullptr);
 	results.clear();
@@ -268,7 +358,7 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 	txn = NULL;
 
 	std::vector<std::pair<netreach_key_t, snapshot_record_t>> deleted_results;
-	deleted_set.range_scan(startkey, endkey, deleted_results);
+	snapshot_deleted_set.range_scan(startkey, endkey, deleted_results);
 
 	// merge sort
 	if (db_results.size() == 0) {
@@ -320,16 +410,116 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 		}
 	}
 
-	mutexlock.unlock();
+	//mutexlock.unlock();
+	rwlock_for_snapshot.unlock_shared();
 	return results.size();
 }
 
 void RocksdbWrapper::make_snapshot() {
-	printf("TODO: implement make_snapshot()\n");
+	//if (!is_snapshot.test_and_set(std::memory_order_acquire))
+	
+	while (true) {
+		if (rwlock_for_snapshot.try_lock()) break;
+	}
+
+	if (!is_snapshot) {
+		// close snapshot database and clear snapshot deleted set
+		if (snapshotdb_ptr != NULL) {
+			delete snapshotdb_ptr;
+			snapshotdb_ptr = NULL;
+		}
+		snapshot_deleted_set.clear();
+
+		snapshotid += 1;
+
+		// create new snapshot database and snapshot deleted set
+		while (true) {
+			if (rwlock.try_lock_shared()) break;
+		}
+		// make snapshot of database
+		rocksdb::Checkpoint *checkpoint_ptr = NULL;
+		rocksdb::Status s = rocksdb::Checkpoint::Create(db_ptr, &checkpoint_ptr);
+		INVARIANT(s.ok());
+		INVARIANT(checkpoint_ptr != NULL);
+		std::string snapshotdb_path;
+		get_snapshotdb_path(snapshotdb_path, workerid, snapshotid);
+		s = checkpoint_ptr->CreateCheckpoint(snapshotdb_path); // snapshot database has been stored into disk by hardlink
+		INVARIANT(s.ok());
+		s = rocksdb::TransactionDB::Open(rocksdb_options, rocksdb::TransactionDBOptions(), snapshotdb_path, &snapshotdb_ptr);
+		INVARIANT(s.ok());
+		INVARIANT(snapshotdb_ptr != NULL);
+		// make snapshot of deleted set
+		snapshot_deleted_set = deleted_set;
+		// NOTE: we can unlock rwlock after accessing db_ptr and deleted_set
+		rwlock.unlock_shared();
+
+		// store snapshot deleted set into disk
+		std::string snapshotdeletedset_path;
+		get_snapshotdeletedset_path(snapshotdeletedset_path, workerid, snapshotid);
+		snapshot_deleted_set.store(snapshotdeletedset_path);
+
+		// store snapshotid at last
+		std::string snapshotid_path;
+		get_snapshotid_path(snapshotid_path, workerid);
+		FILE *snapshotfd = fopen(snapshotid_path.c_str(), "wb+");
+		fwrite(&snapshotid, sizeof(int), 1, snapshotfd);
+		fclose(snapshotfd);
+		
+		// remove old-enough snapshot data w/ snapshotid-2
+		if (snapshotid >= 2) {
+			int old_snapshotid = snapshotid - 2;
+
+			std::string old_snapshotdb_path;
+			get_snapshotdb_path(old_snapshotdb_path, workerid, old_snapshotid);
+			rmfiles(old_snapshotdb_path.c_str());
+
+			std::string old_snapshotdeletedset_path;
+			get_snapshotdeletedset_path(old_snapshotdeletedset_path, workerid, old_snapshotid);
+			rmfiles(old_snapshotdeletedset_path.c_str());
+		}
+		
+		is_snapshot = true;
+	}
+
+	rwlock_for_snapshot.unlock();
 	return;
 }
 
 void RocksdbWrapper::stop_snapshot() {
-	printf("TODO: implement stop_snapshot()\n");
+	//is_snapshot.clear(std::memory_order_release);
+
+	while (true) {
+		if (rwlock_for_snapshot.try_lock()) break;
+	}
+
+	INVARIANT(is_snapshot);
+	is_snapshot = false;
+
+	rwlock_for_snapshot.unlock();
+	return;
+}
+
+inline void RocksdbWrapper::get_db_path(std::string &db_path, uint16_t tmpworkerid) {
+	GET_STRING(db_path, "/tmp/netreach-v4-lsm/worker" << tmpworkerid << ".db");
+	return;
+}
+
+inline void RocksdbWrapper::get_deletedset_path(std::string &deletedset_path, uint16_t tmpworkerid) {
+	GET_STRING(deletedset_path, "/tmp/netreach-v4-lsm/worker" << tmpworkerid << ".deletedset");
+	return;
+}
+
+inline void RocksdbWrapper::get_snapshotid_path(std::string &snapshotid_path, uint16_t tmpworkerid) {
+	GET_STRING(snapshotid_path, "/tmp/netreach-v4-lsm/worker" << tmpworkerid << ".snapshotid");
+	return;
+}
+
+inline void RocksdbWrapper::get_snapshotdb_path(std::string &snapshotdb_path, uint16_t tmpworkerid, uint32_t tmpsnapshotid) {
+	GET_STRING(snapshotdb_path, "/tmp/netreach-v4-lsm/worker" << tmpworkerid << ".snapshotdb" << tmpsnapshotid);
+	return;
+}
+
+inline void RocksdbWrapper::get_snapshotdeletedset_path(std::string &snapshotdeletedset_path, uint16_t tmpworkerid, uint32_t tmpsnapshotid) {
+	GET_STRING(snapshotdeletedset_path, "/tmp/netreach-v4-lsm/worker" << tmpworkerid << ".snapshotdeletedset" << tmpsnapshotid);
 	return;
 }

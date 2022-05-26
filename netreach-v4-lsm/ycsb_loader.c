@@ -58,32 +58,40 @@ void run_server() {
 	for (size_t i = 0; i < server_num; i++) {
   		is_existing = db_wrappers[i].open(i);
 	}
+	if (is_existing) {
+		printf("Database has been created before ycsb_loader\n");
+		exit(-1);
+	}
 
 	// Launch loaders
-	if (!is_existing) {
-		pthread_t loader_threads[server_num * load_factor];
-		size_t loader_ids[server_num * load_factor];
-		for (size_t loader_i = 0; loader_i < server_num * load_factor; loader_i++) {
-			loader_ids[loader_i] = loader_i;
-			ret = pthread_create(&loader_threads[loader_i], nullptr, run_loader, (void *)&loader_ids[loader_i]);
-			if (ret) {
-			  COUT_N_EXIT("Error:" << ret);
-			}
+	pthread_t loader_threads[server_num * load_factor];
+	size_t loader_ids[server_num * load_factor];
+	for (size_t loader_i = 0; loader_i < server_num * load_factor; loader_i++) {
+		loader_ids[loader_i] = loader_i;
+		ret = pthread_create(&loader_threads[loader_i], nullptr, run_loader, (void *)&loader_ids[loader_i]);
+		if (ret) {
+		  COUT_N_EXIT("Error:" << ret);
 		}
+	}
 
-		COUT_THIS("[ycsb_loader] prepare loaders...")
-		while (ready_threads < server_num * load_factor) sleep(1);
+	COUT_THIS("[ycsb_loader] prepare loaders...")
+	while (ready_threads < server_num * load_factor) sleep(1);
 
-		running = true;
-		COUT_THIS("[ycsb_loader] start running...")
+	running = true;
+	COUT_THIS("[ycsb_loader] start running...")
 
-		void *status;
-		for (size_t i = 0; i < server_num * load_factor; i++) {
-			int rc = pthread_join(loader_threads[i], &status);
-			if (rc) {
-				COUT_N_EXIT("Error:unable to join," << rc);
-			}
+	void *status;
+	for (size_t i = 0; i < server_num * load_factor; i++) {
+		int rc = pthread_join(loader_threads[i], &status);
+		if (rc) {
+			COUT_N_EXIT("Error:unable to join," << rc);
 		}
+	}
+
+	COUT_THIS("[ycsb_loader] all loaders finish -> make snapshot...")
+	for (size_t i = 0; i < server_num; i++) {
+  		db_wrappers[i].make_snapshot();
+		db_wrappers[i].stop_snapshot();
 	}
 }
 

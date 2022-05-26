@@ -1,12 +1,24 @@
 #ifndef DELETED_SET_IMPL_H
 #define DELETED_SET_IMPL_H
 
+#include <stdio.h> // fopen
+#include <fcntl.h> // open
+#include <sys/mman.h> // mmap, unmap
+#include <error.h> // errno
+
 #include "deleted_set.h"
 
 template<class key_t, class seq_t>
 DeletedSet<key_t, seq_t>::DeletedSet(uint32_t c, uint32_t rtt) {
-	// Conservative estimation: 100 Mops / c*rtt us = 100 opus * c*rtt us = 100c*rtt
-	max_size = 100 * c * rtt;
+	// Conservative estimation: constant factor * thpt c opus
+	max_size = CAPACITY_FACTOR * c * rtt;
+}
+
+template<class key_t, class seq_t>
+DeletedSet<key_t, seq_t>& DeletedSet<key_t, seq_t>::operator=(const DeletedSet& other) {
+	records_sorted_bykey = other.records_sorted_bykey;
+	records_sorted_byseq = other.records_sorted_byseq;
+	return *this;
 }
 
 template<class key_t, class seq_t>
@@ -99,6 +111,89 @@ size_t DeletedSet<key_t, seq_t>::range_scan(key_t startkey, key_t endkey, std::v
 		results.push_back(std::pair<key_t, snapshot_record_t>(iter->first, tmprecord));
 	}
 	return results.size();
+}
+
+template<class key_t, class seq_t>
+void DeletedSet<key_t, seq_t>::clear() {
+	records_sorted_bykey.clear();
+	records_sorted_byseq.clear();
+}
+
+template<class key_t, class seq_t>
+void DeletedSet<key_t, seq_t>::load(std::string &path) {
+	INVARIANT(access(path.c_str(), F_OK) == 0);
+	int fd = open(path.c_str(), O_RDONLY);
+	INVARIANT(fd != -1);
+
+	struct stat statbuf;
+	int fstat_res = fstat(fd, &statbuf);
+	if (fstat_res < 0) {
+		printf("Cannot get stat of %s\n", path.c_str());
+		exit(-1);
+	}
+	uint32_t filesize = statbuf.st_size;
+
+	char * content = (char *)(mmap(NULL, filesize, PROT_READ, MAP_SHARED, fd, 0)); // NOTE: the last argument must be page-size-aligned
+	if (content == MAP_FAILED) {
+		printf("mmap fails: errno = %d\n", errno);
+		exit(-1);
+	}
+	INVARIANT(content != NULL);
+
+	// load # of records
+	char * curptr = content;
+	uint32_t remainsize = filesize;
+	uint32_t recordcnt = *((uint32_t *)curptr);
+	curptr += sizeof(uint32_t);
+	remainsize -= sizeof(uint32_t);
+
+	// load <key, seq> pairs
+	key_t tmpkey;
+	seq_t tmpseq;
+	clear();
+	for (uint32_t i = 0; i < recordcnt; i++) {
+		uint32_t tmp_keysize = tmpkey.deserialize(curptr, remainsize);
+		curptr += tmp_keysize;
+		remainsize -= tmp_keysize;
+		memcpy(&tmpseq, curptr, sizeof(seq_t));
+		curptr += sizeof(seq_t);
+		remainsize -= sizeof(seq_t);
+		INVARIANT(remainsize >= 0 && remainsize <= filesize);
+
+		records_sorted_bykey.insert(std::pair<key_t, seq_t>(tmpkey, tmpseq));
+		records_sorted_byseq.insert(std::pair<seq_t, key_t>(tmpseq, tmpkey));
+	}
+
+	int res = munmap(content, filesize);
+	if (res != 0) {
+		printf("munmap fails: %d\n", res);
+		exit(-1);
+	}
+	content = NULL;
+	close(fd);
+	return;
+}
+
+template<class key_t, class seq_t>
+void DeletedSet<key_t, seq_t>::store(std::string &path) {
+	INVARIANT(access(path.c_str(), F_OK) != 0);
+	int fd = open(path.c_str(), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+	INVARIANT(fd != -1);
+
+	// store # of records
+	uint32_t recordcnt = records_sorted_bykey.size();
+	write(fd, &recordcnt, sizeof(uint32_t));
+
+	// store <key, seq> pairs
+	char buf[MAX_BUFSIZE];
+	for (typename std::map<key_t, seq_t>::iterator iter = records_sorted_bykey.begin(); iter != records_sorted_bykey.end(); iter++) {
+		uint32_t tmp_keysize = iter->first.serialize(buf, MAX_BUFSIZE);
+		memcpy(buf + tmp_keysize, &iter->second, sizeof(seq_t));
+		write(fd, buf, tmp_keysize + sizeof(seq_t));
+	}
+
+	close(fd);
+	return;
 }
 
 #endif

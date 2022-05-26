@@ -62,6 +62,7 @@ class Key {
   // operation on packet buf (16B key)
   uint32_t deserialize(const char *buf, uint32_t buflen);
   uint32_t serialize(char *buf, uint32_t buflen);
+  uint32_t serialize(char *buf, uint32_t buflen) const;
   uint32_t serialize(char *buf, uint32_t buflen) volatile;
 
 #ifdef LARGE_KEY
