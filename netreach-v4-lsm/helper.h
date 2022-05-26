@@ -8,6 +8,8 @@
 #include <stdio.h> // remove
 #include <ftw.h> // nftw
 #include <error.h> // errno
+#include <fcntl.h> // open
+#include <unistd.h>
 
 #if !defined(HELPER_H)
 #define HELPER_H
@@ -206,11 +208,13 @@ static inline int rmfile(const char *pathname, const struct stat *sbuf, int type
 }
 
 static inline void rmfiles(const char *pathname) {
-	if (nftw(pathname, rmfile, 10, FTW_DEPTH | FTW_MOUNT | FTW_PHYS) < 0)
-    {
-		printf("fail to walk file tree in %s; errno: %d\n", pathname, int(errno));
-    	exit(1);
-    }
+	if (access(pathname, F_OK) == 0) {
+		if (nftw(pathname, rmfile, 10, FTW_DEPTH | FTW_MOUNT | FTW_PHYS) < 0)
+		{
+			printf("fail to walk file tree in %s; errno: %d\n", pathname, int(errno));
+			exit(1);
+		}
+	}
 	return;
 }
 

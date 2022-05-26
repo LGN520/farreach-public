@@ -2,7 +2,7 @@
 #define ROCKSDB_WRAPPER_H
 
 //#include <mutex>
-//#include <atomic>
+#include <atomic>
 #include <boost/thread/shared_mutex.hpp>
 
 #include "rocksdb/db.h"
@@ -70,17 +70,21 @@ class RocksdbWrapper {
 		rocksdb::TransactionDB *db_ptr = NULL;
 		deleted_set_t deleted_set;
 
-		boost::shared_mutex rwlock_for_snapshot; // protect snapshotdata in range_scan/make_snapshot/stop_snapshot
-		bool is_snapshot = false;
-  		//std::atomic_flag is_snapshot = ATOMIC_FLAG_INIT;
+  		std::atomic_flag is_snapshot = ATOMIC_FLAG_INIT; // protect is_snapshot and snapshotid in make_snapshot/stop_snapshot
 		int snapshotid = -1; // to locate snapshot files
+
+		boost::shared_mutex rwlock_for_snapshot; // protect snapshotdata (including sp_ptr, snapshotdb_ptr, snapshot_deleted_set) in range_scan/make_snapshot
+		// normal database snapshot 
+		const rocksdb::Snapshot *sp_ptr = NULL;
+		// database checkpoint to recover database snapshot from server crash
 		rocksdb::TransactionDB *snapshotdb_ptr = NULL;
 		deleted_set_t snapshot_deleted_set; // read-only, only used for range query
 
 		inline void get_db_path(std::string &db_path, uint16_t tmpworkerid);
 		inline void get_deletedset_path(std::string &deletedset_path, uint16_t tmpworkerid);
 		inline void get_snapshotid_path(std::string &snapshotid_path, uint16_t tmpworkerid);
-		inline void get_snapshotdb_path(std::string &snapshotdb_path, uint16_t tmpworkerid, uint32_t tmpsnapshotid);
+		inline void get_snapshotdb_path(std::string &snapshotdb_path, uint16_t tmpworkerid); // at most one snapshotdb for server-side recovery
+		inline void get_snapshotdbseq_path(std::string &snapshotdbseq_path, uint16_t tmpworkerid, uint32_t tmpsnapshotid);
 		inline void get_snapshotdeletedset_path(std::string &snapshotdeletedset_path, uint16_t tmpworkerid, uint32_t tmpsnapshotid);
 };
 
