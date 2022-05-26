@@ -53,6 +53,9 @@ RocksdbWrapper::~RocksdbWrapper() {
 	if (snapshotdb_ptr != NULL) {
 		delete snapshotdb_ptr;
 		snapshotdb_ptr = NULL;
+		std::string snapshotdb_path;
+		get_snapshotdb_path(snapshotdb_path, workerid);
+		rmfiles(snapshotdb_path.c_str());
 	}
 }
 
@@ -461,13 +464,14 @@ void RocksdbWrapper::make_snapshot() {
 			db_ptr->ReleaseSnapshot(sp_ptr); // TODO: need protect db_ptr here?
 			sp_ptr = NULL;
 		}
-		if (snapshotdb_ptr != NULL) {
+		// NOTE: we resort deconstructor to close and remove snapshotdb to save time in make_snapshot()
+		/*if (snapshotdb_ptr != NULL) {
 			delete snapshotdb_ptr;
 			snapshotdb_ptr = NULL;
 			std::string snapshotdb_path;
 			get_snapshotdb_path(snapshotdb_path, workerid);
 			rmfiles(snapshotdb_path.c_str());
-		}
+		}*/
 		snapshot_deleted_set.clear();
 
 		snapshotid += 1;
@@ -485,6 +489,7 @@ void RocksdbWrapper::make_snapshot() {
 
 		// NOTE: we can unlock rwlock after accessing db_ptr and deleted_set -> limited effect on put/delete
 		rwlock.unlock_shared();
+
 		// NOTE: we can unlock rwlock_for_snapshot after updating sp_ptr, snapshotdb_ptr, and snapshot_deleted_set -> limited effect on range_scan
 		rwlock_for_snapshot.unlock();
 

@@ -326,7 +326,7 @@ void prepare_switchos() {
 	prepare_tcpserver(switchos_snapshotserver_tcpsock, false, switchos_snapshotserver_port, 1, "switchos.snapshotserver"); // MAX_PENDING_CONNECTION = 1
 
 	// prepare specialcaseserver socket
-	prepare_udpserver(switchos_specialcaseserver_udpsock, true, switchos_specialcaseserver_port, "switchos.specialcaseserver");
+	prepare_udpserver(switchos_specialcaseserver_udpsock, true, switchos_specialcaseserver_port, "switchos.specialcaseserver", 0, 1000); // timeout interval: 1000us to avoid long wait time when making snapshot
 
 	//switchos_specialcases->clear();
 
@@ -853,8 +853,8 @@ void *run_switchos_snapshotserver(void *param) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_cached_keyarray_backup[debugi].serialize(debugbuf, MAX_BUFSIZE);
 					uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
-					//printf("serialized debug key-value[%d]:\n", int(debugi));
-					//dump_buf(debugbuf, debugkeysize+debugvalsize);
+					printf("serialized debug key-value[%d]:\n", int(debugi));
+					dump_buf(debugbuf, debugkeysize+debugvalsize);
 					printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
 				}
 
@@ -885,8 +885,8 @@ void *run_switchos_snapshotserver(void *param) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_cached_keyarray_backup[debugi].serialize(debugbuf, MAX_BUFSIZE);
 					uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
-					//printf("serialized debug key-value[%d]:\n", int(debugi));
-					//dump_buf(debugbuf, debugkeysize+debugvalsize);
+					printf("serialized debug key-value[%d]:\n", int(debugi));
+					dump_buf(debugbuf, debugkeysize+debugvalsize);
 					printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
 				}
 

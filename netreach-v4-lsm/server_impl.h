@@ -796,8 +796,9 @@ void *run_server_consnapshotserver(void *param) {
 
 				// make server-side snapshot (simulate distributed in-memory KVS by concurrent one)
 				if (!server_issnapshot) {
-					// TODO
-					//table->make_snapshot();
+					for (uint16_t i = 0; i < server_num; i++) {
+						db_wrappers[i].make_snapshot();
+					}
 				}
 
 				// send SNAPSHOT_SERVERSIDE_ACK to controller
@@ -907,8 +908,9 @@ void *run_server_consnapshotserver(void *param) {
 				control_type_phase1 = -1;
 				total_bytes = -1;
 
-				// TODO
-				//table->stop_snapshot();
+				for (uint16_t i = 0; i < server_num; i++) {
+					db_wrappers[i].stop_snapshot();
+				}
 				server_issnapshot = false;
 			}
 		}

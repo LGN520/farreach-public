@@ -13,7 +13,7 @@ void set_sockaddr(sockaddr_in &addr, uint32_t bigendian_saddr, short littleendia
 
 // udp
 
-void create_udpsock(int &sockfd, bool need_timeout, const char* role) {
+void create_udpsock(int &sockfd, bool need_timeout, const char* role, int timeout_sec, int timeout_usec) {
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd == -1) {
 		printf("[%s] fail to create udp socket, errno: %d!\n", role, errno);
@@ -28,8 +28,8 @@ void create_udpsock(int &sockfd, bool need_timeout, const char* role) {
 	// Set timeout for recvfrom/accept of udp/tcp
 	if (need_timeout) {
 		struct timeval tv;
-		tv.tv_sec = SOCKET_TIMEOUT;
-		tv.tv_usec =  0;
+		tv.tv_sec = timeout_sec;
+		tv.tv_usec =  timeout_usec;
 		int res = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 		INVARIANT(res >= 0);
 	}
@@ -70,11 +70,11 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 	return is_timeout;
 }
 
-void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const char* role) {
+void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const char* role, int timeout_sec, int timeout_usec) {
 	INVARIANT(role != NULL);
 
 	// create socket
-	create_udpsock(sockfd, need_timeout, role);
+	create_udpsock(sockfd, need_timeout, role, timeout_sec, timeout_usec);
 	// reuse the occupied port for the last created socket instead of being crashed
 	const int trueFlag = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
