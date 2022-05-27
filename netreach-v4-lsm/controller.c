@@ -23,6 +23,7 @@
 #include <mutex>
 
 #include "helper.h"
+#include "io_helper.h"
 
 #include "common_impl.h"
 
@@ -70,6 +71,7 @@ bool volatile is_controller_evictserver_evictclient_connected = false;
 int controller_evictserver_evictclient_tcpsock = -1;
 
 // controller.snapshotclient <-> switchos.snapshotserver
+int controller_snapshotid = 0;
 bool volatile is_controller_snapshotclient_connected = false;
 int controller_snapshotclient_tcpsock = -1;
 
@@ -187,6 +189,13 @@ void prepare_controller() {
 
 	// prepare evictclient
 	create_tcpsock(controller_evictserver_evictclient_tcpsock, "controller.evictserver.evictclient");
+
+	// load latest snapshotid
+	std::string snapshotid_path;
+	get_controller_snapshotid_path(snapshotid_path);
+	if (isexist(snapshotid_path)) {
+		load_snapshotid(controller_snapshotid, snapshotid_path);
+	}
 
 	// prepare snapshotclient
 	create_tcpsock(controller_snapshotclient_tcpsock, "controller.snapshotclient");
@@ -726,6 +735,22 @@ void *run_controller_snapshotclient(void *param) {
 					// send snapshot data to server.consnapshotserver
 					printf("[controller.snapshotclient] receive snapshot data from switchos and send to server\n"); // TMPDEBUG
 					tcpsend(controller_snapshotclient_consnapshotclient_tcpsock, recvbuf + sizeof(int), total_bytes, "controller.snapshotclient.consnapshotclient");
+
+					// for switch failure recovery
+					controller_snapshotid += 1;
+					// store inswitch snapshot data
+					std::string snapshotdata_path;
+					get_controller_snapshotdata_path(snapshotdata_path, controller_snapshotid);
+					store_buf(recvbuf + sizeof(int), total_bytes, snapshotdata_path);
+					// store latest snapshot id at last 
+					std::string snapshotid_path;
+					get_controller_snapshotid_path(snapshotid_path);
+					store_snapshotid(controller_snapshotid, snapshotid_path);
+					// remove old-enough snapshot data
+					int old_snapshotid = controller_snapshotid - 1;
+					std::string old_snapshotdata_path;
+					get_controller_snapshotdata_path(old_snapshotdata_path, old_snapshotid);
+					rmfiles(old_snapshotdata_path.c_str());
 
 					// Move remaining bytes and reset metadata
 					if (cur_recv_bytes > sizeof(int) + total_bytes) {

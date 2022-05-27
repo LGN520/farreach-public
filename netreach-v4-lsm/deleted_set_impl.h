@@ -1,10 +1,8 @@
 #ifndef DELETED_SET_IMPL_H
 #define DELETED_SET_IMPL_H
 
-#include <stdio.h> // fopen
 #include <fcntl.h> // open
 #include <sys/mman.h> // mmap, unmap
-#include <error.h> // errno
 
 #include "deleted_set.h"
 
@@ -121,23 +119,10 @@ void DeletedSet<key_t, seq_t>::clear() {
 
 template<class key_t, class seq_t>
 void DeletedSet<key_t, seq_t>::load(std::string &path) {
-	INVARIANT(access(path.c_str(), F_OK) == 0);
-	int fd = open(path.c_str(), O_RDONLY);
-	INVARIANT(fd != -1);
+	uint32_t filesize = get_filesize(path);
+	INVARIANT(filesize > 0); // at least load 4B recordcnt
 
-	struct stat statbuf;
-	int fstat_res = fstat(fd, &statbuf);
-	if (fstat_res < 0) {
-		printf("Cannot get stat of %s\n", path.c_str());
-		exit(-1);
-	}
-	uint32_t filesize = statbuf.st_size;
-
-	char * content = (char *)(mmap(NULL, filesize, PROT_READ, MAP_SHARED, fd, 0)); // NOTE: the last argument must be page-size-aligned
-	if (content == MAP_FAILED) {
-		printf("mmap fails: errno = %d\n", errno);
-		exit(-1);
-	}
+	char *content = readonly_mmap(path, 0, filesize);
 	INVARIANT(content != NULL);
 
 	// load # of records
@@ -170,7 +155,6 @@ void DeletedSet<key_t, seq_t>::load(std::string &path) {
 		exit(-1);
 	}
 	content = NULL;
-	close(fd);
 	return;
 }
 

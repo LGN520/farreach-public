@@ -92,39 +92,43 @@ LDDIR += $(MKL_LDDIR)
 
 # Utils
 
-UTILS_OBJETS :=
+UTILS_OBJECTS :=
 
 DEPS += key.d val.d
 CLEAN += key.o val.o
-UTILS_OBJETS += key.o val.o
+UTILS_OBJECTS += key.o val.o
 
 DEPS += socket_helper.d checksum_helper.d
 CLEAN += socket_helper.o checksum_helper.o
-UTILS_OBJETS += socket_helper.o checksum_helper.o
+UTILS_OBJECTS += socket_helper.o checksum_helper.o
 
 DEPS += ycsb/parser.d
 CLEAN += ycsb/parser.o
-UTILS_OBJETS += ycsb/parser.o
+UTILS_OBJECTS += ycsb/parser.o
 
 DEPS += crc32.d
 CLEAN += crc32.o
-UTILS_OBJETS += crc32.o
+UTILS_OBJECTS += crc32.o
 
 DEPS += iniparser/iniparser.d iniparser/dictionary.d iniparser/iniparser_wrapper.d
 CLEAN += iniparser/iniparser.o iniparser/dictionary.o iniparser/iniparser_wrapper.o
-UTILS_OBJETS += iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
+UTILS_OBJECTS += iniparser/iniparser_wrapper.o iniparser/iniparser.o iniparser/dictionary.o
 
 DEPS += special_case.d
 CLEAN += special_case.o
-UTILS_OBJETS += special_case.o
+UTILS_OBJECTS += special_case.o
 
 DEPS += snapshot_record.d
 CLEAN += snapshot_record.o
-UTILS_OBJETS += snapshot_record.o
+UTILS_OBJECTS += snapshot_record.o
 
 DEPS += latency_helper.d
 CLEAN += latency_helper.o
-UTILS_OBJETS += latency_helper.o
+UTILS_OBJECTS += latency_helper.o
+
+DEPS += io_helper.d
+CLEAN += io_helper.o
+UTILS_OBJECTS += io_helper.o
 
 ##############################################################################
 
@@ -135,11 +139,11 @@ LDFLAGS += $(EXTRA_LDFLAGS)
 
 ##############################################################################
 
-TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_loader ycsb_server switchos controller skewness_check
+TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_loader ycsb_server switchos controller skewness_check recover/controller_get_snapshotid recover/server_recover
 #dpdktest_client dpdktest_server socktest_client socktest_server
 ##client server
 
-prepare: prepare.o $(UTILS_OBJETS)
+prepare: prepare.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += prepare.d
 CLEAN += prepare.o prepare
@@ -156,39 +160,39 @@ CLEAN += prepare.o prepare
 #DEPS += server.d
 #CLEAN += server.o server
 
-localtest: localtest.o $(UTILS_OBJETS) $(ROCKSDB_OBJECTS)
+localtest: localtest.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += localtest.d
 CLEAN += localtest.o localtest
 
-split_workload: split_workload.o $(UTILS_OBJETS)
+split_workload: split_workload.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += split_workload.d
 CLEAN += split_workload.o split_workload
 
-ycsb_loader: ycsb_loader.o $(UTILS_OBJETS) $(ROCKSDB_OBJECTS)
+ycsb_loader: ycsb_loader.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += ycsb_loader.d
 CLEAN += ycsb_loader.o ycsb_loader
 
-ycsb_remote_client: ycsb_remote_client.o $(UTILS_OBJETS)
+ycsb_remote_client: ycsb_remote_client.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += ycsb_remote_client.d
 CLEAN += ycsb_remote_client.o ycsb_remote_client
 
-#ycsb_server: ycsb_server.o $(UTILS_OBJETS) $(ROCKSDB_OBJECTS) $(DPDK_OBJECTS)
+#ycsb_server: ycsb_server.o $(UTILS_OBJECTS) $(ROCKSDB_OBJECTS) $(DPDK_OBJECTS)
 	#$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) $(DPDK_LDLIBS) -o $@
-ycsb_server: ycsb_server.o $(UTILS_OBJETS) $(ROCKSDB_OBJECTS)
+ycsb_server: ycsb_server.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += ycsb_server.d
 CLEAN += ycsb_server.o ycsb_server
 
-switchos: switchos.o $(UTILS_OBJETS)
+switchos: switchos.o $(UTILS_OBJECTS)
 	$(CC) -pthread -g $(LDDIR) $^ -lpthread -o $@
 DEPS += switchos.d
 CLEAN += switchos.o switchos
 
-controller: controller.o $(UTILS_OBJETS)
+controller: controller.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += controller.d
 CLEAN += controller.o controller
@@ -213,10 +217,20 @@ CLEAN += controller.o controller
 #DEPS += socktest_server.d
 #CLEAN += socktest_server.o socktest_server
 
-skewness_check: skewness_check.o $(UTILS_OBJETS) 
+skewness_check: skewness_check.o $(UTILS_OBJECTS) 
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += skewness_check.d
 CLEAN += skewness_check.o skewness_check
+
+recover/controller_get_snapshotid: recover/controller_get_snapshotid.o $(UTILS_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += recover/controller_get_snapshotid.d
+CLEAN += recover/controller_get_snapshotid.o recover/controller_get_snapshotid
+
+recover/server_recover: recover/server_recover.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
+	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
+DEPS += recover/server_recover.d
+CLEAN += recover/server_recover.o recover/server_recover
 
 ##############################################################################
 # Top level targets

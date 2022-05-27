@@ -1,11 +1,12 @@
 #ifndef DELETED_SET_H
 #define DELETED_SET_H
 
-#include "helper.h"
 #include <map>
 #include <mutex>
 
+#include "helper.h"
 #include "snapshot_record.h"
+#include "io_helper.h"
 
 #define CAPACITY_FACTOR 10
 

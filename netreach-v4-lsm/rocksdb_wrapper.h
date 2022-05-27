@@ -17,6 +17,7 @@
 #include "val.h"
 #include "deleted_set_impl.h"
 #include "snapshot_record.h"
+#include "io_helper.h"
 
 #define MEMTABLE_SIZE 4 * 1024 * 1024
 #define MAX_MEMTABLE_NUM 2
@@ -36,6 +37,7 @@ class RocksdbWrapper {
 
 	public:
 		static void prepare_rocksdb();
+		static rocksdb::Options rocksdb_options;
 
 		RocksdbWrapper();
 		//RocksdbWrapper(uint16_t tmpworkerid);
@@ -59,7 +61,6 @@ class RocksdbWrapper {
 		size_t range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results);
 
 	private:
-		static rocksdb::Options rocksdb_options;
 		uint16_t workerid;
 
 		// NOTE: we provide thread safety between per-server worker and evictserver; and there is no contention across workers of different servers
@@ -79,13 +80,6 @@ class RocksdbWrapper {
 		// database checkpoint to recover database snapshot from server crash
 		rocksdb::TransactionDB *snapshotdb_ptr = NULL;
 		deleted_set_t snapshot_deleted_set; // read-only, only used for range query
-
-		inline void get_db_path(std::string &db_path, uint16_t tmpworkerid);
-		inline void get_deletedset_path(std::string &deletedset_path, uint16_t tmpworkerid);
-		inline void get_snapshotid_path(std::string &snapshotid_path, uint16_t tmpworkerid);
-		inline void get_snapshotdb_path(std::string &snapshotdb_path, uint16_t tmpworkerid); // at most one snapshotdb for server-side recovery
-		inline void get_snapshotdbseq_path(std::string &snapshotdbseq_path, uint16_t tmpworkerid, uint32_t tmpsnapshotid);
-		inline void get_snapshotdeletedset_path(std::string &snapshotdeletedset_path, uint16_t tmpworkerid, uint32_t tmpsnapshotid);
 };
 
 typedef RocksdbWrapper rocksdb_wrapper_t;

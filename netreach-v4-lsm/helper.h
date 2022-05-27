@@ -5,10 +5,6 @@
 #include <sstream>
 #include <time.h>
 #include <execinfo.h> // backtrace
-#include <stdio.h> // remove
-#include <ftw.h> // nftw
-#include <error.h> // errno
-#include <fcntl.h> // open
 #include <unistd.h>
 
 #if !defined(HELPER_H)
@@ -197,25 +193,6 @@ static inline void dump_buf(char *buf, uint32_t bufsize)
 		printf("0x%02x ", uint8_t(buf[byteidx]));
 	}
 	printf("\n");
-}
-
-static inline int rmfile(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftwb) {
-	if (remove(pathname) < 0) {
-		printf("fail to remove %s; errno: %d\n", pathname, int(errno));
-		return -1;
-	}
-	return 0;
-}
-
-static inline void rmfiles(const char *pathname) {
-	if (access(pathname, F_OK) == 0) {
-		if (nftw(pathname, rmfile, 10, FTW_DEPTH | FTW_MOUNT | FTW_PHYS) < 0)
-		{
-			printf("fail to walk file tree in %s; errno: %d\n", pathname, int(errno));
-			exit(1);
-		}
-	}
-	return;
 }
 
 #endif  // HELPER_H
