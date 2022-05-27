@@ -26,7 +26,7 @@
 
 #include "common_impl.h"
 
-#define DUMP_BUF
+//#define DUMP_BUF
 
 struct alignas(CACHELINE_SIZE) FGParam {
 	uint16_t thread_id;

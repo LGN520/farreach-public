@@ -13,7 +13,7 @@
 #include "concurrent_set_impl.h"
 #include "rocksdb_wrapper.h"
 
-#define DUMP_BUF
+//#define DUMP_BUF
 
 typedef DeletedSet<netreach_key_t, uint32_t> deleted_set_t;
 typedef ConcurrentMap<netreach_key_t, snapshot_record_t> concurrent_snapshot_map_t;
@@ -447,11 +447,9 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				printf("tmp_stat: %d\n", tmp_stat?1:0);
 				if (tmp_stat) {
 				//if (false) {
 					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
-					printf("is_cached_before: %d\n", is_cached_before?1:0);
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
 						// Send CACHE_POP to controller.popserver
@@ -482,11 +480,9 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				printf("tmp_stat: %d\n", tmp_stat?1:0);
 				if (tmp_stat) { // successful put
 				//if (false) {
 					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
-					printf("is_cached_before: %d\n", is_cached_before?1:0);
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
 						// Send CACHE_POP to controller.popserver
@@ -544,11 +540,9 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				printf("tmp_stat: %d\n", tmp_stat?1:0);
 				if (tmp_stat) { // successful put
 				//if (false) {
 					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
-					printf("is_cached_before: %d\n", is_cached_before?1:0);
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
 						// Send CACHE_POP to controller.popserver
