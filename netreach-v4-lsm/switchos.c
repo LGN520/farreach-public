@@ -20,6 +20,7 @@
 #include <mutex>
 
 #include "helper.h"
+#include "io_helper.h"
 #include "key.h"
 #include "val.h"
 //#include "common_impl.h"
@@ -49,6 +50,8 @@ typedef CachePopInswitchAck<index_key_t> cache_pop_inswitch_ack_t;
 typedef CacheEvict<index_key_t, val_t> cache_evict_t;
 typedef CacheEvictCase2<index_key_t, val_t> cache_evict_case2_t;
 typedef ConcurrentMap<uint16_t, special_case_t> concurrent_specicalcase_map_t;
+
+bool recover_mode = false;
 
 bool volatile switchos_running = false;
 std::atomic<size_t> switchos_ready_threads(0);
@@ -157,6 +160,7 @@ int switchos_snapshotserver_snapshotclient_for_ptf_tcpsock = -1;
 inline void parse_ini(const char *config_file);
 inline void parse_control_ini(const char *config_file);
 void prepare_switchos();
+void recover();
 void *run_switchos_popserver(void *param);
 void *run_switchos_popworker(void *param);
 void *run_switchos_snapshotserver(void *param);
@@ -178,6 +182,10 @@ inline uint32_t serialize_reset_snapshot_flag_and_reg(char *buf);
 inline bool wait_for_reset_snapshot_flag_and_reg_ack(int tcpsock, char *buf, uint32_t buflen, const char *role);
 
 int main(int argc, char **argv) {
+	if ((argc == 2) && (strcmp(argv[1], "recover") == 0)) {
+		recover_mode = true;
+	}
+
 	parse_ini("config.ini");
 	parse_control_ini("control_type.ini");
 
@@ -334,9 +342,74 @@ void prepare_switchos() {
 	create_udpsock(switchos_popworker_popclient_for_ptf_udpsock, false, "switchos.popworker.popclient_for_ptf");
 	create_tcpsock(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, "switchos.snapshotserver.snapshotclient_for_ptf");
 
+	if (recover_mode) {
+		recover();
+	}
+
 	memory_fence();
 
 	printf("[switchos] prepare end\n");
+}
+
+void recover() {
+	std::string snapshotid_path;
+	get_controller_snapshotid_path(snapshotid_path);
+	if (!isexist(snapshotid_path)) {
+		printf("You need to copy latest snapshotid from controller to switchos before running with recover mode\n");
+		exit(-1);
+	}
+
+	int controller_snapshotid = 0;
+	load_snapshotid(controller_snapshotid, snapshotid_path);
+	std::string snapshotdata_path;
+	get_controller_snapshotdata_path(snapshotdata_path, controller_snapshotid);
+	if (!isexist(snapshotdata_path)) {
+		printf("You need to copy inswitch snapshot data from controller to switchos before running with recover mode\n");
+		exit(-1);
+	}
+
+	uint32_t filesize = get_filesize(snapshotdata_path);
+	INVARIANT(filesize > 0);
+	char *content = readonly_mmap(snapshotdata_path, 0, filesize);
+	INVARIANT(content != NULL);
+
+	// set inswitch stateful memory with inswitch snapshot data
+	system("sudo bash tofino/recover_switch.sh");
+
+	// extract snapshot data
+	int control_type = *((int *)content);
+	INVARIANT(control_type == SNAPSHOT_DATA);
+	int total_bytes = *((int32_t *)(content + sizeof(int)));
+	int tmp_offset = sizeof(int) + sizeof(int32_t); // SNAPSHOT_DATA + total_bytes
+	while (true) {
+		tmp_offset += sizeof(int32_t); // skip perserver_bytes
+		uint16_t tmp_serveridx = *((uint16_t *)(content + tmp_offset));
+		tmp_offset += sizeof(uint16_t);
+		int32_t tmp_recordcnt = *((int32_t *)(content + tmp_offset));
+		tmp_offset += sizeof(int32_t);
+		for (int32_t tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {
+			netreach_key_t tmp_key;
+			uint32_t tmp_keysize = tmp_key.deserialize(content + tmp_offset, total_bytes - tmp_offset);
+			tmp_offset += tmp_keysize;
+			val_t tmp_val;
+			uint32_t tmp_valsize = tmp_val.deserialize(content + tmp_offset, total_bytes - tmp_offset);
+			tmp_offset += tmp_valsize;
+			uint32_t seq = *((uint32_t *)(content + tmp_offset));
+			tmp_offset += sizeof(uint32_t);
+			bool stat = *((bool *)(content + tmp_offset));
+			tmp_offset += sizeof(bool);
+
+			// Update switchos inswitch cache metadata
+			switchos_cached_keyarray[switchos_cached_empty_index] = tmp_key;
+			switchos_cached_serveridxarray[switchos_cached_empty_index] = tmp_serveridx;
+			switchos_cached_empty_index += 1;
+		}
+		if (tmp_offset >= total_bytes) {
+			break;
+		}
+	}
+
+	munmap(content, filesize);
 }
 
 void *run_switchos_popserver(void *param) {
