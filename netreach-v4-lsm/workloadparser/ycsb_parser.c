@@ -1,20 +1,6 @@
-#include <string.h>
-#include <string>
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
+#include "ycsb_parser.h"
 
-#include "parser.h"
-//#include "utf8.h"
-
-#define MINIMUM_WORKLOAD_FILESIZE
-
-#define MAX_LINE_SIZE 256
-
-int ParserIterator::load_batch_size = 1 * 1000 * 1000; // 1M records per batch
-
-ParserIterator::ParserIterator(const char* filename) {
+YcsbParserIterator::YcsbParserIterator(const char* filename) {
 	_fd = open(filename, O_RDONLY);
 	if (_fd == -1) {
 		printf("No such file: %s\n", filename);
@@ -29,10 +15,10 @@ ParserIterator::ParserIterator(const char* filename) {
 	}
 	_filesize = statbuf.st_size;
 
-	_keys = new Key[load_batch_size];
-	_vals = new Val[load_batch_size];
-	_types = new uint8_t[load_batch_size];
-	_lines = new std::string[load_batch_size];
+	_keys = new Key[ParserIterator::load_batch_size];
+	_vals = new Val[ParserIterator::load_batch_size];
+	_types = new uint8_t[ParserIterator::load_batch_size];
+	_lines = new std::string[ParserIterator::load_batch_size];
 
 	/*bool next_res = next();
 	if (!next_res) {
@@ -41,12 +27,12 @@ ParserIterator::ParserIterator(const char* filename) {
 	}*/
 }
 
-ParserIterator::ParserIterator(const ParserIterator& other) {
-	printf("[ParserIterator] no copy constructor\n");
+YcsbParserIterator::YcsbParserIterator(const YcsbParserIterator& other) {
+	printf("[YcsbParserIterator] no copy constructor\n");
 	exit(-1);
 }
 
-ParserIterator::~ParserIterator() {
+YcsbParserIterator::~YcsbParserIterator() {
 	unmap_content();
 	closeiter();
 
@@ -68,27 +54,27 @@ ParserIterator::~ParserIterator() {
 	}
 }
 
-Key ParserIterator::key() {
+Key YcsbParserIterator::key() {
 	INVARIANT(_idx >= 0 && _idx <= _maxidx);
 	return _keys[_idx];
 }
 
-Val ParserIterator::val() {
+Val YcsbParserIterator::val() {
 	INVARIANT(_idx >= 0 && _idx <= _maxidx);
 	return _vals[_idx];
 }
 
-uint8_t ParserIterator::type() {
+uint8_t YcsbParserIterator::type() {
 	INVARIANT(_idx >= 0 && _idx <= _maxidx);
 	return _types[_idx];
 }
 
-std::string ParserIterator::line() {
+std::string YcsbParserIterator::line() {
 	INVARIANT(_idx >= 0 && _idx <= _maxidx);
 	return _lines[_idx];
 }
 
-bool ParserIterator::next() {
+bool YcsbParserIterator::next() {
 	if (_idx == -1 || _idx == _maxidx) {
 		return next_batch(); // set _idx = 0; update _maxidx;
 	}
@@ -100,43 +86,43 @@ bool ParserIterator::next() {
 	return true;
 }
 
-void ParserIterator::closeiter() {
+void YcsbParserIterator::closeiter() {
 	if (_fd != -1) {
 		close(_fd);
 		_fd = -1;
 	}
 }
 
-Key *ParserIterator::keys() {
+Key *YcsbParserIterator::keys() {
 	INVARIANT(_keys != NULL);
 	return _keys;
 }
 
-Val *ParserIterator::vals() {
+Val *YcsbParserIterator::vals() {
 	INVARIANT(_vals != NULL);
 	return _vals;
 }
 
-uint8_t *ParserIterator::types() {
+uint8_t *YcsbParserIterator::types() {
 	INVARIANT(_types != NULL);
 	return _types;
 }
 
-int ParserIterator::maxidx() {
+int YcsbParserIterator::maxidx() {
 	INVARIANT(_maxidx != -1);
 	return _maxidx;
 }
 
-bool ParserIterator::next_batch() {
+bool YcsbParserIterator::next_batch() {
 	INVARIANT(_content == NULL);
 
-	if (_maxidx < load_batch_size-1) {
+	if (_maxidx < ParserIterator::load_batch_size-1) {
 		return false;
 	}
 
 	map_content(); // map file into content
 
-	// load at most load_batch_size records
+	// load at most ParserIterator::load_batch_size records
 	_idx = 0;
 	_maxidx = -1;
 
@@ -193,11 +179,11 @@ bool ParserIterator::next_batch() {
 		// switch to next line
 		_fileoffset += linelen;
 		//COUT_VAR(std::string(line, linelen));
-		//printf("linelen: %d, _fileoffset: %d, _filesize: %d, _maxidx: %d, load_batch_size: %d\n", linelen, _fileoffset, _filesize, _maxidx, load_batch_size);
+		//printf("linelen: %d, _fileoffset: %d, _filesize: %d, _maxidx: %d, ParserIterator::load_batch_size: %d\n", linelen, _fileoffset, _filesize, _maxidx, ParserIterator::load_batch_size);
 		line = nextline;
 
-		INVARIANT(_maxidx < load_batch_size);
-		if (_maxidx == load_batch_size-1) {
+		INVARIANT(_maxidx < ParserIterator::load_batch_size);
+		if (_maxidx == ParserIterator::load_batch_size-1) {
 			break;
 		}
 
@@ -216,7 +202,7 @@ bool ParserIterator::next_batch() {
 	}
 }
 
-void ParserIterator::unmap_content() {
+void YcsbParserIterator::unmap_content() {
 	if (_content != NULL) {
 		int res = munmap(_content, _filesize);
 		if (res != 0) {
@@ -227,7 +213,7 @@ void ParserIterator::unmap_content() {
 	}
 }
 
-void ParserIterator::map_content() {
+void YcsbParserIterator::map_content() {
 	INVARIANT(_content == NULL);
 	if (_fileoffset < _filesize) {
 		_content = (char *)(mmap(NULL, _filesize, PROT_READ, MAP_SHARED, _fd, 0)); // NOTE: the last argument must be page-size-aligned
@@ -239,7 +225,7 @@ void ParserIterator::map_content() {
 	}
 }
 
-bool ParserIterator::parsekv(const char* line, int linelen) {
+bool YcsbParserIterator::parsekv(const char* line, int linelen) {
 	const char* key_begin = nullptr;
 	const char* key_end = nullptr;
 	const char* val_begin = nullptr;
@@ -283,7 +269,7 @@ bool ParserIterator::parsekv(const char* line, int linelen) {
 	return true;
 }
 
-bool ParserIterator::parsekey(const char* line, int linelen) {
+bool YcsbParserIterator::parsekey(const char* line, int linelen) {
 	const char* key_begin = nullptr;
 	const char* key_end = nullptr;
 

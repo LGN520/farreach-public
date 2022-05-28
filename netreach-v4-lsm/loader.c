@@ -13,8 +13,11 @@
 #include <sys/time.h> // struct timeval
 
 #include "helper.h"
-#include "ycsb/parser.h"
 #include "rocksdb_wrapper.h"
+
+#ifdef USE_YCSB
+#include "workloadparser/ycsb_parser.h"
+#endif
 
 #include "common_impl.h"
 
@@ -112,7 +115,11 @@ void *run_loader(void * param) {
 	memset(load_filename, '\0', 256);
 	LOAD_SPLIT_WORKLOAD(load_filename, server_load_workload_dir, worker_id, loader_id);
 
-	ParserIterator iter(load_filename);
+	ParserIterator *iter = NULL;
+#ifdef USE_YCSB
+	iter = new YcsbParserIterator (load_filename);
+#endif
+	INVARIANT(iter != NULL);
 
 	int res = 0;
 
@@ -131,13 +138,13 @@ void *run_loader(void * param) {
 	//netreach_key_t tmpkey;
 	//val_t tmpval;
 	while (running) {
-		/*if (!iter.next()) {
+		/*if (!iter->next()) {
 			break;
 		}
 
-		tmpkey = iter.key();
-		tmpval = iter.val();	
-		if (iter.type() == uint8_t(packet_type_t::PUTREQ)) {	// INESRT
+		tmpkey = iter->key();
+		tmpval = iter->val();	
+		if (iter->type() == uint8_t(packet_type_t::PUTREQ)) {	// INESRT
 #ifndef CORRECTNESS_TEST
 			bool tmp_stat = db_wrappers[thread_id].force_put(tmpkey, tmpval);
 			if (!tmp_stat) {
@@ -153,22 +160,22 @@ void *run_loader(void * param) {
 #endif
 		}
 		else {
-			COUT_N_EXIT("Invalid type: !" << int(iter.type()));
+			COUT_N_EXIT("Invalid type: !" << int(iter->type()));
 		}*/
 
-		if (!iter.next_batch()) {
+		if (!iter->next_batch()) {
 			break;
 		}
 
-		uint8_t *tmptypes = iter.types();
-		int tmpmaxidx = iter.maxidx();
+		uint8_t *tmptypes = iter->types();
+		int tmpmaxidx = iter->maxidx();
 		for (size_t i = 0; i < tmpmaxidx; i++) {
 			if (tmptypes[i] != uint8_t(packet_type_t::PUTREQ)) {
 				COUT_N_EXIT("Invalid type: !" << int(tmptypes[i]));
 			}
 		}
 
-		bool tmp_stat = db_wrappers[worker_id].force_multiput(iter.keys(), iter.vals(), tmpmaxidx);
+		bool tmp_stat = db_wrappers[worker_id].force_multiput(iter->keys(), iter->vals(), tmpmaxidx);
 		if (!tmp_stat) {
 			printf("Loading phase: fail to multiput %d records\n", tmpmaxidx);
 			exit(-1);
@@ -176,7 +183,9 @@ void *run_loader(void * param) {
 	}
 
 	pthread_exit(nullptr);
-	iter.closeiter();
+	iter->closeiter();
+	delete iter;
+	iter = NULL;
 #if !defined(NDEBUGGING_LOG)
 	ofs.close();
 #endif

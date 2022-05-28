@@ -18,11 +18,14 @@
 #include "helper.h"
 #include "key.h"
 #include "val.h"
-#include "ycsb/parser.h"
 #include "iniparser/iniparser_wrapper.h"
 #include "crc32.h"
 #include "latency_helper.h"
 #include "socket_helper.h"
+
+#ifdef USE_YCSB
+#include "workloadparser/ycsb_parser.h"
+#endif
 
 #include "common_impl.h"
 
@@ -153,7 +156,13 @@ void *run_fg(void *param) {
 	char load_filename[256];
 	memset(load_filename, '\0', 256);
 	RUN_SPLIT_WORKLOAD(load_filename, client_workload_dir, thread_id);
-	ParserIterator iter(load_filename);
+
+	ParserIterator *iter = NULL;
+#ifdef USE_YCSB
+	iter = new YcsbParserIterator(load_filename);
+#endif
+	INVARIANT(iter != NULL);
+
 	netreach_key_t tmpkey;
 	val_t tmpval;
 
@@ -185,14 +194,14 @@ void *run_fg(void *param) {
 
 	bool is_timeout = false;
 	while (running) {
-		if (!iter.next()) {
+		if (!iter->next()) {
 			break;
 		}
 
 		struct timespec req_t1, req_t2, req_t3, rsp_t1, rsp_t2, rsp_t3, final_t3, wait_t1, wait_t2, wait_t3;
 		while (true) {
-			tmpkey = iter.key();
-			if (iter.type() == uint8_t(packet_type_t::GETREQ)) { // get
+			tmpkey = iter->key();
+			if (iter->type() == uint8_t(packet_type_t::GETREQ)) { // get
 				CUR_TIME(req_t1);
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				get_request_t req(tmpkey);
@@ -220,8 +229,8 @@ void *run_fg(void *param) {
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
 				CUR_TIME(rsp_t2);
 			}
-			else if (iter.type() == uint8_t(packet_type_t::PUTREQ)) { // update or insert
-				tmpval = iter.val();
+			else if (iter->type() == uint8_t(packet_type_t::PUTREQ)) { // update or insert
+				tmpval = iter->val();
 
 				CUR_TIME(req_t1);
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
@@ -261,7 +270,7 @@ void *run_fg(void *param) {
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 				CUR_TIME(rsp_t2);
 			}
-			else if (iter.type() == uint8_t(packet_type_t::DELREQ)) {
+			else if (iter->type() == uint8_t(packet_type_t::DELREQ)) {
 				CUR_TIME(req_t1);
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				del_request_t req(tmpkey);
@@ -289,7 +298,7 @@ void *run_fg(void *param) {
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 				CUR_TIME(rsp_t2);
 			}
-			else if (iter.type() == uint8_t(packet_type_t::SCANREQ)) {
+			else if (iter->type() == uint8_t(packet_type_t::SCANREQ)) {
 				netreach_key_t endkey = generate_endkey(tmpkey);
 				/*size_t first_server_idx = get_server_idx(tmpkey);
 				size_t last_server_idx = get_server_idx(endkey);
@@ -368,7 +377,7 @@ void *run_fg(void *param) {
 				}
 			}
 			else {
-				printf("Invalid request type: %u\n", uint32_t(iter.type()));
+				printf("Invalid request type: %u\n", uint32_t(iter->type()));
 				exit(-1);
 			}
 			break;
@@ -406,6 +415,10 @@ void *run_fg(void *param) {
 			cur_sending_time = 0.0;
 		}*/
 	}
+
+	iter->closeiter();
+	delete iter;
+	iter = NULL;
 
 	close(clientsock);
 #if !defined(NDEBUGGING_LOG)

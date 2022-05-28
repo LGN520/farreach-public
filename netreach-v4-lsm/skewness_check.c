@@ -20,8 +20,11 @@
 #include "helper.h"
 #include "key.h"
 #include "val.h"
-#include "ycsb/parser.h"
 #include "iniparser/iniparser_wrapper.h"
+
+#ifdef USE_YCSB
+#include "workloadparser/ycsb_parser.h"
+#endif
 
 #include "common_impl.h"
 
@@ -103,23 +106,33 @@ void * run_checker(void *param) {
 	char load_filename[256];
 	memset(load_filename, '\0', 256);
 	RUN_SPLIT_WORKLOAD(load_filename, client_workload_dir, thread_id);
-	ParserIterator iter(load_filename);
+
+	ParserIterator *iter = NULL;
+#ifdef USE_YCSB
+	iter = new YcsbParserIterator (load_filename);
+#endif
+	INVARIANT(iter != NULL);
+
 	netreach_key_t tmpkey;
 	val_t tmpval;
 
 	while (true) {
-		if (!iter.next()) {
+		if (!iter->next()) {
 			break;
 		}
 
-		std::map<netreach_key_t, int>::iterator mapiter = frequency_map.find(iter.key());
+		std::map<netreach_key_t, int>::iterator mapiter = frequency_map.find(iter->key());
 		if (mapiter == frequency_map.end()) {
-			frequency_map.insert(std::pair<netreach_key_t, int>(iter.key(), 1));
+			frequency_map.insert(std::pair<netreach_key_t, int>(iter->key(), 1));
 		}
 		else {
 			mapiter->second += 1;
 		}
 	}
+
+	iter->closeiter();
+	delete iter;
+	iter = NULL;
 
 	finish_threads++;
 	pthread_exit(nullptr);

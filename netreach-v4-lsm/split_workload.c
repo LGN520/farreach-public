@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include "ycsb/parser.h"
+
 #include "helper.h"
 
 #include "common_impl.h"
@@ -138,18 +138,4 @@ int main(int argc, char **argv) {
 			//fps[i] = nullptr;
 		}
 	}
-
-	/*Parser parser(filename);
-	ParserIterator iter = parser.begin();
-	uint32_t line_idx = 0;
-	while (true) {
-		fwrite(iter.line().c_str(), iter.line().length(), 1, fps[line_idx]);
-		line_idx++;
-		if (line_idx >= splitnum) {
-			line_idx = 0;
-		}
-		if (!iter.next()) {
-			break;
-		}
-	}*/
 }

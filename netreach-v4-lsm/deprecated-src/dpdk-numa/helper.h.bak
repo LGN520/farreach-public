@@ -10,11 +10,11 @@
 #if !defined(HELPER_H)
 #define HELPER_H
 
-// 1: test aggregate throughput
-// 0: not test
-#if 1
-#define TEST_AGG_THPT
-#endif
+#define GET_STRING(v, this) { \
+	std::stringstream ss; \
+ 	ss << this; \
+	v = ss.str(); \
+}
 
 #define LOAD_RAW_WORKLOAD(buf, workload) \
 	sprintf(buf, "%s-load.out", workload)
@@ -42,14 +42,6 @@
 
 #define GET_ROOT(buf, workload_name)  \
 	sprintf(buf, "%s-root.out", workload_name)
-
-/***** Workload *****/
-
-#define USE_YCSB
-//#define USE_SYNTHETIC
-//#define USE_TPCC
-
-/***** Timing *****/
 
 // us
 //#define CUR_TIME() (double) clock() / CLOCKS_PER_SEC * 1000.0 * 1000.0
@@ -79,8 +71,6 @@
 // s + ns -> us
 #define GET_MICROSECOND(t) t.tv_sec * 1000 * 1000 + double(t.tv_nsec) / 1000.0
 
-/***** Dumping *****/
-
 #define COUT_THIS(this) std::cout << this << std::endl;
 #define COUT_VAR(this) std::cout << #this << ": " << this << std::endl;
 #define COUT_POS() COUT_THIS("at " << __FILE__ << ":" << __LINE__)
@@ -88,16 +78,6 @@
   COUT_THIS(msg);        \
   COUT_POS();            \
   abort();
-
-static inline void dump_buf(char *buf, uint32_t bufsize)
-{
-	for (uint32_t byteidx = 0; byteidx < bufsize; byteidx++) {
-		printf("0x%02x ", uint8_t(buf[byteidx]));
-	}
-	printf("\n");
-}
-
-/***** Debuging *****/
 
 // 1: assert
 // 0: ignore assert
@@ -121,30 +101,36 @@ static inline void dump_buf(char *buf, uint32_t bufsize)
 #if 1
 #define NDEBUGGING
 #endif
-#if defined(NDEBUGGING)
-#define DEBUG_THIS(this)
-#else
-#define DEBUG_THIS(this) std::cerr << this << std::endl
-#endif
 
 // 0: print information of main thread
 // 1: not print
 #if 1
 #define NDEBUGGING_LOG
 #endif
+
+// 1: test dpdk polling time to reduce it from normal RTT
+// 0: not test
+//#if 0
+//#define TEST_DPDK_POLLING
+//#endif
+
+// 1: test aggregate throughput
+// 0: not test
+#if 1
+#define TEST_AGG_THPT
+#endif
+
+#if defined(NDEBUGGING)
+#define DEBUG_THIS(this)
+#else
+#define DEBUG_THIS(this) std::cerr << this << std::endl
+#endif
+
 #if defined(NDEBUGGING_LOG)
 #define FDEBUG_THIS(ofs, this)
 #else
 #define FDEBUG_THIS(ofs, this) ofs << this << std::endl
 #endif
-
-/***** Others *****/
-
-#define GET_STRING(v, this) { \
-	std::stringstream ss; \
- 	ss << this; \
-	v = ss.str(); \
-}
 
 #define UNUSED(var) ((void)var)
 
@@ -199,6 +185,14 @@ static inline void print_stacktrace()
         printf("%s\n", stacktrace[i]);
     }
     free(stacktrace);
+}
+
+static inline void dump_buf(char *buf, uint32_t bufsize)
+{
+	for (uint32_t byteidx = 0; byteidx < bufsize; byteidx++) {
+		printf("0x%02x ", uint8_t(buf[byteidx]));
+	}
+	printf("\n");
 }
 
 #endif  // HELPER_H

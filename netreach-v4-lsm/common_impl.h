@@ -11,7 +11,7 @@
 #include "socket_helper.h"
 #include "message_queue_impl.h"
 #include "iniparser/iniparser_wrapper.h"
-#include "ycsb/parser.h"
+#include "workloadparser/parser.h"
 
 /*
  * Class and alias

@@ -102,9 +102,9 @@ DEPS += socket_helper.d checksum_helper.d
 CLEAN += socket_helper.o checksum_helper.o
 UTILS_OBJECTS += socket_helper.o checksum_helper.o
 
-DEPS += ycsb/parser.d
-CLEAN += ycsb/parser.o
-UTILS_OBJECTS += ycsb/parser.o
+DEPS += workloadparser/parser.d workloadparser/ycsb_parser.d
+CLEAN += workloadparser/parser.o workloadparser/ycsb_parser.o
+UTILS_OBJECTS += workloadparser/parser.o workloadparser/ycsb_parser.o
 
 DEPS += crc32.d
 CLEAN += crc32.o
@@ -139,26 +139,13 @@ LDFLAGS += $(EXTRA_LDFLAGS)
 
 ##############################################################################
 
-TARGETS := prepare localtest split_workload ycsb_remote_client ycsb_loader ycsb_server switchos controller skewness_check recover/controller_get_snapshotid recover/server_recover
+TARGETS := prepare localtest split_workload remote_client loader server switchos controller skewness_check recover/controller_get_snapshotid recover/server_recover
 #dpdktest_client dpdktest_server socktest_client socktest_server
-##client server
 
 prepare: prepare.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += prepare.d
 CLEAN += prepare.o prepare
-
-#client: client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS)
-#	echo $(LDFLAGS)
-#	echo $(LDLIBS)
-#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-#DEPS += client.d
-#CLEAN += client.o client
-
-#server: server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS)
-#	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
-#DEPS += server.d
-#CLEAN += server.o server
 
 localtest: localtest.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
@@ -170,22 +157,22 @@ split_workload: split_workload.o $(UTILS_OBJECTS)
 DEPS += split_workload.d
 CLEAN += split_workload.o split_workload
 
-ycsb_loader: ycsb_loader.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
+loader: loader.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
-DEPS += ycsb_loader.d
-CLEAN += ycsb_loader.o ycsb_loader
+DEPS += loader.d
+CLEAN += loader.o loader
 
-ycsb_remote_client: ycsb_remote_client.o $(UTILS_OBJECTS)
+remote_client: remote_client.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += ycsb_remote_client.d
-CLEAN += ycsb_remote_client.o ycsb_remote_client
+DEPS += remote_client.d
+CLEAN += remote_client.o remote_client
 
-#ycsb_server: ycsb_server.o $(UTILS_OBJECTS) $(ROCKSDB_OBJECTS) $(DPDK_OBJECTS)
+#server: server.o $(UTILS_OBJECTS) $(ROCKSDB_OBJECTS) $(DPDK_OBJECTS)
 	#$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) $(DPDK_LDLIBS) -o $@
-ycsb_server: ycsb_server.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
+server: server.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
-DEPS += ycsb_server.d
-CLEAN += ycsb_server.o ycsb_server
+DEPS += server.d
+CLEAN += server.o server
 
 switchos: switchos.o $(UTILS_OBJECTS)
 	$(CC) -pthread -g $(LDDIR) $^ -lpthread -o $@
@@ -197,22 +184,22 @@ controller: controller.o $(UTILS_OBJECTS)
 DEPS += controller.d
 CLEAN += controller.o controller
 
-#dpdktest_client: dpdktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o ycsb/parser.o
+#dpdktest_client: dpdktest_client.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 #DEPS += dpdktest_client.d
 #CLEAN += dpdktest_client.o dpdktest_client
 
-#dpdktest_server: dpdktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o ycsb/parser.o
+#dpdktest_server: dpdktest_server.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
 #DEPS += dpdktest_server.d
 #CLEAN += dpdktest_server.o dpdktest_server
 
-#socktest_client: socktest_client.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o ycsb/parser.o
+#socktest_client: socktest_client.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) -o $@
 #DEPS += socktest_client.d
 #CLEAN += socktest_client.o socktest_client
 
-#socktest_server: socktest_server.o dpdk_helper.o key.o val.o $(INIPARSER_OBJECTS) latency_helper.o socket_helper.o ycsb/parser.o
+#socktest_server: socktest_server.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) -o $@
 #DEPS += socktest_server.d
 #CLEAN += socktest_server.o socktest_server
