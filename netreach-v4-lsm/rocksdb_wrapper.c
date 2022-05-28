@@ -230,7 +230,7 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq) {
 		INVARIANT(deleted_seq > seq);
 		//mutexlock.unlock();
 		rwlock.unlock();
-		return true;
+		return false;
 	}
 
 	rocksdb::Status s;
@@ -281,7 +281,7 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq) {
 		INVARIANT(deleted_seq > seq);
 		//mutexlock.unlock();
 		rwlock.unlock();
-		return true;
+		return false;
 	}
 
 	rocksdb::Status s;

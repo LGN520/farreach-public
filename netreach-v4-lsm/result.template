@@ -1,0 +1,8 @@
+# Template of result.out
+
+# First line: total_pktcnt total_time
+# Second line: server0_pktcnt server1_pktcnt ... servern_pktcnt
+
+# Example (10 servers)
+1000 2.2
+100 90 110 100 100 100 50 150 10 190

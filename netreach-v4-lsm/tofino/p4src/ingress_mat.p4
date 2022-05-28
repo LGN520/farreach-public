@@ -18,6 +18,33 @@ field_list_calculation hash_calc {
 	output_width: 32;
 }
 
+field_list_calculation hash_calc2 {
+	input {
+		hash_fields;
+	}
+	algorithm: crc32_extend;
+	//output_width: 16;
+	output_width: 32;
+}
+
+field_list_calculation hash_calc3 {
+	input {
+		hash_fields;
+	}
+	algorithm: identity;
+	//output_width: 16;
+	output_width: 32;
+}
+
+field_list_calculation hash_calc4 {
+	input {
+		hash_fields;
+	}
+	algorithm: identity_extend;
+	//output_width: 16;
+	output_width: 32;
+}
+
 action nop() {}
 
 // Stage 0
@@ -219,26 +246,38 @@ table cache_lookup_tbl {
 	size: LOOKUP_ENTRY_COUNT; // egress_pipenum * KV_BUCKET_COUNT
 }
 
-/*field_list_calculation sample_calc {
-	input {
-		hash_fields;
-	}
-	algorithm: crc32;
-	output_width: 1;
-}*/
-
-action hash_for_cm() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm, 0, hash_calc, CM_BUCKET_COUNT);
+action hash_for_cm1() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm1, 0, hash_calc, CM_BUCKET_COUNT);
 }
 
 @pragma stage 2
-table hash_for_cm_tbl {
+table hash_for_cm1_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {
-		hash_for_cm;
+		hash_for_cm1;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}
+
+// Stage 3
+
+action hash_for_cm2() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm2, 0, hash_calc2, CM_BUCKET_COUNT);
+}
+
+@pragma stage 3
+table hash_for_cm2_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		hash_for_cm2;
 		nop;
 	}
 	default_action: nop();
@@ -249,7 +288,7 @@ action hash_for_seq() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_seq, 0, hash_calc, SEQ_BUCKET_COUNT);
 }
 
-@pragma stage 2
+@pragma stage 3
 table hash_for_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -263,7 +302,25 @@ table hash_for_seq_tbl {
 	size: 2;
 }
 
-// Stage 3
+// Stage 4
+
+action hash_for_cm3() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc, CM_BUCKET_COUNT);
+}
+
+@pragma stage 4
+table hash_for_cm3_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		hash_for_cm3;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}
 
 action set_snapshot_flag() {
 	modify_field(inswitch_hdr.snapshot_flag, 1);
@@ -273,7 +330,7 @@ action reset_snapshot_flag() {
 	modify_field(inswitch_hdr.snapshot_flag, 0);
 }
 
-@pragma stage 3
+@pragma stage 4
 table snapshot_flag_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -285,6 +342,26 @@ table snapshot_flag_tbl {
 	}
 	default_action: reset_snapshot_flag();
 	size: 8;
+}
+
+// Stage 5
+
+action hash_for_cm4() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc, CM_BUCKET_COUNT);
+}
+
+@pragma stage 5
+table hash_for_cm4_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		hash_for_cm4;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
 }
 
 /*action set_client_sid(client_sid, eport) {
@@ -300,7 +377,7 @@ action set_client_sid(client_sid) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
 }
 
-@pragma stage 3
+@pragma stage 5
 table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -324,7 +401,7 @@ action forward_special_get_response(client_sid) {
 	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding client
 }
 
-@pragma stage 3
+@pragma stage 5
 table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -340,15 +417,14 @@ table ipv4_forward_tbl {
 	size: 8;
 }
 
-// Stage 4
-
+// Stage 6
 
 action sample() {
-	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, sample_calc, 2);
-	modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2);
+	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2); // WRONG: we should not sample key
+	modify_field_rng_uniform(inswitch_hdr.is_sampled, 0, 1); // generate a random value in [0, 1] to sample packet
 }
 
-@pragma stage 4
+@pragma stage 6
 table sample_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -402,7 +478,7 @@ action update_scanreq_to_scanreq_split() {
 }
 #endif
 
-@pragma stage 4
+@pragma stage 6
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;

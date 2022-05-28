@@ -80,8 +80,8 @@ int main(int argc, char **argv) {
 void transaction_main() {
 	// reflector: popserver + worker
 	//// server: server_num workers + receiver + evictserver + consnapshotserver
-	// server: server_num workers + evictserver + consnapshotserver
-	transaction_expected_ready_threads = server_num + 4;
+	// server: server_num workers + server_num popclients + evictserver + consnapshotserver
+	transaction_expected_ready_threads = 2*server_num + 4;
 
 	int ret = 0;
 
@@ -99,6 +99,17 @@ void transaction_main() {
 	ret = pthread_create(&reflector_worker_thread, nullptr, run_reflector_worker, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error of launching reflector.worker: " << ret);
+	}
+
+	// launch popclients
+	pthread_t popclient_threads[server_num];
+	uint16_t popclient_params[server_num];
+	for (uint16_t popclient_i = 0; popclient_i < server_num; popclient_i++) {
+		popclient_params[popclient_i] = popclient_i;
+		int ret = pthread_create(&popclient_threads[popclient_i], nullptr, run_server_popclient, &popclient_params[popclient_i]);
+		if (ret) {
+		  COUT_N_EXIT("Error of launching some server.popclient:" << ret);
+		}
 	}
 
 	// launch workers (processing normal packets)
@@ -188,7 +199,11 @@ void transaction_main() {
 	for (size_t i = 0; i < server_num; i++) {
 		int rc = pthread_join(worker_threads[i], &status);
 		if (rc) {
-		  COUT_N_EXIT("Error: unable to join," << rc);
+		  COUT_N_EXIT("Error: unable to join " << rc);
+		}
+		rc = pthread_join(popclient_threads[i], &status);
+		if (rc) {
+		  COUT_N_EXIT("Error: unable to join " << rc);
 		}
 	}
 	int rc = pthread_join(evictserver_thread, &status);

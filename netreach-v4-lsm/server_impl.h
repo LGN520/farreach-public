@@ -11,6 +11,7 @@
 #include "snapshot_record.h"
 #include "concurrent_map_impl.h"
 #include "concurrent_set_impl.h"
+#include "message_queue_impl.h"
 #include "rocksdb_wrapper.h"
 
 //#define DUMP_BUF
@@ -36,6 +37,9 @@ int * server_worker_udpsock_list = NULL;
 int * server_popclient_tcpsock_list = NULL;
 concurrent_set_t * server_cached_keyset_list = NULL;
 
+// per-server worker <-> per-server popclient
+MessagePtrQueue<cache_pop_t> *server_cache_pop_ptr_queue_list;
+
 // server.evictservers <-> controller.evictserver.evictclients
 //int * server_evictserver_tcpsock_list = NULL;
 // server.evictserver <-> controller.evictserver.evictclient
@@ -52,6 +56,7 @@ bool volatile server_issnapshot = false; // TODO: it should be atomic
 void prepare_server();
 // server.workers for processing pkts
 void *run_server_worker(void *param);
+void *run_server_popclient(void *param);
 void *run_server_evictserver(void *param);
 void *run_server_consnapshotserver(void *param);
 void close_server();
@@ -92,6 +97,12 @@ void prepare_server() {
 		create_tcpsock(server_popclient_tcpsock_list[i], "server.popclient");
 	}
 
+	// Prepare message queue between per-server worker and per-server popclient
+	server_cache_pop_ptr_queue_list = new MessagePtrQueue<cache_pop_t>[server_num];
+	for (size_t i = 0; i < server_num; i++) {
+		server_cache_pop_ptr_queue_list[i].init(MQ_SIZE);
+	}
+
 	// prepare for cache eviction
 	/*server_evictserver_tcpksock_list = new int[server_num];
 	for (size_t i = 0; i < server_num; i++) {
@@ -122,6 +133,10 @@ void close_server() {
 		delete [] server_popclient_tcpsock_list;
 		server_popclient_tcpsock_list = NULL;
 	}
+	if (server_cache_pop_ptr_queue_list != NULL) {
+		delete [] server_cache_pop_ptr_queue_list;
+		server_cache_pop_ptr_queue_list = NULL;
+	}
 	if (server_cached_keyset_list != NULL) {
 		delete [] server_cached_keyset_list;
 		server_cached_keyset_list = NULL;
@@ -134,6 +149,36 @@ void close_server() {
 		delete [] server_snapshot_rcus;
 		server_snapshot_rcus = NULL;
 	}
+}
+
+void *run_server_popclient(void *param) {
+  // Parse param
+  uint16_t serveridx = *((uint16_t *)param); // [0, server_num-1]
+
+  // NOTE: controller and switchos should have been launched before servers
+  tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
+  //tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port_start + serveridx, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
+  
+  printf("[server.popclient%d] ready\n", int(serveridx));
+
+  transaction_ready_threads++;
+
+  while (!transaction_running) {}
+
+  while (transaction_running) {
+	char buf[MAX_BUFSIZE];
+  	cache_pop_t *tmp_cache_pop_ptr = server_cache_pop_ptr_queue_list[serveridx].read();
+  	if (tmp_cache_pop_ptr != NULL) {
+		uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
+		//printf("send CACHE_POP to controller\n");
+		//dump_buf(buf, popsize);
+		tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+	}
+  }
+
+  close(server_popclient_tcpsock_list[serveridx]);
+  pthread_exit(nullptr);
+  return 0;
 }
 
 /*
@@ -160,10 +205,6 @@ void *run_server_worker(void * param) {
   INVARIANT(max_endkeyhihi >= min_startkeyhihi);
   netreach_key_t min_startkey(0, 0, 0, min_startkeyhihi);
   netreach_key_t max_endkey(std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), max_endkeyhihi);
-
-  // NOTE: controller and switchos should have been launched before servers
-  tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
-  //tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port_start + serveridx, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
 
   char buf[MAX_BUFSIZE];
   int recv_size = 0;
@@ -247,7 +288,7 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] stat = " << tmp_stat)
-				put_response_t rsp(req.key(), tmp_stat);
+				put_response_t rsp(req.key(), true);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -264,7 +305,7 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				bool tmp_stat = db_wrappers[serveridx].remove(req.key(), req.seq());
 				//COUT_THIS("[server] stat = " << tmp_stat)
-				del_response_t rsp(req.key(), tmp_stat);
+				del_response_t rsp(req.key(), true);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -452,12 +493,9 @@ void *run_server_worker(void * param) {
 					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
-						// Send CACHE_POP to controller.popserver
-						cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, serveridx);
-						uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-						//printf("send CACHE_POP to controller\n");
-						//dump_buf(buf, popsize);
-						tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+						// Send CACHE_POP to server.popclient
+						cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, serveridx); // freed by server.popclient
+						server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
 					}
 				}
 				break;
@@ -469,7 +507,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				
-				put_response_t rsp(req.key(), tmp_stat);
+				put_response_t rsp(req.key(), true);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -485,12 +523,9 @@ void *run_server_worker(void * param) {
 					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
-						// Send CACHE_POP to controller.popserver
-						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
-						uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-						//printf("send CACHE_POP to controller\n");
-						//dump_buf(buf, popsize);
-						tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+						// Send CACHE_POP to server.popclient
+						cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), serveridx); // freed by server.popclient
+						server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
 					}
 				}
 				break;
@@ -506,7 +541,7 @@ void *run_server_worker(void * param) {
 
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				put_response_t rsp(req.key(), tmp_stat);
+				put_response_t rsp(req.key(), true);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -529,7 +564,7 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				put_response_t rsp(req.key(), tmp_stat);
+				put_response_t rsp(req.key(), true);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -545,10 +580,9 @@ void *run_server_worker(void * param) {
 					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
-						// Send CACHE_POP to controller.popserver
-						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
-						uint32_t popsize = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-						tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+						// Send CACHE_POP to server.popclient
+						cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), serveridx); // freed by server.popclient
+						server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
 					}
 				}
 				break;
@@ -564,7 +598,7 @@ void *run_server_worker(void * param) {
 
 				bool tmp_stat = db_wrappers[serveridx].remove(req.key(), req.seq());
 				//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				del_response_t rsp(req.key(), tmp_stat);
+				del_response_t rsp(req.key(), true);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -595,7 +629,6 @@ void *run_server_worker(void * param) {
   } // end of while(transaction_running)
 
   close(server_worker_udpsock_list[serveridx]);
-  close(server_popclient_tcpsock_list[serveridx]);
   COUT_THIS("[server.worker " << uint32_t(serveridx) << "] exits")
   pthread_exit(nullptr);
 }

@@ -76,7 +76,7 @@ void run_benchmark() {
 	/* Process statistics */
 	COUT_THIS("[client] processing statistics");
 
-	const int hot_threshold = 10;
+	const int hot_threshold = 100;
 	for (uint16_t checker_i = 0; checker_i < client_num; checker_i++) {
 		//std::vector<std::pair<netreach_key_t, int>> hotfrequency_list;
 		int hot_keynum = 0;

@@ -100,7 +100,8 @@
 #define KV_BUCKET_COUNT 32768
 // 64K * 2B counter
 #define CM_BUCKET_COUNT 65536
-#define HH_THRESHOLD 100
+// hot_threshold=50 + sampling_ratio=0.5 -> hot_pktcnt=100
+#define HH_THRESHOLD 50
 // 32K * 4B counter
 #define SEQ_BUCKET_COUNT 32768
 
@@ -180,15 +181,22 @@ control ingress {
 	apply(hash_partition_tbl);
 #endif
 	apply(cache_lookup_tbl); // managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
-	apply(hash_for_cm_tbl); // for CM (access inswitch_hdr.hashval_for_cm)
+	apply(hash_for_cm1_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
+
+	// Stage 3
+	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
-	// Stgae 3
+	// Stage 4
+	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
 	apply(snapshot_flag_tbl); // for snapshot (access inswitch_hdr.snapshot_flag)
+
+	// Stage 5
+	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
 	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
-	// Stage 4
+	// Stage 6
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
 	apply(ig_port_forward_tbl); // update op_hdr.optype
 }

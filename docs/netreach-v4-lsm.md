@@ -42,7 +42,7 @@
 	+ Containers accessed by one ALU must be allocated in the same group
 		* One container can accommodate arbitrary fields from the same packet header
 		* One field can only be split into two containers	
-	+ In each stage, one container can only be accessed once by an ALU
+	+ In each stage, one container can only be accessed once by an ALU (read-read does not incur confliction, yet write-write or read-write incurs)
 		* Even if two fields do not have dependency, if they are located in a same container, they cannot be accessed by different ALUs in the same stage
 	+ The above contraints are only for ALU instead of MAU -> MAU can match containers in different groups, each can be matched with multiple times
 	+ Unextracted fields (e.g., metadata) do not need 8-bit alignment in PHV
@@ -83,6 +83,12 @@
 - NOTE for mirroring
 	+ We need to create mirror_session in ptf for both ingress direction and egress direction explicitly
 	+ NOTE: EGRESS will replace INGRESS, so we need to use BOTH
+- NOTE for MAU limitation
+	+ # of MAUs in each physical stage is limited (aka same stage in ingress pipeline + egress pipeline)
+		* NOTE: calculating hash value is MAU-consuming
+		* For example, calculating 4 hash values in ingress stage 2 consumes most MAUs -> no MAU for some MAT in egress stage 2
+	+ Similarly, # of stateful ALUs is also limited by physical stage
+	+ Each physical stage has two PHV copies for ingress/egress -> same stage in ingress/egress does not have PHV confliction
 
 ## Overview
 

@@ -96,19 +96,18 @@ header_type seq_t {
 // NOTE: inswicth_t affects INSWITCH_PREV_BYTES in packet_format.h
 header_type inswitch_t {
 	fields {
-		// 8-bit container
+		// 32-bit container
 		snapshot_flag: 1;
 		is_cached: 1;
 		is_sampled: 1;
-		//is_wrong_pipeline: 1;
-		//eport_for_res: 9;
-		padding: 5;
-		// two 16-bit containers
 		client_sid: 10; // clone to client for cache hit; NOTE: clone_e2e sets eg_intr_md_for_mb.mirror_id w/ 10 bits
-		hashval_for_cm: 22; // at most 64K
-		// 16-bit container
+		padding: 3;
 		hashval_for_seq: 16; // at most 32K
-		// 16-bit container
+		// 32-bit containers
+		hashval_for_cm1: 16; // at most 64K
+		hashval_for_cm2: 16; // at most 64K
+		hashval_for_cm3: 16; // at most 64K
+		hashval_for_cm4: 16; // at most 64K
 		idx: 16; // index for in-switch cache
 	}
 }
