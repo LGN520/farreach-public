@@ -102,9 +102,9 @@ DEPS += socket_helper.d checksum_helper.d
 CLEAN += socket_helper.o checksum_helper.o
 UTILS_OBJECTS += socket_helper.o checksum_helper.o
 
-DEPS += workloadparser/parser.d workloadparser/ycsb_parser.d
-CLEAN += workloadparser/parser.o workloadparser/ycsb_parser.o
-UTILS_OBJECTS += workloadparser/parser.o workloadparser/ycsb_parser.o
+DEPS += workloadparser/parser.d workloadparser/ycsb_parser.d workloadparser/synthetic_parser.d
+CLEAN += workloadparser/parser.o workloadparser/ycsb_parser.o workloadparser/synthetic_parser.o
+UTILS_OBJECTS += workloadparser/parser.o workloadparser/ycsb_parser.o workloadparser/synthetic_parser.o
 
 DEPS += crc32.d
 CLEAN += crc32.o

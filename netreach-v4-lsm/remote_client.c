@@ -25,6 +25,8 @@
 
 #ifdef USE_YCSB
 #include "workloadparser/ycsb_parser.h"
+#elif defined USE_SYNTHETIC
+#include "workloadparser/synthetic_parser.h"
 #endif
 
 #include "common_impl.h"
@@ -160,6 +162,8 @@ void *run_fg(void *param) {
 	ParserIterator *iter = NULL;
 #ifdef USE_YCSB
 	iter = new YcsbParserIterator(load_filename);
+#elif defined USE_SYNTHETIC
+	iter = new SyntheticParserIterator(load_filename);
 #endif
 	INVARIANT(iter != NULL);
 
