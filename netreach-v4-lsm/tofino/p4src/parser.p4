@@ -22,7 +22,7 @@
 // NOTE: followings are ended with 0b0000
 // op_hdr + scan_hdr (specific value): SCANREQ
 // op_hdr + scan_hdr + split_hdr (specific value): SCANREQ_SPLIT
-// only op_hdr (default): GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK
+// only op_hdr (default): GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK, WARMUPREQ, WARMUPACK
 // not parsed in switch: SCANRES_SPLIT, CACHE_POP, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2
 
 parser start {

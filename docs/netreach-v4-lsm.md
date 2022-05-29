@@ -952,7 +952,7 @@
 			* 6K hot keys, 1.6M total keys, 64K CM -> 792 cached keys due to too small clean period
 			* 53% hot requests -> 37% cache hit rate -> expected RTT w/ cache: 74.4*0.63 + 13.7*0.37 = 51.9us
 			* x*0.63 + 13.7*0.33 = 54.1 -> x=77.8 -> 30% reduction
-		+ runtime RTT w/ cache (w/ cleaner; 60s clean period): 48.1us (server-side latency: 51.7us) -> 25.3 reduction
+		+ runtime RTT w/ cache (w/ cleaner; 60s clean period): 48.1us (server-side latency: 51.7us) -> 25.3% reduction
 			* 6K hot keys, 1.6M total keys, 64K CM -> 2406 cached keys due to still small clean period
 			* 53% hot requests -> 42% cache hit rate -> expected RTT w/ cache:  74.4*0.58 + 13.7*0.37 = 48.2us
 			* x*0.58 + 13.7*0.42 = 48.1 -> x=73 -> 34% reduction
@@ -992,9 +992,10 @@
 - Launch controller in end host
 	+ `./controller`
 - Launch servers in end host
-	+ `./ycsb_server`
+	+ `./server`
+	+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
 - Launch clients in end host
-	- `./ycsb_remote_client`
+	- `./remote_client`
 
 ## Simple test
 

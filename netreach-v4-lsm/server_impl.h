@@ -24,9 +24,6 @@ struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   uint16_t serveridx;
   size_t throughput;
   std::vector<double> latency_list;
-#ifdef TEST_AGG_THPT
-  double sum_latency;
-#endif
 };
 typedef ServerWorkerParam server_worker_param_t;
 
@@ -606,6 +603,34 @@ void *run_server_worker(void * param) {
 #endif
 				break;
 			}
+		case packet_type_t::WARMUPREQ:
+			{
+				warmup_request_t req(buf, recv_size);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
+
+				val_t tmp_val;
+				uint32_t tmp_seq = 0;
+				bool tmp_stat = db_wrappers[serveridx].get(req.key(), tmp_val, tmp_seq);
+				
+				warmup_ack_t rsp(req.key());
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
+
+				// Trigger cache population if necessary (key exist and not being cached)
+				INVARIANT(tmp_stat == true);
+				bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
+				INVARIANT(!is_cached_before);
+				server_cached_keyset_list[serveridx].insert(req.key());
+				// Send CACHE_POP to server.popclient
+				cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, serveridx); // freed by server.popclient
+				server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+				break;
+			}
 		default:
 			{
 				COUT_THIS("[server.worker] Invalid packet type: " << int(pkt_type))
@@ -613,15 +638,15 @@ void *run_server_worker(void * param) {
 				exit(-1);
 			}
 	}
-	CUR_TIME(t2);
-	DELTA_TIME(t2, t1, t3);
-	thread_param.latency_list.push_back(GET_MICROSECOND(t3));
-#ifdef TEST_AGG_THPT
-	thread_param.sum_latency += GET_MICROSECOND(t3);
-#endif
-	//backup_rcu[serveridx]++;
-	server_snapshot_rcus[serveridx]++;
-	thread_param.throughput++;
+
+	if (likely(pkt_type != packet_type_t::WARMUPREQ)) {
+		CUR_TIME(t2);
+		DELTA_TIME(t2, t1, t3);
+		thread_param.latency_list.push_back(GET_MICROSECOND(t3));
+		//backup_rcu[serveridx]++;
+		server_snapshot_rcus[serveridx]++;
+		thread_param.throughput++;
+	}
 
   } // end of while(transaction_running)
 

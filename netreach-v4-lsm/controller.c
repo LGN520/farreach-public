@@ -58,7 +58,6 @@ uint32_t volatile controller_tail_for_pop = 0;*/
 // controller.popclient <-> switchos.popserver
 bool volatile is_controller_popclient_connected = false;
 int controller_popclient_tcpsock = -1;
-std::set<netreach_key_t> controller_cached_keyset;
 
 // switchos.popworker <-> controller.evictserver
 int controller_evictserver_tcpsock = -1;
@@ -172,7 +171,6 @@ void prepare_controller() {
 	controller_tail_for_pop = 0;*/
 
 	create_tcpsock(controller_popclient_tcpsock, false, "controller.popclient");
-	controller_cached_keyset.clear();
 
 	// prepare evictserver
 	prepare_tcpserver(controller_evictserver_tcpsock, false, controller_evictserver_port, 1, "controller.evictserver"); // MAX_PENDING_CONNECTION = 1 (switchos.popworker.evictclient)
@@ -382,8 +380,6 @@ void *run_controller_popclient(void *param) {
 
 	while (!controller_running) {}
 
-	std::map<netreach_key_t, uint16_t> debug_map;
-
 	while (controller_running) {
 		char buf[MAX_BUFSIZE];
 		cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptr_queue.read();
@@ -394,23 +390,14 @@ void *run_controller_popclient(void *param) {
 				is_controller_popclient_connected = true;
 			}
 
-			bool is_cached_before = controller_cached_keyset.find(tmp_cache_pop_ptr->key()) != controller_cached_keyset.end();
-			if (!is_cached_before) {
-				//cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptrs[controller_tail_for_pop];
-				
-				controller_cached_keyset.insert(tmp_cache_pop_ptr->key());
-				debug_map.insert(std::pair<netreach_key_t, uint16_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
+			//cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptrs[controller_tail_for_pop];
 
-				// send CACHE_POP to switch os
-				uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
-				//printf("send CACHE_POP to switchos\n");
-				//dump_buf(buf, popsize);
-				tcpsend(controller_popclient_tcpsock, buf, popsize, "controller.popclient");
-				//printf("[controller.popclient] popsize: %d\n", int(popsize)); // TMPDEBUG
-			}
-			else {
-				printf("Duplicate cache population w/ key %x coming from %d which should be %d\n", tmp_cache_pop_ptr->key().keyhihi, int(tmp_cache_pop_ptr->serveridx()), int(debug_map[tmp_cache_pop_ptr->key()]));
-			}
+			// send CACHE_POP to switch os
+			uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
+			//printf("send CACHE_POP to switchos\n");
+			//dump_buf(buf, popsize);
+			tcpsend(controller_popclient_tcpsock, buf, popsize, "controller.popclient");
+			//printf("[controller.popclient] popsize: %d\n", int(popsize)); // TMPDEBUG
 
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;

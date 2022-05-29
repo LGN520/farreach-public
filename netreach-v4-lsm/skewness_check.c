@@ -30,6 +30,8 @@
 
 #include "common_impl.h"
 
+int hot_threshold = 30;
+
 struct alignas(CACHELINE_SIZE) FGParam {
 	uint16_t thread_id;
 	std::map<netreach_key_t, int> frequency_map;
@@ -42,6 +44,14 @@ void * run_checker(void *param);
 std::atomic<size_t> finish_threads(0);
 
 int main(int argc, char **argv) {
+
+	if (argc != 2) {
+		printf("Usage: ./skewness_check hot_threshold\n");
+		exit(-1);
+	}
+
+	hot_threshold = atoi(argv[1]);
+
 	parse_ini("config.ini");
 
 	run_benchmark();
@@ -76,25 +86,60 @@ void run_benchmark() {
 	/* Process statistics */
 	COUT_THIS("[client] processing statistics");
 
-	const int hot_threshold = 100;
+	std::map<netreach_key_t, int> total_frequency_map;
+	std::map<netreach_key_t, int> union_hot_frequency_map;
 	for (uint16_t checker_i = 0; checker_i < client_num; checker_i++) {
 		//std::vector<std::pair<netreach_key_t, int>> hotfrequency_list;
 		int hot_keynum = 0;
 		int hot_sumfrequency = 0;
-		int total_keynum = 0;
-		int total_sumfrequency = 0;
 		for (std::map<netreach_key_t, int>::iterator iter = fg_params[checker_i].frequency_map.begin();\
 				iter != fg_params[checker_i].frequency_map.end(); iter++) {
 			if (iter->second > hot_threshold) {
 				hot_keynum += 1;
 				hot_sumfrequency += iter->second;
+
+				if (union_hot_frequency_map.find(iter->first) == union_hot_frequency_map.end()) {
+					union_hot_frequency_map.insert(*iter);
+				}
+				else {
+					union_hot_frequency_map[iter->first] += iter->second;
+				}
 			}
-			total_keynum += 1;
-			total_sumfrequency += iter->second;
+
+			if (total_frequency_map.find(iter->first) == total_frequency_map.end()) {
+				total_frequency_map.insert(*iter);
+			}
+			else {
+				total_frequency_map[iter->first] += iter->second;
+			}
 		}
-		printf("[checker %d] hot_keynum: %d, hot_sumfrequency: %d, total_keynum: %d, total_sumfrequency: %d\n",\
-				checker_i, hot_keynum, hot_sumfrequency, total_keynum, total_sumfrequency);
+		printf("[checker %d] hot_keynum: %d, hot_sumfrequency: %d\n", checker_i, hot_keynum, hot_sumfrequency);
 	}
+
+	int union_hot_keynum = 0;
+	int union_hot_sumfrequency = 0;
+	for (std::map<netreach_key_t, int>::iterator iter = union_hot_frequency_map.begin(); \
+			iter != union_hot_frequency_map.end(); iter++) {
+		union_hot_keynum += 1;
+		union_hot_sumfrequency += iter->second;
+	}
+	printf("union_hot_keynum: %d, union_hot_sumfrequency: %d\n", union_hot_keynum, union_hot_sumfrequency);
+
+	int total_hot_keynum = 0;
+	int total_hot_sumfrequency = 0;
+	int total_keynum = 0;
+	int total_sumfrequency = 0;
+	for (std::map<netreach_key_t, int>::iterator iter = total_frequency_map.begin(); \
+			iter != total_frequency_map.end(); iter++) {
+		if (iter->second > hot_threshold) {
+			total_hot_keynum += 1;
+			total_hot_sumfrequency += iter->second;
+		}
+		total_keynum += 1;
+		total_sumfrequency += iter->second;
+	}
+	printf("total_hot_keynum: %d, total_hot_sumfrequency: %d, total_keynum: %d, total_sumfrequency: %d\n", \
+				total_hot_keynum, total_hot_sumfrequency, total_keynum, total_sumfrequency);
 
 	COUT_THIS("Finish dumping statistics!")
 }

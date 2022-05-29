@@ -248,9 +248,12 @@ bool SyntheticParserIterator::parsekv(const char* line, int linelen) {
 	memcpy((void *)&keyhihihi, (void *)&tmpkey, sizeof(uint16_t)); // lowest 2B -> keyhihihi
 	memcpy((void *)&keyhihilo, ((char *)&tmpkey)+2, sizeof(uint16_t)); // highest 2B -> keyhihilo
 	uint32_t keyhihi = (keyhihihi << 16) | keyhihilo;
-	uint32_t keylolo = (2*keyhihi + 3) & 0xFFFFFFFF;
-	uint32_t keylohi = (5*keyhihi + 7) & 0xFFFFFFFF;
-	uint32_t keyhilo = (11*keyhihi + 13) & 0xFFFFFFFF;
+	//uint32_t keylolo = (2*keyhihi + 3) & 0xFFFFFFFF;
+	//uint32_t keylohi = (5*keyhihi + 7) & 0xFFFFFFFF;
+	//uint32_t keyhilo = (11*keyhihi + 13) & 0xFFFFFFFF;
+	uint32_t keylolo = 0;
+	uint32_t keylohi = 0;
+	uint32_t keyhilo = 0;
 	_keys[_maxidx+1] = Key(keylolo, keylohi, keyhilo, keyhihi);
 
 #ifdef MINIMUM_WORKLOAD_FILESIZE
@@ -293,9 +296,12 @@ bool SyntheticParserIterator::parsekey(const char* line, int linelen) {
 	memcpy((void *)&keyhihihi, (void *)&tmpkey, sizeof(uint16_t)); // lowest 2B -> keyhihihi
 	memcpy((void *)&keyhihilo, ((char *)&tmpkey)+2, sizeof(uint16_t)); // highest 2B -> keyhihilo
 	uint32_t keyhihi = (keyhihihi << 16) | keyhihilo;
-	uint32_t keylolo = (2*keyhihi + 3) & 0xFFFFFFFF;
-	uint32_t keylohi = (5*keyhihi + 7) & 0xFFFFFFFF;
-	uint32_t keyhilo = (11*keyhihi + 13) & 0xFFFFFFFF;
+	//uint32_t keylolo = (2*keyhihi + 3) & 0xFFFFFFFF;
+	//uint32_t keylohi = (5*keyhihi + 7) & 0xFFFFFFFF;
+	//uint32_t keyhilo = (11*keyhihi + 13) & 0xFFFFFFFF;
+	uint32_t keylolo = 0;
+	uint32_t keylohi = 0;
+	uint32_t keyhilo = 0;
 	_keys[_maxidx+1] = Key(keylolo, keylohi, keyhilo, keyhihi);
 
 	_vals[_maxidx+1] = Val();

@@ -10,11 +10,8 @@
 #if !defined(HELPER_H)
 #define HELPER_H
 
-// 1: test aggregate throughput
-// 0: not test
-#if 1
-#define TEST_AGG_THPT
-#endif
+#define WARMUP_RAW_WORKLOAD(buf, workload) \
+	sprintf(buf, "%s-warmup.out", workload)
 
 #define LOAD_RAW_WORKLOAD(buf, workload) \
 	sprintf(buf, "%s-load.out", workload)

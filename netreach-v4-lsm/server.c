@@ -122,9 +122,6 @@ void transaction_main() {
 		server_worker_params[worker_i].serveridx = worker_i;
 		server_worker_params[worker_i].throughput = 0;
 		server_worker_params[worker_i].latency_list.clear();
-#ifdef TEST_AGG_THPT
-		server_worker_params[worker_i].sum_latency = 0.0;
-#endif
 		int ret = pthread_create(&worker_threads[worker_i], nullptr, run_server_worker, (void *)&server_worker_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.worker:" << ret);
@@ -188,18 +185,6 @@ void transaction_main() {
 			printf("%d\n", worker_pktcnt_list[i]);
 		}
 	}
-#ifdef TEST_AGG_THPT
-	double max_agg_thpt = 0.0;
-	double avg_latency = 0.0;
-	for (size_t i = 0; i < server_num; i++) {
-		max_agg_thpt += (double(server_worker_params[i].throughput) / server_worker_params[i].sum_latency * 1000 * 1000);
-		avg_latency += server_worker_params[i].sum_latency;
-	}
-	max_agg_thpt /= double(1024 * 1024);
-	avg_latency /= overall_thpt;
-	COUT_THIS("Max server-side aggregate throughput: " << max_agg_thpt << " MQPS");
-	COUT_THIS("Average latency: " << avg_latency << "us");
-#endif
 
 	transaction_running = false;
 	void *status;

@@ -1290,6 +1290,36 @@ CacheEvictCase2<key_t, val_t>::CacheEvictCase2(const char * data, uint32_t recv_
 	INVARIANT(this->_serveridx >= 0);
 }
 
+// WarmupRequest
+
+template<class key_t>
+WarmupRequest<key_t>::WarmupRequest(key_t key) 
+	: GetRequest<key_t>(key)
+{
+	this->_type = static_cast<uint8_t>(PacketType::WARMUPREQ);
+}
+
+template<class key_t>
+WarmupRequest<key_t>::WarmupRequest(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::WARMUPREQ);
+}
+
+// WarmupAck
+
+template<class key_t>
+WarmupAck<key_t>::WarmupAck(key_t key) 
+	: GetRequest<key_t>(key)
+{
+	this->_type = static_cast<uint8_t>(PacketType::WARMUPACK);
+}
+
+template<class key_t>
+WarmupAck<key_t>::WarmupAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::WARMUPACK);
+}
+
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size) {
 	INVARIANT(recv_size >= sizeof(uint8_t));

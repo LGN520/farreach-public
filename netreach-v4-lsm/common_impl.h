@@ -46,6 +46,8 @@ typedef CachePopInswitchAck<netreach_key_t> cache_pop_inswitch_ack_t;
 typedef CacheEvict<netreach_key_t, val_t> cache_evict_t;
 typedef CacheEvictAck<netreach_key_t> cache_evict_ack_t;
 typedef CacheEvictCase2<netreach_key_t, val_t> cache_evict_case2_t;
+typedef WarmupRequest<netreach_key_t> warmup_request_t;
+typedef WarmupAck<netreach_key_t> warmup_ack_t;
 
 /*
  * Constants
@@ -111,10 +113,11 @@ short reflector_port = -1;
 short reflector_popserver_port = -1;
 
 // calculated metadata
-char client_workload_dir[256];
-char server_load_workload_dir[256];
 char raw_load_workload_filename[256]; // used by split_workload for loading phase
+char server_load_workload_dir[256];
+char raw_warmup_workload_filename[256];
 char raw_run_workload_filename[256]; // used by split_workload for transaction phase
+char client_workload_dir[256];
 size_t per_client_per_period_max_sending_rate;
 
 // others (xindex)
@@ -266,17 +269,19 @@ inline void parse_ini(const char* config_file) {
 
 	// calculated metadata
 
-	RUN_SPLIT_DIR(client_workload_dir, workload_name, int(client_num));
+	LOAD_RAW_WORKLOAD(raw_load_workload_filename, workload_name);
 	//LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(split_n)); // get the split directory for loading phase
 	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(server_num)); // get the split directory for loading phase
-	LOAD_RAW_WORKLOAD(raw_load_workload_filename, workload_name);
+	WARMUP_RAW_WORKLOAD(raw_warmup_workload_filename, workload_name);
 	RUN_RAW_WORKLOAD(raw_run_workload_filename, workload_name);
+	RUN_SPLIT_DIR(client_workload_dir, workload_name, int(client_num));
 	max_sending_rate *= server_num;
 	per_client_per_period_max_sending_rate = max_sending_rate / client_num / (1 * 1000 * 1000 / rate_limit_period);
-	printf("client_workload_dir: %s\n", client_workload_dir);
-	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);
 	printf("raw_load_workload_filename for loading phase: %s\n", raw_load_workload_filename);
+	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);
+	printf("raw_warmup_workload_filename for warmup phase: %s\n", raw_warmup_workload_filename);
 	printf("raw_run_workload_filename for transaction phase: %s\n", raw_run_workload_filename);
+	printf("client_workload_dir: %s\n", client_workload_dir);
 }
 
 inline void parse_control_ini(const char* config_file) {

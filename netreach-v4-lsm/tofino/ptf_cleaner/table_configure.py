@@ -68,8 +68,17 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print "[ptf.cleaner] ready"
 
-        clean_period = 90 # cleanup cm regs every 20s
+        # Change clean period based on packet sending rate
+        #first_period = 1
+        #clean_period = 5
+        #is_first = True
+        clean_period = 1
         while True:
+            #if is_first:
+            #    time.sleep(first_period)
+            #    is_first = False
+            #else:
+            #    time.sleep(clean_period)
             time.sleep(clean_period)
             print "Start to reset all cm regs"
             self.client.register_reset_all_cm1_reg(self.sess_hdl, self.dev_tgt)

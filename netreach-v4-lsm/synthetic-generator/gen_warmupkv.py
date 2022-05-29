@@ -3,8 +3,9 @@ from common import *
 
 random.seed(0)
 
-f = open(path_kv, "w")
-for i in range(1, max_key + 1):
+f_hot = open(path_hot, "w")
+#f.write(str(max_key) + "\n\n")
+for i in range(1, max_hot + 1):
     ## Generate a key-value item
     #Select a key
     key_header = i
@@ -12,18 +13,14 @@ for i in range(1, max_key + 1):
     #Select a value
     #val = [1] * len_val #The value
     ###################################################################################################
-    
-    ## Output the key and the value to the file
-    f.write("UPDATE " + str(key_header) + "\n")
-    #f.write(str(key_header) + " ")
-    #for i in range(len(key_body)):
-    #    f.write(hex(key_body[i]) + " ")
-    #f.write("\n")
-    
-    #for i in range(len(val)):
-    #    f.write(hex(val[i]) + " ")
-    #f.write("\n\n")
+
+    ##Output the hot key to the file
+    f_hot.write("UPDATE " + str(key_header) + "\n")
+    #    f_hot.write(str(key_header) + " ")
+    #    for i in range(len(key_body)):
+    #        f_hot.write(hex(key_body[i]) + " ")
+    #    f_hot.write("\n")
     ###################################################################################################
 
-f.flush()
-f.close()
+f_hot.flush()
+f_hot.close()

@@ -139,7 +139,7 @@ LDFLAGS += $(EXTRA_LDFLAGS)
 
 ##############################################################################
 
-TARGETS := prepare localtest split_workload remote_client loader server switchos controller skewness_check recover/controller_get_snapshotid recover/server_recover
+TARGETS := prepare localtest split_workload remote_client loader server switchos controller skewness_check recover/controller_get_snapshotid recover/server_recover warmup_client
 #dpdktest_client dpdktest_server socktest_client socktest_server
 
 prepare: prepare.o $(UTILS_OBJECTS)
@@ -161,6 +161,11 @@ loader: loader.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += loader.d
 CLEAN += loader.o loader
+
+warmup_client: warmup_client.o $(UTILS_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += warmup_client.d
+CLEAN += warmup_client.o warmup_client
 
 remote_client: remote_client.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@

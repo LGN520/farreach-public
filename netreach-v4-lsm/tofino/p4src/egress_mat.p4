@@ -859,9 +859,10 @@ table scan_forward_tbl {
 	actions {
 		forward_scanreq_split_and_clone;
 		forward_scanreq_split;
+		nop;
 	}
-	default_action: forward_scanreq_split_and_clone();
-	size: 1;
+	default_action: nop();
+	size: 2;
 }
 #endif
 

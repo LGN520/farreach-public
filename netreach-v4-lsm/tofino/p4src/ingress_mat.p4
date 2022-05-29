@@ -157,7 +157,7 @@ table hash_for_partition_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 4;
+	size: 8;
 }
 #endif
 
@@ -204,7 +204,7 @@ table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.hashval_for_partition: range;
-		ig_intr_md.ingress_port: exact;
+		//ig_intr_md.ingress_port: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {

@@ -32,3 +32,4 @@ skewness_check
 recover/controller_get_snapshotid
 recover/server_recover
 *.txt
+warmup_client

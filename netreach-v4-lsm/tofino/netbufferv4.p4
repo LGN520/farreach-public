@@ -55,6 +55,8 @@
 #define CACHE_EVICT 0xa0
 #define CACHE_EVICT_ACK 0xb0
 #define CACHE_EVICT_CASE2 0xc0
+#define WARMUPREQ 0xd0
+#define WARMUPACK 0xe0
 
 /*
 #define GETREQ 0x00
@@ -100,8 +102,8 @@
 #define KV_BUCKET_COUNT 32768
 // 64K * 2B counter
 #define CM_BUCKET_COUNT 65536
-// hot_threshold=50 + sampling_ratio=0.5 -> hot_pktcnt=100
-#define HH_THRESHOLD 50
+// hot_threshold=10 + sampling_ratio=0.5 -> hot_pktcnt=20 during each clean period (NOTE: cached key will not update CM)
+#define HH_THRESHOLD 10
 // 32K * 4B counter
 #define SEQ_BUCKET_COUNT 32768
 
@@ -121,8 +123,8 @@
 #define MAX_SERVER_NUM 128
 // RANGE_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM
 #define RANGE_PARTITION_ENTRY_NUM 1024
-// RANGE_PARTITION_FOR_SCAN_ENTRY_NUM = 2 * MAX_SERVER_NUM
-#define RANGE_PARTITION_FOR_SCAN_ENTRY_NUM 256
+// RANGE_PARTITION_FOR_SCAN_ENTRY_NUM = (MAX_SERVER_NUM+1) * MAX_SERVER_NUM/2
+#define RANGE_PARTITION_FOR_SCAN_ENTRY_NUM 16384
 // HASH_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM
 #define HASH_PARTITION_ENTRY_NUM 1024
 
