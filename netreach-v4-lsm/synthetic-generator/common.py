@@ -7,5 +7,5 @@ path_kv = "synthetic-load.out"  #The path to save generated keys and values
 #path_hot = "hot.txt" #The path to save the hot keys
 
 path_query = "synthetic-run.out"
-num_query = 10000000
+num_query = 32000000
 zipf = 0.99

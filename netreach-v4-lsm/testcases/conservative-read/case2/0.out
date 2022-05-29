@@ -1,0 +1,9 @@
+# Step 1 (cache population)
+
+READ usertable user7456195669291483653 [ <all fields>]
+READ usertable user7456195669291483653 [ <all fields>]
+DELETE usertable user7456195669291483653 [ <all fields>]
+
+# Step 2 (conservative read)
+
+READ usertable user7456195669291483653 [ <all fields>]

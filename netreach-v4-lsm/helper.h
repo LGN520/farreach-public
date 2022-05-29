@@ -158,7 +158,7 @@ static inline void dump_buf(char *buf, uint32_t bufsize)
 #define MAX_BUFSIZE 4096 // 4KB; TODO: increase for large value
 #define MAX_LARGE_BUFSIZE 8388608 // 8MB
 
-#define MQ_SIZE 4096 // in-memory message queue
+#define MQ_SIZE 40960 // in-memory message queue
 #define SINGLE_MQ_SIZE 2 // single-message message queue
 
 inline void memory_fence() { asm volatile("mfence" : : : "memory"); }

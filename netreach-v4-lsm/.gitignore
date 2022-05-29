@@ -18,8 +18,9 @@ server
 *.a
 *.o
 *.d
-!testcases/backup/*
-!testcases/normal/*
+!testcases/*
+!testcases/*/*
+!testcases/*/*/*
 *.pcap
 switchos
 controller

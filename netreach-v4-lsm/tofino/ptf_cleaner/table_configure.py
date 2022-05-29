@@ -68,7 +68,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print "[ptf.cleaner] ready"
 
-        clean_period = 30 # cleanup cm regs every 20s
+        clean_period = 90 # cleanup cm regs every 20s
         while True:
             time.sleep(clean_period)
             print "Start to reset all cm regs"

@@ -30,7 +30,7 @@ void prepare_reflector() {
 	printf("[reflector] prepare start\n");
 
 	// prepare worker socket
-	prepare_udpserver(reflector_worker_udpsock, false, reflector_port, "reflector.worker");
+	prepare_udpserver(reflector_worker_udpsock, true, reflector_port, "reflector.worker");
 
 	// prepare popserver socket
 	prepare_udpserver(reflector_popserver_udpsock, true, reflector_popserver_port, "reflector.popserver");
@@ -106,7 +106,10 @@ void *run_reflector_worker(void *param) {
 
 	while (transaction_running) {
 
-		udprecvfrom(reflector_worker_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.worker");
+		bool is_timeout = udprecvfrom(reflector_worker_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.worker");
+		if (is_timeout) {
+			continue;
+		}
 		INVARIANT(recvsize > 0);
 
 		packet_type_t pkt_type = get_packet_type(buf, recvsize);

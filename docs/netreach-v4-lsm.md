@@ -797,6 +797,165 @@
 				- If we introduce swap space to increase server-side overhead, xindex cannot support large # of records -> we cannot argue that we target large-scale in-memory KVS
 				- We only require that server-side KVS can support snapshot and range query
 					+ LSM tree, e.g., rocksdb, can support both snapshot and range query, which should be our server-side KVS
+* Use rocksdb instead of xindex as our server-side KVS
+	* Implement netreach-v4-lsm based on netreach-v4-xindex
+		- Implement key::from/to_string_for_rocksdb to match default rocksdb::ByteWiseComparator (aka Slice::compare)
+		- Implement val::to_string_for_rocksdb to concatenate val and seq
+		- Implement RocksdbWrapper to support get/put/delete/scan with seq
+		- Update localtest
+			+ 10M items: server-side overhead of GET/PUT/DEL = ~50us
+		- Update split_workload and ycsb_loader for loading phase
+		- Update ycsb_server, server_impl, controller for transaction phase
+	* Test latency
+		- Optimize loading phase
+			+ Use mmap+strchr to getline from memory in ycsb/parser to reduce disk overload of loading workload file -> implement next_batch
+			+ Commit a batch of key-value pairs in one transaction in force_multiput
+			+ Use multi-thread to invoke force_put for parallel loading
+			+ Update split_workload and ycsb_loader: workloadname-load-servernum/serveridx-loaderidx.out
+		- Same key
+			- server stores 1M/10M records, server-side latency of GET/PUT is always ~10us
+				+ RTT w/o cache hit: 32us; RTT w/ cache hit: 23us	
+			- Reason: GET on the same key always hit in block cache; PUT on the same key always hit in memtable
+		- Fix latency issue under YCSB workload
+			+ Check skewness -> 1% key frequency > 100; sum frequency = ~35%
+		- Write-intensive skewed workload
+			- NOTE: reset database before each experiment
+			- server stores 1M records
+				+ RTT w/o inswitch cache: us (server-side: 43us); RTT w/ inswitch cache: 52us (server-side: 45us);
+				+ 15% cache hit -> expected latency: 51us
+- Replace DPDK with UDP socket
+	* Add udphdr.checksum into P4 and compile
+	* Try to hide server.srcport in switch and compile
+		- Ingress
+			+ udphdr: change dstport for all REQ
+			+ RES: change eport for dstip for forwarding
+		- Egress
+			+ udphdr: change dstport for SCANREQ_SPLIT; change srcport and dstport for cache hit; change dstport for switch notification
+			+ RES: change udp.hdrlen; change macaddr
+		- change update_macaddr_tbl into update_ipmac_srcport_tbl to hide server-side partition details
+			+ NOTE: for dstport, REQ is update by partition; RES is update by server or switch (swapped with srcport); notification is update by switch (action parameter)
+			+ Although srcport of RES under cahce hit has been set by switch in eg_port_Forward_tbl, we still update srcport for RES here for those issued by server
+		- NOTE: udpserver only cares about dstmac (NIC) and dstport; we also update srcport to hide server-side partition details
+			+ TODO: If compilation fails due to PHV limitation, we can remove srcmac and srcip
+	* Implement client-side timeout and retry
+	* Test correctness of all testcases 
+		- Issue: client cannot send out packet
+			+ Solution: manually configure arp such that udp socket can set *dstmac* (NOTE: not srcmac) for dstip
+		- Issue: server udpsocket.recvfrom cannot return, yet tcpdump shows that the packet arrives at server
+			+ If dstmac is wrong, it is dropped by either NIC or kernel network stack 
+				* Solution: take client as example, we should configure arp with serverip and servermac (not clientmac)
+			+ If iphdr.hdrlen or udphdr.hdrlen is wrong, kernel will drop the packet
+				* udphdr.hdrlen: we retrieve checksum in udphdr, yet not update udphdr.hdrlen accordingly -> modify update_udplen_tbl
+				* iphdr.hdrlen: we replace dpdk with udp socket, yet not update iphdr.hdrlen accordingly -> replace update_udplen_tbl with update_pktlen_tbl
+			+ setsockopt can only disable udp/tcp checksum but not ipv4 checksum; while kernel will drop packet with wrong ipv4 checksum
+				* Solution: update ipv4 checksum in switch by calculated_field
+		- Test normal requests
+		- Test cache population/eviction
+		- Test conservative read
+		- Test cache hit
++ Implement server-side snapshot
+	* Make snapshot for rocksdb atomically and persistently
+		- Create snapshot by checkpoint, and open it for range query
+	* Erase out-of-date items from deleted set to keep memory efficiency
+		- Triggered by DeletedSet::add if size exceeds a predefined threshold (constant factor * max thpt * rtt)
+		- Erase item with the smallest seq number (aka oldest item) before adding new deleted record
+	* Make snapshot for deleted set atomically and persistently
+		- Copy deleted set as a read-only snapshot only for range query
+			+ Implement clear and operator= for deleted set
+		- Save deleted set into disk for persistence
+			+ Implement load and store in deleted set
+	- Remove old-enough snapshot database and snapshot deleted set to save storage
+		* For example, for new snapshot 2, hold snapshot 1 yet remove others, as we do not know whether other servers have created current snapshots successfully
+	* For ycsb_loader, create database -> make snapshot to store snapshotid, snapshotdb, and snapshotdeletedset -> close to store db and deletedset
+	* For ycsb_server, open database -> load deletedset -> load snapshot including snapshotid, snapshotdb, and snapshotdeletedset
++ Test snapshot and fix issue of long wait time in switch os
++ Support switch failure recovery (provide reliability/weak-durability of consistency guarantee)
+	- Controller stores latest snapshotid and in-switch snapshot data (including key, val, seq, and deleted) after sending snapshot data to servers 
+		+ Just an engineering trick; in essence, we can get latest snapshotid and in-switch snapshot data from servers
+	- Manually stop controller, and run controller_get_latest_snapshotid.c to get latest snapshotid
+	- Manually stop each server to close rocksdb, and run server_recover.c with the lastet snapshotid
+		* Remove larger snapshot data if any (e.g., snapshot 2)
+		* Remove runtime data
+		* Copy corresponding snapshot data as runtime data
+	- Manually start P4 program in tofino
+	- Manually copy latest snapshotid and inswitch snapshot data from controller to switchos
+	- Run switchos with recover mode to retrieve inswitch cache from inswitch snapshot data
+		* Invoke recover_switch/table_configure.py to set stateful regs with inswitch snapshot data
+			- TODO: store and load seq_reg, and latest_reg
+	- Manually start controller, each server (now runtime data = latest snapshot data), and configure programmable switch
++ NOTE: factors on RTT latency
+	* Larger cache hit rate (aka larger # of queries under a fixed hot threshold) + larger server-side overhead in NoCache (aka larger # of records) / smaller server-side overhead in FarReach -> larger latency mitigation
+	* Larger clean period means more cached keys and hence larger cache hit rate, yet more uniform server-side workload (aka less server-cache friendly) and hence larger server-side overhead in FarReach -> need a trade-off for best latency mitigation
+		- NOTE: We should tune clean period such that all truly hot keys are cached into switch
++ Code change
+	+ Implement parser interface -> ycsb_parser, synthetic_parser
+		* Change synthetic_parser to set keylolo, keylohi, and keyhilo randomly (avoid from being stored in the same SST)
+		* Move ycsb_server -> server, ycsb_remote_client -> remote_client, ycsb_loader -> loader
+	+ Implement server.popclient thread to reduce worker latency
+	+ Periodically clean up cm regs
++ Fix bug of CM
+	* Calculate 4 hashes for CM
+		- Issue: clone_hdr.client_udpport (save_client_udpport_tbl) cannot be placed into the 2nd stage of egress pipeline
+		- Possible reason: it conflicts with inswitch_hdr.idx (access_latest_tbl) at egress stage 2?
+			- Possible reason 1: compiler places inswitch_hdr.idx and clone_hdr.client_udpport into the same 32-bit container
+				+ Assign 32 bits for inswitch_hdr.idx -> FAIL
+			- Possible reason 2: limited 32-bit PHV containers after introducing inswitch_hdr.hashval_for_cm1/2/3/4
+				+ Assign 16 bits for those fields (64K entries only needs 16 bits) -> FAIL
+		- Final reason: calculating hash is MAU consuming -> ingress stage 2 consumes too many MAUs -> no MAU for save_client_udpport_tbl in egress stage 2, as # of MAUs in one physical stage is limited
+			- Solution: place hash_for_cm1/2/3/4 into different stages of ingress piepline
+	* Hot key does not update CM regs
+		- Reason: we sample packet by key instead of random value, which is the reason of our low cache hit rate
+		- Solution: sample packet by random value through modify_field_rng_uniform w/ hot threshold = 50
+	* Try continuous cache evict
+		- Longer delay of cache evict than that of cache population -> message queue overflow after inswitch cache is full
+	* Try cache population after cleaning CM regs
+		- Under synthetic workload, frequency of hot key may not exceed hot threshold during clean period
++ Test latency again (10M records, 1M queries, 50 hot threshold, 0.5 sampling ratio, 30s clean period, single thread)
+	- Same key
+		+ client-server RTT: 52us (dpdk: 32us)
+			* Reason: requests on same key hit block cache, which do not access rocksdb database
+		+ client-switch RTT: 13.7us (dpdk: 23us)
+	- YCSB workload
+		+ runtime RTT w/o cache: 75.9us (server-side latency: ~49us)
+		+ runtime RTT w/ cache (w/ popclient thread; w/o cleaner): 70.2us (server-side latency: ~60.8us) -> 7.9% reduction
+			* 400 hot keys, 600K total keys, 64K CM -> 1450 cached keys due to hash collision
+			* Larger server-side overhead
+				- If w/o cache, server receives skewed workload and can use cache to reduce server-side overhead
+				- If w/ cache, server receives uniform workload and cannot use cache to reduce server-side overhead
+			+ 26% hot requests -> 23% cache hit rate -> expected RTT w/ cache = 86.9*0.77 + 13.7*0.23 = 70.2us
+		+ runtime RTT w/ cache (w/ popclient thread; w/ cleaner): 67us (server-side latency: ~55us) -> 11.8% reduction
+			* 400 hot keys, 600K total keys, 64K CM -> 300 cached keys due to period clean
+			* Better than w/o cleaner w/ smaller server-side overhead
+				- No unnecessary cache population for cold keys due to false positive in CM
+				- Although 2% packets do not hit in switch, they may make server-side workload more cache friendly?
+			+ 26% hot requests -> 21% cache hit rate -> expected RTT w/ cache = 81.9*0.79 + 13.7*0.21 = 67.58us
+		+ NOTE: To avoid server-side cache issue, we could use cache hit rate + runtime RTT w/ cache + client-switch RTT to calculate runtime RTT w/o cache
+			* x*0.77 + 13.7*0.23 = 70.2 -> x=87 -> 19.5% reduction
+			* x*0.79 + 13.7*0.21 = 67 -> x=81.2 -> 20.9% reduction
+	- synthetic workload
+		+ Implement parser interface -> ycsb_parser, synthetic_parser
+			* Move ycsb_server -> server, ycsb_remote_client -> remote_client, ycsb_loader -> loader
+		+ runtime RTT w/o cache: 60.3us (server-side latency: ~36.7us)
+		+ runtime RTT w/ cache (w/ popclient thread; w/o cleaner): 57.1us (server-side latency: ~52.7us) -> 5% mitigation
+			* 580 hot keys, 250K total keys, 64K CM -> 1655 cached keys due to hash collision
+			* 39% hot requests -> 34% cache hit rate -> expected RTT w/ cache: 76*0.66 + 13.7*0.34 = 54.8us
+		+ runtime RTT w/ cache (w/ popclient thread; w/ cleaner): 48.9us (server-side latency: ~45.3us) -> 18.33% mitigation
+			* 580 hot keys, 250K total keys, 64K CM -> 647 cached keys due to period clean
+			* 39% hot requests -> 33% cache hit rate -> expected RTT w/ cache: 69*0.67 + 13.7*0.33 = 50.75us
+		+ NOTE: To avoid server-side cache issue, we could use cache hit rate + runtime RTT w/ cache + client-switch RTT to calculate runtime RTT w/o cache
+			* x*0.66 + 13.7*0.34 = 57.1 -> x=79.5 -> 28% reduction
+			* x*0.67 + 13.7*0.33 = 48.9 -> x=66.2 -> 26% reduction
++ Test latency again (10M records, 10M queries, 50 hot threshold, 0.5 sampling ratio, 30s period, single thread)
+	- synthetic workload
+		+ runtime RTT w/o cache: 64.4us (server-side latency: 41us)
+		+ runtime RTT w/ cache (w/ cleaner; 30s clean period): 54.1us (server-side latency: 51.7us) -> 16% reduction
+			* 6K hot keys, 1.6M total keys, 64K CM -> 792 cached keys due to too small clean period
+			* 53% hot requests -> 37% cache hit rate -> expected RTT w/ cache: 74.4*0.63 + 13.7*0.37 = 51.9us
+			* x*0.63 + 13.7*0.33 = 54.1 -> x=77.8 -> 30% reduction
+		+ runtime RTT w/ cache (w/ cleaner; 60s clean period): 48.1us (server-side latency: 51.7us) -> 25.3 reduction
+			* 6K hot keys, 1.6M total keys, 64K CM -> 2406 cached keys due to still small clean period
+			* 53% hot requests -> 42% cache hit rate -> expected RTT w/ cache:  74.4*0.58 + 13.7*0.37 = 48.2us
+			* x*0.58 + 13.7*0.42 = 48.1 -> x=73 -> 34% reduction
 
 ## Run
 
@@ -810,6 +969,10 @@
 		* Configure arp
 			- client: `sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8`
 			- server: `sudo arp -s 10.0.1.11 3c:fd:fe:bb:ca:79`
+	+ Max # of open files
+		* `sudo vim /etc/security/limits.conf` to set hard and soft limits on maximum # of open files
+		* logout and re-login
+		* `ulimit -n number` to set soft # of open files
 - Prepare YCSB workload for loading or transaction phase
 	+ For example:
 	+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > workloada-load.out`

@@ -47,7 +47,6 @@ size_t controller_expected_finish_subthreads = 0;
 
 // Keep atomicity for the following variables
 std::mutex mutex_for_pop;
-//std::set<netreach_key_t> * volatile controller_cached_keyset_list = NULL; // TODO: Comment it after checking server.cached_keyset_list
 //std::map<netreach_key_t, uint16_t> volatile controller_cachedkey_serveridx_map; // TODO: Evict removes the corresponding kv pair
 //std::map<uint16_t, uint32_t> volatile controller_serveridx_subthreadidx_map; // Not used
 // Message queue between controller.popservers with controller.popclient (connected with switchos.popserver)
@@ -59,6 +58,7 @@ uint32_t volatile controller_tail_for_pop = 0;*/
 // controller.popclient <-> switchos.popserver
 bool volatile is_controller_popclient_connected = false;
 int controller_popclient_tcpsock = -1;
+std::set<netreach_key_t> controller_cached_keyset;
 
 // switchos.popworker <-> controller.evictserver
 int controller_evictserver_tcpsock = -1;
@@ -162,11 +162,6 @@ void prepare_controller() {
 	// prepare popserver socket
 	prepare_tcpserver(controller_popserver_tcpsock, true, controller_popserver_port, server_num, "controller.popserver"); // MAX_PENDING_CONNECTION = server num
 
-	/*controller_cached_keyset_list = new std::set<netreach_key_t>[server_num];
-	for (size_t i = 0; i < server_num; i++) {
-		controller_cached_keyset_list[i].clear();
-	}*/
-
 	//controller_cachedkey_serveridx_map.clear();
 	//controller_serveridx_subthreadidx_map.clear();
 	/*controller_cache_pop_ptrs = new cache_pop_t*[MQ_SIZE];
@@ -176,7 +171,8 @@ void prepare_controller() {
 	controller_head_for_pop = 0;
 	controller_tail_for_pop = 0;*/
 
-	create_tcpsock(controller_popclient_tcpsock, "controller.popclient");
+	create_tcpsock(controller_popclient_tcpsock, false, "controller.popclient");
+	controller_cached_keyset.clear();
 
 	// prepare evictserver
 	prepare_tcpserver(controller_evictserver_tcpsock, false, controller_evictserver_port, 1, "controller.evictserver"); // MAX_PENDING_CONNECTION = 1 (switchos.popworker.evictclient)
@@ -184,11 +180,11 @@ void prepare_controller() {
 	// prepare evictclients
 	/*controller_evictserver_evictclient_tcpsock_list = new int[server_num];
 	for (size_t i = 0; i < server_num; i++) {
-		create_tcpsock(controller_evictserver_evictclient_tcpsock_list[i], "controller.evictserver.evictclient");
+		create_tcpsock(controller_evictserver_evictclient_tcpsock_list[i], false, "controller.evictserver.evictclient");
 	}*/
 
 	// prepare evictclient
-	create_tcpsock(controller_evictserver_evictclient_tcpsock, "controller.evictserver.evictclient");
+	create_tcpsock(controller_evictserver_evictclient_tcpsock, false, "controller.evictserver.evictclient");
 
 	// load latest snapshotid
 	std::string snapshotid_path;
@@ -198,10 +194,10 @@ void prepare_controller() {
 	}
 
 	// prepare snapshotclient
-	create_tcpsock(controller_snapshotclient_tcpsock, "controller.snapshotclient");
+	create_tcpsock(controller_snapshotclient_tcpsock, false, "controller.snapshotclient");
 
 	// prepare consnapshotclient
-	create_tcpsock(controller_snapshotclient_consnapshotclient_tcpsock, "controller.snapshotclient.consnapshotclient");
+	create_tcpsock(controller_snapshotclient_consnapshotclient_tcpsock, false, "controller.snapshotclient.consnapshotclient");
 
 	memory_fence();
 
@@ -275,7 +271,6 @@ void *run_controller_popserver_subthread(void *param) {
 	//uint32_t vallen = 0;
 	uint16_t vallen = 0;
 	bool with_vallen = false;
-	bool is_cached_before = false; // TODO: remove
 	//netreach_key_t tmpkey(0, 0, 0, 0);
 	const int arrive_optype_bytes = sizeof(uint8_t);
 	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint32_t);
@@ -324,39 +319,34 @@ void *run_controller_popserver_subthread(void *param) {
 			//dump_buf(buf, arrive_serveridx_bytes);
 			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by controller.popclient
 
-			//is_cached_before = (controller_cached_keyset_list[tmp_cache_pop_ptr->serveridx()].find(tmp_cache_pop_ptr->key()) != controller_cached_keyset_list[tmp_cache_pop_ptr->serveridx()].end());
-			if (!is_cached_before) {
-				// Add key into cached keyset (TODO: need to be protected by mutex lock)
-				//controller_cached_keyset_list[tmp_cache_pop_ptr->serveridx()].insert(tmp_cache_pop_ptr->key());
-				/*if (controller_cachedkey_serveridx_map.find(tmp_cache_pop->key()) == controller_cachedkey_serveridx_map.end()) {
-					controller_cachedkey_serveridx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
-				}
-				else {
-					printf("[controller] Receive duplicate key from server %ld!", tmp_cache_pop_ptr->serveridx());
-					exit(-1);
-				}*/
-
-				// Serialize CACHE_POPs
-				mutex_for_pop.lock();
-				/*if (controller_serveridx_subthreadidx_map.find(tmp_cache_pop_ptr->serveridx()) == controller_serveridx_subthreadidx_map.end()) {
-					controller_serveridx_subthreadidx_map.insert(std::pair<uint16_t, uint32_t>(tmp_cache_pop_ptr->serveridx(), subthreadidx));
-				}
-				else {
-					INVARIANT(controller_serveridx_subthreadidx_map[tmp_cache_pop_ptr->serveridx()] == subthreadidx);
-				}*/
-				bool res = controller_cache_pop_ptr_queue.write(tmp_cache_pop_ptr);
-				if (!res) {
-					printf("[controller.popserver] message queue overflow of controller.controller_cache_pop_ptr_queue!");
-				}
-				/*if ((controller_head_for_pop+1)%MQ_SIZE != controller_tail_for_pop) {
-					controller_cache_pop_ptrs[controller_head_for_pop] = tmp_cache_pop_ptr;
-					controller_head_for_pop = (controller_head_for_pop + 1) % MQ_SIZE;
-				}
-				else {
-					printf("[controller] message queue overflow of controller.controller_cache_pop_ptrs!");
-				}*/
-				mutex_for_pop.unlock();
+			/*if (controller_cachedkey_serveridx_map.find(tmp_cache_pop->key()) == controller_cachedkey_serveridx_map.end()) {
+				controller_cachedkey_serveridx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
 			}
+			else {
+				printf("[controller] Receive duplicate key from server %ld!", tmp_cache_pop_ptr->serveridx());
+				exit(-1);
+			}*/
+
+			// Serialize CACHE_POPs
+			mutex_for_pop.lock();
+			/*if (controller_serveridx_subthreadidx_map.find(tmp_cache_pop_ptr->serveridx()) == controller_serveridx_subthreadidx_map.end()) {
+				controller_serveridx_subthreadidx_map.insert(std::pair<uint16_t, uint32_t>(tmp_cache_pop_ptr->serveridx(), subthreadidx));
+			}
+			else {
+				INVARIANT(controller_serveridx_subthreadidx_map[tmp_cache_pop_ptr->serveridx()] == subthreadidx);
+			}*/
+			bool res = controller_cache_pop_ptr_queue.write(tmp_cache_pop_ptr);
+			if (!res) {
+				printf("[controller.popserver] message queue overflow of controller.controller_cache_pop_ptr_queue!");
+			}
+			/*if ((controller_head_for_pop+1)%MQ_SIZE != controller_tail_for_pop) {
+				controller_cache_pop_ptrs[controller_head_for_pop] = tmp_cache_pop_ptr;
+				controller_head_for_pop = (controller_head_for_pop + 1) % MQ_SIZE;
+			}
+			else {
+				printf("[controller] message queue overflow of controller.controller_cache_pop_ptrs!");
+			}*/
+			mutex_for_pop.unlock();
 
 			// Move remaining bytes and reset metadata
 			if (cur_recv_bytes > arrive_serveridx_bytes) {
@@ -378,7 +368,6 @@ void *run_controller_popserver_subthread(void *param) {
 			vallen = 0;
 			with_vallen = false;
 			arrive_serveridx_bytes = -1;
-			is_cached_before = false;
 		}
 	}
 
@@ -393,6 +382,8 @@ void *run_controller_popclient(void *param) {
 
 	while (!controller_running) {}
 
+	std::map<netreach_key_t, uint16_t> debug_map;
+
 	while (controller_running) {
 		char buf[MAX_BUFSIZE];
 		cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptr_queue.read();
@@ -403,13 +394,24 @@ void *run_controller_popclient(void *param) {
 				is_controller_popclient_connected = true;
 			}
 
-			//cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptrs[controller_tail_for_pop];
-			// send CACHE_POP to switch os
-			uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
-			//printf("send CACHE_POP to switchos\n");
-			//dump_buf(buf, popsize);
-			tcpsend(controller_popclient_tcpsock, buf, popsize, "controller.popclient");
-			//printf("[controller.popclient] popsize: %d\n", int(popsize)); // TMPDEBUG
+			bool is_cached_before = controller_cached_keyset.find(tmp_cache_pop_ptr->key()) != controller_cached_keyset.end();
+			if (!is_cached_before) {
+				//cache_pop_t *tmp_cache_pop_ptr = controller_cache_pop_ptrs[controller_tail_for_pop];
+				
+				controller_cached_keyset.insert(tmp_cache_pop_ptr->key());
+				debug_map.insert(std::pair<netreach_key_t, uint16_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
+
+				// send CACHE_POP to switch os
+				uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
+				//printf("send CACHE_POP to switchos\n");
+				//dump_buf(buf, popsize);
+				tcpsend(controller_popclient_tcpsock, buf, popsize, "controller.popclient");
+				//printf("[controller.popclient] popsize: %d\n", int(popsize)); // TMPDEBUG
+			}
+			else {
+				printf("Duplicate cache population w/ key %x coming from %d which should be %d\n", tmp_cache_pop_ptr->key().keyhihi, int(tmp_cache_pop_ptr->serveridx()), int(debug_map[tmp_cache_pop_ptr->key()]));
+			}
+
 			// free CACHE_POP
 			delete tmp_cache_pop_ptr;
 			tmp_cache_pop_ptr = NULL;
@@ -786,10 +788,6 @@ void *run_controller_snapshotclient(void *param) {
 }
 
 void close_controller() {
-	/*if (controller_cached_keyset_list != NULL) {
-		delete [] controller_cached_keyset_list;
-		controller_cached_keyset_list = NULL;
-	}*/
 	/*if (controller_cache_pop_ptrs != NULL) {
 		for (size_t i = 0; i < MQ_SIZE; i++) {
 			if (controller_cache_pop_ptrs[i] != NULL) {

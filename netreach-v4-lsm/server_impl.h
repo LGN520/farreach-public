@@ -71,30 +71,14 @@ void prepare_server() {
 
 	server_worker_udpsock_list = new int[server_num];
 	for (size_t i = 0; i < server_num; i++) {
-		prepare_udpserver(server_worker_udpsock_list[i], false, server_port_start + i, "server.worker");
+		prepare_udpserver(server_worker_udpsock_list[i], true, server_port_start + i, "server.worker");
 	}
-
-	// Prepare pkts and stats for receiver (based on ring buffer)
-	// From receiver to each server
-	/*server_worker_pkts_list = new struct rte_mbuf* volatile *[server_num];
-	server_worker_heads = new uint32_t[server_num];
-	server_worker_tails = new uint32_t[server_num];
-	for (size_t i = 0; i < server_num; i++) {
-		server_worker_heads[i] = 0;
-		server_worker_tails[i] = 0;
-		//int res = 0;
-		server_worker_pkts_list[i] = new struct rte_mbuf*[MQ_SIZE];
-		for (size_t j = 0; j < MQ_SIZE; j++) {
-			server_worker_pkts_list[i][j] = nullptr;
-		}
-		//res = rte_pktmbuf_alloc_bulk(mbuf_pool, server_worker_pkts_list[i], MQ_SIZE);
-	}*/
 
 	// Prepare for cache population
 	server_popclient_tcpsock_list = new int[server_num];
 	server_cached_keyset_list = new concurrent_set_t[server_num];
 	for (size_t i = 0; i < server_num; i++) {
-		create_tcpsock(server_popclient_tcpsock_list[i], "server.popclient");
+		create_tcpsock(server_popclient_tcpsock_list[i], false, "server.popclient");
 	}
 
 	// Prepare message queue between per-server worker and per-server popclient
@@ -108,10 +92,10 @@ void prepare_server() {
 	for (size_t i = 0; i < server_num; i++) {
 		prepare_tcpserver(server_evictserver_tcpksock_list[i], false, server_evictserver_port_start+i, 1, "server.evictserver"); // MAX_PENDING_NUM = 1
 	}*/
-	prepare_tcpserver(server_evictserver_tcpsock, false, server_evictserver_port_start, 1, "server.evictserver"); // MAX_PENDING_NUM = 1
+	prepare_tcpserver(server_evictserver_tcpsock, true, server_evictserver_port_start, 1, "server.evictserver"); // MAX_PENDING_NUM = 1
 
 	// prepare for crash-consistent snapshot
-	prepare_tcpserver(server_consnapshotserver_tcpsock, false, server_consnapshotserver_port, 1, "server.consnapshotserver"); // MAX_PENDING_NUM = 1
+	prepare_tcpserver(server_consnapshotserver_tcpsock, true, server_consnapshotserver_port, 1, "server.consnapshotserver"); // MAX_PENDING_NUM = 1
 
 	// prepare for snapshot
 	server_snapshot_rcus = new uint32_t[server_num];
@@ -125,6 +109,13 @@ void prepare_server() {
 }
 
 void close_server() {
+
+	if (db_wrappers != NULL) {
+		printf("Close rocksdb databases\n");
+		delete [] db_wrappers;
+		db_wrappers = NULL;
+	}
+
 	if (server_worker_udpsock_list != NULL) {
 		delete [] server_worker_udpsock_list;
 		server_worker_udpsock_list = NULL;
@@ -173,6 +164,9 @@ void *run_server_popclient(void *param) {
 		//printf("send CACHE_POP to controller\n");
 		//dump_buf(buf, popsize);
 		tcpsend(server_popclient_tcpsock_list[serveridx], buf, popsize, "server.popclient");
+
+		delete tmp_cache_pop_ptr;
+		tmp_cache_pop_ptr = NULL;
 	}
   }
 
@@ -231,7 +225,10 @@ void *run_server_worker(void * param) {
 
   while (transaction_running) {
 
-	udprecvfrom(server_worker_udpsock_list[serveridx], buf, MAX_BUFSIZE, 0, (struct sockaddr *)&client_addr, &client_addrlen, recv_size, "server.worker");
+	bool is_timeout = udprecvfrom(server_worker_udpsock_list[serveridx], buf, MAX_BUFSIZE, 0, (struct sockaddr *)&client_addr, &client_addrlen, recv_size, "server.worker");
+	if (is_timeout) {
+		continue; // continue to check transaction_running
+	}
 
 	struct timespec t1, t2, t3;
 	CUR_TIME(t1);
@@ -646,14 +643,35 @@ void *run_server_evictserver(void *param) {
 	while (!transaction_running) {}
 
 	int connfd = -1;
-	//tcpaccept(server_evictserver_tcpsock_list[serveridx], NULL, NULL, connfd, "server.evictserver");
-	tcpaccept(server_evictserver_tcpsock, NULL, NULL, connfd, "server.evictserver");
+	while (transaction_running) {
+		//tcpaccept(server_evictserver_tcpsock_list[serveridx], NULL, NULL, connfd, "server.evictserver");
+		bool is_timeout = tcpaccept(server_evictserver_tcpsock, NULL, NULL, connfd, "server.evictserver");
+		if (is_timeout) {
+			continue;
+		}
+		else {
+			break;
+		}
+	}
+
+	if (!transaction_running) {
+		if (connfd != -1) {
+			close(connfd);
+		}
+		close(server_evictserver_tcpsock);
+		pthread_exit(nullptr);
+		return 0;
+	}
+
+	INVARIANT(connfd != -1);
+	set_recvtimeout(connfd);
 
 	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
 	char recvbuf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
 	bool direct_parse = false;
-	bool is_broken = false;
+	//bool is_broken = false;
+	bool is_timeout = false;
 	uint8_t optype = 0;
 	bool with_optype = false;
 	uint32_t vallen = 0;
@@ -666,9 +684,13 @@ void *run_server_evictserver(void *param) {
 	while (transaction_running) {
 		if (!direct_parse) {
 			int recvsize = 0;
-			is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.evictserver");
+			/*is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.evictserver");
 			if (is_broken) {
 				break;
+			}*/
+			is_timeout = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.evictserver");
+			if (is_timeout) {
+				continue; // continue to check transaction_running
 			}
 
 			cur_recv_bytes += recvsize;
@@ -763,7 +785,7 @@ void *run_server_evictserver(void *param) {
 			else {
 				direct_parse = false;
 			}
-			is_broken = false;
+			//is_broken = false;
 			optype = 0;
 			with_optype = false;
 			vallen = 0;
@@ -790,11 +812,34 @@ void *run_server_consnapshotserver(void *param) {
 	while (!transaction_running) {}
 
 	int connfd = -1;
-	tcpaccept(server_consnapshotserver_tcpsock, NULL, NULL, connfd, "server.consnapshotserver");
+	while (transaction_running) {
+		bool is_timeout = tcpaccept(server_consnapshotserver_tcpsock, NULL, NULL, connfd, "server.consnapshotserver");
+		if (is_timeout) {
+			continue;
+		}
+		else {
+			break;
+		}
+	}
+
+	if (!transaction_running) {
+		if (connfd != -1) {
+			close(connfd);
+		}
+		delete [] recvbuf;
+		recvbuf = NULL;
+		close(server_consnapshotserver_tcpsock);
+		pthread_exit(nullptr);
+		return 0;
+	}
+
+	INVARIANT(connfd != -1);
+	set_recvtimeout(connfd);
 
 	int cur_recv_bytes = 0;
 	bool direct_parse = false;
-	bool is_broken = false;
+	//bool is_broken = false;
+	bool is_timeout = false;
 	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
 	int control_type_phase0 = -1;
 	int control_type_phase1 = -1;
@@ -802,9 +847,13 @@ void *run_server_consnapshotserver(void *param) {
 	while (transaction_running) {
 		if (!direct_parse) {
 			int recvsize = 0;
-			is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
+			/*is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
 			if (is_broken) {
 				break;
+			}*/
+			is_timeout = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
+			if (is_timeout) {
+				continue; // continue to check transaction_running
 			}
 
 			cur_recv_bytes += recvsize;
@@ -929,7 +978,7 @@ void *run_server_consnapshotserver(void *param) {
 				else {
 					direct_parse = false;
 				}
-				is_broken = false;
+				//is_broken = false;
 				phase = 0;
 				control_type_phase0 = -1;
 				control_type_phase1 = -1;

@@ -100,7 +100,7 @@ int SNAPSHOT_DATA = -1;
 
 // controller.popclient <-> switchos.popserver
 int switchos_popserver_tcpsock = -1;
-//std::set<index_key_t> switchos_cached_keyset; // TODO: Comment it after checking server.cached_keyset_list
+std::set<netreach_key_t> switchos_cached_keyset; // TODO: Comment it after checking server.cached_keyset_list
 // message queue between switchos.popserver and switchos.popworker
 MessagePtrQueue<cache_pop_t> switchos_cache_pop_ptr_queue(MQ_SIZE);
 /*cache_pop_t * volatile * switchos_cache_pop_ptrs = NULL;
@@ -311,7 +311,7 @@ void prepare_switchos() {
 	// prepare popserver socket
 	prepare_tcpserver(switchos_popserver_tcpsock, false, switchos_popserver_port, 1, "switchos.popserver"); // MAX_PENDING_CONNECTION = 1
 
-	//switchos_cached_keyset.clear();
+	switchos_cached_keyset.clear();
 	//switchos_cache_pop_ptrs = new cache_pop_t*[MQ_SIZE];
 	//switchos_head_for_pop = 0;
 	//switchos_tail_for_pop = 0;
@@ -325,7 +325,7 @@ void prepare_switchos() {
 	switchos_cached_empty_index = 0;
 	//switchos_cached_key_idx_map.clear();
 
-	create_tcpsock(switchos_popworker_evictclient_tcpsock, "switchos.popworker.evictclient");
+	create_tcpsock(switchos_popworker_evictclient_tcpsock, false, "switchos.popworker.evictclient");
 	//switchos_evictvalbytes = new char[val_t::MAX_VALLEN];
 	//INVARIANT(switchos_evictvalbytes != NULL);
 	//memset(switchos_evictvalbytes, 0, val_t::MAX_VALLEN);
@@ -340,7 +340,7 @@ void prepare_switchos() {
 
 	// prepare for switchos <-> ptf
 	create_udpsock(switchos_popworker_popclient_for_ptf_udpsock, false, "switchos.popworker.popclient_for_ptf");
-	create_tcpsock(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, "switchos.snapshotserver.snapshotclient_for_ptf");
+	create_tcpsock(switchos_snapshotserver_snapshotclient_for_ptf_tcpsock, false, "switchos.snapshotserver.snapshotclient_for_ptf");
 
 	if (recover_mode) {
 		recover();
@@ -425,6 +425,8 @@ void *run_switchos_popserver(void *param) {
 	int connfd = -1;
 	tcpaccept(switchos_popserver_tcpsock, NULL, NULL, connfd, "switchos.popserver");
 
+	std::map<netreach_key_t, uint16_t> debug_map;
+
 	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
 	char buf[MAX_BUFSIZE];
 	int cur_recv_bytes = 0;
@@ -484,10 +486,11 @@ void *run_switchos_popserver(void *param) {
 			//dump_buf(buf, cur_recv_bytes);
 			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by switchos.popworker
 
-			//is_cached_before = (switchos_cached_keyset.find(tmp_cache_pop_ptr->key()) != switchos_cached_keyset.end());
+			is_cached_before = (switchos_cached_keyset.find(tmp_cache_pop_ptr->key()) != switchos_cached_keyset.end());
 			if (!is_cached_before) {
 				// Add key into cached keyset
-				//switchos_cached_keyset.insert(tmp_cache_pop_ptr->key());
+				switchos_cached_keyset.insert(tmp_cache_pop_ptr->key());
+				debug_map.insert(std::pair<netreach_key_t, uint16_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
 
 				bool res = switchos_cache_pop_ptr_queue.write(tmp_cache_pop_ptr);
 				if (!res) {
@@ -500,6 +503,9 @@ void *run_switchos_popserver(void *param) {
 				else {
 					printf("[switch os] message queue overflow of switchos.switchos_cache_pop_ptrs!");
 				}*/
+			}
+			else {
+				printf("Duplicate cache population key %x from %d which should be %d\n", tmp_cache_pop_ptr->key().keyhihi, int(tmp_cache_pop_ptr->serveridx()), int(debug_map[tmp_cache_pop_ptr->key()]));
 			}
 
 			// Move remaining bytes and reset metadata

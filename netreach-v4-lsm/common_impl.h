@@ -68,16 +68,11 @@ size_t client_num;
 short client_port_start;
 const char *client_ip;
 uint8_t client_macaddr[6];
-char client_workload_dir[256];
-size_t per_client_per_period_max_sending_rate;
 
 // server: loading phase
 uint32_t load_factor = 1;
 //uint32_t split_n;
 //uint32_t load_n;
-char server_load_workload_dir[256];
-char raw_load_workload_filename[256]; // used by split_workload for loading phase
-char raw_run_workload_filename[256]; // used by split_workload for transaction phase
 
 // server: transaction phase
 uint32_t server_num = 1;
@@ -114,6 +109,13 @@ short switchos_ptf_snapshotserver_port = -1;
 const char *reflector_ip_for_switchos = nullptr;
 short reflector_port = -1;
 short reflector_popserver_port = -1;
+
+// calculated metadata
+char client_workload_dir[256];
+char server_load_workload_dir[256];
+char raw_load_workload_filename[256]; // used by split_workload for loading phase
+char raw_run_workload_filename[256]; // used by split_workload for transaction phase
+size_t per_client_per_period_max_sending_rate;
 
 // others (xindex)
 size_t bg_n = 1;
@@ -174,9 +176,6 @@ inline void parse_ini(const char* config_file) {
 	client_port_start = ini.get_client_port();
 	client_ip = ini.get_client_ip();
 	ini.get_client_mac(client_macaddr);
-	RUN_SPLIT_DIR(client_workload_dir, workload_name, int(client_num));
-	max_sending_rate *= server_num;
-	per_client_per_period_max_sending_rate = max_sending_rate / client_num / (1 * 1000 * 1000 / rate_limit_period);
 	COUT_VAR(client_num);
 	COUT_VAR(client_port_start);
 	printf("client_ip: %s\n", client_ip);
@@ -186,23 +185,15 @@ inline void parse_ini(const char* config_file) {
 		if (i != 5) printf(":");
 		else printf("\n");
 	}
-	printf("client_workload_dir: %s\n", client_workload_dir);
 
 	// server: loading phase
 	load_factor = ini.get_load_factor();
 	//split_n = ini.get_split_num();
 	//INVARIANT(split_n >= 2);
 	//load_n = split_n - 1;
-	//LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(split_n)); // get the split directory for loading phase
-	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(server_num)); // get the split directory for loading phase
-	LOAD_RAW_WORKLOAD(raw_load_workload_filename, workload_name);
-	RUN_RAW_WORKLOAD(raw_run_workload_filename, workload_name);
 	COUT_VAR(load_factor);
 	//COUT_VAR(split_n);
 	//COUT_VAR(load_n);
-	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);
-	printf("raw_load_workload_filename for loading phase: %s\n", raw_load_workload_filename);
-	printf("raw_run_workload_filename for transaction phase: %s\n", raw_run_workload_filename);
 
 	// server: transaction phase
 	server_num = ini.get_server_num();
@@ -272,6 +263,20 @@ inline void parse_ini(const char* config_file) {
 	printf("reflector ip for switchos: %s\n", reflector_ip_for_switchos);
 	COUT_VAR(reflector_port);
 	COUT_VAR(reflector_popserver_port);
+
+	// calculated metadata
+
+	RUN_SPLIT_DIR(client_workload_dir, workload_name, int(client_num));
+	//LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(split_n)); // get the split directory for loading phase
+	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, int(server_num)); // get the split directory for loading phase
+	LOAD_RAW_WORKLOAD(raw_load_workload_filename, workload_name);
+	RUN_RAW_WORKLOAD(raw_run_workload_filename, workload_name);
+	max_sending_rate *= server_num;
+	per_client_per_period_max_sending_rate = max_sending_rate / client_num / (1 * 1000 * 1000 / rate_limit_period);
+	printf("client_workload_dir: %s\n", client_workload_dir);
+	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);
+	printf("raw_load_workload_filename for loading phase: %s\n", raw_load_workload_filename);
+	printf("raw_run_workload_filename for transaction phase: %s\n", raw_run_workload_filename);
 }
 
 inline void parse_control_ini(const char* config_file) {

@@ -133,7 +133,7 @@ void run_benchmark() {
 	dump_latency(req_latency_list, "req_latency_list");
 	dump_latency(rsp_latency_list, "rsp_latency_list");
 	dump_latency(wait_latency_list, "wait_latency_list");
-	COUT_THIS("Client-side throughput: " << req_latency_list.size());
+	COUT_THIS("Client-side total pktcnt: " << req_latency_list.size());
 
 	running = false; // After processing statistics
 	COUT_THIS("Finish dumping statistics!")

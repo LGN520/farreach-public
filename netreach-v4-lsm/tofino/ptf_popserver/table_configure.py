@@ -171,6 +171,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         with_switchos_addr = False
         print "[ptf.popserver] ready"
 
+        #ptf_cached_keyset = set()
+
         while True:
             # receive control packet
             if with_switchos_addr == False:
@@ -195,8 +197,14 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, recvbuf = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
                 freeidx = struct.unpack("=H", recvbuf)[0]
 
+                #if (keylolo, keylohi, keyhilo, keyhihilo, keyhihihi) not in ptf_cached_keyset:
+                #   ptf_cached_keyset.add((keylolo, keylohi, keyhilo, keyhihilo, keyhihihi))
+
                 # add <key, idx> into cache_lookup_tbl, and set valid = 1
                 self.add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx)
+
+                #else:
+                #    print "Duplicate cache population key {} {} {} {} {}".format(hex(keylolo), hex(keylohi), hex(keyhilo), hex(kyhihilo), hex(keyhihihi))
 
                 # send back SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK)

@@ -62,9 +62,6 @@ int main(int argc, char **argv) {
 
   /* (3) free phase */
 
-  delete [] db_wrappers;
-  db_wrappers = NULL;
-
   // close_load_server();
   close_reflector();
   close_server();
@@ -80,7 +77,7 @@ int main(int argc, char **argv) {
 void transaction_main() {
 	// reflector: popserver + worker
 	//// server: server_num workers + receiver + evictserver + consnapshotserver
-	// server: server_num workers + server_num popclients + evictserver + consnapshotserver
+	// server: server_num workers + server_num popclients + evictserver + consnapshotserver + reflector.worker + reflector.popserver
 	transaction_expected_ready_threads = 2*server_num + 4;
 
 	int ret = 0;
@@ -176,11 +173,21 @@ void transaction_main() {
 		COUT_THIS("Load balance ratio of server " << i << ": " << load_balance_ratio_list[i]);
 	}
 	std::vector<double> worker_latency_list;
+	std::vector<int> worker_pktcnt_list;
 	for (size_t i = 0; i < server_num; i++) {
 		worker_latency_list.insert(worker_latency_list.end(), server_worker_params[i].latency_list.begin(), server_worker_params[i].latency_list.end());
+		worker_pktcnt_list.push_back(server_worker_params[i].latency_list.size());
 	}
 	dump_latency(worker_latency_list, "worker_latency_list");
-	//dump_latency(receiver_latency_list, "receiver_latency_list");
+	printf("Per-server pktcnt: ");
+	for (size_t  i = 0; i < server_num; i++) {
+		if (i != server_num - 1) {
+			printf("%d ", worker_pktcnt_list[i]);
+		}
+		else {
+			printf("%d\n", worker_pktcnt_list[i]);
+		}
+	}
 #ifdef TEST_AGG_THPT
 	double max_agg_thpt = 0.0;
 	double avg_latency = 0.0;
@@ -196,25 +203,48 @@ void transaction_main() {
 
 	transaction_running = false;
 	void *status;
+	printf("wait for server.workers\n");
 	for (size_t i = 0; i < server_num; i++) {
 		int rc = pthread_join(worker_threads[i], &status);
 		if (rc) {
-		  COUT_N_EXIT("Error: unable to join " << rc);
-		}
-		rc = pthread_join(popclient_threads[i], &status);
-		if (rc) {
-		  COUT_N_EXIT("Error: unable to join " << rc);
+		  COUT_N_EXIT("Error: unable to join server.worker " << rc);
 		}
 	}
+	printf("server.workers finish\n");
+	printf("wait for server.popclients\n");
+	for (size_t i = 0; i < server_num; i++) {
+		int rc = pthread_join(popclient_threads[i], &status);
+		if (rc) {
+		  COUT_N_EXIT("Error: unable to join server.popclient " << rc);
+		}
+	}
+	printf("server.popclients finish\n");
+	printf("wait for sever.evictserver\n");
 	int rc = pthread_join(evictserver_thread, &status);
 	if (rc) {
-		COUT_N_EXIT("Error: unable to join evictserver " << rc);
+		COUT_N_EXIT("Error: unable to join server.evictserver " << rc);
 	}
+	printf("server.evictserver finish\n");
+	printf("wait for server.consnapshotserver\n");
 	rc = pthread_join(consnapshotserver_thread, &status);
 	if (rc) {
-		COUT_N_EXIT("Error: unable to join consnapshotserver " << rc);
+		COUT_N_EXIT("Error: unable to join server.consnapshotserver " << rc);
 	}
-	printf("[transaction.main] all threads end");
+	printf("server.consnapshotserver finish\n");
+	printf("wait for reflector.popserver\n");
+	rc = pthread_join(reflector_popserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join reflector.popserver " << rc);
+	}
+	printf("reflector.popserver finish\n");
+	printf("wait for reflector.worker\n");
+	rc = pthread_join(reflector_worker_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join reflector.worker " << rc);
+	}
+	printf("reflector.worker finish\n");
+
+	printf("[transaction.main] all threads end\n");
 }
 
 void kill(int signum) {
