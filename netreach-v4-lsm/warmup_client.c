@@ -81,7 +81,7 @@ void run_warmuper() {
 			tmpval = iter->val();
 			INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
 
-			warmup_request_t req(tmpkey);
+			warmup_request_t req(tmpkey, tmpval);
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 			dump_buf(buf, req_size);

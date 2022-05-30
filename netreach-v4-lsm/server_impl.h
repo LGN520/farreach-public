@@ -606,11 +606,11 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 
-				char val_buf[Val::SWITCH_MAX_VALLEN];
-				memset(val_buf, 0x11, Val::SWITCH_MAX_VALLEN);
-				val_t tmp_val(val_buf, Val::SWITCH_MAX_VALLEN);
+				//char val_buf[Val::SWITCH_MAX_VALLEN];
+				//memset(val_buf, 0x11, Val::SWITCH_MAX_VALLEN);
+				//val_t tmp_val(val_buf, Val::SWITCH_MAX_VALLEN);
 				uint32_t tmp_seq = 0;
-				bool tmp_stat = db_wrappers[serveridx].force_put(req.key(), tmp_val);
+				bool tmp_stat = db_wrappers[serveridx].force_put(req.key(), req.val());
 				
 				warmup_ack_t rsp(req.key());
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -625,7 +625,7 @@ void *run_server_worker(void * param) {
 				INVARIANT(!is_cached_before);
 				server_cached_keyset_list[serveridx].insert(req.key());
 				// Send CACHE_POP to server.popclient
-				cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, serveridx); // freed by server.popclient
+				cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), tmp_seq, serveridx); // freed by server.popclient
 				server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
 				break;
 			}

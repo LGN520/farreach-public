@@ -6,8 +6,8 @@ register cm1_reg {
 blackbox stateful_alu update_cm1_alu {
 	reg: cm1_reg;
 
-	// Equivalent to: alu_lo > HH_THRESHOLD
-	condition_lo: register_lo >= HH_THRESHOLD;
+	// Equivalent to: alu_lo > inswitch_hdr.hot_threshold
+	condition_lo: register_lo >= inswitch_hdr.hot_threshold;
 
 	update_lo_1_value: register_lo + 1;
 
@@ -46,8 +46,8 @@ register cm2_reg {
 blackbox stateful_alu update_cm2_alu {
 	reg: cm2_reg;
 
-	// Equivalent to: alu_lo > HH_THRESHOLD
-	condition_lo: register_lo >= HH_THRESHOLD;
+	// Equivalent to: alu_lo > inswitch_hdr.hot_threshold
+	condition_lo: register_lo >= inswitch_hdr.hot_threshold;
 
 	update_lo_1_value: register_lo + 1;
 
@@ -86,8 +86,8 @@ register cm3_reg {
 blackbox stateful_alu update_cm3_alu {
 	reg: cm3_reg;
 
-	// Equivalent to: alu_lo > HH_THRESHOLD
-	condition_lo: register_lo >= HH_THRESHOLD;
+	// Equivalent to: alu_lo > inswitch_hdr.hot_threshold
+	condition_lo: register_lo >= inswitch_hdr.hot_threshold;
 
 	update_lo_1_value: register_lo + 1;
 
@@ -126,8 +126,8 @@ register cm4_reg {
 blackbox stateful_alu update_cm4_alu {
 	reg: cm4_reg;
 
-	// Equivalent to: alu_lo > HH_THRESHOLD
-	condition_lo: register_lo >= HH_THRESHOLD;
+	// Equivalent to: alu_lo > inswitch_hdr.hot_threshold
+	condition_lo: register_lo >= inswitch_hdr.hot_threshold;
 
 	update_lo_1_value: register_lo + 1;
 

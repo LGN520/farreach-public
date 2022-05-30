@@ -88,6 +88,19 @@ table need_recirculate_tbl {
 	size: 8;
 }
 
+action set_hot_threshold(hot_threshold) {
+	modify_field(inswitch_hdr.hot_threshold, hot_threshold);
+}
+
+@pragma stage 0
+table set_hot_threshold_tbl {
+	actions {
+		set_hot_threshold;
+	}
+	default_action: set_hot_threshold(DEFAULT_HH_THRESHOLD);
+	size: 1;
+}
+
 // Stage 1 (need_recirculate = 1)
 
 action recirculate_pkt(port) {

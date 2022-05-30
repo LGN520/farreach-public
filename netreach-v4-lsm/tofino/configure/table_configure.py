@@ -342,6 +342,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #            self.client.need_recirculate_tbl_table_add_with_reset_need_recirculate(\
             #                    self.sess_hdl, self.dev_tgt, matchspec0)
 
+            # Table: set_hot_threshold_tbl (default: set_hot_threshold; size: 1)
+            print "Configuring set_hot_threshold_tbl"
+            hot_threshold = 10
+            actnspec0 = netbufferv4_set_hot_threshold_action_spec_t(hot_threshold)
+            self.client.set_hot_threshold_tbl_set_default_action_set_hot_threshold(\
+                    self.sess_hdl, self.dev_tgt, actnspec0)
+
             # Stage 1
 
             # Table: recirculate_tbl (default: nop; size: 2)

@@ -102,12 +102,13 @@ header_type inswitch_t {
 		is_sampled: 1;
 		client_sid: 10; // clone to client for cache hit; NOTE: clone_e2e sets eg_intr_md_for_mb.mirror_id w/ 10 bits
 		padding: 3;
-		hashval_for_seq: 16; // at most 32K
+		hot_threshold: 16;
 		// 32-bit containers
 		hashval_for_cm1: 16; // at most 64K
 		hashval_for_cm2: 16; // at most 64K
 		hashval_for_cm3: 16; // at most 64K
 		hashval_for_cm4: 16; // at most 64K
+		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
 	}
 }

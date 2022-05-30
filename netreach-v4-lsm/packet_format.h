@@ -11,7 +11,7 @@
 #define VALID_MASK 0x01
 
 // # of bytes before idx in inswitch_hdr
-#define INSWITCH_PREV_BYTES 12
+#define INSWITCH_PREV_BYTES 14
 
 // # of bytes in clone_hdr
 #define CLONE_BYTES 3
@@ -436,10 +436,10 @@ class CacheEvictCase2 : public CacheEvict<key_t, val_t> { // ophdr + val + seq +
 		CacheEvictCase2(const char * data, uint32_t recv_size);
 };
 
-template<class key_t>
-class WarmupRequest : public GetRequest<key_t> { // ophdr
+template<class key_t, class val_t>
+class WarmupRequest : public PutRequest<key_t, val_t> { // ophdr + val + shadowtype
 	public: 
-		WarmupRequest(key_t key);
+		WarmupRequest(key_t key, val_t val);
 		WarmupRequest(const char * data, uint32_t recv_size);
 };
 

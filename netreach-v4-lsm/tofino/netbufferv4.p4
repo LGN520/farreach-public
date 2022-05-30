@@ -13,6 +13,7 @@
 // NOTE: 1B optype does not need endian conversion
 // 0b0001
 #define PUTREQ 0x01
+#define WARMUPREQ 0x11
 // 0b0011
 #define GETRES_LATEST_SEQ 0x03
 #define GETRES_DELETED_SEQ 0x13
@@ -55,8 +56,7 @@
 #define CACHE_EVICT 0xa0
 #define CACHE_EVICT_ACK 0xb0
 #define CACHE_EVICT_CASE2 0xc0
-#define WARMUPREQ 0xd0
-#define WARMUPACK 0xe0
+#define WARMUPACK 0xd0
 
 /*
 #define GETREQ 0x00
@@ -102,8 +102,7 @@
 #define KV_BUCKET_COUNT 32768
 // 64K * 2B counter
 #define CM_BUCKET_COUNT 65536
-// hot_threshold=10 + sampling_ratio=0.5 -> hot_pktcnt=20 during each clean period (NOTE: cached key will not update CM)
-#define HH_THRESHOLD 10
+//#define HH_THRESHOLD 10
 // 32K * 4B counter
 #define SEQ_BUCKET_COUNT 32768
 
@@ -111,10 +110,14 @@
 
 #define KV_BUCKET_COUNT 1
 #define CM_BUCKET_COUNT 1
-#define HH_THRESHOLD 1
+//#define HH_THRESHOLD 1
 #define SEQ_BUCKET_COUNT 1
 
 #endif
+
+// hot_threshold=10 + sampling_ratio=0.5 -> hot_pktcnt=20 during each clean period (NOTE: cached key will not update CM)
+// NOTE: it can be reconfigured by MAT
+#define DEFAULT_HH_THRESHOLD 10
 
 // egress_pipeline_num * kv_bucket_count
 //#define LOOKUP_ENTRY_COUNT 65536
@@ -161,6 +164,7 @@ control ingress {
 		apply(l2_forward_tbl); // forward non-udp packet
 	}*/
 	apply(need_recirculate_tbl); // set meta.need_recirculate
+	apply(set_hot_threshold_tbl); // set inswitch_hdr.hot_threshold
 
 	/* if meta.need_recirculate == 1 */
 
