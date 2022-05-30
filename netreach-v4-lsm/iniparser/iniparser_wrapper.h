@@ -14,6 +14,7 @@ class IniparserWrapper {
 
 		// global
 		const char *get_workload_name();
+		int get_workload_mode();
 		//uint32_t get_max_vallen();
 		uint16_t get_max_vallen();
 		uint32_t get_load_batch_size();

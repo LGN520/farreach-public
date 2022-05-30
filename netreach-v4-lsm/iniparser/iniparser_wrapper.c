@@ -26,6 +26,15 @@ const char *IniparserWrapper::get_workload_name() {
 	return workload_name;
 }
 
+int IniparserWrapper::get_workload_mode() {
+	int tmp = iniparser_getint(ini, "global:workload_mode", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [global:workload_mode]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
 //uint32_t IniparserWrapper::get_max_vallen() {
 uint16_t IniparserWrapper::get_max_vallen() {
 	int tmp = iniparser_getint(ini, "global:max_vallen", -1);

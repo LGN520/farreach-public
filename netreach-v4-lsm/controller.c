@@ -27,28 +27,18 @@
 
 #include "common_impl.h"
 
-struct alignas(CACHELINE_SIZE) ControllerPopserverSubthreadParam {
-	int connfd;
-	uint32_t subthreadidx;
-};
-typedef ControllerPopserverSubthreadParam controller_popserver_subthread_param_t;
-
 bool volatile controller_running = false;
 std::atomic<size_t> controller_ready_threads(0);
-const size_t controller_expected_ready_threads = 4;
-//const size_t controller_expected_ready_threads = 3;
+size_t controller_expected_ready_threads = -1;
 
-// Per-server popclient <-> one popserver.subthread in controller
-// NOTE: subthreadidx != serveridx
-int controller_popserver_tcpsock = -1;
-pthread_t *volatile controller_popserver_subthreads = NULL;
-std::atomic<size_t> controller_finish_subthreads(0);
-size_t controller_expected_finish_subthreads = 0;
+// Per-server popclient <-> one popserver in controller
+int *controller_popserver_tcpsock_list = NULL;
+std::atomic<size_t> controller_popserver_finish_threads(0);
+size_t controller_expected_popserver_finish_threads = -1;
 
 // Keep atomicity for the following variables
 std::mutex mutex_for_pop;
 //std::map<netreach_key_t, uint16_t> volatile controller_cachedkey_serveridx_map; // TODO: Evict removes the corresponding kv pair
-//std::map<uint16_t, uint32_t> volatile controller_serveridx_subthreadidx_map; // Not used
 // Message queue between controller.popservers with controller.popclient (connected with switchos.popserver)
 MessagePtrQueue<cache_pop_t> controller_cache_pop_ptr_queue(MQ_SIZE);
 /*cache_pop_t ** volatile controller_cache_pop_ptrs = NULL;
@@ -79,8 +69,7 @@ bool volatile is_controller_snapshotclient_consnapshotclient_connected = false;
 int controller_snapshotclient_consnapshotclient_tcpsock = -1;
 
 void prepare_controller();
-void *run_controller_popserver(void *param); // Accept connections from servers
-void *run_controller_popserver_subthread(void *param); // Receive CACHE_POPs from one server
+void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
 void *run_controller_popclient(void *param); // Send CACHE_POPs to switch os
 void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
 void *run_controller_snapshotclient(void *param); // Periodically notify switch os to launch snapshot
@@ -92,14 +81,18 @@ int main(int argc, char **argv) {
 
 	prepare_controller();
 
-	pthread_t popserver_thread;
-	int ret = pthread_create(&popserver_thread, nullptr, run_controller_popserver, nullptr);
-	if (ret) {
-		COUT_N_EXIT("Error: " << ret);
+	pthread_t popserver_threads[server_num];
+	uint16_t popserver_params[server_num];
+	for (uint16_t i = 0; i < server_num; i++) {
+		popserver_params[i] = i;
+		int ret = pthread_create(&popserver_threads[i], nullptr, run_controller_popserver, &popserver_params[i]);
+		if (ret) {
+			COUT_N_EXIT("Error: " << ret);
+		}
 	}
 
 	pthread_t popclient_thread;
-	ret = pthread_create(&popclient_thread, nullptr, run_controller_popclient, nullptr);
+	int ret = pthread_create(&popclient_thread, nullptr, run_controller_popclient, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error: " << ret);
 	}
@@ -122,17 +115,19 @@ int main(int argc, char **argv) {
 	controller_running = true;
 
 	// connections from servers
-	while (controller_finish_subthreads < controller_expected_finish_subthreads) sleep(1);
-	printf("[controlelr] all popserver.subthreads finish\n");
+	while (controller_popserver_finish_threads < controller_expected_popserver_finish_threads) sleep(1);
+	printf("[controller] all popservers finish\n");
 
 	controller_running = false;
 
 	void * status;
-	int rc = pthread_join(popserver_thread, &status);
-	if (rc) {
-		COUT_N_EXIT("Error:unable to join," << rc);
+	for (size_t i = 0; i < server_num; i++) {
+		int rc = pthread_join(popserver_threads[i], &status);
+		if (rc) {
+			COUT_N_EXIT("Error:unable to join popserver " << rc);
+		}
 	}
-	rc = pthread_join(popclient_thread, &status);
+	int rc = pthread_join(popclient_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
@@ -154,15 +149,16 @@ void prepare_controller() {
 
 	controller_running =false;
 
-	// Prepare for cache population
-	controller_popserver_subthreads = new pthread_t[server_num];
-	controller_expected_finish_subthreads = server_num;
+	controller_expected_ready_threads = server_num + 3;
+	controller_expected_popserver_finish_threads = server_num;
 
-	// prepare popserver socket
-	prepare_tcpserver(controller_popserver_tcpsock, true, controller_popserver_port, server_num, "controller.popserver"); // MAX_PENDING_CONNECTION = server num
+	// prepare popserver sockets
+	controller_popserver_tcpsock_list = new int[server_num];
+	for (uint16_t i = 0; i < server_num; i++) {
+		prepare_tcpserver(controller_popserver_tcpsock_list[i], false, controller_popserver_port_start + i, 1, "controller.popserver"); // MAX_PENDING_CONNECTION = 1
+	}
 
 	//controller_cachedkey_serveridx_map.clear();
-	//controller_serveridx_subthreadidx_map.clear();
 	/*controller_cache_pop_ptrs = new cache_pop_t*[MQ_SIZE];
 	for (size_t i = 0; i < MQ_SIZE; i++) {
 		controller_cache_pop_ptrs[i] = NULL;
@@ -203,174 +199,130 @@ void prepare_controller() {
 }
 
 void *run_controller_popserver(void *param) {
-	uint32_t subthreadidx = 0;
-	printf("[controller.popserver] ready\n");
+	uint16_t idx = *((uint16_t *)param);
+	printf("[controller.popserver %d] ready\n", idx);
+
 	controller_ready_threads++;
 
 	while (!controller_running) {}
 
+	int connfd = -1;
 	while (controller_running) {
 		// Not used
 		//struct sockaddr_in server_addr;
 		//unsigned int server_addr_len = sizeof(struct sockaddr);
 
-		int connfd = -1;
-		bool is_timeout = tcpaccept(controller_popserver_tcpsock, NULL, NULL, connfd, "controller.popserver");
-		if (is_timeout) {
-			continue; // timeout or interrupted system call
-		}
+		tcpaccept(controller_popserver_tcpsock_list[idx], NULL, NULL, connfd, "controller.popserver");
 		INVARIANT(connfd != -1);
 
-		// disable timeout for popserver.subthread.connfd
-		struct timeval tv;
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
-		int res = setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-		INVARIANT(res >= 0);
+		// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
+		char buf[MAX_BUFSIZE];
+		int cur_recv_bytes = 0;
+		bool direct_parse = false;
+		bool is_broken = false;
+		uint8_t optype = 0;
+		bool with_optype = false;
+		//uint32_t vallen = 0;
+		uint16_t vallen = 0;
+		bool with_vallen = false;
+		//netreach_key_t tmpkey(0, 0, 0, 0);
+		const int arrive_optype_bytes = sizeof(uint8_t);
+		//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint32_t);
+		const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint16_t);
+		int arrive_serveridx_bytes = -1;
+		while (true) {
+			if (!direct_parse) {
+				int recvsize = 0;
+				is_broken = tcprecv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "controller.popserver");
+				if (is_broken) {
+					break;
+				}
 
-		// NOTE: subthreadidx != serveridx
-		controller_popserver_subthread_param_t param;
-		param.connfd = connfd;
-		param.subthreadidx = subthreadidx;
-		int ret = pthread_create(&controller_popserver_subthreads[subthreadidx], nullptr, run_controller_popserver_subthread, (void *)&param);
-		if (ret) {
-			COUT_N_EXIT("Error: unable to create controller.popserver.subthread " << ret);
-		}
-		subthreadidx += 1;
-		INVARIANT(subthreadidx <= server_num);
-	}
-	uint32_t real_servernum = subthreadidx;
-	INVARIANT(real_servernum == server_num);
-
-	for (size_t i = 0; i < real_servernum; i++) {
-		void * status;
-		int rc = pthread_join(controller_popserver_subthreads[i], &status);
-		if (rc) {
-			COUT_N_EXIT("Error: unable to join " << rc);
-		}
-	}
-
-	close(controller_popserver_tcpsock);
-	pthread_exit(nullptr);
-}
-
-void *run_controller_popserver_subthread(void *param) {
-	controller_popserver_subthread_param_t *curparam = (controller_popserver_subthread_param_t *)param;
-	int connfd = curparam->connfd;
-	//uint32_t subthreadidx = curparam->subthreadidx;
-
-	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
-	char buf[MAX_BUFSIZE];
-	int cur_recv_bytes = 0;
-	bool direct_parse = false;
-	bool is_broken = false;
-	uint8_t optype = 0;
-	bool with_optype = false;
-	//uint32_t vallen = 0;
-	uint16_t vallen = 0;
-	bool with_vallen = false;
-	//netreach_key_t tmpkey(0, 0, 0, 0);
-	const int arrive_optype_bytes = sizeof(uint8_t);
-	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint32_t);
-	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint16_t);
-	int arrive_serveridx_bytes = -1;
-	while (true) {
-		if (!direct_parse) {
-			int recvsize = 0;
-			is_broken = tcprecv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "controller.popserver.subthread");
-			if (is_broken) {
-				break;
+				cur_recv_bytes += recvsize;
+				if (cur_recv_bytes >= MAX_BUFSIZE) {
+					printf("[controller.popserver] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
+					exit(-1);
+				}
 			}
 
-			cur_recv_bytes += recvsize;
-			if (cur_recv_bytes >= MAX_BUFSIZE) {
-				printf("[controller.popserver] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
-				exit(-1);
-			}
-		}
-
-		// Get optype
-		if (!with_optype && cur_recv_bytes >= arrive_optype_bytes) {
-			optype = *((uint8_t *)buf);
-			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_POP);
-			direct_parse = false;
-			with_optype = true;
-		}
-
-		// Get vallen
-		if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
-			////tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
-			//vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
-			//vallen = ntohl(vallen);
-			vallen = *((uint16_t *)(buf + arrive_vallen_bytes - sizeof(uint16_t)));
-			vallen = ntohs(vallen);
-			INVARIANT(vallen >= 0);
-			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
-			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(uint16_t);
-			with_vallen = true;
-		}
-
-		// Get one complete CACHE_POP
-		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes) {
-			//printf("[controller.popserver.subthread] cur_recv_bytes: %d, arrive_serveridx_bytes: %d\n", cur_recv_bytes, arrive_serveridx_bytes); // TMPDEBUG
-			//printf("receive CACHE_POP from server\n");
-			//dump_buf(buf, arrive_serveridx_bytes);
-			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by controller.popclient
-
-			/*if (controller_cachedkey_serveridx_map.find(tmp_cache_pop->key()) == controller_cachedkey_serveridx_map.end()) {
-				controller_cachedkey_serveridx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
-			}
-			else {
-				printf("[controller] Receive duplicate key from server %ld!", tmp_cache_pop_ptr->serveridx());
-				exit(-1);
-			}*/
-
-			// Serialize CACHE_POPs
-			mutex_for_pop.lock();
-			/*if (controller_serveridx_subthreadidx_map.find(tmp_cache_pop_ptr->serveridx()) == controller_serveridx_subthreadidx_map.end()) {
-				controller_serveridx_subthreadidx_map.insert(std::pair<uint16_t, uint32_t>(tmp_cache_pop_ptr->serveridx(), subthreadidx));
-			}
-			else {
-				INVARIANT(controller_serveridx_subthreadidx_map[tmp_cache_pop_ptr->serveridx()] == subthreadidx);
-			}*/
-			bool res = controller_cache_pop_ptr_queue.write(tmp_cache_pop_ptr);
-			if (!res) {
-				printf("[controller.popserver] message queue overflow of controller.controller_cache_pop_ptr_queue!");
-			}
-			/*if ((controller_head_for_pop+1)%MQ_SIZE != controller_tail_for_pop) {
-				controller_cache_pop_ptrs[controller_head_for_pop] = tmp_cache_pop_ptr;
-				controller_head_for_pop = (controller_head_for_pop + 1) % MQ_SIZE;
-			}
-			else {
-				printf("[controller] message queue overflow of controller.controller_cache_pop_ptrs!");
-			}*/
-			mutex_for_pop.unlock();
-
-			// Move remaining bytes and reset metadata
-			if (cur_recv_bytes > arrive_serveridx_bytes) {
-				memcpy(buf, buf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
-				cur_recv_bytes = cur_recv_bytes - arrive_serveridx_bytes;
-			}
-			else {
-				cur_recv_bytes = 0;
-			}
-			if (cur_recv_bytes >= arrive_optype_bytes) {
-				direct_parse = true;
-			}
-			else {
+			// Get optype
+			if (!with_optype && cur_recv_bytes >= arrive_optype_bytes) {
+				optype = *((uint8_t *)buf);
+				INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_POP);
 				direct_parse = false;
+				with_optype = true;
 			}
-			is_broken = false;
-			optype = 0;
-			with_optype = false;
-			vallen = 0;
-			with_vallen = false;
-			arrive_serveridx_bytes = -1;
+
+			// Get vallen
+			if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
+				////tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
+				//vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
+				//vallen = ntohl(vallen);
+				vallen = *((uint16_t *)(buf + arrive_vallen_bytes - sizeof(uint16_t)));
+				vallen = ntohs(vallen);
+				INVARIANT(vallen >= 0);
+				int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
+				arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(uint16_t);
+				with_vallen = true;
+			}
+
+			// Get one complete CACHE_POP
+			if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes) {
+				//printf("[controller.popserver] cur_recv_bytes: %d, arrive_serveridx_bytes: %d\n", cur_recv_bytes, arrive_serveridx_bytes); // TMPDEBUG
+				//printf("receive CACHE_POP from server\n");
+				//dump_buf(buf, arrive_serveridx_bytes);
+				cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by controller.popclient
+
+				/*if (controller_cachedkey_serveridx_map.find(tmp_cache_pop->key()) == controller_cachedkey_serveridx_map.end()) {
+					controller_cachedkey_serveridx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
+				}
+				else {
+					printf("[controller] Receive duplicate key from server %ld!", tmp_cache_pop_ptr->serveridx());
+					exit(-1);
+				}*/
+
+				// Serialize CACHE_POPs
+				mutex_for_pop.lock();
+				bool res = controller_cache_pop_ptr_queue.write(tmp_cache_pop_ptr);
+				if (!res) {
+					printf("[controller.popserver] message queue overflow of controller.controller_cache_pop_ptr_queue!");
+				}
+				/*if ((controller_head_for_pop+1)%MQ_SIZE != controller_tail_for_pop) {
+					controller_cache_pop_ptrs[controller_head_for_pop] = tmp_cache_pop_ptr;
+					controller_head_for_pop = (controller_head_for_pop + 1) % MQ_SIZE;
+				}
+				else {
+					printf("[controller] message queue overflow of controller.controller_cache_pop_ptrs!");
+				}*/
+				mutex_for_pop.unlock();
+
+				// Move remaining bytes and reset metadata
+				if (cur_recv_bytes > arrive_serveridx_bytes) {
+					memcpy(buf, buf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
+					cur_recv_bytes = cur_recv_bytes - arrive_serveridx_bytes;
+				}
+				else {
+					cur_recv_bytes = 0;
+				}
+				if (cur_recv_bytes >= arrive_optype_bytes) {
+					direct_parse = true;
+				}
+				else {
+					direct_parse = false;
+				}
+				is_broken = false;
+				optype = 0;
+				with_optype = false;
+				vallen = 0;
+				with_vallen = false;
+				arrive_serveridx_bytes = -1;
+			}
 		}
 	}
 
-	controller_finish_subthreads++;
+	controller_popserver_finish_threads++;
 	close(connfd);
+	close(controller_popserver_tcpsock_list[idx]);
 	pthread_exit(nullptr);
 }
 
@@ -775,6 +727,10 @@ void *run_controller_snapshotclient(void *param) {
 }
 
 void close_controller() {
+	if (controller_popserver_tcpsock_list != NULL) {
+		delete [] controller_popserver_tcpsock_list;
+		controller_popserver_tcpsock_list = NULL;
+	}
 	/*if (controller_cache_pop_ptrs != NULL) {
 		for (size_t i = 0; i < MQ_SIZE; i++) {
 			if (controller_cache_pop_ptrs[i] != NULL) {

@@ -64,6 +64,7 @@ const size_t rate_limit_period = 1000 * 1000; // 1s
 
 // global
 const char *workload_name = nullptr;
+int workload_mode = 0;
 
 // client
 size_t client_num;
@@ -90,8 +91,7 @@ uint64_t perserver_keyrange = 0; // use size_t to avoid int overflow
 // controller
 const char *controller_ip_for_server = nullptr;
 const char *controller_ip_for_switchos = nullptr;
-//short controller_popserver_port_start = -1;
-short controller_popserver_port = -1;
+short controller_popserver_port_start = -1;
 short controller_evictserver_port = -1;
 uint32_t controller_snapshot_period = 0; // ms
 
@@ -166,7 +166,9 @@ inline void parse_ini(const char* config_file) {
 
 	// global
 	workload_name = ini.get_workload_name();
+	workload_mode = ini.get_workload_mode();
 	printf("workload_name: %s\n", workload_name);
+	COUT_VAR(workload_mode);
 	val_t::MAX_VALLEN = ini.get_max_vallen();
 	ParserIterator::load_batch_size = ini.get_load_batch_size();
 	COUT_VAR(val_t::MAX_VALLEN);
@@ -224,14 +226,12 @@ inline void parse_ini(const char* config_file) {
 	// controller
 	controller_ip_for_server = ini.get_controller_ip_for_server();
 	controller_ip_for_switchos = ini.get_controller_ip_for_switchos();
-	//controller_popserver_port_start = ini.get_controller_popserver_port();
-	controller_popserver_port = ini.get_controller_popserver_port();
+	controller_popserver_port_start = ini.get_controller_popserver_port();
 	controller_evictserver_port = ini.get_controller_evictserver_port();
 	controller_snapshot_period = ini.get_controller_snapshot_period();
 	printf("controller ip for server: %s\n", controller_ip_for_server);
 	printf("controller ip for switchos: %s\n", controller_ip_for_switchos);
-	//COUT_VAR(controller_popserver_port_start);
-	COUT_VAR(controller_popserver_port);
+	COUT_VAR(controller_popserver_port_start);
 	COUT_VAR(controller_evictserver_port);
 	COUT_VAR(controller_snapshot_period);
 	

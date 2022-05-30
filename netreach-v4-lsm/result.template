@@ -1,8 +1,12 @@
 # Template of result.out
 
-# First line: total_pktcnt total_time
-# Second line: server0_pktcnt server1_pktcnt ... servern_pktcnt
+# Gobal line: methodnum (each method has two lines)
+# Per-method first line: methodname total_pktcnt total_time
+# Per-method second line: server0_pktcnt server1_pktcnt ... servern_pktcnt
 
-# Example (10 servers)
-1000 2.2
+# Example (2 methods, 10 servers)
+2
+FarReach 1000 2.2
+100 90 110 100 100 100 100 100 90 110
+NoCache 1000 5
 100 90 110 100 100 100 50 150 10 190

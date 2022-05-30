@@ -401,7 +401,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 print "Configuring hash_for_partition_tbl"
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ]:
                     matchspec0 = netbufferv4_hash_for_partition_tbl_match_spec_t(\
-                            op_hdr_optype = tmpoptype,
+                            op_hdr_optype = convert_u8_to_i8(tmpoptype),
                             meta_need_recirculate = 0)
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
@@ -468,7 +468,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             hash_end = hash_start + hash_range_per_server - 1
                         # NOTE: both start and end are included
                         matchspec0 = netbufferv4_hash_partition_tbl_match_spec_t(\
-                                op_hdr_optype = tmpoptype,
+                                op_hdr_optype = convert_u8_to_i8(tmpoptype),
                                 meta_hashval_for_partition_start = convert_u16_to_i16(hash_start),
                                 meta_hashval_for_partition_end = convert_u16_to_i16(hash_end),
                                 #ig_intr_md_ingress_port = iport,
@@ -553,7 +553,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             ipv4addr0 = ipv4Addr_to_i32(client_ip)
             for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK]:
                 matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
+                        op_hdr_optype = convert_u8_to_i8(tmpoptype),
                         ipv4_hdr_dstAddr = ipv4addr0,
                         ipv4_hdr_dstAddr_prefix_length = 32,
                         meta_need_recirculate = 0)

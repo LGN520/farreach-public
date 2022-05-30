@@ -963,39 +963,54 @@
 	+ DPDK
 		* Follow [tech_report](./tech_report.md) to confiure dpdk
 	+ UDP socket
-		* Configure ipv4 address of NICs in client and server
-			- client: `sudo ifconfig enp129s0f1 10.0.1.11/24`
-			- server: `sudo ifconfig enp129s0f0 10.0.1.13/24`
-		* Configure arp
-			- client: `sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8`
-			- server: `sudo arp -s 10.0.1.11 3c:fd:fe:bb:ca:79`
+		* `sudo bash configure_client.sh`
+		* `sudo bash configure_server.sh`
+		* Deprecated
+			* Configure ipv4 address of NICs in client and server
+				- client: `sudo ifconfig enp129s0f1 10.0.1.11/24`
+				- server: `sudo ifconfig enp129s0f0 10.0.1.13/24`
+			* Configure arp
+				- client: `sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8`
+				- server: `sudo arp -s 10.0.1.11 3c:fd:fe:bb:ca:79`
 	+ Max # of open files
 		* `sudo vim /etc/security/limits.conf` to set hard and soft limits on maximum # of open files
 		* logout and re-login
 		* `ulimit -n number` to set soft # of open files
-- Prepare YCSB workload for loading or transaction phase
+- Prepare synthetic Zipf workload for loading, warmup, and transaction phase
+	+ Modify synthetic-generator/common.py to configure max_key, max_hotkey, and query_num
+		+ Update config.ini to configure correct workload name
+	+ `python gen_kv.sh` to generate workload for loading phase
+		+ `./split_workload load linenum` -> workloada-load-{split_num}/*-*.out
+	+ `python gen_warmupkv.sh` to generate workload for warmup phase
+	+ `python gen_queries_zipf.sh` to generate Zipf workload for transaction phase
+		+ `./split_workload run linenum` -> workloada-run-{server_num}/*.out
+- Deprecated: prepare YCSB workload for loading or transaction phase
 	+ For example:
 	+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > workloada-load.out`
 	+ `./bin/ycsb.sh run basic -P workloads/workloada -P netbuffer.dat > workloada-run.out`
-	+ `./split_workload load` -> workloada-load-{split_num}/*.out
-	+ `./split_workload run` -> workloada-run-{server_num}/*.out
-- Switch
-	- Run `cd tofino`
-	+ Run `su` to enter root account
-	+ Run `bash compile.sh` to compile p4 into binary code
-	+ Run `bash start_switch.sh` to launch Tofino
-	+ Create a new terminal and run `bash configure.sh` to configure data plane
-- Launch switchos in local control plane of Tofino
-	+ `./switchos`
-	+ `bash ptf_popserver.sh`
-	+ `bash ptf_snapshotserver.sh`
-- Launch controller in end host
-	+ `./controller`
-- Launch servers in end host
-	+ `./server`
-	+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
-- Launch clients in end host
-	- `./remote_client`
+	+ `./split_workload load linenum` -> workloada-load-{split_num}/*-*.out
+	+ `./split_workload run linenum` -> workloada-run-{server_num}/*.out
+- Loading phase
+	- `./loader` to launch loaders in end host
+- Warmup/Transaciton phase
+	- Switch
+		- Run `cd tofino`
+		+ Run `su` to enter root account
+		+ Run `bash compile.sh` to compile p4 into binary code
+		+ Run `bash start_switch.sh` to launch Tofino
+	- Launch switchos in local control plane of Tofino
+		+ Create a new terminal and run `./switchos`
+		+ Create a new terminal and run `bash ptf_popserver.sh`
+		+ Create a new terminal and run `bash ptf_snapshotserver.sh`
+		+ Create a new terminal and run `bash configure.sh` to configure data plane, then run `bash ptf_cleaner.sh`
+	- Launch controller in end host
+		+ `./controller`
+	- Launch servers in end host
+		+ `./server`
+		+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
+	- Launch clients in end host
+		- Warmup phase: `./warmup_client`
+		- Transaction phase: `./remote_client`
 
 ## Simple test
 

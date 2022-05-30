@@ -144,8 +144,7 @@ void *run_server_popclient(void *param) {
   uint16_t serveridx = *((uint16_t *)param); // [0, server_num-1]
 
   // NOTE: controller and switchos should have been launched before servers
-  tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
-  //tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port_start + serveridx, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
+  tcpconnect(server_popclient_tcpsock_list[serveridx], controller_ip_for_server, controller_popserver_port_start + serveridx, "server.popclient", "controller.popserver"); // enforce the packet to go through NIC 
   
   printf("[server.popclient%d] ready\n", int(serveridx));
 
@@ -482,8 +481,7 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat) {
-				//if (false) {
+				if (tmp_stat && workload_mode != 0) {
 					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
@@ -512,8 +510,7 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat) { // successful put
-				//if (false) {
+				if (tmp_stat && workload_mode != 0) { // successful put
 					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
@@ -569,8 +566,7 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat) { // successful put
-				//if (false) {
+				if (tmp_stat && workload_mode != 0) { // successful put
 					bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
@@ -610,9 +606,11 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 
-				val_t tmp_val;
+				char val_buf[Val::SWITCH_MAX_VALLEN];
+				memset(val_buf, 0x11, Val::SWITCH_MAX_VALLEN);
+				val_t tmp_val(val_buf, Val::SWITCH_MAX_VALLEN);
 				uint32_t tmp_seq = 0;
-				bool tmp_stat = db_wrappers[serveridx].get(req.key(), tmp_val, tmp_seq);
+				bool tmp_stat = db_wrappers[serveridx].force_put(req.key(), tmp_val);
 				
 				warmup_ack_t rsp(req.key());
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
