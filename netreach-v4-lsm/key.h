@@ -6,6 +6,7 @@
 #include <string>
 //#include "rocksdb/slice.h"
 #include "helper.h"
+#include "crc32.h"
 
 // Comment it for 8B small key
 #define LARGE_KEY
@@ -64,6 +65,8 @@ class Key {
   uint32_t serialize(char *buf, uint32_t buflen);
   uint32_t serialize(char *buf, uint32_t buflen) const;
   uint32_t serialize(char *buf, uint32_t buflen) volatile;
+
+  uint32_t get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum);
 
 #ifdef LARGE_KEY
   uint32_t keylolo;

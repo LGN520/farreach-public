@@ -956,6 +956,54 @@
 			* 6K hot keys, 1.6M total keys, 64K CM -> 2406 cached keys due to still small clean period
 			* 53% hot requests -> 42% cache hit rate -> expected RTT w/ cache:  74.4*0.58 + 13.7*0.37 = 48.2us
 			* x*0.58 + 13.7*0.42 = 48.1 -> x=73 -> 34% reduction
++ cache a key -> clean CM -> test cache hit: SUCCESS
+	+ Issue: controller cannot receive CACHE_POP after server sends
+		* Possible reason 1: after opening too many file descriptors, controller and server cannot trasnmit packets -> FAIL
+			+ Solution: after launching server, we gracefully close servers to close fd instead of brute-force ctrl-c
+				* Issue: server cannot exit after receiving SIGKILL due to blocking socket
+				* Solution: change blocking socket (including recv() and accept()) to non-blocking manner
+		- Possible reason 2: tcp cannot receive CACHE_POPs due to too many connections and subthreads on a single tcp port -> SUCCESS
+			- Solution: use multiple tcp ports for different controller.popservers instead of single one with subthreads
+	+ Issue: large client-server RTT latency and larger cache population delay
+		* Reason: after many threads listen on the same NIC, UDP sockets for normal requests cannot send/receive packet immediately (extra tens / hundreds of microseconds)
+		* RTT latency: use single thread to test latency
+		* Cache population delay: socket overhead is not dominant, which should be false positive
++ Cached key set increases slower after cleaning CM regs
+	+ Reason: packets of cached keys will not update CM -> fewer false positives after cleaning CM regs -> that's what we want
++ Test normalized throughput and calculate absolute throughput
+	* Implement calculate_thpt.py
+		* Suppose one physical packet = x virtual packets
+		* Fix # of records stored in server, and run client within a fixed period (deprecated) -> we use normalized thpt directly
+			- For switch, # of cache hits * x <= switch max throughput (not critical)
+				+ Recirculation affects switch max throughput
+			- For each server, # of cache misses * x <= server max throughput
+				+ We should test server max throughput with multiple threads for rocksdb
+			- Absoluate throughput = # of packets per second * x
+		* NOTE: for NetCache + write-back policy under dynamic workload
+			- For YCSB workload, some packets arrive server during cache population, baseline is blocking while we do not block
+			- Within a fixed time period, we can process more packets; for example
+				+ Baseline: 1 pkt w/ 1ms, and 80 pkts w/ 20us
+				+ FarReach: 20 pkts w/ 50us, and 80 pkts w/ 20us
+				+ A little smaller avg latency, yet extremely smaller max/tail latency
+				+ Maybe similar normalized thpt under sufficient large input traffic -> we cannot use this baseline?
+	* Try ycsb workload (32 clients, 32 servers, 100M records, 32M queries, 50 hot threshold, 0.5 sampling ratio, 60s period)
+		* runtime RTT w/ cache: 380us (server-side latency not including packet receiving overhead: 80us)
+			- Reason: in our simulation testbed, multiple client/server threads are waiting for one physical NIC, which introduces resource contention and hence larger overhead of receiving packets; while in real scenario, one thread should be a physical machine with an individual NIC, i.e., no contention on hardware resource -> we should use one client thread <-> one server thread to test latency
+		* No thpt improvement (<10% cache hit rate -> most significant hot keys are not cached in switch)
+			- Reason: ycsb workload is not highly skewed -> very small cache hit rate under multi-thread scenario -> server is still the bottleneck
+			- TODO: retest w/ warmup phase
+			- TODO: we can tune Zipf parameter to generate synthetic workload by ycsb
+	* Try Zipf synthetic workload (32 clients, 32 servers, 100M records, 32M queries, 50 hot threshold, 0.5 sampling ratio, 15s period)
+		* 30% packets belonging to 600 hot keys -> 15.6% cache hit rate w/ 6000 cached keys -> only 54% throughput improvement
+			- NOTE: We must use server emulation as we target dynamic workload, i.e., hot keys cached in switch are changed in runtime
+			- Reason of low cache hit rate
+				+ Larger socket overhead due to one NIC listened by many threads -> longer cache population delay (us-level) 
+				+ Many false positives due to large clean period -> longer cache population delay (ms-level)
+				+ Many false negatives due to large hot threshold -> miss truly hot keys
+			+ Consider smaller hot threshold and smaller clean period + NetCache parameters (64M records) -> FAIL
+				* hot_threshold = 10, sampling ratio = 0.5, clean period = 1s -> 22% cache hit rate -> still imbalance
+				* hot_threshold = 10, sampling ratio = 0.5, clean period = 5s -> 13% cache hit rate -> still imbalance
+				* hot_threshold = 10, sampling ratio = 0.5, first period = 1s, clean period = 5s -> 31% cache hit rate -> better but still limited improvement
 
 ## Run
 

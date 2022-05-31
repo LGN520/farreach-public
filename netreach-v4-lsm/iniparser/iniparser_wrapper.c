@@ -178,6 +178,15 @@ short IniparserWrapper::get_server_consnapshotserver_port() {
 
 // Switch
 
+uint32_t IniparserWrapper::get_partition_num() {
+	int tmp = iniparser_getint(ini, "switch:partition_num", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:partition_num]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
 uint32_t IniparserWrapper::get_switch_kv_bucket_num() {
 	int tmp = iniparser_getint(ini, "switch:switch_kv_bucket_num", -1);
 	if (tmp == -1) {

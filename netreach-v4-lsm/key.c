@@ -443,3 +443,12 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) volatile {
 	return 8;
 #endif
 }
+
+uint32_t Key::get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum) {
+	char buf[16];
+	uint32_t tmp_keysize = this->serialize(buf, 16);
+	uint32_t hashresult = crc32((unsigned char *)buf, tmp_keysize) % partitionnum;
+	uint32_t targetidx = hashresult / (partitionnum / servernum);
+	//printf("key: %x, crc32 result: %u, targetidx: %d\n", keyhihi, hashresult, targetidx);
+	return targetidx;
+}

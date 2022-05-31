@@ -49,6 +49,7 @@ class IniparserWrapper {
 		short get_reflector_popserver_port();
 
 		// switch
+		uint32_t get_partition_num();
 		uint32_t get_switch_kv_bucket_num();
 		//uint32_t get_switch_max_vallen();
 		uint16_t get_switch_max_vallen();

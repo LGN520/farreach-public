@@ -147,18 +147,19 @@ void *run_loader(void * param) {
 		}
 
 		tmpkey = iter->key();
+		uint32_t tmp_worker_id = tmpkey.get_hashpartition_idx(partition_num, server_num);
 		tmpval = iter->val();	
 		if (iter->type() == uint8_t(packet_type_t::PUTREQ)) {	// INESRT
 #ifndef CORRECTNESS_TEST
-			bool tmp_stat = db_wrappers[thread_id].force_put(tmpkey, tmpval);
+			bool tmp_stat = db_wrappers[tmp_worker_id].force_put(tmpkey, tmpval);
 			if (!tmp_stat) {
 				COUT_N_EXIT("Loading phase: fail to put <" << tmpkey.to_string_for_print() << ", " << tmpval.to_string_for_print() << ">");
 			}
 #else
 			val_t getval;
 			uint32_t getseq;
-			bool tmp_stat = db_wrappers[thread_id].get(tmpkey, getval, getseq);
-			FDEBUG_THIS(ofs, "[local client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string_for_print() 
+			bool tmp_stat = db_wrappers[tmp_worker_id].get(tmpkey, getval, getseq);
+			FDEBUG_THIS(ofs, "[local client " << uint32_t(tmp_worker_id) << "] key = " << tmpkey.to_string_for_print() 
 					<< " getval = " << getval.to_string_for_print()
 					<< " val = " << tmpval.to_string_for_print());
 #endif
@@ -179,10 +180,32 @@ void *run_loader(void * param) {
 			}
 		}
 
-		bool tmp_stat = db_wrappers[worker_id].force_multiput(iter->keys(), iter->vals(), tmpmaxidx);
-		if (!tmp_stat) {
-			printf("Loading phase: fail to multiput %d records\n", tmpmaxidx);
-			exit(-1);
+		// split current batch into different databases by hash partition
+		std::map<uint16_t, std::pair<std::vector<netreach_key_t>, std::vector<val_t>>> tmpmap;
+		for (size_t i = 0; i < tmpmaxidx; i++) {
+			uint16_t tmp_worker_id = iter->keys()[i].get_hashpartition_idx(partition_num, server_num);
+			if (tmpmap.find(tmp_worker_id) == tmpmap.end()) {
+				std::vector<netreach_key_t> tmpkeyvec;
+				std::vector<val_t> tmpvalvec;
+				tmpkeyvec.push_back(iter->keys()[i]);
+				tmpvalvec.push_back(iter->vals()[i]);
+				tmpmap.insert(std::pair<uint16_t, std::pair<std::vector<netreach_key_t>, std::vector<val_t>>>(\
+							tmp_worker_id, std::pair<std::vector<netreach_key_t>, std::vector<val_t>>(tmpkeyvec, tmpvalvec)));
+			}
+			else {
+				tmpmap[tmp_worker_id].first.push_back(iter->keys()[i]);
+				tmpmap[tmp_worker_id].second.push_back(iter->vals()[i]);
+			}
+		}
+
+		for (std::map<uint16_t, std::pair<std::vector<netreach_key_t>, std::vector<val_t>>>::iterator tmpiter = tmpmap.begin(); \
+				tmpiter != tmpmap.end(); tmpiter++) {
+			uint16_t tmp_worker_id = tmpiter->first;
+			bool tmp_stat = db_wrappers[tmp_worker_id].force_multiput(tmpiter->second.first.data(), tmpiter->second.second.data(), tmpiter->second.first.size());
+			if (!tmp_stat) {
+				printf("Loading phase: fail to multiput %d records\n", tmpmaxidx);
+				exit(-1);
+			}
 		}
 	}
 

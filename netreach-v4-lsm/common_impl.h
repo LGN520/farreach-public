@@ -96,6 +96,7 @@ short controller_evictserver_port = -1;
 uint32_t controller_snapshot_period = 0; // ms
 
 // switch
+uint32_t partition_num;
 uint32_t switch_kv_bucket_num;
 short switchos_popserver_port = -1;
 //short switchos_paramserver_port = -1;
@@ -236,6 +237,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(controller_snapshot_period);
 	
 	// switch
+	partition_num = ini.get_partition_num();
 	switch_kv_bucket_num = ini.get_switch_kv_bucket_num();
 	switchos_popserver_port = ini.get_switchos_popserver_port();
 	//switchos_paramserver_port = ini.get_switchos_paramserver_port();
@@ -246,6 +248,7 @@ inline void parse_ini(const char* config_file) {
 	switchos_ptf_popserver_port = ini.get_switchos_popserver_port();
 	switchos_ptf_snapshotserver_port = ini.get_switchos_snapshotserver_port();
 	//switchos_snapshotdataserver_port = ini.get_switchos_snapshotdataserver_port();
+	COUT_VAR(partition_num);
 	COUT_VAR(switch_kv_bucket_num);
 	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
