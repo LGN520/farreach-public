@@ -89,6 +89,20 @@
 		* For example, calculating 4 hash values in ingress stage 2 consumes most MAUs -> no MAU for some MAT in egress stage 2
 	+ Similarly, # of stateful ALUs is also limited by physical stage
 	+ Each physical stage has two PHV copies for ingress/egress -> same stage in ingress/egress does not have PHV confliction
+- NOTE: there are only two ways to test system max throughput (especially for dynamic workload)
+	+ Normalized throughput: system throughput / bottlenect server throughput
+		* It assumes that as input traffic scales out, cache hit rate and server load ratio does not change, which should be correct and not related with queuing occupancy
+	+ Emulated throughput: use multi-thread to simulate multiple servers
+		* NOTE: server rotation/emulation in essence has no difference with normalized throughput
+			- For server emulation, we need to saturate the bottleneck server thread, i.e., tune client sending rate to make the bottleneck server thread have the same throughput w/ cache as that w/o cache
+			- For server rotation, we need to tune client sending rate to saturate the bottleneck physical server
+			- All (server rotation/emulation and normalize throughput) are used to evaluate load balance ratio / system maximum throughput under large enough input traffic (different baselines can use different input traffic as long as they can saturate the system)
+		* Cannot represent practical result even if we use sufficient client threads to saturate server threads?
+			- TODO: need to be confirmed by experiment on emulated thpt
+			- If we use multiple client/server threads to listen on the same NIC, linux socket overhead (100~200us) could be dominant -> even if we reduce server-side overhead, linux socket overhead in client is still large and our throughput improvement is limited
+				+ In practical case, each physical client has an individual NIC -> no such socket overhead
+			- If we use one thread to listen on the NIC and distribute received packets to different server threads by message queues (as in NetCache), we still have only one NIC to receive packets
+				+ In practical case, all NICs of different servers can receive packets simultaneously; and w/o message queue overhead
 
 ## Overview
 
@@ -1004,6 +1018,30 @@
 				* hot_threshold = 10, sampling ratio = 0.5, clean period = 1s -> 22% cache hit rate -> still imbalance
 				* hot_threshold = 10, sampling ratio = 0.5, clean period = 5s -> 13% cache hit rate -> still imbalance
 				* hot_threshold = 10, sampling ratio = 0.5, first period = 1s, clean period = 5s -> 31% cache hit rate -> better but still limited improvement
++ Code change
+	* Use PUTREQ instead of GETREQ to implement WARMUPREQ
+		- Issue: server cannot receive packet due to wrong hdrlen
+			+ Reason: default function of add_or_remove_header_tbl is remove_all
+			+ Solution: change ptf configure script to add value header for WARMUPREQ
+		- Issue: duplicate cache population reported by same server or two different servers
+			+ After checking controller and server, they do not report the anomaly -> switchos issue
+			+ Reason: tcp socket uses shallow copy for send buffer; even set NODELAY, tcp cannot send packet immediately;
+				- For pkt i w/ value A, if tcp shallow-copies the userspace buf w/o sending out immediately, the next pkt i+1 w/ value B will overwrite the userspace buf, which trigger duplicate content
+			+ Solution: we use UDP + timeout-and-retry to implement reliable and low-latency channel for cache population/eviction -> SUCCESS
+			+ TODO: Replace TCP w/ UDP + timeout-and-retry for snapshot
+	* Use MAT to configure hot threshold instead of repeat re-compilation
+	* Issue: loader cannot write keys into correct databases -> GETREQ_POP may not trigger cache population due to stat=false
+		- Multiple servers cause this issue
+			- 10M records + 1 server -> no such issue
+			- 100M records + 32 servers -> w/ issue
+			- 10M records + 32 servers -> w/ issue
+			- 10K records + 2 servers -> w/ issue
+			- Reason: we uniformly split loading workload for different servers yet not based on partition strategy
+				+ E.g., key 1 is stored in worker0 in loading phase, while another worker answers its query in transaction phase
+		- Try software crc32 to see whether it is equivalent with Tofino -> SUCCESS
+		- Deprecated: Update split_workload to split workload based on crc32 result -> hash each key to split workload by a single thread of split_workload is too slow
+		- Solution: in loader, each thread hashes keys to find target dbs, then store them into corresponding db
+			- 10M records + 32 servers -> SUCCESS
 
 ## Run
 
