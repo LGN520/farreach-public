@@ -48,7 +48,6 @@ typedef CacheEvictAck<netreach_key_t> cache_evict_ack_t;
 typedef CacheEvictCase2<netreach_key_t, val_t> cache_evict_case2_t;
 typedef WarmupRequest<netreach_key_t, val_t> warmup_request_t;
 typedef WarmupAck<netreach_key_t> warmup_ack_t;
-typedef CachePopAck<netreach_key_t> cache_pop_ack_t;
 
 /*
  * Constants

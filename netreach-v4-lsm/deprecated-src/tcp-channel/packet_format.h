@@ -33,7 +33,7 @@ enum class PacketType {
 	GETREQ_INSWITCH=0x04, DELREQ_INSWITCH=0x14,
 	DELREQ_SEQ=0x02, DELREQ_SEQ_CASE3=0x12,
 	PUTRES=0x08, DELRES=0x18,
-	SCANREQ=0x10, SCANREQ_SPLIT=0x20, GETREQ=0x30, DELREQ=0x40, GETREQ_POP=0x50, GETREQ_NLATEST=0x60, CACHE_POP_INSWITCH_ACK=0x70, SCANRES_SPLIT=0x80, CACHE_POP=0x90, CACHE_EVICT=0xa0, CACHE_EVICT_ACK=0xb0, CACHE_EVICT_CASE2=0xc0, WARMUPACK=0xd0, CACHE_POP_ACK=0xe0
+	SCANREQ=0x10, SCANREQ_SPLIT=0x20, GETREQ=0x30, DELREQ=0x40, GETREQ_POP=0x50, GETREQ_NLATEST=0x60, CACHE_POP_INSWITCH_ACK=0x70, SCANRES_SPLIT=0x80, CACHE_POP=0x90, CACHE_EVICT=0xa0, CACHE_EVICT_ACK=0xb0, CACHE_EVICT_CASE2=0xc0, WARMUPACK=0xd0
 };
 /*enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES_SPLIT, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 
@@ -448,14 +448,6 @@ class WarmupAck : public GetRequest<key_t> { // ophdr
 	public: 
 		WarmupAck(key_t key);
 		WarmupAck(const char * data, uint32_t recv_size);
-};
-
-// NOTE: only used in end-hosts
-template<class key_t>
-class CachePopAck : public GetRequest<key_t> { // ophdr
-	public: 
-		CachePopAck(key_t key);
-		CachePopAck(const char * data, uint32_t recv_size);
 };
 
 // APIs

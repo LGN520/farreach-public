@@ -10,7 +10,7 @@
 
 #include "helper.h"
 
-#define SOCKET_TIMEOUT 5
+#define SOCKET_TIMEOUT 5 // 5s
 
 // udp client: create_udpsock -> set_sockaddr -> udpsendto
 // udp server: prepare_udpserver -> udprecvfrom

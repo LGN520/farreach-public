@@ -152,7 +152,7 @@ static inline void dump_buf(char *buf, uint32_t bufsize)
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
-#define MAX_BUFSIZE 4096 // 4KB; TODO: increase for large value
+#define MAX_BUFSIZE 40960 // 40KB; TODO: increase for large value / more threads
 #define MAX_LARGE_BUFSIZE 8388608 // 8MB
 
 #define MQ_SIZE 40960 // in-memory message queue

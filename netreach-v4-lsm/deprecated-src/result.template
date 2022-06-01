@@ -1,7 +1,7 @@
 # Template of result.out
 
 # Gobal line: methodnum (each method has two lines)
-# Per-method first line: methodname total_pktcnt total_time(no effect)
+# Per-method first line: methodname total_pktcnt total_time
 # Per-method second line: server0_pktcnt server1_pktcnt ... servern_pktcnt
 
 # Example (2 methods, 10 servers)

@@ -8,6 +8,9 @@ if len(sys.argv) != 2:
 resultpath = sys.argv[1]
 print("Result file: {}".format(resultpath))
 
+SWITCH_MAX_THPT = 1 * 1000 * 1000 * 1000 # 1 GOPS
+PERSERVER_MAX_THPT = 1 * 1000 * 1000 # 1 MOPS
+
 with open(resultpath, "r") as f:
     line = f.readline()
     methodnum = int(line.split(" ")[0])
@@ -42,7 +45,6 @@ with open(resultpath, "r") as f:
             server_thpt_list.append(float(server_pktcnt_list[i]) / total_time)
         #for i in range(servernum):
         #    print("server {} thpt: {}".format(i, server_thpt_list[i]))
-
         switch_thpt = total_thpt
         for i in range(servernum):
             switch_thpt -= server_thpt_list[i]
@@ -51,8 +53,16 @@ with open(resultpath, "r") as f:
         #print("switch thpt: {}".format(switch_thpt))
         print("cache hit rate: {}".format(switch_thpt / total_thpt))
 
-        max_server_thpt = -1
+        factor_list = []
+        if switch_thpt != 0:
+            factor_list.append(float(SWITCH_MAX_THPT) / switch_thpt)
         for i in range(servernum):
-            if max_server_thpt == -1 or max_server_thpt < server_thpt_list[i]:
-                max_server_thpt = server_thpt_list[i]
-        print("normalized thpt: {}".format(total_thpt / max_server_thpt))
+            if server_thpt_list[i] != 0:
+                factor_list.append(float(PERSERVER_MAX_THPT) / server_thpt_list[i])
+
+        final_factor = -1
+        for i in range(len(factor_list)):
+            if final_factor == -1 or final_factor > factor_list[i]:
+                final_factor = factor_list[i]
+        final_thpt = total_thpt * final_factor
+        print("final thpt: {} MOPS".format(final_thpt/1000.0/1000.0))

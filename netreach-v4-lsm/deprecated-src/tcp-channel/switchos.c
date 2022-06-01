@@ -48,10 +48,8 @@ typedef CachePop<netreach_key_t, val_t> cache_pop_t;
 typedef CachePopInswitch<netreach_key_t, val_t> cache_pop_inswitch_t;
 typedef CachePopInswitchAck<netreach_key_t> cache_pop_inswitch_ack_t;
 typedef CacheEvict<netreach_key_t, val_t> cache_evict_t;
-typedef CacheEvictAck<netreach_key_t> cache_evict_ack_t;
 typedef CacheEvictCase2<netreach_key_t, val_t> cache_evict_case2_t;
 typedef ConcurrentMap<uint16_t, special_case_t> concurrent_specicalcase_map_t;
-typedef CachePopAck<netreach_key_t> cache_pop_ack_t;
 
 bool recover_mode = false;
 
@@ -101,7 +99,7 @@ int SNAPSHOT_DATA = -1;
 // Cache population
 
 // controller.popclient <-> switchos.popserver
-int switchos_popserver_udpsock = -1;
+int switchos_popserver_tcpsock = -1;
 // message queue between switchos.popserver and switchos.popworker
 MessagePtrQueue<cache_pop_t> switchos_cache_pop_ptr_queue(MQ_SIZE);
 /*cache_pop_t * volatile * switchos_cache_pop_ptrs = NULL;
@@ -118,7 +116,8 @@ int switchos_popworker_popclient_udpsock = -1;
 
 // Cache eviction
 
-int switchos_popworker_evictclient_udpsock = -1;
+bool volatile is_switchos_popworker_evictclient_connected = false;
+int switchos_popworker_evictclient_tcpsock = -1;
 
 // Snapshot
 
@@ -310,14 +309,14 @@ void prepare_switchos() {
 	printf("[switchos] prepare start\n");
 
 	// prepare popserver socket
-	prepare_udpserver(switchos_popserver_udpsock, false, switchos_popserver_port, "switchos.popserver");
+	prepare_tcpserver(switchos_popserver_tcpsock, false, switchos_popserver_port, 1, "switchos.popserver"); // MAX_PENDING_CONNECTION = 1
 
 	//switchos_cache_pop_ptrs = new cache_pop_t*[MQ_SIZE];
 	//switchos_head_for_pop = 0;
 	//switchos_tail_for_pop = 0;
 
 	switchos_cached_keyidx_map.clear();
-	create_udpsock(switchos_popworker_popclient_udpsock, true, "switchos.popworker");
+	create_udpsock(switchos_popworker_popclient_udpsock, false, "switchos.popworker");
 	switchos_cached_keyarray = new netreach_key_t[switch_kv_bucket_num]();
 	switchos_cached_serveridxarray = new uint16_t[switch_kv_bucket_num];
 	for (size_t i = 0; i < switch_kv_bucket_num; i++) {
@@ -326,7 +325,7 @@ void prepare_switchos() {
 	switchos_cached_empty_index = 0;
 	//switchos_cached_key_idx_map.clear();
 
-	create_udpsock(switchos_popworker_evictclient_udpsock, true, "switchos.popworker.evictclient");
+	create_tcpsock(switchos_popworker_evictclient_tcpsock, false, "switchos.popworker.evictclient");
 	//switchos_evictvalbytes = new char[val_t::MAX_VALLEN];
 	//INVARIANT(switchos_evictvalbytes != NULL);
 	//memset(switchos_evictvalbytes, 0, val_t::MAX_VALLEN);
@@ -414,51 +413,114 @@ void recover() {
 }
 
 void *run_switchos_popserver(void *param) {
-	struct sockaddr_in controller_popclient_addr;
-	socklen_t controller_popclient_addrlen = sizeof(struct sockaddr_in);
-	bool with_controller_popclient_addr = false;
-	
+	// Not used
+	//struct sockaddr_in controller_addr;
+	//unsigned int controller_addr_len = sizeof(struct sockaddr);
 	printf("[switchos.popserver] ready\n");
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
 
+	// accept connection from controller.popclient
+	int connfd = -1;
+	tcpaccept(switchos_popserver_tcpsock, NULL, NULL, connfd, "switchos.popserver");
+
 	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
 	char buf[MAX_BUFSIZE];
-	int recvsize = 0;
+	int cur_recv_bytes = 0;
+	uint8_t optype = 0;
+	bool direct_parse = false;
+	bool is_broken = false;
+	bool with_optype = false;
+	//uint32_t vallen = 0;
+	uint16_t vallen = 0;
+	bool with_vallen = false;
+	//netreach_key_t tmpkey(0, 0, 0, 0);
+	const int arrive_optype_bytes = sizeof(uint8_t);
+	//const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint32_t);
+	const int arrive_vallen_bytes = arrive_optype_bytes + sizeof(netreach_key_t) + sizeof(uint16_t);
+	int arrive_serveridx_bytes = -1;
 	while (switchos_running) {
-		if (!with_controller_popclient_addr) {
-			udprecvfrom(switchos_popserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr*)&controller_popclient_addr, &controller_popclient_addrlen, recvsize, "switchos.popserver");
-			with_controller_popclient_addr = true;
-		}
-		else {
-			udprecvfrom(switchos_popserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "switchos.popserver");
+		if (!direct_parse) {
+			int recvsize = 0;
+			is_broken = tcprecv(connfd, buf + cur_recv_bytes, MAX_BUFSIZE - cur_recv_bytes, 0, recvsize, "switchos.popserver");
+			if (is_broken) {
+				break;
+			}
+
+			cur_recv_bytes += recvsize;
+			if (cur_recv_bytes >= MAX_BUFSIZE) {
+				printf("[switch os] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_BUFSIZE);
+				exit(-1);
+			}
 		}
 
-		//printf("receive CACHE_POP from controller\n");
-		//dump_buf(buf, recvsize);
-		cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, recvsize); // freed by switchos.popworker
-
-		// send CACHE_POP_ACK to controller.popclient immediately to avoid timeout
-		cache_pop_ack_t tmp_cache_pop_ack(tmp_cache_pop_ptr->key());
-		uint32_t acksize = tmp_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
-		udpsendto(switchos_popserver_udpsock, buf, acksize, 0, (struct sockaddr*)&controller_popclient_addr, controller_popclient_addrlen, "switchos.popserver");
-
-		bool res = switchos_cache_pop_ptr_queue.write(tmp_cache_pop_ptr);
-		if (!res) {
-			printf("[switch os] message queue overflow of switchos.switchos_cache_pop_ptr_queue!");
+		// Get optype
+		if (!with_optype && cur_recv_bytes >= arrive_optype_bytes) {
+			optype = *((uint8_t *)buf);
+			INVARIANT(packet_type_t(optype) == packet_type_t::CACHE_POP);
+			direct_parse = false;
+			with_optype = true;
 		}
-		/*if ((switchos_head_for_pop+1)%MQ_SIZE != switchos_tail_for_pop) {
-			switchos_cache_pop_ptrs[switchos_head_for_pop] = tmp_cache_pop_ptr;
-			switchos_head_for_pop = (switchos_head_for_pop + 1) % MQ_SIZE;
+
+		// Get vallen
+		if (with_optype && !with_vallen && cur_recv_bytes >= arrive_vallen_bytes) {
+			////tmpkey.deserialize(buf + arrive_optype_bytes, cur_recv_bytes - arrive_optype_bytes);
+			//vallen = *((uint32_t *)(buf + arrive_vallen_bytes - sizeof(uint32_t)));
+			//vallen = ntohl(vallen);
+			vallen = *((uint16_t *)(buf + arrive_vallen_bytes - sizeof(uint16_t)));
+			vallen = ntohs(vallen);
+			INVARIANT(vallen >= 0);
+			int padding_size = int(val_t::get_padding_size(vallen)); // padding for value <= 128B
+			arrive_serveridx_bytes = arrive_vallen_bytes + vallen + padding_size + sizeof(uint32_t) + sizeof(uint16_t);
+			with_vallen = true;
 		}
-		else {
-			printf("[switch os] message queue overflow of switchos.switchos_cache_pop_ptrs!");
-		}*/
+
+		// Get one complete CACHE_POP
+		if (with_optype && with_vallen && cur_recv_bytes >= arrive_serveridx_bytes) {
+			//printf("[switchos.popserver] cur_recv_bytes: %d, arrive_serveridx_bytes: %d\n", cur_recv_bytes, arrive_serveridx_bytes); // TMPDEBUG
+			//printf("receive CACHE_POP from controller\n");
+			//dump_buf(buf, cur_recv_bytes);
+			cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, arrive_serveridx_bytes); // freed by switchos.popworker
+
+			bool res = switchos_cache_pop_ptr_queue.write(tmp_cache_pop_ptr);
+			if (!res) {
+				printf("[switch os] message queue overflow of switchos.switchos_cache_pop_ptr_queue!");
+			}
+			/*if ((switchos_head_for_pop+1)%MQ_SIZE != switchos_tail_for_pop) {
+				switchos_cache_pop_ptrs[switchos_head_for_pop] = tmp_cache_pop_ptr;
+				switchos_head_for_pop = (switchos_head_for_pop + 1) % MQ_SIZE;
+			}
+			else {
+				printf("[switch os] message queue overflow of switchos.switchos_cache_pop_ptrs!");
+			}*/
+
+			// Move remaining bytes and reset metadata
+			if (cur_recv_bytes > arrive_serveridx_bytes) {
+				memcpy(buf, buf + arrive_serveridx_bytes, cur_recv_bytes - arrive_serveridx_bytes);
+				cur_recv_bytes = cur_recv_bytes - arrive_serveridx_bytes;
+			}
+			else {
+				cur_recv_bytes = 0;
+			}
+			if (cur_recv_bytes >= arrive_optype_bytes) {
+				direct_parse = true;
+			}
+			else {
+				direct_parse = false;
+			}
+			is_broken = false;
+			optype = 0;
+			with_optype = false;
+			vallen = 0;
+			with_vallen = false;
+			arrive_serveridx_bytes = -1;
+		}
 	}
 
 	switchos_popserver_finish = true;
-	close(switchos_popserver_udpsock);
+	close(connfd);
+	close(switchos_popserver_tcpsock);
 	pthread_exit(nullptr);
 }
 
@@ -473,23 +535,21 @@ void *run_switchos_popworker(void *param) {
 	set_sockaddr(ptf_popserver_addr, inet_addr("127.0.0.1"), switchos_ptf_popserver_port);
 	int ptf_popserver_addr_len = sizeof(struct sockaddr);
 
-	// used by popworker.evictclient
-	sockaddr_in controller_evictserver_addr;
-	set_sockaddr(controller_evictserver_addr, inet_addr(controller_ip_for_switchos), controller_evictserver_port);
-	socklen_t controller_evictserver_addrlen = sizeof(struct sockaddr_in);
-
 	printf("[switchos.popworker] ready\n");
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
 
-	// (1) communicate with controller.evictserver or reflector.popserer
-	// send CACHE_POP_INSWITCH and CACHE_EVICT to controller
+	// (1) communicate with controller.evictserver
+	char evictclient_buf[MAX_BUFSIZE];
+	int evictclient_cur_recv_bytes = 0;
+	bool evictclient_direct_parse = false;
+	bool evictclient_is_broken = false;
+	//const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(netreach_key_t) + DEBUG_BYTES;
+	const int evictclient_arrive_key_bytes = sizeof(uint8_t) + sizeof(netreach_key_t);
+	// send/recv CACHE_POP_INSWITCH/_ACK and CACHE_EVICT/_ACK to/from controller
 	char pktbuf[MAX_BUFSIZE];
 	uint32_t pktsize = 0;
-	// recv CACHE_POP_INSWITCH_ACK and CACHE_EVICT_ACK from controlelr
-	char ackbuf[MAX_BUFSIZE];
-	int ack_recvsize = 0;
 	// (2) communicate with ptf.popserver
 	char ptfbuf[MAX_BUFSIZE];
 	uint32_t ptf_sendsize = 0;
@@ -511,6 +571,12 @@ void *run_switchos_popworker(void *param) {
 				//cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptrs[switchos_tail_for_pop];
 				//INVARIANT(tmp_cache_pop_ptr != NULL);
 				
+				if (!is_switchos_popworker_evictclient_connected) {
+					// used by tcp socket for cache eviction
+					tcpconnect(switchos_popworker_evictclient_tcpsock, controller_ip_for_switchos, controller_evictserver_port, "switchos.popworker.evictclient", "controller.evictserver");
+					is_switchos_popworker_evictclient_connected = true;
+				}
+
 				if (switchos_cached_keyidx_map.find(tmp_cache_pop_ptr->key()) != switchos_cached_keyidx_map.end()) {
 					printf("Error: populating a key %x cached at %u from server %d\n", tmp_cache_pop_ptr->key().keyhihi, switchos_cached_keyidx_map[tmp_cache_pop_ptr->key()], int(tmp_cache_pop_ptr->serveridx()));
 					exit(-1);
@@ -558,21 +624,49 @@ void *run_switchos_popworker(void *param) {
 								switchos_cached_serveridxarray[switchos_evictidx]);
 						pktsize = tmp_cache_evict_case2.serialize(pktbuf, MAX_BUFSIZE);
 					}
+					//printf("send CACHE_EVICT to controller\n");
+					//dump_buf(pktbuf, pktsize);
+					tcpsend(switchos_popworker_evictclient_tcpsock, pktbuf, pktsize, "switchos.popworker.evictclient");
 
+					// wait for CACHE_EVICT_ACK from controller.evictserver
 					while (true) {
-						//printf("send CACHE_EVICT to controller\n");
-						//dump_buf(pktbuf, pktsize);
-						udpsendto(switchos_popworker_evictclient_udpsock, pktbuf, pktsize, 0, (struct sockaddr*)&controller_evictserver_addr, controller_evictserver_addrlen, "switchos.popworker.evictclient");
+						if (!evictclient_direct_parse) {
+							int evictclient_recvsize = 0;
+							evictclient_is_broken = tcprecv(switchos_popworker_evictclient_tcpsock, evictclient_buf + evictclient_cur_recv_bytes, MAX_BUFSIZE - evictclient_cur_recv_bytes, 0, evictclient_recvsize, "switchos.popworker.evictclient");
+							if (evictclient_is_broken) {
+								break;
+							}
 
-						// wait for CACHE_EVICT_ACK from controller.evictserver
-						// NOTE: no concurrent CACHE_EVICTs -> use request-and-reply manner to wait for entire eviction workflow
-						bool is_timeout = udprecvfrom(switchos_popworker_evictclient_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
-						if (unlikely(is_timeout)) {
-							continue;
+							evictclient_cur_recv_bytes += evictclient_recvsize;
+							if (evictclient_cur_recv_bytes >= MAX_BUFSIZE) {
+								printf("[switchos.popworker.evictclient] Overflow: cur received bytes (%d), maxbufsize (%d)\n", evictclient_cur_recv_bytes, MAX_BUFSIZE);
+								exit(-1);
+							}
 						}
-						else {
-							cache_evict_ack_t tmp_cache_evict_ack(ackbuf, ack_recvsize);
-							INVARIANT(tmp_cache_evict_ack.key() == cur_evictkey);
+
+						// get CACHE_EVICT_ACK from controller.evictserver
+						if (evictclient_cur_recv_bytes >= evictclient_arrive_key_bytes) {
+							//printf("receive CACHE_EVICT_ACK from controller\n");
+							//dump_buf(evictclient_buf, evictclient_arrive_key_bytes);
+							uint8_t evictclient_optype = *((uint8_t *)evictclient_buf);
+							INVARIANT(packet_type_t(evictclient_optype) == packet_type_t::CACHE_EVICT_ACK);
+
+							// move remaining bytes and reset metadata
+							if (evictclient_cur_recv_bytes > evictclient_arrive_key_bytes) {
+								memcpy(evictclient_buf, evictclient_buf + evictclient_arrive_key_bytes, evictclient_cur_recv_bytes - evictclient_arrive_key_bytes);
+								evictclient_cur_recv_bytes = evictclient_cur_recv_bytes - evictclient_arrive_key_bytes;
+							}
+							else {
+								evictclient_cur_recv_bytes = 0;
+							}
+							if (evictclient_cur_recv_bytes >= evictclient_arrive_key_bytes) {
+								evictclient_direct_parse = true;
+							}
+							else {
+								evictclient_direct_parse = false;
+							}
+							evictclient_is_broken = false;
+							pktsize = 0;
 							break;
 						}
 					}
@@ -617,34 +711,16 @@ void *run_switchos_popworker(void *param) {
 				// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
 				cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx);
 				pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
-
+				udpsendto(switchos_popworker_popclient_udpsock, pktbuf, pktsize, 0, (struct sockaddr *)&reflector_popserver_addr, reflector_popserver_addr_len, "switchos.popworker.popclient");
+				// loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
 				while (true) {
-					udpsendto(switchos_popworker_popclient_udpsock, pktbuf, pktsize, 0, (struct sockaddr *)&reflector_popserver_addr, reflector_popserver_addr_len, "switchos.popworker.popclient");
-
-					// loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
-					bool is_timeout = false;
-					bool with_correctack = false;
-					while (true) {
-						is_timeout = udprecvfrom(switchos_popworker_popclient_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.popclient");
-						if (unlikely(is_timeout)) {
-							break;
-						}
-
-						cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(ackbuf, ack_recvsize);
-						if (tmp_cache_pop_inswitch_ack.key() == tmp_cache_pop_ptr->key()) {
-							with_correctack = true;
-							break;
-						}
-					}
-
-					if (unlikely(is_timeout)) {
-						continue;
-					}
-					if (with_correctack) {
+					int recv_size = 0;
+					udprecvfrom(switchos_popworker_popclient_udpsock, pktbuf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "switchos.popworker.popclient");
+					cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(pktbuf, recv_size);
+					if (tmp_cache_pop_inswitch_ack.key() == tmp_cache_pop_ptr->key()) {
 						break;
 					}
 				}
-
 				// (1) add new <key, value> pair into cache_lookup_tbl; (2) and set valid=1 to enable the entry
 				//system("bash tofino/add_cache_lookup_setvalid1.sh");
 				ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx);
@@ -683,7 +759,7 @@ void *run_switchos_popworker(void *param) {
 	udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 
 	close(switchos_popworker_popclient_udpsock);
-	close(switchos_popworker_evictclient_udpsock);
+	close(switchos_popworker_evictclient_tcpsock);
 	close(switchos_popworker_popclient_for_ptf_udpsock);
 	pthread_exit(nullptr);
 }
