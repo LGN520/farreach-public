@@ -103,6 +103,9 @@
 				+ In practical case, each physical client has an individual NIC -> no such socket overhead
 			- If we use one thread to listen on the NIC and distribute received packets to different server threads by message queues (as in NetCache), we still have only one NIC to receive packets
 				+ In practical case, all NICs of different servers can receive packets simultaneously; and w/o message queue overhead
+- NOTE: even if we set NODELAY for tcp socket, it will not send packet immediately before send() returns
+	+ Linux socket uses shallow copy for send(), as tcp socket does not send packet immediately, if we change userspace buf before it sends out the packet, it will trigger misbehavior
+	+ For example, we send key A for cache population, and then send key B; as A is not sent out before we serialize B into buf, we see two keys of B in switchos for cache population -> duplicate cache population issue
 
 ## Overview
 
