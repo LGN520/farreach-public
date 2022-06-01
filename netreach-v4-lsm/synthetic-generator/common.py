@@ -9,3 +9,9 @@ path_hot = "synthetic-warmup.out" #The path to save the hot keys
 path_query = "synthetic-run.out"
 num_query = 32000000
 zipf = 0.99
+
+# six 10-sec periods in 60 secs
+period_num = 6
+# change popularity of 200 keys in each period
+evict_num = 200
+path_hotin = "synthetic-hotin.out"

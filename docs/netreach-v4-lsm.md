@@ -927,52 +927,71 @@
 		- Longer delay of cache evict than that of cache population -> message queue overflow after inswitch cache is full
 	* Try cache population after cleaning CM regs
 		- Under synthetic workload, frequency of hot key may not exceed hot threshold during clean period
-+ Test latency again (10M records, 1M queries, 50 hot threshold, 0.5 sampling ratio, 30s clean period, single thread)
-	- Same key
-		+ client-server RTT: 52us (dpdk: 32us)
-			* Reason: requests on same key hit block cache, which do not access rocksdb database
-		+ client-switch RTT: 13.7us (dpdk: 23us)
-	- YCSB workload
-		+ runtime RTT w/o cache: 75.9us (server-side latency: ~49us)
-		+ runtime RTT w/ cache (w/ popclient thread; w/o cleaner): 70.2us (server-side latency: ~60.8us) -> 7.9% reduction
-			* 400 hot keys, 600K total keys, 64K CM -> 1450 cached keys due to hash collision
-			* Larger server-side overhead
-				- If w/o cache, server receives skewed workload and can use cache to reduce server-side overhead
-				- If w/ cache, server receives uniform workload and cannot use cache to reduce server-side overhead
-			+ 26% hot requests -> 23% cache hit rate -> expected RTT w/ cache = 86.9*0.77 + 13.7*0.23 = 70.2us
-		+ runtime RTT w/ cache (w/ popclient thread; w/ cleaner): 67us (server-side latency: ~55us) -> 11.8% reduction
-			* 400 hot keys, 600K total keys, 64K CM -> 300 cached keys due to period clean
-			* Better than w/o cleaner w/ smaller server-side overhead
-				- No unnecessary cache population for cold keys due to false positive in CM
-				- Although 2% packets do not hit in switch, they may make server-side workload more cache friendly?
-			+ 26% hot requests -> 21% cache hit rate -> expected RTT w/ cache = 81.9*0.79 + 13.7*0.21 = 67.58us
-		+ NOTE: To avoid server-side cache issue, we could use cache hit rate + runtime RTT w/ cache + client-switch RTT to calculate runtime RTT w/o cache
-			* x*0.77 + 13.7*0.23 = 70.2 -> x=87 -> 19.5% reduction
-			* x*0.79 + 13.7*0.21 = 67 -> x=81.2 -> 20.9% reduction
-	- synthetic workload
-		+ Implement parser interface -> ycsb_parser, synthetic_parser
-			* Move ycsb_server -> server, ycsb_remote_client -> remote_client, ycsb_loader -> loader
-		+ runtime RTT w/o cache: 60.3us (server-side latency: ~36.7us)
-		+ runtime RTT w/ cache (w/ popclient thread; w/o cleaner): 57.1us (server-side latency: ~52.7us) -> 5% mitigation
-			* 580 hot keys, 250K total keys, 64K CM -> 1655 cached keys due to hash collision
-			* 39% hot requests -> 34% cache hit rate -> expected RTT w/ cache: 76*0.66 + 13.7*0.34 = 54.8us
-		+ runtime RTT w/ cache (w/ popclient thread; w/ cleaner): 48.9us (server-side latency: ~45.3us) -> 18.33% mitigation
-			* 580 hot keys, 250K total keys, 64K CM -> 647 cached keys due to period clean
-			* 39% hot requests -> 33% cache hit rate -> expected RTT w/ cache: 69*0.67 + 13.7*0.33 = 50.75us
-		+ NOTE: To avoid server-side cache issue, we could use cache hit rate + runtime RTT w/ cache + client-switch RTT to calculate runtime RTT w/o cache
-			* x*0.66 + 13.7*0.34 = 57.1 -> x=79.5 -> 28% reduction
-			* x*0.67 + 13.7*0.33 = 48.9 -> x=66.2 -> 26% reduction
-+ Test latency again (10M records, 10M queries, 50 hot threshold, 0.5 sampling ratio, 30s period, single thread)
-	- synthetic workload
-		+ runtime RTT w/o cache: 64.4us (server-side latency: 41us)
-		+ runtime RTT w/ cache (w/ cleaner; 30s clean period): 54.1us (server-side latency: 51.7us) -> 16% reduction
-			* 6K hot keys, 1.6M total keys, 64K CM -> 792 cached keys due to too small clean period
-			* 53% hot requests -> 37% cache hit rate -> expected RTT w/ cache: 74.4*0.63 + 13.7*0.37 = 51.9us
-			* x*0.63 + 13.7*0.33 = 54.1 -> x=77.8 -> 30% reduction
-		+ runtime RTT w/ cache (w/ cleaner; 60s clean period): 48.1us (server-side latency: 51.7us) -> 25.3% reduction
-			* 6K hot keys, 1.6M total keys, 64K CM -> 2406 cached keys due to still small clean period
-			* 53% hot requests -> 42% cache hit rate -> expected RTT w/ cache:  74.4*0.58 + 13.7*0.37 = 48.2us
-			* x*0.58 + 13.7*0.42 = 48.1 -> x=73 -> 34% reduction
++ Deprecated result: results are not good as we begin with an empty cache, which is not the common case of system -> we should start with a pre-populated cache under static/dynamic workloads
+	+ Test latency again (10M records, 1M queries, 50 hot threshold, 0.5 sampling ratio, 30s clean period, single thread)
+		- Same key
+			+ client-server RTT: 52us (dpdk: 32us)
+				* Reason: requests on same key hit block cache, which do not access rocksdb database
+			+ client-switch RTT: 13.7us (dpdk: 23us)
+		- YCSB workload
+			+ runtime RTT w/o cache: 75.9us (server-side latency: ~49us)
+			+ runtime RTT w/ cache (w/ popclient thread; w/o cleaner): 70.2us (server-side latency: ~60.8us) -> 7.9% reduction
+				* 400 hot keys, 600K total keys, 64K CM -> 1450 cached keys due to hash collision
+				* Larger server-side overhead
+					- If w/o cache, server receives skewed workload and can use cache to reduce server-side overhead
+					- If w/ cache, server receives uniform workload and cannot use cache to reduce server-side overhead
+				+ 26% hot requests -> 23% cache hit rate -> expected RTT w/ cache = 86.9*0.77 + 13.7*0.23 = 70.2us
+			+ runtime RTT w/ cache (w/ popclient thread; w/ cleaner): 67us (server-side latency: ~55us) -> 11.8% reduction
+				* 400 hot keys, 600K total keys, 64K CM -> 300 cached keys due to period clean
+				* Better than w/o cleaner w/ smaller server-side overhead
+					- No unnecessary cache population for cold keys due to false positive in CM
+					- Although 2% packets do not hit in switch, they may make server-side workload more cache friendly?
+				+ 26% hot requests -> 21% cache hit rate -> expected RTT w/ cache = 81.9*0.79 + 13.7*0.21 = 67.58us
+			+ NOTE: To avoid server-side cache issue, we could use cache hit rate + runtime RTT w/ cache + client-switch RTT to calculate runtime RTT w/o cache
+				* x*0.77 + 13.7*0.23 = 70.2 -> x=87 -> 19.5% reduction
+				* x*0.79 + 13.7*0.21 = 67 -> x=81.2 -> 20.9% reduction
+		- synthetic workload
+			+ Implement parser interface -> ycsb_parser, synthetic_parser
+				* Move ycsb_server -> server, ycsb_remote_client -> remote_client, ycsb_loader -> loader
+			+ runtime RTT w/o cache: 60.3us (server-side latency: ~36.7us)
+			+ runtime RTT w/ cache (w/ popclient thread; w/o cleaner): 57.1us (server-side latency: ~52.7us) -> 5% mitigation
+				* 580 hot keys, 250K total keys, 64K CM -> 1655 cached keys due to hash collision
+				* 39% hot requests -> 34% cache hit rate -> expected RTT w/ cache: 76*0.66 + 13.7*0.34 = 54.8us
+			+ runtime RTT w/ cache (w/ popclient thread; w/ cleaner): 48.9us (server-side latency: ~45.3us) -> 18.33% mitigation
+				* 580 hot keys, 250K total keys, 64K CM -> 647 cached keys due to period clean
+				* 39% hot requests -> 33% cache hit rate -> expected RTT w/ cache: 69*0.67 + 13.7*0.33 = 50.75us
+			+ NOTE: To avoid server-side cache issue, we could use cache hit rate + runtime RTT w/ cache + client-switch RTT to calculate runtime RTT w/o cache
+				* x*0.66 + 13.7*0.34 = 57.1 -> x=79.5 -> 28% reduction
+				* x*0.67 + 13.7*0.33 = 48.9 -> x=66.2 -> 26% reduction
+	+ Test latency again (10M records, 10M queries, 50 hot threshold, 0.5 sampling ratio, 30s period, single thread)
+		- synthetic workload
+			+ runtime RTT w/o cache: 64.4us (server-side latency: 41us)
+			+ runtime RTT w/ cache (w/ cleaner; 30s clean period): 54.1us (server-side latency: 51.7us) -> 16% reduction
+				* 6K hot keys, 1.6M total keys, 64K CM -> 792 cached keys due to too small clean period
+				* 53% hot requests -> 37% cache hit rate -> expected RTT w/ cache: 74.4*0.63 + 13.7*0.37 = 51.9us
+				* x*0.63 + 13.7*0.33 = 54.1 -> x=77.8 -> 30% reduction
+			+ runtime RTT w/ cache (w/ cleaner; 60s clean period): 48.1us (server-side latency: 51.7us) -> 25.3% reduction
+				* 6K hot keys, 1.6M total keys, 64K CM -> 2406 cached keys due to still small clean period
+				* 53% hot requests -> 42% cache hit rate -> expected RTT w/ cache:  74.4*0.58 + 13.7*0.37 = 48.2us
+				* x*0.58 + 13.7*0.42 = 48.1 -> x=73 -> 34% reduction
+	* Try ycsb workload (32 clients, 32 servers, 100M records, 32M queries, 50 hot threshold, 0.5 sampling ratio, 60s period)
+		* runtime RTT w/ cache: 380us (server-side latency not including packet receiving overhead: 80us)
+			- Reason: in our simulation testbed, multiple client/server threads are waiting for one physical NIC, which introduces resource contention and hence larger overhead of receiving packets; while in real scenario, one thread should be a physical machine with an individual NIC, i.e., no contention on hardware resource -> we should use one client thread <-> one server thread to test latency
+		* No thpt improvement (<10% cache hit rate -> most significant hot keys are not cached in switch)
+			- Reason: ycsb workload is not highly skewed -> very small cache hit rate under multi-thread scenario -> server is still the bottleneck
+			- TODO: retest w/ warmup phase
+			- TODO: we can tune Zipf parameter to generate synthetic workload by ycsb
+	* Try Zipf synthetic workload (32 clients, 32 servers, 100M records, 32M queries, 50 hot threshold, 0.5 sampling ratio, 15s period)
+		* 30% packets belonging to 600 hot keys -> 15.6% cache hit rate w/ 6000 cached keys -> only 54% throughput improvement
+			- Reason of low cache hit rate
+				+ Larger socket overhead due to one NIC listened by many threads -> longer cache population delay (us-level) 
+				+ Many false positives due to large clean period -> longer cache population delay (ms-level)
+				+ Many false negatives due to large hot threshold -> miss truly hot keys
+				+ Cache warmup overhead -> lose many opportunities of cache hits for hot keys
+			+ Consider smaller hot threshold and smaller clean period + NetCache parameters (64M records) -> FAIL
+				* hot_threshold = 10, sampling ratio = 0.5, clean period = 1s -> 22% cache hit rate -> still imbalance
+				* hot_threshold = 10, sampling ratio = 0.5, clean period = 5s -> 13% cache hit rate -> still imbalance
+				* hot_threshold = 10, sampling ratio = 0.5, first period = 1s, clean period = 5s -> 31% cache hit rate -> better but still limited improvement
 + cache a key -> clean CM -> test cache hit: SUCCESS
 	+ Issue: controller cannot receive CACHE_POP after server sends
 		* Possible reason 1: after opening too many file descriptors, controller and server cannot trasnmit packets -> FAIL
@@ -1003,25 +1022,7 @@
 				+ FarReach: 20 pkts w/ 50us, and 80 pkts w/ 20us
 				+ A little smaller avg latency, yet extremely smaller max/tail latency
 				+ Maybe similar normalized thpt under sufficient large input traffic -> we cannot use this baseline?
-	* Try ycsb workload (32 clients, 32 servers, 100M records, 32M queries, 50 hot threshold, 0.5 sampling ratio, 60s period)
-		* runtime RTT w/ cache: 380us (server-side latency not including packet receiving overhead: 80us)
-			- Reason: in our simulation testbed, multiple client/server threads are waiting for one physical NIC, which introduces resource contention and hence larger overhead of receiving packets; while in real scenario, one thread should be a physical machine with an individual NIC, i.e., no contention on hardware resource -> we should use one client thread <-> one server thread to test latency
-		* No thpt improvement (<10% cache hit rate -> most significant hot keys are not cached in switch)
-			- Reason: ycsb workload is not highly skewed -> very small cache hit rate under multi-thread scenario -> server is still the bottleneck
-			- TODO: retest w/ warmup phase
-			- TODO: we can tune Zipf parameter to generate synthetic workload by ycsb
-	* Try Zipf synthetic workload (32 clients, 32 servers, 100M records, 32M queries, 50 hot threshold, 0.5 sampling ratio, 15s period)
-		* 30% packets belonging to 600 hot keys -> 15.6% cache hit rate w/ 6000 cached keys -> only 54% throughput improvement
-			- NOTE: We must use server emulation as we target dynamic workload, i.e., hot keys cached in switch are changed in runtime
-			- Reason of low cache hit rate
-				+ Larger socket overhead due to one NIC listened by many threads -> longer cache population delay (us-level) 
-				+ Many false positives due to large clean period -> longer cache population delay (ms-level)
-				+ Many false negatives due to large hot threshold -> miss truly hot keys
-			+ Consider smaller hot threshold and smaller clean period + NetCache parameters (64M records) -> FAIL
-				* hot_threshold = 10, sampling ratio = 0.5, clean period = 1s -> 22% cache hit rate -> still imbalance
-				* hot_threshold = 10, sampling ratio = 0.5, clean period = 5s -> 13% cache hit rate -> still imbalance
-				* hot_threshold = 10, sampling ratio = 0.5, first period = 1s, clean period = 5s -> 31% cache hit rate -> better but still limited improvement
-+ Code change
++ Implement warmup phase for static workload
 	* Use PUTREQ instead of GETREQ to implement WARMUPREQ
 		- Issue: server cannot receive packet due to wrong hdrlen
 			+ Reason: default function of add_or_remove_header_tbl is remove_all
