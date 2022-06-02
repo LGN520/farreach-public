@@ -30,6 +30,8 @@ typedef ServerWorkerParam server_worker_param_t;
 RocksdbWrapper *db_wrappers = NULL;
 int * server_worker_udpsock_list = NULL;
 
+std::atomic<bool> server_dynamic_startflag(false);
+
 // Per-server popclient <-> one popserver in controller
 int * server_popclient_udpsock_list = NULL;
 concurrent_set_t * server_cached_keyset_list = NULL;
@@ -247,6 +249,11 @@ void *run_server_worker(void * param) {
 	CUR_TIME(t1);
 
 	packet_type_t pkt_type = get_packet_type(buf, recv_size);
+
+	if (workload_mode != 0 && server_dynamic_startflag == false && pkt_type != packet_type_t::WARMUPREQ) {
+		server_dynamic_startflag = true;
+	}
+
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
 			{

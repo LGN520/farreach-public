@@ -35,6 +35,33 @@ int IniparserWrapper::get_workload_mode() {
 	return tmp;
 }
 
+int IniparserWrapper::get_dynamic_periodnum() {
+	int tmp = iniparser_getint(ini, "global:dynamic_periodnum", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [global:dynamic_periodnum]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_dynamic_periodinterval() {
+	int tmp = iniparser_getint(ini, "global:dynamic_periodinterval", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [global:dynamic_periodinterval]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+const char *IniparserWrapper::get_dynamic_ruleprefix() {
+	const char *dynamic_ruleprefix = iniparser_getstring(ini, "global:dynamic_ruleprefix", nullptr);
+	if (dynamic_ruleprefix == nullptr) {
+		printf("Invalid entry of [global:dynamic_ruleprefix]\n");
+		exit(-1);
+	}
+	return dynamic_ruleprefix;
+}
+
 //uint32_t IniparserWrapper::get_max_vallen() {
 uint16_t IniparserWrapper::get_max_vallen() {
 	int tmp = iniparser_getint(ini, "global:max_vallen", -1);

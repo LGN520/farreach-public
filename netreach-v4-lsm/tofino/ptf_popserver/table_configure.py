@@ -110,11 +110,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
         #print "Get evictidx by approximate LRF"
         min_frequency = frequency_counters[0]
-        evictidx = 0
+        evictidx = sampled_idxes[0]
         for i in range(1, len(frequency_counters)):
             if min_frequency > frequency_counters[i]:
                 min_frequency = frequency_counters[i]
-                evictidx = i
+                evictidx = sampled_idxes[i]
 
         #print "Set validvalue[{}] = 3 for atomicity".format(evictidx)
         index = evictidx

@@ -241,20 +241,7 @@ bool SyntheticParserIterator::parsekv(const char* line, int linelen) {
 #endif
 	if (unlikely(key_end == nullptr)) return false;
 
-	std::string keystr(key_begin, key_end - key_begin);
-	uint32_t tmpkey = std::stoul(keystr);
-	uint16_t keyhihilo = 0;
-	uint16_t keyhihihi = 0;
-	memcpy((void *)&keyhihihi, (void *)&tmpkey, sizeof(uint16_t)); // lowest 2B -> keyhihihi
-	memcpy((void *)&keyhihilo, ((char *)&tmpkey)+2, sizeof(uint16_t)); // highest 2B -> keyhihilo
-	uint32_t keyhihi = (keyhihihi << 16) | keyhihilo;
-	//uint32_t keylolo = (2*keyhihi + 3) & 0xFFFFFFFF;
-	//uint32_t keylohi = (5*keyhihi + 7) & 0xFFFFFFFF;
-	//uint32_t keyhilo = (11*keyhihi + 13) & 0xFFFFFFFF;
-	uint32_t keylolo = 0;
-	uint32_t keylohi = 0;
-	uint32_t keyhilo = 0;
-	_keys[_maxidx+1] = Key(keylolo, keylohi, keyhilo, keyhihi);
+	_keys[_maxidx+1] = extract_key(key_begin, key_end - key_begin);
 
 #ifdef MINIMUM_WORKLOAD_FILESIZE
 	char val_buf[Val::SWITCH_MAX_VALLEN];
@@ -289,20 +276,7 @@ bool SyntheticParserIterator::parsekey(const char* line, int linelen) {
 #endif
 	if (unlikely(key_end == nullptr)) return false;
 
-	std::string keystr(key_begin, key_end - key_begin);
-	uint32_t tmpkey = std::stoul(keystr);
-	uint16_t keyhihilo = 0;
-	uint16_t keyhihihi = 0;
-	memcpy((void *)&keyhihihi, (void *)&tmpkey, sizeof(uint16_t)); // lowest 2B -> keyhihihi
-	memcpy((void *)&keyhihilo, ((char *)&tmpkey)+2, sizeof(uint16_t)); // highest 2B -> keyhihilo
-	uint32_t keyhihi = (keyhihihi << 16) | keyhihilo;
-	//uint32_t keylolo = (2*keyhihi + 3) & 0xFFFFFFFF;
-	//uint32_t keylohi = (5*keyhihi + 7) & 0xFFFFFFFF;
-	//uint32_t keyhilo = (11*keyhihi + 13) & 0xFFFFFFFF;
-	uint32_t keylolo = 0;
-	uint32_t keylohi = 0;
-	uint32_t keyhilo = 0;
-	_keys[_maxidx+1] = Key(keylolo, keylohi, keyhilo, keyhihi);
+	_keys[_maxidx+1] = extract_key(key_begin, key_end - key_begin);
 
 	_vals[_maxidx+1] = Val();
 	_lines[_maxidx+1] = std::string(line, linelen);

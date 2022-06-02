@@ -13,6 +13,7 @@
 #include <netinet/in.h> // struct sockaddr_in
 #include <arpa/inet.h> // inetaddr conversion
 #include <unistd.h>
+#include <set>
 //#include <sys/time.h> // struct timeval
 
 #include "helper.h"
@@ -22,6 +23,7 @@
 #include "crc32.h"
 #include "latency_helper.h"
 #include "socket_helper.h"
+#include "dynamic_rulemap.h"
 
 #ifdef USE_YCSB
 #include "workloadparser/ycsb_parser.h"
@@ -72,6 +74,8 @@ netreach_key_t generate_endkey(netreach_key_t &startkey) {
 	return endkey;
 }
 
+dynamic_rulemap_t * dynamic_rulemap_ptr = NULL;
+
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
 std::atomic<size_t> finish_threads(0);
@@ -79,7 +83,19 @@ std::atomic<size_t> finish_threads(0);
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
 
+	// prepare for clients
+	if (workload_mode != 0) {
+		dynamic_rulemap_ptr = new dynamic_rulemap_t(dynamic_periodnum, dynamic_ruleprefix);
+		INVARIANT(dynamic_rulemap_ptr != NULL);
+		dynamic_rulemap_ptr->nextperiod();
+	}
+
 	run_benchmark();
+
+	if (dynamic_rulemap_ptr != NULL) {
+		delete dynamic_rulemap_ptr;
+		dynamic_rulemap_ptr = NULL;
+	}
 
 	exit(0);
 }
@@ -113,8 +129,37 @@ void run_benchmark() {
 	while (ready_threads < client_num) sleep(1);
 
 	running = true;
-	while (finish_threads < client_num) sleep(1);
-	COUT_THIS("[client] all clients finish!");
+	if (workload_mode == 0) { // send all workloads in static mode
+		while (finish_threads < client_num) sleep(1);
+		COUT_THIS("[client] all clients finish!");
+	}
+	else { // send enough periods in dynamic mode
+		int sleep_usecs = 1000; // 1000us = 1ms
+		int interval_usecs = dynamic_periodinterval * 1000 * 1000; // 10s
+		struct timespec dynamic_t1, dynamic_t2, dynamic_t3;
+		for (int periodidx = 0; periodidx < dynamic_periodnum; periodidx++) {
+			CUR_TIME(dynamic_t1);
+			while (true) { // wait for every 10 secs
+				CUR_TIME(dynamic_t2);
+				DELTA_TIME(dynamic_t2, dynamic_t1, dynamic_t3);
+				if (GET_MICROSECOND(dynamic_t3) >= interval_usecs) {
+					break;
+				}
+				else {
+					usleep(sleep_usecs);
+				}
+			}
+
+			if (periodidx != dynamic_periodnum - 1) { // not the last period
+				COUT_VAR(periodidx);
+				dynamic_rulemap_ptr->nextperiod(); // change key popularity
+			}
+			else {
+				break;
+			}
+		}
+	}
+	running = false;
 
 	/* Process statistics */
 	COUT_THIS("[client] processing statistics");
@@ -135,7 +180,6 @@ void run_benchmark() {
 	dump_latency(wait_latency_list, "wait_latency_list");
 	COUT_THIS("Client-side total pktcnt: " << req_latency_list.size());
 
-	running = false; // After processing statistics
 	COUT_THIS("Finish dumping statistics!")
 	void *status;
 	for (size_t i = 0; i < client_num; i++) {
@@ -205,6 +249,10 @@ void *run_fg(void *param) {
 		struct timespec req_t1, req_t2, req_t3, rsp_t1, rsp_t2, rsp_t3, final_t3, wait_t1, wait_t2, wait_t3;
 		while (true) {
 			tmpkey = iter->key();
+			if (workload_mode != 0) { // change key popularity if necessary
+				dynamic_rulemap_ptr->trymap(tmpkey);
+			}
+
 			if (iter->type() == uint8_t(packet_type_t::GETREQ)) { // get
 				CUR_TIME(req_t1);
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);

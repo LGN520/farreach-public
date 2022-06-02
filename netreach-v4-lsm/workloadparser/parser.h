@@ -33,4 +33,6 @@ class ParserIterator {
 		virtual void closeiter() = 0;
 };
 
+netreach_key_t extract_key(const char *buf, int buflen);
+
 #endif

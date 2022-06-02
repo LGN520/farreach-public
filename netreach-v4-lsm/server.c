@@ -97,6 +97,10 @@ void transaction_main() {
 	if (ret) {
 		COUT_N_EXIT("Error of launching reflector.worker: " << ret);
 	}
+	// used under dynamic workload
+	int totalsecs = dynamic_periodnum * dynamic_periodinterval;
+	size_t persec_perserver_thpts[totalsecs][server_num];
+	struct timespec dynamic_t1, dynamic_t2, dynamic_t3;
 
 	// launch popclients
 	pthread_t popclient_threads[server_num];
@@ -150,9 +154,36 @@ void transaction_main() {
 
 	signal(SIGTERM, kill); // Set for main thread (kill -15)
 
-	while (!killed) {
-		sleep(1);
+	if (workload_mode == 0) { // wait for manual close in static mode
+		while (!killed) {
+			sleep(1);
+		}
 	}
+	else { // wait for all periods in dynamic mode
+		while (!server_dynamic_startflag) {} // wait for the first pkt globally
+
+		int sleep_usecs = 1000; // 1000us = 1ms
+		int onesec_usecs = 1 * 1000 * 1000; // 1s
+		for (int secidx = 0; secidx < totalsecs; secidx++) {
+			CUR_TIME(dynamic_t1);
+			while (true) { // wait for every 1 sec
+				CUR_TIME(dynamic_t2);
+				DELTA_TIME(dynamic_t2, dynamic_t1, dynamic_t3);
+				if (GET_MICROSECOND(dynamic_t3) >= onesec_usecs) {
+					break;
+				}
+				else {
+					usleep(sleep_usecs);
+				}
+			}
+
+			// NOTE: here we save accumulated throughput -> get per-second throughput later
+			for (size_t i = 0; i < server_num; i++) {
+				persec_perserver_thpts[secidx][i] = server_worker_params[i].throughput;
+			}
+		}
+	}
+	transaction_running = false;
 
 	/* Processing Statistics */
 	//COUT_THIS("Server-side aggregate throughput: " << receiver_param.overall_thpt);
@@ -177,7 +208,7 @@ void transaction_main() {
 	}
 	dump_latency(worker_latency_list, "worker_latency_list");
 	printf("Per-server pktcnt: ");
-	for (size_t  i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < server_num; i++) {
 		if (i != server_num - 1) {
 			printf("%d ", worker_pktcnt_list[i]);
 		}
@@ -186,7 +217,29 @@ void transaction_main() {
 		}
 	}
 
-	transaction_running = false;
+	if (workload_mode != 0) {
+		size_t thpt_history[server_num];
+		memset(thpt_history, 0, sizeof(size_t) * server_num);
+		for (int secidx = 0; secidx < totalsecs; secidx++) {
+			for (size_t i = 0; i < server_num; i++) {
+				size_t tmp_thpt = persec_perserver_thpts[secidx][i];
+				persec_perserver_thpts[secidx][i] = tmp_thpt - thpt_history[i];
+				thpt_history[i] = tmp_thpt;
+			}
+		}
+		for (int secidx = 0; secidx < totalsecs; secidx++) {
+			printf("sec[%d] per-server pktcnt: ", secidx);
+			for (size_t i = 0; i < server_num; i++) {
+				if (i != server_num - 1) {
+					printf("%d ", persec_perserver_thpts[secidx][i]);
+				}
+				else {
+					printf("%d\n", persec_perserver_thpts[secidx][i]);
+				}
+			}
+		}
+	}
+
 	void *status;
 	printf("wait for server.workers\n");
 	for (size_t i = 0; i < server_num; i++) {

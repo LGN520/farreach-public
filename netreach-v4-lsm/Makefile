@@ -130,6 +130,10 @@ DEPS += io_helper.d
 CLEAN += io_helper.o
 UTILS_OBJECTS += io_helper.o
 
+DEPS += dynamic_rulemap.d
+CLEAN += dynamic_rulemap.o
+UTILS_OBJECTS += dynamic_rulemap.o
+
 ##############################################################################
 
 CPPFLAGS += $(INCDIR)

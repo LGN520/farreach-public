@@ -18,6 +18,9 @@ class IniparserWrapper {
 		//uint32_t get_max_vallen();
 		uint16_t get_max_vallen();
 		uint32_t get_load_batch_size();
+		int get_dynamic_periodnum();
+		int get_dynamic_periodinterval();
+		const char *get_dynamic_ruleprefix();
 
 		// client
 		size_t get_client_num();

@@ -239,13 +239,8 @@ bool YcsbParserIterator::parsekv(const char* line, int linelen) {
 	key_begin += 4; // At the first character of key
 	key_end = strchr(key_begin, ' '); // At the end of key
 	if (unlikely(key_end == nullptr)) return false;
-	std::string keystr(key_begin, key_end - key_begin);
-	uint64_t tmpkey = std::stoull(keystr);
-	uint32_t keyhilo = 0;
-	uint32_t keyhihi = 0;
-	memcpy((void *)&keyhilo, (void *)&tmpkey, sizeof(uint32_t)); // lowest 4B -> keyhilo
-	memcpy((void *)&keyhihi, ((char *)&tmpkey)+4, sizeof(uint32_t)); // highest 4B -> keyhihi
-	_keys[_maxidx+1] = Key(0, 0, keyhilo, keyhihi);
+
+	_keys[_maxidx+1] = extract_key(key_begin, key_end - key_begin);
 
 #ifdef MINIMUM_WORKLOAD_FILESIZE
 	char val_buf[Val::SWITCH_MAX_VALLEN];
@@ -281,13 +276,8 @@ bool YcsbParserIterator::parsekey(const char* line, int linelen) {
 	key_begin += 4; // At the first character of key
 	key_end = strchr(key_begin, ' '); // At the end of key
 	if (unlikely(key_end == nullptr)) return false;
-	std::string keystr(key_begin, key_end - key_begin);
-	uint64_t tmpkey = std::stoull(keystr);
-	uint32_t keyhilo = 0;
-	uint32_t keyhihi = 0;
-	memcpy((void *)&keyhilo, (void *)&tmpkey, sizeof(uint32_t)); // lowest 4B -> keyhilo
-	memcpy((void *)&keyhihi, ((char *)&tmpkey)+4, sizeof(uint32_t)); // highest 4B -> keyhihi
-	_keys[_maxidx+1] = Key(0, 0, keyhilo, keyhihi);
+
+	_keys[_maxidx+1] = extract_key(key_begin, key_end - key_begin);
 
 	_vals[_maxidx+1] = Val();
 	_lines[_maxidx+1] = std::string(line, linelen);

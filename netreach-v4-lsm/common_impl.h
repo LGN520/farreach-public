@@ -66,6 +66,9 @@ const size_t rate_limit_period = 1000 * 1000; // 1s
 // global
 const char *workload_name = nullptr;
 int workload_mode = 0;
+int dynamic_periodnum = 0;
+int dynamic_periodinterval = 0;
+const char *dynamic_ruleprefix = nullptr;
 
 // client
 size_t client_num;
@@ -171,6 +174,12 @@ inline void parse_ini(const char* config_file) {
 	workload_mode = ini.get_workload_mode();
 	printf("workload_name: %s\n", workload_name);
 	COUT_VAR(workload_mode);
+	dynamic_periodnum = ini.get_dynamic_periodnum();
+	dynamic_periodinterval = ini.get_dynamic_periodinterval();
+	dynamic_ruleprefix = ini.get_dynamic_ruleprefix();
+	COUT_VAR(dynamic_periodnum);
+	COUT_VAR(dynamic_periodinterval);
+	printf("dynamic_ruleprefix: %s\n", dynamic_ruleprefix);
 	val_t::MAX_VALLEN = ini.get_max_vallen();
 	ParserIterator::load_batch_size = ini.get_load_batch_size();
 	COUT_VAR(val_t::MAX_VALLEN);
