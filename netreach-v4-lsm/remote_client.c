@@ -128,6 +128,12 @@ void run_benchmark() {
 	COUT_THIS("[client] prepare clients ...");
 	while (ready_threads < client_num) sleep(1);
 
+	// used for dynamic workload
+	int persec_totalthpt[dynamic_periodnum * dynamic_periodinterval];
+	memset(persec_totalthpt, 0, sizeof(int) * dynamic_periodnum * dynamic_periodinterval);
+	int onesec_usecs = 1 * 1000 * 1000; // 1s
+	int history_thpt = 0;
+
 	running = true;
 	if (workload_mode == 0) { // send all workloads in static mode
 		while (finish_threads < client_num) sleep(1);
@@ -142,7 +148,20 @@ void run_benchmark() {
 			while (true) { // wait for every 10 secs
 				CUR_TIME(dynamic_t2);
 				DELTA_TIME(dynamic_t2, dynamic_t1, dynamic_t3);
-				if (GET_MICROSECOND(dynamic_t3) >= interval_usecs) {
+
+				// wait for every 1 sec to update thpt
+				int t3_usecs = int(GET_MICROSECOND(dynamic_t3));
+				int onesec_idx = t3_usecs / onesec_usecs;
+				if (onesec_idx > 0 && persec_totalthpt[periodidx*dynamic_periodinterval + onesec_idx - 1] == 0) {
+					int tmp_totalthpt = 0;
+					for (size_t i = 0; i < client_num; i++) {
+						tmp_totalthpt += fg_params[i].req_latency_list.size();
+					}
+					persec_totalthpt[periodidx*dynamic_periodinterval + onesec_idx - 1] = tmp_totalthpt - history_thpt;
+					history_thpt = tmp_totalthpt;
+				}
+
+				if (t3_usecs >= interval_usecs) {
 					break;
 				}
 				else {
@@ -179,6 +198,13 @@ void run_benchmark() {
 	dump_latency(rsp_latency_list, "rsp_latency_list");
 	dump_latency(wait_latency_list, "wait_latency_list");
 	COUT_THIS("Client-side total pktcnt: " << req_latency_list.size());
+
+	if (workload_mode != 0) {
+		printf("per-sec client total thpt:\n");
+		for (size_t i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+			printf("sec[%d] client total thpt: %d\n", int(i), int(persec_totalthpt[i]));
+		}
+	}
 
 	COUT_THIS("Finish dumping statistics!")
 	void *status;

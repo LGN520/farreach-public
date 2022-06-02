@@ -14,4 +14,5 @@ zipf = 0.99
 period_num = 6
 # change popularity of 200 keys in each period
 evict_num = 200
+#evict_num = 10000
 path_hotin = "synthetic-hotin.out"

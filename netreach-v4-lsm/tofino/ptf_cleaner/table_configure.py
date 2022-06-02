@@ -72,7 +72,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #first_period = 1
         #clean_period = 5
         #is_first = True
-        clean_period = 1
+        #clean_period = 1 # for threshold = 50
+        clean_period = 0.2 # for threshold = 10
         while True:
             #if is_first:
             #    time.sleep(first_period)
@@ -80,12 +81,12 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             #else:
             #    time.sleep(clean_period)
             time.sleep(clean_period)
-            print "Start to reset all cm regs"
+            #print "Start to reset all cm regs"
             self.client.register_reset_all_cm1_reg(self.sess_hdl, self.dev_tgt)
             self.client.register_reset_all_cm2_reg(self.sess_hdl, self.dev_tgt)
             self.client.register_reset_all_cm3_reg(self.sess_hdl, self.dev_tgt)
             self.client.register_reset_all_cm4_reg(self.sess_hdl, self.dev_tgt)
 
             self.conn_mgr.complete_operations(self.sess_hdl)
-            print "Finish to reset all cm regs"
+            #print "Finish to reset all cm regs"
         self.conn_mgr.client_cleanup(self.sess_hdl) # close session
