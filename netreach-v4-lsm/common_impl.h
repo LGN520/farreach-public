@@ -297,7 +297,8 @@ inline void parse_ini(const char* config_file) {
 	RUN_SPLIT_DIR(client_workload_dir, workload_name, int(client_num));
 	max_sending_rate *= server_num;
 	per_client_per_period_max_sending_rate = max_sending_rate / client_num / (1 * 1000 * 1000 / rate_limit_period);
-	perserver_keyrange = 4ll*1024ll*1024ll*1024ll / int64_t(server_num); // 2^32 / server_num
+	//perserver_keyrange = 4ll*1024ll*1024ll*1024ll / int64_t(server_num); // 2^32 / server_num
+	perserver_keyrange = 64*1024 / server_num; // 2^16 / server_num
 	printf("raw_load_workload_filename for loading phase: %s\n", raw_load_workload_filename);
 	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);
 	printf("raw_warmup_workload_filename for warmup phase: %s\n", raw_warmup_workload_filename);

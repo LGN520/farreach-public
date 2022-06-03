@@ -183,7 +183,11 @@ void *run_loader(void * param) {
 		// split current batch into different databases by hash partition
 		std::map<uint16_t, std::pair<std::vector<netreach_key_t>, std::vector<val_t>>> tmpmap;
 		for (size_t i = 0; i < tmpmaxidx; i++) {
+#ifdef USE_HASH
 			uint16_t tmp_worker_id = iter->keys()[i].get_hashpartition_idx(partition_num, server_num);
+#elif defined USE_RANGE
+			uint16_t tmp_worker_id = iter->keys()[i].get_rangepartition_idx(server_num);
+#endif
 			if (tmpmap.find(tmp_worker_id) == tmpmap.end()) {
 				std::vector<netreach_key_t> tmpkeyvec;
 				std::vector<val_t> tmpvalvec;

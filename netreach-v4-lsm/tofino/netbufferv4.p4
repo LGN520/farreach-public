@@ -4,7 +4,7 @@
 #include "tofino/primitives.p4"
 
 // Uncomment it if support range query, or comment it otherwise
-//#define RANGE_SUPPORT
+#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
@@ -124,11 +124,11 @@
 #define LOOKUP_ENTRY_COUNT 32768
 
 #define MAX_SERVER_NUM 128
-// RANGE_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM
+// RANGE_PARTITION_ENTRY_NUM = 6 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
 #define RANGE_PARTITION_ENTRY_NUM 1024
-// RANGE_PARTITION_FOR_SCAN_ENTRY_NUM = (MAX_SERVER_NUM+1) * MAX_SERVER_NUM/2
-#define RANGE_PARTITION_FOR_SCAN_ENTRY_NUM 16384
-// HASH_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM
+// RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM = 1 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
+#define RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM 1024
+// HASH_PARTITION_ENTRY_NUM = 5 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
 #define HASH_PARTITION_ENTRY_NUM 1024
 
 // hash partition range
@@ -169,20 +169,18 @@ control ingress {
 	/* if meta.need_recirculate == 1 */
 
 	// Stage 1
-	apply(recirculate_tbl); // recirculate for atomic snapshot
+	apply(recirculate_tbl); // recirculate for atomic snapshot (NOTE: recirculate will collide with modifying egress port)
 
 	/* else if meta.need_recirculate == 0 */
 
 	// Stage 1
-#ifdef RANGE_SUPPORT
-	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
-#else
-	apply(hash_for_partition_tbl); // for hash partition
+#ifndef RANGE_SUPPORT
+	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif
 
 	// Stage 2 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 #ifdef RANGE_SUPPORT
-	apply(range_partition_for_scan_tbl); // for range partition (SCAN)
+	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
 #else
 	apply(hash_partition_tbl);
 #endif
@@ -190,6 +188,9 @@ control ingress {
 	apply(hash_for_cm1_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
 
 	// Stage 3
+#ifdef RANGE_SUPPORT
+	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
+#endif
 	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
@@ -227,7 +228,7 @@ control egress {
 
 	// Stage 1
 #ifdef RANGE_SUPPORT
-	apply(is_last_scansplit);
+	apply(is_last_scansplit_tbl);
 #endif
 	apply(is_hot_tbl);
 	apply(access_cache_frequency_tbl);

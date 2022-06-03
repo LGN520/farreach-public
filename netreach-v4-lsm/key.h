@@ -67,6 +67,7 @@ class Key {
   uint32_t serialize(char *buf, uint32_t buflen) volatile;
 
   uint32_t get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum);
+  uint32_t get_rangepartition_idx(uint32_t server_num);
 
 #ifdef LARGE_KEY
   uint32_t keylolo;

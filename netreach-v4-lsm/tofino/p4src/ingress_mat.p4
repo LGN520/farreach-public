@@ -126,39 +126,10 @@ table recirculate_tbl {
 /*action reset_is_wrong_pipeline() {
 	modify_field(inswitch_hdr.is_wrong_pipeline, 0);
 }*/
-#ifdef RANGE_SUPPORT
-/*action range_partition(udpport, eport, is_wrong_pipeline) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
-}*/
-action range_partition(udpport, eport) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-@pragma stage 1
-table range_partition_tbl {
-	reads {
-		op_hdr.optype: exact;
-		//op_hdr.keyhihi: range;
-		op_hdr.keyhihihi: range;
-		ig_intr_md.ingress_port: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		range_partition;
-		//reset_is_wrong_pipeline;
-		nop;
-	}
-	//default_action: reset_is_wrong_pipeline();
-	default_action: nop();
-	size: RANGE_PARTITION_ENTRY_NUM;
-}
-#else
+#ifndef RANGE_SUPPORT
 action hash_for_partition() {
 	modify_field_with_hash_based_offset(meta.hashval_for_partition, 0, hash_calc, PARTITION_COUNT);
 }
-
 @pragma stage 1
 table hash_for_partition_tbl {
 	reads {
@@ -177,29 +148,32 @@ table hash_for_partition_tbl {
 // Stage 2
 
 #ifdef RANGE_SUPPORT
-action range_partition_for_scan(udpport, eport, max_scannum) {
+/*action range_partition(udpport, eport, is_wrong_pipeline) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(split_hdr.cur_scanidx, 0);
-	modify_field(split_hdr.max_scannum, max_scannum);
+	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
+}*/
+action range_partition(udpport, eport) {
+	modify_field(udp_hdr.dstPort, udpport);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
-
 @pragma stage 2
-table range_partition_for_scan_tbl {
+table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
 		//op_hdr.keyhihi: range;
-		//scan_hdr.keyhihi: range;
 		op_hdr.keyhihihi: range;
-		scan_hdr.keyhihihi: range;
+		//ig_intr_md.ingress_port: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {
-		range_partition_for_scan;
+		range_partition;
+		//reset_is_wrong_pipeline;
 		nop;
 	}
+	//default_action: reset_is_wrong_pipeline();
 	default_action: nop();
-	size: RANGE_PARTITION_FOR_SCAN_ENTRY_NUM;
+	size: RANGE_PARTITION_ENTRY_NUM;
 }
 #else
 /*action hash_partition(udpport, eport, is_wrong_pipeline) {
@@ -211,7 +185,6 @@ action hash_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
-
 @pragma stage 2
 table hash_partition_tbl {
 	reads {
@@ -278,6 +251,29 @@ table hash_for_cm1_tbl {
 }
 
 // Stage 3
+
+#ifdef RANGE_SUPPORT
+action range_partition_for_scan_endkey(last_udpport_plus_one) {
+	modify_field(split_hdr.cur_scanidx, 0);
+	subtract(split_hdr.max_scannum, last_udpport_plus_one, udp_hdr.dstPort);
+}
+
+@pragma stage 3
+table range_partition_for_scan_endkey_tbl {
+	reads {
+		op_hdr.optype: exact;
+		//scan_hdr.keyhihi: range;
+		scan_hdr.keyhihihi: range;
+		meta.need_recirculate: exact;
+	}
+	actions {
+		range_partition_for_scan_endkey;
+		nop;
+	}
+	default_action: nop();
+	size: RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM;
+}
+#endif
 
 action hash_for_cm2() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm2, 0, hash_calc2, CM_BUCKET_COUNT);

@@ -66,7 +66,9 @@ fp_ports.append(dst_fpport)
 #fp_ports = ["2/0", "3/0"]
 
 # Set it as True if support range, or False otherwise
-RANGE_SUPPORT = False
+# NOTE: update RANGE_SUPPORT in netbufferv4 accordingly
+#RANGE_SUPPORT = False
+RANGE_SUPPORT = True
 
 # 0b0001
 PUTREQ = 0x01

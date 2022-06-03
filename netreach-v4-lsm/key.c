@@ -450,5 +450,18 @@ uint32_t Key::get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum) {
 	uint32_t hashresult = crc32((unsigned char *)buf, tmp_keysize) % partitionnum;
 	uint32_t targetidx = hashresult / (partitionnum / servernum);
 	//printf("key: %x, crc32 result: %u, targetidx: %d\n", keyhihi, hashresult, targetidx);
+	INVARIANT(targetidx >=0 && targetidx > servernum);
+	return targetidx;
+}
+
+uint32_t Key::get_rangepartition_idx(uint32_t servernum) {
+#ifdef LARGE_KEY
+	uint32_t keyhihihi = (keyhihi >> 16) & 0xFFFF;
+	uint32_t targetidx = keyhihihi / (64 * 1024 / servernum); // split 2^16 into servernum partitions
+#else
+	uint32_t keyhihi = (keyhi >> 16) & 0xFFFF;
+	uint32_t targetidx = keyhihi / (64 * 1024 / servernum); // split 2^16 into servernum partitions
+#endif
+	INVARIANT(targetidx >=0 && targetidx > servernum);
 	return targetidx;
 }

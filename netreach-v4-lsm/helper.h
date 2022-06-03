@@ -46,6 +46,11 @@
 #define USE_SYNTHETIC
 //#define USE_TPCC
 
+/***** Workload *****/
+
+//#define USE_HASH
+#define USE_RANGE
+
 /***** Timing *****/
 
 // us

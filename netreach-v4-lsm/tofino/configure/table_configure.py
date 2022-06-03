@@ -365,44 +365,44 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             if RANGE_SUPPORT:
                 # # Table: range_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
-                # Table: range_partition_tbl (default: nop; size <= 8 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 6 * 128)
                 print "Configuring range_partition_tbl"
                 #key_range_per_server = pow(2, 32) / server_num
                 key_range_per_server = pow(2, 16) / server_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ]:
-                    for iport in self.devPorts:
-                        ##key_start = -pow(2, 31) # [-2^31, 2^31-1]
-                        #key_start = 0 # [0, 2^32-1]
-                        key_start = 0 # [0, 2^16-1]
-                        for i in range(server_num):
-                            if i == server_num - 1:
-                                ##key_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
-                                #key_end = pow(2, 32) - 1
-                                key_end = pow(2, 16) - 1
-                            else:
-                                key_end = key_start + key_range_per_server - 1
-                            # NOTE: both start and end are included
-                            matchspec0 = netbufferv4_range_partition_tbl_match_spec_t(\
-                                    op_hdr_optype = tmpoptype,
-                                    #op_hdr_keyhihi_start = convert_u32_to_i32(key_start),
-                                    #op_hdr_keyhihi_end = convert_u32_to_i32(key_end),
-                                    op_hdr_keyhihihi_start = convert_u16_to_i16(key_start),
-                                    op_hdr_keyhihihi_end = convert_u16_to_i16(key_end),
-                                    ig_intr_md_ingress_port = iport,
-                                    meta_need_recirculate = 0)
-                            # Forward to the egress pipeline of server
-                            eport = self.devPorts[1]
-                            #if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
-                            #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                            #            server_port + i, eport, 0)
-                            #else: # in wrong pipeline
-                            #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                            #            server_port + i, eport, 1)
-                            actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                                    server_port + i, eport)
-                            self.client.range_partition_tbl_table_add_with_range_partition(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                            key_start = key_end + 1
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ]:
+                    #for iport in self.devPorts:
+                    ##key_start = -pow(2, 31) # [-2^31, 2^31-1]
+                    #key_start = 0 # [0, 2^32-1]
+                    key_start = 0 # [0, 2^16-1]
+                    for i in range(server_num):
+                        if i == server_num - 1:
+                            ##key_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
+                            #key_end = pow(2, 32) - 1
+                            key_end = pow(2, 16) - 1
+                        else:
+                            key_end = key_start + key_range_per_server - 1
+                        # NOTE: both start and end are included
+                        matchspec0 = netbufferv4_range_partition_tbl_match_spec_t(\
+                                op_hdr_optype = tmpoptype,
+                                #op_hdr_keyhihi_start = convert_u32_to_i32(key_start),
+                                #op_hdr_keyhihi_end = convert_u32_to_i32(key_end),
+                                op_hdr_keyhihihi_start = convert_u16_to_i16(key_start),
+                                op_hdr_keyhihihi_end = convert_u16_to_i16(key_end),
+                                #ig_intr_md_ingress_port = iport,
+                                meta_need_recirculate = 0)
+                        # Forward to the egress pipeline of server
+                        eport = self.devPorts[1]
+                        #if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
+                        #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                        #            server_port + i, eport, 0)
+                        #else: # in wrong pipeline
+                        #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                        #            server_port + i, eport, 1)
+                        actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                                server_port + i, eport)
+                        self.client.range_partition_tbl_table_add_with_range_partition(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        key_start = key_end + 1
             else:
                 # Table: hash_for_partition_tbl (default: nop; size: 5)
                 print "Configuring hash_for_partition_tbl"
@@ -416,50 +416,30 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 2
 
             if RANGE_SUPPORT:
-                # Table: range_partition_for_scan_tbl (default: nop; size <= 64 * 129)
+                # Table: range_partition_for_scan_endkey_tbl (default: nop; size <= 1 * 128)
                 # TODO: limit max_scannum <= constant (e.g., 32)
-                print "Configuring range_partition_for_scan_tbl"
-                #key_range_per_server = pow(2, 32) / server_num
+                print "Configuring range_partition_for_scan_endkey_tbl"
                 key_range_per_server = pow(2, 16) / server_num
-                #for iport in self.devPorts:
-                ##startkey_start = -pow(2, 31) # [-2^31, 2^31-1]
-                #startkey_start = 0 # [0, 2^32-1]
-                startkey_start = 0 # [0, 2^16-1]
+                endkey_start = 0 # [0, 2^16-1]
                 for i in range(server_num):
                     if i == server_num - 1:
-                        ##startkey_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
-                        #startkey_end = pow(2, 32) - 1
-                        startkey_end = pow(2, 16) - 1
+                        ##endkey_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
+                        #endkey_end = pow(2, 32) - 1
+                        endkey_end = pow(2, 16) - 1
                     else:
-                        startkey_end = startkey_start + key_range_per_server - 1
-                    endkey_start = startkey_start
-                    for j in range(i, server_num):
-                        if j == server_num - 1:
-                            ##endkey_end = pow(2, 31) - 1
-                            #endkey_end = pow(2, 32) - 1
-                            endkey_end = pow(2, 16) - 1
-                        else:
-                            endkey_end = endkey_start + key_range_per_server - 1
-                        # NOTE: both start and end are included
-                        matchspec0 = netbufferv4_range_partition_for_scan_tbl_match_spec_t(\
-                                op_hdr_optype = SCANREQ,
-                                #op_hdr_keyhihi_start = convert_u32_to_i32(startkey_start),
-                                #op_hdr_keyhihi_end = convert_u32_to_i32(startkey_end),
-                                #scan_hdr_keyhihi_start = convert_u32_to_i32(endkey_start),
-                                #scan_hdr_keyhihi_end = convert_u32_to_i32(endkey_end),
-                                op_hdr_keyhihihi_start = convert_u32_to_i32(startkey_start),
-                                op_hdr_keyhihihi_end = convert_u32_to_i32(startkey_end),
-                                scan_hdr_keyhihihi_start = convert_u32_to_i32(endkey_start),
-                                scan_hdr_keyhihihi_end = convert_u32_to_i32(endkey_end),
-                                meta_need_recirculate = 0)
-                        # Forward to the egress pipeline of server
-                        # serveridx = i to j
-                        actnspec0 = netbufferv4_range_partition_for_scan_action_spec_t(\
-                                server_port + i, self.devPorts[1], j-i+1)
-                        self.client.range_partition_for_scan_tbl_table_add_with_range_partition_for_scan(\
-                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                        endkey_start = endkey_end + 1
-                    startkey_start = startkey_end + 1
+                        endkey_end = endkey_start + key_range_per_server - 1
+                    # NOTE: both start and end are included
+                    matchspec0 = netbufferv4_range_partition_for_scan_endkey_tbl_match_spec_t(\
+                            op_hdr_optype = SCANREQ,
+                            scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
+                            scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end),
+                            meta_need_recirculate = 0)
+                    last_udpport_plus_one = server_port + i + 1
+                    actnspec0 = netbufferv4_range_partition_for_scan_endkey_action_spec_t(last_udpport_plus_one)
+                    # set cur_scanidx = 0; set max_scannum = last_udpport_plus_one - udp_hdr.dstPort (first_udpport)
+                    self.client.range_partition_for_scan_endkey_tbl_table_add_with_range_partition_for_scan_endkey(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                    endkey_start = endkey_end + 1
             else:
                 # # Table: hash_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
                 # Table: hash_partition_tbl (default: nop; size <= 5 * 128)

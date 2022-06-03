@@ -23,7 +23,7 @@ table process_scanreq_split_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: MAX_SERVERNUM;
+	size: MAX_SERVER_NUM;
 }
 /*action process_cloned_scanreq_split(eport, server_sid) {
 	add_to_field(udp_hdr.dstPort, 1);
@@ -47,7 +47,7 @@ table process_cloned_scanreq_split_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: MAX_SERVERNUM;
+	size: MAX_SERVER_NUM;
 }
 #endif
 
