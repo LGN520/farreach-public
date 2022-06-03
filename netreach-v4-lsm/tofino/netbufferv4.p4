@@ -217,6 +217,12 @@ control egress {
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
 	apply(access_cm4_tbl);
+
+	// Stage 1
+	apply(is_hot_tbl);
+	apply(access_cache_frequency_tbl);
+	apply(access_validvalue_tbl);
+	apply(access_seq_tbl);
 #ifdef RANGE_SUPPORT
 	if (pkt_is_e2e_mirrored) {
 		apply(process_cloned_scanreq_split_tbl);
@@ -226,18 +232,12 @@ control egress {
 	}
 #endif
 
-	// Stage 1
-#ifdef RANGE_SUPPORT
-	apply(is_last_scansplit_tbl);
-#endif
-	apply(is_hot_tbl);
-	apply(access_cache_frequency_tbl);
-	apply(access_validvalue_tbl);
-	apply(access_seq_tbl);
-
 	// Stage 2
 	apply(access_latest_tbl);
 	apply(save_client_udpport_tbl);
+#ifdef RANGE_SUPPORT
+	apply(is_last_scansplit_tbl);
+#endif
 
 	// Stage 3
 	apply(access_deleted_tbl);

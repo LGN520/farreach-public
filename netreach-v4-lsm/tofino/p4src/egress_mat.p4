@@ -1,79 +1,6 @@
 /* Ingress Processing (Normal Operation) */
 
-// Stage 0
-
-#ifdef RANGE_SUPPORT
-/*action process_scanreq_split(eport, server_sid) {
-	modify_field(eg_intr_md.egress_port, eport);
-	modify_field(meta.server_sid, server_sid); // clone to server for SCANREQ_SPLIT
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
-}*/
-action process_scanreq_split(server_sid) {
-	modify_field(meta.server_sid, server_sid); // clone to server for SCANREQ_SPLIT
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
-}
-@pragma stage 0
-table process_scanreq_split_tbl {
-	reads {
-		op_hdr.optype: exact;
-		udp_hdr.dstPort: exact;
-	}
-	actions {
-		process_scanreq_split;
-		nop;
-	}
-	default_action: nop();
-	size: MAX_SERVER_NUM;
-}
-/*action process_cloned_scanreq_split(eport, server_sid) {
-	add_to_field(udp_hdr.dstPort, 1);
-	modify_field(eg_intr_md.egress_port, eport);
-	modify_field(meta.server_sid, server_sid);
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
-}*/
-action process_cloned_scanreq_split(server_sid) {
-	add_to_field(udp_hdr.dstPort, 1);
-	modify_field(meta.server_sid, server_sid);
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
-}
-@pragma stage 0
-table process_cloned_scanreq_split_tbl {
-	reads {
-		op_hdr.optype: exact;
-		udp_hdr.dstPort: exact;
-	}
-	actions {
-		process_cloned_scanreq_split;
-		nop;
-	}
-	default_action: nop();
-	size: MAX_SERVER_NUM;
-}
-#endif
-
 // Stage 1
-
-#ifdef RANGE_SUPPORT
-action set_is_last_scansplit() {
-	modify_field(meta.is_last_scansplit, 1);
-}
-action reset_is_last_scansplit() {
-	modify_field(meta.is_last_scansplit, 0);
-}
-@pragma stage 1
-table is_last_scansplit_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.remain_scannum: exact;
-	}
-	actions {
-		set_is_last_scansplit;
-		reset_is_last_scansplit;
-	}
-	default_action: reset_is_last_scansplit();
-	size: 1;
-}
-#endif
 
 action set_is_hot() {
 	modify_field(meta.is_hot, 1);
@@ -101,6 +28,55 @@ table is_hot_tbl {
 	size: 1;
 }
 
+#ifdef RANGE_SUPPORT
+/*action process_scanreq_split(eport, server_sid) {
+	modify_field(eg_intr_md.egress_port, eport);
+	modify_field(meta.server_sid, server_sid); // clone to server for SCANREQ_SPLIT
+	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
+}*/
+action process_scanreq_split(server_sid) {
+	modify_field(meta.server_sid, server_sid); // clone to server for SCANREQ_SPLIT
+	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
+}
+@pragma stage 1
+table process_scanreq_split_tbl {
+	reads {
+		op_hdr.optype: exact;
+		udp_hdr.dstPort: exact;
+	}
+	actions {
+		process_scanreq_split;
+		nop;
+	}
+	default_action: nop();
+	size: MAX_SERVER_NUM;
+}
+/*action process_cloned_scanreq_split(eport, server_sid) {
+	add_to_field(udp_hdr.dstPort, 1);
+	modify_field(eg_intr_md.egress_port, eport);
+	modify_field(meta.server_sid, server_sid);
+	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
+}*/
+action process_cloned_scanreq_split(server_sid) {
+	add_to_field(udp_hdr.dstPort, 1);
+	modify_field(meta.server_sid, server_sid);
+	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
+}
+@pragma stage 1
+table process_cloned_scanreq_split_tbl {
+	reads {
+		op_hdr.optype: exact;
+		udp_hdr.dstPort: exact;
+	}
+	actions {
+		process_cloned_scanreq_split;
+		nop;
+	}
+	default_action: nop();
+	size: MAX_SERVER_NUM;
+}
+#endif
+
 // Stage 2
 
 action save_client_udpport() {
@@ -119,6 +95,28 @@ table save_client_udpport_tbl {
 	default_action: nop();
 	size: 4;
 }
+
+#ifdef RANGE_SUPPORT
+action set_is_last_scansplit() {
+	modify_field(meta.is_last_scansplit, 1);
+}
+action reset_is_last_scansplit() {
+	modify_field(meta.is_last_scansplit, 0);
+}
+@pragma stage 2
+table is_last_scansplit_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.remain_scannum: exact;
+	}
+	actions {
+		set_is_last_scansplit;
+		reset_is_last_scansplit;
+	}
+	default_action: reset_is_last_scansplit();
+	size: 1;
+}
+#endif
 
 // Stage 9
 

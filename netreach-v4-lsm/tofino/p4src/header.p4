@@ -129,10 +129,7 @@ header_type clone_t {
 header_type metadata_t {
 	fields {
 		need_recirculate: 1;
-#ifdef RANGE_SUPPORT
-		remain_scannum: 16;
-		is_last_scansplit: 1;
-#else
+#ifndef RANGE_SUPPORT
 		hashval_for_partition: 16; // at most 32K
 #endif
 		cm1_predicate: 4;
@@ -140,13 +137,17 @@ header_type metadata_t {
 		cm3_predicate: 4;
 		cm4_predicate: 4;
 		is_hot: 1;
-		is_lastclone_for_pktloss: 1;
-		server_sid: 10; // clone to server for SCANREQ_SPLIT
 		validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;
+		is_lastclone_for_pktloss: 1;
 		access_val_mode: 4; // 0: not access val_reg; 1: get; 2: set_and_get; 3: reset_and_get
+#ifdef RANGE_SUPPORT
+		server_sid: 10; // clone to server for SCANREQ_SPLIT
+		remain_scannum: 16;
+		is_last_scansplit: 1;
+#endif
 	}
 }
 
