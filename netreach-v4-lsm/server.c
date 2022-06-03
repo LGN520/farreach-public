@@ -97,10 +97,6 @@ void transaction_main() {
 	if (ret) {
 		COUT_N_EXIT("Error of launching reflector.worker: " << ret);
 	}
-	// used under dynamic workload
-	int totalsecs = dynamic_periodnum * dynamic_periodinterval;
-	size_t persec_perserver_thpts[totalsecs][server_num];
-	struct timespec dynamic_t1, dynamic_t2, dynamic_t3;
 
 	// launch popclients
 	pthread_t popclient_threads[server_num];
@@ -149,6 +145,15 @@ void transaction_main() {
 
 	while (transaction_ready_threads < transaction_expected_ready_threads) sleep(1);
 
+	// used under dynamic workload
+	int totalsecs = dynamic_periodnum * dynamic_periodinterval;
+	size_t persec_perserver_thpts[totalsecs][server_num];
+	int dynamicserver_udpsock = -1;
+	prepare_udpserver(dynamicserver_udpsock, false, server_dynamicserver_port, "server.dynamicserver");
+	struct sockaddr_in dynamicclient_addr;
+	socklen_t dynamicclient_addrlen = sizeof(struct sockaddr_in);
+	bool with_dynamicclient_addr = false;
+
 	transaction_running = true;
 	COUT_THIS("[transaction.main] all threads ready");
 
@@ -160,27 +165,26 @@ void transaction_main() {
 		}
 	}
 	else { // wait for all periods in dynamic mode
-		while (!server_dynamic_startflag) {} // wait for the first pkt globally
-
-		int sleep_usecs = 1000; // 1000us = 1ms
-		int onesec_usecs = 1 * 1000 * 1000; // 1s
+		char buf[MAX_BUFSIZE];
+		int recvsize = 0;
+		size_t thpt_history[server_num];
+		memset(thpt_history, 0, sizeof(size_t) * server_num);
 		for (int secidx = 0; secidx < totalsecs; secidx++) {
-			CUR_TIME(dynamic_t1);
-			while (true) { // wait for every 1 sec
-				CUR_TIME(dynamic_t2);
-				DELTA_TIME(dynamic_t2, dynamic_t1, dynamic_t3);
-				if (GET_MICROSECOND(dynamic_t3) >= onesec_usecs) {
-					break;
-				}
-				else {
-					usleep(sleep_usecs);
-				}
+			if (!with_dynamicclient_addr) {
+				udprecvfrom(dynamicserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr*)&dynamicclient_addr, &dynamicclient_addrlen, recvsize, "server.dynamicserver");
+				with_dynamicclient_addr = true;
 			}
-
-			// NOTE: here we save accumulated throughput -> get per-second throughput later
+			else {
+				udprecvfrom(dynamicserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "server.dynamicserver");
+			}
+			INVARIANT(recvsize == sizeof(int));
+			INVARIANT(*((int *)buf) == secidx);
 			for (size_t i = 0; i < server_num; i++) {
-				persec_perserver_thpts[secidx][i] = server_worker_params[i].throughput;
+				size_t tmp_thpt = server_worker_params[i].throughput; // accumulated thpt
+				persec_perserver_thpts[secidx][i] = tmp_thpt - thpt_history[i]; // thpt of current second
+				thpt_history[i] = tmp_thpt;
 			}
+			udpsendto(dynamicserver_udpsock, buf, recvsize, 0, (struct sockaddr*)&dynamicclient_addr, dynamicclient_addrlen, "server.dynamicserver");
 		}
 	}
 	transaction_running = false;
@@ -218,17 +222,8 @@ void transaction_main() {
 	}
 
 	if (workload_mode != 0) {
-		size_t thpt_history[server_num];
-		memset(thpt_history, 0, sizeof(size_t) * server_num);
+		printf("\nper-sec per-server pktcnts:\n");
 		for (int secidx = 0; secidx < totalsecs; secidx++) {
-			for (size_t i = 0; i < server_num; i++) {
-				size_t tmp_thpt = persec_perserver_thpts[secidx][i];
-				persec_perserver_thpts[secidx][i] = tmp_thpt - thpt_history[i];
-				thpt_history[i] = tmp_thpt;
-			}
-		}
-		for (int secidx = 0; secidx < totalsecs; secidx++) {
-			printf("sec[%d] per-server pktcnt: ", secidx);
 			for (size_t i = 0; i < server_num; i++) {
 				if (i != server_num - 1) {
 					printf("%d ", persec_perserver_thpts[secidx][i]);

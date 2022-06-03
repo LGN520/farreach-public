@@ -344,7 +344,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: set_hot_threshold_tbl (default: set_hot_threshold; size: 1)
             print "Configuring set_hot_threshold_tbl"
-            hot_threshold = 10
+            hot_threshold = 50
             actnspec0 = netbufferv4_set_hot_threshold_action_spec_t(hot_threshold)
             self.client.set_hot_threshold_tbl_set_default_action_set_hot_threshold(\
                     self.sess_hdl, self.dev_tgt, actnspec0)

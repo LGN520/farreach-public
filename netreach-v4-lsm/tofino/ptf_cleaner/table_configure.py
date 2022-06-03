@@ -72,8 +72,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #first_period = 1
         #clean_period = 5
         #is_first = True
-        #clean_period = 1 # for threshold = 50
-        clean_period = 0.2 # for threshold = 10
+        clean_period = 1 # for threshold = 50
+        #clean_period = 0.2 # for threshold = 10
         while True:
             #if is_first:
             #    time.sleep(first_period)

@@ -74,7 +74,9 @@ netreach_key_t generate_endkey(netreach_key_t &startkey) {
 	return endkey;
 }
 
+// used for dynamic workload
 dynamic_rulemap_t * dynamic_rulemap_ptr = NULL;
+bool volatile stop_for_dynamic_control = false;
 
 volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
@@ -131,8 +133,6 @@ void run_benchmark() {
 	// used for dynamic workload
 	int persec_totalthpt[dynamic_periodnum * dynamic_periodinterval];
 	memset(persec_totalthpt, 0, sizeof(int) * dynamic_periodnum * dynamic_periodinterval);
-	int onesec_usecs = 1 * 1000 * 1000; // 1s
-	int history_thpt = 0;
 
 	running = true;
 	if (workload_mode == 0) { // send all workloads in static mode
@@ -140,45 +140,64 @@ void run_benchmark() {
 		COUT_THIS("[client] all clients finish!");
 	}
 	else { // send enough periods in dynamic mode
-		int sleep_usecs = 1000; // 1000us = 1ms
-		int interval_usecs = dynamic_periodinterval * 1000 * 1000; // 10s
+		int dynamicclient_udpsock = -1;
+		create_udpsock(dynamicclient_udpsock, false, "client.dynamicclient");
+		struct sockaddr_in dynamicserver_addr;
+		set_sockaddr(dynamicserver_addr, inet_addr(server_ip_for_client), server_dynamicserver_port);
+		socklen_t dynamicserver_addrlen = sizeof(struct sockaddr_in);
+		char buf[MAX_BUFSIZE];
+		int recvsize = 0;
+
+		const int sleep_usecs = 1000; // 1000us = 1ms
+		const int onesec_usecs = 1 * 1000 * 1000; // 1s
+		int history_thpt = 0;
 		struct timespec dynamic_t1, dynamic_t2, dynamic_t3;
 		for (int periodidx = 0; periodidx < dynamic_periodnum; periodidx++) {
-			CUR_TIME(dynamic_t1);
-			while (true) { // wait for every 10 secs
-				CUR_TIME(dynamic_t2);
-				DELTA_TIME(dynamic_t2, dynamic_t1, dynamic_t3);
+			for (int secidx = 0; secidx < dynamic_periodinterval; secidx++) { // wait for every 10 secs
+				CUR_TIME(dynamic_t1);
+				while (true) { // wait for every 1 sec to update thpt
+					CUR_TIME(dynamic_t2);
+					DELTA_TIME(dynamic_t2, dynamic_t1, dynamic_t3);
 
-				// wait for every 1 sec to update thpt
-				int t3_usecs = int(GET_MICROSECOND(dynamic_t3));
-				int onesec_idx = t3_usecs / onesec_usecs;
-				if (onesec_idx > 0 && persec_totalthpt[periodidx*dynamic_periodinterval + onesec_idx - 1] == 0) {
-					int tmp_totalthpt = 0;
-					for (size_t i = 0; i < client_num; i++) {
-						tmp_totalthpt += fg_params[i].req_latency_list.size();
+					int t3_usecs = int(GET_MICROSECOND(dynamic_t3));
+					if (t3_usecs >= onesec_usecs) {
+						stop_for_dynamic_control = true;
+
+						int global_secidx = periodidx * dynamic_periodinterval + secidx;
+						udpsendto(dynamicclient_udpsock, &global_secidx, sizeof(int), 0, (struct sockaddr*)&dynamicserver_addr, dynamicserver_addrlen, "client.dynamicclient"); // notify server to count statistics of current second
+						udprecvfrom(dynamicclient_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "client.dynamicclient"); // wait for ack from server.main
+						INVARIANT(recvsize == sizeof(int));
+						INVARIANT(*((int *)buf) == global_secidx);
+
+						int tmp_totalthpt = 0;
+						for (size_t i = 0; i < client_num; i++) {
+							tmp_totalthpt += fg_params[i].req_latency_list.size();
+						}
+						persec_totalthpt[global_secidx] = tmp_totalthpt - history_thpt;
+						history_thpt = tmp_totalthpt;
+						break;
 					}
-					persec_totalthpt[periodidx*dynamic_periodinterval + onesec_idx - 1] = tmp_totalthpt - history_thpt;
-					history_thpt = tmp_totalthpt;
+					else {
+						usleep(sleep_usecs);
+					}
 				}
 
-				if (t3_usecs >= interval_usecs) {
-					break;
-				}
-				else {
-					usleep(sleep_usecs);
+				if (secidx != dynamic_periodinterval - 1) { // not the last second in current period
+					stop_for_dynamic_control = false;
 				}
 			}
 
+			COUT_VAR(periodidx);
+			INVARIANT(stop_for_dynamic_control == true);
 			if (periodidx != dynamic_periodnum - 1) { // not the last period
-				COUT_VAR(periodidx);
 				dynamic_rulemap_ptr->nextperiod(); // change key popularity
-			}
-			else {
-				break;
+				stop_for_dynamic_control = false;
 			}
 		}
 	}
 	running = false;
+	INVARIANT(stop_for_dynamic_control == true);
+	stop_for_dynamic_control = false;
 
 	/* Process statistics */
 	COUT_THIS("[client] processing statistics");
@@ -200,9 +219,14 @@ void run_benchmark() {
 	COUT_THIS("Client-side total pktcnt: " << req_latency_list.size());
 
 	if (workload_mode != 0) {
-		printf("per-sec client total thpt:\n");
+		printf("\nper-sec client total thpt:\n");
 		for (size_t i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
-			printf("sec[%d] client total thpt: %d\n", int(i), int(persec_totalthpt[i]));
+			if (i != dynamic_periodnum*dynamic_periodinterval-1) {
+				printf("%d ", int(persec_totalthpt[i]));
+			}
+			else {
+				printf("%d\n", int(persec_totalthpt[i]));
+			}
 		}
 	}
 
@@ -276,6 +300,10 @@ void *run_fg(void *param) {
 		while (true) {
 			tmpkey = iter->key();
 			if (workload_mode != 0) { // change key popularity if necessary
+				while (stop_for_dynamic_control) {} // stop for dynamic control between client.main and server.main
+				if (unlikely(!running)) {
+					break;
+				}
 				dynamic_rulemap_ptr->trymap(tmpkey);
 			}
 
@@ -459,8 +487,12 @@ void *run_fg(void *param) {
 				exit(-1);
 			}
 			break;
-		}
+		} // end of while(true)
 		is_timeout = false;
+
+		if (unlikely(!running)) {
+			break;
+		}
 
 		DELTA_TIME(req_t2, req_t1, req_t3);
 		DELTA_TIME(rsp_t2, rsp_t1, rsp_t3);

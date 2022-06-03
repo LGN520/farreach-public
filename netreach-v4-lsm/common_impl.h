@@ -75,6 +75,7 @@ size_t client_num;
 short client_port_start;
 const char *client_ip;
 uint8_t client_macaddr[6];
+const char *client_ip_for_server;
 
 // server: loading phase
 uint32_t load_factor = 1;
@@ -90,7 +91,8 @@ uint8_t server_macaddr[6];
 const char* server_ip_for_controller = nullptr;
 short server_evictserver_port_start = -1;
 short server_consnapshotserver_port = -1;
-uint64_t perserver_keyrange = 0; // use size_t to avoid int overflow
+short server_dynamicserver_port = -1;
+const char *server_ip_for_client;
 
 // controller
 const char *controller_ip_for_server = nullptr;
@@ -124,6 +126,7 @@ char raw_warmup_workload_filename[256];
 char raw_run_workload_filename[256]; // used by split_workload for transaction phase
 char client_workload_dir[256];
 size_t per_client_per_period_max_sending_rate;
+uint64_t perserver_keyrange = 0; // use size_t to avoid int overflow
 
 // others (xindex)
 size_t bg_n = 1;
@@ -192,6 +195,7 @@ inline void parse_ini(const char* config_file) {
 	client_port_start = ini.get_client_port();
 	client_ip = ini.get_client_ip();
 	ini.get_client_mac(client_macaddr);
+	client_ip_for_server = ini.get_client_ip_for_server();
 	COUT_VAR(client_num);
 	COUT_VAR(client_port_start);
 	printf("client_ip: %s\n", client_ip);
@@ -201,6 +205,7 @@ inline void parse_ini(const char* config_file) {
 		if (i != 5) printf(":");
 		else printf("\n");
 	}
+	printf("client_ip_for_server: %s\n", client_ip_for_server);
 
 	// server: loading phase
 	load_factor = ini.get_load_factor();
@@ -220,7 +225,8 @@ inline void parse_ini(const char* config_file) {
 	server_ip_for_controller = ini.get_server_ip_for_controller();
 	server_evictserver_port_start = ini.get_server_evictserver_port();
 	server_consnapshotserver_port = ini.get_server_consnapshotserver_port();
-	perserver_keyrange = 4ll*1024ll*1024ll*1024ll / int64_t(server_num); // 2^32 / server_num
+	server_dynamicserver_port = ini.get_server_dynamicserver_port();
+	server_ip_for_client = ini.get_server_ip_for_client();
 	COUT_VAR(server_num);
 	COUT_VAR(server_port_start);
 	printf("server_ip: %s\n", server_ip);
@@ -232,7 +238,8 @@ inline void parse_ini(const char* config_file) {
 	}
 	COUT_VAR(server_evictserver_port_start);
 	COUT_VAR(server_consnapshotserver_port);
-	COUT_VAR(perserver_keyrange);
+	COUT_VAR(server_dynamicserver_port);
+	printf("server_ip_for_client: %s\n", server_ip_for_client);
 
 	// controller
 	controller_ip_for_server = ini.get_controller_ip_for_server();
@@ -290,11 +297,13 @@ inline void parse_ini(const char* config_file) {
 	RUN_SPLIT_DIR(client_workload_dir, workload_name, int(client_num));
 	max_sending_rate *= server_num;
 	per_client_per_period_max_sending_rate = max_sending_rate / client_num / (1 * 1000 * 1000 / rate_limit_period);
+	perserver_keyrange = 4ll*1024ll*1024ll*1024ll / int64_t(server_num); // 2^32 / server_num
 	printf("raw_load_workload_filename for loading phase: %s\n", raw_load_workload_filename);
 	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);
 	printf("raw_warmup_workload_filename for warmup phase: %s\n", raw_warmup_workload_filename);
 	printf("raw_run_workload_filename for transaction phase: %s\n", raw_run_workload_filename);
-	printf("client_workload_dir: %s\n", client_workload_dir);
+	printf("client_workload_dir for transaction phase: %s\n", client_workload_dir);
+	COUT_VAR(perserver_keyrange);
 }
 
 inline void parse_control_ini(const char* config_file) {

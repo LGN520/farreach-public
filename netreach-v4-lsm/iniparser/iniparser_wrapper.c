@@ -120,6 +120,15 @@ void IniparserWrapper::get_client_mac(uint8_t *macaddr) {
 	parse_mac(macaddr, client_mac);
 }
 
+const char *IniparserWrapper::get_client_ip_for_server() {
+	const char *client_ip_for_server = iniparser_getstring(ini, "client:client_ip_for_server", nullptr);
+	if (client_ip_for_server == nullptr) {
+		printf("Invalid entry of [client:client_ip_for_server]\n");
+		exit(-1);
+	}
+	return client_ip_for_server;
+}
+
 // Server
 
 uint32_t IniparserWrapper::get_load_factor() {
@@ -201,6 +210,24 @@ short IniparserWrapper::get_server_consnapshotserver_port() {
 		exit(-1);
 	}
 	return short(tmp);
+}
+
+short IniparserWrapper::get_server_dynamicserver_port() {
+	int tmp = iniparser_getint(ini, "server:server_dynamicserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:server_dynamicserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+const char *IniparserWrapper::get_server_ip_for_client() {
+	const char *server_ip_for_client = iniparser_getstring(ini, "server:server_ip_for_client", nullptr);
+	if (server_ip_for_client == nullptr) {
+		printf("Invalid entry of [server:server_ip_for_client]\n");
+		exit(-1);
+	}
+	return server_ip_for_client;
 }
 
 // Switch
