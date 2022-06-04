@@ -233,9 +233,6 @@ control egress {
 	// Stage 2
 	apply(access_latest_tbl);
 	apply(save_client_udpport_tbl);
-#ifdef RANGE_SUPPORT
-	apply(is_last_scansplit_tbl);
-#endif
 
 	// Stage 3
 	apply(access_deleted_tbl);
@@ -270,7 +267,7 @@ control egress {
 	apply(update_valhi12_tbl);
 
 	// Stage 9
-	apply(lastclone_tbl);
+	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
 
 	// Stage 10
 	apply(update_vallo13_tbl);

@@ -78,51 +78,48 @@ table save_client_udpport_tbl {
 	size: 4;
 }
 
-#ifdef RANGE_SUPPORT
-action set_is_last_scansplit() {
-	modify_field(meta.is_last_scansplit, 1);
-}
-action reset_is_last_scansplit() {
-	modify_field(meta.is_last_scansplit, 0);
-}
-@pragma stage 2
-table is_last_scansplit_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.remain_scannum: exact;
-	}
-	actions {
-		set_is_last_scansplit;
-		reset_is_last_scansplit;
-	}
-	default_action: reset_is_last_scansplit();
-	size: 1;
-}
-#endif
-
 // Stage 9
 
 action set_is_lastclone() {
 	modify_field(meta.is_lastclone_for_pktloss, 1);
 	//modify_field(debug_hdr.is_lastclone_for_pktloss, 1);
+#ifdef RANGE_SUPPORT
+	modify_field(meta.is_last_scansplit, 0);
+#endif
 }
 
-action reset_is_lastclone() {
+#ifdef RANGE_SUPPORT
+action set_is_lastscansplit() {
+	modify_field(meta.is_last_scansplit, 1);
+	modify_field(meta.is_lastclone_for_pktloss, 0);
+}
+#endif
+
+action reset_is_lastclone_lastscansplit() {
 	modify_field(meta.is_lastclone_for_pktloss, 0);
 	//modify_field(debug_hdr.is_lastclone_for_pktloss, 0);
+#ifdef RANGE_SUPPORT
+	modify_field(meta.is_last_scansplit, 0);
+#endif
 }
 
 @pragma stage 9
-table lastclone_tbl {
+table lastclone_lastscansplit_tbl {
 	reads {
 		op_hdr.optype: exact;
 		clone_hdr.clonenum_for_pktloss: exact;
+#ifdef RANGE_SUPPORT
+		meta.remain_scannum: exact;
+#endif
 	}
 	actions {
 		set_is_lastclone;
-		reset_is_lastclone;
+#ifdef RANGE_SUPPORT
+		set_is_lastscansplit;
+#endif
+		reset_is_lastclone_lastscansplit;
 	}
-	default_action: reset_is_lastclone();
+	default_action: reset_is_lastclone_lastscansplit();
 	size: 8;
 }
 

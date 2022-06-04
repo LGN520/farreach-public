@@ -646,15 +646,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stgae 1
 
-            if RANGE_SUPPORT:
-                # Table: is_last_scansplit_tbl (default: reset_is_last_scansplit; size: 1)
-                print "Configuring is_last_scansplit_tbl"
-                matchspec0 = netbufferv4_is_last_scansplit_tbl_match_spec_t(\
-                        op_hdr_optype = SCANREQ_SPLIT,
-                        meta_remain_scannum = 1)
-                self.client.is_last_scansplit_tbl_table_add_with_set_is_last_scansplit(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-
             # Table: is_hot_tbl (default: reset_is_hot; size: 1)
             print "Configuring is_hot_tbl"
             matchspec0 = netbufferv4_is_hot_tbl_match_spec_t(\
@@ -1034,13 +1025,28 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 9
 
-            # Table: lastclone_tbl (default: reset_is_lastclone; size: 5)
-            print "Configuring lastclone_tbl"
-            for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1]:
-                matchspec0 = netbufferv4_lastclone_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        clone_hdr_clonenum_for_pktloss = 0)
-                self.client.lastclone_tbl_table_add_with_set_is_lastclone(\
+            # Table: lastclone_lastscansplit_tbl (default: reset_is_lastclone_lastscansplit; size: 5)
+            print "Configuring lastclone_lastscansplit_tbl"
+            if RANGE_SUPPORT:
+                for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1]:
+                    matchspec0 = netbufferv4_lastclone_lastscansplit_tbl_match_spec_t(\
+                            op_hdr_optype = tmpoptype,
+                            clone_hdr_clonenum_for_pktloss = 0)
+                    self.client.lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+            else:
+                for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1]:
+                    matchspec0 = netbufferv4_lastclone_lastscansplit_tbl_match_spec_t(\
+                            op_hdr_optype = tmpoptype,
+                            clone_hdr_clonenum_for_pktloss = 0,
+                            meta_remain_scannum = 0)
+                    self.client.lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = netbufferv4_lastclone_lastscansplit_tbl_match_spec_t(\
+                        op_hdr_optype = SCANREQ_SPLIT,
+                        clone_hdr_clonenum_for_pktloss = 0,
+                        meta_remain_scannum = 1)
+                self.client.lastclone_lastscansplit_tbl_table_add_with_set_is_lastscansplit(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 10
