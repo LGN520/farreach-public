@@ -29,51 +29,33 @@ table is_hot_tbl {
 }
 
 #ifdef RANGE_SUPPORT
-/*action process_scanreq_split(eport, server_sid) {
-	modify_field(eg_intr_md.egress_port, eport);
-	modify_field(meta.server_sid, server_sid); // clone to server for SCANREQ_SPLIT
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
-}*/
 action process_scanreq_split(server_sid) {
 	modify_field(meta.server_sid, server_sid); // clone to server for SCANREQ_SPLIT
 	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
+}
+action process_cloned_scanreq_split(server_sid) {
+	add_to_field(udp_hdr.dstPort, 1);
+	modify_field(meta.server_sid, server_sid);
+	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
+}
+action reset_meta_server_sid() {
+	modify_field(meta.server_sid, 0);
 }
 @pragma stage 1
 table process_scanreq_split_tbl {
 	reads {
 		op_hdr.optype: exact;
 		udp_hdr.dstPort: exact;
+		//eg_intr_md_from_parser_aux.clone_src: exact; // NOTE: access intrinsic metadata
+		split_hdr.is_clone: exact;
 	}
 	actions {
 		process_scanreq_split;
-		nop;
-	}
-	default_action: nop();
-	size: MAX_SERVER_NUM;
-}
-/*action process_cloned_scanreq_split(eport, server_sid) {
-	add_to_field(udp_hdr.dstPort, 1);
-	modify_field(eg_intr_md.egress_port, eport);
-	modify_field(meta.server_sid, server_sid);
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
-}*/
-action process_cloned_scanreq_split(server_sid) {
-	add_to_field(udp_hdr.dstPort, 1);
-	modify_field(meta.server_sid, server_sid);
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
-}
-@pragma stage 1
-table process_cloned_scanreq_split_tbl {
-	reads {
-		op_hdr.optype: exact;
-		udp_hdr.dstPort: exact;
-	}
-	actions {
 		process_cloned_scanreq_split;
-		nop;
+		reset_meta_server_sid;
 	}
-	default_action: nop();
-	size: MAX_SERVER_NUM;
+	default_action: reset_meta_server_sid();
+	size: PROCESS_SCANREQ_SPLIT_ENTRY_NUM;
 }
 #endif
 
@@ -764,6 +746,20 @@ action update_delreq_inswitch_to_delreq_seq_case3() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
+#ifdef RANGE_SUPPORT
+action forward_scanreq_split_and_clone(server_sid) {
+	modify_field(split_hdr.is_clone, 1);
+	add_to_field(split_hdr.cur_scanidx, 1);
+	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
+	clone_egress_pkt_to_egress(server_sid); // clone to server (meta.server_sid)
+}
+action forward_scanreq_split() {
+	modify_field(split_hdr.is_clone, 1);
+	add_to_field(split_hdr.cur_scanidx, 1);
+	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
+}
+#endif
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -787,6 +783,10 @@ table eg_port_forward_tbl {
 		//debug_hdr.is_lastclone_for_pktloss: exact;
 		inswitch_hdr.snapshot_flag: exact;
 		meta.is_case1: exact;
+#ifdef RANGE_SUPPORT
+		meta.is_last_scansplit: exact;
+		meta.server_sid: exact;
+#endif
 	}
 	actions {
 		update_getreq_inswitch_to_getreq;
@@ -827,6 +827,10 @@ table eg_port_forward_tbl {
 		//update_delreq_seq_inswitch_case1_to_delres;
 		update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
 		update_delreq_inswitch_to_delreq_seq_case3;
+#ifdef RANGE_SUPPORT
+		forward_scanreq_split_and_clone;
+		forward_scanreq_split;
+#endif
 		nop;
 	}
 	default_action: nop();
@@ -836,33 +840,6 @@ table eg_port_forward_tbl {
 	size: 1024;
 #endif
 }
-
-#ifdef RANGE_SUPPORT
-action forward_scanreq_split_and_clone(server_sid) {
-	add_to_field(split_hdr.cur_scanidx, 1);
-	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
-	clone_egress_pkt_to_egress(server_sid); // clone to server (meta.server_sid)
-}
-action forward_scanreq_split() {
-	add_to_field(split_hdr.cur_scanidx, 1);
-	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
-}
-@pragma stage 10
-table scan_forward_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.is_last_scansplit: exact;
-		meta.server_sid: exact;
-	}
-	actions {
-		forward_scanreq_split_and_clone;
-		forward_scanreq_split;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-#endif
 
 
 // NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen

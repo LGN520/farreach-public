@@ -152,6 +152,10 @@ WARMUPACK = 0xd0
 #CACHE_EVICT_ACK = 0x20
 #CACHE_EVICT_CASE2 = 0x21
 
+#NOT_CLONED = 0
+#CLONED_FROM_INGRESS = 1
+#CLONED_FROM_EGRESS = 3
+
 # u8val in [0, 255] -> i8val in [-128, 127]
 def convert_u8_to_i8(u8val):
     if u8val < 0 or u8val >= 256:

@@ -123,11 +123,14 @@
 //#define LOOKUP_ENTRY_COUNT 65536
 #define LOOKUP_ENTRY_COUNT 32768
 
+// MAX_SERVER_NUM <= 128
 #define MAX_SERVER_NUM 128
 // RANGE_PARTITION_ENTRY_NUM = 6 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
 #define RANGE_PARTITION_ENTRY_NUM 1024
-// RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM = 1 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
-#define RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM 1024
+// RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM = 1 * MAX_SERVER_NUM
+#define RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM 128
+// PROCESS_SCANREQ_SPLIT_ENTRY_NUM = 2 * MAX_SERVER_NUM
+#define PROCESS_SCANREQ_SPLIT_ENTRY_NUM 256
 // HASH_PARTITION_ENTRY_NUM = 5 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
 #define HASH_PARTITION_ENTRY_NUM 1024
 
@@ -224,12 +227,7 @@ control egress {
 	apply(access_validvalue_tbl);
 	apply(access_seq_tbl);
 #ifdef RANGE_SUPPORT
-	if (pkt_is_e2e_mirrored) {
-		apply(process_cloned_scanreq_split_tbl);
-	}
-	else {
-		apply(process_scanreq_split_tbl);
-	}
+	apply(process_scanreq_split_tbl);
 #endif
 
 	// Stage 2
@@ -279,10 +277,7 @@ control egress {
 	apply(update_valhi13_tbl);
 	apply(update_vallo14_tbl);
 	apply(update_valhi14_tbl);
-	apply(eg_port_forward_tbl);
-#ifdef RANGE_SUPPORT
-	apply(scan_forward_tbl);
-#endif
+	apply(eg_port_forward_tbl); // including scan forwarding
 
 	// Stage 11
 	apply(update_vallo15_tbl);

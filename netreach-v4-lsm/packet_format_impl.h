@@ -484,7 +484,7 @@ std::vector<std::pair<key_t, val_t>> ScanResponseSplit<key_t, val_t>::pairs() co
 template<class key_t, class val_t>
 uint32_t ScanResponseSplit<key_t, val_t>::size() {
 	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int32_t);
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int32_t);
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int32_t);
 }
 
 template<class key_t, class val_t>
@@ -500,6 +500,8 @@ uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t 
 	begin += tmp_endkeysize;
 	//memcpy(begin, (void *)&this->_num, sizeof(uint32_t));
 	//begin += sizeof(uint32_t);
+	memset(begin, 0, SPLIT_PREV_BYTES);
+	begin += SPLIT_PREV_BYTES;
 	uint16_t bigendian_cur_scanidx = htons(uint16_t(this->_cur_scanidx));
 	memcpy(begin, (void *)&bigendian_cur_scanidx, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
@@ -510,7 +512,7 @@ uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t 
 	uint32_t bigendian_pairnum = htonl(uint32_t(this->_pairnum));
 	memcpy(begin, (void *)&bigendian_pairnum, sizeof(int32_t));
 	begin += sizeof(int32_t);
-	uint32_t totalsize = sizeof(uint8_t) + tmp_keysize + tmp_endkeysize + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int32_t);
+	uint32_t totalsize = sizeof(uint8_t) + tmp_keysize + tmp_endkeysize + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int32_t);
 	for (uint32_t pair_i = 0; pair_i < this->_pairs.size(); pair_i++) {
 		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.serialize(begin, max_size - totalsize);
 		begin += tmp_pair_keysize;
@@ -535,6 +537,7 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 	begin += tmp_endkeysize;
 	//memcpy((void *)&this->_num, begin, sizeof(uint32_t));
 	//begin += sizeof(uint32_t);
+	begin += SPLIT_PREV_BYTES;
 	memcpy((void *)&this->_cur_scanidx, begin, sizeof(uint16_t));
 	this->_cur_scanidx = ntohs(this->_cur_scanidx);
 	begin += sizeof(uint16_t);
@@ -1005,7 +1008,7 @@ uint16_t ScanRequestSplit<key_t>::max_scannum() const {
 
 template<class key_t>
 uint32_t ScanRequestSplit<key_t>::size() {
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint16_t) + sizeof(uint16_t);// + sizeof(uint32_t);
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t);// + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -1026,6 +1029,7 @@ void ScanRequestSplit<key_t>::deserialize(const char * data, uint32_t recv_size)
 	begin += tmp_endkeysize;
 	//memcpy((void *)&this->_num, begin, sizeof(uint32_t));
 	//begin += sizeof(uint32_t);
+	begin += SPLIT_PREV_BYTES;
 	memcpy((void *)&this->_cur_scanidx, begin, sizeof(uint16_t));
 	this->_cur_scanidx = ntohs(this->_cur_scanidx);
 	begin += sizeof(uint16_t);

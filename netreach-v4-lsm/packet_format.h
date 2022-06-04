@@ -16,6 +16,9 @@
 // # of bytes in clone_hdr
 #define CLONE_BYTES 3
 
+// # of bytes before cur_scanidx&max_scannum in split_hdr
+#define SPLIT_PREV_BYTES 1
+
 // # of bytes in debug_hdr
 //#define DEBUG_BYTES 1
 

@@ -254,6 +254,7 @@ table hash_for_cm1_tbl {
 
 #ifdef RANGE_SUPPORT
 action range_partition_for_scan_endkey(last_udpport_plus_one) {
+	modify_field(split_hdr.is_clone, 0);
 	modify_field(split_hdr.cur_scanidx, 0);
 	subtract(split_hdr.max_scannum, last_udpport_plus_one, udp_hdr.dstPort);
 }
