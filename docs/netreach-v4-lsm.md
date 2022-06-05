@@ -1046,6 +1046,41 @@
 		- Deprecated: Update split_workload to split workload based on crc32 result -> hash each key to split workload by a single thread of split_workload is too slow
 		- Solution: in loader, each thread hashes keys to find target dbs, then store them into corresponding db
 			- 10M records + 32 servers -> SUCCESS
++ Test latency and throughput on static workload
+	* Latency
+		- 1 server thread (w/ 1 client thread): 66.16us -> 40.08us; 40% reduction
+		- 128 server threads (w/ 32 client threads): 344.5us -> 172.5us; 49.94% reduction
+			+ Reason: more server threads incurs more simulation overhead including context switching and NIC resource contention
+	* Throughput
+		* Calculate normalized throughput (100M records, 32M queries, 32 client threads)
+			- 8 server threads: 2.48X
+			- 32 server threads: 4.6X
+			- 128 server threads: 13.8X
++ Implement hot-in dynamic workload (preliminary version)
+	- Generate dynamic rule on key popularity change for every 10 secs
+	- TODO: Switchos resets query statistics every 1 sec, including CMs and frequency counters
+	- Client changes key popularity every 10 secs
+		+ For hot-in, client chooses 200 uncached cold keys to replace 200 hotest keys
+	- server.main collects # of pkts of all servers per second after receiving the first packet (globally)
+	- NOTE: client can start to apply the dynamic rule at any sec in every 10 secs, yet not affect server-side statistic module
+	- Imlement dynamic_calculate_thpt.py
+	- Test 20-sec latency and thpt on dynamic workload
+		+ Issue: server-side statistics do not change every 10 seconds
+		+ Reason: client and server do not have synchronous/consistent timing
+		+ Solution: for precise normalized thpt, use client.main<->server.main to count server-side statistics per second
+	- For random: limited effect on cache hit rate
+	- For hot-out: no effect on cache hit rate
++ Implement range query
+	- Change range_parition_for_scan_tbl into range_partition_for_scan_endkey_tbl to reduce MAT entries
++ Compile range query
+	- Reduce MATs related with range query
+		+ Merge process_cloned_scanreq_split_tbl into process_scanreq_split_tbl
+		+ Merge scan_forward_tbl into eg_port_forward_tbl
+	- Issue: VLIW limitation
+		+ Reason 1: we cannot access eg_intr_md_from_parser_aux.clone_src due to PHV/VLIW limitation
+		+ Solution 1: add is_clone in split_hdr for SCANREQ
+		+ Reason 2: too many MATs
+		+ Solution 2: merge is_last_scansplit_tbl and is_last_clone_tbl into lastclone_lastscansplit_tbl
 
 ## Run
 

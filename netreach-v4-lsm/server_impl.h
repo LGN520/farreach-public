@@ -205,11 +205,13 @@ void *run_server_worker(void * param) {
 
   // scan.startkey <= max_startkey; scan.endkey >= min_startkey
   // use size_t to avoid int overflow
-  uint64_t min_startkeyhihi = serveridx * perserver_keyrange;
-  uint64_t max_endkeyhihi = min_startkeyhihi - 1 + perserver_keyrange;
-  INVARIANT(min_startkeyhihi >= std::numeric_limits<uint32_t>::min() && min_startkeyhihi <= std::numeric_limits<uint32_t>::max());
-  INVARIANT(max_endkeyhihi >= std::numeric_limits<uint32_t>::min() && max_endkeyhihi <= std::numeric_limits<uint32_t>::max());
-  INVARIANT(max_endkeyhihi >= min_startkeyhihi);
+  uint64_t min_startkeyhihihi = serveridx * perserver_keyrange;
+  uint64_t max_endkeyhihihi = min_startkeyhihihi - 1 + perserver_keyrange;
+  INVARIANT(min_startkeyhihihi >= std::numeric_limits<uint16_t>::min() && min_startkeyhihihi <= std::numeric_limits<uint16_t>::max());
+  INVARIANT(max_endkeyhihihi >= std::numeric_limits<uint16_t>::min() && max_endkeyhihihi <= std::numeric_limits<uint16_t>::max());
+  INVARIANT(max_endkeyhihihi >= min_startkeyhihihi);
+  uint32_t min_startkeyhihi = min_startkeyhihihi << 16;
+  uint32_t max_endkeyhihi = (max_endkeyhihihi << 16) | 0xFFFF;
   netreach_key_t min_startkey(0, 0, 0, min_startkeyhihi);
   netreach_key_t max_endkey(std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), max_endkeyhihi);
 

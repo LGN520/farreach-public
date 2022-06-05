@@ -33,7 +33,7 @@
 
 #include "common_impl.h"
 
-//#define DUMP_BUF
+#define DUMP_BUF
 
 struct alignas(CACHELINE_SIZE) FGParam {
 	uint16_t thread_id;
@@ -196,7 +196,7 @@ void run_benchmark() {
 		}
 	}
 	running = false;
-	INVARIANT(stop_for_dynamic_control == true);
+	INVARIANT(workload_mode == 0 || stop_for_dynamic_control == true);
 	stop_for_dynamic_control = false;
 
 	/* Process statistics */
@@ -299,6 +299,7 @@ void *run_fg(void *param) {
 		struct timespec req_t1, req_t2, req_t3, rsp_t1, rsp_t2, rsp_t3, final_t3, wait_t1, wait_t2, wait_t3;
 		while (true) {
 			tmpkey = iter->key();
+			printf("expected server of key %x: %d\n", tmpkey.keyhihi, tmpkey.get_rangepartition_idx(server_num));
 			if (workload_mode != 0) { // change key popularity if necessary
 				while (stop_for_dynamic_control) {} // stop for dynamic control between client.main and server.main
 				if (unlikely(!running)) {
@@ -405,7 +406,8 @@ void *run_fg(void *param) {
 				CUR_TIME(rsp_t2);
 			}
 			else if (iter->type() == uint8_t(packet_type_t::SCANREQ)) {
-				netreach_key_t endkey = generate_endkey(tmpkey);
+				//netreach_key_t endkey = generate_endkey(tmpkey);
+				netreach_key_t endkey = netreach_key_t(tmpkey.keylolo, tmpkey.keylohi, tmpkey.keyhilo, (((tmpkey.keyhihi>>16)&0xFFFF)+1)<<16); // TMPDEBUG
 				/*size_t first_server_idx = get_server_idx(tmpkey);
 				size_t last_server_idx = get_server_idx(endkey);
 				size_t split_num = last_server_idx - first_server_idx + 1;*/
@@ -474,6 +476,8 @@ void *run_fg(void *param) {
 						rsp_t2 = scan_rsp_t2;
 					}*/
 
+					COUT_VAR(received_scannum);
+					COUT_VAR(max_scannum); // TMPDEBUG
 					if (received_scannum >= max_scannum) {
 						break;
 					}

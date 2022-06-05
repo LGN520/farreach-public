@@ -393,12 +393,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         # Forward to the egress pipeline of server
                         eport = self.devPorts[1]
                         #if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
-                        #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                        #    actnspec0 = netbufferv4_range_partition_action_spec_t(\
                         #            server_port + i, eport, 0)
                         #else: # in wrong pipeline
-                        #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                        #    actnspec0 = netbufferv4_range_partition_action_spec_t(\
                         #            server_port + i, eport, 1)
-                        actnspec0 = netbufferv4_hash_partition_action_spec_t(\
+                        actnspec0 = netbufferv4_range_partition_action_spec_t(\
                                 server_port + i, eport)
                         self.client.range_partition_tbl_table_add_with_range_partition(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
@@ -535,10 +535,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #self.client.prepare_for_cachehit_tbl_set_default_action_set_client_sid(\
             #        self.sess_hdl, self.dev_tgt, actnspec0)
 
-            # Table: ipv4_forward_tbl (default: nop; size: 6)
+            # Table: ipv4_forward_tbl (default: nop; size: 7)
             print "Configuring ipv4_forward_tbl"
             ipv4addr0 = ipv4Addr_to_i32(client_ip)
-            for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK]:
+            for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT]:
                 matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
                         op_hdr_optype = convert_u8_to_i8(tmpoptype),
                         ipv4_hdr_dstAddr = ipv4addr0,
@@ -638,7 +638,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.client.process_scanreq_split_tbl_table_add_with_process_scanreq_split(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                         #elif clone_src == CLONED_FROM_EGRESS:
-                        elif is_clnoe == 1:
+                        elif is_clone == 1:
                             # Set sid for dstport+2
                             actnspec0 = netbufferv4_process_cloned_scanreq_split_action_spec_t(self.server_sid)
                             self.client.process_scanreq_split_tbl_table_add_with_process_cloned_scanreq_split(\
@@ -1027,7 +1027,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: lastclone_lastscansplit_tbl (default: reset_is_lastclone_lastscansplit; size: 5)
             print "Configuring lastclone_lastscansplit_tbl"
-            if RANGE_SUPPORT:
+            if RANGE_SUPPORT == False:
                 for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1]:
                     matchspec0 = netbufferv4_lastclone_lastscansplit_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
@@ -1053,12 +1053,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: eg_port_forward_tbl (default: nop; size: 932)
             print "Configuring eg_port_forward_tbl"
-            if RANGE_SUPPORT:
+            if RANGE_SUPPORT == False:
                 self.configure_eg_port_forward_tbl()
             else:
                 self.configure_eg_port_forward_tbl_with_range()
 
-            # Table: update_pktlen_tbl (default: nop; 158)
+            # Table: update_pktlen_tbl (default: nop; 159)
             print "Configuring update_pktlen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
@@ -1118,6 +1118,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             stat_iplen = 47
             seq_udplen = 30
             seq_iplen = 50
+            scanreqsplit_udplen = 46
+            scanreqsplit_iplen = 66
             matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
                     op_hdr_optype=CACHE_POP_INSWITCH_ACK,
                     vallen_hdr_vallen_start=0,
@@ -1139,9 +1141,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         vallen_hdr_vallen_start=0,
                         vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
                 actnspec0 = netbufferv4_update_pktlen_action_spec_t(seq_udplen, seq_iplen)
-                # TODO: check parameter 0
                 self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
+                    op_hdr_optype=SCANREQ_SPLIT,
+                    vallen_hdr_vallen_start=0,
+                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+            actnspec0 = netbufferv4_update_pktlen_action_spec_t(scanreqsplit_udplen, scanreqsplit_iplen)
+            self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
             # Table: update_ipmac_srcport_tbl (default: nop; 8)
             print "Configuring update_ipmac_srcport_tbl"
@@ -2312,7 +2320,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached, is_hot, validvalue,  is_latest, is_deleted, client_sid, is_lastclone_for_pktloss, snapshot_flag, is_case1 must be 0 for SCANREQ_SPLIT
                                                     # size: 2
-                                                    if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktlos == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                                    if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
                                                         matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                             op_hdr_optype = SCANREQ_SPLIT,
                                                             inswitch_hdr_is_cached = is_cached,
@@ -2330,7 +2338,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         if is_last_scansplit == 1 and tmp_server_sid == self.server_sid:
                                                             self.client.eg_port_forward_tbl_table_add_with_forward_scanreq_split(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                                                        elif is_last_scansplit == 0 and tmp_server_sid == self.server_sid
+                                                        elif is_last_scansplit == 0 and tmp_server_sid == self.server_sid:
                                                             actnspec0 = netbufferv4_forward_scanreq_split_and_clone_action_spec_t(tmp_server_sid)
                                                             self.client.eg_port_forward_tbl_table_add_with_forward_scanreq_split_and_clone(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)

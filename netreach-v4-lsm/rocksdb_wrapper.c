@@ -524,8 +524,8 @@ void RocksdbWrapper::make_snapshot() {
 		CUR_TIME(store_t2);
 		DELTA_TIME(create_t2, create_t1, create_t3);
 		DELTA_TIME(store_t2, store_t1, store_t3);
-		COUT_VAR(GET_MICROSECOND(create_t3));
-		COUT_VAR(GET_MICROSECOND(store_t3));
+		//COUT_VAR(GET_MICROSECOND(create_t3));
+		//COUT_VAR(GET_MICROSECOND(store_t3));
 	}
 
 	return;

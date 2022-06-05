@@ -29,6 +29,13 @@ table is_hot_tbl {
 }
 
 #ifdef RANGE_SUPPORT
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter process_scanreq_split_counter {
+	type : packets_and_bytes;
+	direct: process_scanreq_split_tbl;
+}
+#endif
 action process_scanreq_split(server_sid) {
 	modify_field(meta.server_sid, server_sid); // clone to server for SCANREQ_SPLIT
 	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
@@ -79,6 +86,14 @@ table save_client_udpport_tbl {
 }
 
 // Stage 9
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter lastclone_lastscansplit_counter {
+	type : packets_and_bytes;
+	direct: lastclone_lastscansplit_tbl;
+}
+#endif
 
 action set_is_lastclone() {
 	modify_field(meta.is_lastclone_for_pktloss, 1);
@@ -892,6 +907,13 @@ action update_seq_pktlen() {
 	/modify_field(ipv4_hdr.totalLen, 51);
 	modify_field(udp_hdr.hdrlen, 30);
 	modify_field(ipv4_hdr.totalLen, 50);
+}
+ 
+// SCANREQ_SPLIT
+action update_scanreqsplit_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 17(ophdr) + 16(endkey) + 5(split_hdr)
+	modify_field(udp_hdr.hdrlen, 46);
+	modify_field(ipv4_hdr.totalLen, 66);
 }*/
 
 action update_pktlen(udplen, iplen) {
