@@ -29,13 +29,6 @@ table is_hot_tbl {
 }
 
 #ifdef RANGE_SUPPORT
-#ifdef DEBUG
-// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
-counter process_scanreq_split_counter {
-	type : packets_and_bytes;
-	direct: process_scanreq_split_tbl;
-}
-#endif
 action process_scanreq_split(server_sid) {
 	modify_field(meta.server_sid, server_sid); // clone to server for SCANREQ_SPLIT
 	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
@@ -780,6 +773,7 @@ counter eg_port_forward_counter {
 }
 #endif
 
+@pragma stage 10
 table eg_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -846,11 +840,7 @@ table eg_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-#ifdef DEBUG
-	size: 8192; // assign more entries for debugging
-#else
 	size: 1024;
-#endif
 }
 
 
