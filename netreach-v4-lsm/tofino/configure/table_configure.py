@@ -620,7 +620,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
             if RANGE_SUPPORT:
-                # Table: process_scanreq_split_tbl (default: reset_meta_server_sid; size <= 2 * 128)
+                # Table: process_scanreq_split_tbl (default: reset_meta_serversid_remainscannum; size <= 2 * 128)
                 print "Configuring process_scanreq_split_tbl"
                 #for clone_src in [NOT_CLONED, CLONED_FROM_EGRESS]:
                 for is_clone in [0, 1]:

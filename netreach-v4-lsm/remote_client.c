@@ -407,7 +407,7 @@ void *run_fg(void *param) {
 			}
 			else if (iter->type() == uint8_t(packet_type_t::SCANREQ)) {
 				//netreach_key_t endkey = generate_endkey(tmpkey);
-				netreach_key_t endkey = netreach_key_t(tmpkey.keylolo, tmpkey.keylohi, tmpkey.keyhilo, (((tmpkey.keyhihi>>16)&0xFFFF)+1)<<16); // TMPDEBUG
+				netreach_key_t endkey = netreach_key_t(tmpkey.keylolo, tmpkey.keylohi, tmpkey.keyhilo, (((tmpkey.keyhihi>>16)&0xFFFF)+513)<<16); // TMPDEBUG
 				/*size_t first_server_idx = get_server_idx(tmpkey);
 				size_t last_server_idx = get_server_idx(endkey);
 				size_t split_num = last_server_idx - first_server_idx + 1;*/

@@ -8,7 +8,7 @@
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
-#define DEBUG
+//#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
 // 0b0001
@@ -263,10 +263,8 @@ control egress {
 	apply(update_valhi10_tbl);
 	apply(update_vallo11_tbl);
 	apply(update_valhi11_tbl);
-#ifdef DEBUG
 	apply(update_vallo12_tbl);
 	apply(update_valhi12_tbl);
-#endif
 
 	// Stage 9
 	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
@@ -274,10 +272,8 @@ control egress {
 	// Stage 10
 	apply(update_vallo13_tbl);
 	apply(update_valhi13_tbl);
-#ifdef DEBUG
 	apply(update_vallo14_tbl);
 	apply(update_valhi14_tbl);
-#endif
 	apply(eg_port_forward_tbl); // including scan forwarding
 
 	// Stage 11

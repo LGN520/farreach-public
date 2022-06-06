@@ -32,14 +32,17 @@ table is_hot_tbl {
 action process_scanreq_split(server_sid) {
 	modify_field(meta.server_sid, server_sid); // clone to server for SCANREQ_SPLIT
 	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
+	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
 action process_cloned_scanreq_split(server_sid) {
 	add_to_field(udp_hdr.dstPort, 1);
 	modify_field(meta.server_sid, server_sid);
 	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
+	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
-action reset_meta_server_sid() {
+action reset_meta_serversid_remainscannum() {
 	modify_field(meta.server_sid, 0);
+	modify_field(meta.remain_scannum, 0);
 }
 @pragma stage 1
 table process_scanreq_split_tbl {
@@ -52,9 +55,9 @@ table process_scanreq_split_tbl {
 	actions {
 		process_scanreq_split;
 		process_cloned_scanreq_split;
-		reset_meta_server_sid;
+		reset_meta_serversid_remainscannum;
 	}
-	default_action: reset_meta_server_sid();
+	default_action: reset_meta_serversid_remainscannum();
 	size: PROCESS_SCANREQ_SPLIT_ENTRY_NUM;
 }
 #endif
