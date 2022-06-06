@@ -414,9 +414,9 @@ void recover() {
 }
 
 void *run_switchos_popserver(void *param) {
-	// NOTE: controller.popclient address continues to change
 	struct sockaddr_in controller_popclient_addr;
 	socklen_t controller_popclient_addrlen = sizeof(struct sockaddr_in);
+	bool with_controller_popclient_addr = false;
 	
 	printf("[switchos.popserver] ready\n");
 	switchos_ready_threads++;
@@ -427,7 +427,13 @@ void *run_switchos_popserver(void *param) {
 	char buf[MAX_BUFSIZE];
 	int recvsize = 0;
 	while (switchos_running) {
-		udprecvfrom(switchos_popserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr*)&controller_popclient_addr, &controller_popclient_addrlen, recvsize, "switchos.popserver");
+		if (!with_controller_popclient_addr) {
+			udprecvfrom(switchos_popserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr*)&controller_popclient_addr, &controller_popclient_addrlen, recvsize, "switchos.popserver");
+			with_controller_popclient_addr = true;
+		}
+		else {
+			udprecvfrom(switchos_popserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "switchos.popserver");
+		}
 
 		//printf("receive CACHE_POP from controller\n");
 		//dump_buf(buf, recvsize);

@@ -106,6 +106,18 @@
 - NOTE: even if we set NODELAY for tcp socket, it will not send packet immediately before send() returns
 	+ Linux socket uses shallow copy for send(), as tcp socket does not send packet immediately, if we change userspace buf before it sends out the packet, it will trigger misbehavior
 	+ For example, we send key A for cache population, and then send key B; as A is not sent out before we serialize B into buf, we see two keys of B in switchos for cache population -> duplicate cache population issue
+- NOTE: for system throughput
+	+ Max system throughput is limited by the min component throughput
+		* For each component, throughput is related with its latency
+		* Multi-thread increases CPU throughput, which improves system throughput only if CPU is the bottleneck of single thread
+	+ Load balance affects system throughput only if each server has the same max throughput
+		* For example, given a thread to simulate each server, if CPU is the bottleneck componenet, each thread with a new CPU core has the same max thpt, which can reflect load ratio
+			+ NOTE: If # of threads exceeds CPU core number, adding thread will not increase system throughput
+			+ NOTE: If bottleneck componenet changes from CPU to others such as disk after launching sufficient threads, adding thread will not increase system throughput
+			+ Under the above two cases, each thread does not have the same max throughput -> load ratio does not affect system throughput
+	+ Two ways to test system max throughput
+		* Like ycsb: each client follows request-response-request + sufficient client threads
+		* Like pkt generator: each client continuously send large # of requests -> pkt loss due to queue overflow
 
 ## Overview
 

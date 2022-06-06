@@ -201,6 +201,8 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr + 
 		std::vector<std::pair<key_t, val_t>> pairs() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+		size_t get_frag_hdrsize() const;
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);

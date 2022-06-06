@@ -604,6 +604,11 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 	}
 }
 
+template<class key_t, class val_t>
+size_t ScanResponseSplit<key_t, val_t>::get_frag_hdrsize() {
+	return sizeof(uint8_t) + sizeof(key_t);
+}
+
 // GetRequestPOP
 
 template<class key_t>

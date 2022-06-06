@@ -12,14 +12,6 @@
 
 #define SOCKET_TIMEOUT 5 // 5s
 
-// payload only used by end-hosts -> linux kernel performs ip-level fragmentation
-// max payload size to avoid udp fragmentation (manual udp fragmentation)
-#define UDP_FRAGMENT_MAXSIZE 65536
-// programmable switch needs to process udp_hdr and op_hdr in payload -> we must perform ip-level fragmentation manually
-// max ethernet pkt 1518 - ethernet header 18 - ipv4 header 20 - udp header 8
-// max payload size to avoid ipv4 fragmentation (manual ipv4 fragmentation)
-#define IP_FRAGMENT_MAXSIZE 1472
-
 // udp client: create_udpsock -> set_sockaddr -> udpsendto
 // udp server: prepare_udpserver -> udprecvfrom
 // tcp client: create_tcpsock -> tcpconnect -> tcpsend
@@ -34,13 +26,6 @@ void create_udpsock(int &sockfd, bool need_timeout, const char* role = "sockethe
 void udpsendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, const char* role = "sockethelper.udpsendto");
 void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const char* role = "sockethelper.udpserver", int timeout_sec = SOCKET_TIMEOUT, int timeout_usec = 0);
 bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role = "sockethelper.udprecvfrom");
-
-void udpsendlarge_udpfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, const char* role);
-void udpsendlarge_ipfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, const char* role, size_t frag_hdrsize);
-void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, const char* role, size_t frag_hdrsize, size_t frag_maxsize);
-bool udprecvlarge_udpfrag(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role);
-bool udprecvlarge_ipfrag(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role, size_t frag_hdrsize);
-bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role, size_t frag_hdrsize, size_t frag_maxsize);
 
 // tcp
 void create_tcpsock(int &sockfd, bool need_timeout, const char* role = "sockethelper.tcpsock", int timeout_sec = SOCKET_TIMEOUT, int timeout_usec = 0);
