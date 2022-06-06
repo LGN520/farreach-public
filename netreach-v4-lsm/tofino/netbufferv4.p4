@@ -14,6 +14,7 @@
 // 0b0001
 #define PUTREQ 0x01
 #define WARMUPREQ 0x11
+#define LOADREQ 0x21
 // 0b0011
 #define GETRES_LATEST_SEQ 0x03
 #define GETRES_DELETED_SEQ 0x13
@@ -57,6 +58,8 @@
 #define CACHE_EVICT_ACK 0xb0
 #define CACHE_EVICT_CASE2 0xc0
 #define WARMUPACK 0xd0
+#define LOADACK 0xe0
+#define CACHE_POP_ACK 0xf0
 
 /*
 #define GETREQ 0x00
@@ -136,6 +139,8 @@
 
 // hash partition range
 #define PARTITION_COUNT 32768
+
+#define SWITCHIDX_FOREVAL 0xFFFF
 
 //#define CPU_PORT 192
 

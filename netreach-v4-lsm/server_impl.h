@@ -259,7 +259,7 @@ void *run_server_worker(void * param) {
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[serveridx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				get_response_t rsp(req.key(), tmp_val, tmp_stat);
+				get_response_t rsp(req.key(), tmp_val, tmp_stat, serveridx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -301,7 +301,7 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] stat = " << tmp_stat)
-				put_response_t rsp(req.key(), true);
+				put_response_t rsp(req.key(), true, serveridx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -318,7 +318,7 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				bool tmp_stat = db_wrappers[serveridx].remove(req.key(), req.seq());
 				//COUT_THIS("[server] stat = " << tmp_stat)
-				del_response_t rsp(req.key(), true);
+				del_response_t rsp(req.key(), true, serveridx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -470,7 +470,7 @@ void *run_server_worker(void * param) {
 				} // both inmemory_results and inswitch_results are not empty
 				//COUT_THIS("results size: " << results.size());
 
-				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), results.size(), results);
+				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), serveridx, results.size(), results);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -490,7 +490,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[serveridx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				
-				get_response_t rsp(req.key(), tmp_val, tmp_stat);
+				get_response_t rsp(req.key(), tmp_val, tmp_stat, serveridx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -519,7 +519,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				
-				put_response_t rsp(req.key(), true);
+				put_response_t rsp(req.key(), true, serveridx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -552,7 +552,7 @@ void *run_server_worker(void * param) {
 
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				put_response_t rsp(req.key(), true);
+				put_response_t rsp(req.key(), true, serveridx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -575,7 +575,7 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				put_response_t rsp(req.key(), true);
+				put_response_t rsp(req.key(), true, serveridx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -608,7 +608,7 @@ void *run_server_worker(void * param) {
 
 				bool tmp_stat = db_wrappers[serveridx].remove(req.key(), req.seq());
 				//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				del_response_t rsp(req.key(), true);
+				del_response_t rsp(req.key(), true, serveridx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -649,6 +649,27 @@ void *run_server_worker(void * param) {
 				server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
 				break;
 			}
+		case packet_type_t::LOADREQ:
+			{
+				load_request_t req(buf, recv_size);
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
+
+				//char val_buf[Val::SWITCH_MAX_VALLEN];
+				//memset(val_buf, 0x11, Val::SWITCH_MAX_VALLEN);
+				//val_t tmp_val(val_buf, Val::SWITCH_MAX_VALLEN);
+				uint32_t tmp_seq = 0;
+				bool tmp_stat = db_wrappers[serveridx].force_put(req.key(), req.val());
+				
+				load_ack_t rsp(req.key());
+				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+#ifdef DUMP_BUF
+				dump_buf(buf, rsp_size);
+#endif
+				break;
+			}
 		default:
 			{
 				COUT_THIS("[server.worker] Invalid packet type: " << int(pkt_type))
@@ -657,7 +678,7 @@ void *run_server_worker(void * param) {
 			}
 	}
 
-	if (likely(pkt_type != packet_type_t::WARMUPREQ)) {
+	if (likely(pkt_type != packet_type_t::WARMUPREQ && pkt_type != packet_type_t::LOADREQ)) {
 		CUR_TIME(t2);
 		DELTA_TIME(t2, t1, t3);
 		thread_param.latency_list.push_back(GET_MICROSECOND(t3));

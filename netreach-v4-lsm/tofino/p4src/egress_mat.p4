@@ -167,6 +167,7 @@ action update_getreq_inswitch_to_getreq_nlatest() {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, 0);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
 	remove_header(inswitch_hdr);
 	add_header(vallen_hdr);
@@ -195,6 +196,7 @@ action update_getreq_inswitch_to_getres_for_deleted_by_mirroring(client_sid, ser
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, 0);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
@@ -226,6 +228,7 @@ action update_getreq_inswitch_to_getres_for_deleted_by_mirroring(client_sid, ser
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
 	remove_header(inswitch_hdr);
 	add_header(vallen_hdr);
@@ -254,6 +257,7 @@ action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port) {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
@@ -430,6 +434,7 @@ action update_putreq_inswitch_to_putreq_pop_seq() {
 	modify_field(op_hdr.optype, PUTRES);
 	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
 	remove_header(inswitch_hdr);
 	remove_header(vallen_hdr);
@@ -458,6 +463,7 @@ action update_putreq_inswitch_to_putres_by_mirroring(client_sid, server_port) {
 	modify_field(op_hdr.optype, PUTRES);
 	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
@@ -525,6 +531,7 @@ action forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(switchos_s
 	modify_field(op_hdr.optype, PUTRES);
 	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
@@ -554,6 +561,7 @@ action update_putreq_seq_inswitch_case1_to_putres_by_mirroring(client_sid, serve
 	modify_field(op_hdr.optype, PUTRES);
 	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
@@ -617,6 +625,7 @@ action update_delreq_inswitch_to_delreq_seq() {
 	modify_field(op_hdr.optype, DELRES);
 	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
 	remove_header(inswitch_hdr);
 	add_header(stat_hdr);
@@ -628,6 +637,7 @@ action update_delreq_inswitch_to_delres_by_mirroring(client_sid, server_port) {
 	modify_field(op_hdr.optype, DELRES);
 	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
@@ -686,6 +696,7 @@ action forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(switchos_s
 	modify_field(op_hdr.optype, DELRES);
 	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
 	remove_header(vallen_hdr);
 	remove_header(val1_hdr);
@@ -715,6 +726,7 @@ action update_delreq_seq_inswitch_case1_to_delres_by_mirroring(client_sid, serve
 	modify_field(op_hdr.optype, DELRES);
 	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
@@ -963,7 +975,7 @@ table update_ipmac_srcport_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 16;
 }
 
 action add_only_vallen() {

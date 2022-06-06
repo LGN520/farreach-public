@@ -365,11 +365,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             if RANGE_SUPPORT:
                 # # Table: range_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
-                # Table: range_partition_tbl (default: nop; size <= 6 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 7 * 128)
                 print "Configuring range_partition_tbl"
                 #key_range_per_server = pow(2, 32) / server_num
                 key_range_per_server = pow(2, 16) / server_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ]:
                     #for iport in self.devPorts:
                     ##key_start = -pow(2, 31) # [-2^31, 2^31-1]
                     #key_start = 0 # [0, 2^32-1]
@@ -404,9 +404,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
             else:
-                # Table: hash_for_partition_tbl (default: nop; size: 5)
+                # Table: hash_for_partition_tbl (default: nop; size: 6)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ]:
                     matchspec0 = netbufferv4_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u8_to_i8(tmpoptype),
                             meta_need_recirculate = 0)
@@ -442,10 +442,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     endkey_start = endkey_end + 1
             else:
                 # # Table: hash_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
-                # Table: hash_partition_tbl (default: nop; size <= 5 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 6 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_server = partition_count / server_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ]:
                     #for iport in self.devPorts:
                     hash_start = 0 # [0, partition_count-1]
                     for i in range(server_num):
@@ -535,10 +535,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #self.client.prepare_for_cachehit_tbl_set_default_action_set_client_sid(\
             #        self.sess_hdl, self.dev_tgt, actnspec0)
 
-            # Table: ipv4_forward_tbl (default: nop; size: 7)
+            # Table: ipv4_forward_tbl (default: nop; size: 8)
             print "Configuring ipv4_forward_tbl"
             ipv4addr0 = ipv4Addr_to_i32(client_ip)
-            for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT]:
+            for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
                 matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
                         op_hdr_optype = convert_u8_to_i8(tmpoptype),
                         ipv4_hdr_dstAddr = ipv4addr0,
@@ -1151,7 +1151,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
-            # Table: update_ipmac_srcport_tbl (default: nop; 8)
+            # Table: update_ipmac_srcport_tbl (default: nop; 9)
             print "Configuring update_ipmac_srcport_tbl"
             actnspec0 = netbufferv4_update_ipmac_srcport_server2client_action_spec_t(\
                     macAddr_to_string(client_mac), \
@@ -1171,6 +1171,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec2 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(DELRES))
             matchspec3 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(SCANRES_SPLIT))
             matchspec4 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(WARMUPACK))
+            matchspec5 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(LOADACK))
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
@@ -1181,21 +1182,23 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec3, actnspec0)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
                     self.sess_hdl, self.dev_tgt, matchspec4, actnspec0)
-            matchspec5 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(GETRES_LATEST_SEQ_INSWITCH_CASE1))
-            matchspec6 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(GETRES_DELETED_SEQ_INSWITCH_CASE1))
-            matchspec7 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(CACHE_POP_INSWITCH_ACK))
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
-                    self.sess_hdl, self.dev_tgt, matchspec5, actnspec1)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
+                    self.sess_hdl, self.dev_tgt, matchspec5, actnspec0)
+            matchspec6 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(GETRES_LATEST_SEQ_INSWITCH_CASE1))
+            matchspec7 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(GETRES_DELETED_SEQ_INSWITCH_CASE1))
+            matchspec8 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(CACHE_POP_INSWITCH_ACK))
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
                     self.sess_hdl, self.dev_tgt, matchspec6, actnspec1)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
                     self.sess_hdl, self.dev_tgt, matchspec7, actnspec1)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
+                    self.sess_hdl, self.dev_tgt, matchspec8, actnspec1)
 
-            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*10=170)
+            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*11=187)
             print "Configuring add_and_remove_value_header_tbl"
             # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
-            for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES, WARMUPREQ]:
+            for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES, WARMUPREQ, LOADREQ]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                     if i == 0:
                         vallen_start = 0

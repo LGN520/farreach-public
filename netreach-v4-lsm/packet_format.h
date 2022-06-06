@@ -27,7 +27,7 @@
 // (1) vallen&value: mask 0b0001; seq: mask 0b0010; inswitch_hdr: mask 0b0100; stat: mask 0b1000;
 // (2) scan/split: specific value (X + 0b0000); not parsed optypes: X + 0b0000
 enum class PacketType {
-	PUTREQ=0x01, WARMUPREQ=0x11,
+	PUTREQ=0x01, WARMUPREQ=0x11, LOADREQ=0x21,
 	GETRES_LATEST_SEQ=0x03, GETRES_DELETED_SEQ=0x13, PUTREQ_SEQ=0x23, PUTREQ_POP_SEQ=0x33, PUTREQ_SEQ_CASE3=0x43, PUTREQ_POP_SEQ_CASE3=0x53,
 	GETRES_LATEST_SEQ_INSWITCH=0x07, GETRES_DELETED_SEQ_INSWITCH=0x17, CACHE_POP_INSWITCH=0x27,
 	GETRES_LATEST_SEQ_INSWITCH_CASE1=0x0f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x1f, PUTREQ_SEQ_INSWITCH_CASE1=0x2f, DELREQ_SEQ_INSWITCH_CASE1=0x3f,
@@ -36,7 +36,7 @@ enum class PacketType {
 	GETREQ_INSWITCH=0x04, DELREQ_INSWITCH=0x14,
 	DELREQ_SEQ=0x02, DELREQ_SEQ_CASE3=0x12,
 	PUTRES=0x08, DELRES=0x18,
-	SCANREQ=0x10, SCANREQ_SPLIT=0x20, GETREQ=0x30, DELREQ=0x40, GETREQ_POP=0x50, GETREQ_NLATEST=0x60, CACHE_POP_INSWITCH_ACK=0x70, SCANRES_SPLIT=0x80, CACHE_POP=0x90, CACHE_EVICT=0xa0, CACHE_EVICT_ACK=0xb0, CACHE_EVICT_CASE2=0xc0, WARMUPACK=0xd0, CACHE_POP_ACK=0xe0
+	SCANREQ=0x10, SCANREQ_SPLIT=0x20, GETREQ=0x30, DELREQ=0x40, GETREQ_POP=0x50, GETREQ_NLATEST=0x60, CACHE_POP_INSWITCH_ACK=0x70, SCANRES_SPLIT=0x80, CACHE_POP=0x90, CACHE_EVICT=0xa0, CACHE_EVICT_ACK=0xb0, CACHE_EVICT_CASE2=0xc0, WARMUPACK=0xd0, LOADACK=0xe0, CACHE_POP_ACK=0xf0
 };
 /*enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES_SPLIT, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 
@@ -133,14 +133,15 @@ class ScanRequest : public Packet<key_t> { // ophdr + scanhdr
 };
 
 template<class key_t, class val_t>
-class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat
+class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat_hdr
 	public:
 		GetResponse();
-		GetResponse(key_t key, val_t val, bool stat);
+		GetResponse(key_t key, val_t val, bool stat, uint16_t nodeidx_foreval);
 		GetResponse(const char * data, uint32_t recv_size);
 
 		val_t val() const;
 		bool stat() const;
+		uint16_t nodeidx_foreval() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -149,15 +150,17 @@ class GetResponse : public Packet<key_t> { // ophdr + val + shadowtype + stat
 	private:
 		val_t _val;
 		bool _stat;
+		uint16_t _nodeidx_foreval;
 };
 
 template<class key_t>
-class PutResponse : public Packet<key_t> { // ophdr + shadowtype + stat
+class PutResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 	public: 
-		PutResponse(key_t key, bool stat);
+		PutResponse(key_t key, bool stat, uint16_t nodeidx_foreval);
 		PutResponse(const char * data, uint32_t recv_size);
 
 		bool stat() const;
+		uint16_t nodeidx_foreval() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -165,15 +168,17 @@ class PutResponse : public Packet<key_t> { // ophdr + shadowtype + stat
 		virtual void deserialize(const char * data, uint32_t recv_size);
 	private:
 		bool _stat;
+		uint16_t _nodeidx_foreval;
 };
 
 template<class key_t>
-class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat
+class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 	public: 
-		DelResponse(key_t key, bool stat);
+		DelResponse(key_t key, bool stat, uint16_t nodeidx_foreval);
 		DelResponse(const char * data, uint32_t recv_size);
 
 		bool stat() const;
+		uint16_t nodeidx_foreval() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -181,15 +186,17 @@ class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat
 		virtual void deserialize(const char * data, uint32_t recv_size);
 	private:
 		bool _stat;
+		uint16_t _nodeidx_foreval;
 };
 
 template<class key_t, class val_t>
-class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr + splithdr + pairs
+class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr + splithdr + nodeidx_foreval + pairs
 	public: 
 		//ScanResponseSplit(key_t key, key_t endkey, uint32_t num, uint16_t cur_scanidx, uint16_t max_scannum, int32_t pairnum, std::vector<std::pair<key_t, val_t>> pairs);
-		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, int32_t parinum, std::vector<std::pair<key_t, val_t>> pairs);
+		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int32_t parinum, std::vector<std::pair<key_t, val_t>> pairs);
 		ScanResponseSplit(const char * data, uint32_t recv_size);
 
+		uint16_t nodeidx_foreval() const;
 		int32_t pairnum() const;
 		std::vector<std::pair<key_t, val_t>> pairs() const;
 
@@ -197,6 +204,7 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr + 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint16_t _nodeidx_foreval;
 		int32_t _pairnum;
 		std::vector<std::pair<key_t, val_t>> _pairs;
 };
@@ -451,6 +459,20 @@ class WarmupAck : public GetRequest<key_t> { // ophdr
 	public: 
 		WarmupAck(key_t key);
 		WarmupAck(const char * data, uint32_t recv_size);
+};
+
+template<class key_t, class val_t>
+class LoadRequest : public PutRequest<key_t, val_t> { // ophdr + val + shadowtype
+	public: 
+		LoadRequest(key_t key, val_t val);
+		LoadRequest(const char * data, uint32_t recv_size);
+};
+
+template<class key_t>
+class LoadAck : public GetRequest<key_t> { // ophdr
+	public: 
+		LoadAck(key_t key);
+		LoadAck(const char * data, uint32_t recv_size);
 };
 
 // NOTE: only used in end-hosts
