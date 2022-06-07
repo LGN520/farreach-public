@@ -122,7 +122,7 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 	memcpy(fragbuf, buf, frag_hdrsize); // fixed fragment header
 	uint16_t cur_fragidx = 0;
 	uint16_t max_fragnum = uint16_t(fragnum);
-	char *cur_bufptr = buf + frag_hdrsize;
+	size_t buf_sentsize = frag_hdrsize;
 	for (; cur_fragidx < max_fragnum; cur_fragidx++) {
 		memset(fragbuf + frag_hdrsize, 0, frag_maxsize - frag_hdrsize);
 
@@ -136,8 +136,8 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 		if (cur_fragidx == max_fragnum - 1) {
 			cur_frag_bodysize = total_bodysize - frag_bodysize * cur_fragidx;
 		}
-		memcpy(fragbuf + final_frag_hdrsize, cur_bufptr, cur_frag_bodysize);
-		cur_bufptr += cur_frag_bodysize;
+		memcpy(fragbuf + final_frag_hdrsize, buf + buf_sentsize, cur_frag_bodysize);
+		buf_sentsize += cur_frag_bodysize;
 
 		udpsendto(sockfd, fragbuf, final_frag_hdrsize + cur_frag_bodysize, flags, dest_addr, addrlen, role);
 	}
@@ -151,9 +151,11 @@ bool udprecvlarge_ipfrag(int sockfd, void *buf, size_t len, int flags, struct so
 	return udprecvlarge(sockfd, buf, len, flags, src_addr, addrlen, recvsize, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE);
 }
 
+// NOTE: receive large packet from one source
 bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role, size_t frag_hdrsize, size_t frag_maxsize) {
 	bool is_timeout = false;
 	size_t final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
+	size_t frag_bodysize = frag_maxsize - final_frag_hdrsize;
 	recvsize = 0;
 
 	char fragbuf[frag_maxsize];
@@ -161,19 +163,17 @@ bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr 
 	bool is_first = true;
 	uint16_t max_fragnum = 0;
 	uint16_t cur_fragnum = 0;
-	char *cur_bufptr = buf;
 	while (true) {
 		if (is_first) {
 			is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, src_addr, addrlen, frag_recvsize, role);
 			if (is_timeout) {
 				break;
 			}
-			INVARIANT(frag_recvsize >= final_frag_hdrsize);
+			INVARIANT(frag_recvsize >= final_frag_hdrsize && frag_recvsize <= frag_maxsize);
 
+			INVARIANT(len >= frag_hdrsize);
+			memcpy(buf, fragbuf, frag_hdrsize);
 			recvsize += frag_hdrsize;
-			INVARIANT(len >= recvsize);
-			memcpy(cur_bufptr, fragbuf, frag_hdrsize);
-			cur_bufptr += frag_hdrsize;
 			memcpy(&max_fragnum, fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
 			is_first = false;
 		}
@@ -185,10 +185,13 @@ bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr 
 			INVARIANT(frag_recvsize >= final_frag_hdrsize);
 		}
 
+		uint16_t cur_fragidx = 0;
+		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
+		INVARIANT(cur_fragidx < max_fragnum);
+
+		INVARIANT(len >= (cur_fragidx * frag_bodysize + frag_recvsize - final_frag_hdrsize));
+		memcpy(buf + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
 		recvsize += (frag_recvsize - final_frag_hdrsize);
-		INVARIANT(len >= recvsize);
-		memcpy(cur_bufptr, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
-		cur_bufptr += (frag_recvsize - final_frag_hdrsize);
 
 		cur_fragnum += 1;
 		if (cur_fragnum >= max_fragnum) {
@@ -196,6 +199,108 @@ bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr 
 		}
 	}
 
+	return is_timeout;
+}
+
+
+bool udprecvlarge_multisrc_udpfrag(int sockfd, void *bufs, size_t bufnum, size_t len, int flags, struct sockaddr *src_addrs, socklen_t *addrlens, int *recvsizes, int& recvnum, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion) {
+	return udprecvlarge_multisrc(sockfd, bufs, bufnum, len, flags, src_addrs, addrlens, recvsizes, recvnum, role, 0, UDP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion);
+}
+
+bool udprecvlarge_multisrc_ipfrag(int sockfd, void *bufs, size_t bufnum, size_t len, int flags, struct sockaddr *src_addrs, socklen_t *addrlens, int *recvsizes, int& recvnum, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion) {
+	return udprecvlarge_multisrc(sockfd, bufs, bufnum, len, flags, src_addrs, addrlens, recvsizes, recvnum, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion);
+}
+
+// NOTE: receive large packet from multiple sources (srcid >= 0 && srcid < srcnum <= bufnum)
+// bufs: bufnum * len; src_addrs: NULL or bufnum; addrlens: NULL or bufnum; recvsizes: bufnum
+// For example, srcnum for SCANRES_SPLIT is split_hdr.max_scannum; srcid for SCANRES_SPLIT is split_hdr.cur_scanidx
+bool udprecvlarge_multisrc(int sockfd, void *bufs, size_t bufnum, size_t len, int flags, struct sockaddr *src_addrs, socklen_t *addrlens, int *recvsizes, int& recvnum, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion) {
+	INVARIANT(srcnum_len == 1 || srcnum_len == 2 || srcnum_len == 4);
+	INVARIANT(srcid_len == 1 || srcid_len == 2 || srcid_len == 4);
+	INVARIANT(srcnum_off <= frag_hdrsize && srcid_off <= frag_hdrsize);
+
+	bool is_timeout = false;
+	size_t final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
+	size_t frag_bodysize = frag_maxsize - final_frag_hdrsize;
+	recvsize = 0;
+	struct sockaddr_in tmp_srcaddr;
+	socklen_t tmp_addrlen;
+
+	// receive current fragment
+	char fragbuf[frag_maxsize];
+	int frag_recvsize = 0;
+	// set by the global first fragment
+	bool global_isfirst = true;
+	size_t max_srcnum = 0;
+	size_t cur_srcnum = 0;
+	// set by the first fragment of each srcid
+	bool local_isfirsts[bufnum];
+	uint16_t max_fragnums[bufnum];
+	uint16_t cur_fragnums[bufnum];
+	// initialize
+	for (size_t tmpbufidx = 0; tmpbufidx < bufnum; tmpbufidx++) {
+		local_isfirsts[tmpbufidx] = false;
+		max_fragnums[tmpbufidx] = 0;
+		cur_fragnums[tmpbufidx] = 0;
+
+		recvsizes[tmpbufidx] = 0;
+	}
+	while (true) {
+		is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, (struct sockaddr*)&tmp_srcaddr, tmp_addrlen, frag_recvsize, role);
+		if (is_timeout) {
+			break;
+		}
+		INVARIANT(frag_recvsize >= final_frag_hdrsize);
+
+		// set max_srcnum for the global first packet
+		if (global_isfirst) {
+			memcpy(&max_srcnum, fragbuf + srcnum_off, srcnum_len);
+			if (srcnum_conversion && srcnum_len == 2) max_srcnum = size_t(ntohs(uint16_t(max_srcnum)));
+			else if (srcnum_conversion && srcnum_len == 4) max_srcnum = size_t(ntohl(uint32_t(max_srcnum)));
+			INVARIANT(max_srcnum <= bufnum);
+			global_isfirst = false;
+		}
+
+		uint16_t tmpsrcid = 0;
+		memcpy(&tmpsrcid, fragbuf + srcid_off, srcid_len);
+		if (srcid_conversion && srcid_len == 2) tmpsrcid = size_t(ntohs(uint16_t(tmpsrcid)));
+		else if (srcid_conversion && srcid_len == 4) tmpsrcid = size_t(ntohl(uint32_t(tmpsrcid)));
+		INVARIANT(tmpsrcid < max_srcnum);
+
+		if (local_isfirsts[tmpsrcid]) {
+			if (src_addrs != NULL) {
+				src_addrs[tmpsrcid] = tmp_srcaddr;
+				addrlens[tmpsrcid] = tmp_addrlen;
+			}
+
+			INVARIANT(len >= frag_hdrsize);
+			memcpy(bufs[tmpsrcid], fragbuf, frag_hdrsize);
+			recvsizes[tmpsrcid] += frag_hdrsize;
+			memcpy(&max_fragnums[tmpsrcid], fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
+
+			local_isfirsts[tmpsrcid] = false;
+		}
+
+		uint16_t cur_fragidx = 0;
+		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
+		INVARIANT(cur_fragidx < max_fragnums[tmpsrcid]);
+
+		INVARIANT(len >= (cur_fragidx * frag_bodysize + frag_recvsize - final_frag_hdrsize));
+		memcpy(bufs[tmpsrcid] + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
+		recvsizes[tmpsrcid] += (frag_recvsize - final_frag_hdrsize);
+
+		cur_fragnums[tmpsrcid] += 1;
+		INVARIANT(cur_fragnums[tmpsrcid] <= max_fragnums[tmpsrcid]);
+		if (cur_fragnums[tmpsrcid] == max_fragnums[tmpsrcid]) {
+			cur_srcnum += 1;
+			if (cur_srcnum >= max_srcnum) {
+				break;
+			}
+		}
+	}
+
+	INVARIANT(cur_srcnum <= bufnum);
+	recvnum = cur_srcnum;
 	return is_timeout;
 }
 

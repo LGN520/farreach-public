@@ -50,8 +50,11 @@ int controller_evictserver_evictclient_udpsock = -1;
 
 // controller.snapshotclient <-> switchos.snapshotserver
 int controller_snapshotid = 0;
-bool volatile is_controller_snapshotclient_connected = false;
-int controller_snapshotclient_tcpsock = -1;
+int controller_snapshotclient_udpsock = -1;
+int controller_snapshotserver_udpsock = -1;
+int controller_snapshotserver_snapshotclient_for_server_snapshotserver_udpsock = -1;
+int controller_consnapshotserver_udpsock = -1;
+int controller_consnapshotserver_snapshotclient_for_server_consnapshotserver_udpsock = -1;
 
 // controller.snapshotclient.consnapshotclient <-> server.consnapshotserver
 bool volatile is_controller_snapshotclient_consnapshotclient_connected = false;
@@ -61,6 +64,8 @@ void prepare_controller();
 void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
 void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
 void *run_controller_snapshotclient(void *param); // Periodically notify switch os to launch snapshot
+void *run_controller_snapshotserver(void *param); // Forward SNAPSHOT_SERERSIDE to server
+void *run_controller_consnapshotserver(void *param); // Forward SNAPSHOT_DATA to server
 void close_controller();
 
 int main(int argc, char **argv) {
@@ -91,6 +96,18 @@ int main(int argc, char **argv) {
 		COUT_N_EXIT("Error: " << ret);
 	}
 
+	pthread_t snapshotserver_thread;
+	ret = pthread_create(&snapshotserver_thread, nullptr, run_controller_snapshotserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
+	pthread_t consnapshotserver_thread;
+	ret = pthread_create(&consnapshotserver_thread, nullptr, run_controller_consnapshotserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+
 	while (controller_ready_threads < controller_expected_ready_threads) sleep(1);
 	printf("[controller] all threads ready\n");
 
@@ -117,10 +134,18 @@ int main(int argc, char **argv) {
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
-	/*rc = pthread_join(snapshotclient_thread, &status);
+	rc = pthread_join(snapshotclient_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
-	}*/
+	}
+	rc = pthread_join(snapshotserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
+	rc = pthread_join(consnapshotserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join," << rc);
+	}
 
 	printf("[controller] all threads end\n");
 	close_controller();
@@ -131,7 +156,7 @@ void prepare_controller() {
 
 	controller_running =false;
 
-	controller_expected_ready_threads = server_num + 2;
+	controller_expected_ready_threads = server_num + 4;
 	controller_expected_popserver_finish_threads = server_num;
 
 	// prepare popserver sockets
@@ -170,8 +195,12 @@ void prepare_controller() {
 		load_snapshotid(controller_snapshotid, snapshotid_path);
 	}
 
-	// prepare snapshotclient
-	create_tcpsock(controller_snapshotclient_tcpsock, false, "controller.snapshotclient");
+	// prepare snapshotclient, snapshotserver, consnapshotserver
+	create_udpsock(controller_snapshotclient_udpsock, true, "controller.snapshotclient");
+	prepare_udpserver(controller_snapshotserver_udpsock, false, controller_snapshotserver_port, "controller.snapshotserver");
+	create_udpsock(controller_snapshotserver_snapshotclient_for_server_snapshotserver_udpsock, true, "controller.snapshotserver.snapshotclient_for_server_snapshotserver");
+	prepare_udpserver(controller_consnapshotserver_udpsock, false, controller_consnapshotserver_port, "controller.consnapshotserver");
+	create_udpsock(controller_consnapshotserver_snapshotclient_for_server_consnapshotserver_udpsock, true, "controller.consnapshotserver.snapshotclient_for_server_consnapshotserver");
 
 	// prepare consnapshotclient
 	create_tcpsock(controller_snapshotclient_consnapshotclient_tcpsock, false, "controller.snapshotclient.consnapshotclient");
@@ -294,42 +323,20 @@ void *run_controller_evictserver(void *param) {
 	pthread_exit(nullptr);
 }
 
+// TODO: controller.snapshotclient should guide snapshot in switchos
 void *run_controller_snapshotclient(void *param) {
-	char *recvbuf = new char[MAX_LARGE_BUFSIZE]; // SNAPSHOT_SERVERSIDE/snapshotdata from switchos
-	INVARIANT(recvbuf != NULL);
-	memset(recvbuf, 0, MAX_LARGE_BUFSIZE);
+	struct sockaddr_in switchos_snapshotserver_addr;
+	set_sockaddr(switchos_snapshotserver_addr, inet_addr(switchos_ip), switchos_snapshotserver_port);
+	socklen_t switchos_snapshotserver_addrlen = sizeof(struct sockaddr_in);
 	printf("[controller.snapshotclient] ready\n");
 	controller_ready_threads++;
 
 	while (!controller_running) {}
 
-	// NOTE: as messages are sent among end-hosts (controller, switchos, and server), we do not perform endian conversion
-	uint32_t last_duration = 0; // ms
-	uint32_t cur_recv_bytes = 0;
-	bool direct_parse = false;
-	bool is_broken = false;
-	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
-	int control_type_phase0 = -1;
-	char ack_recvbuf[MAX_BUFSIZE]; // SNAPSHOT_SERVERSIDE_ACK from server
-	int ack_cur_recv_bytes = 0;
-	bool ack_direct_parse = false;
-	bool ack_is_broken = false;
-	int ack_control_type_phase0 = -1;
-	int control_type_phase1 = -1;
-	int total_bytes = -1;
+	char buf[MAX_BUFSIZE];
+	int recvsize = 0;
 	while (controller_running) {
-		INVARIANT(controller_snapshot_period > last_duration);
-		usleep((controller_snapshot_period - last_duration) * 1000); // ms -> us
-
-		// count time for last_duration
-		struct timespec t1, t2, t3;
-		CUR_TIME(t1);
-
-		// connect switchos.snapshotserver
-		if (!is_controller_snapshotclient_connected) {
-			tcpconnect(controller_snapshotclient_tcpsock, switchos_ip, switchos_snapshotserver_port, "controller.snapshotclient", "switchos.snapshotserver");
-			is_controller_snapshotclient_connected = true;
-		}
+		usleep(controller_snapshot_period * 1000); // ms -> us
 
 		// TMPDEBUG
 		printf("Type to send SNAPSHOT_START...\n");
@@ -337,155 +344,136 @@ void *run_controller_snapshotclient(void *param) {
 
 		// send SNAPSHOT_START (little-endian) to switchos
 		printf("[controller.snapshotclient] send SNAPSHOT_START\n");
-		tcpsend(controller_snapshotclient_tcpsock, (char *)&SNAPSHOT_START, sizeof(int), "controlelr.snapshotclient");
-
-		// wait for SNAPSHOT_SERVERSIDE from switchos
 		while (true) {
-			if (!direct_parse) {
-				int recvsize = 0;
-				is_broken = tcprecv(controller_snapshotclient_tcpsock, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "controller.snapshotclient");
-				if (is_broken) {
-					break;
-				}
+			udpsendto(controller_snapshotclient_udpsock, (char *)&SNAPSHOT_START, sizeof(int), 0, (struct sockaddr*)&switchos_snapshotserver_addr, switchos_snapshotserver_addrlen, "controlelr.snapshotclient");
 
-				cur_recv_bytes += recvsize;
-				if (cur_recv_bytes >= MAX_LARGE_BUFSIZE) {
-					printf("[controller.snapshotclient] overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_LARGE_BUFSIZE);
-					exit(-1);
-				}
+			bool is_timeout = udprecvfrom(controller_snapshotclient_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient");
+			if (is_timeout) {
+				continue;
 			}
+			else {
+				INVARIANT(recvsize == sizeof(int) && *((int *)buf) == SNAPSHOT_START_ACK);
+				break;
+			}
+		}
+	}
 
-			// wait for SNAPSHOT_SERVERSIDE from switchos, and send it to server
-			if (phase == 0) {
-				if (control_type_phase0 == -1 && cur_recv_bytes >= sizeof(int)) {
-					control_type_phase0 = *((int *)recvbuf);
-					INVARIANT(control_type_phase0 == SNAPSHOT_SERVERSIDE);
+	close(controller_snapshotclient_udpsock);
+	pthread_exit(nullptr);
+}
 
-					// connect server.consnapshotserver
-					if (!is_controller_snapshotclient_consnapshotclient_connected) {
-						tcpconnect(controller_snapshotclient_consnapshotclient_tcpsock, server_ip_for_controller, server_consnapshotserver_port, "controller.snapshotclient.consnapshotclient", "server.consnapshotserver");
-						is_controller_snapshotclient_consnapshotclient_connected = true;
-					}
+void *run_controller_snapshotserver(void *param) {
+	struct sockaddr_in switchos_snapshotclient_addr;
+	socklen_t switchos_snapshotclient_addrlen = sizeof(struct sockaddr_in);
+	bool with_switchos_snapshotclient_addr = false;
 
-					// send SNAPSHOT_SERVERSIDE to server for server-side snapshot
-					printf("[controller.snapshotclient] receive SNAPSHOT_SERVERSIDE from switchos and send to server\n"); // TMPDEBUG
-					tcpsend(controller_snapshotclient_consnapshotclient_tcpsock, (char *)&SNAPSHOT_SERVERSIDE, sizeof(int), "controller.snapshotclient.consnapshotclient");
+	struct sockaddr_in server_snapshotserver_addr;
+	// TODO: server_snapshotserver_port
+	set_sockaddr(server_snapshotserver_addr, inet_addr(server_ip_for_controller), server_consnapshotserver_port);
+	socklen_t server_snapshotserver_addrlen = sizeof(struct sockaddr_in);
 
-					// wait for SNAPSHOT_SERVERSIDE_ACK from server, and send it to switchos
-					while (true) {
-						if (!ack_direct_parse) {
-							int tmp_recvsize = 0;
-							ack_is_broken = tcprecv(controller_snapshotclient_consnapshotclient_tcpsock, ack_recvbuf + ack_cur_recv_bytes, MAX_BUFSIZE - ack_cur_recv_bytes, 0, tmp_recvsize, "controller.snapshotclient.consnapshotclient");
-							if (ack_is_broken) {
-								break;
-							}
+	printf("[controller.snapshotserver] ready\n");
+	controller_ready_threads++;
 
-							ack_cur_recv_bytes += tmp_recvsize;
-							if (ack_cur_recv_bytes >= MAX_BUFSIZE) {
-								printf("[controller.snapshotclient.consnapshotclient] overflow: cur received bytes (%d), maxbufsize (%d)\n", ack_cur_recv_bytes, MAX_BUFSIZE);
-								exit(-1);
-							}
-						}
+	while (!controller_running) {}
 
-						if (ack_control_type_phase0 == -1 && ack_cur_recv_bytes >= int(sizeof(int))) {
-							ack_control_type_phase0 = *((int *)ack_recvbuf);
-							INVARIANT(ack_control_type_phase0 == SNAPSHOT_SERVERSIDE_ACK);
+	char buf[MAX_BUFSIZE];
+	int recvsize = 0;
+	while (controller_running) {
+		if (!with_switchos_snapshotclient_addr) {
+			udprecvfrom(controller_snapshotserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr*)&switchos_snapshotclient_addr, &switchos_snapshotclient_addrlen, recvsize, "controller.snapshotserver");
+			with_switchos_snapshotclient_addr = true;
+		}
+		else {
+			udprecvfrom(controller_snapshotserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotserver");
+		}
+		INVARIANT(recvsize == sizoef(int) && *((int *)buf) == SNAPSHOT_SERVERSIDE);
 
-							// send SNAPSHOT_SERVERSIDE_ACK to switchos
-							printf("[controller.snapshotclient] receive SNAPSHOT_SERVERSIDE_ACK from server and send to switchos\n"); // TMPDEBUG
-							tcpsend(controller_snapshotclient_tcpsock, (char *)&SNAPSHOT_SERVERSIDE_ACK, sizeof(int), "controller.snapshotclient");
+		// send SNAPSHOT_SERVERSIDE to server.snapshotserver
+		udpsendto(controller_snapshotserver_snapshotclient_for_server_snapshotserver_udpsock, &SNAPSHOT_SERVERSIDE_ACK, sizeof(int), 0, (struct sockaddr*)&server_snapshotserver_addr, server_snapshotserver_addrlen, "controller.snapshotserver.snapshotclient_for_server_snapshotserver");
 
-							// Move remaining bytes and reset metadata
-							if (ack_cur_recv_bytes > int(sizeof(int))) {
-								memcpy(ack_recvbuf, ack_recvbuf + sizeof(int), ack_cur_recv_bytes - sizeof(int));
-								ack_cur_recv_bytes = ack_cur_recv_bytes - sizeof(int);
-							}
-							else {
-								ack_cur_recv_bytes = 0;
-							}
-							if (ack_cur_recv_bytes >= int(sizeof(int))) {
-								ack_direct_parse = true;
-							}
-							else {
-								ack_direct_parse = false;
-							}
-							ack_is_broken = false;
-							ack_control_type_phase0 = -1;
-							break;
-						} // receive a SNAPSHOT_SERVERSIDE_ACK
-					} // while (true)
+		// wait for SNAPSHOT_SERVERSIDE_ACK
+		bool is_timeout = udprecvfrom(controller_snapshotserver_snapshotclient_for_server_snapshotserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotserver.snapshotclient_for_server_snapshotserver");
+		if (!is_timeout) {
+			// send SNAPSHOT_SERVERSIDE_ACK to switchos.snapshotclient
+			INVARIANT(recvsize == sizeof(int) && *((int *)buf) == SNAPSHOT_SERVERSIDE_ACK);
+			udpsendto(controller_snapshotserver_udpsock, buf, recvsize, 0, (struct sockaddr*)&switchos_snapshotclient_addr, switchos_snapshotclient_addrlen, "controller.snapshotserver");
+		}
+	}
 
-					phase = 1; // wait for crash-consistent snapshot data
-					direct_parse = false;
-				} // receive a SNAPSHOT_SERVERSIDE
-			} // phase == 0
+	close(controller_snapshotserver_udpsock);
+	close(controller_snapshotserver_snapshotclient_for_server_snapshotserver_udpsock);
+	pthread_exit(nullptr);
+}
+
+void *run_controller_consnapshotserver(void *param) {
+	char *recvbuf = new char[MAX_LARGE_BUFSIZE]; // SNAPSHOT_DATA from switchos
+	INVARIANT(recvbuf != NULL);
+	memset(recvbuf, 0, MAX_LARGE_BUFSIZE);
+	int recvsize = 0;
+
+	struct sockaddr_in switchos_consnapshotclient_addr;
+	socklen_t switchos_consnapshotclient_addrlen;
+	bool with_switchos_consnapshotclient_addr = false;
+
+	struct sockaddr_in server_consnapshotserver_addr;
+	set_sockaddr(server_consnapshotserver_addr, inet_addr(server_ip_for_controller), server_consnapshotserver_port);
+	socklen_t server_consnapshotserver_addrlen = sizeof(struct sockaddr_in);
+
+	printf("[controller.consnapshotserver] ready\n");
+	controller_ready_threads++;
+
+	while (!controller_running) {}
+
+	// NOTE: as messages are sent among end-hosts (controller, switchos, and server), we do not perform endian conversion
+	char ackbuf[MAX_BUFSIZE];
+	int ack_recvsize = 0;
+	while (controller_running) {
+		if (!with_switchos_consnapshotclient_addr) {
+			udprecvlarge_udpfrag(controller_consnapshotserver_udpsock, recvbuf, MAX_LARGE_BUFSIZE, 0, (struct sockaddr*)&switchos_consnapshotclient_addr, switchos_consnapshotclient_addrlen, recvsize, "controller.consnapshotserver");
+			with_switchos_consnapshotclient_addr = true;
+		}
+		else {
+			udprecvlarge_udpfrag(controller_consnapshotserver_udpsock, recvbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, recvsize, "controller.consnapshotserver");
+		}
 			
-			if (phase == 1) { // wait for crash-consistent snapshot data
-				// NOTE: skip sizeof(int) for SNAPSHOT_SERVERSIDE
-				if (control_type_phase1 == -1 && cur_recv_bytes >= sizeof(int) + sizeof(int) + sizeof(int32_t)) { // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
-					control_type_phase1 = *((int *)(recvbuf + sizeof(int)));
-					INVARIANT(control_type_phase1 == SNAPSHOT_DATA);
-					total_bytes = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int)));
-					INVARIANT(total_bytes > 0);
-				}
+		// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
+		// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
+		//// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
+		// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
+		
+		// send snapshot data to server.consnapshotserver
+		printf("[controller.consnapshotserver] receive snapshot data from switchos and send to server\n"); // TMPDEBUG
+		udpsendlarge_udpfrag(controller_consnapshotserver_snapshotclient_for_server_consnapshotserver_udpsock, recvbuf, recvsize, 0, (struct sockaddr*)&server_consnapshotserver_addr, server_consnapshotserver_addrlen, "controller.snapshotclient.consnapshotclient");
+		
+		bool is_timeout = udprecvfrom(controller_consnapshotserver_snapshotclient_for_server_consnapshotserver_udpsock, ackbuf, ack_recvsize, 0, NULL, NULL, "controller.snapshotclient.consnapshotclient");
+		if (!is_timeout) {
+			INVARIANT(ack_recvsize == sizeof(int) && *((int *)ackbuf) == SNAPSHOT_DATA_ACK);
+			// send SNAPSHOT_DATA_ACK to switchos
+			udpsendto(controller_consnapshotserver_udpsock, ackbuf, ack_recvsize, 0, (struct sockaddr*)&switchos_consnapshotclient_addr, switchos_consnapshotclient_addrlen, "controller.consnapshotserver");
 
-				// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
-				// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
-				//// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
-				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
-				if (control_type_phase1 != -1 && cur_recv_bytes >= sizeof(int) + total_bytes) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
-					// NOTE: per-server_bytes is used for sending snapshot data to different server.consnapshotservers (not used now)
-					
-					// send snapshot data to server.consnapshotserver
-					printf("[controller.snapshotclient] receive snapshot data from switchos and send to server\n"); // TMPDEBUG
-					tcpsend(controller_snapshotclient_consnapshotclient_tcpsock, recvbuf + sizeof(int), total_bytes, "controller.snapshotclient.consnapshotclient");
-
-					// for switch failure recovery
-					controller_snapshotid += 1;
-					// store inswitch snapshot data
-					std::string snapshotdata_path;
-					get_controller_snapshotdata_path(snapshotdata_path, controller_snapshotid);
-					store_buf(recvbuf + sizeof(int), total_bytes, snapshotdata_path);
-					// store latest snapshot id at last 
-					std::string snapshotid_path;
-					get_controller_snapshotid_path(snapshotid_path);
-					store_snapshotid(controller_snapshotid, snapshotid_path);
-					// remove old-enough snapshot data
-					int old_snapshotid = controller_snapshotid - 1;
-					std::string old_snapshotdata_path;
-					get_controller_snapshotdata_path(old_snapshotdata_path, old_snapshotid);
-					rmfiles(old_snapshotdata_path.c_str());
-
-					// Move remaining bytes and reset metadata
-					if (cur_recv_bytes > sizeof(int) + total_bytes) {
-						memcpy(recvbuf, recvbuf + sizeof(int) + total_bytes, cur_recv_bytes - sizeof(int) - total_bytes);
-						cur_recv_bytes = cur_recv_bytes - sizeof(int) - total_bytes;
-					}
-					else {
-						cur_recv_bytes = 0;
-					}
-					if (cur_recv_bytes >= sizeof(int)) {
-						direct_parse = true;
-					}
-					else {
-						direct_parse = false;
-					}
-					is_broken = false;
-					phase = 0;
-					control_type_phase0 = -1;
-					control_type_phase1 = -1;
-					total_bytes = -1;
-				}
-			}
-		} // while (true)
-		CUR_TIME(t2);
-		DELTA_TIME(t2, t1, t3);
-		last_duration = GET_MICROSECOND(t3) / 1000; // us -> ms
+			// for switch failure recovery
+			controller_snapshotid += 1;
+			// store inswitch snapshot data
+			std::string snapshotdata_path;
+			get_controller_snapshotdata_path(snapshotdata_path, controller_snapshotid);
+			store_buf(recvbuf + sizeof(int), total_bytes, snapshotdata_path);
+			// store latest snapshot id at last 
+			std::string snapshotid_path;
+			get_controller_snapshotid_path(snapshotid_path);
+			store_snapshotid(controller_snapshotid, snapshotid_path);
+			// remove old-enough snapshot data
+			int old_snapshotid = controller_snapshotid - 1;
+			std::string old_snapshotdata_path;
+			get_controller_snapshotdata_path(old_snapshotdata_path, old_snapshotid);
+			rmfiles(old_snapshotdata_path.c_str());
+		}
 	} // while (controller_running)
 
 	delete [] recvbuf;
 	recvbuf = NULL;
-	close(controller_snapshotclient_tcpsock);
+	close(controller_consnapshotserver_udpsock);
+	close(controller_consnapshotserver_snapshotclient_for_server_consnapshotserver_udpsock);
 	pthread_exit(nullptr);
 }
 

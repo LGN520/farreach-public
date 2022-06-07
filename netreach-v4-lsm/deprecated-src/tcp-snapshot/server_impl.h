@@ -475,8 +475,7 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				//udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
-				udpsendlarge_ipfrag(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif

@@ -226,6 +226,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 sendbuf = struct.pack("=i", SWITCHOS_REMOVE_CACHE_LOOKUP_ACK)
                 switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_PTF_POPSERVER_END:
+                switchos_ptf_popserver_udpsock.close()
                 print("[ptf.popserver] END")
                 break;
             else:

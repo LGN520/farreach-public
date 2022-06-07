@@ -273,9 +273,6 @@ void *run_fg(void *param) {
 	struct sockaddr_in server_addr;
 	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
-	// we can use max_server_num to hide server-side detail
-	char *scanbufs = new char[server_num * MAX_BUFSIZE];
-	int scan_recvsizes[server_num];
 
 #if !defined(NDEBUGGING_LOG)
 	std::string logname;
@@ -428,19 +425,63 @@ void *run_fg(void *param) {
 				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(req_t2);
 
-				int received_scannum = 0;
-				CUR_TIME(wait_t1);
-				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_odd(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
-				CUR_TIME(wait_t2);
+				struct timespec scan_rsp_t1, scan_rsp_t2, scan_rsp_t3;
+				struct timespec scan_wait_t1, scan_wait_t2, scan_wait_t3;
+				double scan_rsp_latency = 0.0, scan_wait_latency = 0.0;
+				//for (size_t tmpsplit = 0; tmpsplit < split_num; tmpsplit++) {
+				uint16_t received_scannum = 0;
+				uint16_t max_scannum = 0;
+				bool with_max_scannum = false;
+				bool split_is_timeout = false;
+				while (true) {
+					CUR_TIME(scan_wait_t1);
+					split_is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+#ifdef DUMP_BUF
+					dump_buf(buf, recv_size);
+#endif
+					if (split_is_timeout) {
+						is_timeout = true;
+						break;
+					}
+					INVARIANT(recv_size > 0);
+					CUR_TIME(scan_wait_t2);
 
-				CUR_TIME(rsp_t1);
-				for (int tmpscanidx = 0; tmpscanidx < received_scannum; tmpscanidx++) {
-					scan_response_split_t rsp(scanbuf[tmpscanidx * MAX_BUFSIZE], scan_recvsizes[tmpscanidx]);
+					DELTA_TIME(scan_wait_t2, scan_wait_t1, scan_wait_t3);
+					double tmp_scan_wait_latency = GET_MICROSECOND(scan_wait_t3);
+					scan_wait_latency += tmp_scan_wait_latency;
+					/*if (scan_wait_latency == 0.0 || tmp_scan_wait_latency < scan_wait_latency) {
+						scan_wait_latency = tmp_scan_wait_latency;
+						wait_t1 = scan_wait_t1;
+						wait_t2 = scan_wait_t2;
+					}*/
+
+					CUR_TIME(scan_rsp_t1);
+					scan_response_split_t rsp(buf, recv_size);
 					FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
 							<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
-				}
-				CUR_TIME(rsp_t2);
+					received_scannum += 1;
+					if (!with_max_scannum) {
+						max_scannum = rsp.max_scannum();
+						INVARIANT(max_scannum >= 1 && max_scannum <= server_num);
+						with_max_scannum = true;
+					}
+					CUR_TIME(scan_rsp_t2);
 
+					DELTA_TIME(scan_rsp_t2, scan_rsp_t1, scan_rsp_t3);
+					double tmp_scan_rsp_latency = GET_MICROSECOND(scan_rsp_t3);
+					scan_rsp_latency += tmp_scan_rsp_latency;
+					/*if (scan_rsp_latency == 0.0 || tmp_scan_rsp_latency < scan_rsp_latency) {
+						scan_rsp_latency = tmp_scan_rsp_latency;
+						rsp_t1 = scan_rsp_t1;
+						rsp_t2 = scan_rsp_t2;
+					}*/
+
+					COUT_VAR(received_scannum);
+					COUT_VAR(max_scannum); // TMPDEBUG
+					if (received_scannum >= max_scannum) {
+						break;
+					}
+				}
 				if (is_timeout) {
 					continue;
 				}
@@ -488,8 +529,6 @@ void *run_fg(void *param) {
 			cur_sending_time = 0.0;
 		}*/
 	}
-
-	delete [] scanbufs;
 
 	iter->closeiter();
 	delete iter;

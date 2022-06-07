@@ -43,8 +43,10 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(this_dir))
 from common import *
 
-switchos_ptf_snapshotserver_udpsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-switchos_ptf_snapshotserver_udpsock.bind(("127.0.0.1", switchos_ptf_snapshotserver_port))
+switchos_ptf_snapshotserver_tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+switchos_ptf_snapshotserver_tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+switchos_ptf_snapshotserver_tcpsock.bind(("127.0.0.1", switchos_ptf_snapshotserver_port))
+switchos_ptf_snapshotserver_tcpsock.listen(1) # MAXIMUM_PENDING_CONNECTION = 1
 
 flags = netbufferv4_register_flags_t(read_hw_sync=True)
 
@@ -180,76 +182,60 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         print "Reset case1_reg"
         self.client.register_reset_all_case1_reg(self.sess_hdl, self.dev_tgt)
 
-    # Refer to udpsendlarge_udpfrag in socket_helper.c
-    def send_snapshotdata(self, udpsock, buf, dstaddr):
-        print "Send snapshot data to switchos.snapshotserver"
-        frag_hdrsize = 0
-        frag_maxsize = 65536
-        final_frag_hdrsize = frag_hdrsize + 2 + 2 # + cur_fragidx + max_fragnum
-        frag_bodysize = frag_maxsize - final_frag_hdrsize
-        total_bodysize = len(buf) - frag_hdrsize
-        fragnum = 1
-        if total_bodysize > 0:
-            fragnum = (total_bodysize + frag_bodysize - 1) / frag_bodysize
-
-        buf_sentsize = 0 # NOTE: frag_hdrsize = 0 for snapshot data
-        for cur_fragidx in range(fragnum):
-            fragbuf = struct.pack("=2H", cur_fragidx, fragnum)
-            cur_fragbodysize = frag_bodysize
-            if cur_fragidx == fragnum - 1:
-                cur_fragbodysize = total_bodysize - frag_bodysize * cur_fragidx
-            fragbuf = fragbuf + buf[buf_sentsize:buf_sentsize + cur_fragbodysize]
-            buf_sentsize += cur_fragbodysize
-            udpsock.sendto(fragbuf, dstaddr)
-
     def runTest(self):
-        with_switchos_addr = False
         print "[ptf.snapshotserver] ready"
+        connfd, switchos_addr = switchos_ptf_snapshotserver_tcpsock.accept()
 
         control_type = -1
         recvbuf = bytes()
         while True:
-            if with_switchos_addr == False:
-                recvbuf, switchos_addr = switchos_ptf_snapshotserver_udpsock.recvfrom(1024)
-                with_switchos_addr = True
-            else:
-                recvbuf, _ = switchos_ptf_snapshotserver_udpsock.recvfrom(1024)
+            # receive control packet
+            tmp_recvbuf = connfd.recv(1024)
+            recvbuf = recvbuf + tmp_recvbuf
 
-            control_type, recvbuf = struct.unpack("=i{}s".format(len(recvbuf) - 4), recvbuf)
+            if control_type == -1 and len(recvbuf) >= 4:
+                control_type, recvbuf = struct.unpack("=i{}s".format(len(recvbuf) - 4), recvbuf)
 
-            if control_type == SWITCHOS_SET_SNAPSHOT_FLAG:
-                # set snapshot_flag as true atomically
-                self.set_snapshot_flag()
+            if control_type != -1:
+                if control_type == SWITCHOS_SET_SNAPSHOT_FLAG:
+                    # set snapshot_flag as true atomically
+                    self.set_snapshot_flag()
 
-                # send back SWITCHOS_SET_SNAPSHOT_FLAG_ACK
-                sendbuf = struct.pack("=i", SWITCHOS_SET_SNAPSHOT_FLAG_ACK)
-                switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
-            elif control_type == SWITCHOS_LOAD_SNAPSHOT_DATA:
-                # parse empty index
-                cached_empty_index_backup = struct.unpack("=I", recvbuf)[0] # must > 0
-                if cached_empty_index_backup <= 0 or cached_empty_index_backup > kv_bucket_num:
-                    print "Invalid cached_empty_index_backup: {}".format(cached_empty_index_backup)
+                    # send back SWITCHOS_SET_SNAPSHOT_FLAG_ACK
+                    sendbuf = struct.pack("=i", SWITCHOS_SET_SNAPSHOT_FLAG_ACK)
+                    connfd.sendall(sendbuf)
+
+                    control_type = -1
+                elif control_type == SWITCHOS_LOAD_SNAPSHOT_DATA:
+                    if len(recvbuf) >= 4:
+                        # parse empty index
+                        cached_empty_index_backup, recvbuf = struct.unpack("=I{}s".format(len(recvbuf) - 4), recvbuf) # must > 0
+                        if cached_empty_index_backup <= 0 or cached_empty_index_backup > kv_bucket_num:
+                            print "Invalid cached_empty_index_backup: {}".format(cached_empty_index_backup)
+                            exit(-1)
+
+                        # load snapshot data from data plane
+                        sendbuf = self.load_snapshot_data(cached_empty_index_backup)
+
+                        # send back snapshot data
+                        connfd.sendall(sendbuf)
+
+                        control_type = -1
+                elif control_type == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG:
+                    # reset snapshot_flag and case1_reg
+                    self.reset_snapshot_flag_and_reg()
+
+                    # send back SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK
+                    sendbuf = struct.pack("=i", SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK)
+                    connfd.sendall(sendbuf)
+
+                    control_type = -1
+                elif control_type == SWITCHOS_PTF_SNAPSHOTSERVER_END:
+                    print("[ptf.snapshotserver] END")
+                    break;
+                else:
+                    print("Invalid control type {}".format(control_type))
                     exit(-1)
-
-                # load snapshot data from data plane
-                sendbuf = self.load_snapshot_data(cached_empty_index_backup)
-
-                # send back snapshot data
-                self.send_snapshotdata(switchos_ptf_snapshotserver_udpsock, sendbuf, switchos_addr)
-            elif control_type == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG:
-                # reset snapshot_flag and case1_reg
-                self.reset_snapshot_flag_and_reg()
-
-                # send back SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK
-                sendbuf = struct.pack("=i", SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK)
-                switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
-            elif control_type == SWITCHOS_PTF_SNAPSHOTSERVER_END:
-                switchos_ptf_snapshotserver_udpsock.close()
-                print("[ptf.snapshotserver] END")
-                break;
-            else:
-                print("Invalid control type {}".format(control_type))
-                exit(-1)
 
         self.conn_mgr.complete_operations(self.sess_hdl)
         self.conn_mgr.client_cleanup(self.sess_hdl) # close session
