@@ -148,6 +148,8 @@ int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
 int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
 int SWITCHOS_REMOVE_CACHE_LOOKUP = -1;
 int SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = -1;
+int SWITCHOS_ENABLE_SINGLEPATH = -1;
+int SWITCHOS_ENABLE_SINGLEPATH_ACK = -1;
 int SWITCHOS_SET_SNAPSHOT_FLAG = -1;
 int SWITCHOS_SET_SNAPSHOT_FLAG_ACK = -1;
 int SWITCHOS_LOAD_SNAPSHOT_DATA = -1;
@@ -350,6 +352,8 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
 	SWITCHOS_REMOVE_CACHE_LOOKUP = ini.get_switchos_remove_cache_lookup();
 	SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = ini.get_switchos_remove_cache_lookup_ack();
+	SWITCHOS_ENABLE_SINGLEPATH = ini.get_switchos_enable_singlepath();
+	SWITCHOS_ENABLE_SINGLEPATH_ACK = ini.get_switchos_enable_singlepath_ack();
 	SWITCHOS_SET_SNAPSHOT_FLAG = ini.get_switchos_set_snapshot_flag();
 	SWITCHOS_SET_SNAPSHOT_FLAG_ACK = ini.get_switchos_set_snapshot_flag_ack();
 	SWITCHOS_LOAD_SNAPSHOT_DATA = ini.get_switchos_load_snapshot_data();

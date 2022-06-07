@@ -87,7 +87,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             if self.devPorts[1] not in pipeidx_ports_map[egress_pipeidx]:
                 pipeidx_ports_map[egress_pipeidx].append(self.devPorts[1])
 
-    def set_snapshot_flag(self):
+    def enable_singlepath(self):
         print "Set need_recirculate=1 for iports in different ingress pipelines"
         for tmppipeidx in pipeidx_ports_map.keys():
             if tmppipeidx != ingress_pipeidx:
@@ -100,6 +100,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.need_recirculate_tbl_table_add_with_set_need_recirculate(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
+    def set_snapshot_flag(self):
         print "Set snapshot_flag=1 for all ingress pipelines"
         for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
             matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
@@ -217,7 +218,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
             control_type, recvbuf = struct.unpack("=i{}s".format(len(recvbuf) - 4), recvbuf)
 
-            if control_type == SWITCHOS_SET_SNAPSHOT_FLAG:
+            if control_type == SWITCHOS_ENABLE_SINGLEPATH:
+                self.enable_singlepath()
+
+                # send back SWITCHOS_ENABLE_SINGLEPATH_ACK
+                sendbuf = struct.pack("=i", SWITCHOS_ENABLE_SINGLEPATH_ACK)
+                switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
+            elif control_type == SWITCHOS_SET_SNAPSHOT_FLAG:
                 # set snapshot_flag as true atomically
                 self.set_snapshot_flag()
 

@@ -83,6 +83,8 @@ int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
 int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
 int SWITCHOS_REMOVE_CACHE_LOOKUP = -1;
 int SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = -1;
+int SWITCHOS_ENABLE_SINGLEPATH = -1;
+int SWITCHOS_ENABLE_SINGLEPATH_ACK = -1;
 int SWITCHOS_SET_SNAPSHOT_FLAG = -1;
 int SWITCHOS_SET_SNAPSHOT_FLAG_ACK = -1;
 int SWITCHOS_LOAD_SNAPSHOT_DATA = -1;
@@ -133,6 +135,11 @@ int switchos_popworker_evictclient_udpsock = -1;
 // snapshotserver socket to lead snapshot workflow
 int switchos_snapshotserver_udpsock = -1;
 
+// prepare to backup cache metadata for snapshot case2 with atomicity
+bool volatile is_stop_cachepop = false;
+bool volatile popworker_know_stop_cachepop = false; // ensure current cache population/eviction is finished before metadata backup
+// NOTE: not need specialcaseserver_know_stop_cachepop as switchos_specialcases has been cleared in the previous snapshot period
+
 inline void parse_ini(const char *config_file);
 inline void parse_control_ini(const char *config_file);
 void prepare_switchos();
@@ -142,14 +149,16 @@ void *run_switchos_popworker(void *param);
 void *run_switchos_snapshotserver(void *param);
 void close_switchos();
 
+// switchos <-> ptf.popserver
+inline uint32_t serialize_enable_singlepath(char *buf);
 
 
 
 
-// prepare to backup cache metadata with atomicity
-bool volatile is_snapshot_prepare = false;
-bool volatile popworker_know_snapshot_prepare = false; // ensure current cache population/eviction is finished before metadata backup
-// NOTE: not need specialcaseserver_know_snapshot_prepare as switchos_specialcases has been cleared in the previous snapshot period
+
+
+
+
 
 // backuped cache metadata (set/reset by snapshotserver, read by popoworker/specialcaseserver)
 netreach_key_t * volatile switchos_cached_keyarray_backup = NULL; // idx (of inswitch KV) -> key (TODO: different switches for distributed case)
@@ -181,8 +190,6 @@ int switchos_snapshotserver_snapshotclient_for_ptf_udpsock = -1;
 void *run_switchos_specialcaseserver(void *param);
 void process_specialcase(const uint16_t &tmpidx, const netreach_key_t &tmpkey, const val_t &tmpval, const uint32_t &tmpseq, const bool &tmpstat);
 
-// switchos <-> ptf.popserver
-inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx);
 inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx);
 inline uint32_t serialize_get_evictdata_setvalid3(char *buf);
 inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
@@ -306,6 +313,8 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
 	SWITCHOS_REMOVE_CACHE_LOOKUP = ini.get_switchos_remove_cache_lookup();
 	SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = ini.get_switchos_remove_cache_lookup_ack();
+	SWITCHOS_ENABLE_SINGLEPATH = ini.get_switchos_enable_singlepath();
+	SWITCHOS_ENABLE_SINGLEPATH_ACK = ini.get_switchos_enable_singlepath_ack();
 	SWITCHOS_SET_SNAPSHOT_FLAG = ini.get_switchos_set_snapshot_flag();
 	SWITCHOS_SET_SNAPSHOT_FLAG_ACK = ini.get_switchos_set_snapshot_flag_ack();
 	SWITCHOS_LOAD_SNAPSHOT_DATA = ini.get_switchos_load_snapshot_data();
@@ -357,6 +366,10 @@ void prepare_switchos() {
 	// prepare snapshotserver socket
 	prepare_udpserver(switchos_snapshotserver_udpsock, false, switchos_snapshotserver_port, "switchos.snapshotserver");
 
+	// prepare for switchos <-> ptf
+	create_udpsock(switchos_popworker_popclient_for_ptf_udpsock, false, "switchos.popworker.popclient_for_ptf");
+	create_udpsock(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, false, "switchos.snapshotserver.snapshotclient_for_ptf");
+
 
 
 
@@ -367,10 +380,6 @@ void prepare_switchos() {
 	prepare_udpserver(switchos_specialcaseserver_udpsock, true, switchos_specialcaseserver_port, "switchos.specialcaseserver", 0, 1000); // timeout interval: 1000us to avoid long wait time when making snapshot
 
 	//switchos_specialcases->clear();
-
-	// prepare for switchos <-> ptf
-	create_udpsock(switchos_popworker_popclient_for_ptf_udpsock, false, "switchos.popworker.popclient_for_ptf");
-	create_udpsock(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, false, "switchos.snapshotserver.snapshotclient_for_ptf");
 
 	if (recover_mode) {
 		recover();
@@ -524,10 +533,10 @@ void *run_switchos_popworker(void *param) {
 	uint32_t switchos_evictseq = 0;
 	bool switchos_evictstat = false;
 	while (switchos_running) {
-		if (is_snapshot_prepare && !popworker_know_snapshot_prepare) {
-			popworker_know_snapshot_prepare = true;
+		if (is_stop_cachepop && !popworker_know_stop_cachepop) {
+			popworker_know_stop_cachepop = true;
 		}
-		else if (!is_snapshot_prepare) {
+		else if (!is_stop_cachepop) {
 		//if (switchos_tail_for_pop != switchos_head_for_pop) {
 			cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptr_queue.read();
 			if (tmp_cache_pop_ptr != NULL) {
@@ -695,7 +704,7 @@ void *run_switchos_popworker(void *param) {
 				switchos_evictseq = 0;
 				switchos_evictstat = false;
 			} // tmp_cache_pop_ptr != NULL
-		} // !is_snapshot_prepare
+		} // !is_stop_cachepop
 		if (is_snapshot_end && !popworker_know_snapshot_end) {
 			popworker_know_snapshot_end = true;
 		}
@@ -721,16 +730,6 @@ void *run_switchos_snapshotserver(void *param) {
 	set_sockaddr(ptf_addr, inet_addr("127.0.0.1"), switchos_ptf_snapshotserver_port);
 	socklen_t ptf_addrlen = sizeof(struct sockaddr_in);
 
-	// for SNAPSHOT_SERVERSIDE/_ACK
-	struct sockaddr_in controller_snapshotserver_addr;
-	set_sockaddr(controller_snapshotserver_addr, inet_addr(controller_ip_for_switchos), controller_snapshotserver_port);
-	socklen_t controller_snapshotserver_addrlen = sizeof(struct sockaddr);
-
-	// for SNAPSHOT_DATA/_ACK
-	struct sockaddr_in controller_consnapshotserver_addr;
-	set_sockaddr(controller_consnapshotserver_addr, inet_addr(controller_ip_for_switchos), controller_consnapshotserver_port);
-	socklen_t controller_consnapshotserver_addrlen = sizeof(struct sockaddr);
-
 	// for snapshot data from ptf
 	char *ptfbuf = new char[MAX_LARGE_BUFSIZE];
 	INVARIANT(ptfbuf != NULL);
@@ -755,6 +754,16 @@ void *run_switchos_snapshotserver(void *param) {
 	memset((void *)tmp_send_bytes, 0, server_num*sizeof(int));
 	int tmp_record_cnts[server_num];
 	memset((void *)tmp_record_cnts, 0, server_num*sizeof(int));
+
+	// for SNAPSHOT_SERVERSIDE/_ACK
+	//struct sockaddr_in controller_snapshotserver_addr;
+	//set_sockaddr(controller_snapshotserver_addr, inet_addr(controller_ip_for_switchos), controller_snapshotserver_port);
+	//socklen_t controller_snapshotserver_addrlen = sizeof(struct sockaddr);
+
+	// for SNAPSHOT_DATA/_ACK
+	//struct sockaddr_in controller_consnapshotserver_addr;
+	//set_sockaddr(controller_consnapshotserver_addr, inet_addr(controller_ip_for_switchos), controller_consnapshotserver_port);
+	//socklen_t controller_consnapshotserver_addrlen = sizeof(struct sockaddr);
 
 	printf("[switchos.snapshotserver] ready");
 	switchos_ready_threads++;
@@ -782,57 +791,104 @@ void *run_switchos_snapshotserver(void *param) {
 		printf("[switchos.snapshotserver] receive control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
 
 		if (control_type == SNAPSHOT_CLEANUP) {
-			// TODO: cleanup stable states on snapshot
+			// TODO: (1) cleanup stale snapshot
+			
+			// enable cache popuation/eviction
+			is_stop_cachepop = false;
+			popworker_know_stop_cachepop = false;
+
+			// notify to end stale snapshot
+			is_snapshot = false;
+			is_snapshot_end = true;
+			popworker_know_snapshot_end = false;
+			specialcaseserver_know_snapshot_end = false;
+
+			// wait for case2 from popworker and case1 from specialcaseserver (finish using switchos_specialcases_ptr)
+			while (!popworker_know_snapshot_end || !specialcaseserver_know_snapshot_end) {}
+
+			// end stale snapshot (by now popworker/specialcaseserver will not access switchos_specialcases_ptr and backuped metadata)
+			is_snapshot_end = false;
+			popworker_know_snapshot_end = false;
+			specialcaseserver_know_snapshot_end = false;
+
+			// free stale special cases
+			// NOTE: popserver/specialcaseserver will not touch speicalcases_ptr now, as both is_snapshot/is_snapshot_end are false
+			if (switchos_specialcases_ptr != NULL) {
+				delete switchos_specialcases_ptr;
+				switchos_specialcases_ptr = NULL;
+			}
+
+			// free backuped metadata
+			// NOTE: popserver/specialcaseserver will not touch backuped metadata now, as both is_snapshot/is_snapshot_end are false
+			if (switchos_cached_keyarray_backup != NULL) {
+				delete [] switchos_cached_keyarray_backup;
+				switchos_cached_keyarray_backup = NULL;
+			}
+			if (switchos_cached_serveridxarray_backup != NULL) {
+				delete [] switchos_cached_serveridxarray_backup;
+				switchos_cached_serveridxarray_backup = NULL;
+			}
+			switchos_cached_empty_index_backup = 0;
+
+			// (2) init for new snapshot
+			
+			// create new speical cases (freed by next SNAPSHOT_CLEANUP)
+			switchos_specialcases_ptr = new concurrent_specicalcase_map_t();
+
+			// stop cache population/eviction (stop until we can ensure that snapshot has started aka SNAPSHOT_START)
+			is_stop_cachepop = true;
+
+			// wait until popworker_know_stop_cachepop = true
+			while (!popworker_know_stop_cachepop) {}
+			// by now, cache population/eviction is temporarily stopped -> snapshotserver can backup cache metadata atomically
+
+			// backup cache metadata (freed by next SNAPSHOT_CLEANUP)
+			// NOTE: is_snapshot/_end = false -> we can write backuped metadata
+			// NOTE: is_stop_cache/popworker_know_stop_cachepop = true -> we can read cache metadata
+			memory_fence();
+			switchos_cached_keyarray_backup = new netreach_key_t[switch_kv_bucket_num];
+			INVARIANT(switchos_cached_keyarray_backup != NULL);
+			memcpy(switchos_cached_keyarray_backup, (void *)switchos_cached_keyarray, switch_kv_bucket_num * sizeof(netreach_key_t));
+			switchos_cached_serveridxarray_backup = new uint16_t[switch_kv_bucket_num];
+			INVARIANT(switchos_cached_serveridxarray_backup != NULL);
+			memcpy(switchos_cached_serveridxarray_backup, (void *)switchos_cached_serveridxarray, switch_kv_bucket_num * sizeof(uint16_t));
+			switchos_cached_empty_index_backup = switchos_cached_empty_index;
+			//switchos_cached_key_idx_map_backup = switchos_cached_key_idx_map; // by copy assignment
+			memory_fence();
 			
 			// sendback SNAPSHOT_CLEANUP_ACK
 			udpsendto(switchos_snapshotserver_udpsock, &SNAPSHOT_CLEANUP_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
 		}
+		else if (control_type == SNAPSHOT_PREPARE) {
+			// enable a single path to prepare for setting snapshot with atomicity
+			ptf_sendsize = serialize_enable_singlepath(ptfbuf);
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr*)&ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_ENABLE_SINGLEPATH_ACK);
 
+			// sendback SNAPSHOT_PREPARE_ACK
+			udpsendto(switchos_snapshotserver_udpsock, &SNAPSHOT_PREPARE_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
+		}
+		else if (control_type == SNAPSHOT_SETFLAG) {
+			// TMPDEBUG
+			printf("Type to set snapshot flag...\n");
+			getchar();
 
+			// ptf sets snapshot flag as true atomically
+			//system("bash tofino/set_snapshot_flag.sh");
+			ptf_sendsize = serialize_set_snapshot_flag(ptfbuf);
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr*)&ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_SET_SNAPSHOT_FLAG_ACK);
 
+			// sendback SNAPSHOT_SETFLAG_ACK
+			udpsendto(switchos_snapshotserver_udpsock, &SNAPSHOT_SETFLAG_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
+		}
 
-
-		// send SNAPSHOT_START_ACK to controller.snapshotclient
-		// TODO: we can split controller.snapshotserver and controller.snapshotworker to avoid duplicate SNAPSHOT_START if previous has not finished
-		udpsendto(switchos_snapshotserver_udpsock, &SNAPSHOT_START_ACK, sizeof(int), 0, (struct sockaddr*)controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
-
-		// NOTE: popserver/specialcaseserver will not touch speicalcases_ptr now, as both is_snapshot/is_snapshot_end are false
-		INVARIANT(switchos_specialcases_ptr == NULL);
-		switchos_specialcases_ptr = new concurrent_specicalcase_map_t();
-			
-		// TMPDEBUG
-		printf("Type to prepare snapshot, set snapshot flag, and backup metadata...\n");
-		getchar();
-
-		// stop cache population/eviction
-		is_snapshot_prepare = true;
-
-		// wait until popworker_know_snapshot_prepare = true
-		while (!popworker_know_snapshot_prepare) {}
-		// by now, cache population/eviction is temporarily stopped -> snapshotserver can backup cache metadata atomically
-
-		// ptf sets snapshot flag as true atomically
-		//system("bash tofino/set_snapshot_flag.sh");
-		ptf_sendsize = serialize_set_snapshot_flag(ptfbuf);
-		udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr*)&ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
-		udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
-		INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_SET_SNAPSHOT_FLAG_ACK);
-
-		// backup cache metadata (freed later)
-		memory_fence();
-		switchos_cached_keyarray_backup = new netreach_key_t[switch_kv_bucket_num];
-		INVARIANT(switchos_cached_keyarray_backup != NULL);
-		memcpy(switchos_cached_keyarray_backup, (void *)switchos_cached_keyarray, switch_kv_bucket_num * sizeof(netreach_key_t));
-		switchos_cached_serveridxarray_backup = new uint16_t[switch_kv_bucket_num];
-		INVARIANT(switchos_cached_serveridxarray_backup != NULL);
-		memcpy(switchos_cached_serveridxarray_backup, (void *)switchos_cached_serveridxarray, switch_kv_bucket_num * sizeof(uint16_t));
-		switchos_cached_empty_index_backup = switchos_cached_empty_index;
-		//switchos_cached_key_idx_map_backup = switchos_cached_key_idx_map; // by copy assignment
-		memory_fence();
 
 		// resume cache population/eviction
 		is_snapshot = true; // notify popworker and specialcaseserver to collect special cases
-		is_snapshot_prepare = false; // resume cache population/eviction
+		is_stop_cachepop = false; // resume cache population/eviction
 
 		// TMPDEBUG
 		printf("Type to load snapshot data...\n");
@@ -982,8 +1038,8 @@ void *run_switchos_snapshotserver(void *param) {
 		is_snapshot_end = false;
 		popworker_know_snapshot_end = false;
 		specialcaseserver_know_snapshot_end = false;
-		is_snapshot_prepare = false;
-		popworker_know_snapshot_prepare = false;
+		is_stop_cachepop = false;
+		popworker_know_stop_cachepop = false;
 		is_snapshot = false;
 		delete [] switchos_cached_keyarray_backup;
 		switchos_cached_keyarray_backup = NULL;
@@ -1167,6 +1223,11 @@ void close_switchos() {
 }
 
 // switchos <-> ptf.popserver
+
+inline uint32_t serialize_enable_singlepath(char *buf) {
+	memcpy(buf, &SWITCHOS_ENABLE_SINGLEPATH, sizeof(int));
+	return sizeof(int);
+}
 
 inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx) {
 	memcpy(buf, &SWITCHOS_SETVALID0, sizeof(int));

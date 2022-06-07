@@ -86,6 +86,8 @@ class IniparserWrapper {
 		int get_switchos_get_evictdata_setvalid3_ack();
 		int get_switchos_remove_cache_lookup();
 		int get_switchos_remove_cache_lookup_ack();
+		int get_switchos_enable_singlepath();
+		int get_switchos_enable_singlepath_ack();
 		int get_switchos_set_snapshot_flag();
 		int get_switchos_set_snapshot_flag_ack();
 		int get_switchos_load_snapshot_data();

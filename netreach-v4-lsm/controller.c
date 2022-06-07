@@ -175,28 +175,6 @@ int main(int argc, char **argv) {
 void prepare_controller() {
 	printf("[controller] prepare start\n");
 
-	// load latest snapshotid
-	controller_load_snapshotid();
-
-	// prepare snapshotclient
-	create_udpsock(controller_snapshotclient_for_switchos_udpsock, true, "controller.snapshotclient_for_switchos");
-	controller_snapshotclient_for_server_udpsock_list = new int[server_num];
-	for (size_t i = 0; i < server_num; i++) {
-		create_udpsock(controller_snapshotclient_for_server_udpsock_list[i], true, "controller.snapshotclient_for_server")
-	}
-
-
-
-
-
-	prepare_udpserver(controller_snapshotserver_udpsock, false, controller_snapshotserver_port, "controller.snapshotserver");
-	create_udpsock(controller_snapshotserver_snapshotclient_for_server_snapshotserver_udpsock, true, "controller.snapshotserver.snapshotclient_for_server_snapshotserver");
-	prepare_udpserver(controller_consnapshotserver_udpsock, false, controller_consnapshotserver_port, "controller.consnapshotserver");
-	create_udpsock(controller_consnapshotserver_snapshotclient_for_server_consnapshotserver_udpsock, true, "controller.consnapshotserver.snapshotclient_for_server_consnapshotserver");
-
-
-
-
 	controller_running =false;
 
 	controller_expected_ready_threads = server_num + 4;
@@ -230,6 +208,28 @@ void prepare_controller() {
 
 	// prepare evictclient
 	create_udpsock(controller_evictserver_evictclient_udpsock, true, "controller.evictserver.evictclient");
+
+	// load latest snapshotid
+	controller_load_snapshotid();
+
+	// prepare snapshotclient
+	create_udpsock(controller_snapshotclient_for_switchos_udpsock, true, "controller.snapshotclient_for_switchos");
+	controller_snapshotclient_for_server_udpsock_list = new int[server_num];
+	for (size_t i = 0; i < server_num; i++) {
+		create_udpsock(controller_snapshotclient_for_server_udpsock_list[i], true, "controller.snapshotclient_for_server")
+	}
+
+
+
+
+
+	prepare_udpserver(controller_snapshotserver_udpsock, false, controller_snapshotserver_port, "controller.snapshotserver");
+	create_udpsock(controller_snapshotserver_snapshotclient_for_server_snapshotserver_udpsock, true, "controller.snapshotserver.snapshotclient_for_server_snapshotserver");
+	prepare_udpserver(controller_consnapshotserver_udpsock, false, controller_consnapshotserver_port, "controller.consnapshotserver");
+	create_udpsock(controller_consnapshotserver_snapshotclient_for_server_consnapshotserver_udpsock, true, "controller.consnapshotserver.snapshotclient_for_server_consnapshotserver");
+
+
+
 
 	// prepare consnapshotclient
 	create_tcpsock(controller_snapshotclient_consnapshotclient_tcpsock, false, "controller.snapshotclient.consnapshotclient");
@@ -437,6 +437,39 @@ void *run_controller_snapshotclient(void *param) {
 			pthread_join(cleanup_subthread_for_server_list[i], NULL);
 		}
 
+		// (2) send SNAPSHOT_PREPARE to each switch os to enable single path for snapshot atomicity
+		printf("[controller.snapshotclient] send SNAPSHOT_PREPARE to each switchos\n");
+		memcpy(sendbuf, &SNAPSHOT_PREPARE, sizeof(int));
+		memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
+		while (true) {
+			udpsendto(controller_snapshotclient_for_switchos_udpsock, sendbuf, 2*sizeof(int), 0, &switchos_snapshotserver_addr, switchos_snapshotserver_addrlen, "controller.snapshotclient");
+
+			is_timeout = udprecvfrom(controller_snapshotclient_for_switchos_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient");
+			if (is_timeout) {
+				continue;
+			}
+			else {
+				INVARIANT(recvsize == sizeof(int) && *((int *)recvbuf) == SNAPSHOT_PREPARE_ACK);
+				break;
+			}
+		}
+
+		// (3) send SNAPSHOT_SETFLAG to each switch os to set snapshot flag
+		printf("[controller.snapshotclient] send SNAPSHOT_SETFLAG to each switchos\n");
+		memcpy(sendbuf, &SNAPSHOT_SETFLAG, sizeof(int));
+		memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
+		while (true) {
+			udpsendto(controller_snapshotclient_for_switchos_udpsock, sendbuf, 2*sizeof(int), 0, &switchos_snapshotserver_addr, switchos_snapshotserver_addrlen, "controller.snapshotclient");
+
+			is_timeout = udprecvfrom(controller_snapshotclient_for_switchos_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient");
+			if (is_timeout) {
+				continue;
+			}
+			else {
+				INVARIANT(recvsize == sizeof(int) && *((int *)recvbuf) == SNAPSHOT_SETFLAG_ACK);
+				break;
+			}
+		}
 
 		// TODO: END HERE
 	}

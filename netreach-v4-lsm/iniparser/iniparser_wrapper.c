@@ -548,6 +548,24 @@ int IniparserWrapper::get_switchos_remove_cache_lookup_ack() {
 	return tmp;
 }
 
+int IniparserWrapper::get_switchos_enable_singlepath() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_enable_singlepath", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_enable_singlepath]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_enable_singlepath_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_enable_singlepath_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_enable_singlepath_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
 int IniparserWrapper::get_switchos_set_snapshot_flag() {
 	int tmp = iniparser_getint(ini, "switchos:switchos_set_snapshot_flag", -1);
 	if (tmp == -1) {
