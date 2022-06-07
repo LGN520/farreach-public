@@ -92,6 +92,7 @@ const char* server_ip = nullptr;
 uint8_t server_macaddr[6];
 const char* server_ip_for_controller = nullptr;
 short server_evictserver_port_start = -1;
+short server_snapshotserver_port_start = -1;
 short server_consnapshotserver_port = -1;
 short server_dynamicserver_port = -1;
 const char *server_ip_for_client;
@@ -157,12 +158,18 @@ int SWITCHOS_PTF_POPSERVER_END = -1;
 int SWITCHOS_PTF_SNAPSHOTSERVER_END = -1;
 
 // Packet types used by switchos/controller/server for snapshot
+int SNAPSHOT_CLEANUP = -1;
+int SNAPSHOT_CLEANUP_ACK = -1;
+int SNAPSHOT_PREPARE = -1;
+int SNAPSHOT_PREPARE_ACK = -1;
+int SNAPSHOT_SETFLAG = -1;
+int SNAPSHOT_SETFLAG_ACK = -1;
 int SNAPSHOT_START = -1;
 int SNAPSHOT_START_ACK = -1;
-int SNAPSHOT_SERVERSIDE = -1;
-int SNAPSHOT_SERVERSIDE_ACK = -1;
-int SNAPSHOT_DATA = -1;
-int SNAPSHOT_DATA_ACK = -1;
+int SNAPSHOT_GETDATA = -1;
+int SNAPSHOT_GETDATA_ACK = -1;
+int SNAPSHOT_SENDDATA = -1;
+int SNAPSHOT_SENDDATA_ACK = -1;
 
 /*
  * Get configuration
@@ -228,6 +235,7 @@ inline void parse_ini(const char* config_file) {
 	ini.get_server_mac(server_macaddr);
 	server_ip_for_controller = ini.get_server_ip_for_controller();
 	server_evictserver_port_start = ini.get_server_evictserver_port();
+	server_snapshotserver_port_start = ini.get_server_snapshotserver_port();
 	server_consnapshotserver_port = ini.get_server_consnapshotserver_port();
 	server_dynamicserver_port = ini.get_server_dynamicserver_port();
 	server_ip_for_client = ini.get_server_ip_for_client();
@@ -351,12 +359,18 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_PTF_POPSERVER_END = ini.get_switchos_ptf_popserver_end();
 	SWITCHOS_PTF_SNAPSHOTSERVER_END = ini.get_switchos_ptf_snapshotserver_end();
 
+	SNAPSHOT_CLEANUP = ini.get_snapshot_cleanup();
+	SNAPSHOT_CLEANUP_ACK = ini.get_snapshot_cleanup_ack();
+	SNAPSHOT_PREPARE = ini.get_snapshot_prepare();
+	SNAPSHOT_PREPARE_ACK = ini.get_snapshot_prepare_ack();
+	SNAPSHOT_SETFLAG = ini.get_snapshot_setflag();
+	SNAPSHOT_SETFLAG_ACK = ini.get_snapshot_setflag_ack();
 	SNAPSHOT_START = ini.get_snapshot_start();
 	SNAPSHOT_START_ACK = ini.get_snapshot_start_ack();
-	SNAPSHOT_SERVERSIDE = ini.get_snapshot_serverside();
-	SNAPSHOT_SERVERSIDE_ACK = ini.get_snapshot_serverside_ack();
-	SNAPSHOT_DATA = ini.get_snapshot_data();
-	SNAPSHOT_DATA_ACK = ini.get_snapshot_data_ack();
+	SNAPSHOT_GETDATA = ini.get_snapshot_getdata();
+	SNAPSHOT_GETDATA_ACK = ini.get_snapshot_getdata_ack();
+	SNAPSHOT_SENDDATA = ini.get_snapshot_senddata();
+	SNAPSHOT_SENDDATA_ACK = ini.get_snapshot_senddata_ack();
 }
 
 /*inline void parse_args(int argc, char **argv) {

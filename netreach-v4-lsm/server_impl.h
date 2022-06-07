@@ -43,6 +43,20 @@ MessagePtrQueue<cache_pop_t> *server_cache_pop_ptr_queue_list;
 int server_evictserver_udpsock = -1;
 
 // snapshot
+int *server_snapshotserver_udpsock_list = NULL;
+
+void prepare_server();
+// server.workers for processing pkts
+void *run_server_worker(void *param);
+void *run_server_popclient(void *param);
+void *run_server_evictserver(void *param);
+void *run_server_snapshotserver(void *param);
+void close_server();
+
+
+
+
+
 int server_consnapshotserver_tcpsock = -1;
 // per-server snapshot_map and snapshot_rcu
 //std::map<netreach_key_t, snapshot_record_t> * volatile server_snapshot_maps = NULL;
@@ -50,13 +64,7 @@ concurrent_snapshot_map_t * volatile server_snapshot_maps = NULL;
 uint32_t volatile * server_snapshot_rcus = NULL;
 bool volatile server_issnapshot = false; // TODO: it should be atomic
 
-void prepare_server();
-// server.workers for processing pkts
-void *run_server_worker(void *param);
-void *run_server_popclient(void *param);
-void *run_server_evictserver(void *param);
 void *run_server_consnapshotserver(void *param);
-void close_server();
 
 void prepare_server() {
 	printf("[server] prepare start\n");
@@ -90,6 +98,16 @@ void prepare_server() {
 		prepare_tcpserver(server_evictserver_tcpksock_list[i], false, server_evictserver_port_start+i, 1, "server.evictserver"); // MAX_PENDING_NUM = 1
 	}*/
 	prepare_udpserver(server_evictserver_udpsock, true, server_evictserver_port_start, "server.evictserver");
+
+	// prepare for snapshotserver
+	server_snapshotserver_udpsock_list = new int[server_num];
+	for (size_t i = 0; i < server_num; i++) {
+		prepare_udpserver(server_snapshotserver_udpsock_list[i], true, server_snapshotserver_port_start + i, "server.snapshotserver");
+	}
+
+
+
+
 
 	// prepare for crash-consistent snapshot
 	prepare_tcpserver(server_consnapshotserver_tcpsock, true, server_consnapshotserver_port, 1, "server.consnapshotserver"); // MAX_PENDING_NUM = 1
@@ -129,10 +147,16 @@ void close_server() {
 		delete [] server_cached_keyset_list;
 		server_cached_keyset_list = NULL;
 	}
+	if (server_snapshotserver_udpsock_list != NULL) {
+		delete [] server_snapshotserver_udpsock_list;
+		server_snapshotserver_udpsock_list = NULL;
+	}
 	/*if (server_evictserver_tcpsock_list != NULL) {
 		delete [] server_evictserver_tcpsock_list;
 		server_evictserver_tcpsock_list = NULL;
 	}*/
+
+
 	if (server_snapshot_rcus != NULL) {
 		delete [] server_snapshot_rcus;
 		server_snapshot_rcus = NULL;
@@ -777,6 +801,60 @@ void *run_server_evictserver(void *param) {
 	close(server_evictserver_udpsock);
 	pthread_exit(nullptr);
 }
+
+void *run_server_snapshotserver(void *param) {
+	uint16_t serveridx = *((uint16_t *)param);
+	struct sockaddr_in controller_snapshotclient_addr;
+	socklen_t controller_snapshotclient_addrlen;
+	bool with_controller_snapshotclient_addr = false;
+
+	printf("[server.snapshotserver %d] ready\n", serveridx);
+	transaction_ready_threads += 1;
+
+	while (!transaction_running) {}
+
+	char recvbuf[MAX_BUFSIZE];
+	int recvsize = 0;
+	bool is_timeout = false;
+	int control_type = -1;
+	int snapshotid = -1;
+	while (transaction_running) {
+		if (!with_controller_snapshotclient_addr) {
+			is_timeout = udprecvfrom(server_snapshotserver_udpsock_list[serveridx], recvbuf, MAX_BUFSIZE, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "server.snapshotserver");
+			if (!is_timeout) {
+				with_controller_snapshotclient_addr = true;
+			}
+		}
+		else {
+			is_timeout = udprecvfrom(server_snapshotserver_udpsock_list[serveridx], recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "server.snapshotserver");
+		}
+		if (is_timeout) {
+			continue;
+		}
+
+		control_type = *((int *)recvbuf);
+		snapshotid = *((int *)(recvbuf + sizeof(int)));
+
+		if (control_type == SNAPSHOT_CLEANUP) {
+			// TODO: cleanup stale snapshot states
+			
+			// sendback SNAPSHOT_CLEANUP_ACK to controller
+			udpsendto(server_snapshotserver_udpsock_list[serveridx], &SNAPSHOT_CLEANUP_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 void *run_server_consnapshotserver(void *param) {
 

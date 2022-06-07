@@ -203,6 +203,15 @@ short IniparserWrapper::get_server_evictserver_port() {
 	return short(tmp);
 }
 
+short IniparserWrapper::get_server_snapshotserver_port() {
+	int tmp = iniparser_getint(ini, "server:server_snapshotserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:server_snapshotserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 short IniparserWrapper::get_server_consnapshotserver_port() {
 	int tmp = iniparser_getint(ini, "server:server_consnapshotserver_port", -1);
 	if (tmp == -1) {
@@ -613,55 +622,109 @@ int IniparserWrapper::get_switchos_ptf_snapshotserver_end() {
 
 // snapshot
 
-int IniparserWrapper::get_snapshot_start() {
-	int tmp = iniparser_getint(ini, "snapshot:snapshot_start", -1);
+int IniparserWrapper::get_snapshot_cleanup() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_CLEANUP", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [snapshot:snapshot_start]: %d\n", tmp);
+		printf("Invalid entry of [snapshot:SNAPSHOT_CLEANUP]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_snapshot_cleanup_ack() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_CLEANUP_ACK", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [snapshot:SNAPSHOT_CLEANUP_ACK]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_snapshot_prepare() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_PREPARE", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [snapshot:SNAPSHOT_PREPARE]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_snapshot_prepare_ack() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_PREPARE_ACK", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [snapshot:SNAPSHOT_PREPARE_ACK]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_snapshot_setflag() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_SETFLAG", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [snapshot:SNAPSHOT_SETFLAG]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_snapshot_setflag_ack() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_SETFLAG_ACK", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [snapshot:SNAPSHOT_SETFLAG_ACK]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_snapshot_start() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_START", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [snapshot:SNAPSHOT_START]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;
 }
 
 int IniparserWrapper::get_snapshot_start_ack() {
-	int tmp = iniparser_getint(ini, "snapshot:snapshot_start_ack", -1);
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_START_ACK", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [snapshot:snapshot_start_ack]: %d\n", tmp);
+		printf("Invalid entry of [snapshot:SNAPSHOT_START_ACK]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;
 }
 
-int IniparserWrapper::get_snapshot_serverside() {
-	int tmp = iniparser_getint(ini, "snapshot:snapshot_serverside", -1);
+int IniparserWrapper::get_snapshot_getdata() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_GETDATA", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [snapshot:snapshot_serverside]: %d\n", tmp);
+		printf("Invalid entry of [snapshot:SNAPSHOT_GETDATA]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;
 }
 
-int IniparserWrapper::get_snapshot_serverside_ack() {
-	int tmp = iniparser_getint(ini, "snapshot:snapshot_serverside_ack", -1);
+int IniparserWrapper::get_snapshot_getdata_ack() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_GETDATA_ACK", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [snapshot:snapshot_serverside_ack]: %d\n", tmp);
+		printf("Invalid entry of [snapshot:SNAPSHOT_GETDATA_ACK]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;
 }
 
-int IniparserWrapper::get_snapshot_data() {
-	int tmp = iniparser_getint(ini, "snapshot:snapshot_data", -1);
+int IniparserWrapper::get_snapshot_senddata() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_SENDDATA", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [snapshot:snapshot_data]: %d\n", tmp);
+		printf("Invalid entry of [snapshot:SNAPSHOT_SENDDATA]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;
 }
 
-int IniparserWrapper::get_snapshot_data_ack() {
-	int tmp = iniparser_getint(ini, "snapshot:snapshot_data_ack", -1);
+int IniparserWrapper::get_snapshot_senddata_ack() {
+	int tmp = iniparser_getint(ini, "snapshot:SNAPSHOT_SENDDATA_ACK", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [snapshot:snapshot_data_ack]: %d\n", tmp);
+		printf("Invalid entry of [snapshot:SNAPSHOT_SENDDATA_ACK]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;

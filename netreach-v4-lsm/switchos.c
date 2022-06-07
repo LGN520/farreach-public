@@ -93,12 +93,18 @@ int SWITCHOS_PTF_POPSERVER_END = -1;
 int SWITCHOS_PTF_SNAPSHOTSERVER_END = -1;
 
 // Packet types used by switchos/controller/server for snapshot
+int SNAPSHOT_CLEANUP = -1;
+int SNAPSHOT_CLEANUP_ACK = -1;
+int SNAPSHOT_PREPARE = -1;
+int SNAPSHOT_PREPARE_ACK = -1;
+int SNAPSHOT_SETFLAG = -1;
+int SNAPSHOT_SETFLAG_ACK = -1;
 int SNAPSHOT_START = -1;
 int SNAPSHOT_START_ACK = -1;
-int SNAPSHOT_SERVERSIDE = -1;
-int SNAPSHOT_SERVERSIDE_ACK = -1;
-int SNAPSHOT_DATA = -1;
-int SNAPSHOT_DATA_ACK = -1;
+int SNAPSHOT_GETDATA = -1;
+int SNAPSHOT_GETDATA_ACK = -1;
+int SNAPSHOT_SENDDATA = -1;
+int SNAPSHOT_SENDDATA_ACK = -1;
 
 // Cache population
 
@@ -126,6 +132,19 @@ int switchos_popworker_evictclient_udpsock = -1;
 
 // snapshotserver socket to lead snapshot workflow
 int switchos_snapshotserver_udpsock = -1;
+
+inline void parse_ini(const char *config_file);
+inline void parse_control_ini(const char *config_file);
+void prepare_switchos();
+void recover();
+void *run_switchos_popserver(void *param);
+void *run_switchos_popworker(void *param);
+void *run_switchos_snapshotserver(void *param);
+void close_switchos();
+
+
+
+
 
 // prepare to backup cache metadata with atomicity
 bool volatile is_snapshot_prepare = false;
@@ -159,16 +178,8 @@ int switchos_popworker_popclient_for_ptf_udpsock = -1;
 // switchos.snapshotserver <-> ptf.snapshotserver
 int switchos_snapshotserver_snapshotclient_for_ptf_udpsock = -1; 
 
-inline void parse_ini(const char *config_file);
-inline void parse_control_ini(const char *config_file);
-void prepare_switchos();
-void recover();
-void *run_switchos_popserver(void *param);
-void *run_switchos_popworker(void *param);
-void *run_switchos_snapshotserver(void *param);
 void *run_switchos_specialcaseserver(void *param);
 void process_specialcase(const uint16_t &tmpidx, const netreach_key_t &tmpkey, const val_t &tmpval, const uint32_t &tmpseq, const bool &tmpstat);
-void close_switchos();
 
 // switchos <-> ptf.popserver
 inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx);
@@ -304,12 +315,18 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_PTF_POPSERVER_END = ini.get_switchos_ptf_popserver_end();
 	SWITCHOS_PTF_SNAPSHOTSERVER_END = ini.get_switchos_ptf_snapshotserver_end();
 
+	SNAPSHOT_CLEANUP = ini.get_snapshot_cleanup();
+	SNAPSHOT_CLEANUP_ACK = ini.get_snapshot_cleanup_ack();
+	SNAPSHOT_PREPARE = ini.get_snapshot_prepare();
+	SNAPSHOT_PREPARE_ACK = ini.get_snapshot_prepare_ack();
+	SNAPSHOT_SETFLAG = ini.get_snapshot_setflag();
+	SNAPSHOT_SETFLAG_ACK = ini.get_snapshot_setflag_ack();
 	SNAPSHOT_START = ini.get_snapshot_start();
 	SNAPSHOT_START_ACK = ini.get_snapshot_start_ack();
-	SNAPSHOT_SERVERSIDE = ini.get_snapshot_serverside();
-	SNAPSHOT_SERVERSIDE_ACK = ini.get_snapshot_serverside_ack();
-	SNAPSHOT_DATA = ini.get_snapshot_data();
-	SNAPSHOT_DATA_ACK = ini.get_snapshot_data_ack();
+	SNAPSHOT_GETDATA = ini.get_snapshot_getdata();
+	SNAPSHOT_GETDATA_ACK = ini.get_snapshot_getdata_ack();
+	SNAPSHOT_SENDDATA = ini.get_snapshot_senddata();
+	SNAPSHOT_SENDDATA_ACK = ini.get_snapshot_senddata_ack();
 }
 
 void prepare_switchos() {
@@ -338,7 +355,11 @@ void prepare_switchos() {
 	//memset(switchos_evictvalbytes, 0, val_t::MAX_VALLEN);
 
 	// prepare snapshotserver socket
-	prepare_udpserver(switchos_snapshotserver_udpsock, true, switchos_snapshotserver_port, "switchos.snapshotserver");
+	prepare_udpserver(switchos_snapshotserver_udpsock, false, switchos_snapshotserver_port, "switchos.snapshotserver");
+
+
+
+
 	create_udpsock(switchos_snapshotserver_snapshotclient_for_controller_snapshotserver_udpsock, true, "switchos.snapshotserver.snapshotclient_for_ptf");
 	create_udpsock(switchos_snapshotserver_snapshotclient_for_controller_consnapshotserver_udpsock, true, "switchos.snapshotserver.consnapshotclient_for_ptf");
 
@@ -742,24 +763,34 @@ void *run_switchos_snapshotserver(void *param) {
 
 	// communicate with controller.snapshotclient
 	char recvbuf[MAX_BUFSIZE];
-	bool is_timeout = false;
 	int recvsize = 0;
+	int control_type = -1;
+	int snapshotid = -1;
 	while (switchos_running) {
-		// wait for SNAPSHOT_START from controller.snapshotclient
+		// wait for control instruction from controller.snapshotclient
 		if (!with_controller_snapshotclient_addr) {
-			is_timeout = udprecvfrom(switchos_snapshotserver_udpsock, recvbuf, MAX_BUFSIZE, 0, (struct sockaddr*)&controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "switchos.snapshotserver");
-			if (!is_timeout) {
-				with_controller_snapshotclient_addr = true;
-			}
+			udprecvfrom(switchos_snapshotserver_udpsock, recvbuf, MAX_BUFSIZE, 0, (struct sockaddr*)&controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "switchos.snapshotserver");
+			with_controller_snapshotclient_addr = true;
 		}
 		else {
-			is_timeout = udprecvfrom(switchos_snapshotserver_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "switchos.snapshotserver");
+			udprecvfrom(switchos_snapshotserver_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "switchos.snapshotserver");
 		}
-		if (is_timeout) {
-			continue;
+
+		INVARIANT(recvsize == 2*sizeof(int));
+		control_type = *((int *)buf);
+		snapshotid = *((int *)(buf + 4));
+		printf("[switchos.snapshotserver] receive control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+
+		if (control_type == SNAPSHOT_CLEANUP) {
+			// TODO: cleanup stable states on snapshot
+			
+			// sendback SNAPSHOT_CLEANUP_ACK
+			udpsendto(switchos_snapshotserver_udpsock, &SNAPSHOT_CLEANUP_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
 		}
-		INVARIANT(*(int *)recvbuf == SNAPSHOT_START);
-		printf("[switchos.snapshotserver] receive SNAPSHOT_START\n"); // TMPDEBUG
+
+
+
+
 
 		// send SNAPSHOT_START_ACK to controller.snapshotclient
 		// TODO: we can split controller.snapshotserver and controller.snapshotworker to avoid duplicate SNAPSHOT_START if previous has not finished

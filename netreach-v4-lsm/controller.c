@@ -27,9 +27,18 @@
 
 #include "common_impl.h"
 
+struct CleanupSubthreadParam {
+	int udpsock;
+	struct sockaddr_in dstaddr;
+	socklen-t dstaddrlen;
+};
+typedef CleanupSubthreadParam cleanup_subthread_param_t;
+
 bool volatile controller_running = false;
 std::atomic<size_t> controller_ready_threads(0);
 size_t controller_expected_ready_threads = -1;
+
+// cache population/eviction
 
 // server.popclient <-> controller.popserver
 int *controller_popserver_udpsock_list = NULL;
@@ -48,9 +57,26 @@ int controller_evictserver_udpsock = -1;
 // controller.evictclient <-> server.evictserver
 int controller_evictserver_evictclient_udpsock = -1;
 
-// controller.snapshotclient <-> switchos.snapshotserver
-int controller_snapshotid = 0;
-int controller_snapshotclient_udpsock = -1;
+// snapshot
+
+int controller_snapshotid = 1; // server uses snapshot id 0 after loading phase
+
+// controller.snapshotclient <-> switchos/per-server.snapshotserver
+int controller_snapshotclient_for_switchos_udpsock = -1;
+int *controller_snapshotclient_for_server_udpsock_list = NULL;
+
+void prepare_controller();
+void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
+void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
+void controller_load_snapshotid(); // retrieve latest snapshot id
+void controller_update_snapshotid(); // store latest snapshotid and inswitch snapshot data
+void *run_controller_snapshotclient(void *param); // Periodically notify switch os to launch snapshot
+
+
+
+
+
+
 int controller_snapshotserver_udpsock = -1;
 int controller_snapshotserver_snapshotclient_for_server_snapshotserver_udpsock = -1;
 int controller_consnapshotserver_udpsock = -1;
@@ -59,11 +85,6 @@ int controller_consnapshotserver_snapshotclient_for_server_consnapshotserver_udp
 // controller.snapshotclient.consnapshotclient <-> server.consnapshotserver
 bool volatile is_controller_snapshotclient_consnapshotclient_connected = false;
 int controller_snapshotclient_consnapshotclient_tcpsock = -1;
-
-void prepare_controller();
-void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
-void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
-void *run_controller_snapshotclient(void *param); // Periodically notify switch os to launch snapshot
 void *run_controller_snapshotserver(void *param); // Forward SNAPSHOT_SERERSIDE to server
 void *run_controller_consnapshotserver(void *param); // Forward SNAPSHOT_DATA to server
 void close_controller();
@@ -154,6 +175,28 @@ int main(int argc, char **argv) {
 void prepare_controller() {
 	printf("[controller] prepare start\n");
 
+	// load latest snapshotid
+	controller_load_snapshotid();
+
+	// prepare snapshotclient
+	create_udpsock(controller_snapshotclient_for_switchos_udpsock, true, "controller.snapshotclient_for_switchos");
+	controller_snapshotclient_for_server_udpsock_list = new int[server_num];
+	for (size_t i = 0; i < server_num; i++) {
+		create_udpsock(controller_snapshotclient_for_server_udpsock_list[i], true, "controller.snapshotclient_for_server")
+	}
+
+
+
+
+
+	prepare_udpserver(controller_snapshotserver_udpsock, false, controller_snapshotserver_port, "controller.snapshotserver");
+	create_udpsock(controller_snapshotserver_snapshotclient_for_server_snapshotserver_udpsock, true, "controller.snapshotserver.snapshotclient_for_server_snapshotserver");
+	prepare_udpserver(controller_consnapshotserver_udpsock, false, controller_consnapshotserver_port, "controller.consnapshotserver");
+	create_udpsock(controller_consnapshotserver_snapshotclient_for_server_consnapshotserver_udpsock, true, "controller.consnapshotserver.snapshotclient_for_server_consnapshotserver");
+
+
+
+
 	controller_running =false;
 
 	controller_expected_ready_threads = server_num + 4;
@@ -188,26 +231,45 @@ void prepare_controller() {
 	// prepare evictclient
 	create_udpsock(controller_evictserver_evictclient_udpsock, true, "controller.evictserver.evictclient");
 
-	// load latest snapshotid
-	std::string snapshotid_path;
-	get_controller_snapshotid_path(snapshotid_path);
-	if (isexist(snapshotid_path)) {
-		load_snapshotid(controller_snapshotid, snapshotid_path);
-	}
-
-	// prepare snapshotclient, snapshotserver, consnapshotserver
-	create_udpsock(controller_snapshotclient_udpsock, true, "controller.snapshotclient");
-	prepare_udpserver(controller_snapshotserver_udpsock, false, controller_snapshotserver_port, "controller.snapshotserver");
-	create_udpsock(controller_snapshotserver_snapshotclient_for_server_snapshotserver_udpsock, true, "controller.snapshotserver.snapshotclient_for_server_snapshotserver");
-	prepare_udpserver(controller_consnapshotserver_udpsock, false, controller_consnapshotserver_port, "controller.consnapshotserver");
-	create_udpsock(controller_consnapshotserver_snapshotclient_for_server_consnapshotserver_udpsock, true, "controller.consnapshotserver.snapshotclient_for_server_consnapshotserver");
-
 	// prepare consnapshotclient
 	create_tcpsock(controller_snapshotclient_consnapshotclient_tcpsock, false, "controller.snapshotclient.consnapshotclient");
 
 	memory_fence();
 
 	printf("[controller] prepare end\n");
+}
+
+void controller_load_snapshotid() {
+	std::string snapshotid_path;
+	get_controller_snapshotid_path(snapshotid_path);
+	if (isexist(snapshotid_path)) {
+		load_snapshotid(controller_snapshotid, snapshotid_path);
+		controller_snapshotid += 1;
+	}
+	else {
+		controller_snapshotid = 1;
+	}
+	return;
+}
+
+void controller_update_snapshotid() {
+	// TODO: store inswitch snapshot data for switch failure
+	std::string snapshotdata_path;
+	get_controller_snapshotdata_path(snapshotdata_path, controller_snapshotid);
+	store_buf(recvbuf + sizeof(int), total_bytes, snapshotdata_path);
+	// store latest snapshot id for controller failure 
+	std::string snapshotid_path;
+	get_controller_snapshotid_path(snapshotid_path);
+	store_snapshotid(controller_snapshotid, snapshotid_path);
+	// remove old-enough snapshot data
+	int old_snapshotid = controller_snapshotid - 1;
+	if (old_snapshotid > 0) {
+		std::string old_snapshotdata_path;
+		get_controller_snapshotdata_path(old_snapshotdata_path, old_snapshotid);
+		rmfiles(old_snapshotdata_path.c_str());
+	}
+
+	controller_snapshotid += 1;
 }
 
 void *run_controller_popserver(void *param) {
@@ -323,18 +385,40 @@ void *run_controller_evictserver(void *param) {
 	pthread_exit(nullptr);
 }
 
-// TODO: controller.snapshotclient should guide snapshot in switchos
 void *run_controller_snapshotclient(void *param) {
 	struct sockaddr_in switchos_snapshotserver_addr;
 	set_sockaddr(switchos_snapshotserver_addr, inet_addr(switchos_ip), switchos_snapshotserver_port);
 	socklen_t switchos_snapshotserver_addrlen = sizeof(struct sockaddr_in);
+
+	struct sockaddr_in server_snapshotserver_addr_list[server_num];
+	socklen_t server_snapshotserver_addrlen_list[server_num];
+	for (size_t i = 0; i < server_num; i++) {
+		set_sockaddr(server_snapshotserver_addr_list[i], inet_addr(server_ip_for_controller), server_snapshotserver_port_start);
+		server_snapshotserver_addrlen_list[i] = sizeof(struct sockaddr_in);
+	}
+
+	// prepare for concurrent SNAPSHOT_CLEANUP
+	pthread_t cleanup_subthread_for_switchos;
+	cleanup_subthread_param_t cleanup_subthread_param_for_switchos;
+	cleanup_subthread_param_for_switchos.udpsock = controller_snapshotclient_for_switchos_udpsock;
+	cleanup_subthread_param_for_switchos.dstaddr = switchos_snapshotserver_addr;
+	cleanup_subthread_param_for_switchos.dstaddrlen = switchos_snapshotclient_addrlen;
+	pthread_t cleanup_subthread_for_server_list[server_num];
+	for (i = 0; i < server_num; i++) {
+		cleanup_subthread_param_for_server_list[i].udpsock = controller_snapshotclient_for_server_udpsock_list[i];
+		cleanup_subthread_param_for_server_list[i].dstaddr = server_snapshotserver_addr_list[i];
+		cleanup_subthread_param_for_server_list[i].dstaddrlen = server_snapshotserver_addrlen_list[i];
+	}
+
 	printf("[controller.snapshotclient] ready\n");
 	controller_ready_threads++;
 
 	while (!controller_running) {}
 
-	char buf[MAX_BUFSIZE];
+	char sendbuf[MAX_BUFSIZE];
+	char recvbuf[MAX_BUFSIZE];
 	int recvsize = 0;
+	bool is_timeout = false;
 	while (controller_running) {
 		usleep(controller_snapshot_period * 1000); // ms -> us
 
@@ -342,25 +426,57 @@ void *run_controller_snapshotclient(void *param) {
 		printf("Type to send SNAPSHOT_START...\n");
 		getchar();
 
-		// send SNAPSHOT_START (little-endian) to switchos
-		printf("[controller.snapshotclient] send SNAPSHOT_START\n");
-		while (true) {
-			udpsendto(controller_snapshotclient_udpsock, (char *)&SNAPSHOT_START, sizeof(int), 0, (struct sockaddr*)&switchos_snapshotserver_addr, switchos_snapshotserver_addrlen, "controlelr.snapshotclient");
-
-			bool is_timeout = udprecvfrom(controller_snapshotclient_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient");
-			if (is_timeout) {
-				continue;
-			}
-			else {
-				INVARIANT(recvsize == sizeof(int) && *((int *)buf) == SNAPSHOT_START_ACK);
-				break;
-			}
+		// (1) send SNAPSHOT_CLEANUP to each switchos and server concurrently
+		printf("[controller.snapshotclient] send SNAPSHOT_CLEANUPs to each switchos and server\n");
+		pthread_create(&cleanup_subthread_for_switchos, nullptr, run_controller_snapshotclient_cleanup_subthread, &cleanup_subthread_param_for_switchos);
+		for (i = 0; i < server_num; i++) {
+			pthread_create(&cleanup_subthread_for_server_list[i], nullptr, run_controller_snapshotclient_cleanup_subthread, &cleanup_subthread_param_for_server_list[i]);
 		}
+		pthread_join(cleanup_subthread_for_switchos, NULL);
+		for (i = 0; i < server_num; i++) {
+			pthread_join(cleanup_subthread_for_server_list[i], NULL);
+		}
+
+
+		// TODO: END HERE
 	}
 
 	close(controller_snapshotclient_udpsock);
 	pthread_exit(nullptr);
 }
+
+void *run_controller_snapshotclient_cleanup_subthread(void *param) {
+	udpsock = *((int *)param);
+
+	char sendbuf[MAX_BUFSIZE];
+	memcpy(sendbuf, &SNAPSHOT_CLEANUP, sizeof(int));
+	memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
+
+	char recvbuf[MAX_BUFSIZE];
+	int recvsize = 0;
+	bool is_timeout = false;
+	while (true) {
+		udpsendto(udpsock, sendbuf, 2*sizeof(int), 0, (struct sockaddr*)&dstaddr, dstaddrlen, "controlelr.snapshotclient.cleanup_subthread");
+
+		// wait for SNAPSHOT_CLEANUP_ACK
+		is_timeout = udprecvfrom(udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient.cleanup_subthread");
+		if (is_timeout) {
+			continue;
+		}
+		else {
+			INVARIANT(recvsize == sizeof(int) && *((int *)buf) == SNAPSHOT_CLEANUP_ACK);
+			break;
+		}
+	}
+
+	pthread_exit(nullptr);
+}
+
+
+
+
+
+
 
 void *run_controller_snapshotserver(void *param) {
 	struct sockaddr_in switchos_snapshotclient_addr;
@@ -452,21 +568,8 @@ void *run_controller_consnapshotserver(void *param) {
 			// send SNAPSHOT_DATA_ACK to switchos
 			udpsendto(controller_consnapshotserver_udpsock, ackbuf, ack_recvsize, 0, (struct sockaddr*)&switchos_consnapshotclient_addr, switchos_consnapshotclient_addrlen, "controller.consnapshotserver");
 
-			// for switch failure recovery
-			controller_snapshotid += 1;
-			// store inswitch snapshot data
-			std::string snapshotdata_path;
-			get_controller_snapshotdata_path(snapshotdata_path, controller_snapshotid);
-			store_buf(recvbuf + sizeof(int), total_bytes, snapshotdata_path);
-			// store latest snapshot id at last 
-			std::string snapshotid_path;
-			get_controller_snapshotid_path(snapshotid_path);
-			store_snapshotid(controller_snapshotid, snapshotid_path);
-			// remove old-enough snapshot data
-			int old_snapshotid = controller_snapshotid - 1;
-			std::string old_snapshotdata_path;
-			get_controller_snapshotdata_path(old_snapshotdata_path, old_snapshotid);
-			rmfiles(old_snapshotdata_path.c_str());
+			// for controller failure recovery
+			controller_update_snapshotid();
 		}
 	} // while (controller_running)
 
@@ -486,18 +589,8 @@ void close_controller() {
 		delete [] controller_popserver_popclient_udpsock_list;
 		controller_popserver_popclient_udpsock_list = NULL;
 	}
-	/*if (controller_cache_pop_ptrs != NULL) {
-		for (size_t i = 0; i < MQ_SIZE; i++) {
-			if (controller_cache_pop_ptrs[i] != NULL) {
-				delete controller_cache_pop_ptrs[i];
-				controller_cache_pop_ptrs[i] = NULL;
-			}
-		}
-		delete [] controller_cache_pop_ptrs;
-		controller_cache_pop_ptrs = NULL;
-	}*/
-	/*if (controller_evictserver_evictclient_tcpsock_list != NULL) {
-		delete [] controller_evictserver_evictclient_tcpsock_list;
-		controller_evictserver_evictclient_tcpsock_list = NULL;
-	}*/
+	if (controller_snapshotclient_for_server_udpsock_list != NULL) {
+		delete [] controller_snapshotclient_for_server_udpsock_list;
+		controller_snapshotclient_for_server_udpsock_list = NULL;
+	}
 }

@@ -38,6 +38,7 @@ class IniparserWrapper {
 		void get_server_mac(uint8_t* macaddr);
 		const char *get_server_ip_for_controller();
 		short get_server_evictserver_port();
+		short get_server_snapshotserver_port();
 		short get_server_consnapshotserver_port();
 		short get_server_dynamicserver_port();
 		const char *get_server_ip_for_client();
@@ -95,12 +96,18 @@ class IniparserWrapper {
 		int get_switchos_ptf_snapshotserver_end();
 
 		// snapshot
+		int get_snapshot_cleanup();
+		int get_snapshot_cleanup_ack();
+		int get_snapshot_prepare();
+		int get_snapshot_prepare_ack();
+		int get_snapshot_setflag();
+		int get_snapshot_setflag_ack();
 		int get_snapshot_start();
 		int get_snapshot_start_ack();
-		int get_snapshot_serverside();
-		int get_snapshot_serverside_ack();
-		int get_snapshot_data();
-		int get_snapshot_data_ack();
+		int get_snapshot_getdata();
+		int get_snapshot_getdata_ack();
+		int get_snapshot_senddata();
+		int get_snapshot_senddata_ack();
 
 	private:
 		dictionary *ini = nullptr;

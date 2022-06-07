@@ -40,15 +40,15 @@ void create_udpsock(int &sockfd, bool need_timeout, const char* role, int timeou
 	}
 }
 
-void udpsendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, const char* role) {
-	int res = sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+void udpsendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role) {
+	int res = sendto(sockfd, buf, len, flags, (struct sockaddr *)dest_addr, addrlen);
 	if (res < 0) {
 		printf("[%s] sendto of udp socket fails, errno: %d!\n", role, errno);
 		exit(-1);
 	}
 }
 
-bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role) {
+bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, int &recvsize, const char* role) {
 	bool need_timeout = false;
 	struct timeval tv;
 	tv.tv_sec = 0;
@@ -61,7 +61,7 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 	}
 
 	bool is_timeout = false;
-	recvsize = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+	recvsize = recvfrom(sockfd, buf, len, flags, (struct sockaddr *)src_addr, addrlen);
 	if (recvsize < 0) {
 		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
 			recvsize = 0;
@@ -95,15 +95,15 @@ void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const 
 	}
 }
 
-void udpsendlarge_udpfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, const char* role) {
+void udpsendlarge_udpfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role) {
 	udpsendlarge(sockfd, buf, len, flggs, dest_addr, addrlen, role, 0, UDP_FRAGMENT_MAXSIZE);
 }
 
-void udpsendlarge_ipfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, const char* role, size_t frag_hdrsize) {
+void udpsendlarge_ipfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role, size_t frag_hdrsize) {
 	udpsendlarge(sockfd, buf, len, flggs, dest_addr, addrlen, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE);
 }
 
-void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, const char* role, size_t frag_hdrsize, size_t frag_maxsize) {
+void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role, size_t frag_hdrsize, size_t frag_maxsize) {
 	// (1) buf[0:frag_hdrsize] + <cur_fragidx, max_fragnum> as final header of each fragment payload
 	// (2) frag_maxsize is the max size of fragment payload (final fragment header + fragment body), yet not including ethernet/ipv4/udp header
 	INVARIANT(len >= frag_hdrsize);
@@ -143,16 +143,16 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 	}
 }
 
-bool udprecvlarge_udpfrag(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role) {
+bool udprecvlarge_udpfrag(int sockfd, void *buf, size_t len, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, int &recvsize, const char* role) {
 	return udprecvlarge(sockfd, buf, len, flags, src_addr, addrlen, recvsize, role, 0, UDP_FRAGMENT_MAXSIZE);
 }
 
-bool udprecvlarge_ipfrag(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role, size_t frag_hdrsize) {
+bool udprecvlarge_ipfrag(int sockfd, void *buf, size_t len, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, int &recvsize, const char* role, size_t frag_hdrsize) {
 	return udprecvlarge(sockfd, buf, len, flags, src_addr, addrlen, recvsize, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE);
 }
 
 // NOTE: receive large packet from one source
-bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen, int &recvsize, const char* role, size_t frag_hdrsize, size_t frag_maxsize) {
+bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, int &recvsize, const char* role, size_t frag_hdrsize, size_t frag_maxsize) {
 	bool is_timeout = false;
 	size_t final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
 	size_t frag_bodysize = frag_maxsize - final_frag_hdrsize;
@@ -203,18 +203,18 @@ bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr 
 }
 
 
-bool udprecvlarge_multisrc_udpfrag(int sockfd, void *bufs, size_t bufnum, size_t len, int flags, struct sockaddr *src_addrs, socklen_t *addrlens, int *recvsizes, int& recvnum, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion) {
+bool udprecvlarge_multisrc_udpfrag(int sockfd, void *bufs, size_t bufnum, size_t len, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, int *recvsizes, int& recvnum, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion) {
 	return udprecvlarge_multisrc(sockfd, bufs, bufnum, len, flags, src_addrs, addrlens, recvsizes, recvnum, role, 0, UDP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion);
 }
 
-bool udprecvlarge_multisrc_ipfrag(int sockfd, void *bufs, size_t bufnum, size_t len, int flags, struct sockaddr *src_addrs, socklen_t *addrlens, int *recvsizes, int& recvnum, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion) {
+bool udprecvlarge_multisrc_ipfrag(int sockfd, void *bufs, size_t bufnum, size_t len, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, int *recvsizes, int& recvnum, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion) {
 	return udprecvlarge_multisrc(sockfd, bufs, bufnum, len, flags, src_addrs, addrlens, recvsizes, recvnum, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion);
 }
 
 // NOTE: receive large packet from multiple sources (srcid >= 0 && srcid < srcnum <= bufnum)
 // bufs: bufnum * len; src_addrs: NULL or bufnum; addrlens: NULL or bufnum; recvsizes: bufnum
 // For example, srcnum for SCANRES_SPLIT is split_hdr.max_scannum; srcid for SCANRES_SPLIT is split_hdr.cur_scanidx
-bool udprecvlarge_multisrc(int sockfd, void *bufs, size_t bufnum, size_t len, int flags, struct sockaddr *src_addrs, socklen_t *addrlens, int *recvsizes, int& recvnum, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion) {
+bool udprecvlarge_multisrc(int sockfd, void *bufs, size_t bufnum, size_t len, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, int *recvsizes, int& recvnum, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion) {
 	INVARIANT(srcnum_len == 1 || srcnum_len == 2 || srcnum_len == 4);
 	INVARIANT(srcid_len == 1 || srcid_len == 2 || srcid_len == 4);
 	INVARIANT(srcnum_off <= frag_hdrsize && srcid_off <= frag_hdrsize);
@@ -331,7 +331,7 @@ void tcpconnect(int sockfd, const char* ip, short port, const char *srcrole, con
 	INVARIANT(ip != NULL);
 	sockaddr_in addr;
 	set_sockaddr(addr, inet_addr(ip), port);
-	if (connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+	if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		// TODO broken
 		printf("[%s] fail to connect %s at %s:%hu, errno: %d!\n", srcrole, dstrole, ip, port, errno);
 		exit(-1);
@@ -380,7 +380,7 @@ void prepare_tcpserver(int &sockfd, bool need_timeout, short server_port, int ma
 	}
 }
 
-bool tcpaccept(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int &connfd, const char* role) {
+bool tcpaccept(int sockfd, struct sockaddr_in *addr, socklen_t *addrlen, int &connfd, const char* role) {
 	bool need_timeout = false;
 	struct timeval tv;
 	tv.tv_sec = 0;
@@ -394,7 +394,7 @@ bool tcpaccept(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int &connf
 
 	bool is_timeout = false;
 
-	connfd = accept(sockfd, addr, addrlen);
+	connfd = accept(sockfd, (struct sockaddr *)addr, addrlen);
 	if (connfd == -1) {
 		if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
 			is_timeout = true;
