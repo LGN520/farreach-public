@@ -17,7 +17,6 @@
 //#define DUMP_BUF
 
 typedef DeletedSet<netreach_key_t, uint32_t> deleted_set_t;
-typedef ConcurrentMap<netreach_key_t, snapshot_record_t> concurrent_snapshot_map_t;
 typedef ConcurrentSet<netreach_key_t> concurrent_set_t;
 
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
@@ -44,6 +43,7 @@ int server_evictserver_udpsock = -1;
 
 // snapshot
 int *server_snapshotserver_udpsock_list = NULL;
+int *server_snapshotdataserver_udpsock_list = NULL;
 std::atomic<bool> *server_issnapshot_list = NULL; // TODO: be atomic
 
 void prepare_server();
@@ -54,18 +54,6 @@ void *run_server_evictserver(void *param);
 void *run_server_snapshotserver(void *param);
 void *run_server_snapshotdataserver(void *param);
 void close_server();
-
-
-
-
-
-int server_consnapshotserver_tcpsock = -1;
-// per-server snapshot_map and snapshot_rcu
-//std::map<netreach_key_t, snapshot_record_t> * volatile server_snapshot_maps = NULL;
-concurrent_snapshot_map_t * volatile server_snapshot_maps = NULL;
-uint32_t volatile * server_snapshot_rcus = NULL;
-
-void *run_server_consnapshotserver(void *param);
 
 void prepare_server() {
 	printf("[server] prepare start\n");
@@ -102,24 +90,13 @@ void prepare_server() {
 
 	// prepare for snapshotserver
 	server_snapshotserver_udpsock_list = new int[server_num];
+	server_snapshotdataserver_udpsock_list = new int[server_num];
 	for (size_t i = 0; i < server_num; i++) {
 		prepare_udpserver(server_snapshotserver_udpsock_list[i], true, server_snapshotserver_port_start + i, "server.snapshotserver");
+		prepare_udpserver(server_snapshotdataserver_udpsock_list[i], true, server_snapshotdataserver_port_start + i, "server.snapshotdataserver");
 	}
 
 	server_issnapshot_list = new std::atomic<bool>[server_num];
-
-
-
-
-
-	// prepare for crash-consistent snapshot
-	prepare_tcpserver(server_consnapshotserver_tcpsock, true, server_consnapshotserver_port, 1, "server.consnapshotserver"); // MAX_PENDING_NUM = 1
-
-	// prepare for snapshot
-	server_snapshot_rcus = new uint32_t[server_num];
-	for (size_t i = 0; i < server_num; i++) {
-		server_snapshot_rcus[i] = 0;
-	}
 
 	memory_fence();
 
@@ -154,22 +131,18 @@ void close_server() {
 		delete [] server_snapshotserver_udpsock_list;
 		server_snapshotserver_udpsock_list = NULL;
 	}
+	if (server_snapshotdataserver_udpsock_list != NULL) {
+		delete [] server_snapshotdataserver_udpsock_list;
+		server_snapshotdataserver_udpsock_list = NULL;
+	}
 	if (server_issnapshot_list != NULL) {
 		delete [] server_issnapshot_list;
 		server_issnapshot_list = NULL;
 	}
-
-
 	/*if (server_evictserver_tcpsock_list != NULL) {
 		delete [] server_evictserver_tcpsock_list;
 		server_evictserver_tcpsock_list = NULL;
 	}*/
-
-
-	if (server_snapshot_rcus != NULL) {
-		delete [] server_snapshot_rcus;
-		server_snapshot_rcus = NULL;
-	}
 }
 
 void *run_server_popclient(void *param) {
@@ -852,232 +825,118 @@ void *run_server_snapshotserver(void *param) {
 			udpsendto(server_snapshotserver_udpsock_list[serveridx], &SNAPSHOT_CLEANUP_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
 		}
 		else if (control_type == SNAPSHOT_START) {
-			if (!server_issnapshot_list[serveridx]) {
-				db_wrappers[serveridx].make_snapshot(snapshotid);
-			}
+			INVARIANT(!server_issnapshot_list[serveridx]);
+			db_wrappers[serveridx].make_snapshot(snapshotid);
 			
 			// sendback SNAPSHOT_START_ACK to controller
 			udpsendto(server_snapshotserver_udpsock_list[serveridx], &SNAPSHOT_START_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
-		}
-		else if (control_type == SNAPSHOT_SENDDATA) {
-			// TODO: END HERE (set is_snapshot -> update in-switch and server-side snapshot -> reset is_snapshot -> stop_snapshot)
 		}
 		else {
 			printf("[server.snapshotserver] invalid control type: %d\n", control_type);
 			exit(-1);
 		}
 	}
+
+	close(server_snapshotserver_udpsock_list[serveridx]);
+	pthread_exit(nullptr);
 }
 
+void *run_server_snapshotdataserver(void *param) {
+	uint16_t serveridx = *((uint16_t *)param);
+	struct sockaddr_in controller_snapshotclient_addr;
+	socklen_t controller_snapshotclient_addrlen;
+	bool with_controller_snapshotclient_addr = false;
 
-
-
-
-
-
-
-
-
-
-
-
-void *run_server_consnapshotserver(void *param) {
-
-	// Not used
-	//struct sockaddr_in controller_addr;
-	//unsigned int controller_addr_len = sizeof(struct sockaddr);
-	
 	char *recvbuf = new char[MAX_LARGE_BUFSIZE];
 	INVARIANT(recvbuf != NULL);
 	memset(recvbuf, 0, MAX_LARGE_BUFSIZE);
-	printf("[server.consnapshotserver] ready\n");
-	transaction_ready_threads++;
+	int recvsize = 0;
+
+	printf("[server.snapshotdataserver %d] ready\n", serveridx);
+	transaction_ready_threads += 1;
 
 	while (!transaction_running) {}
 
-	int connfd = -1;
+	bool is_timeout = false;
+	int control_type = -1;
+	int snapshotid = -1;
 	while (transaction_running) {
-		bool is_timeout = tcpaccept(server_consnapshotserver_tcpsock, NULL, NULL, connfd, "server.consnapshotserver");
+		if (!with_controller_snapshotclient_addr) {
+			is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[serveridx], recvbuf, MAX_LARGE_BUFSIZE, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "server.snapshotdataserver");
+			if (!is_timeout) {
+				with_controller_snapshotclient_addr = true;
+			}
+		}
+		else {
+			is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[serveridx], recvbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, recvsize, "server.snapshotdataserver");
+		}
 		if (is_timeout) {
 			continue;
 		}
+
+		control_type = *((int *)recvbuf);
+		//snapshotid = *((int *)(recvbuf + sizeof(int)));
+
+		if (control_type == SNAPSHOT_SENDDATA) {
+			// per-server snapshot data: <int SNAPSHOT_SENDDATA, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
+			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
+			server_issnapshot_list[serveridx] = true;
+
+			// parse in-switch snapshot data
+			int32_t tmp_serverbytes = *((int32_t *)(recvbuf + sizeof(int)));
+			INVARIANT(recvsize == tmp_serverbytes);
+			uint16_t tmp_serveridx = *((uint16_t *)(recvbuf + sizeof(int) + sizeof(int32_t)));
+			INVARIANT(tmp_serveridx == serveridx);
+			int32_t tmp_recordcnt = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
+
+			std::map<netreach_key_t, snapshot_record_t> tmp_inswitch_snapshot;
+			int tmp_offset = sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
+			for (int32_t tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {
+				netreach_key_t tmp_key;
+				snapshot_record_t tmp_record;
+				uint32_t tmp_keysize = tmp_key.deserialize(recvbuf + tmp_offset, recvsize - tmp_offset);
+				tmp_offset += tmp_keysize;
+				uint32_t tmp_valsize = tmp_record.val.deserialize(recvbuf + tmp_offset, recvsize - tmp_offset);
+				tmp_offset += tmp_valsize;
+				tmp_record.seq = *((uint32_t *)(recvbuf + tmp_offset));
+				tmp_offset += sizeof(uint32_t);
+				tmp_record.stat = *((bool *)(recvbuf + tmp_offset));
+				tmp_offset += sizeof(bool);
+				tmp_inswitch_snapshot.insert(std::pair<netreach_key_t, snapshot_record_t>(tmp_key, tmp_record));
+			}
+
+			// TMPDEBUG
+			printf("[server.snapshotdataserver %d] receive snapshot data from controller\n", serveridx);
+			int debugi = 0;
+			for (std::map<netreach_key_t, snapshot_record_t>::iterator iter = tmp_inswitch_snapshot.begin();
+					iter != tmp_inswitch_snapshot.end(); iter++) {
+				char debugbuf[MAX_BUFSIZE];
+				uint32_t debugkeysize = iter->first.serialize(debugbuf, MAX_BUFSIZE);
+				uint32_t debugvalsize = iter->second.val.serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
+				printf("serialized key-value %d:\n", debugi);
+				dump_buf(debugbuf, debugkeysize+debugvalsize);
+				printf("seq: %d, stat %d\n", iter->second.seq, iter->second.stat?1:0);
+			}
+
+			// TODO: update in-switch and server-side snapshot
+			
+			// stop current snapshot to enable making next server-side snapshot
+			db_wrappers[serveridx].stop_snapshot();
+			server_issnapshot_list[serveridx] = false;
+			
+			// sendback SNAPSHOT_SENDDATA_ACK to controller
+			udpsendto(server_snapshotdataserver_udpsock_list[serveridx], &SNAPSHOT_SENDDATA_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotdataserver");
+		}
 		else {
-			break;
+			printf("[server.snapshotdataserver] invalid control type: %d\n", control_type);
+			exit(-1);
 		}
 	}
 
-	if (!transaction_running) {
-		if (connfd != -1) {
-			close(connfd);
-		}
-		delete [] recvbuf;
-		recvbuf = NULL;
-		close(server_consnapshotserver_tcpsock);
-		pthread_exit(nullptr);
-		return 0;
-	}
-
-	INVARIANT(connfd != -1);
-	set_recvtimeout(connfd);
-
-	int cur_recv_bytes = 0;
-	bool direct_parse = false;
-	//bool is_broken = false;
-	bool is_timeout = false;
-	int phase = 0; // 0: wait for SNAPSHOT_SERVERSIDE; 1: wait for crash-consistent snapshot data
-	int control_type_phase0 = -1;
-	int control_type_phase1 = -1;
-	int total_bytes = -1;
-	while (transaction_running) {
-		if (!direct_parse) {
-			int recvsize = 0;
-			/*is_broken = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
-			if (is_broken) {
-				break;
-			}*/
-			is_timeout = tcprecv(connfd, recvbuf + cur_recv_bytes, MAX_LARGE_BUFSIZE - cur_recv_bytes, 0, recvsize, "server.consnapshotserver");
-			if (is_timeout) {
-				continue; // continue to check transaction_running
-			}
-
-			cur_recv_bytes += recvsize;
-			if (cur_recv_bytes >= MAX_LARGE_BUFSIZE) {
-				printf("[server.consnapshotserver] Overflow: cur received bytes (%d), maxbufsize (%d)\n", cur_recv_bytes, MAX_LARGE_BUFSIZE);
-				exit(-1);
-			}
-		}
-
-		if (phase == 0) {
-			// process SNAPSHOT_SERVERSIDE for server-side snapshot
-			if (control_type_phase0 == -1 && cur_recv_bytes >= int(sizeof(int))) {
-				printf("[server.snapshotserver] receive SNAPSHOT_SERVERISDE from controller\n"); // TMPDEBUG
-				control_type_phase0 = *((int *)recvbuf);
-				INVARIANT(control_type_phase0 == SNAPSHOT_SERVERSIDE);
-
-				// make server-side snapshot (simulate distributed in-memory KVS by concurrent one)
-				if (!server_issnapshot_list[i]) {
-					for (uint16_t i = 0; i < server_num; i++) {
-						db_wrappers[i].make_snapshot();
-					}
-				}
-
-				// send SNAPSHOT_SERVERSIDE_ACK to controller
-				printf("[server.snapshotserver] send SNAPSHOT_SERVERSIDE_ACK to controller\n"); // TMPDEBUG
-				tcpsend(connfd, (char *)&SNAPSHOT_SERVERSIDE_ACK, sizeof(int), "server.consnapshotserver");
-
-				direct_parse = false;
-				phase = 1; // wait for crash-consistent snapshot data
-			}
-		}
-		
-		if (phase == 1) {
-			// NOTE: skip sizeof(int) for SNAPSHOT_SERVERSIDE
-			if (control_type_phase1 == -1 && cur_recv_bytes >= int(sizeof(int) + sizeof(int) + sizeof(int32_t))) { // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
-				control_type_phase1 = *((int *)(recvbuf + sizeof(int)));
-				INVARIANT(control_type_phase1 == SNAPSHOT_DATA);
-				total_bytes = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int)));
-				server_issnapshot = true;
-			}
-
-			// snapshot data: <int SNAPSHOT_DATA, int32_t total_bytes, per-server data>
-			// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
-			// per-record data: <16B key, uint32_t vallen, value (w/ padding), uint32_t seq, bool stat>
-			if (control_type_phase1 != -1 && cur_recv_bytes >= int(sizeof(int) + total_bytes)) { // SNAPSHOT_SERVERSIDE + snapshot data of total_bytes
-				// NOTE: per-server_bytes is used for processing snapshot data of each server (not used now)
-				
-				// save snapshot data of servers
-				int tmp_offset = sizeof(int) + sizeof(int) + sizeof(int32_t); // SNAPSHOT_SERVERSIDE + SNAPSHOT_DATA + total_bytes
-				//std::map<netreach_key_t, snapshot_record_t> *new_server_snapshot_maps = new std::map<netreach_key_t, snapshot_record_t>[server_num];
-				concurrent_snapshot_map_t *new_server_snapshot_maps = new concurrent_snapshot_map_t[server_num];
-				const int tmp_maxbytes = sizeof(int) + total_bytes;
-				while (true) {
-					tmp_offset += sizeof(int32_t); // skip perserver_bytes
-					uint16_t tmp_serveridx = *((uint16_t *)(recvbuf + tmp_offset));
-					tmp_offset += sizeof(uint16_t);
-					int32_t tmp_recordcnt = *((int32_t *)(recvbuf + tmp_offset));
-					tmp_offset += sizeof(int32_t);
-					for (int32_t tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {
-						netreach_key_t tmp_key;
-						snapshot_record_t tmp_record;
-						uint32_t tmp_keysize = tmp_key.deserialize(recvbuf + tmp_offset, tmp_maxbytes - tmp_offset);
-						tmp_offset += tmp_keysize;
-						uint32_t tmp_valsize = tmp_record.val.deserialize(recvbuf + tmp_offset, tmp_maxbytes - tmp_offset);
-						tmp_offset += tmp_valsize;
-						tmp_record.seq = *((uint32_t *)(recvbuf + tmp_offset));
-						tmp_offset += sizeof(uint32_t);
-						tmp_record.stat = *((bool *)(recvbuf + tmp_offset));
-						tmp_offset += sizeof(bool);
-						//new_server_snapshot_maps[tmp_serveridx].insert(std::pair<netreach_key_t, snapshot_record_t>(tmp_key, tmp_record));
-						new_server_snapshot_maps[tmp_serveridx].insert(tmp_key, tmp_record);
-					}
-					if (tmp_offset >= tmp_maxbytes) {
-						break;
-					}
-				}
-
-				// TMPDEBUG
-				printf("[server.snapshotserver] receive snapshot data from controller\n");
-				for (size_t debugi = 0; debugi < server_num; debugi++) {
-					printf("snapshot of serveridx: %d\n", int(debugi));
-					std::vector<std::pair<netreach_key_t, snapshot_record_t>> debugvec;
-					new_server_snapshot_maps[debugi].range_scan(netreach_key_t::min(), netreach_key_t::max(), debugvec);
-					printf("debugvec size: %d\n", debugvec.size());
-					for (size_t veci = 0; veci < debugvec.size(); veci++) {
-						char debugbuf[MAX_BUFSIZE];
-						uint32_t debugkeysize = debugvec[veci].first.serialize(debugbuf, MAX_BUFSIZE);
-						uint32_t debugvalsize = debugvec[veci].second.val.serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
-						printf("serialized debugvec[%d]:\n", veci);
-						dump_buf(debugbuf, debugkeysize+debugvalsize);
-						printf("seq: %d, stat %d\n", debugvec[veci].second.seq, debugvec[veci].second.stat?1:0);
-					}
-				}
-
-				// replace old snapshot data based on RCU
-				//std::map<netreach_key_t, snapshot_record_t> *old_server_snapshot_maps = server_snapshot_maps;
-				concurrent_snapshot_map_t *old_server_snapshot_maps = server_snapshot_maps;
-				server_snapshot_maps = new_server_snapshot_maps;
-				if (old_server_snapshot_maps != NULL) {
-					uint32_t prev_server_snapshot_rcus[server_num];
-					for (uint32_t i = 0; i < server_num; i++) {
-						prev_server_snapshot_rcus[i] = server_snapshot_rcus[i];
-					}
-					for (uint32_t i = 0; i < server_num; i++) {
-						while (transaction_running && server_snapshot_rcus[i] == prev_server_snapshot_rcus[i]) {}
-					}
-					delete [] old_server_snapshot_maps;
-					old_server_snapshot_maps = NULL;
-				}
-
-				// Move remaining bytes and reset metadata
-				if (cur_recv_bytes > int(sizeof(int) + total_bytes)) {
-					memcpy(recvbuf, recvbuf + sizeof(int) + total_bytes, cur_recv_bytes - sizeof(int) - total_bytes);
-					cur_recv_bytes = cur_recv_bytes - sizeof(int) - total_bytes;
-				}
-				else {
-					cur_recv_bytes = 0;
-				}
-				if (cur_recv_bytes >= int(sizeof(int))) {
-					direct_parse = true;
-				}
-				else {
-					direct_parse = false;
-				}
-				//is_broken = false;
-				phase = 0;
-				control_type_phase0 = -1;
-				control_type_phase1 = -1;
-				total_bytes = -1;
-
-				for (uint16_t i = 0; i < server_num; i++) {
-					db_wrappers[i].stop_snapshot();
-				}
-				server_issnapshot = false;
-			}
-		}
-	}
 	delete [] recvbuf;
 	recvbuf = NULL;
-	close(server_consnapshotserver_tcpsock);
+
+	close(server_snapshotdataserver_udpsock_list[serveridx]);
 	pthread_exit(nullptr);
 }
 

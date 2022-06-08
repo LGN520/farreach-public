@@ -129,6 +129,8 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 		latest_snapshot_deleted_set.clear();
 	}
 
+	// TODO: load inswitch snapshot
+
 	return is_existing;
 }
 
@@ -334,8 +336,8 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 		iter = txn->GetIterator(read_options);
 	}
 	INVARIANT(iter != NULL);
-	results.clear();
 
+	// get results from snapshot database
 	std::vector<std::pair<netreach_key_t, snapshot_record_t>> db_results;
 	std::string startkeystr = startkey.to_string_for_rocksdb();
 	std::string endkeystr = endkey.to_string_for_rocksdb();
@@ -372,62 +374,71 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 	delete txn;
 	txn = NULL;
 
+	// get results from snapshot deleted set
 	std::vector<std::pair<netreach_key_t, snapshot_record_t>> deleted_results;
 	snapshot_deleted_set.range_scan(startkey, endkey, deleted_results);
 
 	// merge sort
-	if (db_results.size() == 0) {
-		results = deleted_results;
-	}
-	else if (deleted_results.size() == 0) {
-		results = db_results;
-	}
-	else {
-		uint32_t db_idx = 0;
-		uint32_t deleted_idx = 0;
-		bool remain_db = false;
-		bool remain_deleted = false;
-		while (true) {
-			netreach_key_t &tmp_db_key = db_results[db_idx].first;
-			snapshot_record_t &tmp_db_record = db_results[db_idx].second;
-			netreach_key_t &tmp_deleted_key = deleted_results[deleted_idx].first;
-			snapshot_record_t &tmp_deleted_record = deleted_results[deleted_idx].second;
-			if (tmp_db_key < tmp_deleted_key) {
-				results.push_back(db_results[db_idx]);
-				db_idx += 1;
-			}
-			else if (tmp_db_key > tmp_deleted_key) {
-				results.push_back(deleted_results[deleted_idx]);
-				deleted_idx += 1;
-			}
-			else {
-				printf("[RocksdbWrapper] deleted set and database cannot have the same key!\n");
-				exit(-1);
-			}
-			if (db_idx >= db_results.size()) {
-				remain_deleted = true;
-				break;
-			}
-			if (deleted_idx >= deleted_results.size()) {
-				remain_db = true;
-				break;
-			}
-		}
-		if (remain_db) {
-			for (; db_idx < db_results.size(); db_idx++) {
-				results.push_back(db_results[db_idx]);
-			}
-		}
-		else if (remain_deleted) {
-			for (; deleted_idx < deleted_results.size(); deleted_idx++) {
-				results.push_back(deleted_results[deleted_idx]);
-			}
-		}
-	}
+	results.clear();
+	merge_sort(db_results, deleted_results, results, false);
 
 	//mutexlock.unlock();
 	rwlock_for_snapshot.unlock_shared();
 	return results.size();
+}
+
+// merge sort between snapshot db and snapshot deleted set: need_exist = false
+// merge sort between server-side snapshot and in-switch snapshot: need_exist = true
+void RocksdbWrapper::merge_sort(const std::vector<std::pair<netreach_key_t, snapshot_record_t>> &veca, const std::vector<std::pair<netreach_key_t, snapshot_record_t>> &vecb, std::vecotr<std::pair<netreach_key_t, snapshot_record_t>> &result, bool need_exist) {
+	if (veca.size() == 0) {
+		results = vecb;
+	}
+	else if (vecb.size() == 0) {
+		results = veca;
+	}
+	else {
+		uint32_t veca_idx = 0;
+		uint32_t vecb_idx = 0;
+		bool remain_veca = false;
+		bool remain_vecb = false;
+		while (true) {
+			netreach_key_t &tmp_veca_key = veca[veca_idx].first;
+			snapshot_record_t &tmp_veca_record = veca[veca_idx].second;
+			netreach_key_t &tmp_vecb_key = vecb[vecb_idx].first;
+			snapshot_record_t &tmp_vecb_record = vecb[vecb_idx].second;
+			if (tmp_veca_key < tmp_vecb_key) {
+				results.push_back(veca[veca_idx]);
+				veca_idx += 1;
+			}
+			else if (tmp_veca_key > tmp_vecb_key) {
+				results.push_back(vecb[vecb_idx]);
+				vecb_idx += 1;
+			}
+			else {
+				//printf("[RocksdbWrapper] deleted set and database cannot have the same key!\n");
+				//exit(-1);
+				INVARIANT(need_exist == true);
+			}
+			if (veca_idx >= veca.size()) {
+				remain_vecb = true;
+				break;
+			}
+			if (vecb_idx >= vecb.size()) {
+				remain_veca = true;
+				break;
+			}
+		}
+		if (remain_veca) {
+			for (; veca_idx < veca.size(); veca_idx++) {
+				results.push_back(veca[veca_idx]);
+			}
+		}
+		else if (remain_vecb) {
+			for (; vecb_idx < vecb.size(); vecb_idx++) {
+				results.push_back(vecb[vecb_idx]);
+			}
+		}
+	}
 }
 
 // snapshot

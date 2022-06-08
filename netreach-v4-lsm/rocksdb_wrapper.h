@@ -69,20 +69,26 @@ class RocksdbWrapper {
 		// NOTE: we provide thread safety between per-server worker and evictserver; and there is no contention across workers of different servers
 		// NOTE: lock overhead is ignorable compared with that of rocksdb
 		
+		/* server-side KVS */
+
 		boost::shared_mutex rwlock; // protect db_ptr and deleted_set in get/put/remove/make_snapshot
 		//std::mutex mutexlock; // protect db_ptr and deleted_set in get/put/remove/make_snapshot
 		rocksdb::TransactionDB *db_ptr = NULL;
 		deleted_set_t deleted_set;
 
-  		std::atomic_flag is_snapshot = ATOMIC_FLAG_INIT; // protect is_snapshot and snapshotid in make_snapshot/stop_snapshot
 		int snapshotid = -1; // to locate snapshot files
 
-		boost::shared_mutex rwlock_for_snapshot; // protect snapshotdata (including sp_ptr, snapshotdb_ptr, snapshot_deleted_set) in range_scan/make_snapshot
-		// normal database snapshot 
-		const rocksdb::Snapshot *sp_ptr = NULL;
-		// database checkpoint to recover database snapshot from server crash
-		rocksdb::TransactionDB *snapshotdb_ptr = NULL;
+		/* snapshot data for range query */
+
+		boost::shared_mutex rwlock_for_snapshot; // protect snapshotdata used by range query (including sp_ptr, snapshotdb_ptr, snapshot_deleted_set, and inswitch_snapshot) in range_scan/make_snapshot/update_snapshot
+		const rocksdb::Snapshot *sp_ptr = NULL; // normal database snapshot 
+		rocksdb::TransactionDB *snapshotdb_ptr = NULL; // database checkpoint to recover database snapshot from server crash
 		deleted_set_t snapshot_deleted_set; // read-only, only used for range query
+		std::map<netreach_key_t, snapshot_record_t> inswitch_snapshot;
+
+		/* latest snapshot data */
+
+  		std::atomic_flag is_snapshot = ATOMIC_FLAG_INIT; // protect is_snapshot and latest server-side snapshot in make_snapshot/stop_snapshot
 		// save latest snapshot temporarily
 		const rocksdb::Snapshot *latest_sp_ptr = NULL;
 		deleted_set_t latest_snapshot_deleted_set;

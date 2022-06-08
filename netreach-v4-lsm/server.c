@@ -103,7 +103,7 @@ void transaction_main() {
 	uint16_t popclient_params[server_num];
 	for (uint16_t popclient_i = 0; popclient_i < server_num; popclient_i++) {
 		popclient_params[popclient_i] = popclient_i;
-		int ret = pthread_create(&popclient_threads[popclient_i], nullptr, run_server_popclient, &popclient_params[popclient_i]);
+		ret = pthread_create(&popclient_threads[popclient_i], nullptr, run_server_popclient, &popclient_params[popclient_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.popclient:" << ret);
 		}
@@ -122,7 +122,7 @@ void transaction_main() {
 		server_worker_params[worker_i].serveridx = worker_i;
 		server_worker_params[worker_i].throughput = 0;
 		server_worker_params[worker_i].latency_list.clear();
-		int ret = pthread_create(&worker_threads[worker_i], nullptr, run_server_worker, (void *)&server_worker_params[worker_i]);
+		ret = pthread_create(&worker_threads[worker_i], nullptr, run_server_worker, (void *)&server_worker_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.worker:" << ret);
 		}
@@ -136,11 +136,26 @@ void transaction_main() {
 		COUT_N_EXIT("Error of launching server.evictserver: " << ret);
 	}
 
-	// launch consnapshotserver
-	pthread_t consnapshotserver_thread;
-	ret = pthread_create(&consnapshotserver_thread, nullptr, run_server_consnapshotserver, nullptr);
-	if (ret) {
-		COUT_N_EXIT("Error of launching server.consnapshotserver: " << ret);
+	// launch snapshotservers
+	uint16_t snapshotserver_params[server_num];
+	pthread_t snapshotserver_threads[server_num];
+	for (uint16_t snapshotserver_i = 0; snapshotserver_i < server_num; snapshotserver_i++) {
+		snapshotserver_params[snapshotserver_i] = snapshotserver_i;
+		ret = pthread_create(&snapshotserver_threads[snapshotserver_i], nullptr, run_server_snapshotserver, &snapshotserver_params[snapshotserver_i]);
+		if (ret) {
+		  COUT_N_EXIT("Error of launching some server.snapshotserver:" << ret);
+		}
+	}
+
+	// launch snapshotdataservers
+	uint16_t snapshotdataserver_params[server_num];
+	pthread_t snapshotdataserver_threads[server_num];
+	for (uint16_t snapshotdataserver_i = 0; snapshotdataserver_i < server_num; snapshotdataserver_i++) {
+		snapshotdataserver_params[snapshotdataserver_i] = snapshotdataserver_i;
+		ret = pthread_create(&snapshotdataserver_threads[snapshotdataserver_i], nullptr, run_server_snapshotdataserver, &snapshotdataserver_params[snapshotdataserver_i]);
+		if (ret) {
+		  COUT_N_EXIT("Error of launching some server.snapshotdataserver:" << ret);
+		}
 	}
 
 	while (transaction_ready_threads < transaction_expected_ready_threads) sleep(1);
@@ -258,12 +273,22 @@ void transaction_main() {
 		COUT_N_EXIT("Error: unable to join server.evictserver " << rc);
 	}
 	printf("server.evictserver finish\n");
-	printf("wait for server.consnapshotserver\n");
-	rc = pthread_join(consnapshotserver_thread, &status);
-	if (rc) {
-		COUT_N_EXIT("Error: unable to join server.consnapshotserver " << rc);
+	printf("wait for server.snapshotservers\n");
+	for (size_t i = 0; i < server_num; i++) {
+		rc = pthread_join(snapshotserver_threads[i], &status);
+		if (rc) {
+			COUT_N_EXIT("Error: unable to join server.snapshotserver " << rc);
+		}
 	}
-	printf("server.consnapshotserver finish\n");
+	printf("server.snapshotservers finish\n");
+	printf("wait for server.snapshotdataservers\n");
+	for (size_t i = 0; i < server_num; i++) {
+		rc = pthread_join(snapshotdataserver_threads[i], &status);
+		if (rc) {
+			COUT_N_EXIT("Error: unable to join server.snapshotdataserver " << rc);
+		}
+	}
+	printf("server.snapshotdataservers finish\n");
 	printf("wait for reflector.popserver\n");
 	rc = pthread_join(reflector_popserver_thread, &status);
 	if (rc) {
