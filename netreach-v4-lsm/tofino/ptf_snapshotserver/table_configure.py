@@ -87,6 +87,28 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             if self.devPorts[1] not in pipeidx_ports_map[egress_pipeidx]:
                 pipeidx_ports_map[egress_pipeidx].append(self.devPorts[1])
 
+    def cleanup(self):
+        print "Reset need_recirculate=0 for iports in different ingress pipelines"
+        for tmppipeidx in pipeidx_ports_map.keys():
+            if tmppipeidx != ingress_pipeidx:
+                tmpports = pipeidx_ports_map[tmppipeidx]
+                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                    for iport in tmpports:
+                        matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
+                                op_hdr_optype = tmpoptype,
+                                ig_intr_md_ingress_port = iport)
+                        self.client.need_recirculate_tbl_table_delete_by_match_spec(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+        print "Reset snapshot_flag=0 for all ingress pipelines"
+        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+            matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
+                    op_hdr_optype = tmpoptype,
+                    meta_need_recirculate = 0)
+            self.client.snapshot_flag_tbl_table_delete_by_match_spec(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+        print "Reset case1_reg"
+        self.client.register_reset_all_case1_reg(self.sess_hdl, self.dev_tgt)
+
     def enable_singlepath(self):
         print "Set need_recirculate=1 for iports in different ingress pipelines"
         for tmppipeidx in pipeidx_ports_map.keys():
@@ -111,6 +133,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.snapshot_flag_tbl_table_add_with_set_snapshot_flag(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
+    def disable_singlepath(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
         for tmppipeidx in pipeidx_ports_map.keys():
             if tmppipeidx != ingress_pipeidx:
@@ -218,7 +241,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
             control_type, recvbuf = struct.unpack("=i{}s".format(len(recvbuf) - 4), recvbuf)
 
-            if control_type == SWITCHOS_ENABLE_SINGLEPATH:
+            if control_type == SWITCHOS_CLEANUP:
+                self.cleanup()
+
+                # send back SWITCHOS_CLEANUP_ACK
+                sendbuf = struct.pack("=i", SWITCHOS_CLEANUP_ACK)
+                switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
+            elif control_type == SWITCHOS_ENABLE_SINGLEPATH:
                 self.enable_singlepath()
 
                 # send back SWITCHOS_ENABLE_SINGLEPATH_ACK
@@ -230,6 +259,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
                 # send back SWITCHOS_SET_SNAPSHOT_FLAG_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_SET_SNAPSHOT_FLAG_ACK)
+                switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
+                switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
+            elif control_type == SWITCHOS_DISABLE_SINGLEPATH:
+                self.disable_singlepath()
+
+                # send back SWITCHOS_DISABLE_SINGLEPATH_ACK
+                sendbuf = struct.pack("=i", SWITCHOS_DISABLE_SINGLEPATH_ACK)
                 switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_LOAD_SNAPSHOT_DATA:
                 # parse empty index

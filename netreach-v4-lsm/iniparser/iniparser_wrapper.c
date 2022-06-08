@@ -548,6 +548,24 @@ int IniparserWrapper::get_switchos_remove_cache_lookup_ack() {
 	return tmp;
 }
 
+int IniparserWrapper::get_switchos_cleanup() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_cleanup", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_cleanup]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_cleanup_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_cleanup_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_cleanup_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
 int IniparserWrapper::get_switchos_enable_singlepath() {
 	int tmp = iniparser_getint(ini, "switchos:switchos_enable_singlepath", -1);
 	if (tmp == -1) {
@@ -579,6 +597,24 @@ int IniparserWrapper::get_switchos_set_snapshot_flag_ack() {
 	int tmp = iniparser_getint(ini, "switchos:switchos_set_snapshot_flag_ack", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switchos:switchos_set_snapshot_flag_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_disable_singlepath() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_disable_singlepath", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_disable_singlepath]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_disable_singlepath_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_disable_singlepath_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_disable_singlepath_ack]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;

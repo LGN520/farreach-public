@@ -44,6 +44,7 @@ int server_evictserver_udpsock = -1;
 
 // snapshot
 int *server_snapshotserver_udpsock_list = NULL;
+std::atomic<bool> *server_issnapshot_list = NULL; // TODO: be atomic
 
 void prepare_server();
 // server.workers for processing pkts
@@ -62,7 +63,6 @@ int server_consnapshotserver_tcpsock = -1;
 //std::map<netreach_key_t, snapshot_record_t> * volatile server_snapshot_maps = NULL;
 concurrent_snapshot_map_t * volatile server_snapshot_maps = NULL;
 uint32_t volatile * server_snapshot_rcus = NULL;
-bool volatile server_issnapshot = false; // TODO: it should be atomic
 
 void *run_server_consnapshotserver(void *param);
 
@@ -104,6 +104,8 @@ void prepare_server() {
 	for (size_t i = 0; i < server_num; i++) {
 		prepare_udpserver(server_snapshotserver_udpsock_list[i], true, server_snapshotserver_port_start + i, "server.snapshotserver");
 	}
+
+	server_issnapshot_list = new std::atomic<bool>[server_num];
 
 
 
@@ -151,6 +153,12 @@ void close_server() {
 		delete [] server_snapshotserver_udpsock_list;
 		server_snapshotserver_udpsock_list = NULL;
 	}
+	if (server_issnapshot_list != NULL) {
+		delete [] server_issnapshot_list;
+		server_issnapshot_list = NULL;
+	}
+
+
 	/*if (server_evictserver_tcpsock_list != NULL) {
 		delete [] server_evictserver_tcpsock_list;
 		server_evictserver_tcpsock_list = NULL;
@@ -571,7 +579,7 @@ void *run_server_worker(void * param) {
 				COUT_THIS("PUTREQ_SEQ_CASE3")
 				put_request_seq_case3_t req(buf, recv_size);
 
-				if (!server_issnapshot) {
+				if (!server_issnapshot_list[serveridx]) {
 					db_wrappers[serveridx].make_snapshot();
 				}
 
@@ -593,7 +601,7 @@ void *run_server_worker(void * param) {
 				COUT_THIS("PUTREQ_POP_SEQ_CASE3")
 				put_request_pop_seq_case3_t req(buf, recv_size);
 
-				if (!server_issnapshot) {
+				if (!server_issnapshot_list[serveridx]) {
 					db_wrappers[serveridx].make_snapshot();
 				}
 
@@ -627,7 +635,7 @@ void *run_server_worker(void * param) {
 				COUT_THIS("DELREQ_SEQ_CASE3")
 				del_request_seq_case3_t req(buf, recv_size);
 
-				if (!server_issnapshot) {
+				if (!server_issnapshot_list[serveridx]) {
 					db_wrappers[serveridx].make_snapshot();
 				}
 
@@ -771,7 +779,7 @@ void *run_server_evictserver(void *param) {
 		// make server-side snapshot for CACHE_EVICT_CASE2
 		if (packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2) {
 			printf("CACHE_EVICT_CASE2!\n");
-			if (!server_issnapshot) {
+			if (!server_issnapshot_list[tmp_serveridx]) {
 				db_wrappers[tmp_serveridx].make_snapshot();
 			}
 		}
@@ -840,6 +848,14 @@ void *run_server_snapshotserver(void *param) {
 			
 			// sendback SNAPSHOT_CLEANUP_ACK to controller
 			udpsendto(server_snapshotserver_udpsock_list[serveridx], &SNAPSHOT_CLEANUP_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
+		}
+		else if (control_type == SNAPSHOT_START) {
+			if (!server_issnapshot_list[serveridx]) {
+				db_wrappers[serveridx].make_snapshot();
+			}
+			
+			// sendback SNAPSHOT_START_ACK to controller
+			udpsendto(server_snapshotserver_udpsock_list[serveridx], &SNAPSHOT_START_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
 		}
 	}
 }
@@ -930,7 +946,7 @@ void *run_server_consnapshotserver(void *param) {
 				INVARIANT(control_type_phase0 == SNAPSHOT_SERVERSIDE);
 
 				// make server-side snapshot (simulate distributed in-memory KVS by concurrent one)
-				if (!server_issnapshot) {
+				if (!server_issnapshot_list[i]) {
 					for (uint16_t i = 0; i < server_num; i++) {
 						db_wrappers[i].make_snapshot();
 					}
