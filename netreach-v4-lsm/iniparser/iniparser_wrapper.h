@@ -39,7 +39,7 @@ class IniparserWrapper {
 		const char *get_server_ip_for_controller();
 		short get_server_evictserver_port();
 		short get_server_snapshotserver_port();
-		short get_server_consnapshotserver_port();
+		short get_server_snapshotdataserver_port();
 		short get_server_dynamicserver_port();
 		const char *get_server_ip_for_client();
 

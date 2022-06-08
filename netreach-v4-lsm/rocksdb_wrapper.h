@@ -55,9 +55,12 @@ class RocksdbWrapper {
 		bool remove(netreach_key_t key, uint32_t seq);
 
 		// transaction phase (per-server worker, evictserver, and consnapshotserver touch both rocksdb and deleted set; need mutex for atomicity)
-		void make_snapshot();
+		void create_snapshotdb_checkpoint(uint64_t snapshotdbseq);
+		void clean_snapshot(int tmpsnapshotid);
+		void make_snapshot(int tmpsnapshotid = 0);
+		void update_snapshot();
 		void stop_snapshot();
-		// TODO: based on snapshot
+
 		size_t range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results);
 
 	private:
@@ -80,6 +83,9 @@ class RocksdbWrapper {
 		// database checkpoint to recover database snapshot from server crash
 		rocksdb::TransactionDB *snapshotdb_ptr = NULL;
 		deleted_set_t snapshot_deleted_set; // read-only, only used for range query
+		// save latest snapshot temporarily
+		const rocksdb::Snapshot *latest_sp_ptr = NULL;
+		deleted_set_t latest_snapshot_deleted_set;
 };
 
 typedef RocksdbWrapper rocksdb_wrapper_t;

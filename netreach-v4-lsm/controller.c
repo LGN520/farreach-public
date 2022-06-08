@@ -27,12 +27,13 @@
 
 #include "common_impl.h"
 
-struct SnapshotClientSubthreadParam {
+struct SnapshotclientSubthreadParam {
 	int udpsock;
 	struct sockaddr_in dstaddr;
-	socklen-t dstaddrlen;
+	socklen_t dstaddrlen;
+	uint16_t serveridx;
 };
-typedef SnapshotClientSubthreadParam snapshot_client_subthread_param_t;
+typedef SnapshotclientSubthreadParam snapshotclient_subthread_param_t;
 
 bool volatile controller_running = false;
 std::atomic<size_t> controller_ready_threads(0);
@@ -64,6 +65,7 @@ int controller_snapshotid = 1; // server uses snapshot id 0 after loading phase
 // controller.snapshotclient <-> switchos/per-server.snapshotserver
 int controller_snapshotclient_for_switchos_udpsock = -1;
 int *controller_snapshotclient_for_server_udpsock_list = NULL;
+// written by controller.snapshotclient; read by controller.snapshotclient.senddata_subthread to server.snapshotdataserver
 char **controller_snapshotclient_for_server_databuf_list = NULL;
 int **controller_snapshotclient_for_server_databuflen_list = NULL;
 
@@ -75,6 +77,7 @@ void controller_update_snapshotid(); // store latest snapshotid and inswitch sna
 void *run_controller_snapshotclient(void *param); // Periodically notify switch os to launch snapshot
 void *run_controller_snapshotclient_cleanup_subthread(void *param);
 void *run_controller_snapshotclient_start_subthread(void *param);
+void *run_controller_snapshotclient_senddata_subthread(void *param);
 void close_controller();
 
 int main(int argc, char **argv) {
@@ -350,36 +353,55 @@ void *run_controller_snapshotclient(void *param) {
 	struct sockaddr_in server_snapshotserver_addr_list[server_num];
 	socklen_t server_snapshotserver_addrlen_list[server_num];
 	for (size_t i = 0; i < server_num; i++) {
-		set_sockaddr(server_snapshotserver_addr_list[i], inet_addr(server_ip_for_controller), server_snapshotserver_port_start);
+		set_sockaddr(server_snapshotserver_addr_list[i], inet_addr(server_ip_for_controller), server_snapshotserver_port_start + i);
 		server_snapshotserver_addrlen_list[i] = sizeof(struct sockaddr_in);
 	}
 
-	// prepare for concurrent SNAPSHOT_CLEANUP
+	struct sockaddr_in server_snapshotdataserver_addr_list[server_num];
+	socklen_t server_snapshotdataserver_addrlen_list[server_num];
+	for (size_t i = 0; i < server_num; i++) {
+		set_sockaddr(server_snapshotdataserver_addr_list[i], inet_addr(server_ip_for_controller), server_snapshotdataserver_port_start + i);
+		server_snapshotdataserver_addrlen_list[i] = sizeof(struct sockaddr_in);
+	}
+
+	// prepare for concurrent SNAPSHOT_CLEANUP (param.serveridx not used)
 	pthread_t cleanup_subthread_for_switchos;
-	snapshot_client_subthread_param_t cleanup_subthread_param_for_switchos;
+	snapshotclient_subthread_param_t cleanup_subthread_param_for_switchos;
 	cleanup_subthread_param_for_switchos.udpsock = controller_snapshotclient_for_switchos_udpsock;
 	cleanup_subthread_param_for_switchos.dstaddr = switchos_snapshotserver_addr;
 	cleanup_subthread_param_for_switchos.dstaddrlen = switchos_snapshotclient_addrlen;
 	pthread_t cleanup_subthread_for_server_list[server_num];
-	snapshot_client_subthread_param_t cleanup_subthread_param_for_server_list[server_num];
+	snapshotclient_subthread_param_t cleanup_subthread_param_for_server_list[server_num];
 	for (i = 0; i < server_num; i++) {
 		cleanup_subthread_param_for_server_list[i].udpsock = controller_snapshotclient_for_server_udpsock_list[i];
 		cleanup_subthread_param_for_server_list[i].dstaddr = server_snapshotserver_addr_list[i];
 		cleanup_subthread_param_for_server_list[i].dstaddrlen = server_snapshotserver_addrlen_list[i];
+		senddata_subthread_param_for_server_list[i].serveridx = i;
 	}
 
-	// prepare for concurrent SNAPSHOT_START
+	// prepare for concurrent SNAPSHOT_START (param.serveridx not used)
 	pthread_t start_subthread_for_switchos;
-	snapshot_client_subthread_param_t start_subthread_param_for_switchos;
+	snapshotclient_subthread_param_t start_subthread_param_for_switchos;
 	start_subthread_param_for_switchos.udpsock = controller_snapshotclient_for_switchos_udpsock;
 	start_subthread_param_for_switchos.dstaddr = switchos_snapshotserver_addr;
 	start_subthread_param_for_switchos.dstaddrlen = switchos_snapshotclient_addrlen;
 	pthread_t start_subthread_for_server_list[server_num];
-	snapshot_client_subthread_param_t start_subthread_param_for_server_list[server_num];
+	snapshotclient_subthread_param_t start_subthread_param_for_server_list[server_num];
 	for (i = 0; i < server_num; i++) {
 		start_subthread_param_for_server_list[i].udpsock = controller_snapshotclient_for_server_udpsock_list[i];
 		start_subthread_param_for_server_list[i].dstaddr = server_snapshotserver_addr_list[i];
 		start_subthread_param_for_server_list[i].dstaddrlen = server_snapshotserver_addrlen_list[i];
+		senddata_subthread_param_for_server_list[i].serveridx = i;
+	}
+
+	// prepare for concurrent SNAPSHOT_SENDDATA
+	pthread_t senddata_subthread_for_server_list[server_num];
+	snapshotclient_subthread_param_t senddata_subthread_param_for_server_list[server_num];
+	for (i = 0; i < server_num; i++) {
+		senddata_subthread_param_for_server_list[i].udpsock = controller_snapshotclient_for_server_udpsock_list[i];
+		senddata_subthread_param_for_server_list[i].dstaddr = server_snapshotdataserver_addr_list[i];
+		senddata_subthread_param_for_server_list[i].dstaddrlen = server_snapshotdataserver_addrlen_list[i];
+		senddata_subthread_param_for_server_list[i].serveridx = i;
 	}
 
 	// prepare for SNAPSHOT_GETDATA_ACK
@@ -464,6 +486,21 @@ void *run_controller_snapshotclient(void *param) {
 			pthread_join(start_subthread_for_server_list[i], NULL);
 		}
 
+		// prepare to process per-server snapshot data
+		// per-server snapshot data: <int SNAPSHOT_SENDDATA, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
+		// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
+		memset(controller_snapshotclient_for_server_databuflen_list, 0, sizeof(int) * server_num);
+		int32_t snapshot_senddata_default_perserverbytes = sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
+		int32_t snapshot_senddata_default_recordcnt = 0;
+		for (uint16_t tmpi = 0; tmpi < server_num; tmpi++) {
+			// prepare header for SNAPSHOT_SENDDATA
+			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi], &SNAPSHOT_SENDDATA, sizeof(int));
+			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int), &snapshot_senddata_default_perserverbytes, sizeof(int32_t));
+			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int) + sizeof(int32_t), &tmpi, sizeof(uint16_t));
+			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), &snapshot_senddata_default_recordcnt, sizeof(int32_t));
+			controller_snapshotclient_for_server_databuflen_list[tmp_serveridx] = snapshot_senddata_default_perserverbytes;
+		}
+
 		// (5) send SNAPSHOT_GETDATA to each switch os to get consistent snapshot data
 		printf("[controller.snapshotclient] send SNAPSHOT_GETDATA to each switchos\n");
 		memcpy(sendbuf, &SNAPSHOT_GETDATA, sizeof(int));
@@ -476,10 +513,7 @@ void *run_controller_snapshotclient(void *param) {
 				continue;
 			}
 			else {
-				// prepare to process per-server snapshot data
-				memset(controller_snapshotclient_for_server_databuflen_list, 0, sizeof(int) * server_num);
-
-				// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes, per-server data>
+				// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes (including SNAPSHOT_GETDATA_ACK), per-server data>
 				// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 				
@@ -487,24 +521,26 @@ void *run_controller_snapshotclient(void *param) {
 				int32_t total_bytes = *((int32_t *)(databuf + sizeof(int)));
 				INVARIANT(datarecvsize == total_bytes);
 				
-				// per-server snapshot data: <int SNAPSHOT_SENDDATA, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
+				// per-server snapshot data: <int SNAPSHOT_SENDDATA, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
 				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 				int tmp_offset = sizeof(int) + sizeof(int32_t); // SNAPSHOT_GETDATA_ACK + total_bytes
 				while (true) {
 					int32_t tmp_serverbytes = *((int32_t *)(databuf + tmp_offset));
+					int32_t effective_serverbytes = tmp_serverbytes - sizeof(int32_t) - sizeof(uint16_t) - sizeof(int32_t);
 					uint16_t tmp_serveridx = *((uint16_t *)(databuf + tmp_offset + sizeof(int32_t)));
 					int32_t tmp_recordcnt = *((int32_t *)(databuf + tmp_offset + sizeof(int32_t) + sizeof(uint16_t)));
-					if (controller_snapshotclient_for_server_databuflen_list[tmp_serveridx] == 0) {
-						// prepare header for SNAPSHOT_SENDDATA
-						memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx], &SNAPSHOT_SENDDATA, sizeof(int));
-						memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int), &tmp_serverbytes, sizeof(int32_t));
-						memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int32_t), &tmp_serveridx, sizeof(uint16_t));
-						memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), &tmp_recordcnt, sizeof(int32_t));
-						controller_snapshotclient_for_server_databuflen_list[tmp_serveridx] = sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
-					}
-					// TODO: for multiple switches, we need to increase perserver_bytes and record_cnt in SNAPSHOT_SENDDATA header
-					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + controller_snapshotclient_for_server_databuflen_list[tmp_serveridx], databuf + tmp_offset + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t), tmp_serverbytes - sizeof(int32_t) - sizeof(uint16_t) - sizeof(int32_t));
-					controller_snapshotclient_for_server_databuflen_list[tmp_serveridx] += (tmp_serverbytes - sizeof(int32_t) - sizeof(uint16_t) - sizeof(int32_t));
+
+					// increase perserver_bytes and record_cnt in SNAPSHOT_SENDDATA header
+					int32_t old_serverbytes = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int)));
+					int32_t old_recordcnt = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
+					int32_t new_serverbytes = old_serverbytes + effective_serverbytes;
+					int32_t new_recordcnt = old_recordcnt + tmp_recordcnt;
+					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int), &new_serverbytes, sizeof(int32_t));
+					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), &new_recordcnt, sizeof(int32_t));
+					
+					// copy per-record data in SNAPSHOT_SENDDATA body
+					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + controller_snapshotclient_for_server_databuflen_list[tmp_serveridx], databuf + tmp_offset + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t), effective_serverbytes);
+					controller_snapshotclient_for_server_databuflen_list[tmp_serveridx] += effective_serverbytes;
 
 					tmp_offset += tmp_serverbytes;
 					if (tmp_offset >= total_bytes) {
@@ -515,13 +551,18 @@ void *run_controller_snapshotclient(void *param) {
 			}
 		}
 
-		// TODO: send SNAPSHOT_SENDDATA to each server
+		// (6) send SNAPSHOT_SENDDATA to each server concurrently
+		printf("[controller.snapshotclient] send SNAPSHOT_SENDDATAs to each server\n");
+		for (i = 0; i < server_num; i++) {
+			// NOTE: even if databuflen[i] == default_perserverbytes, we still need to notify the server that snapshot is end by SNAPSHOT_SENDDATA
+			pthread_create(&senddata_subthread_for_server_list[i], nullptr, run_controller_snapshotclient_senddata_subthread, &senddata_subthread_param_for_server_list[i]);
+		}
+		for (i = 0; i < server_num; i++) {
+			pthread_join(senddata_subthread_for_server_list[i], NULL);
+		}
 		
-		// TODO: after SNAPSHOT_SENDDATA_ACK
-		// save per-switch SNAPSHOT_GETDATA_ACK (databuf) for controller failure recovery
+		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databuf) for controller failure recovery
 		controller_update_snapshotid(databuf, datarecvsize);
-
-		// TODO: END HERE
 	}
 
 	delete [] databuf;
@@ -531,7 +572,7 @@ void *run_controller_snapshotclient(void *param) {
 }
 
 void *run_controller_snapshotclient_cleanup_subthread(void *param) {
-	udpsock = *((int *)param);
+	snapshotclient_subthread_param_t &subthread_param = *((snapshotclient_subthread_param_t *)param);
 
 	char sendbuf[MAX_BUFSIZE];
 	memcpy(sendbuf, &SNAPSHOT_CLEANUP, sizeof(int));
@@ -541,10 +582,10 @@ void *run_controller_snapshotclient_cleanup_subthread(void *param) {
 	int recvsize = 0;
 	bool is_timeout = false;
 	while (true) {
-		udpsendto(udpsock, sendbuf, 2*sizeof(int), 0, (struct sockaddr*)&dstaddr, dstaddrlen, "controlelr.snapshotclient.cleanup_subthread");
+		udpsendto(subthread_param.udpsock, sendbuf, 2*sizeof(int), 0, &subthread_param.dstaddr, subthread_param.dstaddrlen, "controller.snapshotclient.cleanup_subthread");
 
 		// wait for SNAPSHOT_CLEANUP_ACK
-		is_timeout = udprecvfrom(udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient.cleanup_subthread");
+		is_timeout = udprecvfrom(subthread_param.udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient.cleanup_subthread");
 		if (is_timeout) {
 			continue;
 		}
@@ -558,7 +599,7 @@ void *run_controller_snapshotclient_cleanup_subthread(void *param) {
 }
 
 void *run_controller_snapshotclient_start_subthread(void *param) {
-	udpsock = *((int *)param);
+	snapshotclient_subthread_param_t &subthread_param = *((snapshotclient_subthread_param_t *)param);
 
 	char sendbuf[MAX_BUFSIZE];
 	memcpy(sendbuf, &SNAPSHOT_START, sizeof(int));
@@ -568,15 +609,38 @@ void *run_controller_snapshotclient_start_subthread(void *param) {
 	int recvsize = 0;
 	bool is_timeout = false;
 	while (true) {
-		udpsendto(udpsock, sendbuf, 2*sizeof(int), 0, (struct sockaddr*)&dstaddr, dstaddrlen, "controlelr.snapshotclient.start_subthread");
+		udpsendto(subthread_param.udpsock, sendbuf, 2*sizeof(int), 0, &subthread_param.dstaddr, subthread_param.dstaddrlen, "controller.snapshotclient.start_subthread");
 
 		// wait for SNAPSHOT_start_ACK
-		is_timeout = udprecvfrom(udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient.start_subthread");
+		is_timeout = udprecvfrom(subthread_param.udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient.start_subthread");
 		if (is_timeout) {
 			continue;
 		}
 		else {
 			INVARIANT(recvsize == sizeof(int) && *((int *)buf) == SNAPSHOT_START_ACK);
+			break;
+		}
+	}
+
+	pthread_exit(nullptr);
+}
+
+void *run_controller_snapshotclient_senddata_subthread(void *param) {
+	snapshotclient_subthread_param_t &subthread_param = *((snapshotclient_subthread_param_t *)param);
+
+	char recvbuf[MAX_BUFSIZE];
+	int recvsize = 0;
+	bool is_timeout = false;
+	while (true) {
+		udpsendlarge_udpfrag(subthread_param.udpsock, controller_snapshotclient_for_server_databuf_list[subthread_param.serveridx], controller_snapshotclient_for_server_databuflen_list[subthread_param.serveridx], 0, &subthread_param.dstaddr, subthread_param.dstaddrlen, "controller.snapshotclient.senddata_subthread");
+
+		// wait for SNAPSHOT_start_ACK
+		is_timeout = udprecvfrom(subthread_param.udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient.senddata_subthread");
+		if (is_timeout) {
+			continue;
+		}
+		else {
+			INVARIANT(recvsize == sizeof(int) && *((int *)buf) == SNAPSHOT_SENDDATA_ACK);
 			break;
 		}
 	}

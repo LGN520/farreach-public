@@ -212,10 +212,10 @@ short IniparserWrapper::get_server_snapshotserver_port() {
 	return short(tmp);
 }
 
-short IniparserWrapper::get_server_consnapshotserver_port() {
-	int tmp = iniparser_getint(ini, "server:server_consnapshotserver_port", -1);
+short IniparserWrapper::get_server_snapshotdataserver_port() {
+	int tmp = iniparser_getint(ini, "server:server_snapshotdataserver_port", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [server:server_consnapshotserver_port]: %d\n", tmp);
+		printf("Invalid entry of [server:server_snapshotdataserver_port]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);

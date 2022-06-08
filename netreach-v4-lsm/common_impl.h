@@ -93,7 +93,7 @@ uint8_t server_macaddr[6];
 const char* server_ip_for_controller = nullptr;
 short server_evictserver_port_start = -1;
 short server_snapshotserver_port_start = -1;
-short server_consnapshotserver_port = -1;
+short server_snapshotdataserver_port_start = -1;
 short server_dynamicserver_port = -1;
 const char *server_ip_for_client;
 

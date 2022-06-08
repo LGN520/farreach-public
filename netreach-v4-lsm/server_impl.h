@@ -52,6 +52,7 @@ void *run_server_worker(void *param);
 void *run_server_popclient(void *param);
 void *run_server_evictserver(void *param);
 void *run_server_snapshotserver(void *param);
+void *run_server_snapshotdataserver(void *param);
 void close_server();
 
 
@@ -844,18 +845,26 @@ void *run_server_snapshotserver(void *param) {
 		snapshotid = *((int *)(recvbuf + sizeof(int)));
 
 		if (control_type == SNAPSHOT_CLEANUP) {
-			// TODO: cleanup stale snapshot states
+			// cleanup stale snapshot states
+			db_wrappers[serveridx].clean_snapshot(snapshotid);
 			
 			// sendback SNAPSHOT_CLEANUP_ACK to controller
 			udpsendto(server_snapshotserver_udpsock_list[serveridx], &SNAPSHOT_CLEANUP_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
 		}
 		else if (control_type == SNAPSHOT_START) {
 			if (!server_issnapshot_list[serveridx]) {
-				db_wrappers[serveridx].make_snapshot();
+				db_wrappers[serveridx].make_snapshot(snapshotid);
 			}
 			
 			// sendback SNAPSHOT_START_ACK to controller
 			udpsendto(server_snapshotserver_udpsock_list[serveridx], &SNAPSHOT_START_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
+		}
+		else if (control_type == SNAPSHOT_SENDDATA) {
+			// TODO: END HERE (set is_snapshot -> update in-switch and server-side snapshot -> reset is_snapshot -> stop_snapshot)
+		}
+		else {
+			printf("[server.snapshotserver] invalid control type: %d\n", control_type);
+			exit(-1);
 		}
 	}
 }

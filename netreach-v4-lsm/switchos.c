@@ -1027,6 +1027,10 @@ void *run_switchos_snapshotserver(void *param) {
 			printf("[switchos.snapshotserver] send snapshot data to controller\n"); // TMPDEBUG
 			udpsendlarge_udpfrag(switchos_snapshotserver_udpsock, sendbuf, total_bytes, 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
 		}
+		else {
+			printf("[switchos.snapshotserver] invalid control type: %d\n", control_type);
+			exit(-1);
+		}
 	} // while (switchos_running)
 
 	// send SWITCHOS_PTF_SNAPSHOTSERVER_END to ptf.snapshotserver
