@@ -494,6 +494,7 @@ ScanResponseSplit<key_t, val_t>::ScanResponseSplit(key_t key, key_t endkey, uint
 	: ScanRequestSplit<key_t>(key, endkey, cur_scanidx, max_scannum), _nodeidx_foreval(nodeidx_foreval), _snapshotid(snapshotid), _pairnum(pairnum)
 {	
 	this->_type = static_cast<uint8_t>(PacketType::SCANRES_SPLIT);
+	INVARIANT(snapshotid >= 0);
 	INVARIANT(pairnum == int32_t(pairs.size()));
 	this->_pairs.assign(pairs.begin(), pairs.end());
 }
@@ -502,6 +503,7 @@ template<class key_t, class val_t>
 ScanResponseSplit<key_t, val_t>::ScanResponseSplit(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::SCANRES_SPLIT);
+	INVARIANT(this->_snapshotid >= 0);
 }
 
 template<class key_t, class val_t>
@@ -520,7 +522,7 @@ int32_t ScanResponseSplit<key_t, val_t>::pairnum() const {
 }
 
 template<class key_t, class val_t>
-std::vector<std::pair<key_t, val_t>> ScanResponseSplit<key_t, val_t>::pairs() const {
+std::vector<std::pair<key_t, snapshot_record_t>> ScanResponseSplit<key_t, val_t>::pairs() const {
 	return this->_pairs;
 }
 
@@ -614,37 +616,37 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 }
 
 template<class key_t, class val_t>
-size_t ScanResponseSplit<key_t, val_t>::get_frag_hdrsize() const {
+size_t ScanResponseSplit<key_t, val_t>::get_frag_hdrsize() {
 	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // op_hdr + scan_hdr + split_hdr + nodeidx_foreval (used to identify fragments from different servers)
 }
 
 template<class key_t, class val_t>
-size_t ScanResponseSplit<key_t, val_t>::get_srcnum_off() const {
+size_t ScanResponseSplit<key_t, val_t>::get_srcnum_off() {
 	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t); // offset of split_hdr.max_scannum
 }
 
 template<class key_t, class val_t>
-size_t ScanResponseSplit<key_t, val_t>::get_srcnum_len() const {
+size_t ScanResponseSplit<key_t, val_t>::get_srcnum_len() {
 	return sizeof(uint16_t);
 }
 
 template<class key_t, class val_t>
-bool ScanResponseSplit<key_t, val_t>::get_srcnum_conversion() const {
+bool ScanResponseSplit<key_t, val_t>::get_srcnum_conversion() {
 	return true;
 }
 
 template<class key_t, class val_t>
-size_t ScanResponseSplit<key_t, val_t>::get_srcid_off() const {
+size_t ScanResponseSplit<key_t, val_t>::get_srcid_off() {
 	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES; // offset of split_hdr.cur_scanidx
 }
 
 template<class key_t, class val_t>
-size_t ScanResponseSplit<key_t, val_t>::get_srcid_len() const {
+size_t ScanResponseSplit<key_t, val_t>::get_srcid_len() {
 	return sizeof(uint16_t);
 }
 
 template<class key_t, class val_t>
-bool ScanResponseSplit<key_t, val_t>::get_srcid_conversion() const {
+bool ScanResponseSplit<key_t, val_t>::get_srcid_conversion() {
 	return true;
 }
 

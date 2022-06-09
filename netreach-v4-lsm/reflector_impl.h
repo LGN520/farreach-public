@@ -67,7 +67,7 @@ void *run_reflector_popserver(void *param) {
 		int recvsize = -1;
 		bool is_timeout = true;
 		if (!reflector_with_switchos_popworker_addr) {
-			is_timeout = udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, (socklen_t *)&reflector_switchos_popworker_addr_len, recvsize, "reflector.popserver");
+			is_timeout = udprecvfrom(reflector_popserver_udpsock, buf, MAX_BUFSIZE, 0, &reflector_switchos_popworker_addr, (socklen_t *)&reflector_switchos_popworker_addr_len, recvsize, "reflector.popserver");
 			memory_fence();
 			if (!is_timeout) {
 				reflector_with_switchos_popworker_addr = true;
@@ -84,7 +84,7 @@ void *run_reflector_popserver(void *param) {
 
 		// send CACHE_POP_INSWITCH to data plane
 		//cache_pop_inswitch_t tmp_cache_pop_inswitch_pkt(buf, recvsize); // TODO: check whether buf is CACHE_POP_INSWITCH
-		udpsendto(reflector_popserver_udpsock, buf, recvsize, 0, (struct sockaddr *)&client_addr, client_addrlen, "reflector.popserver");
+		udpsendto(reflector_popserver_udpsock, buf, recvsize, 0, &client_addr, client_addrlen, "reflector.popserver");
 	}
 
 	close(reflector_popserver_udpsock);
@@ -119,7 +119,7 @@ void *run_reflector_worker(void *param) {
 					INVARIANT(reflector_with_switchos_popworker_addr == true);
 					// send CACHE_POP_INSWITCH_ACK to switchos.popworker
 					// NOTE: not use popserver.popclient due to duplicate packets for packet loss issued by switch
-					udpsendto(reflector_worker_popclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, "reflector.worker.popclient");
+					udpsendto(reflector_worker_popclient_udpsock, buf, recvsize, 0, &reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, "reflector.worker.popclient");
 					break;
 				}
 			case packet_type_t::GETRES_LATEST_SEQ_INSWITCH_CASE1:
@@ -128,7 +128,7 @@ void *run_reflector_worker(void *param) {
 			case packet_type_t::DELREQ_SEQ_INSWITCH_CASE1:
 				{
 					// send CASE1 to switchos.specialcaseserver
-					udpsendto(reflector_worker_specialcaseclient_udpsock, buf, recvsize, 0, (struct sockaddr *)&reflector_switchos_specialcaseserver_addr, reflector_switchos_specialcaseserver_addr_len, "reflector.worker.specialcaseclient");
+					udpsendto(reflector_worker_specialcaseclient_udpsock, buf, recvsize, 0, &reflector_switchos_specialcaseserver_addr, reflector_switchos_specialcaseserver_addr_len, "reflector.worker.specialcaseclient");
 					break;
 				}
 			default:

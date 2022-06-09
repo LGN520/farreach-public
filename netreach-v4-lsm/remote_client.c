@@ -164,7 +164,7 @@ void run_benchmark() {
 						stop_for_dynamic_control = true;
 
 						int global_secidx = periodidx * dynamic_periodinterval + secidx;
-						udpsendto(dynamicclient_udpsock, &global_secidx, sizeof(int), 0, (struct sockaddr*)&dynamicserver_addr, dynamicserver_addrlen, "client.dynamicclient"); // notify server to count statistics of current second
+						udpsendto(dynamicclient_udpsock, &global_secidx, sizeof(int), 0, &dynamicserver_addr, dynamicserver_addrlen, "client.dynamicclient"); // notify server to count statistics of current second
 						udprecvfrom(dynamicclient_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "client.dynamicclient"); // wait for ack from server.main
 						INVARIANT(recvsize == sizeof(int));
 						INVARIANT(*((int *)buf) == global_secidx);
@@ -273,7 +273,10 @@ void *run_fg(void *param) {
 	struct sockaddr_in server_addr;
 	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
-	// we can use max_server_num to hide server-side detail
+
+	// NOTE: now we only support small range scan -> client_num * server_num * MAX_BUFSIZE memory overhead
+	// TODO: we can dynamically assign memory to receive scan response in udprecvlarge_multisrc in socket_helper.c
+	// TODO: if so, we can also determine number of srcs in runtime instead of using server_num or max_server_num in client side
 	char *scanbufs = new char[server_num * MAX_BUFSIZE];
 	int scan_recvsizes[server_num];
 
@@ -320,7 +323,7 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
-				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(req_t2);
 
 				CUR_TIME(wait_t1);
@@ -361,7 +364,7 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
-				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(req_t2);
 
 				CUR_TIME(wait_t1);
@@ -389,7 +392,7 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
-				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(req_t2);
 
 				CUR_TIME(wait_t1);
@@ -425,18 +428,18 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
-				udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(req_t2);
 
 				int received_scannum = 0;
 				CUR_TIME(wait_t1);
-				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_odd(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
+				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
 				CUR_TIME(wait_t2);
 
 				CUR_TIME(rsp_t1);
 				int snapshotid = -1;
 				for (int tmpscanidx = 0; tmpscanidx < received_scannum; tmpscanidx++) {
-					scan_response_split_t rsp(scanbuf[tmpscanidx * MAX_BUFSIZE], scan_recvsizes[tmpscanidx]);
+					scan_response_split_t rsp(scanbufs + tmpscanidx * MAX_BUFSIZE, scan_recvsizes[tmpscanidx]);
 					FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
 							<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
 					// check scan response consistency

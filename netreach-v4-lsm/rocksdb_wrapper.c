@@ -362,10 +362,10 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 	snapshot_deleted_set.range_scan(startkey, endkey, deleted_results);
 
 	// get results from inswitch snapshot
-	std::map<netreach_key_t, snapshot_record_t> inswitch_results;
-	std::map<netreach_key_t, snapshot_record_t>::iterator iter = inswitch_snapshot.lower_bound(startkey);
-	for (; iter != inswitch_snapshot.end() && iter->first <= endkey; iter++) {
-		inswitch_results.push_back(*iter);
+	std::vector<std::pair<netreach_key_t, snapshot_record_t>> inswitch_results;
+	std::map<netreach_key_t, snapshot_record_t>::iterator inswitch_snapshot_iter = inswitch_snapshot.lower_bound(startkey);
+	for (; inswitch_snapshot_iter != inswitch_snapshot.end() && inswitch_snapshot_iter->first <= endkey; inswitch_snapshot_iter++) {
+		inswitch_results.push_back(*inswitch_snapshot_iter);
 	}
 
 	//mutexlock.unlock();
@@ -381,16 +381,20 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 	return results.size();
 }
 
+int RocksdbWrapper::get_snapshotid() const {
+	return snapshotid;
+}
+
 // merge sort between snapshot db and snapshot deleted set: need_exist = false
 // merge sort between server-side snapshot and in-switch snapshot: need_exist = true
-void RocksdbWrapper::merge_sort(const std::vector<std::pair<netreach_key_t, snapshot_record_t>> &veca, const std::vector<std::pair<netreach_key_t, snapshot_record_t>> &vecb, std::vecotr<std::pair<netreach_key_t, snapshot_record_t>> &result, bool need_exist) {
+void RocksdbWrapper::merge_sort(const std::vector<std::pair<netreach_key_t, snapshot_record_t>> &veca, const std::vector<std::pair<netreach_key_t, snapshot_record_t>> &vecb, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results, bool need_exist) {
 	if (veca.size() == 0) {
 		if (!need_exist) {
 			results = vecb;
 		}
 		else {
 			for (size_t i = 0; i < vecb.size(); i++) {
-				if (vecb[i].stat) {
+				if (vecb[i].second.stat) {
 					results.push_back(vecb[i]);
 				}
 			}
@@ -402,7 +406,7 @@ void RocksdbWrapper::merge_sort(const std::vector<std::pair<netreach_key_t, snap
 		}
 		else {
 			for (size_t i = 0; i < veca.size(); i++) {
-				if (veca[i].stat) {
+				if (veca[i].second.stat) {
 					results.push_back(veca[i]);
 				}
 			}
@@ -414,10 +418,10 @@ void RocksdbWrapper::merge_sort(const std::vector<std::pair<netreach_key_t, snap
 		bool remain_veca = false;
 		bool remain_vecb = false;
 		while (true) {
-			netreach_key_t &tmp_veca_key = veca[veca_idx].first;
-			snapshot_record_t &tmp_veca_record = veca[veca_idx].second;
-			netreach_key_t &tmp_vecb_key = vecb[vecb_idx].first;
-			snapshot_record_t &tmp_vecb_record = vecb[vecb_idx].second;
+			const netreach_key_t &tmp_veca_key = veca[veca_idx].first;
+			const snapshot_record_t &tmp_veca_record = veca[veca_idx].second;
+			const netreach_key_t &tmp_vecb_key = vecb[vecb_idx].first;
+			const snapshot_record_t &tmp_vecb_record = vecb[vecb_idx].second;
 			if (tmp_veca_key < tmp_vecb_key) {
 				if (!need_exist || tmp_veca_record.stat) {
 					results.push_back(veca[veca_idx]);
@@ -582,7 +586,7 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 
 // use latest server-side and in-switch snapshot of snapshotid+1 for range query after receiving latest in-switch snapshot
 // invoked by SNAPSHOT_SENDDATA; (deprecated: or invoked by make_snapshot under rare case due to controller failure)
-void RocksdbWrapper::update_snapshot(std::map<enable_write_thread_adaptive_yield, snapshot_record_t> &tmp_inswitch_snapshot, int tmpsnapshotid) {
+void RocksdbWrapper::update_snapshot(std::map<netreach_key_t, snapshot_record_t> &tmp_inswitch_snapshot, int tmpsnapshotid) {
 	INVARIANT(tmpsnapshotid == snapshotid + 1);
 
 	while (true) {
@@ -677,7 +681,7 @@ void RocksdbWrapper::create_snapshotdb_checkpoint(uint64_t snapshotdbseq) {
 	return;
 }
 
-void load_inswitch_snapshot(std::string inswitchsnapshot_path) {
+void RocksdbWrapper::load_inswitch_snapshot(std::string inswitchsnapshot_path) {
 	// <int recordcnt, key1, value1, seq1, stat1, ..., keyn, valuen, seqn, statn>
 	uint32_t tmpfilesize = get_filesize(inswitchsnapshot_path);
 	char *tmpbuf = readonly_mmap(inswitchsnapshot_path, 0, tmpfilesize);
@@ -707,13 +711,13 @@ void load_inswitch_snapshot(std::string inswitchsnapshot_path) {
 	return;
 }
 
-void store_inswitch_snapshot(std::string inswitchsnapshot_path) {
+void RocksdbWrapper::store_inswitch_snapshot(std::string inswitchsnapshot_path) {
 	// <int recordcnt, key1, value1, seq1, stat1, ..., keyn, valuen, seqn, statn>
 	char *tmpbuf = new char[MAX_LARGE_BUFSIZE];
 	int tmpbuflen = 0;
 
 	int tmprecordcnt = inswitch_snapshot.size();
-	memcpy(tmpbuf. &tmprecordcnt, sizeof(int));
+	memcpy(tmpbuf, &tmprecordcnt, sizeof(int));
 	tmpbuflen += sizeof(int);
 
 	for (std::map<netreach_key_t, snapshot_record_t>::iterator iter = inswitch_snapshot.begin();
@@ -734,7 +738,7 @@ void store_inswitch_snapshot(std::string inswitchsnapshot_path) {
 	return;
 }
 
-void load_serverside_snapshot_files(int tmpsnapshotid) {
+void RocksdbWrapper::load_serverside_snapshot_files(int tmpsnapshotid) {
 	std::string snapshotdbseq_path;
 	get_server_snapshotdbseq_path(snapshotdbseq_path, workerid, tmpsnapshotid);
 	INVARIANT(isexist(snapshotdbseq_path));
@@ -753,7 +757,7 @@ void load_serverside_snapshot_files(int tmpsnapshotid) {
 	return;
 }
 
-void load_snapshot_files(int tmpsnapshotid) {
+void RocksdbWrapper::load_snapshot_files(int tmpsnapshotid) {
 	load_serverside_snapshot_files(tmpsnapshotid);
 
 	std::string inswitchsnapshot_path;
@@ -763,7 +767,7 @@ void load_snapshot_files(int tmpsnapshotid) {
 	return;
 }
 
-void remove_snapshot_files(int tmpsnapshotid) {
+void RocksdbWrapper::remove_snapshot_files(int tmpsnapshotid) {
 	std::string snapshotdbseq_path;
 	get_server_snapshotdbseq_path(snapshotdbseq_path, workerid, tmpsnapshotid);
 	rmfiles(snapshotdbseq_path.c_str());

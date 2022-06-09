@@ -87,7 +87,7 @@ void run_warmuper() {
 			dump_buf(buf, req_size);
 #endif
 
-			udpsendto(clientsock, buf, req_size, 0, (struct sockaddr *)&server_addr, server_addrlen, "ycsb_remove_client");
+			udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 
 			udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 			INVARIANT(recv_size > 0);

@@ -183,6 +183,7 @@ void process_specialcase(const uint16_t &tmpidx, const netreach_key_t &tmpkey, c
 void close_switchos();
 
 // switchos <-> ptf.popserver
+inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx);
 inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx);
 inline uint32_t serialize_get_evictdata_setvalid3(char *buf);
 inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
@@ -309,8 +310,8 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
 	SWITCHOS_REMOVE_CACHE_LOOKUP = ini.get_switchos_remove_cache_lookup();
 	SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = ini.get_switchos_remove_cache_lookup_ack();
-	SWITCHOS_CLEANUP = ini.get_switchos_CLEANUP();
-	SWITCHOS_CLEANUP_ACK = ini.get_switchos_CLEANUP_ack();
+	SWITCHOS_CLEANUP = ini.get_switchos_cleanup();
+	SWITCHOS_CLEANUP_ACK = ini.get_switchos_cleanup_ack();
 	SWITCHOS_ENABLE_SINGLEPATH = ini.get_switchos_enable_singlepath();
 	SWITCHOS_ENABLE_SINGLEPATH_ACK = ini.get_switchos_enable_singlepath_ack();
 	SWITCHOS_SET_SNAPSHOT_FLAG = ini.get_switchos_set_snapshot_flag();
@@ -410,8 +411,11 @@ void recover() {
 	system("sudo bash tofino/recover_switch.sh");
 
 	// extract snapshot data
+	// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes (including SNAPSHOT_GETDATA_ACK), per-server data>
+	// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
+	// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 	int control_type = *((int *)content);
-	INVARIANT(control_type == SNAPSHOT_DATA);
+	INVARIANT(control_type == SNAPSHOT_GETDATA_ACK);
 	int total_bytes = *((int32_t *)(content + sizeof(int)));
 	int tmp_offset = sizeof(int) + sizeof(int32_t); // SNAPSHOT_DATA + total_bytes
 	while (true) {
@@ -459,7 +463,7 @@ void *run_switchos_popserver(void *param) {
 	char buf[MAX_BUFSIZE];
 	int recvsize = 0;
 	while (switchos_running) {
-		udprecvfrom(switchos_popserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr*)&controller_popclient_addr, &controller_popclient_addrlen, recvsize, "switchos.popserver");
+		udprecvfrom(switchos_popserver_udpsock, buf, MAX_BUFSIZE, 0, &controller_popclient_addr, &controller_popclient_addrlen, recvsize, "switchos.popserver");
 
 		//printf("receive CACHE_POP from controller\n");
 		//dump_buf(buf, recvsize);
@@ -468,7 +472,7 @@ void *run_switchos_popserver(void *param) {
 		// send CACHE_POP_ACK to controller.popclient immediately to avoid timeout
 		cache_pop_ack_t tmp_cache_pop_ack(tmp_cache_pop_ptr->key());
 		uint32_t acksize = tmp_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
-		udpsendto(switchos_popserver_udpsock, buf, acksize, 0, (struct sockaddr*)&controller_popclient_addr, controller_popclient_addrlen, "switchos.popserver");
+		udpsendto(switchos_popserver_udpsock, buf, acksize, 0, &controller_popclient_addr, controller_popclient_addrlen, "switchos.popserver");
 
 		bool res = switchos_cache_pop_ptr_queue.write(tmp_cache_pop_ptr);
 		if (!res) {
@@ -554,7 +558,7 @@ void *run_switchos_popworker(void *param) {
 					// get evictdata from ptf framework 
 					//system("bash tofino/get_evictdata_setvalid3.sh");
 					ptf_sendsize = serialize_get_evictdata_setvalid3(ptfbuf);
-					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 					INVARIANT(*((int *)ptfbuf) == SWITCHOS_GET_EVICTDATA_SETVALID3_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
 					parse_evictdata(ptfbuf, ptf_recvsize, switchos_evictidx, switchos_evictvalue, switchos_evictseq, switchos_evictstat);
@@ -588,7 +592,7 @@ void *run_switchos_popworker(void *param) {
 					while (true) {
 						//printf("send CACHE_EVICT to controller\n");
 						//dump_buf(pktbuf, pktsize);
-						udpsendto(switchos_popworker_evictclient_udpsock, pktbuf, pktsize, 0, (struct sockaddr*)&controller_evictserver_addr, controller_evictserver_addrlen, "switchos.popworker.evictclient");
+						udpsendto(switchos_popworker_evictclient_udpsock, pktbuf, pktsize, 0, &controller_evictserver_addr, controller_evictserver_addrlen, "switchos.popworker.evictclient");
 
 						// wait for CACHE_EVICT_ACK from controller.evictserver
 						// NOTE: no concurrent CACHE_EVICTs -> use request-and-reply manner to wait for entire eviction workflow
@@ -615,7 +619,7 @@ void *run_switchos_popworker(void *param) {
 					//system("bash tofino/remove_cache_lookup.sh");
 					////switchos_cached_key_idx_map.erase(cur_evictkey);
 					ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, switchos_cached_keyarray[switchos_evictidx]);
-					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 					INVARIANT(*((int *)ptfbuf) == SWITCHOS_REMOVE_CACHE_LOOKUP_ACK); // wait for SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
 
@@ -636,7 +640,7 @@ void *run_switchos_popworker(void *param) {
 				// set valid=0 for atomicity
 				//system("bash tofino/setvalid0.sh");
 				ptf_sendsize = serialize_setvalid0(ptfbuf, switchos_freeidx);
-				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 				INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID0_ACK); // wait for SWITCHOS_SETVALID0_ACK
 
@@ -645,7 +649,7 @@ void *run_switchos_popworker(void *param) {
 				pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 
 				while (true) {
-					udpsendto(switchos_popworker_popclient_udpsock, pktbuf, pktsize, 0, (struct sockaddr *)&reflector_popserver_addr, reflector_popserver_addr_len, "switchos.popworker.popclient");
+					udpsendto(switchos_popworker_popclient_udpsock, pktbuf, pktsize, 0, &reflector_popserver_addr, reflector_popserver_addr_len, "switchos.popworker.popclient");
 
 					// loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
 					bool is_timeout = false;
@@ -674,7 +678,7 @@ void *run_switchos_popworker(void *param) {
 				// (1) add new <key, value> pair into cache_lookup_tbl; (2) and set valid=1 to enable the entry
 				//system("bash tofino/add_cache_lookup_setvalid1.sh");
 				ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx);
-				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 				INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
 
@@ -706,7 +710,7 @@ void *run_switchos_popworker(void *param) {
 
 	// send SWITCHOS_PTF_POPSERVER_END to ptf.popserver
 	memcpy(ptfbuf, &SWITCHOS_PTF_POPSERVER_END, sizeof(int));
-	udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, (struct sockaddr *)&ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+	udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 
 	close(switchos_popworker_popclient_udpsock);
 	close(switchos_popworker_evictclient_udpsock);
@@ -762,7 +766,7 @@ void *run_switchos_snapshotserver(void *param) {
 	while (switchos_running) {
 		// wait for control instruction from controller.snapshotclient
 		if (!with_controller_snapshotclient_addr) {
-			udprecvfrom(switchos_snapshotserver_udpsock, recvbuf, MAX_BUFSIZE, 0, (struct sockaddr*)&controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "switchos.snapshotserver");
+			udprecvfrom(switchos_snapshotserver_udpsock, recvbuf, MAX_BUFSIZE, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "switchos.snapshotserver");
 			with_controller_snapshotclient_addr = true;
 		}
 		else {
@@ -770,8 +774,8 @@ void *run_switchos_snapshotserver(void *param) {
 		}
 
 		INVARIANT(recvsize == 2*sizeof(int));
-		control_type = *((int *)buf);
-		snapshotid = *((int *)(buf + 4));
+		control_type = *((int *)recvbuf);
+		snapshotid = *((int *)(recvbuf + 4));
 		printf("[switchos.snapshotserver] receive control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
 
 		if (control_type == SNAPSHOT_CLEANUP) {
@@ -779,7 +783,7 @@ void *run_switchos_snapshotserver(void *param) {
 			
 			// cleanup dataplane: disable single path, reset flag and reg
 			ptf_sendsize = serialize_cleanup(ptfbuf);
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr*)&ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
 			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_CLEANUP_ACK);
 			
@@ -864,7 +868,7 @@ void *run_switchos_snapshotserver(void *param) {
 		else if (control_type == SNAPSHOT_PREPARE) {
 			// enable a single path to prepare for setting snapshot with atomicity
 			ptf_sendsize = serialize_enable_singlepath(ptfbuf);
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr*)&ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
 			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_ENABLE_SINGLEPATH_ACK);
 
@@ -875,7 +879,7 @@ void *run_switchos_snapshotserver(void *param) {
 			// ptf sets snapshot flag as true atomically
 			//system("bash tofino/set_snapshot_flag.sh");
 			ptf_sendsize = serialize_set_snapshot_flag(ptfbuf);
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr*)&ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
 			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_SET_SNAPSHOT_FLAG_ACK);
 
@@ -887,7 +891,7 @@ void *run_switchos_snapshotserver(void *param) {
 		else if (control_type == SNAPSHOT_START) {
 			// disable single path
 			ptf_sendsize = serialize_disable_singlepath(ptfbuf);
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr*)&ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
 			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_DISABLE_SINGLEPATH_ACK);
 
@@ -910,9 +914,9 @@ void *run_switchos_snapshotserver(void *param) {
 
 				//system("bash tofino/load_snapshot_data.sh"); // load snapshot (maybe inconsistent -> need rollback later)
 				ptf_sendsize = serialize_load_snapshot_data(ptfbuf, switchos_cached_empty_index_backup);
-				udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr*)&ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+				udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
 				udprecvlarge_udpfrag(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
-				parse_snapshotdata_fromptf(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_recvsize, \
+				parse_snapshotdata_fromptf(ptfbuf, ptf_recvsize, \
 						switchos_snapshot_values, switchos_snapshot_seqs, switchos_snapshot_stats, switchos_cached_empty_index_backup);
 			}
 
@@ -923,7 +927,7 @@ void *run_switchos_snapshotserver(void *param) {
 			// reset snapshot flag as false in data plane
 			//system("bash tofino/reset_snapshot_flag_and_reg.sh");
 			ptf_sendsize = serialize_reset_snapshot_flag_and_reg(ptfbuf);
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, (struct sockaddr*)&ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
 			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK);
 
@@ -1029,7 +1033,7 @@ void *run_switchos_snapshotserver(void *param) {
 
 	// send SWITCHOS_PTF_SNAPSHOTSERVER_END to ptf.snapshotserver
 	memcpy(ptfbuf, &SWITCHOS_PTF_SNAPSHOTSERVER_END, sizeof(int));
-	udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, (struct sockaddr*)ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+	udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
 
 	for (uint16_t i = 0; i < server_num; i++) {
 		delete [] tmp_sendbuf_list[i];
@@ -1259,7 +1263,7 @@ void parse_snapshotdata_fromptf(char *buf, uint32_t buflen, \
 	// for each record: <vallen (big-endian), valbytes (same order), seq, result>
 	uint32_t tmp_offset = sizeof(int) + sizeof(int32_t);
 	for (uint32_t tmp_recordidx = 0; tmp_recordidx < record_cnt; tmp_recordidx++) {
-		uint32_t tmp_valsize = values[tmp_recordidx].deserialize(buf + tmp_offset, cur_recv_bytes - tmp_offset);
+		uint32_t tmp_valsize = values[tmp_recordidx].deserialize(buf + tmp_offset, buflen - tmp_offset);
 		tmp_offset += tmp_valsize;
 		seqs[tmp_recordidx] = *((uint32_t *)(buf + tmp_offset));
 		tmp_offset += sizeof(uint32_t);

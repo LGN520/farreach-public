@@ -204,13 +204,13 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr + 
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
-		static size_t get_frag_hdrsize() const;
-		static size_t get_srcnum_off() const;
-		static size_t get_srcnum_len() const;
-		static bool get_srcnum_conversion() const;
-		static size_t get_srcid_off() const;
-		static size_t get_srcid_len() const;
-		static bool get_srcid_conversion() const;
+		static size_t get_frag_hdrsize();
+		static size_t get_srcnum_off();
+		static size_t get_srcnum_len();
+		static bool get_srcnum_conversion();
+		static size_t get_srcid_off();
+		static size_t get_srcid_len();
+		static bool get_srcid_conversion();
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);

@@ -3,6 +3,8 @@
 
 //#include <mutex>
 #include <atomic>
+#include <vector>
+#include <map>
 #include <boost/thread/shared_mutex.hpp>
 
 #include "rocksdb/db.h"
@@ -55,13 +57,13 @@ class RocksdbWrapper {
 		bool remove(netreach_key_t key, uint32_t seq);
 
 		// transaction phase (per-server worker, evictserver, and consnapshotserver touch both rocksdb and deleted set; need mutex for atomicity)
-		void create_snapshotdb_checkpoint(uint64_t snapshotdbseq);
 		void clean_snapshot(int tmpsnapshotid);
 		void make_snapshot(int tmpsnapshotid = 0);
-		void update_snapshot();
+		void update_snapshot(std::map<netreach_key_t, snapshot_record_t> &tmp_inswitch_snapshot, int tmpsnapshotid);
 		void stop_snapshot();
 
 		size_t range_scan(netreach_key_t startkey, netreach_key_t endkey, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results);
+		int get_snapshotid() const;
 
 	private:
 		uint16_t workerid;
@@ -94,6 +96,16 @@ class RocksdbWrapper {
 		// save latest snapshot temporarily
 		const rocksdb::Snapshot *latest_sp_ptr = NULL;
 		deleted_set_t latest_snapshot_deleted_set;
+
+		/* utils */
+
+		void merge_sort(const std::vector<std::pair<netreach_key_t, snapshot_record_t>> &veca, const std::vector<std::pair<netreach_key_t, snapshot_record_t>> &vecb, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results, bool need_exist = false);
+		void create_snapshotdb_checkpoint(uint64_t snapshotdbseq);
+		void load_inswitch_snapshot(std::string inswitchsnapshot_path);
+		void store_inswitch_snapshot(std::string inswitchsnapshot_path);
+		void load_serverside_snapshot_files(int tmpsnapshotid);
+		void load_snapshot_files(int tmpsnapshotid);
+		void remove_snapshot_files(int tmpsnapshotid);
 };
 
 typedef RocksdbWrapper rocksdb_wrapper_t;

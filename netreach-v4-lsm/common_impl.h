@@ -242,7 +242,7 @@ inline void parse_ini(const char* config_file) {
 	server_ip_for_controller = ini.get_server_ip_for_controller();
 	server_evictserver_port_start = ini.get_server_evictserver_port();
 	server_snapshotserver_port_start = ini.get_server_snapshotserver_port();
-	server_consnapshotserver_port = ini.get_server_consnapshotserver_port();
+	server_snapshotdataserver_port_start = ini.get_server_snapshotdataserver_port();
 	server_dynamicserver_port = ini.get_server_dynamicserver_port();
 	server_ip_for_client = ini.get_server_ip_for_client();
 	COUT_VAR(server_num);
@@ -255,7 +255,8 @@ inline void parse_ini(const char* config_file) {
 		else printf("\n");
 	}
 	COUT_VAR(server_evictserver_port_start);
-	COUT_VAR(server_consnapshotserver_port);
+	COUT_VAR(server_snapshotserver_port_start);
+	COUT_VAR(server_snapshotdataserver_port_start);
 	COUT_VAR(server_dynamicserver_port);
 	printf("server_ip_for_client: %s\n", server_ip_for_client);
 
@@ -356,8 +357,8 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
 	SWITCHOS_REMOVE_CACHE_LOOKUP = ini.get_switchos_remove_cache_lookup();
 	SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = ini.get_switchos_remove_cache_lookup_ack();
-	SWITCHOS_CLEANUP = ini.get_switchos_CLEANUP();
-	SWITCHOS_CLEANUP_ACK = ini.get_switchos_CLEANUP_ack();
+	SWITCHOS_CLEANUP = ini.get_switchos_cleanup();
+	SWITCHOS_CLEANUP_ACK = ini.get_switchos_cleanup_ack();
 	SWITCHOS_ENABLE_SINGLEPATH = ini.get_switchos_enable_singlepath();
 	SWITCHOS_ENABLE_SINGLEPATH_ACK = ini.get_switchos_enable_singlepath_ack();
 	SWITCHOS_SET_SNAPSHOT_FLAG = ini.get_switchos_set_snapshot_flag();

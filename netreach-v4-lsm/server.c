@@ -185,7 +185,7 @@ void transaction_main() {
 		memset(thpt_history, 0, sizeof(size_t) * server_num);
 		for (int secidx = 0; secidx < totalsecs; secidx++) {
 			if (!with_dynamicclient_addr) {
-				udprecvfrom(dynamicserver_udpsock, buf, MAX_BUFSIZE, 0, (struct sockaddr*)&dynamicclient_addr, &dynamicclient_addrlen, recvsize, "server.dynamicserver");
+				udprecvfrom(dynamicserver_udpsock, buf, MAX_BUFSIZE, 0, &dynamicclient_addr, &dynamicclient_addrlen, recvsize, "server.dynamicserver");
 				with_dynamicclient_addr = true;
 			}
 			else {
@@ -198,7 +198,7 @@ void transaction_main() {
 				persec_perserver_thpts[secidx][i] = tmp_thpt - thpt_history[i]; // thpt of current second
 				thpt_history[i] = tmp_thpt;
 			}
-			udpsendto(dynamicserver_udpsock, buf, recvsize, 0, (struct sockaddr*)&dynamicclient_addr, dynamicclient_addrlen, "server.dynamicserver");
+			udpsendto(dynamicserver_udpsock, buf, recvsize, 0, &dynamicclient_addr, dynamicclient_addrlen, "server.dynamicserver");
 		}
 	}
 	transaction_running = false;

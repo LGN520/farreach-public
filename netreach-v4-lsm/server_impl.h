@@ -169,7 +169,7 @@ void *run_server_popclient(void *param) {
 			uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
 			//printf("send CACHE_POP to controller\n");
 			//dump_buf(buf, popsize);
-			udpsendto(server_popclient_udpsock_list[serveridx], buf, popsize, 0, (struct sockaddr *)&controller_popserver_addr, controller_popserver_addrlen, "server.popclient");
+			udpsendto(server_popclient_udpsock_list[serveridx], buf, popsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "server.popclient");
 
 			// wait for CACHE_POP_ACK
 			// NOTE: we do not wait for CACHE_POP_INSWITCH_ACK, as it needs to wait for finishing entire cache population workflow, and cannot utilize max thpt of switchos<->ptf
@@ -246,7 +246,7 @@ void *run_server_worker(void * param) {
 
   while (transaction_running) {
 
-	bool is_timeout = udprecvfrom(server_worker_udpsock_list[serveridx], buf, MAX_BUFSIZE, 0, (struct sockaddr *)&client_addr, &client_addrlen, recv_size, "server.worker");
+	bool is_timeout = udprecvfrom(server_worker_udpsock_list[serveridx], buf, MAX_BUFSIZE, 0, &client_addr, &client_addrlen, recv_size, "server.worker");
 	if (is_timeout) {
 		continue; // continue to check transaction_running
 	}
@@ -270,7 +270,7 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -295,7 +295,7 @@ void *run_server_worker(void * param) {
 					get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -312,7 +312,7 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -329,7 +329,7 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -351,18 +351,18 @@ void *run_server_worker(void * param) {
 					cur_endkey = max_endkey;
 				}
 
-				std::vector<netreach_key_t, snapshot_record_t> results;
+				std::vector<std::pair<netreach_key_t, snapshot_record_t>> results;
 				db_wrappers[serveridx].range_scan(cur_startkey, cur_endkey, results);
 
 				//COUT_THIS("results size: " << results.size());
 
-				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), serveridx, results.size(), results);
+				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), serveridx, db_wrappers[serveridx].get_snapshotid(), results.size(), results);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				//udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
-				udpsendlarge_ipfrag(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
+				//udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+				udpsendlarge_ipfrag(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -382,7 +382,7 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -411,7 +411,7 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -444,7 +444,7 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -467,7 +467,7 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -500,7 +500,7 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -521,7 +521,7 @@ void *run_server_worker(void * param) {
 				
 				warmup_ack_t rsp(req.key());
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -551,7 +551,7 @@ void *run_server_worker(void * param) {
 				
 				load_ack_t rsp(req.key());
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, (struct sockaddr *)&client_addr, client_addrlen, "server.worker");
+				udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -569,8 +569,6 @@ void *run_server_worker(void * param) {
 		CUR_TIME(t2);
 		DELTA_TIME(t2, t1, t3);
 		thread_param.latency_list.push_back(GET_MICROSECOND(t3));
-		//backup_rcu[serveridx]++;
-		server_snapshot_rcus[serveridx]++;
 		thread_param.throughput++;
 	}
 
@@ -598,7 +596,7 @@ void *run_server_evictserver(void *param) {
 	char sendbuf[MAX_BUFSIZE]; // used to send CACHE_EVICT_ACK to controller
 	while (transaction_running) {
 		if (!with_controller_evictclient_addr) {
-			is_timeout = udprecvfrom(server_evictserver_udpsock, recvbuf, MAX_BUFSIZE, 0, (struct sockaddr*)&controller_evictclient_addr, &controller_evictclient_addrlen, recvsize, "server.evictserver");
+			is_timeout = udprecvfrom(server_evictserver_udpsock, recvbuf, MAX_BUFSIZE, 0, &controller_evictclient_addr, &controller_evictclient_addrlen, recvsize, "server.evictserver");
 			if (!is_timeout) {
 				with_controller_evictclient_addr = true;
 			}
@@ -654,7 +652,7 @@ void *run_server_evictserver(void *param) {
 		int sendsize = tmp_cache_evict_ack.serialize(sendbuf, MAX_BUFSIZE);
 		//printf("send CACHE_EVICT_ACK to controller\n");
 		//dump_buf(sendbuf, sendsize);
-		udpsendto(server_evictserver_udpsock, sendbuf, sendsize, 0, (struct sockaddr*)&controller_evictclient_addr, controller_evictclient_addrlen, "server.evictserver");
+		udpsendto(server_evictserver_udpsock, sendbuf, sendsize, 0, &controller_evictclient_addr, controller_evictclient_addrlen, "server.evictserver");
 
 		// free CACHE_EVIT
 		delete tmp_cache_evict_ptr;
@@ -731,7 +729,7 @@ void *run_server_snapshotdataserver(void *param) {
 	socklen_t controller_snapshotclient_addrlen;
 	bool with_controller_snapshotclient_addr = false;
 
-	char *recvbuf = new char[MAX_LARGE_BUFSIZE];
+	char *recvbuf = new char[MAX_LARGE_BUFSIZE]; // server_num * MAX_LARGE_BUFSIZE memory overhead for snapshot data in total
 	INVARIANT(recvbuf != NULL);
 	memset(recvbuf, 0, MAX_LARGE_BUFSIZE);
 	int recvsize = 0;
