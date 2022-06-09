@@ -27,6 +27,11 @@ void get_server_snapshotdbseq_path(std::string &snapshotdbseq_path, uint16_t wor
 	return;
 }
 
+void get_server_inswitchsnapshot_path(std::string &inswitchsnapshot_path, uint16_t workerid, uint32_t snapshotid) {
+	GET_STRING(inswitchsnapshot_path, "/tmp/netreach-v4-lsm/worker" << workerid << ".inswitchsnapshot" << snapshotid);
+	return;
+}
+
 void get_server_snapshotdeletedset_path(std::string &snapshotdeletedset_path, uint16_t workerid, uint32_t snapshotid) {
 	GET_STRING(snapshotdeletedset_path, "/tmp/netreach-v4-lsm/worker" << workerid << ".snapshotdeletedset" << snapshotid);
 	return;

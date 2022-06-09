@@ -490,8 +490,8 @@ ScanResponseSplit<key_t, val_t>::ScanResponseSplit(key_t key, key_t endkey, uint
 	this->_pairs.assign(pairs.begin(), pairs.end());
 }*/
 template<class key_t, class val_t>
-ScanResponseSplit<key_t, val_t>::ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int32_t pairnum, std::vector<std::pair<key_t, val_t>> pairs) 
-	: ScanRequestSplit<key_t>(key, endkey, cur_scanidx, max_scannum), _nodeidx_foreval(nodeidx_foreval), _pairnum(pairnum)
+ScanResponseSplit<key_t, val_t>::ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t pairnum, std::vector<std::pair<key_t, snapshot_record_t>> pairs) 
+	: ScanRequestSplit<key_t>(key, endkey, cur_scanidx, max_scannum), _nodeidx_foreval(nodeidx_foreval), _snapshotid(snapshotid), _pairnum(pairnum)
 {	
 	this->_type = static_cast<uint8_t>(PacketType::SCANRES_SPLIT);
 	INVARIANT(pairnum == int32_t(pairs.size()));
@@ -510,6 +510,11 @@ uint16_t ScanResponseSplit<key_t, val_t>::nodeidx_foreval() const {
 }
 
 template<class key_t, class val_t>
+int ScanResponseSplit<key_t, val_t>::snapshotid() const {
+	return this->_snapshotid;
+}
+
+template<class key_t, class val_t>
 int32_t ScanResponseSplit<key_t, val_t>::pairnum() const {
 	return this->_pairnum;
 }
@@ -522,7 +527,7 @@ std::vector<std::pair<key_t, val_t>> ScanResponseSplit<key_t, val_t>::pairs() co
 template<class key_t, class val_t>
 uint32_t ScanResponseSplit<key_t, val_t>::size() {
 	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int32_t);
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int32_t);
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int) + sizeof(int32_t);
 }
 
 template<class key_t, class val_t>
@@ -549,16 +554,18 @@ uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t 
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
+	memcpy(begin, (void *)&this->_snapshotid, sizeof(int)); // directly use little-endian
+	begin += sizeof(int);
 
 	uint32_t bigendian_pairnum = htonl(uint32_t(this->_pairnum));
 	memcpy(begin, (void *)&bigendian_pairnum, sizeof(int32_t));
 	begin += sizeof(int32_t);
-	uint32_t totalsize = sizeof(uint8_t) + tmp_keysize + tmp_endkeysize + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int32_t);
+	uint32_t totalsize = sizeof(uint8_t) + tmp_keysize + tmp_endkeysize + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int) + sizeof(int32_t);
 	for (uint32_t pair_i = 0; pair_i < this->_pairs.size(); pair_i++) {
 		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.serialize(begin, max_size - totalsize);
 		begin += tmp_pair_keysize;
 		totalsize += tmp_pair_keysize;
-		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.serialize(begin, max_size - totalsize);
+		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.val.serialize(begin, max_size - totalsize);
 		begin += tmp_pair_valsize;
 		totalsize += tmp_pair_valsize;
 	}
@@ -588,6 +595,8 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
 	begin += sizeof(uint16_t);
+	memcpy(&this->_snapshotid, begin, sizeof(int));
+	begin += sizeof(int);
 
 	memcpy((void *)&this->_pairnum, begin, sizeof(int32_t));
 	this->_pairnum = int32_t(ntohl(uint32_t(this->_pairnum)));
@@ -598,7 +607,7 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.deserialize(begin, recv_size - totalsize);
 		begin += tmp_pair_keysize;
 		totalsize += tmp_pair_keysize;
-		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.deserialize(begin, recv_size - totalsize);
+		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.val.deserialize(begin, recv_size - totalsize);
 		begin += tmp_pair_valsize;
 		totalsize += tmp_pair_valsize;
 	}

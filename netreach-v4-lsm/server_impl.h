@@ -351,129 +351,9 @@ void *run_server_worker(void * param) {
 					cur_endkey = max_endkey;
 				}
 
-				// get results from in-memory snapshot in [cur_startkey, cur_endkey]
-				//COUT_THIS("[server.worker] startkey: " << cur_startkey << "endkey: " << cur_endkey().to_string()
-				//		<< "min_startkey: " << min_startkey << "max_endkey: " << max_endkey; // << " num = " << req.num())
-				std::vector<std::pair<netreach_key_t, snapshot_record_t>> inmemory_results;
-				size_t inmemory_num = db_wrappers[serveridx].range_scan(cur_startkey, cur_endkey, inmemory_results);
-				UNUSED(inmemory_num);
+				std::vector<netreach_key_t, snapshot_record_t> results;
+				db_wrappers[serveridx].range_scan(cur_startkey, cur_endkey, results);
 
-				// get results from in-switch snapshot in [cur_startkey, cur_endkey]
-				//std::map<netreach_key_t, snapshot_record_t> *tmp_server_snapshot_maps = server_snapshot_maps;
-				concurrent_snapshot_map_t *tmp_server_snapshot_maps = server_snapshot_maps;
-				std::vector<std::pair<netreach_key_t, snapshot_record_t>> inswitch_results;
-				if (tmp_server_snapshot_maps != NULL) {
-					/*std::map<netreach_key_t, snapshot_record_t>::iterator iter = tmp_server_snapshot_maps[serveridx].lower_bound(cur_startkey);
-					for (; iter != tmp_server_snapshot_maps[serveridx].end() && iter->first <= cur_endkey; iter++) {
-						//inmemory_results.push_back(*iter);
-						inswitch_results.push_back(*iter);
-					}*/
-					tmp_server_snapshot_maps[serveridx].range_scan(cur_startkey, cur_endkey, inswitch_results);
-				}
-
-				// merge sort w/ seq comparison
-				std::vector<std::pair<netreach_key_t, val_t>> results;
-				if (inmemory_results.size() == 0) {
-					for (uint32_t inswitch_idx = 0; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
-						netreach_key_t &tmpkey = inswitch_results[inswitch_idx].first;
-						snapshot_record_t &tmprecord = inswitch_results[inswitch_idx].second;
-						if (tmprecord.stat) {
-							results.push_back(std::pair<netreach_key_t, val_t>(tmpkey, tmprecord.val));
-						}
-					}
-				}
-				else if (inswitch_results.size() == 0) {
-					for (uint32_t inmemory_idx = 0; inmemory_idx < inmemory_results.size(); inmemory_idx++) {
-						netreach_key_t &tmpkey = inmemory_results[inmemory_idx].first;
-						snapshot_record_t &tmprecord = inmemory_results[inmemory_idx].second;
-						if (tmprecord.stat) {
-							results.push_back(std::pair<netreach_key_t, val_t>(tmpkey, tmprecord.val));
-						}
-					}
-				}
-				else {
-					uint32_t inmemory_idx = 0;
-					uint32_t inswitch_idx = 0;
-					bool remain_inmemory = false;
-					bool remain_inswitch = false;
-					while (true) {
-						netreach_key_t &tmp_inmemory_key = inmemory_results[inmemory_idx].first;
-						snapshot_record_t &tmp_inmemory_record = inmemory_results[inmemory_idx].second;
-						netreach_key_t &tmp_inswitch_key = inswitch_results[inswitch_idx].first;
-						snapshot_record_t &tmp_inswitch_record = inswitch_results[inswitch_idx].second;
-						if (tmp_inmemory_key < tmp_inswitch_key) {
-							if (tmp_inmemory_record.stat) {
-								results.push_back(std::pair<netreach_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
-							}
-							inmemory_idx += 1;
-						}
-						else if (tmp_inswitch_key < tmp_inmemory_key) {
-							if (tmp_inswitch_record.stat) {
-								results.push_back(std::pair<netreach_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
-							}
-							inswitch_idx += 1;
-						}
-						else if (tmp_inmemory_key == tmp_inswitch_key) {
-							/*if (tmp_inmemory_record.stat && tmp_inswitch_record.stat) {
-								if (tmp_inmemory_record.seq >= tmp_inswitch_record.seq) {
-									results.push_back(std::pair<netreach_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
-									inmemory_idx += 1;
-								}
-								else {
-									results.push_back(std::pair<netreach_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
-									inswitch_idx += 1;
-								}
-							}
-							else if (tmp_inmemory_record.stat) {
-								results.push_back(std::pair<netreach_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
-								inmemory_idx += 1;
-							}
-							else if (tmp_inswitch_record.stat) {
-								results.push_back(std::pair<netreach_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
-								inswitch_idx += 1;
-							}*/
-							if (tmp_inmemory_record.seq >= tmp_inswitch_record.seq) {
-								if (tmp_inmemory_record.stat) {
-									results.push_back(std::pair<netreach_key_t, val_t>(tmp_inmemory_key, tmp_inmemory_record.val));
-								}
-							}
-							else {
-								if (tmp_inswitch_record.stat) {
-									results.push_back(std::pair<netreach_key_t, val_t>(tmp_inswitch_key, tmp_inswitch_record.val));
-								}
-							}
-							inmemory_idx += 1;
-							inswitch_idx += 1;
-						}
-
-						if (inmemory_idx >= inmemory_results.size()) {
-							remain_inswitch = true;
-							break;
-						}
-						else if (inswitch_idx >= inswitch_results.size()) {
-							remain_inmemory = true;
-							break;
-						}
-					} // while (true)
-					if (remain_inswitch) {
-						for (; inswitch_idx < inswitch_results.size(); inswitch_idx++) {
-							netreach_key_t &tmpkey = inswitch_results[inswitch_idx].first;
-							snapshot_record_t &tmprecord = inswitch_results[inswitch_idx].second;
-							if (tmprecord.stat) {
-								results.push_back(std::pair<netreach_key_t, val_t>(tmpkey, tmprecord.val));
-							}
-						}
-					}
-					else if (remain_inmemory) {
-						for (; inmemory_idx < inmemory_results.size(); inmemory_idx++) {
-							netreach_key_t &tmpkey = inmemory_results[inmemory_idx].first;
-							snapshot_record_t &tmprecord = inmemory_results[inmemory_idx].second;
-							if (tmprecord.stat) {
-								results.push_back(std::pair<netreach_key_t, val_t>(tmpkey, tmprecord.val));
-							}
-						}
-					}
-				} // both inmemory_results and inswitch_results are not empty
 				//COUT_THIS("results size: " << results.size());
 
 				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), serveridx, results.size(), results);
@@ -820,6 +700,10 @@ void *run_server_snapshotserver(void *param) {
 		if (control_type == SNAPSHOT_CLEANUP) {
 			// cleanup stale snapshot states
 			db_wrappers[serveridx].clean_snapshot(snapshotid);
+
+			// enable making server-side snapshot for new snapshot period
+			server_issnapshot_list[serveridx] = false;
+			db_wrappers[serveridx].stop_snapshot();
 			
 			// sendback SNAPSHOT_CLEANUP_ACK to controller
 			udpsendto(server_snapshotserver_udpsock_list[serveridx], &SNAPSHOT_CLEANUP_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
@@ -875,22 +759,22 @@ void *run_server_snapshotdataserver(void *param) {
 		}
 
 		control_type = *((int *)recvbuf);
-		//snapshotid = *((int *)(recvbuf + sizeof(int)));
 
 		if (control_type == SNAPSHOT_SENDDATA) {
-			// per-server snapshot data: <int SNAPSHOT_SENDDATA, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
+			// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
 			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 			server_issnapshot_list[serveridx] = true;
 
 			// parse in-switch snapshot data
-			int32_t tmp_serverbytes = *((int32_t *)(recvbuf + sizeof(int)));
+			int tmp_snapshotid = *((int *)(recvbuf + sizeof(int)));
+			int32_t tmp_serverbytes = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int)));
 			INVARIANT(recvsize == tmp_serverbytes);
-			uint16_t tmp_serveridx = *((uint16_t *)(recvbuf + sizeof(int) + sizeof(int32_t)));
+			uint16_t tmp_serveridx = *((uint16_t *)(recvbuf + sizeof(int) + sizeof(int) + sizeof(int32_t)));
 			INVARIANT(tmp_serveridx == serveridx);
-			int32_t tmp_recordcnt = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
+			int32_t tmp_recordcnt = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
 
 			std::map<netreach_key_t, snapshot_record_t> tmp_inswitch_snapshot;
-			int tmp_offset = sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
+			int tmp_offset = sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
 			for (int32_t tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {
 				netreach_key_t tmp_key;
 				snapshot_record_t tmp_record;
@@ -912,13 +796,14 @@ void *run_server_snapshotdataserver(void *param) {
 					iter != tmp_inswitch_snapshot.end(); iter++) {
 				char debugbuf[MAX_BUFSIZE];
 				uint32_t debugkeysize = iter->first.serialize(debugbuf, MAX_BUFSIZE);
-				uint32_t debugvalsize = iter->second.val.serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
+				uint32_t debugvalsize = iter->second.val.serialize(debugbuf + debugkeysize, MAX_BUFSIZE - debugkeysize);
 				printf("serialized key-value %d:\n", debugi);
 				dump_buf(debugbuf, debugkeysize+debugvalsize);
 				printf("seq: %d, stat %d\n", iter->second.seq, iter->second.stat?1:0);
 			}
 
-			// TODO: update in-switch and server-side snapshot
+			// update in-switch and server-side snapshot
+			db_wrappers[serveridx].update_snapshot(tmp_inswitch_snapshot, tmp_snapshotid);
 			
 			// stop current snapshot to enable making next server-side snapshot
 			db_wrappers[serveridx].stop_snapshot();

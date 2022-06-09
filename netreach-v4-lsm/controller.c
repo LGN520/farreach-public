@@ -148,7 +148,7 @@ void prepare_controller() {
 
 	controller_running =false;
 
-	controller_expected_ready_threads = server_num + 4;
+	controller_expected_ready_threads = server_num + 2;
 	controller_expected_popserver_finish_threads = server_num;
 
 	// prepare popserver sockets
@@ -487,17 +487,18 @@ void *run_controller_snapshotclient(void *param) {
 		}
 
 		// prepare to process per-server snapshot data
-		// per-server snapshot data: <int SNAPSHOT_SENDDATA, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
+		// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
 		// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 		memset(controller_snapshotclient_for_server_databuflen_list, 0, sizeof(int) * server_num);
-		int32_t snapshot_senddata_default_perserverbytes = sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
+		int32_t snapshot_senddata_default_perserverbytes = sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
 		int32_t snapshot_senddata_default_recordcnt = 0;
 		for (uint16_t tmpi = 0; tmpi < server_num; tmpi++) {
 			// prepare header for SNAPSHOT_SENDDATA
 			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi], &SNAPSHOT_SENDDATA, sizeof(int));
-			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int), &snapshot_senddata_default_perserverbytes, sizeof(int32_t));
-			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int) + sizeof(int32_t), &tmpi, sizeof(uint16_t));
-			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), &snapshot_senddata_default_recordcnt, sizeof(int32_t));
+			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int), &controller_snapshotid, sizeof(int));
+			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int) + sizeof(int), &snapshot_senddata_default_perserverbytes, sizeof(int32_t));
+			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int) + sizeof(int) + sizeof(int32_t), &tmpi, sizeof(uint16_t));
+			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), &snapshot_senddata_default_recordcnt, sizeof(int32_t));
 			controller_snapshotclient_for_server_databuflen_list[tmp_serveridx] = snapshot_senddata_default_perserverbytes;
 		}
 
@@ -521,7 +522,7 @@ void *run_controller_snapshotclient(void *param) {
 				int32_t total_bytes = *((int32_t *)(databuf + sizeof(int)));
 				INVARIANT(datarecvsize == total_bytes);
 				
-				// per-server snapshot data: <int SNAPSHOT_SENDDATA, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
+				// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
 				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 				int tmp_offset = sizeof(int) + sizeof(int32_t); // SNAPSHOT_GETDATA_ACK + total_bytes
 				while (true) {
@@ -531,12 +532,12 @@ void *run_controller_snapshotclient(void *param) {
 					int32_t tmp_recordcnt = *((int32_t *)(databuf + tmp_offset + sizeof(int32_t) + sizeof(uint16_t)));
 
 					// increase perserver_bytes and record_cnt in SNAPSHOT_SENDDATA header
-					int32_t old_serverbytes = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int)));
-					int32_t old_recordcnt = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
+					int32_t old_serverbytes = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int)));
+					int32_t old_recordcnt = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
 					int32_t new_serverbytes = old_serverbytes + effective_serverbytes;
 					int32_t new_recordcnt = old_recordcnt + tmp_recordcnt;
-					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int), &new_serverbytes, sizeof(int32_t));
-					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), &new_recordcnt, sizeof(int32_t));
+					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int), &new_serverbytes, sizeof(int32_t));
+					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), &new_recordcnt, sizeof(int32_t));
 					
 					// copy per-record data in SNAPSHOT_SENDDATA body
 					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + controller_snapshotclient_for_server_databuflen_list[tmp_serveridx], databuf + tmp_offset + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t), effective_serverbytes);

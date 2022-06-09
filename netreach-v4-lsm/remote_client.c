@@ -434,10 +434,20 @@ void *run_fg(void *param) {
 				CUR_TIME(wait_t2);
 
 				CUR_TIME(rsp_t1);
+				int snapshotid = -1;
 				for (int tmpscanidx = 0; tmpscanidx < received_scannum; tmpscanidx++) {
 					scan_response_split_t rsp(scanbuf[tmpscanidx * MAX_BUFSIZE], scan_recvsizes[tmpscanidx]);
 					FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
 							<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
+					// check scan response consistency
+					if (snapshotid == -1) {
+						snapshotid = rsp.snapshotid();
+					}
+					else if (snapshotid != rsp.snapshotid()) {
+						printf("Inconsistent scan response!\n"); // TMPDEBUG
+						is_timeout = true; // retry
+						break;
+					}
 				}
 				CUR_TIME(rsp_t2);
 

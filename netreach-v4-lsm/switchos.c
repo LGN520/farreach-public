@@ -191,12 +191,6 @@ inline uint32_t serialize_cleanup(char *buf);
 inline uint32_t serialize_enable_singlepath(char *buf);
 inline uint32_t serialize_set_snapshot_flag(char *buf);
 inline uint32_t serialize_disable_singlepath(char *buf);
-
-
-
-
-
-
 inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx);
 void parse_snapshotdata_fromptf(char *buf, uint32_t buflen, val_t *values, uint32_t *seqs, bool *stats, uint32_t record_cnt);
 inline uint32_t serialize_reset_snapshot_flag_and_reg(char *buf);
@@ -1247,14 +1241,6 @@ inline uint32_t serialize_disable_singlepath(char *buf) {
 	memcpy(buf, &SWITCHOS_DISABLE_SINGLEPATH, sizeof(int));
 	return sizeof(int);
 }
-
-
-
-
-
-
-
-
 
 inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx) {
 	memcpy(buf, &SWITCHOS_LOAD_SNAPSHOT_DATA, sizeof(int));

@@ -21,6 +21,7 @@ void get_server_snapshotid_path(std::string &snapshotid_path, uint16_t workerid)
 void get_server_snapshotdb_path(std::string &snapshotdb_path, uint16_t workerid); // at most one snapshotdb for server-side recovery
 void get_server_snapshotdbseq_path(std::string &snapshotdbseq_path, uint16_t workerid, uint32_t snapshotid);
 void get_server_snapshotdeletedset_path(std::string &snapshotdeletedset_path, uint16_t workerid, uint32_t snapshotid);
+void get_server_inswitchsnapshot_path(std::string &inswitchsnapshot_path, uint16_t workerid, uint32_t snapshotid);
 
 void get_controller_snapshotid_path(std::string &snapshotid_path);
 void get_controller_snapshotdata_path(std::string &snapshotdata_path, int snapshotid);

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "helper.h"
+#include "snapshot_record.h"
 
 // mask for other_hdr
 #define VALID_MASK 0x01
@@ -190,15 +191,16 @@ class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 };
 
 template<class key_t, class val_t>
-class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr + splithdr + nodeidx_foreval + pairs
+class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr + splithdr + nodeidx_foreval + snapshotid + pairs
 	public: 
 		//ScanResponseSplit(key_t key, key_t endkey, uint32_t num, uint16_t cur_scanidx, uint16_t max_scannum, int32_t pairnum, std::vector<std::pair<key_t, val_t>> pairs);
-		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int32_t parinum, std::vector<std::pair<key_t, val_t>> pairs);
+		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<key_t, snapshot_record_t>> pairs);
 		ScanResponseSplit(const char * data, uint32_t recv_size);
 
 		uint16_t nodeidx_foreval() const;
+		int snapshotid() const;
 		int32_t pairnum() const;
-		std::vector<std::pair<key_t, val_t>> pairs() const;
+		std::vector<std::pair<key_t, snapshot_record_t>> pairs() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -213,8 +215,9 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr + 
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint16_t _nodeidx_foreval;
+		int _snapshotid;
 		int32_t _pairnum;
-		std::vector<std::pair<key_t, val_t>> _pairs;
+		std::vector<std::pair<key_t, snapshot_record_t>> _pairs;
 };
 
 template<class key_t>

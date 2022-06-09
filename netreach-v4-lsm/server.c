@@ -76,9 +76,8 @@ int main(int argc, char **argv) {
 
 void transaction_main() {
 	// reflector: popserver + worker
-	//// server: server_num workers + receiver + evictserver + consnapshotserver
-	// server: server_num workers + server_num popclients + evictserver + consnapshotserver + reflector.worker + reflector.popserver
-	transaction_expected_ready_threads = 2*server_num + 4;
+	// server: server_num * (workers + popclients + snapshotserver + snapshotdataserver) + evictserver
+	transaction_expected_ready_threads = 2 + 4*server_num + 1;
 
 	int ret = 0;
 
