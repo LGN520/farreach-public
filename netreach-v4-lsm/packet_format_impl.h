@@ -617,7 +617,9 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 
 template<class key_t, class val_t>
 size_t ScanResponseSplit<key_t, val_t>::get_frag_hdrsize() {
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // op_hdr + scan_hdr + split_hdr + nodeidx_foreval (used to identify fragments from different servers)
+	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // op_hdr + scan_hdr + split_hdr + nodeidx_foreval (used to identify fragments from different servers)
+	// NOTE: we only need nodeidx_foreval for entire split packet instead of each fragment; so we can place it in fragment body isntead of fragment header in udpsendlarge_ipfrag (see socket_helper.c)
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t); // op_hdr + scan_hdr + split_hdr
 }
 
 template<class key_t, class val_t>
@@ -778,7 +780,7 @@ bool GetResponseLatestSeqInswitchCase1<key_t, val_t>::stat() const {
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::size() { // unused
 	//return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(bool) + DEBUG_BYTES;
-	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(bool);
+	return sizeof(uint8_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + CLONE_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -803,8 +805,10 @@ uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::serialize(char * const
 	memcpy(begin, (void *)&bigendian_idx, sizeof(uint16_t)); // little-endian to big-endian
 	begin += sizeof(uint16_t);
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
-	begin += sizeof(bool);
-	memset(begin, 0, CLONE_BYTES);
+	begin += sizeof(bool); // stat_hdr.stat
+	memset(begin, 0, sizeof(uint16_t)); // stat_hdr.nodeidx_foreval
+	begin += sizeof(uint16_t);
+	memset(begin, 0, CLONE_BYTES); // clone_hdr
 	return sizeof(uint8_t) + tmp_keysize + tmp_valsize + sizeof(uint8_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + CLONE_BYTES;
 	//begin += CLONE_BYTES;
 	//memset(begin, 0, DEBUG_BYTES);
@@ -831,7 +835,9 @@ void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * d
 	this->_idx = ntohs(this->_idx); // big-endian to little-endian
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
-	begin += sizeof(bool);
+	begin += sizeof(bool); // stat_hdr.stat
+	//begin += sizeof(uint16_t); // stat_hdr.nodeidx_foreval
+	//begin += CLONE_BYTES; // clone_hdr
 }
 
 // GetResponseDeletedSeq (value must = 0B)

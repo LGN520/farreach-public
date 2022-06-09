@@ -762,8 +762,12 @@ void RocksdbWrapper::load_snapshot_files(int tmpsnapshotid) {
 
 	std::string inswitchsnapshot_path;
 	get_server_inswitchsnapshot_path(inswitchsnapshot_path, workerid, tmpsnapshotid);
-	INVARIANT(isexist(inswitchsnapshot_path));
-	load_inswitch_snapshot(inswitchsnapshot_path);
+	if (unlikely(!isexist(inswitchsnapshot_path))) {
+		printf("no inswitch snapshot: %s\n", inswitchsnapshot_path.c_str());
+	}
+	else {
+		load_inswitch_snapshot(inswitchsnapshot_path);
+	}
 	return;
 }
 

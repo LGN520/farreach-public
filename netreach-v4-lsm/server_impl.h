@@ -665,7 +665,7 @@ void *run_server_evictserver(void *param) {
 void *run_server_snapshotserver(void *param) {
 	uint16_t serveridx = *((uint16_t *)param);
 	struct sockaddr_in controller_snapshotclient_addr;
-	socklen_t controller_snapshotclient_addrlen;
+	socklen_t controller_snapshotclient_addrlen = sizeof(struct sockaddr_in);
 	bool with_controller_snapshotclient_addr = false;
 
 	printf("[server.snapshotserver %d] ready\n", serveridx);

@@ -82,7 +82,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         with open(snapshotdata_path, "rb") as f:
             buf = f.read(8)
             control_type, total_bytes = struct.unpack("=2i", buf)
-            if control_type != SNAPSHOT_DATA:
+            if control_type != SNAPSHOT_GETDATA_ACK:
                 print "Invalid control type: {}".format(control_type)
                 exit(-1)
             buf = f.read(total_bytes - 8)

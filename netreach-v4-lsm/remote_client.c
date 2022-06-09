@@ -339,6 +339,7 @@ void *run_fg(void *param) {
 
 				CUR_TIME(rsp_t1);
 				get_response_t rsp(buf, recv_size);
+				COUT_VAR(rsp.nodeidx_foreval());
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
 				CUR_TIME(rsp_t2);
 			}

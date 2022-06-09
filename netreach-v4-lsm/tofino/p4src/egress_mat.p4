@@ -871,20 +871,20 @@ action update_onlyop_pktlen() {
 
 // GETRES
 action update_val_stat_pktlen(aligned_vallen) {
-	// 20[iphdr] + 8(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 30);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 50);
-	add(udp_hdr.hdrlen, aligned_vallen, 29);
-	add(ipv4_hdr.totalLen, aligned_vallen, 49);
+	// 20[iphdr] + 8(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 3(stat) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 32);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 52);
+	add(udp_hdr.hdrlen, aligned_vallen, 31);
+	add(ipv4_hdr.totalLen, aligned_vallen, 51);
 }
 
 // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 9(inswitch) + 1(stat) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 43);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 63);
-	add(udp_hdr.hdrlen, aligned_vallen, 42);
-	add(ipv4_hdr.totalLen, aligned_vallen, 62);
+	// [20(iphdr)] + 8(udphdr) + 17(ophdr) + 2(vallen) + aligned_vallen(val) + 1(shadowtype) + 4(seq) + 9(inswitch) + 3(stat) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 45);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 65);
+	add(udp_hdr.hdrlen, aligned_vallen, 44);
+	add(ipv4_hdr.totalLen, aligned_vallen, 64);
 }
 
 // PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3
@@ -898,11 +898,11 @@ action update_val_seq_pktlen(aligned_vallen) {
 
 // PUTRES, DELRES
 action update_stat_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 17(ophdr) + 1(shadowtype) + 1(stat) + 1(debug_hdr)
-	//modify_field(udp_hdr.hdrlen, 28);
-	//modify_field(ipv4_hdr.totalLen, 48);
-	modify_field(udp_hdr.hdrlen, 27);
-	modify_field(ipv4_hdr.totalLen, 47);
+	// [20(iphdr)] + 8(udphdr) + 17(ophdr) + 1(shadowtype) + 3(stat) + 1(debug_hdr)
+	//modify_field(udp_hdr.hdrlen, 30);
+	//modify_field(ipv4_hdr.totalLen, 50);
+	modify_field(udp_hdr.hdrlen, 29);
+	modify_field(ipv4_hdr.totalLen, 49);
 }
 
 // DELREQ_SEQ, DELREQ_SEQ_CASE3

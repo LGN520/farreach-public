@@ -1070,16 +1070,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     vallen_end = (i-1)*8+8 # 8, 16, ..., 128
                     aligned_vallen = vallen_end # 8, 16, ..., 128
                 ## DEPRECATED: including 1B debug_hdr
-                #val_stat_udplen = aligned_vallen + 30
-                #val_stat_iplen = aligned_vallen + 50
-                #val_seq_inswitch_stat_udplen = aligned_vallen + 43
-                #val_seq_inswitch_stat_iplen = aligned_vallen + 63
+                #val_stat_udplen = aligned_vallen + 32
+                #val_stat_iplen = aligned_vallen + 52
+                #val_seq_inswitch_stat_udplen = aligned_vallen + 45
+                #val_seq_inswitch_stat_iplen = aligned_vallen + 65
                 #val_seq_udplen = aligned_vallen + 33
                 #val_seq_iplen = aligned_vallen + 53
-                val_stat_udplen = aligned_vallen + 29
-                val_stat_iplen = aligned_vallen + 49
-                val_seq_inswitch_stat_udplen = aligned_vallen + 42
-                val_seq_inswitch_stat_iplen = aligned_vallen + 62
+                val_stat_udplen = aligned_vallen + 31
+                val_stat_iplen = aligned_vallen + 51
+                val_seq_inswitch_stat_udplen = aligned_vallen + 44
+                val_seq_inswitch_stat_iplen = aligned_vallen + 64
                 val_seq_udplen = aligned_vallen + 32
                 val_seq_iplen = aligned_vallen + 52
                 matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
@@ -1108,14 +1108,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             ## DEPRECATED: including 1B debug_hdr
             #onlyop_udplen = 26
             #onlyop_iplen = 46
-            #stat_udplen = 28
-            #stat_iplen = 48
+            #stat_udplen = 30
+            #stat_iplen = 50
             #seq_udplen = 31
             #seq_iplen = 51
             onlyop_udplen = 25
             onlyop_iplen = 45
-            stat_udplen = 27
-            stat_iplen = 47
+            stat_udplen = 29
+            stat_iplen = 49
             seq_udplen = 30
             seq_iplen = 50
             scanreqsplit_udplen = 46

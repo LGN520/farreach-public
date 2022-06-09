@@ -89,23 +89,28 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def cleanup(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
-        for tmppipeidx in pipeidx_ports_map.keys():
-            if tmppipeidx != ingress_pipeidx:
-                tmpports = pipeidx_ports_map[tmppipeidx]
-                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
-                    for iport in tmpports:
-                        matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
-                                op_hdr_optype = tmpoptype,
-                                ig_intr_md_ingress_port = iport)
-                        self.client.need_recirculate_tbl_table_delete_by_match_spec(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
+        # get entry count
+        entrynum = self.client.need_recirculate_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
+        if entrynum > 0:
+            for tmppipeidx in pipeidx_ports_map.keys():
+                if tmppipeidx != ingress_pipeidx:
+                    tmpports = pipeidx_ports_map[tmppipeidx]
+                    for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                        for iport in tmpports:
+                            matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
+                                    op_hdr_optype = tmpoptype,
+                                    ig_intr_md_ingress_port = iport)
+                            self.client.need_recirculate_tbl_table_delete_by_match_spec(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
         print "Reset snapshot_flag=0 for all ingress pipelines"
-        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
-            matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
-                    op_hdr_optype = tmpoptype,
-                    meta_need_recirculate = 0)
-            self.client.snapshot_flag_tbl_table_delete_by_match_spec(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
+        entrynum = self.client.snapshot_flag_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
+        if entrynum > 0:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                matchspec0 = netbufferv4_snapshot_flag_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 0)
+                self.client.snapshot_flag_tbl_table_delete_by_match_spec(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
         print "Reset case1_reg"
         self.client.register_reset_all_case1_reg(self.sess_hdl, self.dev_tgt)
 
