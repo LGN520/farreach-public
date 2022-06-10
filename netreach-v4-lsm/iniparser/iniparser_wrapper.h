@@ -27,7 +27,7 @@ class IniparserWrapper {
 		short get_client_port();
 		const char *get_client_ip();
 		void get_client_mac(uint8_t* macaddr);
-		const char *get_client_ip_for_server();
+		//const char *get_client_ip_for_server();
 		
 		// server
 		uint32_t get_load_factor();
@@ -40,8 +40,8 @@ class IniparserWrapper {
 		short get_server_evictserver_port();
 		short get_server_snapshotserver_port();
 		short get_server_snapshotdataserver_port();
-		short get_server_dynamicserver_port();
-		const char *get_server_ip_for_client();
+		//short get_server_dynamicserver_port();
+		//const char *get_server_ip_for_client();
 
 		// controller
 		const char *get_controller_ip_for_server();

@@ -33,10 +33,11 @@
 
 #include "common_impl.h"
 
-#define DUMP_BUF
+//#define DUMP_BUF
 
 struct alignas(CACHELINE_SIZE) FGParam {
 	uint16_t thread_id;
+	std::map<uint16_t, int> nodeidx_pktcnt_map;
 	std::vector<double> req_latency_list;
 	std::vector<double> rsp_latency_list;
 	std::vector<double> wait_latency_list;
@@ -120,6 +121,7 @@ void run_benchmark() {
 	// Launch workers
 	for (uint16_t worker_i = 0; worker_i < client_num; worker_i++) {
 		fg_params[worker_i].thread_id = worker_i;
+		fg_params[worker_i].nodeidx_pktcnt_map.clear();
 		fg_params[worker_i].req_latency_list.clear();
 		fg_params[worker_i].rsp_latency_list.clear();
 		fg_params[worker_i].wait_latency_list.clear();
@@ -131,8 +133,7 @@ void run_benchmark() {
 	while (ready_threads < client_num) sleep(1);
 
 	// used for dynamic workload
-	int persec_totalthpt[dynamic_periodnum * dynamic_periodinterval];
-	memset(persec_totalthpt, 0, sizeof(int) * dynamic_periodnum * dynamic_periodinterval);
+	std::map<uint16_t, int> persec_perclient_nodeidx_pktcnt_map[dynamic_periodnum * dynamic_periodinterval][client_num];
 
 	running = true;
 	if (workload_mode == 0) { // send all workloads in static mode
@@ -140,17 +141,8 @@ void run_benchmark() {
 		COUT_THIS("[client] all clients finish!");
 	}
 	else { // send enough periods in dynamic mode
-		int dynamicclient_udpsock = -1;
-		create_udpsock(dynamicclient_udpsock, false, "client.dynamicclient");
-		struct sockaddr_in dynamicserver_addr;
-		set_sockaddr(dynamicserver_addr, inet_addr(server_ip_for_client), server_dynamicserver_port);
-		socklen_t dynamicserver_addrlen = sizeof(struct sockaddr_in);
-		char buf[MAX_BUFSIZE];
-		int recvsize = 0;
-
 		const int sleep_usecs = 1000; // 1000us = 1ms
 		const int onesec_usecs = 1 * 1000 * 1000; // 1s
-		int history_thpt = 0;
 		struct timespec dynamic_t1, dynamic_t2, dynamic_t3;
 		for (int periodidx = 0; periodidx < dynamic_periodnum; periodidx++) {
 			for (int secidx = 0; secidx < dynamic_periodinterval; secidx++) { // wait for every 10 secs
@@ -164,17 +156,10 @@ void run_benchmark() {
 						stop_for_dynamic_control = true;
 
 						int global_secidx = periodidx * dynamic_periodinterval + secidx;
-						udpsendto(dynamicclient_udpsock, &global_secidx, sizeof(int), 0, &dynamicserver_addr, dynamicserver_addrlen, "client.dynamicclient"); // notify server to count statistics of current second
-						udprecvfrom(dynamicclient_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "client.dynamicclient"); // wait for ack from server.main
-						INVARIANT(recvsize == sizeof(int));
-						INVARIANT(*((int *)buf) == global_secidx);
-
-						int tmp_totalthpt = 0;
 						for (size_t i = 0; i < client_num; i++) {
-							tmp_totalthpt += fg_params[i].req_latency_list.size();
+							persec_perclient_nodeidx_pktcnt_map[global_secidx][i] = fg_params[i].nodeidx_pktcnt_map;
 						}
-						persec_totalthpt[global_secidx] = tmp_totalthpt - history_thpt;
-						history_thpt = tmp_totalthpt;
+
 						break;
 					}
 					else {
@@ -200,11 +185,22 @@ void run_benchmark() {
 	stop_for_dynamic_control = false;
 
 	/* Process statistics */
+
 	COUT_THIS("[client] processing statistics");
 
-	// Dump latency statistics
+	// Process latency statistics
+	std::map<uint16_t, int> nodeidx_pktcnt_map;
 	std::vector<double> req_latency_list, rsp_latency_list, wait_latency_list;
 	for (size_t i = 0; i < client_num; i++) {
+		for (std::map<uint16_t, int>::iterator iter = fg_params[i].nodeidx_pktcnt_map.begin(); \
+				iter != fg_params[i].nodeidx_pktcnt_map.end(); iter++) {
+			if (nodeidx_pktcnt_map.find(iter->first) == nodeidx_pktcnt_map.end()) {
+				nodeidx_pktcnt_map.insert(*iter);
+			}
+			else {
+				nodeidx_pktcnt_map[iter->first] += iter->second;
+			}
+		}
 		req_latency_list.insert(req_latency_list.end(), fg_params[i].req_latency_list.begin(), fg_params[i].req_latency_list.end());
 		rsp_latency_list.insert(rsp_latency_list.end(), fg_params[i].rsp_latency_list.begin(), fg_params[i].rsp_latency_list.end());
 		wait_latency_list.insert(wait_latency_list.end(), fg_params[i].wait_latency_list.begin(), fg_params[i].wait_latency_list.end());
@@ -213,19 +209,86 @@ void run_benchmark() {
 	for (size_t i = 0; i < req_latency_list.size(); i++) {
 		total_latency_list[i] = req_latency_list[i] + rsp_latency_list[i] + wait_latency_list[i];
 	}
+
+	// Dump latency statistics
 	dump_latency(req_latency_list, "req_latency_list");
 	dump_latency(rsp_latency_list, "rsp_latency_list");
 	dump_latency(wait_latency_list, "wait_latency_list");
-	COUT_THIS("Client-side total pktcnt: " << req_latency_list.size());
+	dump_latency(total_latency_list, "total_latency_list");
+
+	// Dump pktcnt statistics
+	COUT_THIS("Client-side total pktcnt: " << total_latency_list.size());
+	COUT_THIS("cache hit pktcnt: " << nodeidx_pktcnt_map[0xFFFF]);
+	printf("per-server pktcnt: ");
+	for (uint16_t i = 0; i < server_num; i++) {
+		if (i != server_num - 1) {
+			printf("%d ", nodeidx_pktcnt_map[i]);
+		}
+		else {
+			printf("%d\n", nodeidx_pktcnt_map[i]);
+		}
+	}
 
 	if (workload_mode != 0) {
-		printf("\nper-sec client total thpt:\n");
+		// get persec nodeidx-pktcnt mapping data
+		std::map<uint16_t, int> persec_nodeidx_pktcnt_map[dynamic_periodnum*dynamic_periodinterval];
+		// aggregate perclient pktcnt for each previous i seconds -> accumulative pktcnt for each previous i seconds
 		for (size_t i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
-			if (i != dynamic_periodnum*dynamic_periodinterval-1) {
-				printf("%d ", int(persec_totalthpt[i]));
+			for (size_t j = 0; j < client_num; j++) {
+				for (std::map<uint16_t, int>::iterator iter = persec_perclient_nodeidx_pktcnt_map[i][j].begin(); \
+						iter != persec_perclient_nodeidx_pktcnt_map[i][j].end(); iter++) {
+					if (persec_nodeidx_pktcnt_map[i].find(iter->first) == persec_nodeidx_pktcnt_map[i].end()) {
+						persec_nodeidx_pktcnt_map[i].insert(*iter);
+					}
+					else {
+						persec_nodeidx_pktcnt_map[i][iter->first] += iter->second;
+					}
+				}
+			}
+		}
+		// accumulative pktcnt for previous i seconds - that for previous i-1 seconds -> pktcnt for the ith second
+		for (size_t i = dynamic_periodnum*dynamic_periodinterval-1; i > 0; i--) {
+			int tmptotalpktcnt = 0;
+			for (std::map<uint16_t, int>::iterator iter = persec_nodeidx_pktcnt_map[i].begin(); \
+					iter != persec_nodeidx_pktcnt_map[i].end(); iter++) {
+				tmptotalpktcnt += iter->second;
+				if (persec_nodeidx_pktcnt_map[i-1].find(iter->first) != persec_nodeidx_pktcnt_map[i-1].end()) {
+					INVARIANT(iter->second >= persec_nodeidx_pktcnt_map[i-1][iter->first]);
+					iter->second -= persec_nodeidx_pktcnt_map[i-1][iter->first];
+				}
+			}
+		}
+		// get persec total pktcnt
+		int persec_totalpktcnt_list[dynamic_periodnum*dynamic_periodinterval];
+		memset(persec_totalpktcnt_list, 0, dynamic_periodnum*dynamic_periodinterval*sizeof(int));
+		for (size_t i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+			for (std::map<uint16_t, int>::iterator iter = persec_nodeidx_pktcnt_map[i].begin(); \
+					iter != persec_nodeidx_pktcnt_map[i].end(); iter++) {
+				persec_totalpktcnt_list[i] += iter->second;
+			}
+		}
+		printf("\nper-sec total throughput:\n");
+		for (size_t i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+			if (i != dynamic_periodnum * dynamic_periodinterval - 1) {
+				printf("%d ", persec_totalpktcnt_list[i]);
 			}
 			else {
-				printf("%d\n", int(persec_totalthpt[i]));
+				printf("%d\n", persec_totalpktcnt_list[i]);
+			}
+		}
+		printf("\nper-sec per-server throughput:\n");
+		for (size_t i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+			for (uint16_t j = 0; j < server_num; j++) {
+				int tmppktcnt = 0;
+				if (persec_nodeidx_pktcnt_map[i].find(j) != persec_nodeidx_pktcnt_map[i].end()) {
+					tmppktcnt = persec_nodeidx_pktcnt_map[i][j];
+				}
+				if (j != server_num - 1) {
+					printf("%d ", tmppktcnt);
+				}
+				else {
+					printf("%d\n", tmppktcnt);
+				}
 			}
 		}
 	}
@@ -303,9 +366,11 @@ void *run_fg(void *param) {
 		}
 
 		struct timespec req_t1, req_t2, req_t3, rsp_t1, rsp_t2, rsp_t3, final_t3, wait_t1, wait_t2, wait_t3;
+		uint16_t tmp_nodeidx_foreval = 0;
 		while (true) {
 			tmpkey = iter->key();
-			printf("expected server of key %x: %d\n", tmpkey.keyhihi, tmpkey.get_rangepartition_idx(server_num));
+			//printf("expected server of key %x: %d\n", tmpkey.keyhihi, tmpkey.get_hashpartition_idx(server_num));
+			//printf("expected server of key %x: %d\n", tmpkey.keyhihi, tmpkey.get_rangepartition_idx(server_num));
 			if (workload_mode != 0) { // change key popularity if necessary
 				while (stop_for_dynamic_control) {} // stop for dynamic control between client.main and server.main
 				if (unlikely(!running)) {
@@ -339,7 +404,7 @@ void *run_fg(void *param) {
 
 				CUR_TIME(rsp_t1);
 				get_response_t rsp(buf, recv_size);
-				COUT_VAR(rsp.nodeidx_foreval());
+				tmp_nodeidx_foreval = rsp.nodeidx_foreval();
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
 				CUR_TIME(rsp_t2);
 			}
@@ -381,6 +446,7 @@ void *run_fg(void *param) {
 
 				CUR_TIME(rsp_t1);
 				put_response_t rsp(buf, recv_size);
+				tmp_nodeidx_foreval = rsp.nodeidx_foreval();
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 				CUR_TIME(rsp_t2);
 			}
@@ -409,6 +475,7 @@ void *run_fg(void *param) {
 
 				CUR_TIME(rsp_t1);
 				del_response_t rsp(buf, recv_size);
+				tmp_nodeidx_foreval = rsp.nodeidx_foreval();
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
 				CUR_TIME(rsp_t2);
 			}
@@ -448,6 +515,7 @@ void *run_fg(void *param) {
 					// check scan response consistency
 					if (snapshotid == -1) {
 						snapshotid = rsp.snapshotid();
+						tmp_nodeidx_foreval = rsp.nodeidx_foreval();
 					}
 					else if (snapshotid != rsp.snapshotid()) {
 						printf("Inconsistent scan response!\n"); // TMPDEBUG
@@ -473,6 +541,14 @@ void *run_fg(void *param) {
 
 		if (unlikely(!running)) {
 			break;
+		}
+
+		INVARIANT(tmp_nodeidx_foreval == 0xFFFF || tmp_nodeidx_foreval < server_num);
+		if (thread_param.nodeidx_pktcnt_map.find(tmp_nodeidx_foreval) == thread_param.nodeidx_pktcnt_map.end()) {
+			thread_param.nodeidx_pktcnt_map.insert(std::pair<uint16_t, int>(tmp_nodeidx_foreval, 1));
+		}
+		else {
+			thread_param.nodeidx_pktcnt_map[tmp_nodeidx_foreval] += 1;
 		}
 
 		DELTA_TIME(req_t2, req_t1, req_t3);

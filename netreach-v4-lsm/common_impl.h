@@ -77,7 +77,7 @@ size_t client_num;
 short client_port_start;
 const char *client_ip;
 uint8_t client_macaddr[6];
-const char *client_ip_for_server;
+//const char *client_ip_for_server;
 
 // server: loading phase
 uint32_t load_factor = 1;
@@ -94,8 +94,8 @@ const char* server_ip_for_controller = nullptr;
 short server_evictserver_port_start = -1;
 short server_snapshotserver_port_start = -1;
 short server_snapshotdataserver_port_start = -1;
-short server_dynamicserver_port = -1;
-const char *server_ip_for_client;
+//short server_dynamicserver_port = -1;
+//const char *server_ip_for_client;
 
 // controller
 const char *controller_ip_for_server = nullptr;
@@ -212,7 +212,7 @@ inline void parse_ini(const char* config_file) {
 	client_port_start = ini.get_client_port();
 	client_ip = ini.get_client_ip();
 	ini.get_client_mac(client_macaddr);
-	client_ip_for_server = ini.get_client_ip_for_server();
+	//client_ip_for_server = ini.get_client_ip_for_server();
 	COUT_VAR(client_num);
 	COUT_VAR(client_port_start);
 	printf("client_ip: %s\n", client_ip);
@@ -222,7 +222,7 @@ inline void parse_ini(const char* config_file) {
 		if (i != 5) printf(":");
 		else printf("\n");
 	}
-	printf("client_ip_for_server: %s\n", client_ip_for_server);
+	//printf("client_ip_for_server: %s\n", client_ip_for_server);
 
 	// server: loading phase
 	load_factor = ini.get_load_factor();
@@ -243,8 +243,8 @@ inline void parse_ini(const char* config_file) {
 	server_evictserver_port_start = ini.get_server_evictserver_port();
 	server_snapshotserver_port_start = ini.get_server_snapshotserver_port();
 	server_snapshotdataserver_port_start = ini.get_server_snapshotdataserver_port();
-	server_dynamicserver_port = ini.get_server_dynamicserver_port();
-	server_ip_for_client = ini.get_server_ip_for_client();
+	//server_dynamicserver_port = ini.get_server_dynamicserver_port();
+	//server_ip_for_client = ini.get_server_ip_for_client();
 	COUT_VAR(server_num);
 	COUT_VAR(server_port_start);
 	printf("server_ip: %s\n", server_ip);
@@ -257,8 +257,8 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(server_evictserver_port_start);
 	COUT_VAR(server_snapshotserver_port_start);
 	COUT_VAR(server_snapshotdataserver_port_start);
-	COUT_VAR(server_dynamicserver_port);
-	printf("server_ip_for_client: %s\n", server_ip_for_client);
+	//COUT_VAR(server_dynamicserver_port);
+	//printf("server_ip_for_client: %s\n", server_ip_for_client);
 
 	// controller
 	controller_ip_for_server = ini.get_controller_ip_for_server();

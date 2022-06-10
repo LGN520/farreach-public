@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
 		op = 1; // run
 	}
 	else {
-		printf("Usage: ./split_workload load/run\n");
+		printf("Usage: ./split_workload load/run linenum\n");
 		exit(-1);
 	}
 	int linenum = atoi(argv[2]);
