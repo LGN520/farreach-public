@@ -120,7 +120,7 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 		fragnum = (total_bodysize + frag_bodysize - 1) / frag_bodysize;
 	}
 	INVARIANT(fragnum > 0);
-	printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d, len: %d, total_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize, len, total_bodysize);
+	//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d, len: %d, total_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize, len, total_bodysize);
 
 	// <frag_hdrsize, cur_fragidx, max_fragnum, frag_bodysize>
 	char fragbuf[frag_maxsize];
@@ -145,7 +145,7 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 		memcpy(fragbuf + final_frag_hdrsize, buf + buf_sentsize, cur_frag_bodysize);
 		buf_sentsize += cur_frag_bodysize;
 
-		printf("cur_fragidx: %d, max_fragnum: %d, cur_fragsize: %d\n", cur_fragidx, max_fragnum, final_frag_hdrsize + cur_frag_bodysize);
+		//printf("cur_fragidx: %d, max_fragnum: %d, cur_fragsize: %d\n", cur_fragidx, max_fragnum, final_frag_hdrsize + cur_frag_bodysize);
 		udpsendto(sockfd, fragbuf, final_frag_hdrsize + cur_frag_bodysize, flags, dest_addr, addrlen, role);
 	}
 }
@@ -177,7 +177,7 @@ bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr_
 				break;
 			}
 			INVARIANT(frag_recvsize >= final_frag_hdrsize && frag_recvsize <= frag_maxsize);
-			printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
+			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
 
 			INVARIANT(len >= frag_hdrsize);
 			memcpy(buf, fragbuf, frag_hdrsize);
@@ -196,10 +196,10 @@ bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr_
 		uint16_t cur_fragidx = 0;
 		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
 		INVARIANT(cur_fragidx < max_fragnum);
-		printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, len: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnum, frag_recvsize, len, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
+		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, len: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnum, frag_recvsize, len, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 
 		INVARIANT(len >= (cur_fragidx * frag_bodysize + frag_recvsize - final_frag_hdrsize));
-		memcpy(buf + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
+		memcpy(buf + frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
 		recvsize += (frag_recvsize - final_frag_hdrsize);
 
 		cur_fragnum += 1;
@@ -220,7 +220,7 @@ bool udprecvlarge_multisrc_ipfrag(int sockfd, void *bufs, size_t bufnum, size_t 
 	return udprecvlarge_multisrc(sockfd, bufs, bufnum, len, flags, src_addrs, addrlens, recvsizes, recvnum, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion);
 }
 
-// NOTE: receive large packet from multiple sources (srcid >= 0 && srcid < srcnum <= bufnum)
+// NOTE: receive large packet from multiple sources (IMPORTANT: srcid > 0 && srcid <= srcnum <= bufnum)
 // bufs: bufnum * len; src_addrs: NULL or bufnum; addrlens: NULL or bufnum; recvsizes: bufnum
 // For example, srcnum for SCANRES_SPLIT is split_hdr.max_scannum; srcid for SCANRES_SPLIT is split_hdr.cur_scanidx
 bool udprecvlarge_multisrc(int sockfd, void *bufs, size_t bufnum, size_t len, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, int *recvsizes, int& recvnum, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion) {
@@ -248,7 +248,7 @@ bool udprecvlarge_multisrc(int sockfd, void *bufs, size_t bufnum, size_t len, in
 	uint16_t cur_fragnums[bufnum];
 	// initialize
 	for (size_t tmpbufidx = 0; tmpbufidx < bufnum; tmpbufidx++) {
-		local_isfirsts[tmpbufidx] = false;
+		local_isfirsts[tmpbufidx] = true;
 		max_fragnums[tmpbufidx] = 0;
 		cur_fragnums[tmpbufidx] = 0;
 
@@ -263,7 +263,7 @@ bool udprecvlarge_multisrc(int sockfd, void *bufs, size_t bufnum, size_t len, in
 
 		// set max_srcnum for the global first packet
 		if (global_isfirst) {
-			printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
+			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
 			memcpy(&max_srcnum, fragbuf + srcnum_off, srcnum_len);
 			if (srcnum_conversion && srcnum_len == 2) max_srcnum = size_t(ntohs(uint16_t(max_srcnum)));
 			else if (srcnum_conversion && srcnum_len == 4) max_srcnum = size_t(ntohl(uint32_t(max_srcnum)));
@@ -275,37 +275,38 @@ bool udprecvlarge_multisrc(int sockfd, void *bufs, size_t bufnum, size_t len, in
 		memcpy(&tmpsrcid, fragbuf + srcid_off, srcid_len);
 		if (srcid_conversion && srcid_len == 2) tmpsrcid = size_t(ntohs(uint16_t(tmpsrcid)));
 		else if (srcid_conversion && srcid_len == 4) tmpsrcid = size_t(ntohl(uint32_t(tmpsrcid)));
-		INVARIANT(tmpsrcid < max_srcnum);
-		printf("tmpsrcid: %d, max_srcnum: %d, bufnum: %d\n", tmpsrcid, max_srcnum, bufnum);
+		//printf("tmpsrcid: %d, max_srcnum: %d, bufnum: %d\n", tmpsrcid, max_srcnum, bufnum);
+		INVARIANT(tmpsrcid > 0 && tmpsrcid <= max_srcnum);
 
-		void *tmpbuf = bufs + tmpsrcid * len;
+		int tmp_bufidx = tmpsrcid - 1; // [1, max_srcnum] -> [0, max_srcnum-1]
+		void *tmpbuf = bufs + tmp_bufidx * len;
 
-		if (local_isfirsts[tmpsrcid]) {
+		if (local_isfirsts[tmp_bufidx]) {
 			if (src_addrs != NULL) {
-				src_addrs[tmpsrcid] = tmp_srcaddr;
-				addrlens[tmpsrcid] = tmp_addrlen;
+				src_addrs[tmp_bufidx] = tmp_srcaddr;
+				addrlens[tmp_bufidx] = tmp_addrlen;
 			}
 
 			INVARIANT(len >= frag_hdrsize);
 			memcpy(tmpbuf, fragbuf, frag_hdrsize);
-			recvsizes[tmpsrcid] += frag_hdrsize;
-			memcpy(&max_fragnums[tmpsrcid], fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
+			recvsizes[tmp_bufidx] += frag_hdrsize;
+			memcpy(&max_fragnums[tmp_bufidx], fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
 
-			local_isfirsts[tmpsrcid] = false;
+			local_isfirsts[tmp_bufidx] = false;
 		}
 
 		uint16_t cur_fragidx = 0;
 		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
-		INVARIANT(cur_fragidx < max_fragnums[tmpsrcid]);
-		printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, len: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnums[tmpsrcid], frag_recvsize, len, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
+		INVARIANT(cur_fragidx < max_fragnums[tmp_bufidx]);
+		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, len: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnums[tmp_bufidx], frag_recvsize, len, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 
 		INVARIANT(len >= (cur_fragidx * frag_bodysize + frag_recvsize - final_frag_hdrsize));
-		memcpy(tmpbuf + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
-		recvsizes[tmpsrcid] += (frag_recvsize - final_frag_hdrsize);
+		memcpy(tmpbuf + frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
+		recvsizes[tmp_bufidx] += (frag_recvsize - final_frag_hdrsize);
 
-		cur_fragnums[tmpsrcid] += 1;
-		INVARIANT(cur_fragnums[tmpsrcid] <= max_fragnums[tmpsrcid]);
-		if (cur_fragnums[tmpsrcid] == max_fragnums[tmpsrcid]) {
+		cur_fragnums[tmp_bufidx] += 1;
+		INVARIANT(cur_fragnums[tmp_bufidx] <= max_fragnums[tmp_bufidx]);
+		if (cur_fragnums[tmp_bufidx] == max_fragnums[tmp_bufidx]) {
 			cur_srcnum += 1;
 			if (cur_srcnum >= max_srcnum) {
 				break;

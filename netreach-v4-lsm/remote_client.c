@@ -439,10 +439,12 @@ void *run_fg(void *param) {
 
 				CUR_TIME(rsp_t1);
 				int snapshotid = -1;
+				int totalnum = 0;
 				for (int tmpscanidx = 0; tmpscanidx < received_scannum; tmpscanidx++) {
 					scan_response_split_t rsp(scanbufs + tmpscanidx * MAX_BUFSIZE, scan_recvsizes[tmpscanidx]);
 					FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
 							<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
+					totalnum += rsp.pairnum();
 					// check scan response consistency
 					if (snapshotid == -1) {
 						snapshotid = rsp.snapshotid();
@@ -453,6 +455,8 @@ void *run_fg(void *param) {
 						break;
 					}
 				}
+				COUT_VAR(received_scannum);
+				COUT_VAR(totalnum);
 				CUR_TIME(rsp_t2);
 
 				if (is_timeout) {
