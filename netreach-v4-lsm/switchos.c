@@ -722,7 +722,7 @@ void *run_switchos_snapshotserver(void *param) {
 	// for SNAPSHOT_START/_ACK
 	struct sockaddr_in controller_snapshotclient_addr;
 	socklen_t controller_snapshotclient_addrlen = sizeof(struct sockaddr);
-	bool with_controller_snapshotclient_addr = false;
+	//bool with_controller_snapshotclient_addr = false;
 
 	struct sockaddr_in ptf_addr;
 	set_sockaddr(ptf_addr, inet_addr("127.0.0.1"), switchos_ptf_snapshotserver_port);
@@ -765,21 +765,29 @@ void *run_switchos_snapshotserver(void *param) {
 	int snapshotid = -1;
 	while (switchos_running) {
 		// wait for control instruction from controller.snapshotclient
-		if (!with_controller_snapshotclient_addr) {
+		/*if (!with_controller_snapshotclient_addr) {
 			udprecvfrom(switchos_snapshotserver_udpsock, recvbuf, MAX_BUFSIZE, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "switchos.snapshotserver");
 			with_controller_snapshotclient_addr = true;
 		}
 		else {
 			udprecvfrom(switchos_snapshotserver_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "switchos.snapshotserver");
-		}
+		}*/
+		udprecvfrom(switchos_snapshotserver_udpsock, recvbuf, MAX_BUFSIZE, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "switchos.snapshotserver");
 
 		INVARIANT(recvsize == 2*sizeof(int));
-		control_type = *((int *)recvbuf);
-		snapshotid = *((int *)(recvbuf + 4));
-		printf("[switchos.snapshotserver] receive control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+		// Fix duplicate packet
+		if (control_type == *((int *)recvbuf) && snapshotid == *((int *)(recvbuf + sizeof(int)))) {
+			printf("[switchos.snapshotserver] receive duplicate control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+			continue;
+		}
+		else {
+			control_type = *((int *)recvbuf);
+			snapshotid = *((int *)(recvbuf + sizeof(int)));
+			printf("[switchos.snapshotserver] receive control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
+		}
 
 		if (control_type == SNAPSHOT_CLEANUP) {
-			// TODO: (1) cleanup stale snapshot
+			// (1) cleanup stale snapshot
 			
 			// cleanup dataplane: disable single path, reset flag and reg
 			ptf_sendsize = serialize_cleanup(ptfbuf);
@@ -901,9 +909,11 @@ void *run_switchos_snapshotserver(void *param) {
 			is_stop_cachepop = false; // resume cache population/eviction
 			popworker_know_stop_cachepop = false;
 
-			// TMPDEBUG
+#ifdef DEBUG_SNAPSHOT
+			// TMPDEBUG (NOTE: temporarily dislabe timeout-and-retry of SNAPSHOT_START in controller to debug snapshot here)
 			printf("Type to load snapshot data...\n");
 			getchar();
+#endif
 
 			// load vallen, value, deleted, and savedseq in [0, switchos_cached_empty_index_backup-1]
 			if (switchos_cached_empty_index_backup > 0) {
@@ -944,6 +954,7 @@ void *run_switchos_snapshotserver(void *param) {
 			popworker_know_snapshot_end = false;
 			specialcaseserver_know_snapshot_end = false;
 
+#ifdef DEBUG_SNAPSHOT
 			// TMPDEBUG
 			printf("[before rollback] snapshot size: %d\n", switchos_cached_empty_index_backup);
 			for (size_t debugi = 0; debugi < switchos_cached_empty_index_backup; debugi++) {
@@ -954,6 +965,7 @@ void *run_switchos_snapshotserver(void *param) {
 				dump_buf(debugbuf, debugkeysize+debugvalsize);
 				printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
 			}
+#endif
 
 			// perform rollback (now both popserver/specicalserver will not touch specialcases)
 			/*for (std::map<uint16_t, special_case_t>::iterator iter = switchos_specialcases.begin(); iter != switchos_specialcases.end(); iter++) {
@@ -974,6 +986,7 @@ void *run_switchos_snapshotserver(void *param) {
 				source.advance_to_next_valid();
 			}
 
+#ifdef DEBUG_SNAPSHOT
 			// TMPDEBUG
 			printf("[after rollback] snapshot size: %d\n", switchos_cached_empty_index_backup);
 			for (size_t debugi = 0; debugi < switchos_cached_empty_index_backup; debugi++) {
@@ -984,6 +997,7 @@ void *run_switchos_snapshotserver(void *param) {
 				dump_buf(debugbuf, debugkeysize+debugvalsize);
 				printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
 			}
+#endif
 
 			// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes, per-server data>
 			// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>

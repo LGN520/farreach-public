@@ -13,8 +13,8 @@
 #define SOCKET_TIMEOUT 5 // 5s
 
 // payload only used by end-hosts -> linux kernel performs ip-level fragmentation
-// max payload size to avoid udp fragmentation (manual udp fragmentation)
-#define UDP_FRAGMENT_MAXSIZE 65536
+// max payload size to avoid udp fragmentation (manual udp fragmentation): 65535(ipmax) - 20(iphdr) - 8(udphdr)
+#define UDP_FRAGMENT_MAXSIZE 65507
 // programmable switch needs to process udp_hdr and op_hdr in payload -> we must perform ip-level fragmentation manually
 // max ethernet pkt 1518 - ethernet header 18 - ipv4 header 20 - udp header 8
 // max payload size to avoid ipv4 fragmentation (manual ipv4 fragmentation)
@@ -30,9 +30,9 @@ void set_sockaddr(sockaddr_in &addr, uint32_t bigendian_saddr, short littleendia
 void set_recvtimeout(int sockfd, int timeout_sec = SOCKET_TIMEOUT, int timeout_usec = 0);
 
 // udp
-void create_udpsock(int &sockfd, bool need_timeout, const char* role = "sockethelper.udpsock", int timeout_sec = SOCKET_TIMEOUT, int timeout_usec = 0);
+void create_udpsock(int &sockfd, bool need_timeout, const char* role = "sockethelper.udpsock", int timeout_sec = SOCKET_TIMEOUT, int timeout_usec = 0, int udp_rcvbufsize = UDP_DEFAULT_RCVBUFSIZE);
 void udpsendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role = "sockethelper.udpsendto");
-void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const char* role = "sockethelper.udpserver", int timeout_sec = SOCKET_TIMEOUT, int timeout_usec = 0);
+void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const char* role = "sockethelper.udpserver", int timeout_sec = SOCKET_TIMEOUT, int timeout_usec = 0, int udp_rcvbufsize = UDP_DEFAULT_RCVBUFSIZE);
 bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, int &recvsize, const char* role = "sockethelper.udprecvfrom");
 
 void udpsendlarge_udpfrag(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr_in *dest_addr, socklen_t addrlen, const char* role);

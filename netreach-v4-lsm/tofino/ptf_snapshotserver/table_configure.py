@@ -213,7 +213,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def send_snapshotdata(self, udpsock, buf, dstaddr):
         print "Send snapshot data to switchos.snapshotserver"
         frag_hdrsize = 0
-        frag_maxsize = 65536
+        frag_maxsize = 65507 # 65536(ipmax) - 20(iphdr) - 8(udphdr)
         final_frag_hdrsize = frag_hdrsize + 2 + 2 # + cur_fragidx + max_fragnum
         frag_bodysize = frag_maxsize - final_frag_hdrsize
         total_bodysize = len(buf) - frag_hdrsize
@@ -264,7 +264,6 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
                 # send back SWITCHOS_SET_SNAPSHOT_FLAG_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_SET_SNAPSHOT_FLAG_ACK)
-                switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
                 switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_DISABLE_SINGLEPATH:
                 self.disable_singlepath()

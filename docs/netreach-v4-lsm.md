@@ -814,7 +814,7 @@
 				- GET: 23us; PUT: 23us, DEL: 23us
 			* same key in practice (cache population delay)
 				- GET: 23us; PUT: 22us; DEL: 22us
-		+ Try large-scale in-memory KVS and test latency
+		+ Deprecated: Try large-scale in-memory KVS and test latency
 			* Enable swap space to avoid being killed by OOM killer
 			* Use localtest to get larger server-side latency first
 				- w/o using swap space: ~2us

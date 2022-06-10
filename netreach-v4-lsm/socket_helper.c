@@ -22,7 +22,7 @@ void set_recvtimeout(int sockfd, int timeout_sec, int timeout_usec) {
 
 // udp
 
-void create_udpsock(int &sockfd, bool need_timeout, const char* role, int timeout_sec, int timeout_usec) {
+void create_udpsock(int &sockfd, bool need_timeout, const char* role, int timeout_sec, int timeout_usec, int udp_rcvbufsize) {
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd == -1) {
 		printf("[%s] fail to create udp socket, errno: %d!\n", role, errno);
@@ -37,6 +37,11 @@ void create_udpsock(int &sockfd, bool need_timeout, const char* role, int timeou
 	// Set timeout for recvfrom/accept of udp/tcp
 	if (need_timeout) {
 		set_recvtimeout(sockfd, timeout_sec, timeout_usec);
+	}
+	// set udp receive buffer size
+	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &udp_rcvbufsize, sizeof(int)) == -1) {
+		printf("[%s] fail to set udp receive bufsize as %d, errno: %d\n", role, udp_rcvbufsize, errno);
+		exit(-1);
 	}
 }
 
@@ -75,11 +80,11 @@ bool udprecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr_i
 	return is_timeout;
 }
 
-void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const char* role, int timeout_sec, int timeout_usec) {
+void prepare_udpserver(int &sockfd, bool need_timeout, short server_port, const char* role, int timeout_sec, int timeout_usec, int udp_rcvbufsize) {
 	INVARIANT(role != NULL);
 
 	// create socket
-	create_udpsock(sockfd, need_timeout, role, timeout_sec, timeout_usec);
+	create_udpsock(sockfd, need_timeout, role, timeout_sec, timeout_usec, udp_rcvbufsize);
 	// reuse the occupied port for the last created socket instead of being crashed
 	const int trueFlag = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &trueFlag, sizeof(int)) < 0) {
@@ -115,6 +120,7 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 		fragnum = (total_bodysize + frag_bodysize - 1) / frag_bodysize;
 	}
 	INVARIANT(fragnum > 0);
+	printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d, len: %d, total_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize, len, total_bodysize);
 
 	// <frag_hdrsize, cur_fragidx, max_fragnum, frag_bodysize>
 	char fragbuf[frag_maxsize];
@@ -139,6 +145,7 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 		memcpy(fragbuf + final_frag_hdrsize, buf + buf_sentsize, cur_frag_bodysize);
 		buf_sentsize += cur_frag_bodysize;
 
+		printf("cur_fragidx: %d, max_fragnum: %d, cur_fragsize: %d\n", cur_fragidx, max_fragnum, final_frag_hdrsize + cur_frag_bodysize);
 		udpsendto(sockfd, fragbuf, final_frag_hdrsize + cur_frag_bodysize, flags, dest_addr, addrlen, role);
 	}
 }
@@ -170,6 +177,7 @@ bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr_
 				break;
 			}
 			INVARIANT(frag_recvsize >= final_frag_hdrsize && frag_recvsize <= frag_maxsize);
+			printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
 
 			INVARIANT(len >= frag_hdrsize);
 			memcpy(buf, fragbuf, frag_hdrsize);
@@ -188,6 +196,7 @@ bool udprecvlarge(int sockfd, void *buf, size_t len, int flags, struct sockaddr_
 		uint16_t cur_fragidx = 0;
 		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
 		INVARIANT(cur_fragidx < max_fragnum);
+		printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, len: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnum, frag_recvsize, len, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 
 		INVARIANT(len >= (cur_fragidx * frag_bodysize + frag_recvsize - final_frag_hdrsize));
 		memcpy(buf + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
@@ -254,6 +263,7 @@ bool udprecvlarge_multisrc(int sockfd, void *bufs, size_t bufnum, size_t len, in
 
 		// set max_srcnum for the global first packet
 		if (global_isfirst) {
+			printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
 			memcpy(&max_srcnum, fragbuf + srcnum_off, srcnum_len);
 			if (srcnum_conversion && srcnum_len == 2) max_srcnum = size_t(ntohs(uint16_t(max_srcnum)));
 			else if (srcnum_conversion && srcnum_len == 4) max_srcnum = size_t(ntohl(uint32_t(max_srcnum)));
@@ -266,6 +276,7 @@ bool udprecvlarge_multisrc(int sockfd, void *bufs, size_t bufnum, size_t len, in
 		if (srcid_conversion && srcid_len == 2) tmpsrcid = size_t(ntohs(uint16_t(tmpsrcid)));
 		else if (srcid_conversion && srcid_len == 4) tmpsrcid = size_t(ntohl(uint32_t(tmpsrcid)));
 		INVARIANT(tmpsrcid < max_srcnum);
+		printf("tmpsrcid: %d, max_srcnum: %d, bufnum: %d\n", tmpsrcid, max_srcnum, bufnum);
 
 		void *tmpbuf = bufs + tmpsrcid * len;
 
@@ -286,6 +297,7 @@ bool udprecvlarge_multisrc(int sockfd, void *bufs, size_t bufnum, size_t len, in
 		uint16_t cur_fragidx = 0;
 		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
 		INVARIANT(cur_fragidx < max_fragnums[tmpsrcid]);
+		printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, len: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnums[tmpsrcid], frag_recvsize, len, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 
 		INVARIANT(len >= (cur_fragidx * frag_bodysize + frag_recvsize - final_frag_hdrsize));
 		memcpy(tmpbuf + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);

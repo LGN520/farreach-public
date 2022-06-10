@@ -101,6 +101,8 @@ static inline void dump_buf(char *buf, uint32_t bufsize)
 
 /***** Debuging *****/
 
+//#define DEBUG_SNAPSHOT
+
 // 1: assert
 // 0: ignore assert
 #if 1
@@ -159,6 +161,9 @@ static inline void dump_buf(char *buf, uint32_t bufsize)
 
 #define MAX_BUFSIZE 40960 // 40KB; TODO: increase for large value / more threads
 #define MAX_LARGE_BUFSIZE 8388608 // 8MB
+
+#define UDP_DEFAULT_RCVBUFSIZE 212992 // 208KB used in linux by default
+#define UDP_LARGE_RCVBUFSIZE 8388608 // 8MB (used by socket to receive large data; client_num + 1 for controller + server_num)
 
 #define MQ_SIZE 40960 // in-memory message queue
 #define SINGLE_MQ_SIZE 2 // single-message message queue

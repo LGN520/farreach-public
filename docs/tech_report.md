@@ -65,10 +65,10 @@
 ## Global Configuration
 
 - We use gcc-7.5.0 and g++-7.5.0
-- Configuration of XIndex
+- Deprecated: Configuration of XIndex
 	+ See [README.md](../xindex/XIndex-R/READE.md)
 	+ For jemalloc, follow the next instructions to install libjemalloc-dev instead of libjemalloc1 as XIndex
-- Install jemalloc
+- Deprecated: Install jemalloc
 	+ `wget https://github.com/jemalloc/jemalloc/archive/refs/tags/5.2.1.tar.gz`
 	+ `gunzip 5.2.1.tar.gz`
 	+ `tar -xvf 5.2.1.tar`
@@ -97,7 +97,7 @@
 	+ `ovs-ctl start`
 	+ Check whether with successful install: `ovs-vsctl show`
 	+ After modifying source code of OVS: `sudo ./remake.sh`
-- Install DPDK (we use 18.11 instead of 20.08)
+- Deprecated: Install DPDK (we use 18.11 instead of 20.08)
 	+ Check environment
 		* `lspci | grep Ethernet`
 		* `enstool -i <if>`
@@ -203,14 +203,22 @@
 	+ `sudo service redis restart`
 	+ `sudo systemctl status redis`
 	+ `pip install redis==3.5.3` for python2.7
-- After restart
+- Deprecated: After restart
 	+ Re-configure dpdk
 	+ Run `~/bf-sde-8.9.1/install/bin/bf_kdrv_mod_load $SDE_INSTALL` and `~/bf-sde-8.9.1/install/bin/bf_knet_mod_load $SDE_INSTALL` in Tofino
 	+ `sudo service redis restart` to restart redis
-- Enable swap space to avoid being killed by OOM killer
-	+ `sudo fallocate -l 64g /mnt/64BiB.swap`
-	+ `sudo mkswap /mnt/64BiB.swap`
-	+ `sudo swapon /mnt/64BiB.swap`
-	+ After using
-		* `sudo swapoff /mnt/64BiB.swap`
-		* `sudo rm /mnt/64BiB.swap`
+- Deprecated: Enable swap space to avoid being killed by OOM killer
+	+ `free` and `swapon -s` to check swap space
+	+ If w/o hardware partition
+		+ `sudo fallocate -l 64g /mnt/64GiB.swap`
+		+ `sudo mkswap /mnt/64BiB.swap`
+		+ `sudo swapon /mnt/64BiB.swap`
+		+ After using
+			* `sudo swapoff /mnt/64GiB.swap`
+			* `sudo rm /mnt/64BiB.swap`
+	+ Else (e.g., /dev/dm-2)
+		+ `sudo swapon /dev/dm-2`
+		+ `sudo swapoff /dev/dm-2`
+- Configure udp socket buffer size (max and default)
+	+ `sudo sysctl -w net.core.rmem_max=8388608`
+	+ `sudo sysctl -w net.core.rmem_default=212992`
