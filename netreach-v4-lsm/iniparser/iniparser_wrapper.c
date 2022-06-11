@@ -241,10 +241,10 @@ const char *IniparserWrapper::get_server_ip_for_client() {
 
 // Switch
 
-uint32_t IniparserWrapper::get_partition_num() {
-	int tmp = iniparser_getint(ini, "switch:partition_num", -1);
+uint32_t IniparserWrapper::get_partition_count() {
+	int tmp = iniparser_getint(ini, "switch:partition_count", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [switch:partition_num]: %d\n", tmp);
+		printf("Invalid entry of [switch:partition_count]: %d\n", tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);

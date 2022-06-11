@@ -417,12 +417,15 @@ void *run_controller_snapshotclient(void *param) {
 	char recvbuf[MAX_BUFSIZE];
 	int recvsize = 0;
 	bool is_timeout = false;
+	struct timespec snapshot_t1, snapshot_t2, snapshot_t3;
 	while (controller_running) {
 		usleep(controller_snapshot_period * 1000); // ms -> us
 
 		// TMPDEBUG
 		printf("Type to send SNAPSHOT_START...\n");
 		getchar();
+
+		CUR_TIME(snapshot_t1);
 
 		// (1) send SNAPSHOT_CLEANUP to each switchos and server concurrently
 		printf("[controller.snapshotclient] send SNAPSHOT_CLEANUPs to each switchos and server\n");
@@ -558,6 +561,10 @@ void *run_controller_snapshotclient(void *param) {
 		for (size_t i = 0; i < server_num; i++) {
 			pthread_join(senddata_subthread_for_server_list[i], NULL);
 		}
+
+		CUR_TIME(snapshot_t2);
+		DELTA_TIME(snapshot_t2, snapshot_t1, snapshot_t3);
+		printf("Time of making consistent system snapshot: %f s\n", GET_MICROSECOND(snapshot_t3) / 1000.0 / 1000.0);
 		
 		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databuf) for controller failure recovery
 		controller_update_snapshotid(databuf, datarecvsize);

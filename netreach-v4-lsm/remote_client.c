@@ -135,10 +135,12 @@ void run_benchmark() {
 	// used for dynamic workload
 	std::map<uint16_t, int> persec_perclient_nodeidx_pktcnt_map[dynamic_periodnum * dynamic_periodinterval][client_num];
 
+	struct timespec total_t1, total_t2, total_t3;
 	running = true;
+
+	CUR_TIME(total_t1);
 	if (workload_mode == 0) { // send all workloads in static mode
-		while (finish_threads < client_num) sleep(1);
-		COUT_THIS("[client] all clients finish!");
+		while (finish_threads < client_num) usleep(10 * 1000); // 10ms
 	}
 	else { // send enough periods in dynamic mode
 		const int sleep_usecs = 1000; // 1000us = 1ms
@@ -180,9 +182,14 @@ void run_benchmark() {
 			}
 		}
 	}
+	CUR_TIME(total_t2);
+	DELTA_TIME(total_t2, total_t1, total_t3);
+	double total_secs = GET_MICROSECOND(total_t3) / 1000.0 / 1000.0;
+
 	running = false;
 	INVARIANT(workload_mode == 0 || stop_for_dynamic_control == true);
 	stop_for_dynamic_control = false;
+	COUT_THIS("[client] all clients finish!");
 
 	/* Process statistics */
 
@@ -217,7 +224,9 @@ void run_benchmark() {
 	dump_latency(total_latency_list, "total_latency_list");
 
 	// Dump pktcnt statistics
-	COUT_THIS("Client-side total pktcnt: " << total_latency_list.size());
+	printf("client-side total time: %f s\n", total_secs);
+	int total_pktcnt = total_latency_list.size();
+	printf("client-side total pktcnt: %d, total thpt: %f MOPS\n", total_pktcnt, double(total_pktcnt) / total_secs / 1000.0 / 1000.0);
 	COUT_THIS("cache hit pktcnt: " << nodeidx_pktcnt_map[0xFFFF]);
 	printf("per-server pktcnt: ");
 	for (uint16_t i = 0; i < server_num; i++) {

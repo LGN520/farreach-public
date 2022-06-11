@@ -48,8 +48,8 @@
 
 /***** Workload *****/
 
-//#define USE_HASH
-#define USE_RANGE
+#define USE_HASH
+//#define USE_RANGE
 
 /***** Timing *****/
 
@@ -79,7 +79,7 @@
 		}\
 	} while (0)
 // s + ns -> us
-#define GET_MICROSECOND(t) t.tv_sec * 1000 * 1000 + double(t.tv_nsec) / 1000.0
+#define GET_MICROSECOND(t) (t.tv_sec * 1000 * 1000 + double(t.tv_nsec) / 1000.0)
 
 /***** Dumping *****/
 

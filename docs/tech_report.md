@@ -222,3 +222,7 @@
 - Configure udp socket buffer size (max and default)
 	+ `sudo sysctl -w net.core.rmem_max=8388608`
 	+ `sudo sysctl -w net.core.rmem_default=212992`
+- Configure max open file descriptors
+	* `sudo vim /etc/security/limits.conf` to set hard and soft limits on maximum # of open files
+	* logout and re-login
+	* `ulimit -n number` to set soft # of open files

@@ -753,7 +753,7 @@ void *run_switchos_snapshotserver(void *param) {
 	INVARIANT(sendbuf != NULL);
 	memset(sendbuf, 0, MAX_LARGE_BUFSIZE);
 
-	printf("[switchos.snapshotserver] ready");
+	printf("[switchos.snapshotserver] ready\n");
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
@@ -763,6 +763,7 @@ void *run_switchos_snapshotserver(void *param) {
 	int recvsize = 0;
 	int control_type = -1;
 	int snapshotid = -1;
+	struct timespec stop_cachepop_t1, stop_cachepop_t2, stop_cachepop_t3, enable_singlepath_t1, enable_singlepath_t2, enable_singlepath_t3, load_snapshotdata_t1, load_snapshotdata_t2, load_snapshotdata_t3;
 	while (switchos_running) {
 		// wait for control instruction from controller.snapshotclient
 		/*if (!with_controller_snapshotclient_addr) {
@@ -849,6 +850,7 @@ void *run_switchos_snapshotserver(void *param) {
 			// create new speical cases (freed by next SNAPSHOT_CLEANUP)
 			switchos_specialcases_ptr = new concurrent_specicalcase_map_t();
 
+			CUR_TIME(stop_cachepop_t1);
 			// stop cache population/eviction (stop until we can ensure that snapshot has started aka SNAPSHOT_START)
 			is_stop_cachepop = true;
 
@@ -874,6 +876,7 @@ void *run_switchos_snapshotserver(void *param) {
 			udpsendto(switchos_snapshotserver_udpsock, &SNAPSHOT_CLEANUP_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
 		}
 		else if (control_type == SNAPSHOT_PREPARE) {
+			CUR_TIME(enable_singlepath_t1);
 			// enable a single path to prepare for setting snapshot with atomicity
 			ptf_sendsize = serialize_enable_singlepath(ptfbuf);
 			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
@@ -902,12 +905,20 @@ void *run_switchos_snapshotserver(void *param) {
 			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
 			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_DISABLE_SINGLEPATH_ACK);
+			CUR_TIME(enable_singlepath_t2);
 
 			// enable special case processing and resume cache population/eviction
 			INVARIANT(is_snapshot == false && is_stop_cachepop == true && popworker_know_stop_cachepop == true);
 			is_snapshot = true; // notify popworker and specialcaseserver to collect special cases
 			is_stop_cachepop = false; // resume cache population/eviction
 			popworker_know_stop_cachepop = false;
+			CUR_TIME(stop_cachepop_t2);
+
+			DELTA_TIME(stop_cachepop_t2, stop_cachepop_t1, stop_cachepop_t3);
+			DELTA_TIME(enable_singlepath_t2, enable_singlepath_t1, enable_singlepath_t3);
+			printf("Time of stopping cache population: %f ms\n", GET_MICROSECOND(stop_cachepop_t3) / 1000.0);
+			printf("Time of enabling single path: %f ms\n", GET_MICROSECOND(enable_singlepath_t3) / 1000.0);
+			
 
 #ifdef DEBUG_SNAPSHOT
 			// TMPDEBUG (NOTE: temporarily dislabe timeout-and-retry of SNAPSHOT_START in controller to debug snapshot here)
@@ -916,6 +927,7 @@ void *run_switchos_snapshotserver(void *param) {
 #endif
 
 			// load vallen, value, deleted, and savedseq in [0, switchos_cached_empty_index_backup-1]
+			CUR_TIME(load_snapshotdata_t1);
 			if (switchos_cached_empty_index_backup > 0) {
 				// NOTE: freed by next SNAPSHOT_CLEANUP
 				switchos_snapshot_values = new val_t[switchos_cached_empty_index_backup];
@@ -929,6 +941,9 @@ void *run_switchos_snapshotserver(void *param) {
 				parse_snapshotdata_fromptf(ptfbuf, ptf_recvsize, \
 						switchos_snapshot_values, switchos_snapshot_seqs, switchos_snapshot_stats, switchos_cached_empty_index_backup);
 			}
+			CUR_TIME(load_snapshotdata_t2);
+			DELTA_TIME(load_snapshotdata_t2, load_snapshotdata_t1, load_snapshotdata_t3);
+			printf("Time of loading snapshot data by ptf: %f s\n", GET_MICROSECOND(load_snapshotdata_t3) / 1000.0 / 1000.0);
 
 			// sendback SNAPSHOT_START_ACK
 			udpsendto(switchos_snapshotserver_udpsock, &SNAPSHOT_START_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
