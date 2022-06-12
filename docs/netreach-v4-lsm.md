@@ -1093,6 +1093,64 @@
 		+ Solution 1: add is_clone in split_hdr for SCANREQ
 		+ Reason 2: too many MATs
 		+ Solution 2: merge is_last_scansplit_tbl and is_last_clone_tbl into lastclone_lastscansplit_tbl
++ Test range query
+	+ Fix ptf syntax issues
+	+ Check range partition of normal request
+	+ Check repeat packets of CACHE_POP_INSWITCH_ACK and XXX_CASE1
+	+ Update pktlen for SCANREQ_SPLIT
+	* Check multiple packets of SCANREQ_SPLIT
+		- Cannot read latest put -> correct as we perform range query based on snapshot
+		- Incorrect # of SCANREQ_SPLIT
+			+ Reason: clone_hdr.clonenum_for_pktloss = 1 (compiler reuse same PHV for clonenum_for_pksloss and cur_scanidx???)
+			+ Solution: in process_scansplit_tbl, we set clone_hdr.clonenum_for_pksloss = 0 for SCANREQ_SPLIT, set meta.remain_scannum = 0 for other optypes in default action -> compiler should not reuse same PHV now as both fields appear in the same action
+			+ Test CACHE_POP_INSWITCH_ACK, XXX_CASE1, and SCANREQ_SPLIT in debug mode
+			+ Test CACHE_POP_INSWITCH_ACK, XXX_CASE1, and SCANREQ_SPLIT in non-debug mode
++ Prepare LOADREQ/LOADACK for loading phase to avoid in-switch state change (simple fowarding is enough)
++ Add nodeidx_foreval in stat_hdr for GET/PUT/DELRES and after split_hdr for SCANRES_SPLIT
+	* NOTE: SCANRES_SPLIT is not processed by switch (only used by end-hosts)
+	* Check nodeidx_foreval for cache hit/miss
+		- Fix hdrlen issue for GETRES/PUTRES/DELRES/XXX_CASE1 due to adding nodeidx_foreval in stat_hdr
+	* Change remote_client.c to measure normalized throuhgput in client side -> then we can drop dynamic control process between client.main and server.main
+	* Test normalized thpt for static/dynamic workload in client-side (prepare for ycsb)
++ Use server-side timeout-and-retry to guarantee that the cache population must arrive at switchos
+	* Replace controller.popclient with controller.popserver.popclient
+	* NOTE: not wait ptf framework to reduce latency and leverage switchos max thpt
++ Implement udpsend/recvlarge_udp/ipfrag to send/recv snapshot data and ScanResponseSplit (providing frag_hdrsize)
+	* Implement udprecvlarge_multisrc_udp/ipfrag for ScanResponseSplit
+	* Introduce SNAPSHOT_ACK and use switchos-side timeout-and-retry to guarantee that snapshot data can arrive at server
+	* Test empty snapshot data, small snapshot data, and special case1/case2
+	* Test large snapshot data
+		- Fix timeout issue caused by udp packet loss due to insufficient udp receive buffer (many threads listen on localhost interface -> some thread cannot receive udp packets immediately from short udp receive buffer)
+			+ Set udp recv buffer max size of linux by configure_client/server/switchos.sh
+			+ Set udp recv buffer size of socket in runtime for large data by setsockopt
+		- Fix duplicate control packet in switch/server.snapshotserver
+	* Test empty scan data, small scan data
+	* Test large scan response from single/multiple src(s)
+* Re-implement crash-consistent snapshot such that controller guides switchos to perform in-switch snapshot
+	- Implement perserver snapshotserver and snapshotdataserver
+	- Embed snapshotid into SNAPSHOT_SENDDATA, which must = server.snapshotid + 1 (store latest inswitch snapshot -> atomically update inswitch snapshot and server-side snapshot -> increase snapshot id and drop old snapshot data)
+	- Encapsulate in-switch snapshot into RocksdbWrapper (rocsdb + deletedset for all methods; inswitch data for FarReach)
+	- Embed serveridx into perserver scan response -> client-side retry if inconsistent
+	- Update expected_threads in controller, server, and switchos
+	- Test time of snapshot
+		- Entire time: ~3.5s
+		- Time of stopping cache population/eviction: ~50ms
+		- Time of enforcing single path: ~10ms
+		- Time of loading data by ptf: ~3.3s
++ Reliability
+	+ NOTE: we focus on weak-form durability (aka data loss w/ consistency guarantee after failure) and eventual availability
+		* We do not target service full uptime / zero downtime / fault tolerance / fast recovery
+	+ Support controller failure recovery (stateless aka no key-value data -> no concern on availability/durability)
+		* For cache population, server-side timeout-and-retry guarantees that the populated data can be eventually sent to switchos
+		* For cache eviction, switchos-side timeout-and-retry guarantees that the evicted data can be eventually sent to server
+		* For snapshot, controller.cleanup phase can clean stale snapshot states in switchos/client after launching a new controller
+		* We only need to launch a new controller, and restart a new snapshot
+			+ TODO: Check all kinds of corner cases
+			+ TODO: If send or recv fails (if using tcp), wait for connecting with new controller (no need now as w/o tcp sockets)
+	+ For server crash, we can utilize persistence of rocksdb to recover data
+		* NOTE: if we treat both switch and server as storage node, we have already trade availability for failure consistency based on snapshot
+		* TODO: We can use sync write for recoverable failure -> undermine deployability/generality
+		* TODO: For unrecoverable failure, we can use server-side replication -> undermine thpt
 
 ## Run
 
@@ -1121,12 +1179,16 @@
 	+ `python gen_warmupkv.sh` to generate workload for warmup phase
 	+ `python gen_queries_zipf.sh` to generate Zipf workload for transaction phase
 		+ `./split_workload run linenum` -> workloada-run-{server_num}/*.out
-- Deprecated: prepare YCSB workload for loading or transaction phase
+- Prepare YCSB workload for loading or transaction phase
 	+ For example:
 	+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > workloada-load.out`
 	+ `./bin/ycsb.sh run basic -P workloads/workloada -P netbuffer.dat > workloada-run.out`
 	+ `./split_workload load linenum` -> workloada-load-{split_num}/*-*.out
 	+ `./split_workload run linenum` -> workloada-run-{server_num}/*.out
+- Change partition method (hash/range partition)
+	+ RANGE_SUPPORT in tofino/netbufferv4.p4
+	+ USE_HASH/RANGE in helper.h
+	+ RANGE_SUPPORT in tofino/common.py
 - Loading phase
 	- `./loader` to launch loaders in end host
 - Warmup/Transaciton phase

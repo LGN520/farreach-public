@@ -224,9 +224,21 @@ void run_benchmark() {
 	dump_latency(total_latency_list, "total_latency_list");
 
 	// Dump pktcnt statistics
-	printf("client-side total time: %f s\n", total_secs);
 	int total_pktcnt = total_latency_list.size();
-	printf("client-side total pktcnt: %d, total thpt: %f MOPS\n", total_pktcnt, double(total_pktcnt) / total_secs / 1000.0 / 1000.0);
+	printf("Deprecated: client-side total pktcnt: %d, total time: %f s,total thpt: %f MOPS\n", total_pktcnt, total_secs, double(total_pktcnt) / total_secs / 1000.0 / 1000.0);
+	double total_thpt = 0.0;
+	for (size_t i = 0; i < client_num; i++) {
+		double curclient_thpt = 0.0;
+		int curclient_pktcnt = fg_params[i].req_latency_list.size();
+		double curclient_totalusecs = 0.0;
+		for (size_t j = 0; j < curclient_pktcnt; j++) {
+			curclient_totalusecs += (fg_params[i].req_latency_list[j] + fg_params[i].rsp_latency_list[j] + fg_params[i].wait_latency_list[j]);
+		}
+		double curclient_totalsecs = curclient_totalusecs / 1000.0 / 1000.0;
+		curclient_thpt = double(curclient_pktcnt) / curclient_totalsecs / 1024.0 / 1024.0;
+		total_thpt += curclient_thpt;
+	}
+	printf("client-side total pktcnt: %d, total thpt: %f MOPS\n", total_pktcnt, total_thpt);
 	COUT_THIS("cache hit pktcnt: " << nodeidx_pktcnt_map[0xFFFF]);
 	printf("per-server pktcnt: ");
 	for (uint16_t i = 0; i < server_num; i++) {
