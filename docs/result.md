@@ -43,13 +43,13 @@
 			+ Server 1
 				* Client 8: TODO MOPS; clien 32: TODO MOPS
 			+ Server 4
-				* Client 32: TODO MOPS; client 64: TODO MOPS; client 128: TODO MOPS
+				* Client 32: 0.071 MOPS; client 64: 0.068 MOPS; client 128: 0.079 MOPS; client 256: 0.085 MOPS; client 512: 0.0955 MOPS; client 1024: 0.18 MOPS (TODO: what's the problem?)
 			+ Server 8
 				* Client 32: TODO MOPS; client 64: TODO MOPS
 			+ Server 16
 				* Client 64: TODO MOPS; client 128: TODO MOPS; client 256: TODO MOPS
 			+ Server 32
-				* Client 128: TODO MOPS; client 256: TODO MOPS
+				* Client 128: 0.156 MOPS; client 256: 0.185 MOPS; client 512: TODO MOPS; client 1024: TODO MOPS
 			+ Server 128
 				* Client 256: TODO MOPS; client 512: TODO MOPS
 			+ NoCache under hash > NoCache under range w/ server 4
@@ -62,7 +62,7 @@
 			+ Server 16 (emulated thpt: TODOX; normalized thpt: 3.9X)
 				* Client 128: TODO MOPS
 			+ Server 32 (emulated thpt: TODOX; normalized thpt: 5.8X)
-				* Client 256: TODO MOPS; client 512: TODO MOPS
+				* Client 256: 0.34 MOPS; client 512: 0.44 MOPS; client 1024: 0.617 MOPS; client 2048: TODO MOPS
 			+ Server 128 (emulated thpt: TODOX; normalized thpt: 18.16X)
 				* Client 256: TODO MOPS; client 512: TODO MOPS; client 1024: TODO MOPS
 		- NoCache w/ only disk operation (1K queries)
@@ -75,7 +75,7 @@
 			+ Server 16
 				* Client 64: TODO KOPS; client 128 (2K queries): TODO KOPS
 			+ Server 32
-				* Client 64: TODO KOPS; client 128 (2K queries): TODOKOPS
+				* Client 64: TODO KOPS; client 128 (2K queries): TODO KOPS
 			+ Server 128
 				* Client 128 (2K queries): TODO KOPS (2K queries); client 256 (8K queries): TODO KOPS
 		- TODO: NoCache w/ only CPU operation

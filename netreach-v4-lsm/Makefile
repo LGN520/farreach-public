@@ -134,6 +134,10 @@ DEPS += dynamic_rulemap.d
 CLEAN += dynamic_rulemap.o
 UTILS_OBJECTS += dynamic_rulemap.o
 
+DEPS += dynamic_array.d
+CLEAN += dynamic_array.o
+UTILS_OBJECTS += dynamic_array.o
+
 ##############################################################################
 
 CPPFLAGS += $(INCDIR)

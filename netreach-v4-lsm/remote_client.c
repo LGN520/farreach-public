@@ -24,6 +24,7 @@
 #include "latency_helper.h"
 #include "socket_helper.h"
 #include "dynamic_rulemap.h"
+#include "dynamic_array.h"
 
 #ifdef USE_YCSB
 #include "workloadparser/ycsb_parser.h"
@@ -225,7 +226,7 @@ void run_benchmark() {
 
 	// Dump pktcnt statistics
 	int total_pktcnt = total_latency_list.size();
-	printf("Deprecated: client-side total pktcnt: %d, total time: %f s,total thpt: %f MOPS\n", total_pktcnt, total_secs, double(total_pktcnt) / total_secs / 1000.0 / 1000.0);
+	printf("Deprecated: client-side total pktcnt: %d, total time: %f s, total thpt: %f MOPS\n", total_pktcnt, total_secs, double(total_pktcnt) / total_secs / 1024.0 / 1024.0);
 	double total_thpt = 0.0;
 	for (size_t i = 0; i < client_num; i++) {
 		double curclient_thpt = 0.0;
@@ -358,11 +359,11 @@ void *run_fg(void *param) {
 	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
 
-	// NOTE: now we only support small range scan -> client_num * server_num * MAX_BUFSIZE memory overhead
-	// TODO: we can dynamically assign memory to receive scan response in udprecvlarge_multisrc in socket_helper.c
-	// TODO: if so, we can also determine number of srcs in runtime instead of using server_num or max_server_num in client side
-	char *scanbufs = new char[server_num * MAX_BUFSIZE];
-	int scan_recvsizes[server_num];
+	// DEPRECATED: we only support small range scan -> client_num * server_num * MAX_BUFSIZE memory overhead
+	// Now we dynamically assign memory to receive scan response in udprecvlarge_multisrc in socket_helper.c
+	// We also determine number of srcs in runtime instead of using server_num or max_server_num in client side
+	//char *scanbufs = new char[server_num * MAX_BUFSIZE];
+	//int scan_recvsizes[server_num];
 
 #if !defined(NDEBUGGING_LOG)
 	std::string logname;
@@ -521,15 +522,18 @@ void *run_fg(void *param) {
 				CUR_TIME(req_t2);
 
 				int received_scannum = 0;
+				dynamic_array_t *scanbufs = NULL;
 				CUR_TIME(wait_t1);
-				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
+				//is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
+				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
 				CUR_TIME(wait_t2);
 
 				CUR_TIME(rsp_t1);
 				int snapshotid = -1;
 				int totalnum = 0;
 				for (int tmpscanidx = 0; tmpscanidx < received_scannum; tmpscanidx++) {
-					scan_response_split_t rsp(scanbufs + tmpscanidx * MAX_BUFSIZE, scan_recvsizes[tmpscanidx]);
+					//scan_response_split_t rsp(scanbufs + tmpscanidx * MAX_BUFSIZE, scan_recvsizes[tmpscanidx]);
+					scan_response_split_t rsp(scanbufs[tmpscanidx].array(), scanbufs[tmpscanidx].size());
 					FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
 							<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
 					totalnum += rsp.pairnum();
@@ -547,6 +551,11 @@ void *run_fg(void *param) {
 				COUT_VAR(received_scannum);
 				COUT_VAR(totalnum);
 				CUR_TIME(rsp_t2);
+
+				if (scanbufs != NULL) {
+					delete [] scanbufs;
+					scanbufs = NULL;
+				}
 
 				if (is_timeout) {
 					continue;
