@@ -4,7 +4,7 @@
 #include "tofino/primitives.p4"
 
 // Uncomment it if support range query, or comment it otherwise
-//#define RANGE_SUPPORT
+#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly

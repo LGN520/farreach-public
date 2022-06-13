@@ -2,85 +2,7 @@
 
 ## Preliminary results of netreach-v4-lsm
 
-+ Test runtime throughput under synthetic write-only workload (throughput calculation excludes client-side overhead)
-	* Different # of server threads under range partition
-		- NOTE: CPU operation = memory access; disk operation = disk access / flush / sync write
-		- NoCache w/ CPU+disk operation (10M queries)
-			+ Server 1
-				* Client 1: TODO MOPS; client 8: TODO MOPS; client 32: TODO MOPS
-			+ Server 4
-				* Client 32: TODO MOPS; client 64: TODO MOPS
-			+ Server 8
-				* Client 32: TODO MOPS; client 64: TODO MOPS
-			+ Server 16
-				* Client 64: TODO MOPS; Client 128: TODO MOPS
-			+ Server 32
-				* Client 64: TODO MOPS; Client 128: TODO MOPS; Client 256: TODO MOPS; client 512: TODO MOPS
-			+ TODO: Server 128
-			+ NoCache w/ CPU+disk has 2X thpt from server 1 to server 4 due to batch flush from memtable to sstable
-				* Reason: some writes are processed by memtable in memory, while others are processed by sstable in disk
-				* If server thread only accesses memory, server 4 should be 4X thpt of server 1
-				* If server thread only accesses disk, server 4 should be 1X thpt of server 1(no change)
-		- FarReach w/ CPU+disk operation (10M queries)
-			+ Server 4 (emulated thpt: TODOX; normalized thpt: 5X)
-				* Client 32: TODO MOPS; client 64: TODO MOPS
-			+ Server 8 (emulated thpt: TODOX; normalized thpt: 8.2X)
-				* Client 32: TODO MOPS; client 64: TODO MOPS; client 128: TODO MOPS; client 256: TODO MOPS
-			+ Server 16 (emulated thpt: TODOX; normalized thpt: 13.9X)
-				* Client 64: TODO MOPS; client 128: TODO MOPS
-			+ Server 32 (emulated thpt: TODOX; normalized thpt: 23X)
-				* Client 64: TODO MOPS; client 128: TODO MOPS; client 256: TODO MOPS; client 512: TODO MOPS
-			+ TODO: Server 128
-			+ FarReach w/ CPU+disk has 2.45X thpt of NoCache w/ CPU+disk under server 4
-				* Reason: some writes are processed by memtable in memory, while others are processed by sstable in disk
-				* 50% traffic hits in switch w/ large thpt -> 2X
-				* Traffic uses CPU/memory can benefit from load balance -> >2X
-				* Traffic uses disk cannot benefit from load balance
-		- TODO: NoCache w/ only disk operation (1K queries) -> TODO: expected: similar/limited_difference with hash partition
-		- TODO: NoCache w/ only CPU operation
-	* Different # of server threads under hash partition
-		- NoCache w/ CPU+disk operation (10M queries)
-			+ Server 1
-				* Client 8: TODO MOPS; clien 32: TODO MOPS
-			+ Server 4
-				* Client 32: 0.071 MOPS; client 64: 0.068 MOPS; client 128: 0.079 MOPS; client 256: 0.085 MOPS; client 512: 0.0955 MOPS; client 1024: 0.18 MOPS (TODO: what's the problem?)
-			+ Server 8
-				* Client 32: TODO MOPS; client 64: TODO MOPS
-			+ Server 16
-				* Client 64: TODO MOPS; client 128: TODO MOPS; client 256: TODO MOPS
-			+ Server 32
-				* Client 128: 0.156 MOPS; client 256: 0.185 MOPS; client 512: TODO MOPS; client 1024: TODO MOPS
-			+ Server 128
-				* Client 256: TODO MOPS; client 512: TODO MOPS
-			+ NoCache under hash > NoCache under range w/ server 4
-				* Reason: hash partition is more balanced than range partition + traffic access memory can benefit from load balance
-		- FarReach w/ CPU+disk operation (10M queries)
-			+ Server 4 (emulated thpt: TODOX; normalized thpt: 2.6X)
-				* Client 32: TODO MOPS; client 64: TODO MOPS
-			+ Server 8 (emulated thpt: TODOX; normalized thpt: 3X)
-				* Client 32: TODO MOPS; client 64: TODO MOPS
-			+ Server 16 (emulated thpt: TODOX; normalized thpt: 3.9X)
-				* Client 128: TODO MOPS
-			+ Server 32 (emulated thpt: TODOX; normalized thpt: 5.8X)
-				* Client 256: 0.34 MOPS; client 512: 0.44 MOPS; client 1024: 0.617 MOPS; client 2048: TODO MOPS
-			+ Server 128 (emulated thpt: TODOX; normalized thpt: 18.16X)
-				* Client 256: TODO MOPS; client 512: TODO MOPS; client 1024: TODO MOPS
-		- NoCache w/ only disk operation (1K queries)
-			+ Server 1
-				* Client 8: TODO KOPS; clien 32: TODO KOPS
-			+ Server 4
-				* Client 32: TODO KOPS; client 64: TODO KOPS
-			+ Server 8
-				* Client 32: TODO KOPS; client 64: TODO KOPS
-			+ Server 16
-				* Client 64: TODO KOPS; client 128 (2K queries): TODO KOPS
-			+ Server 32
-				* Client 64: TODO KOPS; client 128 (2K queries): TODO KOPS
-			+ Server 128
-				* Client 128 (2K queries): TODO KOPS (2K queries); client 256 (8K queries): TODO KOPS
-		- TODO: NoCache w/ only CPU operation
-
-+ Deprecated: Test runtime throughput under synthetic write-only workload (throughput calculation includes client-side overhead)
++ Test runtime throughput under synthetic write-only workload (throughput calculation includes client-side overhead)
 	* Different # of server threads under range partition
 		- NOTE: CPU operation = memory access; disk operation = disk access / flush / sync write
 		- NoCache w/ CPU+disk operation (10M queries)
@@ -157,6 +79,18 @@
 			+ Server 128
 				* Client 128 (2K queries): 0.257 KOPS (2K queries); client 256 (8K queries): 0.24 KOPS
 		- TODO: NoCache w/ only CPU operation
+
++ DEPRECATED: Test runtime throughput under synthetic write-only workload (throughput calculation excludes client-side overhead)
+	* NOTE: WRONG way of calculating system avg thpt, as we do not consider 0ops thpt if some clients finish before system running time, which could incur infinitely-increased system thpt issue
+	* Different # of server threads under hash partition
+		- NoCache w/ CPU+disk operation (10M queries)
+			+ Server 4
+				* Client 32: 0.071 MOPS; client 64: 0.068 MOPS; client 128: 0.079 MOPS; client 256: 0.085 MOPS; client 512: 0.0955 MOPS; client 1024: 0.18 MOPS
+			+ Server 32
+				* Client 128: 0.156 MOPS; client 256: 0.185 MOPS; client 512: TODO MOPS; client 1024: TODO MOPS
+		- FarReach w/ CPU+disk operation (10M queries)
+			+ Server 32 (emulated thpt: TODOX; normalized thpt: 5.8X)
+				* Client 256: 0.34 MOPS; client 512: 0.44 MOPS; client 1024: 0.617 MOPS; client 2048: TODO MOPS
 
 ## Localtest of original XIndex w/o log
 

@@ -13,6 +13,7 @@
 #include "concurrent_set_impl.h"
 #include "message_queue_impl.h"
 #include "rocksdb_wrapper.h"
+#include "dynamic_array.h"
 
 //#define DUMP_BUF
 
@@ -222,6 +223,7 @@ void *run_server_worker(void * param) {
   netreach_key_t max_endkey(std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), max_endkeyhihi);
 
   char buf[MAX_BUFSIZE];
+  dynamic_array_t scanbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
   int recv_size = 0;
   int rsp_size = 0;
 
@@ -360,9 +362,11 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
+				//rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				//udpsendto(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-				udpsendlarge_ipfrag(server_worker_udpsock_list[serveridx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
+				scanbuf.clear();
+				rsp_size = rsp.dynamic_serialize(scanbuf);
+				udpsendlarge_ipfrag(server_worker_udpsock_list[serveridx], scanbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -742,10 +746,8 @@ void *run_server_snapshotdataserver(void *param) {
 	socklen_t controller_snapshotclient_addrlen;
 	//bool with_controller_snapshotclient_addr = false;
 
-	char *recvbuf = new char[MAX_LARGE_BUFSIZE]; // server_num * MAX_LARGE_BUFSIZE memory overhead for snapshot data in total
-	INVARIANT(recvbuf != NULL);
-	memset(recvbuf, 0, MAX_LARGE_BUFSIZE);
-	int recvsize = 0;
+	// receive per-server snapshot data from controller
+	dynamic_array_t recvbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 
 	printf("[server.snapshotdataserver %d] ready\n", serveridx);
 	transaction_ready_threads += 1;
@@ -757,16 +759,17 @@ void *run_server_snapshotdataserver(void *param) {
 	int snapshotid = -1;
 	while (transaction_running) {
 		/*if (!with_controller_snapshotclient_addr) {
-			is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[serveridx], recvbuf, MAX_LARGE_BUFSIZE, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "server.snapshotdataserver");
+			is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[serveridx], recvbuf, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, "server.snapshotdataserver");
 			if (!is_timeout) {
 				with_controller_snapshotclient_addr = true;
 			}
 		}
 		else {
-			is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[serveridx], recvbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, recvsize, "server.snapshotdataserver");
+			is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[serveridx], recvbuf, 0, NULL, NULL, "server.snapshotdataserver");
 		}*/
 
-		is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[serveridx], recvbuf, MAX_LARGE_BUFSIZE, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "server.snapshotdataserver");
+		recvbuf.clear();
+		is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[serveridx], recvbuf, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, "server.snapshotdataserver");
 		if (is_timeout) {
 			memset(&controller_snapshotclient_addr, 0, sizeof(struct sockaddr_in));
 			controller_snapshotclient_addrlen = sizeof(struct sockaddr_in);
@@ -774,13 +777,13 @@ void *run_server_snapshotdataserver(void *param) {
 		}
 
 		// Fix duplicate packet
-		if (control_type == *((int *)recvbuf) && snapshotid == *((int *)(recvbuf + sizeof(int)))) {
+		if (control_type == *((int *)recvbuf.array()) && snapshotid == *((int *)(recvbuf.array() + sizeof(int)))) {
 			printf("[server.snapshotdataserver] receive duplicate control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
 			continue;
 		}
 		else {
-			control_type = *((int *)recvbuf);
-			snapshotid = *((int *)(recvbuf + sizeof(int)));
+			control_type = *((int *)recvbuf.array());
+			snapshotid = *((int *)(recvbuf.array() + sizeof(int)));
 		}
 
 		if (control_type == SNAPSHOT_SENDDATA) {
@@ -792,24 +795,24 @@ void *run_server_snapshotdataserver(void *param) {
 			server_issnapshot_list[serveridx] = true;
 
 			// parse in-switch snapshot data
-			int32_t tmp_serverbytes = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int)));
-			INVARIANT(recvsize == tmp_serverbytes);
-			uint16_t tmp_serveridx = *((uint16_t *)(recvbuf + sizeof(int) + sizeof(int) + sizeof(int32_t)));
+			int32_t tmp_serverbytes = *((int32_t *)(recvbuf.array() + sizeof(int) + sizeof(int)));
+			INVARIANT(recvbuf.size() == tmp_serverbytes);
+			uint16_t tmp_serveridx = *((uint16_t *)(recvbuf.array() + sizeof(int) + sizeof(int) + sizeof(int32_t)));
 			INVARIANT(tmp_serveridx == serveridx);
-			int32_t tmp_recordcnt = *((int32_t *)(recvbuf + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
+			int32_t tmp_recordcnt = *((int32_t *)(recvbuf.array() + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
 
 			std::map<netreach_key_t, snapshot_record_t> tmp_inswitch_snapshot;
 			int tmp_offset = sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
 			for (int32_t tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {
 				netreach_key_t tmp_key;
 				snapshot_record_t tmp_record;
-				uint32_t tmp_keysize = tmp_key.deserialize(recvbuf + tmp_offset, recvsize - tmp_offset);
+				uint32_t tmp_keysize = tmp_key.deserialize(recvbuf.array() + tmp_offset, recvbuf.size() - tmp_offset);
 				tmp_offset += tmp_keysize;
-				uint32_t tmp_valsize = tmp_record.val.deserialize(recvbuf + tmp_offset, recvsize - tmp_offset);
+				uint32_t tmp_valsize = tmp_record.val.deserialize(recvbuf.array() + tmp_offset, recvbuf.size() - tmp_offset);
 				tmp_offset += tmp_valsize;
-				tmp_record.seq = *((uint32_t *)(recvbuf + tmp_offset));
+				tmp_record.seq = *((uint32_t *)(recbuf.array() + tmp_offset));
 				tmp_offset += sizeof(uint32_t);
-				tmp_record.stat = *((bool *)(recvbuf + tmp_offset));
+				tmp_record.stat = *((bool *)(recvbuf.array() + tmp_offset));
 				tmp_offset += sizeof(bool);
 				tmp_inswitch_snapshot.insert(std::pair<netreach_key_t, snapshot_record_t>(tmp_key, tmp_record));
 			}
@@ -841,9 +844,6 @@ void *run_server_snapshotdataserver(void *param) {
 			exit(-1);
 		}
 	}
-
-	delete [] recvbuf;
-	recvbuf = NULL;
 
 	close(server_snapshotdataserver_udpsock_list[serveridx]);
 	pthread_exit(nullptr);

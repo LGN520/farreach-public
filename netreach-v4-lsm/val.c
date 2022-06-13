@@ -319,3 +319,21 @@ uint32_t Val::serialize(char *buf, uint32_t buflen) {
 	return serialize_size; // sizeof(vallen) + vallen + [padding size]
 }
 
+uint32_t Val::dynamic_serialize(dynamic_array_t *buf, int offset) {
+	INVARIANT((val_length != 0 && val_data != nullptr) || (val_length == 0 && val_data == nullptr));
+
+	uint16_t padding_size = get_padding_size(val_length); // padding for value <= 128B 
+	uint32_t serialize_size = sizeof(uint16_t) + val_length + padding_size;
+	INVARIANT(serialize_size >= 0);
+
+	uint16_t bigendian_vallen = htons(val_length); // Little-endian to big-endian
+	buf.dynamic_memcpy(offset, (char *)&bigendian_vallen, sizeof(uint16_t)); // Switch needs to use vallen
+	if (val_length > 0) {
+		buf.dynamic_memcpy(offset + sizeof(uint16_t), val_data, val_length);
+		if (padding_size > 0) { // vallen <= 128B and vallen % 8 != 0
+			buf.dynamic_memset(offset + sizeof(uint16_t) + val_length, 0, padding_size);
+		}
+	}
+	return serialize_size; // sizeof(vallen) + vallen + [padding size]
+}
+

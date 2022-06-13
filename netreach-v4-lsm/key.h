@@ -7,6 +7,7 @@
 //#include "rocksdb/slice.h"
 #include "helper.h"
 #include "crc32.h"
+#include "dynamic_array.h"
 
 // Comment it for 8B small key
 #define LARGE_KEY
@@ -65,6 +66,7 @@ class Key {
   uint32_t serialize(char *buf, uint32_t buflen);
   uint32_t serialize(char *buf, uint32_t buflen) const;
   uint32_t serialize(char *buf, uint32_t buflen) volatile;
+  uint32_t dynamic_serialize(dynamic_array_t *buf, int offset);
 
   uint32_t get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum);
   uint32_t get_rangepartition_idx(uint32_t server_num);

@@ -7,6 +7,7 @@
 
 #include "helper.h"
 #include "snapshot_record.h"
+#include "dynamic_array.h"
 
 // mask for other_hdr
 #define VALID_MASK 0x01
@@ -203,6 +204,7 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(en
 		std::vector<std::pair<key_t, snapshot_record_t>> pairs() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
+		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
 
 		static size_t get_frag_hdrsize();
 		static size_t get_srcnum_off();

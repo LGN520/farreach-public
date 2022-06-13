@@ -575,6 +575,48 @@ uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t 
 }
 
 template<class key_t, class val_t>
+uint32_t ScanResponseSplit<key_t, val_t>::dynamic_serialize(dynamic_array_t &dynamic_data) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	int tmpoff = 0;
+	dynamic_data.dynamic_memcpy(tmpoff, (char *)&this->_type, sizeof(uint8_t));
+	tmpoff += sizeof(uint8_t);
+	uint32_t tmp_keysize = this->_key.dynamic_serialize(dynamic_data, tmpoff);
+	tmpoff += tmp_keysize;
+	uint32_t tmp_endkeysize = this->_endkey.dynamic_serialize(dynamic_data, tmpoff);
+	tmpoff += tmp_endkeysize;
+	//dynamic_data.dynamic_memcpy(tmpoff, (char *)&this->_num, sizeof(uint32_t));
+	//tmpoff += sizeof(uint32_t);
+	dynamic_data.dynamic_memset(tmpoff, 0, SPLIT_PREV_BYTES);
+	tmpoff += SPLIT_PREV_BYTES;
+	uint16_t bigendian_cur_scanidx = htons(uint16_t(this->_cur_scanidx));
+	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_cur_scanidx, sizeof(uint16_t));
+	tmpoff += sizeof(uint16_t);
+	uint16_t bigendian_max_scannum = htons(uint16_t(this->_max_scannum));
+	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_max_scannum, sizeof(uint16_t));
+	tmpoff += sizeof(uint16_t);
+	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
+	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
+	tmpoff += sizeof(uint16_t);
+	dynamic_data.dynamic_memcpy(tmpoff, (char *)&this->_snapshotid, sizeof(int)); // directly use little-endian
+	tmpoff += sizeof(int);
+
+	uint32_t bigendian_pairnum = htonl(uint32_t(this->_pairnum));
+	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_pairnum, sizeof(int32_t));
+	tmpoff += sizeof(int32_t);
+	uint32_t totalsize = sizeof(uint8_t) + tmp_keysize + tmp_endkeysize + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int) + sizeof(int32_t);
+	for (uint32_t pair_i = 0; pair_i < this->_pairs.size(); pair_i++) {
+		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.dynamic_serialize(dynamic_data, tmpoff);
+		tmpoff += tmp_pair_keysize;
+		totalsize += tmp_pair_keysize;
+		uint32_t tmp_pair_valsize = this->_pairs[pair_i].second.val.dynamic_serialize(dynamic_data, tmpoff);
+		tmpoff += tmp_pair_valsize;
+		totalsize += tmp_pair_valsize;
+	}
+	return totalsize;
+}
+
+template<class key_t, class val_t>
 void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(recv_size >= my_size);

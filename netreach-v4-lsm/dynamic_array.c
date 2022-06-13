@@ -3,8 +3,10 @@
 DynamicArray::DynamicArray() {
 	_cursize = 0;
 	_curcapability = 0;
-	_maxcapability = 0;
 	_array = NULL;
+
+	_mincapability = 0;
+	_maxcapability = 0;
 }
 
 DynamicArray::DynamicArray(int mincapability, int maxcapability) {
@@ -22,8 +24,10 @@ DynamicArray::~DynamicArray() {
 void DynamicArray::init(int mincapability, int maxcapability) {
 	INVARIANT(maxcapability > mincapability);
 
-	_curcapability = mincapability;
+	_mincapability = mincapability;
 	_maxcapability = maxcapability;
+
+	_curcapability = mincapability;
 	_array = new char[_curcapability];
 	memset(_array, 0, _curcapability);
 }
@@ -33,7 +37,44 @@ char& DynamicArray::operator[](int idx) {
 	return _array[idx];
 }
 
-void DynamicArray::memcpy(int off, char *srcarray, int len) {
+void DynamicArray::dynamic_memcpy(int off, char *srcarray, int len) {
+	dynamic_reserve(off, len);
+
+	memcpy(_array + off, srcarray, len);
+	if (off + len > _cursize) {
+		_cursize = off + len;
+	}
+}
+
+void DynamicArray::dynamic_memset(int off, int value, int len) {
+	dynamic_reserve(off, len);
+
+	memset(_array + off, value, len);
+	if (off + len > _cursize) {
+		_cursize = off + len;
+	}
+}
+
+void DynamicArray::clear() {
+	if (_curcapability != _mincapability) {
+		INVARIANT(_array != NULL);
+		delete [] _array;
+		_array = new char[_mincapability];
+		_curcapability = _mincapability;
+	}
+	memset(_array, 0, _mincapability);
+	_cursize = 0;
+}
+
+int DynamicArray::size() const {
+	return _cursize;
+}
+
+char *DynamicArray::array() const {
+	return _array;
+}
+
+void DynamicArray::dynamic_reserve(int off, int len) {
 	if (off + len > _maxcapability) {
 		printf("[DynamicArray] off %d + len %d exceeds maxcapability %d!\n", off, len, _maxcapability);
 		exit(-1);
@@ -60,17 +101,4 @@ void DynamicArray::memcpy(int off, char *srcarray, int len) {
 		newarray = NULL;
 		_curcapability = newcapability;
 	}
-
-	memcpy(_array + off, srcarray, len);
-	if (off + len > _cursize) {
-		_cursize = off + len;
-	}
-}
-
-int DynamicArray::size() const {
-	return _cursize;
-}
-
-char *DynamicArray::array() const {
-	return _array;
 }

@@ -444,6 +444,42 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) volatile {
 #endif
 }
 
+uint32_t Key::dynamic_serialize(dynamic_array_t* buf, int offset) {
+#ifdef LARGE_KEY
+	INVARIANT(buf != nullptr && offset >= 0);
+	// Little-endian to big-endian
+	uint32_t bigendian_keylolo = htonl(keylolo);
+	uint32_t bigendian_keylohi = htonl(keylohi);
+	uint32_t bigendian_keyhilo = htonl(keyhilo);
+	//uint32_t bigendian_keyhihi = htonl(keyhihi);
+	uint16_t keyhihilo = uint16_t(keyhihi & 0xFFFF);
+	uint16_t keyhihihi = uint16_t((keyhihi >> 16) & 0xFFFF);
+	uint16_t bigendian_keyhihilo = htons(keyhihilo);
+	uint16_t bigendian_keyhihihi = htons(keyhihihi);
+	buf.dynamic_memcpy(offset, (char *)&bigendian_keylolo, sizeof(uint32_t));
+	buf.dynamic_memcpy(offset+4, (char *)&bigendian_keylohi, sizeof(uint32_t));
+	buf.dynamic_memcpy(offset+8, (char *)&bigendian_keyhilo, sizeof(uint32_t));
+	//buf.dynamic_memcpy(offset+12, (char *)&bigendian_keyhihi, sizeof(uint32_t));
+	buf.dynamic_memcpy(offset+12, (char *)&bigendian_keyhihilo, sizeof(uint16_t));
+	buf.dynamic_memcpy(offset+14, (char *)&bigendian_keyhihihi, sizeof(uint16_t)); // the highest 2 bytes will be used for range matching
+	return 16;
+#else
+	INVARIANT(buf != nullptr && offset >= 0);
+	// Little-endian to big-endian
+	uint32_t bigendian_keylo = htonl(keylo);
+	//uint32_t bigendian_keyhi = htonl(keyhi);
+	uint16_t keyhilo = uint16_t(keyhi & 0xFFFF);
+	uint16_t keyhihi = uint16_t((keyhi >> 16) & 0xFFFF);
+	uint16_t bigendian_keyhilo = htons(keyhilo);
+	uint16_t bigendian_keyhihi = htons(keyhihi);
+	buf.dynamic_memcpy(offset, (char *)&bigendian_keylo, sizeof(uint32_t));
+	//buf.dynamic_memcpy(offset+4, (char *)&bigendian_keyhi, sizeof(uint32_t));
+	buf.dynamic_memcpy(offset+4, (char *)&bigendian_keyhilo, sizeof(uint16_t));
+	buf.dynamic_memcpy(offset+6, (char *)&bigendian_keyhihi, sizeof(uint16_t)); // the highest 2 bytes will be used for range matching
+	return 8;
+#endif
+}
+
 uint32_t Key::get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum) {
 	char buf[16];
 	uint32_t tmp_keysize = this->serialize(buf, 16);

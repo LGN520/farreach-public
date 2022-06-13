@@ -226,8 +226,10 @@ void run_benchmark() {
 
 	// Dump pktcnt statistics
 	int total_pktcnt = total_latency_list.size();
-	printf("Deprecated: client-side total pktcnt: %d, total time: %f s, total thpt: %f MOPS\n", total_pktcnt, total_secs, double(total_pktcnt) / total_secs / 1024.0 / 1024.0);
-	double total_thpt = 0.0;
+	printf("client-side total pktcnt: %d, total time: %f s, total thpt: %f MOPS\n", total_pktcnt, total_secs, double(total_pktcnt) / total_secs / 1024.0 / 1024.0);
+	
+	// WRONG way of calculating system average throughput (not including 0ops if client finishes before system running time)
+	/*double total_thpt = 0.0;
 	for (size_t i = 0; i < client_num; i++) {
 		double curclient_thpt = 0.0;
 		int curclient_pktcnt = fg_params[i].req_latency_list.size();
@@ -239,7 +241,8 @@ void run_benchmark() {
 		curclient_thpt = double(curclient_pktcnt) / curclient_totalsecs / 1024.0 / 1024.0;
 		total_thpt += curclient_thpt;
 	}
-	printf("client-side total pktcnt: %d, total thpt: %f MOPS\n", total_pktcnt, total_thpt);
+	printf("client-side total pktcnt: %d, total thpt: %f MOPS\n", total_pktcnt, total_thpt);*/
+
 	COUT_THIS("cache hit pktcnt: " << nodeidx_pktcnt_map[0xFFFF]);
 	printf("per-server pktcnt: ");
 	for (uint16_t i = 0; i < server_num; i++) {
@@ -521,7 +524,7 @@ void *run_fg(void *param) {
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(req_t2);
 
-				int received_scannum = 0;
+				size_t received_scannum = 0;
 				dynamic_array_t *scanbufs = NULL;
 				CUR_TIME(wait_t1);
 				//is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
@@ -612,8 +615,6 @@ void *run_fg(void *param) {
 			cur_sending_time = 0.0;
 		}*/
 	}
-
-	delete [] scanbufs;
 
 	iter->closeiter();
 	delete iter;

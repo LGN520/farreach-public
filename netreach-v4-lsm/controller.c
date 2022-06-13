@@ -66,8 +66,7 @@ int controller_snapshotid = 1; // server uses snapshot id 0 after loading phase
 int controller_snapshotclient_for_switchos_udpsock = -1;
 int *controller_snapshotclient_for_server_udpsock_list = NULL;
 // written by controller.snapshotclient; read by controller.snapshotclient.senddata_subthread to server.snapshotdataserver
-char **controller_snapshotclient_for_server_databuf_list = NULL;
-int *controller_snapshotclient_for_server_databuflen_list = NULL;
+dynamic_array_t *controller_snapshotclient_for_server_databuf_list = NULL;
 
 void prepare_controller();
 void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
@@ -182,12 +181,10 @@ void prepare_controller() {
 	// prepare snapshotclient
 	create_udpsock(controller_snapshotclient_for_switchos_udpsock, true, "controller.snapshotclient_for_switchos", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 	controller_snapshotclient_for_server_udpsock_list = new int[server_num];
-	controller_snapshotclient_for_server_databuf_list = new char*[server_num];
-	controller_snapshotclient_for_server_databuflen_list = new int[server_num];
+	controller_snapshotclient_for_server_databuf_list = new dynamic_array_t[server_num];
 	for (size_t i = 0; i < server_num; i++) {
 		create_udpsock(controller_snapshotclient_for_server_udpsock_list[i], true, "controller.snapshotclient_for_server");
-		controller_snapshotclient_for_server_databuf_list[i] = new char[MAX_LARGE_BUFSIZE];
-		controller_snapshotclient_for_server_databuflen_list[i] = 0;
+		controller_snapshotclient_for_server_databuf_list[i].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	}
 
 	memory_fence();
@@ -403,10 +400,7 @@ void *run_controller_snapshotclient(void *param) {
 	}
 
 	// prepare for SNAPSHOT_GETDATA_ACK
-	char *databuf = new char[MAX_LARGE_BUFSIZE];
-	INVARIANT(databuf != NULL);
-	memset(databuf, 0, MAX_LARGE_BUFSIZE);
-	int datarecvsize = 0;
+	dynamic_array_t databuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 
 	printf("[controller.snapshotclient] ready\n");
 	controller_ready_threads++;
@@ -492,17 +486,19 @@ void *run_controller_snapshotclient(void *param) {
 		// prepare to process per-server snapshot data
 		// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
 		// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
-		memset(controller_snapshotclient_for_server_databuflen_list, 0, sizeof(int) * server_num);
+		for (uint16_t tmpi = 0; tmpi < server_num; tmpi++) {
+			controller_snapshotclient_for_server_databuf_list[tmpi].clear();
+		}
 		int32_t snapshot_senddata_default_perserverbytes = sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
 		int32_t snapshot_senddata_default_recordcnt = 0;
 		for (uint16_t tmpi = 0; tmpi < server_num; tmpi++) {
 			// prepare header for SNAPSHOT_SENDDATA
-			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi], &SNAPSHOT_SENDDATA, sizeof(int));
-			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int), &controller_snapshotid, sizeof(int));
-			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int) + sizeof(int), &snapshot_senddata_default_perserverbytes, sizeof(int32_t));
-			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int) + sizeof(int) + sizeof(int32_t), &tmpi, sizeof(uint16_t));
-			memcpy(controller_snapshotclient_for_server_databuf_list[tmpi] + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), &snapshot_senddata_default_recordcnt, sizeof(int32_t));
-			controller_snapshotclient_for_server_databuflen_list[tmpi] = snapshot_senddata_default_perserverbytes;
+			controller_snapshotclient_for_server_databuf_list[tmpi].dynamic_memcpy(0, (char *)&SNAPSHOT_SENDDATA, sizeof(int));
+			controller_snapshotclient_for_server_databuf_list[tmpi].dynamic_memcpy(0 + sizeof(int), (char *)&controller_snapshotid, sizeof(int));
+			controller_snapshotclient_for_server_databuf_list[tmpi].dynamic_memcpy(0 + sizeof(int) + sizeof(int), (char *)&snapshot_senddata_default_perserverbytes, sizeof(int32_t));
+			controller_snapshotclient_for_server_databuf_list[tmpi].dynamic_memcpy(0 + sizeof(int) + sizeof(int) + sizeof(int32_t), (char *)&tmpi, sizeof(uint16_t));
+			controller_snapshotclient_for_server_databuf_list[tmpi].dynamic_memcpy(0 + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), (char *)&snapshot_senddata_default_recordcnt, sizeof(int32_t));
+			INVARIANT(controller_snapshotclient_for_server_databuf_list[tmpi].size() == snapshot_senddata_default_perserverbytes);
 		}
 
 		// (5) send SNAPSHOT_GETDATA to each switch os to get consistent snapshot data
@@ -512,7 +508,8 @@ void *run_controller_snapshotclient(void *param) {
 		while (true) {
 			udpsendto(controller_snapshotclient_for_switchos_udpsock, sendbuf, 2*sizeof(int), 0, &switchos_snapshotserver_addr, switchos_snapshotserver_addrlen, "controller.snapshotclient");
 
-			is_timeout = udprecvlarge_udpfrag(controller_snapshotclient_for_switchos_udpsock, databuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, datarecvsize, "controller.snapshotclient");
+			databuf.clear();
+			is_timeout = udprecvlarge_udpfrag(controller_snapshotclient_for_switchos_udpsock, databuf, 0, NULL, NULL, "controller.snapshotclient");
 			if (is_timeout) {
 				continue;
 			}
@@ -521,30 +518,30 @@ void *run_controller_snapshotclient(void *param) {
 				// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 				
-				INVARIANT(*((int *)databuf) == SNAPSHOT_GETDATA_ACK);
-				int32_t total_bytes = *((int32_t *)(databuf + sizeof(int)));
-				INVARIANT(datarecvsize == total_bytes);
+				INVARIANT(*((int *)databuf.array()) == SNAPSHOT_GETDATA_ACK);
+				int32_t total_bytes = *((int32_t *)(databuf.array() + sizeof(int)));
+				INVARIANT(databuf.size() == total_bytes);
 				
 				// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
 				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 				int tmp_offset = sizeof(int) + sizeof(int32_t); // SNAPSHOT_GETDATA_ACK + total_bytes
 				while (tmp_offset < total_bytes) {
-					int32_t tmp_serverbytes = *((int32_t *)(databuf + tmp_offset));
+					int32_t tmp_serverbytes = *((int32_t *)(databuf.array() + tmp_offset));
 					int32_t effective_serverbytes = tmp_serverbytes - sizeof(int32_t) - sizeof(uint16_t) - sizeof(int32_t);
-					uint16_t tmp_serveridx = *((uint16_t *)(databuf + tmp_offset + sizeof(int32_t)));
-					int32_t tmp_recordcnt = *((int32_t *)(databuf + tmp_offset + sizeof(int32_t) + sizeof(uint16_t)));
+					uint16_t tmp_serveridx = *((uint16_t *)(databuf.array() + tmp_offset + sizeof(int32_t)));
+					int32_t tmp_recordcnt = *((int32_t *)(databuf.array() + tmp_offset + sizeof(int32_t) + sizeof(uint16_t)));
 
 					// increase perserver_bytes and record_cnt in SNAPSHOT_SENDDATA header
-					int32_t old_serverbytes = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int)));
-					int32_t old_recordcnt = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
+					int32_t old_serverbytes = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx].array() + sizeof(int) + sizeof(int)));
+					int32_t old_recordcnt = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx].array() + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
 					int32_t new_serverbytes = old_serverbytes + effective_serverbytes;
 					int32_t new_recordcnt = old_recordcnt + tmp_recordcnt;
-					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int), &new_serverbytes, sizeof(int32_t));
-					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), &new_recordcnt, sizeof(int32_t));
+					controller_snapshotclient_for_server_databuf_list[tmp_serveridx].dynamic_memcpy(0 + sizeof(int) + sizeof(int), (char *)&new_serverbytes, sizeof(int32_t));
+					controller_snapshotclient_for_server_databuf_list[tmp_serveridx].dynamic_memcpy(0 + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), (char *)&new_recordcnt, sizeof(int32_t));
 					
 					// copy per-record data in SNAPSHOT_SENDDATA body
-					memcpy(controller_snapshotclient_for_server_databuf_list[tmp_serveridx] + controller_snapshotclient_for_server_databuflen_list[tmp_serveridx], databuf + tmp_offset + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t), effective_serverbytes);
-					controller_snapshotclient_for_server_databuflen_list[tmp_serveridx] += effective_serverbytes;
+					int tmp_databuflen = controller_snapshotclient_for_server_databuf_list[tmp_serveridx].size();
+					controller_snapshotclient_for_server_databuf_list[tmp_serveridx].dynamic_memcpy(0 + tmp_databuflen, databuf.array() + tmp_offset + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t), effective_serverbytes);
 
 					tmp_offset += tmp_serverbytes;
 				}
@@ -555,7 +552,7 @@ void *run_controller_snapshotclient(void *param) {
 		// (6) send SNAPSHOT_SENDDATA to each server concurrently
 		printf("[controller.snapshotclient] send SNAPSHOT_SENDDATAs to each server\n");
 		for (size_t i = 0; i < server_num; i++) {
-			// NOTE: even if databuflen[i] == default_perserverbytes, we still need to notify the server that snapshot is end by SNAPSHOT_SENDDATA
+			// NOTE: even if databuf_list[i].size() == default_perserverbytes, we still need to notify the server that snapshot is end by SNAPSHOT_SENDDATA
 			pthread_create(&senddata_subthread_for_server_list[i], nullptr, run_controller_snapshotclient_senddata_subthread, &senddata_subthread_param_for_server_list[i]);
 		}
 		for (size_t i = 0; i < server_num; i++) {
@@ -567,11 +564,9 @@ void *run_controller_snapshotclient(void *param) {
 		printf("Time of making consistent system snapshot: %f s\n", GET_MICROSECOND(snapshot_t3) / 1000.0 / 1000.0);
 		
 		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databuf) for controller failure recovery
-		controller_update_snapshotid(databuf, datarecvsize);
+		controller_update_snapshotid(databuf.array(), databuf.size());
 	}
 
-	delete [] databuf;
-	databuf = NULL;
 	close(controller_snapshotclient_for_switchos_udpsock);
 	for (size_t i = 0; i < server_num; i++) {
 		close(controller_snapshotclient_for_server_udpsock_list[i]);
@@ -670,17 +665,7 @@ void close_controller() {
 		controller_snapshotclient_for_server_udpsock_list = NULL;
 	}
 	if (controller_snapshotclient_for_server_databuf_list != NULL) {
-		for (size_t i = 0; i < server_num; i++) {
-			if (controller_snapshotclient_for_server_databuf_list[i] != NULL) {
-				delete [] controller_snapshotclient_for_server_databuf_list[i];
-				controller_snapshotclient_for_server_databuf_list[i] = NULL;
-			}
-		}
 		delete [] controller_snapshotclient_for_server_databuf_list;
 		controller_snapshotclient_for_server_databuf_list = NULL;
-	}
-	if (controller_snapshotclient_for_server_databuflen_list != NULL) {
-		delete [] controller_snapshotclient_for_server_databuflen_list;
-		controller_snapshotclient_for_server_databuflen_list = NULL;
 	}
 }

@@ -31,6 +31,7 @@
 #include "message_queue_impl.h"
 #include "packet_format_impl.h"
 #include "concurrent_map_impl.h"
+#include "dynamic_array.h"
 
 // ptf scripts used by switchos
 // cache eviction: get_evictdata_setvalid3.sh, remove_cache_lookup.sh
@@ -188,13 +189,8 @@ inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t k
 inline uint32_t serialize_get_evictdata_setvalid3(char *buf);
 inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
 inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key);
-inline uint32_t serialize_cleanup(char *buf);
-inline uint32_t serialize_enable_singlepath(char *buf);
-inline uint32_t serialize_set_snapshot_flag(char *buf);
-inline uint32_t serialize_disable_singlepath(char *buf);
 inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx);
 void parse_snapshotdata_fromptf(char *buf, uint32_t buflen, val_t *values, uint32_t *seqs, bool *stats, uint32_t record_cnt);
-inline uint32_t serialize_reset_snapshot_flag_and_reg(char *buf);
 
 int main(int argc, char **argv) {
 	if ((argc == 2) && (strcmp(argv[1], "recover") == 0)) {
@@ -729,29 +725,21 @@ void *run_switchos_snapshotserver(void *param) {
 	socklen_t ptf_addrlen = sizeof(struct sockaddr_in);
 
 	// for snapshot data from ptf
-	char *ptfbuf = new char[MAX_LARGE_BUFSIZE];
-	INVARIANT(ptfbuf != NULL);
-	memset(ptfbuf, 0, MAX_LARGE_BUFSIZE);
-	int ptf_recvsize = 0;
-	uint32_t ptf_sendsize = 0;
 	val_t * switchos_snapshot_values = NULL;
 	uint32_t * switchos_snapshot_seqs = NULL;
 	bool * switchos_snapshot_stats = NULL;
+	dynamic_array_t ptf_largebuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	
 	// for consistent snapshot data to controller
-	char *tmp_sendbuf_list[server_num];
+	dynamic_array_t tmp_sendbuf_list[server_num];
 	for (uint16_t i = 0; i < server_num; i++) {
-		tmp_sendbuf_list[i] = new char[MAX_LARGE_BUFSIZE];
-		INVARIANT(tmp_sendbuf_list[i] != NULL);
-		memset(tmp_sendbuf_list[i], 0, MAX_LARGE_BUFSIZE);
+		tmp_sendbuf_list[i].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	}
 	int tmp_send_bytes[server_num];
 	memset((void *)tmp_send_bytes, 0, server_num*sizeof(int));
 	int tmp_record_cnts[server_num];
 	memset((void *)tmp_record_cnts, 0, server_num*sizeof(int));
-	char *sendbuf = new char[MAX_LARGE_BUFSIZE];
-	INVARIANT(sendbuf != NULL);
-	memset(sendbuf, 0, MAX_LARGE_BUFSIZE);
+	dynamic_array_t sendbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 
 	printf("[switchos.snapshotserver] ready\n");
 	switchos_ready_threads++;
@@ -763,6 +751,9 @@ void *run_switchos_snapshotserver(void *param) {
 	int recvsize = 0;
 	int control_type = -1;
 	int snapshotid = -1;
+	// communicate with ptf.snapshotserver
+	char ptfbuf[MAX_BUFSIZE];
+	int ptf_recvsize = 0;
 	struct timespec stop_cachepop_t1, stop_cachepop_t2, stop_cachepop_t3, enable_singlepath_t1, enable_singlepath_t2, enable_singlepath_t3, load_snapshotdata_t1, load_snapshotdata_t2, load_snapshotdata_t3;
 	while (switchos_running) {
 		// wait for control instruction from controller.snapshotclient
@@ -791,9 +782,9 @@ void *run_switchos_snapshotserver(void *param) {
 			// (1) cleanup stale snapshot
 			
 			// cleanup dataplane: disable single path, reset flag and reg
-			ptf_sendsize = serialize_cleanup(ptfbuf);
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
-			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+			memcpy(ptfbuf, &SWITCHOS_CLEANUP, sizeof(int));
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_CLEANUP_ACK);
 			
 			// enable cache popuation/eviction
@@ -878,9 +869,9 @@ void *run_switchos_snapshotserver(void *param) {
 		else if (control_type == SNAPSHOT_PREPARE) {
 			CUR_TIME(enable_singlepath_t1);
 			// enable a single path to prepare for setting snapshot with atomicity
-			ptf_sendsize = serialize_enable_singlepath(ptfbuf);
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
-			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+			memcpy(ptfbuf, &SWITCHOS_ENABLE_SINGLEPATH, sizeof(int));
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_ENABLE_SINGLEPATH_ACK);
 
 			// sendback SNAPSHOT_PREPARE_ACK
@@ -889,9 +880,9 @@ void *run_switchos_snapshotserver(void *param) {
 		else if (control_type == SNAPSHOT_SETFLAG) {
 			// ptf sets snapshot flag as true atomically
 			//system("bash tofino/set_snapshot_flag.sh");
-			ptf_sendsize = serialize_set_snapshot_flag(ptfbuf);
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
-			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+			memcpy(ptfbuf, &SWITCHOS_SET_SNAPSHOT_FLAG, sizeof(int));
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_SET_SNAPSHOT_FLAG_ACK);
 
 			// NOTE: by now data plane starts to report case1 to controller, although switchos wlll not process case1 after SNAPSHOT_START, the special cases will be stored in UDP socket receive buffer
@@ -901,9 +892,9 @@ void *run_switchos_snapshotserver(void *param) {
 		}
 		else if (control_type == SNAPSHOT_START) {
 			// disable single path
-			ptf_sendsize = serialize_disable_singlepath(ptfbuf);
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
-			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+			memcpy(ptfbuf, &SWITCHOS_DISABLE_SINGLEPATH, sizeof(int));
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_DISABLE_SINGLEPATH_ACK);
 			CUR_TIME(enable_singlepath_t2);
 
@@ -935,10 +926,11 @@ void *run_switchos_snapshotserver(void *param) {
 				switchos_snapshot_stats = new bool[switchos_cached_empty_index_backup];
 
 				//system("bash tofino/load_snapshot_data.sh"); // load snapshot (maybe inconsistent -> need rollback later)
-				ptf_sendsize = serialize_load_snapshot_data(ptfbuf, switchos_cached_empty_index_backup);
+				uint32_t ptf_sendsize = serialize_load_snapshot_data(ptfbuf, switchos_cached_empty_index_backup);
 				udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
-				udprecvlarge_udpfrag(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
-				parse_snapshotdata_fromptf(ptfbuf, ptf_recvsize, \
+				ptf_largebuf.clear();
+				udprecvlarge_udpfrag(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptf_largebuf, 0, NULL, NULL, "switchos.snapshotserver.snapshotclient_for_ptf");
+				parse_snapshotdata_fromptf(ptf_largebuf.array(), ptf_largebuf.size(), \
 						switchos_snapshot_values, switchos_snapshot_seqs, switchos_snapshot_stats, switchos_cached_empty_index_backup);
 			}
 			CUR_TIME(load_snapshotdata_t2);
@@ -951,9 +943,9 @@ void *run_switchos_snapshotserver(void *param) {
 		else if (control_type == SNAPSHOT_GETDATA) {
 			// reset snapshot flag as false in data plane
 			//system("bash tofino/reset_snapshot_flag_and_reg.sh");
-			ptf_sendsize = serialize_reset_snapshot_flag_and_reg(ptfbuf);
-			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
-			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_LARGE_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
+			memcpy(ptfbuf, &SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG, sizeof(int));
+			udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+			udprecvfrom(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.snapshotserver.snapshotclient_for_ptf");
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK);
 
 			// finish snapshot
@@ -1019,16 +1011,20 @@ void *run_switchos_snapshotserver(void *param) {
 			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
 			memset((void *)tmp_send_bytes, 0, server_num*sizeof(int));
 			memset((void *)tmp_record_cnts, 0, server_num*sizeof(int));
+			for (size_t i = 0; i < server_num; i++) {
+				tmp_sendbuf_list[i].clear();
+			}
+			sendbuf.clear();
 			for (uint32_t tmpidx = 0; tmpidx < switchos_cached_empty_index_backup; tmpidx++) { // prepare per-server per-record data
 				uint16_t tmp_serveridx = switchos_cached_serveridxarray_backup[tmpidx];
-				char * tmpptr = tmp_sendbuf_list[tmp_serveridx];
-				uint32_t tmp_keysize = switchos_cached_keyarray_backup[tmpidx].serialize(tmpptr + tmp_send_bytes[tmp_serveridx], MAX_LARGE_BUFSIZE - tmp_send_bytes[tmp_serveridx]);
+				dynamic_array_t &tmp_sendbuf = tmp_sendbuf_list[tmp_serveridx];
+				uint32_t tmp_keysize = switchos_cached_keyarray_backup[tmpidx].dynamic_serialize(tmp_sendbuf, tmp_send_bytes[tmp_serveridx]);
 				tmp_send_bytes[tmp_serveridx] += tmp_keysize;
-				uint32_t tmp_valsize = switchos_snapshot_values[tmpidx].serialize(tmpptr + tmp_send_bytes[tmp_serveridx], MAX_LARGE_BUFSIZE - tmp_send_bytes[tmp_serveridx]);
+				uint32_t tmp_valsize = switchos_snapshot_values[tmpidx].dynamic_serialize(tmp_sendbuf, tmp_send_bytes[tmp_serveridx]);
 				tmp_send_bytes[tmp_serveridx] += tmp_valsize;
-				memcpy(tmpptr + tmp_send_bytes[tmp_serveridx], (void *)&switchos_snapshot_seqs[tmpidx], sizeof(uint32_t));
+				tmp_sendbuf.dynamic_memcpy(tmp_send_bytes[tmp_serveridx], (char *)&switchos_snapshot_seqs[tmpidx], sizeof(uint32_t));
 				tmp_send_bytes[tmp_serveridx] += sizeof(uint32_t);
-				memcpy(tmpptr + tmp_send_bytes[tmp_serveridx], (void *)&switchos_snapshot_stats[tmpidx], sizeof(bool));
+				tmp_sendbuf.dynamic_memcpy(tmp_send_bytes[tmp_serveridx], (char *)&switchos_snapshot_stats[tmpidx], sizeof(bool));
 				tmp_send_bytes[tmp_serveridx] += sizeof(bool);
 				tmp_record_cnts[tmp_serveridx] += 1;
 			}
@@ -1036,23 +1032,23 @@ void *run_switchos_snapshotserver(void *param) {
 			for (uint16_t tmp_serveridx = 0; tmp_serveridx < server_num; tmp_serveridx++) {
 				if (tmp_record_cnts[tmp_serveridx] > 0) {
 					int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int);
-					memcpy(sendbuf + total_bytes, (void *)&tmp_perserver_bytes, sizeof(int32_t));
+					sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_perserver_bytes, sizeof(int32_t));
 					total_bytes += sizeof(int32_t);
-					memcpy(sendbuf + total_bytes, (void *)&tmp_serveridx, sizeof(uint16_t));
+					sendbuf.dynamic_memcpy(total_bytes, (void *)&tmp_serveridx, sizeof(uint16_t));
 					total_bytes += sizeof(uint16_t);
-					memcpy(sendbuf + total_bytes, (void *)&tmp_record_cnts[tmp_serveridx], sizeof(int));
+					sendbuf.dynamic_memcpy(total_bytes, (void *)&tmp_record_cnts[tmp_serveridx], sizeof(int));
 					total_bytes += sizeof(int);
-					memcpy(sendbuf + total_bytes, tmp_sendbuf_list[tmp_serveridx], tmp_send_bytes[tmp_serveridx]);
+					sendbuf.dynamic_memcpy(total_bytes, tmp_sendbuf_list[tmp_serveridx], tmp_send_bytes[tmp_serveridx]);
 					total_bytes += tmp_send_bytes[tmp_serveridx];
 				}
 			}
-			memcpy(sendbuf, (void *)&SNAPSHOT_GETDATA_ACK, sizeof(int)); // set 1st 4B as SNAPSHOT_GETDATA_ACK
-			memcpy(sendbuf + sizeof(int), (void *)&total_bytes, sizeof(int32_t)); // set 2nd 4B as total_bytes
+			sendbuf.dyanmic_memcpy(0, (void *)&SNAPSHOT_GETDATA_ACK, sizeof(int)); // set 1st 4B as SNAPSHOT_GETDATA_ACK
+			sendbuf.dynamic_memcpy(0 + sizeof(int), (void *)&total_bytes, sizeof(int32_t)); // set 2nd 4B as total_bytes
 			INVARIANT(total_bytes <= MAX_LARGE_BUFSIZE);
 
 			// send rollbacked snapshot data to controller.snapshotserver
 			printf("[switchos.snapshotserver] send snapshot data to controller\n"); // TMPDEBUG
-			udpsendlarge_udpfrag(switchos_snapshotserver_udpsock, sendbuf, total_bytes, 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
+			udpsendlarge_udpfrag(switchos_snapshotserver_udpsock, sendbuf.array(), total_bytes, 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "switchos.snapshotserver");
 		}
 		else {
 			printf("[switchos.snapshotserver] invalid control type: %d\n", control_type);
@@ -1064,13 +1060,6 @@ void *run_switchos_snapshotserver(void *param) {
 	memcpy(ptfbuf, &SWITCHOS_PTF_SNAPSHOTSERVER_END, sizeof(int));
 	udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
 
-	for (uint16_t i = 0; i < server_num; i++) {
-		delete [] tmp_sendbuf_list[i];
-		tmp_sendbuf_list[i] = NULL;
-	}
-	delete [] sendbuf;
-	delete [] ptfbuf;
-	sendbuf = NULL;
 	close(switchos_snapshotserver_udpsock);
 	close(switchos_snapshotserver_snapshotclient_for_ptf_udpsock);
 	pthread_exit(nullptr);
@@ -1255,26 +1244,6 @@ inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key) {
 	return sizeof(int) + tmp_keysize;
 }
 
-inline uint32_t serialize_cleanup(char *buf) {
-	memcpy(buf, &SWITCHOS_CLEANUP, sizeof(int));
-	return sizeof(int);
-}
-
-inline uint32_t serialize_enable_singlepath(char *buf) {
-	memcpy(buf, &SWITCHOS_ENABLE_SINGLEPATH, sizeof(int));
-	return sizeof(int);
-}
-
-inline uint32_t serialize_set_snapshot_flag(char *buf) {
-	memcpy(buf, &SWITCHOS_SET_SNAPSHOT_FLAG, sizeof(int));
-	return sizeof(int);
-}
-
-inline uint32_t serialize_disable_singlepath(char *buf) {
-	memcpy(buf, &SWITCHOS_DISABLE_SINGLEPATH, sizeof(int));
-	return sizeof(int);
-}
-
 inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx) {
 	memcpy(buf, &SWITCHOS_LOAD_SNAPSHOT_DATA, sizeof(int));
 	memcpy(buf + sizeof(int), &emptyidx, sizeof(uint32_t));
@@ -1302,9 +1271,4 @@ void parse_snapshotdata_fromptf(char *buf, uint32_t buflen, \
 	}
 	memory_fence();
 	return;
-}
-
-inline uint32_t serialize_reset_snapshot_flag_and_reg(char *buf) {
-	memcpy(buf, &SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG, sizeof(int));
-	return sizeof(int);
 }
