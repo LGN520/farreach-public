@@ -319,7 +319,7 @@ uint32_t Val::serialize(char *buf, uint32_t buflen) {
 	return serialize_size; // sizeof(vallen) + vallen + [padding size]
 }
 
-uint32_t Val::dynamic_serialize(dynamic_array_t *buf, int offset) {
+uint32_t Val::dynamic_serialize(dynamic_array_t &buf, int offset) {
 	INVARIANT((val_length != 0 && val_data != nullptr) || (val_length == 0 && val_data == nullptr));
 
 	uint16_t padding_size = get_padding_size(val_length); // padding for value <= 128B 

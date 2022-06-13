@@ -635,7 +635,7 @@ void *run_controller_snapshotclient_senddata_subthread(void *param) {
 	int recvsize = 0;
 	bool is_timeout = false;
 	while (true) {
-		udpsendlarge_udpfrag(subthread_param.udpsock, controller_snapshotclient_for_server_databuf_list[subthread_param.serveridx], controller_snapshotclient_for_server_databuflen_list[subthread_param.serveridx], 0, &subthread_param.dstaddr, subthread_param.dstaddrlen, "controller.snapshotclient.senddata_subthread");
+		udpsendlarge_udpfrag(subthread_param.udpsock, controller_snapshotclient_for_server_databuf_list[subthread_param.serveridx].array(), controller_snapshotclient_for_server_databuf_list[subthread_param.serveridx].size(), 0, &subthread_param.dstaddr, subthread_param.dstaddrlen, "controller.snapshotclient.senddata_subthread");
 
 		// wait for SNAPSHOT_SENDDATA_ACK
 		is_timeout = udprecvfrom(subthread_param.udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient.senddata_subthread");

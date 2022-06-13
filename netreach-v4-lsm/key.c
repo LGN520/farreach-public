@@ -444,9 +444,9 @@ uint32_t Key::serialize(char* buf, uint32_t buflen) volatile {
 #endif
 }
 
-uint32_t Key::dynamic_serialize(dynamic_array_t* buf, int offset) {
+uint32_t Key::dynamic_serialize(dynamic_array_t& buf, int offset) {
 #ifdef LARGE_KEY
-	INVARIANT(buf != nullptr && offset >= 0);
+	INVARIANT(offset >= 0);
 	// Little-endian to big-endian
 	uint32_t bigendian_keylolo = htonl(keylolo);
 	uint32_t bigendian_keylohi = htonl(keylohi);

@@ -576,8 +576,8 @@ uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t 
 
 template<class key_t, class val_t>
 uint32_t ScanResponseSplit<key_t, val_t>::dynamic_serialize(dynamic_array_t &dynamic_data) {
-	uint32_t my_size = this->size();
-	INVARIANT(max_size >= my_size);
+	//uint32_t my_size = this->size();
+	//INVARIANT(max_size >= my_size);
 	int tmpoff = 0;
 	dynamic_data.dynamic_memcpy(tmpoff, (char *)&this->_type, sizeof(uint8_t));
 	tmpoff += sizeof(uint8_t);

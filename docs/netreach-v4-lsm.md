@@ -1157,16 +1157,10 @@
 - Hardware configure
 	+ DPDK
 		* Follow [tech_report](./tech_report.md) to confiure dpdk
-	+ UDP socket
-		* `sudo bash configure_client.sh`
-		* `sudo bash configure_server.sh`
-		* Deprecated
-			* Configure ipv4 address of NICs in client and server
-				- client: `sudo ifconfig enp129s0f1 10.0.1.11/24`
-				- server: `sudo ifconfig enp129s0f0 10.0.1.13/24`
-			* Configure arp
-				- client: `sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8`
-				- server: `sudo arp -s 10.0.1.11 3c:fd:fe:bb:ca:79`
+	+ Configure after each login
+		* `sudo bash configure_client.sh`: configure NIC ipv4 address, arp table, UDP rcvbuf size, and openfd limitation
+		* `sudo bash configure_server.sh`: configure NIC ipv4 address, arp table, UDP rcvbuf size, and openfd limitation
+		* `sudo bash configure_switchos.sh`: ocnfigure UDP rcvbuf size
 	+ Max # of open files
 		* `sudo vim /etc/security/limits.conf` to set hard and soft limits on maximum # of open files
 		* logout and re-login

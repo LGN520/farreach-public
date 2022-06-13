@@ -41,7 +41,7 @@ class Val {
   uint32_t deserialize_vallen(const char *buf, uint32_t buflen);
   uint32_t deserialize_val(const char *buf, uint32_t buflen);
   uint32_t serialize(char *buf, uint32_t buflen);
-  uint32_t dynamic_serialize(dynamic_array_t *buf, int offset);
+  uint32_t dynamic_serialize(dynamic_array_t &buf, int offset);
 
   uint16_t get_bytesnum() const;
 

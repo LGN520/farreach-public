@@ -810,7 +810,7 @@ void *run_server_snapshotdataserver(void *param) {
 				tmp_offset += tmp_keysize;
 				uint32_t tmp_valsize = tmp_record.val.deserialize(recvbuf.array() + tmp_offset, recvbuf.size() - tmp_offset);
 				tmp_offset += tmp_valsize;
-				tmp_record.seq = *((uint32_t *)(recbuf.array() + tmp_offset));
+				tmp_record.seq = *((uint32_t *)(recvbuf.array() + tmp_offset));
 				tmp_offset += sizeof(uint32_t);
 				tmp_record.stat = *((bool *)(recvbuf.array() + tmp_offset));
 				tmp_offset += sizeof(bool);
@@ -820,7 +820,7 @@ void *run_server_snapshotdataserver(void *param) {
 #ifdef DEBUG_SNAPSHOT
 			// TMPDEBUG
 			printf("[server.snapshotdataserver %d] receive snapshot data of size %d from controller\n", serveridx, tmp_inswitch_snapshot.size());
-			int debugi = 0;
+			/*int debugi = 0;
 			for (std::map<netreach_key_t, snapshot_record_t>::iterator iter = tmp_inswitch_snapshot.begin();
 					iter != tmp_inswitch_snapshot.end(); iter++) {
 				char debugbuf[MAX_BUFSIZE];
@@ -829,7 +829,7 @@ void *run_server_snapshotdataserver(void *param) {
 				printf("serialized key-value %d:\n", debugi);
 				dump_buf(debugbuf, debugkeysize+debugvalsize);
 				printf("seq: %d, stat %d\n", iter->second.seq, iter->second.stat?1:0);
-			}
+			}*/
 #endif
 
 			// update in-switch and server-side snapshot

@@ -365,7 +365,7 @@ void prepare_switchos() {
 
 	// prepare for switchos <-> ptf
 	create_udpsock(switchos_popworker_popclient_for_ptf_udpsock, false, "switchos.popworker.popclient_for_ptf");
-	create_udpsock(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, false, "switchos.snapshotserver.snapshotclient_for_ptf");
+	create_udpsock(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, false, "switchos.snapshotserver.snapshotclient_for_ptf", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 
 	// prepare specialcaseserver socket
 	prepare_udpserver(switchos_specialcaseserver_udpsock, true, switchos_specialcaseserver_port, "switchos.specialcaseserver", 0, 1000); // timeout interval: 1000us to avoid long wait time when making snapshot
@@ -964,14 +964,14 @@ void *run_switchos_snapshotserver(void *param) {
 #ifdef DEBUG_SNAPSHOT
 			// TMPDEBUG
 			printf("[before rollback] snapshot size: %d\n", switchos_cached_empty_index_backup);
-			for (size_t debugi = 0; debugi < switchos_cached_empty_index_backup; debugi++) {
+			/*for (size_t debugi = 0; debugi < switchos_cached_empty_index_backup; debugi++) {
 				char debugbuf[MAX_BUFSIZE];
 				uint32_t debugkeysize = switchos_cached_keyarray_backup[debugi].serialize(debugbuf, MAX_BUFSIZE);
 				uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
 				printf("serialized debug key-value[%d]:\n", int(debugi));
 				dump_buf(debugbuf, debugkeysize+debugvalsize);
 				printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
-			}
+			}*/
 #endif
 
 			// perform rollback (now both popserver/specicalserver will not touch specialcases)
@@ -996,14 +996,14 @@ void *run_switchos_snapshotserver(void *param) {
 #ifdef DEBUG_SNAPSHOT
 			// TMPDEBUG
 			printf("[after rollback] snapshot size: %d\n", switchos_cached_empty_index_backup);
-			for (size_t debugi = 0; debugi < switchos_cached_empty_index_backup; debugi++) {
+			/*for (size_t debugi = 0; debugi < switchos_cached_empty_index_backup; debugi++) {
 				char debugbuf[MAX_BUFSIZE];
 				uint32_t debugkeysize = switchos_cached_keyarray_backup[debugi].serialize(debugbuf, MAX_BUFSIZE);
 				uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
 				printf("serialized debug key-value[%d]:\n", int(debugi));
 				dump_buf(debugbuf, debugkeysize+debugvalsize);
 				printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
-			}
+			}*/
 #endif
 
 			// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes, per-server data>
@@ -1034,16 +1034,16 @@ void *run_switchos_snapshotserver(void *param) {
 					int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int);
 					sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_perserver_bytes, sizeof(int32_t));
 					total_bytes += sizeof(int32_t);
-					sendbuf.dynamic_memcpy(total_bytes, (void *)&tmp_serveridx, sizeof(uint16_t));
+					sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_serveridx, sizeof(uint16_t));
 					total_bytes += sizeof(uint16_t);
-					sendbuf.dynamic_memcpy(total_bytes, (void *)&tmp_record_cnts[tmp_serveridx], sizeof(int));
+					sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_record_cnts[tmp_serveridx], sizeof(int));
 					total_bytes += sizeof(int);
-					sendbuf.dynamic_memcpy(total_bytes, tmp_sendbuf_list[tmp_serveridx], tmp_send_bytes[tmp_serveridx]);
+					sendbuf.dynamic_memcpy(total_bytes, tmp_sendbuf_list[tmp_serveridx].array(), tmp_send_bytes[tmp_serveridx]);
 					total_bytes += tmp_send_bytes[tmp_serveridx];
 				}
 			}
-			sendbuf.dyanmic_memcpy(0, (void *)&SNAPSHOT_GETDATA_ACK, sizeof(int)); // set 1st 4B as SNAPSHOT_GETDATA_ACK
-			sendbuf.dynamic_memcpy(0 + sizeof(int), (void *)&total_bytes, sizeof(int32_t)); // set 2nd 4B as total_bytes
+			sendbuf.dynamic_memcpy(0, (char *)&SNAPSHOT_GETDATA_ACK, sizeof(int)); // set 1st 4B as SNAPSHOT_GETDATA_ACK
+			sendbuf.dynamic_memcpy(0 + sizeof(int), (char *)&total_bytes, sizeof(int32_t)); // set 2nd 4B as total_bytes
 			INVARIANT(total_bytes <= MAX_LARGE_BUFSIZE);
 
 			// send rollbacked snapshot data to controller.snapshotserver
