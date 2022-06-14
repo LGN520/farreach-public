@@ -22,8 +22,8 @@ typedef ConcurrentSet<netreach_key_t> concurrent_set_t;
 
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   uint16_t serveridx;
-  size_t throughput;
-  std::vector<double> latency_list;
+  std::vector<double> process_latency_list;
+  std::vector<double> wait_latency_list;
 };
 typedef ServerWorkerParam server_worker_param_t;
 
@@ -246,6 +246,9 @@ void *run_server_worker(void * param) {
   while (!transaction_running) {
   }
 
+  struct timespec process_t1, process_t2, process_t3;
+  struct timespec wait_t1, wait_t2, wait_t3;
+  bool is_first_pkt = true;
   while (transaction_running) {
 
 	bool is_timeout = udprecvfrom(server_worker_udpsock_list[serveridx], buf, MAX_BUFSIZE, 0, &client_addr, &client_addrlen, recv_size, "server.worker");
@@ -253,10 +256,15 @@ void *run_server_worker(void * param) {
 		continue; // continue to check transaction_running
 	}
 
-	struct timespec t1, t2, t3;
-	CUR_TIME(t1);
+	CUR_TIME(process_t1);
 
 	packet_type_t pkt_type = get_packet_type(buf, recv_size);
+
+	if (!is_first_pkt && pkt_type != packet_type_t::WARMUPREQ && pkt_type != packet_type_t::LOADREQ) {
+		CUR_TIME(wait_t2);
+		DELTA_TIME(wait_t2, wait_t1, wait_t3);
+		thread_param.wait_latency_list.push_back(GET_MICROSECOND(wait_t3));
+	}
 
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
@@ -570,10 +578,12 @@ void *run_server_worker(void * param) {
 	}
 
 	if (likely(pkt_type != packet_type_t::WARMUPREQ && pkt_type != packet_type_t::LOADREQ)) {
-		CUR_TIME(t2);
-		DELTA_TIME(t2, t1, t3);
-		thread_param.latency_list.push_back(GET_MICROSECOND(t3));
-		thread_param.throughput++;
+		CUR_TIME(wait_t1);
+		is_first_pkt = false;
+
+		CUR_TIME(process_t2);
+		DELTA_TIME(process_t2, process_t1, process_t3);
+		thread_param.process_latency_list.push_back(GET_MICROSECOND(process_t3));
 	}
 
   } // end of while(transaction_running)

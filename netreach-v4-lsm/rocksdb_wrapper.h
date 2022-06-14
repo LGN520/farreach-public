@@ -21,15 +21,17 @@
 #include "snapshot_record.h"
 #include "io_helper.h"
 
-#define MEMTABLE_SIZE 4 * 1024 * 1024
-#define MAX_MEMTABLE_NUM 2
-#define SST_SIZE 4 * 1024 * 1024
+// Default configuration of rocksdb
+#define MEMTABLE_SIZE 64 * 1024 * 1024 // x
+#define MIN_IMMUTABLE_FLUSH_NUM 4
+#define MAX_MEMTABLE_IMMUTABLE_NUM 5
+#define SST_SIZE 64 * 1024 * 1024 // x
 #define COMPACTION_THREAD_NUM 2
-#define LEVEL0_SST_NUM 8
-#define LEVEL_NUM 4
-#define LEVEL1_TOTAL_SIZE 32 * 1024 * 1024
-#define LEVEL_MULTIPLIER 8
-#define BLOCKCACHE_SIZE 4 * 1024 * 1024
+#define LEVEL0_SST_NUM 4
+#define LEVEL_NUM 7
+#define LEVEL1_TOTAL_SIZE 256 * 1024 * 1024 // 4x
+#define LEVEL_MULTIPLIER 10
+#define BLOCKCACHE_SIZE 64 * 1024 * 1024 // x
 #define BLOCKCACHE_SHARDBITS 4
 #define SYNC_WRITE false
 

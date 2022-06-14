@@ -13,7 +13,10 @@ void RocksdbWrapper::prepare_rocksdb() {
   rocksdb_options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options)); // Block cache with uncompressed blocks
   rocksdb_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
   rocksdb_options.write_buffer_size = MEMTABLE_SIZE; // single memtable size
-  rocksdb_options.max_write_buffer_number = MAX_MEMTABLE_NUM; // memtable number
+  // min # of immutable to flush into disk: if # < min, no flush; if # >= min, flush
+  rocksdb_options.min_write_buffer_number_to_merge = MIN_IMMUTABLE_FLUSH_NUM;
+  // max # of memtable and immutable: if # = max-1, limit write speed; if # = max, forbid write operations
+  rocksdb_options.max_write_buffer_number = MAX_MEMTABLE_IMMUTABLE_NUM;
   rocksdb_options.target_file_size_base = SST_SIZE; // single sst size
   rocksdb_options.max_background_compactions = COMPACTION_THREAD_NUM; // compaction thread number
   rocksdb_options.level0_file_num_compaction_trigger = LEVEL0_SST_NUM; // sst number in level0

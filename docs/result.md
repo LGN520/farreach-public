@@ -22,6 +22,8 @@
 				* If server thread only accesses memory, server 4 should be 4X thpt of server 1
 				* If server thread only accesses disk, server 4 should be 1X thpt of server 1(no change)
 		- FarReach w/ CPU+disk operation (10M queries)
+			+ Server 1 (emulated thpt: 1.43X; normalized thpt: 2.3X)
+				* Client 8: 0.0389 MOPS; client 32: 0.0395 MOPS
 			+ Server 4 (emulated thpt: 2.45X; normalized thpt: 5X)
 				* Client 32: 0.13 MOPS; client 64: 0.13 MOPS
 			+ Server 8 (emulated thpt: 3.5X; normalized thpt: 8.2X)

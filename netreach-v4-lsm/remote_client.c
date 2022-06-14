@@ -139,9 +139,22 @@ void run_benchmark() {
 	struct timespec total_t1, total_t2, total_t3;
 	running = true;
 
+	std::vector<int> perinterval_totalpktcnts;
+	int interval_usecs = 5 * 1000 * 1000; // 5s
 	CUR_TIME(total_t1);
 	if (workload_mode == 0) { // send all workloads in static mode
-		while (finish_threads < client_num) usleep(10 * 1000); // 10ms
+		while (finish_threads < client_num) {
+			CUR_TIME(total_t2);
+			DELTA_TIME(total_t2, total_t1, total_t3);
+			if (GET_MICROSECOND(total_t3) >= (perinterval_totalpktcnts.size()+1) * interval_usecs) {
+				int curinterval_totalpktcnt = 0;
+				for (size_t i = 0; i < client_num; i++) {
+					curinterval_totalpktcnt += fg_params[i].rsp_latency_list.size();
+				}
+				perinterval_totalpktcnts.push_back(curinterval_totalpktcnt);
+			}
+			usleep(10 * 1000); // 10ms
+		}
 	}
 	else { // send enough periods in dynamic mode
 		const int sleep_usecs = 1000; // 1000us = 1ms
@@ -224,7 +237,13 @@ void run_benchmark() {
 	dump_latency(wait_latency_list, "wait_latency_list");
 	dump_latency(total_latency_list, "total_latency_list");
 
-	// Dump pktcnt statistics
+	// Dump throughput statistics
+	printf("thpt interval: %d s\n", interval_usecs/1000/1000);
+	int previnterval_pktcnt = 0;
+	for (size_t i = 0; i < perinterval_totalpktcnts.size(); i++) {
+		printf("interval[%d]: throughput = %f MOPS\n", i, double(perinterval_totalpktcnts[i] - previnterval_pktcnt)/(interval_usecs/1000/1000)/1024.0/1024.0);
+		previnterval_pktcnt = perinterval_totalpktcnts[i];
+	}
 	int total_pktcnt = total_latency_list.size();
 	printf("client-side total pktcnt: %d, total time: %f s, total thpt: %f MOPS\n", total_pktcnt, total_secs, double(total_pktcnt) / total_secs / 1024.0 / 1024.0);
 	

@@ -119,8 +119,8 @@ void transaction_main() {
 	}
 	for (uint16_t worker_i = 0; worker_i < server_num; worker_i++) {
 		server_worker_params[worker_i].serveridx = worker_i;
-		server_worker_params[worker_i].throughput = 0;
-		server_worker_params[worker_i].latency_list.clear();
+		server_worker_params[worker_i].process_latency_list.clear();
+		server_worker_params[worker_i].wait_latency_list.clear();
 		ret = pthread_create(&worker_threads[worker_i], nullptr, run_server_worker, (void *)&server_worker_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.worker:" << ret);
@@ -170,36 +170,42 @@ void transaction_main() {
 	transaction_running = false;
 
 	/* Processing Statistics */
-	//COUT_THIS("Server-side aggregate throughput: " << receiver_param.overall_thpt);
-	size_t overall_thpt = 0;
-	std::vector<double> load_balance_ratio_list;
+
+	// dump per-server load ratio
+	size_t overall_pktcnt = 0;
 	for (size_t i = 0; i < server_num; i++) {
-		overall_thpt += server_worker_params[i].throughput;
+		overall_pktcnt += server_worker_params[i].process_latency_list.size();
 	}
-	COUT_THIS("Server-side overall throughput: " << overall_thpt);
-	double avg_per_server_thpt = double(overall_thpt) / double(server_num);
+	COUT_THIS("Server-side overall pktcnt: " << overall_pktcnt);
+	double avg_per_server_thpt = double(overall_pktcnt) / double(server_num);
 	for (size_t i = 0; i < server_num; i++) {
-		load_balance_ratio_list.push_back(double(server_worker_params[i].throughput) / avg_per_server_thpt);
+		double tmp_load_balance_ratio = double(server_worker_params[i].process_latency_list.size()) / avg_per_server_thpt;
+		COUT_THIS("Load balance ratio of server " << i << ": " << tmp_load_balance_ratio);
 	}
-	for (size_t i = 0; i < load_balance_ratio_list.size(); i++) {
-		COUT_THIS("Load balance ratio of server " << i << ": " << load_balance_ratio_list[i]);
-	}
-	std::vector<double> worker_latency_list;
-	std::vector<int> worker_pktcnt_list;
+
+	// dump process latency
+	std::vector<double> worker_process_latency_list;
 	for (size_t i = 0; i < server_num; i++) {
-		worker_latency_list.insert(worker_latency_list.end(), server_worker_params[i].latency_list.begin(), server_worker_params[i].latency_list.end());
-		worker_pktcnt_list.push_back(server_worker_params[i].latency_list.size());
+		printf("[server %d]\n", i);
+		std::string tmp_label;
+		GET_STRING(tmp_label, "worker_process_latency_list " << i);
+		dump_latency(server_worker_params[i].process_latency_list, tmp_label);
+
+		worker_process_latency_list.insert(worker_process_latency_list.end(), server_worker_params[i].process_latency_list.begin(), server_worker_params[i].process_latency_list.end());
 	}
-	dump_latency(worker_latency_list, "worker_latency_list");
-	printf("Per-server pktcnt: ");
+	dump_latency(worker_process_latency_list, "worker_process_latency_list overall");
+
+	// dump wait latency
+	std::vector<double> worker_wait_latency_list;
 	for (size_t i = 0; i < server_num; i++) {
-		if (i != server_num - 1) {
-			printf("%d ", worker_pktcnt_list[i]);
-		}
-		else {
-			printf("%d\n", worker_pktcnt_list[i]);
-		}
+		printf("[server %d]\n", i);
+		std::string tmp_label;
+		GET_STRING(tmp_label, "worker_wait_latency_list " << i);
+		dump_latency(server_worker_params[i].wait_latency_list, tmp_label);
+
+		worker_wait_latency_list.insert(worker_wait_latency_list.end(), server_worker_params[i].wait_latency_list.begin(), server_worker_params[i].wait_latency_list.end());
 	}
+	dump_latency(worker_wait_latency_list, "worker_wait_latency_list overall");
 
 	void *status;
 	printf("wait for server.workers\n");
