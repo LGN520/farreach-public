@@ -184,6 +184,7 @@ void transaction_main() {
 	}
 
 	// dump process latency
+	printf("\nprocess latency:\n");
 	std::vector<double> worker_process_latency_list;
 	for (size_t i = 0; i < server_num; i++) {
 		printf("[server %d]\n", i);
@@ -193,9 +194,11 @@ void transaction_main() {
 
 		worker_process_latency_list.insert(worker_process_latency_list.end(), server_worker_params[i].process_latency_list.begin(), server_worker_params[i].process_latency_list.end());
 	}
+	printf("[overall]\n");
 	dump_latency(worker_process_latency_list, "worker_process_latency_list overall");
 
 	// dump wait latency
+	printf("\nwait latency:\n");
 	std::vector<double> worker_wait_latency_list;
 	for (size_t i = 0; i < server_num; i++) {
 		printf("[server %d]\n", i);
@@ -205,6 +208,7 @@ void transaction_main() {
 
 		worker_wait_latency_list.insert(worker_wait_latency_list.end(), server_worker_params[i].wait_latency_list.begin(), server_worker_params[i].wait_latency_list.end());
 	}
+	printf("[overall]\n");
 	dump_latency(worker_wait_latency_list, "worker_wait_latency_list overall");
 
 	void *status;

@@ -656,11 +656,12 @@ void *run_server_evictserver(void *param) {
 		server_cached_keyset_list[tmp_serveridx].erase(tmp_cache_evict_ptr->key()); // NOTE: no contention
 
 		// update in-memory KVS if necessary
+		// NOTE: we need to check seq to avoid from overwriting normal data
 		if (tmp_cache_evict_ptr->stat()) { // put
-			db_wrappers[tmp_serveridx].put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq());
+			db_wrappers[tmp_serveridx].put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq(), true);
 		}
 		else { // del
-			db_wrappers[tmp_serveridx].remove(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->seq());
+			db_wrappers[tmp_serveridx].remove(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->seq(), true);
 		}
 
 		// send CACHE_EVICT_ACK to controller.evictserver.evictclient

@@ -39,9 +39,8 @@
 struct alignas(CACHELINE_SIZE) FGParam {
 	uint16_t thread_id;
 	std::map<uint16_t, int> nodeidx_pktcnt_map;
-	std::vector<double> req_latency_list;
-	std::vector<double> rsp_latency_list;
-	std::vector<double> wait_latency_list;
+	std::vector<double> process_latency_list;
+	std::vector<double> send_latency_list;
 };
 typedef FGParam fg_param_t;
 
@@ -123,9 +122,8 @@ void run_benchmark() {
 	for (uint16_t worker_i = 0; worker_i < client_num; worker_i++) {
 		fg_params[worker_i].thread_id = worker_i;
 		fg_params[worker_i].nodeidx_pktcnt_map.clear();
-		fg_params[worker_i].req_latency_list.clear();
-		fg_params[worker_i].rsp_latency_list.clear();
-		fg_params[worker_i].wait_latency_list.clear();
+		fg_params[worker_i].process_latency_list.clear();
+		fg_params[worker_i].send_latency_list.clear();
 		int ret = pthread_create(&threads[worker_i], nullptr, run_fg, (void *)&fg_params[worker_i]);
 		COUT_THIS("[client] Lanuch client " << worker_i)
 	}
@@ -149,7 +147,7 @@ void run_benchmark() {
 			if (GET_MICROSECOND(total_t3) >= (perinterval_totalpktcnts.size()+1) * interval_usecs) {
 				int curinterval_totalpktcnt = 0;
 				for (size_t i = 0; i < client_num; i++) {
-					curinterval_totalpktcnt += fg_params[i].rsp_latency_list.size();
+					curinterval_totalpktcnt += fg_params[i].process_latency_list.size();
 				}
 				perinterval_totalpktcnts.push_back(curinterval_totalpktcnt);
 			}
@@ -211,7 +209,7 @@ void run_benchmark() {
 
 	// Process latency statistics
 	std::map<uint16_t, int> nodeidx_pktcnt_map;
-	std::vector<double> req_latency_list, rsp_latency_list, wait_latency_list;
+	std::vector<double> total_latency_list;
 	for (size_t i = 0; i < client_num; i++) {
 		for (std::map<uint16_t, int>::iterator iter = fg_params[i].nodeidx_pktcnt_map.begin(); \
 				iter != fg_params[i].nodeidx_pktcnt_map.end(); iter++) {
@@ -222,20 +220,32 @@ void run_benchmark() {
 				nodeidx_pktcnt_map[iter->first] += iter->second;
 			}
 		}
-		req_latency_list.insert(req_latency_list.end(), fg_params[i].req_latency_list.begin(), fg_params[i].req_latency_list.end());
-		rsp_latency_list.insert(rsp_latency_list.end(), fg_params[i].rsp_latency_list.begin(), fg_params[i].rsp_latency_list.end());
-		wait_latency_list.insert(wait_latency_list.end(), fg_params[i].wait_latency_list.begin(), fg_params[i].wait_latency_list.end());
+		total_latency_list.insert(total_latency_list.end(), fg_params[i].process_latency_list.begin(), fg_params[i].process_latency_list.end());
 	}
-	std::vector<double> total_latency_list(req_latency_list.size());
-	for (size_t i = 0; i < req_latency_list.size(); i++) {
-		total_latency_list[i] = req_latency_list[i] + rsp_latency_list[i] + wait_latency_list[i];
+	double avg_send_latency_list[client_num];
+	for (size_t i = 0; i < client_num; i++) {
+		avg_send_latency_list[i] = 0.0;
+	}
+	for (size_t i = 0; i < client_num; i++) {
+		for (size_t j = 0; j < fg_params[i].send_latency_list.size(); j++) {
+			avg_send_latency_list[i] += fg_params[i].send_latency_list[j];
+		}
+	}
+	for (size_t i = 0; i < client_num; i++) {
+		avg_send_latency_list[i] /= fg_params[i].send_latency_list.size();
 	}
 
 	// Dump latency statistics
-	dump_latency(req_latency_list, "req_latency_list");
-	dump_latency(rsp_latency_list, "rsp_latency_list");
-	dump_latency(wait_latency_list, "wait_latency_list");
 	dump_latency(total_latency_list, "total_latency_list");
+	printf("average send latency list: ");
+	for (size_t i = 0; i < client_num; i++) {
+		if (i != client_num - 1) {
+			printf("%f ", avg_send_latency_list[i]);
+		}
+		else {
+			printf("%f\n", avg_send_latency_list[i]);
+		}
+	}
 
 	// Dump throughput statistics
 	printf("thpt interval: %d s\n", interval_usecs/1000/1000);
@@ -377,6 +387,7 @@ void *run_fg(void *param) {
 	int recv_size = 0;
 	int clientsock = -1;
 	create_udpsock(clientsock, true, "ycsb_remote_client", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+	//create_udpsock(clientsock, true, "ycsb_remote_client", 0, CLIENT_SOCKET_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
 	struct sockaddr_in server_addr;
 	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
@@ -409,9 +420,11 @@ void *run_fg(void *param) {
 			break;
 		}
 
-		struct timespec req_t1, req_t2, req_t3, rsp_t1, rsp_t2, rsp_t3, final_t3, wait_t1, wait_t2, wait_t3;
+		struct timespec process_t1, process_t2, process_t3, send_t1, send_t2, send_t3;
 		uint16_t tmp_nodeidx_foreval = 0;
 		while (true) {
+			CUR_TIME(process_t1);
+
 			tmpkey = iter->key();
 			//printf("expected server of key %x: %d\n", tmpkey.keyhihi, tmpkey.get_hashpartition_idx(server_num));
 			//printf("expected server of key %x: %d\n", tmpkey.keyhihi, tmpkey.get_rangepartition_idx(server_num));
@@ -424,7 +437,6 @@ void *run_fg(void *param) {
 			}
 
 			if (iter->type() == uint8_t(packet_type_t::GETREQ)) { // get
-				CUR_TIME(req_t1);
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				get_request_t req(tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
@@ -432,10 +444,10 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
+				CUR_TIME(send_t1);
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
-				CUR_TIME(req_t2);
+				CUR_TIME(send_t2);
 
-				CUR_TIME(wait_t1);
 				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
@@ -444,18 +456,14 @@ void *run_fg(void *param) {
 					continue;
 				}
 				INVARIANT(recv_size > 0);
-				CUR_TIME(wait_t2);
 
-				CUR_TIME(rsp_t1);
 				get_response_t rsp(buf, recv_size);
 				tmp_nodeidx_foreval = rsp.nodeidx_foreval();
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
-				CUR_TIME(rsp_t2);
 			}
 			else if (iter->type() == uint8_t(packet_type_t::PUTREQ)) { // update or insert
 				tmpval = iter->val();
 
-				CUR_TIME(req_t1);
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
@@ -474,10 +482,10 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
+				CUR_TIME(send_t1);
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
-				CUR_TIME(req_t2);
+				CUR_TIME(send_t2);
 
-				CUR_TIME(wait_t1);
 				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
@@ -486,16 +494,12 @@ void *run_fg(void *param) {
 					continue;
 				}
 				INVARIANT(recv_size > 0);
-				CUR_TIME(wait_t2);
 
-				CUR_TIME(rsp_t1);
 				put_response_t rsp(buf, recv_size);
 				tmp_nodeidx_foreval = rsp.nodeidx_foreval();
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
-				CUR_TIME(rsp_t2);
 			}
 			else if (iter->type() == uint8_t(packet_type_t::DELREQ)) {
-				CUR_TIME(req_t1);
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				del_request_t req(tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
@@ -503,10 +507,10 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
+				CUR_TIME(send_t1);
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
-				CUR_TIME(req_t2);
+				CUR_TIME(send_t2);
 
-				CUR_TIME(wait_t1);
 				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
@@ -515,13 +519,10 @@ void *run_fg(void *param) {
 					continue;
 				}
 				INVARIANT(recv_size > 0);
-				CUR_TIME(wait_t2);
 
-				CUR_TIME(rsp_t1);
 				del_response_t rsp(buf, recv_size);
 				tmp_nodeidx_foreval = rsp.nodeidx_foreval();
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
-				CUR_TIME(rsp_t2);
 			}
 			else if (iter->type() == uint8_t(packet_type_t::SCANREQ)) {
 				//netreach_key_t endkey = generate_endkey(tmpkey);
@@ -530,7 +531,6 @@ void *run_fg(void *param) {
 				size_t last_server_idx = get_server_idx(endkey);
 				size_t split_num = last_server_idx - first_server_idx + 1;*/
 
-				CUR_TIME(req_t1);
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				//scan_request_t req(tmpkey, endkey, range_num);
 				scan_request_t req(tmpkey, endkey);
@@ -540,17 +540,15 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
+				CUR_TIME(send_t1);
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
-				CUR_TIME(req_t2);
+				CUR_TIME(send_t2);
 
 				size_t received_scannum = 0;
 				dynamic_array_t *scanbufs = NULL;
-				CUR_TIME(wait_t1);
 				//is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
 				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
-				CUR_TIME(wait_t2);
 
-				CUR_TIME(rsp_t1);
 				int snapshotid = -1;
 				int totalnum = 0;
 				for (int tmpscanidx = 0; tmpscanidx < received_scannum; tmpscanidx++) {
@@ -572,7 +570,6 @@ void *run_fg(void *param) {
 				}
 				COUT_VAR(received_scannum);
 				COUT_VAR(totalnum);
-				CUR_TIME(rsp_t2);
 
 				if (scanbufs != NULL) {
 					delete [] scanbufs;
@@ -590,6 +587,7 @@ void *run_fg(void *param) {
 			break;
 		} // end of while(true)
 		is_timeout = false;
+		CUR_TIME(process_t2);
 
 		if (unlikely(!running)) {
 			break;
@@ -603,29 +601,26 @@ void *run_fg(void *param) {
 			thread_param.nodeidx_pktcnt_map[tmp_nodeidx_foreval] += 1;
 		}
 
-		DELTA_TIME(req_t2, req_t1, req_t3);
-		DELTA_TIME(rsp_t2, rsp_t1, rsp_t3);
-		DELTA_TIME(wait_t2, wait_t1, wait_t3);
-		double req_time = GET_MICROSECOND(req_t3);
-		double rsp_time = GET_MICROSECOND(rsp_t3);
-		double wait_time = GET_MICROSECOND(wait_t3);
+		DELTA_TIME(process_t2, process_t1, process_t3);
+		DELTA_TIME(send_t2, send_t1, send_t3);
+		double process_time = GET_MICROSECOND(process_t3);
+		double send_time = GET_MICROSECOND(send_t3);
+		thread_param.process_latency_list.push_back(process_time);
+		thread_param.send_latency_list.push_back(send_time);
 
 		//SUM_TIME(req_t3, rsp_t3, final_t3); // time of sending req and receiving rsp
 		//double final_time = GET_MICROSECOND(final_t3);
-		double final_time = req_time + rsp_time;
+		/*double final_time = req_time + rsp_time;
 		if (wait_time > dpdk_polling_time) {
 			// wait_time: in-switch queuing + server-side latency + dpdk overhead + client-side packet dispatching (receiver) + schedule cost for PMD (unnecessary)
 			final_time += (wait_time - dpdk_polling_time); // time of in-switch queuing and server-side latency
-		}
+		}*/
 
 		//thread_param.sum_latency += final_time;
-		thread_param.req_latency_list.push_back(req_time);
-		thread_param.rsp_latency_list.push_back(rsp_time);
-		thread_param.wait_latency_list.push_back(wait_time);
 
 		// Rate limit (within each rate_limit_period, we can send at most per_client_per_period_max_sending_rate reqs)
-		cur_sending_rate++;
-		cur_sending_time += final_time;
+		//cur_sending_rate++;
+		//cur_sending_time += final_time;
 		/*if (cur_sending_rate >= per_client_per_period_max_sending_rate) {
 			if (cur_sending_time < rate_limit_period) {
 				usleep(rate_limit_period - cur_sending_time);

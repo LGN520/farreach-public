@@ -133,6 +133,8 @@ bool RocksdbWrapper::force_multiput(netreach_key_t *keys, val_t *vals, int maxid
 		std::string keystr = keys[i].to_string_for_rocksdb();
 		std::string valstr = vals[i].to_string_for_rocksdb(0);
 		s = txn->Put(keystr, valstr);
+	
+		perkey_seqcache.put(keys[i], 0);
 	}
 	s = txn->Commit();
 	INVARIANT(s.ok());
@@ -154,6 +156,8 @@ bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
 	s = txn->Put(keystr, valstr);
 	s = txn->Commit();
 	INVARIANT(s.ok());
+
+	perkey_seqcache.put(key, 0);
 
 	delete txn;
 	txn = NULL;
@@ -185,6 +189,8 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t &seq) {
 		seq = val.from_string_for_rocksdb(valstr);
 		INVARIANT(s.ok());
 		stat = true;
+
+		perkey_seqcache.put(key, seq);
 	}
 
 	uint32_t deleted_seq = 0;
@@ -200,13 +206,12 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t &seq) {
 	return stat;
 }
 
-bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool checkseq) {
+bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq) {
 	//mutexlock.lock();
 	while (true) {
 		if (rwlock.try_lock()) break;
 	}
 
-	// check and update seq of deleted keys
 	uint32_t deleted_seq = 0;
 	bool is_deleted = deleted_set.check_and_remove(key, seq, &deleted_seq);
 	if (is_deleted) {
@@ -224,46 +229,50 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 	rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
 	std::string keystr = key.to_string_for_rocksdb();
 
-	// check seq of undeleted keys if necessary
-	if (checkseq) {
-		uint32_t tmp_seq = 0;
+	uint32_t tmp_seq = 0;
+	bool res = perkey_seqcache.get(key, tmp_seq);
+	if (!res) {
 		std::string tmp_valstr;
 		s = txn->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
 		if (tmp_valstr != "") {
 			val_t tmp_val;
 			tmp_seq = tmp_val.from_string_for_rocksdb(tmp_valstr);
-			if (tmp_seq > seq) {
-				s = txn->Commit();
-				INVARIANT(s.ok());
-				delete txn;
-				txn = NULL;
-
-				//mutexlock.unlock();
-				rwlock.unlock();
-				return true;
-			}
 		}
 	}
+	if (tmp_seq > seq) {
+		s = txn->Commit();
+		INVARIANT(s.ok());
+		delete txn;
+		txn = NULL;
 
-	// update seq of undeleted keys
+		if (!res) {
+			perkey_seqcache.put(key, tmp_seq);
+		}
+
+		//mutexlock.unlock();
+		rwlock.unlock();
+		return true;
+	}
+
 	s = txn->Put(keystr, valstr);
 	s = txn->Commit();
 	INVARIANT(s.ok());
 	delete txn;
 	txn = NULL;
 
+	perkey_seqcache.put(key, seq);
+
 	//mutexlock.unlock();
 	rwlock.unlock();
 	return true;
 }
 
-bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
+bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq) {
 	//mutexlock.lock();
 	while (true) {
 		if (rwlock.try_lock()) break;
 	}
 
-	// check and update seq of deleted keys
 	uint32_t deleted_seq = 0;
 	bool is_deleted = deleted_set.check_and_remove(key, seq, &deleted_seq);
 	if (is_deleted) {
@@ -280,33 +289,38 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 	rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
 	std::string keystr = key.to_string_for_rocksdb();
 
-	// check seq of undeleted keys if necessary
-	if (checkseq) {
-		uint32_t tmp_seq = 0;
+	uint32_t tmp_seq = 0;
+	bool res = perkey_seqcache.get(key, tmp_seq);
+	if (!res) {
 		std::string tmp_valstr;
 		s = txn->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
 		if (tmp_valstr != "") {
 			val_t tmp_val;
 			tmp_seq = tmp_val.from_string_for_rocksdb(tmp_valstr);
-			if (tmp_seq > seq) {
-				s = txn->Commit();
-				INVARIANT(s.ok());
-				delete txn;
-				txn = NULL;
-
-				//mutexlock.unlock();
-				rwlock.unlock();
-				return true;
-			}
 		}
 	}
+	if (tmp_seq > seq) {
+		s = txn->Commit();
+		INVARIANT(s.ok());
+		delete txn;
+		txn = NULL;
 
-	// update seq pf undeleted keys
+		if (!res) {
+			perkey_seqcache.put(key, tmp_seq);
+		}
+
+		//mutexlock.unlock();
+		rwlock.unlock();
+		return true;
+	}
+
 	s = txn->Delete(keystr);
 	s = txn->Commit();
 	INVARIANT(s.ok());
 	delete txn;
 	txn = NULL;
+
+	perkey_seqcache.remove(key);
 
 	deleted_set.add(key, seq);
 

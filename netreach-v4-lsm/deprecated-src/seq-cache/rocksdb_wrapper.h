@@ -20,6 +20,7 @@
 #include "deleted_set_impl.h"
 #include "snapshot_record.h"
 #include "io_helper.h"
+#include "seq_cache.h"
 
 // Default configuration of rocksdb
 #define MEMTABLE_SIZE 64 * 1024 * 1024 // x
@@ -56,14 +57,8 @@ class RocksdbWrapper {
 		
 		// transaction phase (per-server worker and evictserver touch both rocksdb and deleted set; need mutex for atomicity)
 		bool get(netreach_key_t key, val_t &val, uint32_t &seq);
-		// NOTE: only normal pkt and evicted pkt can udpate per-key seq
-		// (1) for two normal pkts, we use the order of arriving server as the final order while not comparing the seqs assigned by switch, which does not undermine serializability (besides, packet reordering seems impossible between switch and server due to a single path and FIFO manner of inswitch queue)-> not need to check seq
-		// (2) for two evicted pkts, controller guarantees that they cannot arrive at the same time (one-by-one manner)
-		// (3) for normal pkt and evicted pkt
-		// (3-1) normal pkt with smaller seq cannot overwrite evicted pkt: (a) if normal pkt arrives at switch between cache population and cache eviction, it must be processed by switch instead arriving at server; (b) if normal pkt arrives at switch after cache eviction, the seq must be larger than that of evicted pkt; (c) if normal pkt arrives at switch before cache population, it is impossible to arrive at server after evicted pkt, as the time of cache population and cache eviction has passed, which is much longer than normal RTT!
-		// (3-2) evicted pkt with smaller seq could overwrite normal pkt as we use non-blocking cache population/eviction -> to solve it, we only need to check seq for evicted pkt
-		bool put(netreach_key_t key, val_t val, uint32_t seq, bool checkseq=false);
-		bool remove(netreach_key_t key, uint32_t seq, bool checkseq=false);
+		bool put(netreach_key_t key, val_t val, uint32_t seq);
+		bool remove(netreach_key_t key, uint32_t seq);
 
 		// transaction phase (per-server worker, evictserver, and consnapshotserver touch both rocksdb and deleted set; need mutex for atomicity)
 		void clean_snapshot(int tmpsnapshotid);
@@ -87,6 +82,7 @@ class RocksdbWrapper {
 		rocksdb::TransactionDB *db_ptr = NULL;
 		// NOTE: deleted_set_t and seq_cache_t do not support concurrency control, which is guaranteed by RocksdbWrapper::rwlock
 		deleted_set_t deleted_set; // seqs of recently deleted keys (flush into disk at each snapshot period for reliability)
+		seq_cache_t perkey_seqcache; // cache seq of undeleted keys from rocksdb
 
 		int snapshotid = -1; // to locate snapshot files
 

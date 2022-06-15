@@ -12,6 +12,7 @@
 #include "dynamic_array.h"
 
 #define SOCKET_TIMEOUT 5 // 5s
+#define CLIENT_SOCKET_TIMEOUT_USECS 10000 // 10ms
 
 // payload only used by end-hosts -> linux kernel performs ip-level fragmentation
 // max payload size to avoid udp fragmentation (manual udp fragmentation): 65535(ipmax) - 20(iphdr) - 8(udphdr)
