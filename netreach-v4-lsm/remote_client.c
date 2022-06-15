@@ -386,8 +386,8 @@ void *run_fg(void *param) {
 	int req_size = 0;
 	int recv_size = 0;
 	int clientsock = -1;
-	create_udpsock(clientsock, true, "ycsb_remote_client", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
-	//create_udpsock(clientsock, true, "ycsb_remote_client", 0, CLIENT_SOCKET_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+	//create_udpsock(clientsock, true, "ycsb_remote_client", 1, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+	create_udpsock(clientsock, true, "ycsb_remote_client", 0, CLIENT_SOCKET_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
 	struct sockaddr_in server_addr;
 	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
