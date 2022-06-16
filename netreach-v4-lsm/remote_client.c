@@ -40,7 +40,9 @@ struct alignas(CACHELINE_SIZE) FGParam {
 	uint16_t thread_id;
 	std::map<uint16_t, int> nodeidx_pktcnt_map;
 	std::vector<double> process_latency_list;
-	std::vector<double> send_latency_list;
+	std::vector<double> send_latency_list; // time of sending packet
+	int unmatched_cnt;
+	std::vector<double> wait_latency_list; // time between receiving response and sending next request
 };
 typedef FGParam fg_param_t;
 
@@ -124,6 +126,8 @@ void run_benchmark() {
 		fg_params[worker_i].nodeidx_pktcnt_map.clear();
 		fg_params[worker_i].process_latency_list.clear();
 		fg_params[worker_i].send_latency_list.clear();
+		fg_params[worker_i].unmatched_cnt = 0;
+		fg_params[worker_i].wait_latency_list.clear();
 		int ret = pthread_create(&threads[worker_i], nullptr, run_fg, (void *)&fg_params[worker_i]);
 		COUT_THIS("[client] Lanuch client " << worker_i)
 	}
@@ -138,6 +142,8 @@ void run_benchmark() {
 	running = true;
 
 	std::vector<int> perinterval_totalpktcnts;
+	std::vector<int> perinterval_cachehitcnts;
+	std::vector<std::vector<int>> perinterval_perserver_pktcnts;
 	//int interval_usecs = 5 * 1000 * 1000; // 5s
 	int interval_usecs = 1 * 1000 * 1000; // 1s
 	CUR_TIME(total_t1);
@@ -147,10 +153,18 @@ void run_benchmark() {
 			DELTA_TIME(total_t2, total_t1, total_t3);
 			if (GET_MICROSECOND(total_t3) >= (perinterval_totalpktcnts.size()+1) * interval_usecs) {
 				int curinterval_totalpktcnt = 0;
+				int curinterval_cachehitcnt = 0;
+				std::vector<int> curinterval_perserver_pktcnts(server_num);
 				for (size_t i = 0; i < client_num; i++) {
 					curinterval_totalpktcnt += fg_params[i].process_latency_list.size();
+					curinterval_cachehitcnt += fg_params[i].nodeidx_pktcnt_map[0xFFFF];
+					for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
+						curinterval_perserver_pktcnts[serveridx] += fg_params[i].nodeidx_pktcnt_map[serveridx];
+					}
 				}
 				perinterval_totalpktcnts.push_back(curinterval_totalpktcnt);
+				perinterval_cachehitcnts.push_back(curinterval_cachehitcnt);
+				perinterval_perserver_pktcnts.push_back(curinterval_perserver_pktcnts);
 			}
 			usleep(10 * 1000); // 10ms
 		}
@@ -223,37 +237,56 @@ void run_benchmark() {
 		}
 		total_latency_list.insert(total_latency_list.end(), fg_params[i].process_latency_list.begin(), fg_params[i].process_latency_list.end());
 	}
-	double avg_send_latency_list[client_num];
+	std::vector<double> avg_send_latency_list(client_num);
+	std::vector<double> avg_wait_latency_list(client_num);
 	for (size_t i = 0; i < client_num; i++) {
 		avg_send_latency_list[i] = 0.0;
+		avg_wait_latency_list[i] = 0.0;
 	}
 	for (size_t i = 0; i < client_num; i++) {
 		for (size_t j = 0; j < fg_params[i].send_latency_list.size(); j++) {
 			avg_send_latency_list[i] += fg_params[i].send_latency_list[j];
+			avg_wait_latency_list[i] += fg_params[i].wait_latency_list[j];
 		}
 	}
 	for (size_t i = 0; i < client_num; i++) {
 		avg_send_latency_list[i] /= fg_params[i].send_latency_list.size();
+		avg_wait_latency_list[i] /= fg_params[i].wait_latency_list.size();
 	}
 
 	// Dump latency statistics
 	dump_latency(total_latency_list, "total_latency_list");
-	printf("average send latency list: ");
+	dump_latency(avg_send_latency_list, "avg_send_latency_list");
+	dump_latency(avg_wait_latency_list, "avg_wait_latency_list");
+
+	int total_unmatched_cnt = 0;
 	for (size_t i = 0; i < client_num; i++) {
-		if (i != client_num - 1) {
-			printf("%f ", avg_send_latency_list[i]);
-		}
-		else {
-			printf("%f\n", avg_send_latency_list[i]);
-		}
+		total_unmatched_cnt += fg_params[i].unmatched_cnt;
 	}
+	COUT_VAR(total_unmatched_cnt);
 
 	// Dump throughput statistics
 	printf("thpt interval: %d s\n", interval_usecs/1000/1000);
 	int previnterval_pktcnt = 0;
+	int previnterval_cachehitcnt = 0;
+	int previnterval_perserver_pktcnts[server_num];
+	memset(previnterval_perserver_pktcnts, 0, server_num*sizeof(int));
 	for (size_t i = 0; i < perinterval_totalpktcnts.size(); i++) {
-		printf("interval[%d]: throughput = %f MOPS\n", i, double(perinterval_totalpktcnts[i] - previnterval_pktcnt)/(interval_usecs/1000/1000)/1024.0/1024.0);
+		int curinterval_pktcnt = perinterval_totalpktcnts[i] - previnterval_pktcnt;
+		int curinterval_cachehitcnt = perinterval_cachehitcnts[i] - previnterval_cachehitcnt;
+		printf("interval[%d]: throughput = %f MOPS; cache hit rate: %f\n", i, double(curinterval_pktcnt)/(interval_usecs/1000/1000)/1024.0/1024.0, double(curinterval_cachehitcnt)/double(curinterval_pktcnt));
+		int curinterval_serverpktcnt = 0;
+		for (size_t j = 0; j < server_num; j++) {
+			curinterval_serverpktcnt += perinterval_perserver_pktcnts[i][j] - previnterval_perserver_pktcnts[j];
+		}
+		printf("perserver load ratio: ");
+		for (size_t j = 0; j < server_num; j++) {
+			printf(" %f ", (perinterval_perserver_pktcnts[i][j] - previnterval_perserver_pktcnts[j]) / double(curinterval_serverpktcnt));
+		}
+		printf("\n");
 		previnterval_pktcnt = perinterval_totalpktcnts[i];
+		previnterval_cachehitcnt = perinterval_cachehitcnts[i];
+		memcpy(previnterval_perserver_pktcnts, perinterval_perserver_pktcnts[i].data(), server_num*sizeof(int));
 	}
 	int total_pktcnt = total_latency_list.size();
 	printf("client-side total pktcnt: %d, total time: %f s, total thpt: %f MOPS\n", total_pktcnt, total_secs, double(total_pktcnt) / total_secs / 1024.0 / 1024.0);
@@ -416,22 +449,25 @@ void *run_fg(void *param) {
 
 	bool is_timeout = false;
 	//int runtimes = 1;
-	int runtimes = 5;
-	int currun = 0;
+	//int runtimes = 5;
+	//int currun = 0;
+	bool isfirst_pkt = true;
 	while (running) {
 		if (!iter->next()) {
-			currun += 1;
+			/*currun += 1;
 			if (currun >= runtimes) {
 				break;
 			}
 			else {
 				iter->reset();
 				iter->next();
-			}
+			}*/
+			break;
 		}
 
-		struct timespec process_t1, process_t2, process_t3, send_t1, send_t2, send_t3;
+		struct timespec process_t1, process_t2, process_t3, send_t1, send_t2, send_t3, wait_t1, wait_t2, wait_t3;
 		uint16_t tmp_nodeidx_foreval = 0;
+		double wait_time = 0.0;
 		while (true) { // timeout-and-retry mechanism
 			CUR_TIME(process_t1);
 
@@ -454,6 +490,11 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
+				if (!isfirst_pkt) {
+					CUR_TIME(wait_t2);
+					DELTA_TIME(wait_t2, wait_t1, wait_t3);
+					wait_time = GET_MICROSECOND(wait_t3);
+				}
 				CUR_TIME(send_t1);
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
@@ -461,17 +502,20 @@ void *run_fg(void *param) {
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
 				while (true) {
 					is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					CUR_TIME(wait_t1);
 #ifdef DUMP_BUF
 					dump_buf(buf, recv_size);
 #endif
 					if (!is_timeout) {
 						INVARIANT(recv_size > 0);
 						if (*((uint8_t *)buf) != uint8_t(packet_type_t::GETRES)) {
+							thread_param.unmatched_cnt++;
 							continue; // continue to receive next packet
 						}
 						else {
 							get_response_t rsp(buf, recv_size);
 							if (rsp.key() != tmpkey) {
+								thread_param.unmatched_cnt++;
 								continue; // continue to receive next packet
 							}
 							else {
@@ -510,6 +554,12 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
+
+				if (!isfirst_pkt) {
+					CUR_TIME(wait_t2);
+					DELTA_TIME(wait_t2, wait_t1, wait_t3);
+					wait_time = GET_MICROSECOND(wait_t3);
+				}
 				CUR_TIME(send_t1);
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
@@ -517,17 +567,20 @@ void *run_fg(void *param) {
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
 				while (true) {
 					is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					CUR_TIME(wait_t1);
 #ifdef DUMP_BUF
 					dump_buf(buf, recv_size);
 #endif
 					if (!is_timeout) {
 						INVARIANT(recv_size > 0);
 						if (*((uint8_t *)buf) != uint8_t(packet_type_t::PUTRES)) {
+							thread_param.unmatched_cnt++;
 							continue; // continue to receive next packet
 						}
 						else {
 							put_response_t rsp(buf, recv_size);
 							if (rsp.key() != tmpkey) {
+								thread_param.unmatched_cnt++;
 								continue; // continue to receive next packet
 							}
 							else {
@@ -553,6 +606,12 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
+
+				if (!isfirst_pkt) {
+					CUR_TIME(wait_t2);
+					DELTA_TIME(wait_t2, wait_t1, wait_t3);
+					wait_time = GET_MICROSECOND(wait_t3);
+				}
 				CUR_TIME(send_t1);
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
@@ -560,17 +619,20 @@ void *run_fg(void *param) {
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
 				while (true) {
 					is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					CUR_TIME(wait_t1);
 #ifdef DUMP_BUF
 					dump_buf(buf, recv_size);
 #endif
 					if (!is_timeout) {
 						INVARIANT(recv_size > 0);
 						if (*((uint8_t *)buf) != uint8_t(packet_type_t::DELRES)) {
+							thread_param.unmatched_cnt++;
 							continue; // continue to receive next packet
 						}
 						else {
 							del_response_t rsp(buf, recv_size);
 							if (rsp.key() != tmpkey) {
+								thread_param.unmatched_cnt++;
 								continue; // continue to receive next packet
 							}
 							else {
@@ -604,6 +666,12 @@ void *run_fg(void *param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
 #endif
+
+				if (!isfirst_pkt) {
+					CUR_TIME(wait_t2);
+					DELTA_TIME(wait_t2, wait_t1, wait_t3);
+					wait_time = GET_MICROSECOND(wait_t3);
+				}
 				CUR_TIME(send_t1);
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
@@ -613,6 +681,7 @@ void *run_fg(void *param) {
 				set_recvtimeout(clientsock, CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
 				//is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
 				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, uint8_t(packet_type_t::SCANRES_SPLIT), tmpkey);
+				CUR_TIME(wait_t1);
 				set_recvtimeout(clientsock, CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
 				if (is_timeout) {
 					continue;
@@ -652,6 +721,7 @@ void *run_fg(void *param) {
 			break;
 		} // end of while(true)
 		is_timeout = false;
+		isfirst_pkt = false;
 		CUR_TIME(process_t2);
 
 		if (unlikely(!running)) {
@@ -672,6 +742,7 @@ void *run_fg(void *param) {
 		double send_time = GET_MICROSECOND(send_t3);
 		thread_param.process_latency_list.push_back(process_time);
 		thread_param.send_latency_list.push_back(send_time);
+		thread_param.wait_latency_list.push_back(wait_time);
 
 		//SUM_TIME(req_t3, rsp_t3, final_t3); // time of sending req and receiving rsp
 		//double final_time = GET_MICROSECOND(final_t3);

@@ -8,6 +8,15 @@
 
 #include "common_impl.h"
 
+int op = -1;
+int linenum = -1;
+
+uint32_t splitnum;
+char output_dir[256];
+char filename[256];
+
+void *run_split_worker(void *param);
+
 int main(int argc, char **argv) {
 
 	if (argc != 3) {
@@ -15,7 +24,6 @@ int main(int argc, char **argv) {
 		exit(-1);
 	}
 
-	int op = -1;
 	if (strcmp(argv[1], "load") == 0) {
 		op = 0; // load
 	}
@@ -26,7 +34,7 @@ int main(int argc, char **argv) {
 		printf("Usage: ./split_workload load/run linenum\n");
 		exit(-1);
 	}
-	int linenum = atoi(argv[2]);
+	linenum = atoi(argv[2]);
 	printf("op: %d, linenum: %d\n", op, linenum);
 
 	parse_ini("config.ini");
@@ -41,9 +49,6 @@ int main(int argc, char **argv) {
 		strncpy(prefix, filename, delimiter - filename);
 	}*/
 
-	uint32_t splitnum;
-	char output_dir[256];
-	char filename[256];
 	if (op == 0) { // load
 		splitnum = server_num;
 		memcpy(output_dir, server_load_workload_dir, 256);
@@ -68,15 +73,34 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	int line_startidx = 1;
-	int line_endidx = 0;
+	pthread_t split_worker_threads[client_num];
+	int split_worker_params[client_num];
+	for (size_t i = 0; i < client_num; i++) {
+		split_worker_params[i] = i;
+		pthread_create(&split_worker_threads[i], nullptr, run_split_worker, (void *)&split_worker_params[i]);
+	}
+	COUT_THIS("start to split...\n");
+
+	for (size_t i = 0; i < client_num; i++) {
+		pthread_join(split_worker_threads[i], NULL);
+	}
+	COUT_THIS("finish split...\n");
+}
+
+void *run_split_worker(void *param) {
+	int splitidx = *((int *)param);
+
 	char command[256];
-	if (op == 0) {
+	if (op == 0) { // load
 		int per_loader_linenum = linenum / splitnum / load_factor;
-		char *output_names[splitnum * load_factor] = {nullptr};
+		int line_startidx = splitidx * load_factor * per_loader_linenum + 1;
+		int line_endidx = 0;
+
+		char *output_names[load_factor] = {nullptr};
 		//FILE *fps[splitnum * load_factor] = {nullptr};
-		for (uint32_t i = 0; i < splitnum * load_factor; i++) {
-			if (i == splitnum * load_factor - 1) {
+		for (uint32_t i = 0; i < load_factor; i++) {
+			int globalidx = splitidx * load_factor + i;
+			if (globalidx == splitnum * load_factor - 1) {
 				line_endidx = linenum;
 			}
 			else {
@@ -84,7 +108,7 @@ int main(int argc, char **argv) {
 			}
 
 			output_names[i] = new char[256];
-			LOAD_SPLIT_WORKLOAD(output_names[i], output_dir, i/load_factor, i);
+			LOAD_SPLIT_WORKLOAD(output_names[i], output_dir, splitidx, i);
 
 			sprintf(command, "sed -n \'%d,%dp\' %s > %s", line_startidx, line_endidx, filename, output_names[i]);
 			system(command);
@@ -106,36 +130,30 @@ int main(int argc, char **argv) {
 	}
 	else if (op == 1) {
 		int per_client_linenum = linenum / splitnum;
+		int line_startidx = splitidx * per_client_linenum + 1;
+		int line_endidx = 0;
 
-		char *output_names[splitnum] = {nullptr};
-		//FILE *fps[splitnum] = {nullptr};
-		for (uint32_t i = 0; i < splitnum; i++) {
-			if (i == splitnum - 1) {
-				line_endidx = linenum;
-			}
-			else {
-				line_endidx = line_startidx + per_client_linenum - 1;
-			}
-
-			output_names[i] = new char[256];
-			RUN_SPLIT_WORKLOAD(output_names[i], output_dir, i);
-
-			sprintf(command, "sed -n \'%d,%dp\' %s > %s", line_startidx, line_endidx, filename, output_names[i]);
-			system(command);
-			/*fps[i] = fopen(output_names[i], "w+");
-			if (fps[i] == nullptr) {
-				printf("Fail to open %s!\n", output_names[i]);
-				exit(-1);
-			}*/
-
-			line_startidx = line_endidx + 1;
+		char *output_name = nullptr;
+		if (splitidx == splitnum - 1) {
+			line_endidx = linenum;
+		}
+		else {
+			line_endidx = line_startidx + per_client_linenum - 1;
 		}
 
-		for (uint32_t i = 0; i < splitnum; i++) {
-			delete [] output_names[i];
-			output_names[i] = nullptr;
-			//close(fps[i]);
-			//fps[i] = nullptr;
-		}
+		output_name = new char[256];
+		RUN_SPLIT_WORKLOAD(output_name, output_dir, splitidx);
+
+		sprintf(command, "sed -n \'%d,%dp\' %s > %s", line_startidx, line_endidx, filename, output_name);
+		system(command);
+		/*fps[i] = fopen(output_names[i], "w+");
+		if (fps[i] == nullptr) {
+			printf("Fail to open %s!\n", output_names[i]);
+			exit(-1);
+		}*/
+
+		delete [] output_name;
+		output_name = nullptr;
 	}
+	pthread_exit(nullptr);
 }

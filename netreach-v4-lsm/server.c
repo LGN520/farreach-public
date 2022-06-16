@@ -242,7 +242,7 @@ void transaction_main() {
 
 	// dump process latency
 	printf("\nprocess latency:\n");
-	std::vector<double> worker_process_latency_list;
+	/*std::vector<double> worker_process_latency_list;
 	for (size_t i = 0; i < server_num; i++) {
 		printf("[server %d]\n", i);
 		std::string tmp_label;
@@ -252,11 +252,21 @@ void transaction_main() {
 		worker_process_latency_list.insert(worker_process_latency_list.end(), server_worker_params[i].process_latency_list.begin(), server_worker_params[i].process_latency_list.end());
 	}
 	printf("[overall]\n");
-	dump_latency(worker_process_latency_list, "worker_process_latency_list overall");
+	dump_latency(worker_process_latency_list, "worker_process_latency_list overall");*/
+	std::vector<double> worker_avg_process_latency_list(server_num);
+	for (size_t i = 0; i < server_num; i++) {
+		double tmp_avg_process_latency = 0.0;
+		for (size_t j = 0; j < server_worker_params[i].process_latency_list.size(); j++) {
+			tmp_avg_process_latency += server_worker_params[i].process_latency_list[j];
+		}
+		tmp_avg_process_latency /= server_worker_params[i].process_latency_list.size();
+		worker_avg_process_latency_list[i] = tmp_avg_process_latency;
+	}
+	dump_latency(worker_avg_process_latency_list, "worker_avg_process_latency_list");
 
 	// dump wait latency
 	printf("\nwait latency:\n");
-	std::vector<double> worker_wait_latency_list;
+	/*std::vector<double> worker_wait_latency_list;
 	for (size_t i = 0; i < server_num; i++) {
 		printf("[server %d]\n", i);
 		std::string tmp_label;
@@ -266,7 +276,17 @@ void transaction_main() {
 		worker_wait_latency_list.insert(worker_wait_latency_list.end(), server_worker_params[i].wait_latency_list.begin(), server_worker_params[i].wait_latency_list.end());
 	}
 	printf("[overall]\n");
-	dump_latency(worker_wait_latency_list, "worker_wait_latency_list overall");
+	dump_latency(worker_wait_latency_list, "worker_wait_latency_list overall");*/
+	std::vector<double> worker_avg_wait_latency_list(server_num);
+	for (size_t i = 0; i < server_num; i++) {
+		double tmp_avg_wait_latency = 0.0;
+		for (size_t j = 0; j < server_worker_params[i].wait_latency_list.size(); j++) {
+			tmp_avg_wait_latency += server_worker_params[i].wait_latency_list[j];
+		}
+		tmp_avg_wait_latency /= server_worker_params[i].wait_latency_list.size();
+		worker_avg_wait_latency_list[i] = tmp_avg_wait_latency;
+	}
+	dump_latency(worker_avg_wait_latency_list, "worker_avg_wait_latency_list");
 
 	void *status;
 	printf("wait for server.workers\n");
