@@ -92,14 +92,19 @@ int main(int argc, char **argv) {
 
 	int ret = 0;
 
-	prepare_controller();
-
 	// NOTE: now we deploy controller in the same physical machine with servers
 	// If we use an individual physical machine, we can comment all the setaffinity statements
 	CPU_ZERO(&nonserverworker_cpuset);
 	for (int i = server_cores; i < total_cores; i++) {
 		CPU_SET(i, &nonserverworker_cpuset);
 	}
+	ret = sched_setaffinity(0, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	if (ret) {
+		printf("[Error] fail to set affinity of controller.main; errno: %d\n", errno);
+		exit(-1);
+	}
+
+	prepare_controller();
 
 	pthread_t popserver_threads[server_num];
 	uint16_t popserver_params[server_num];

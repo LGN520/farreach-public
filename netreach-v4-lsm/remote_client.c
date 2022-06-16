@@ -138,7 +138,8 @@ void run_benchmark() {
 	running = true;
 
 	std::vector<int> perinterval_totalpktcnts;
-	int interval_usecs = 5 * 1000 * 1000; // 5s
+	//int interval_usecs = 5 * 1000 * 1000; // 5s
+	int interval_usecs = 1 * 1000 * 1000; // 1s
 	CUR_TIME(total_t1);
 	if (workload_mode == 0) { // send all workloads in static mode
 		while (finish_threads < client_num) {
@@ -386,8 +387,7 @@ void *run_fg(void *param) {
 	int req_size = 0;
 	int recv_size = 0;
 	int clientsock = -1;
-	//create_udpsock(clientsock, true, "ycsb_remote_client", 0, 1 * 1000, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
-	create_udpsock(clientsock, true, "ycsb_remote_client", 0, CLIENT_SOCKET_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+	create_udpsock(clientsock, true, "ycsb_remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
 	struct sockaddr_in server_addr;
 	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
@@ -415,9 +415,19 @@ void *run_fg(void *param) {
 		;
 
 	bool is_timeout = false;
+	//int runtimes = 1;
+	int runtimes = 5;
+	int currun = 0;
 	while (running) {
 		if (!iter->next()) {
-			break;
+			currun += 1;
+			if (currun >= runtimes) {
+				break;
+			}
+			else {
+				iter->reset();
+				iter->next();
+			}
 		}
 
 		struct timespec process_t1, process_t2, process_t3, send_t1, send_t2, send_t3;
@@ -603,7 +613,7 @@ void *run_fg(void *param) {
 				set_recvtimeout(clientsock, CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
 				//is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
 				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, uint8_t(packet_type_t::SCANRES_SPLIT), tmpkey);
-				set_recvtimeout(clientsock, 0, CLIENT_SOCKET_TIMEOUT_USECS); // 100ms for other reqs
+				set_recvtimeout(clientsock, CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
 				if (is_timeout) {
 					continue;
 				}

@@ -13,7 +13,7 @@
 #include "key.h"
 
 #define SOCKET_TIMEOUT 5 // 5s
-#define CLIENT_SOCKET_TIMEOUT_USECS 100 * 1000 // 100ms
+#define CLIENT_SOCKET_TIMEOUT_SECS 5 // 5s
 #define CLIENT_SCAN_SOCKET_TIMEOUT_SECS 10 // 10s
 
 // payload only used by end-hosts -> linux kernel performs ip-level fragmentation

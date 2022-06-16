@@ -66,7 +66,7 @@ void prepare_server() {
 
 	server_worker_udpsock_list = new int[server_num];
 	for (size_t i = 0; i < server_num; i++) {
-		prepare_udpserver(server_worker_udpsock_list[i], true, server_port_start + i, "server.worker");
+		prepare_udpserver(server_worker_udpsock_list[i], true, server_port_start + i, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 	}
 
 	// Prepare for cache population

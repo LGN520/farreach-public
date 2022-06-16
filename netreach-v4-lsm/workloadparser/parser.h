@@ -23,6 +23,7 @@ class ParserIterator {
 		virtual uint8_t type() = 0;
 		virtual std::string line() = 0;
 		virtual bool next() = 0;
+		virtual void reset() = 0;
 
 		virtual Key *keys() = 0;
 		virtual Val *vals() = 0;

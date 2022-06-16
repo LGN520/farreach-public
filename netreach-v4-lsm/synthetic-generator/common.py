@@ -7,7 +7,8 @@ path_kv = "synthetic-load.out"  #The path to save generated keys and values
 path_hot = "synthetic-warmup.out" #The path to save the hot keys
 
 path_query = "synthetic-run.out"
-num_query = 32000000
+#num_query = 32000000
+num_query = 100 * 1000 * 1000
 zipf = 0.99
 
 # six 10-sec periods in 60 secs

@@ -38,6 +38,8 @@ std::atomic<size_t> transaction_ready_threads(0);
 size_t transaction_expected_ready_threads = 0;
 bool volatile killed = false;
 
+cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other threads
+
 /* functions */
 
 // transaction phase
@@ -49,6 +51,16 @@ void kill(int signum);
 int main(int argc, char **argv) {
   parse_ini("config.ini");
   parse_control_ini("control_type.ini");
+
+  CPU_ZERO(&nonserverworker_cpuset);
+  for (int i = server_cores; i < total_cores; i++) {
+	CPU_SET(i, &nonserverworker_cpuset);
+  }
+  int result = sched_setaffinity(0, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+  if (result) {
+	  printf("[Error] fail to set affinity of server.main; errno: %d\n", errno);
+	  exit(-1);
+  }
   
   /* (1) prepare phase */
 
@@ -89,11 +101,6 @@ void transaction_main() {
 	transaction_running = false;
 
 	cpu_set_t serverworker_cpuset; // [0, server_cores-1] for each server.worker
-	cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other threads
-	CPU_ZERO(&nonserverworker_cpuset);
-	for (int i = server_cores; i < total_cores; i++) {
-		CPU_SET(i, &nonserverworker_cpuset);
-	}
 
 	// launch reflector.popserver
 	pthread_t reflector_popserver_thread;

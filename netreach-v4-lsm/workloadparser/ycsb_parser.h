@@ -24,6 +24,7 @@ class YcsbParserIterator : public ParserIterator {
 		virtual uint8_t type();
 		virtual std::string line();
 		virtual bool next();
+		virtual void reset();
 
 		virtual Key *keys();
 		virtual Val *vals();

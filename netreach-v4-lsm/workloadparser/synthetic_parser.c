@@ -86,6 +86,13 @@ bool SyntheticParserIterator::next() {
 	return true;
 }
 
+void SyntheticParserIterator::reset() {
+	unmap_content();
+	_fileoffset = 0;
+	_maxidx = load_batch_size - 1;
+	_idx = -1;
+}
+
 void SyntheticParserIterator::closeiter() {
 	if (_fd != -1) {
 		close(_fd);
