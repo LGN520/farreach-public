@@ -85,6 +85,8 @@ uint32_t load_factor = 1;
 //uint32_t load_n;
 
 // server: transaction phase
+int total_cores = -1;
+int server_cores = -1;
 uint32_t server_num = 1;
 short server_port_start = -1;
 // switch os simulator for processing special cases and packet loss handling (and tcp servers for workers)
@@ -234,6 +236,8 @@ inline void parse_ini(const char* config_file) {
 	//COUT_VAR(load_n);
 
 	// server: transaction phase
+	total_cores = sysconf(_SC_NPROCESSORS_ONLN);
+	server_cores = ini.get_server_cores();
 	server_num = ini.get_server_num();
 	//INVARIANT(server_num >= load_n);
 	server_port_start = ini.get_server_port();
@@ -245,6 +249,8 @@ inline void parse_ini(const char* config_file) {
 	server_snapshotdataserver_port_start = ini.get_server_snapshotdataserver_port();
 	//server_dynamicserver_port = ini.get_server_dynamicserver_port();
 	//server_ip_for_client = ini.get_server_ip_for_client();
+	COUT_VAR(total_cores);
+	COUT_VAR(server_cores);
 	COUT_VAR(server_num);
 	COUT_VAR(server_port_start);
 	printf("server_ip: %s\n", server_ip);
@@ -259,6 +265,13 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(server_snapshotdataserver_port_start);
 	//COUT_VAR(server_dynamicserver_port);
 	//printf("server_ip_for_client: %s\n", server_ip_for_client);
+	if (server_num > server_cores) {
+		printf("[WARNING] server_num %d > server_cores %d, which could incur CPU contention!\n", server_num, server_cores);
+	}
+	if (server_cores > total_cores) {
+		printf("[ERROR] server_cores %d must <= total_cores %d!\n", server_cores, total_cores);
+		exit(-1);
+	}
 
 	// controller
 	controller_ip_for_server = ini.get_controller_ip_for_server();

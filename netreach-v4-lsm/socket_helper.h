@@ -10,9 +10,11 @@
 
 #include "helper.h"
 #include "dynamic_array.h"
+#include "key.h"
 
 #define SOCKET_TIMEOUT 5 // 5s
-#define CLIENT_SOCKET_TIMEOUT_USECS 200 * 1000 // 100ms
+#define CLIENT_SOCKET_TIMEOUT_USECS 100 * 1000 // 100ms
+#define CLIENT_SCAN_SOCKET_TIMEOUT_SECS 10 // 10s
 
 // payload only used by end-hosts -> linux kernel performs ip-level fragmentation
 // max payload size to avoid udp fragmentation (manual udp fragmentation): 65535(ipmax) - 20(iphdr) - 8(udphdr)
@@ -49,9 +51,9 @@ void udpsendlarge(int sockfd, const void *buf, size_t len, int flags, const stru
 bool udprecvlarge_udpfrag(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role);
 bool udprecvlarge_ipfrag(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role, size_t frag_hdrsize);
 bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_in *src_addr, socklen_t *addrlen, const char* role, size_t frag_hdrsize, size_t frag_maxsize);
-bool udprecvlarge_multisrc_udpfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion);
-bool udprecvlarge_multisrc_ipfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion);
-bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion);
+bool udprecvlarge_multisrc_udpfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter=false, uint8_t optype=0, netreach_key_t targetkey=netreach_key_t());
+bool udprecvlarge_multisrc_ipfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter=false, uint8_t optype=0, netreach_key_t targetkey=netreach_key_t());
+bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter=false, uint8_t optype=0, netreach_key_t targetkey=netreach_key_t());
 
 // tcp
 void create_tcpsock(int &sockfd, bool need_timeout, const char* role = "sockethelper.tcpsock", int timeout_sec = SOCKET_TIMEOUT, int timeout_usec = 0);

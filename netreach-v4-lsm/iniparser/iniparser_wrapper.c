@@ -131,6 +131,15 @@ void IniparserWrapper::get_client_mac(uint8_t *macaddr) {
 
 // Server
 
+int IniparserWrapper::get_server_cores() {
+	int tmp = iniparser_getint(ini, "server:server_cores", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:server_cores]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
 uint32_t IniparserWrapper::get_load_factor() {
 	int tmp = iniparser_getint(ini, "server:load_factor", -1);
 	if (tmp == -1) {

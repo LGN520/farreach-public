@@ -386,7 +386,7 @@ void *run_fg(void *param) {
 	int req_size = 0;
 	int recv_size = 0;
 	int clientsock = -1;
-	//create_udpsock(clientsock, true, "ycsb_remote_client", 1, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+	//create_udpsock(clientsock, true, "ycsb_remote_client", 0, 1 * 1000, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
 	create_udpsock(clientsock, true, "ycsb_remote_client", 0, CLIENT_SOCKET_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
 	struct sockaddr_in server_addr;
 	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
@@ -422,7 +422,7 @@ void *run_fg(void *param) {
 
 		struct timespec process_t1, process_t2, process_t3, send_t1, send_t2, send_t3;
 		uint16_t tmp_nodeidx_foreval = 0;
-		while (true) {
+		while (true) { // timeout-and-retry mechanism
 			CUR_TIME(process_t1);
 
 			tmpkey = iter->key();
@@ -448,18 +448,36 @@ void *run_fg(void *param) {
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
-				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
+				while (true) {
+					is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+					dump_buf(buf, recv_size);
 #endif
-				if (is_timeout) {
-					continue;
+					if (!is_timeout) {
+						INVARIANT(recv_size > 0);
+						if (*((uint8_t *)buf) != uint8_t(packet_type_t::GETRES)) {
+							continue; // continue to receive next packet
+						}
+						else {
+							get_response_t rsp(buf, recv_size);
+							if (rsp.key() != tmpkey) {
+								continue; // continue to receive next packet
+							}
+							else {
+								tmp_nodeidx_foreval = rsp.nodeidx_foreval();
+								FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
+								break; // break to update statistics and send next packet
+							}
+						}
+					}
+					else {
+						break; // break to resend
+					}
 				}
-				INVARIANT(recv_size > 0);
-
-				get_response_t rsp(buf, recv_size);
-				tmp_nodeidx_foreval = rsp.nodeidx_foreval();
-				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
+				if (is_timeout) {
+					continue; // continue to resend
+				}
 			}
 			else if (iter->type() == uint8_t(packet_type_t::PUTREQ)) { // update or insert
 				tmpval = iter->val();
@@ -486,18 +504,36 @@ void *run_fg(void *param) {
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
-				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
+				while (true) {
+					is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+					dump_buf(buf, recv_size);
 #endif
-				if (is_timeout) {
-					continue;
+					if (!is_timeout) {
+						INVARIANT(recv_size > 0);
+						if (*((uint8_t *)buf) != uint8_t(packet_type_t::PUTRES)) {
+							continue; // continue to receive next packet
+						}
+						else {
+							put_response_t rsp(buf, recv_size);
+							if (rsp.key() != tmpkey) {
+								continue; // continue to receive next packet
+							}
+							else {
+								tmp_nodeidx_foreval = rsp.nodeidx_foreval();
+								FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+								break; // break to update statistics and send next packet
+							}
+						}
+					}
+					else {
+						break; // break to resend
+					}
 				}
-				INVARIANT(recv_size > 0);
-
-				put_response_t rsp(buf, recv_size);
-				tmp_nodeidx_foreval = rsp.nodeidx_foreval();
-				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+				if (is_timeout) {
+					continue; // continue to resend
+				}
 			}
 			else if (iter->type() == uint8_t(packet_type_t::DELREQ)) {
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
@@ -511,18 +547,36 @@ void *run_fg(void *param) {
 				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
-				is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
+				while (true) {
+					is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 #ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
+					dump_buf(buf, recv_size);
 #endif
-				if (is_timeout) {
-					continue;
+					if (!is_timeout) {
+						INVARIANT(recv_size > 0);
+						if (*((uint8_t *)buf) != uint8_t(packet_type_t::DELRES)) {
+							continue; // continue to receive next packet
+						}
+						else {
+							del_response_t rsp(buf, recv_size);
+							if (rsp.key() != tmpkey) {
+								continue; // continue to receive next packet
+							}
+							else {
+								tmp_nodeidx_foreval = rsp.nodeidx_foreval();
+								FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+								break; // break to update statistics and send next packet
+							}
+						}
+					}
+					else {
+						break; // break to resend
+					}
 				}
-				INVARIANT(recv_size > 0);
-
-				del_response_t rsp(buf, recv_size);
-				tmp_nodeidx_foreval = rsp.nodeidx_foreval();
-				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+				if (is_timeout) {
+					continue; // continue to resend
+				}
 			}
 			else if (iter->type() == uint8_t(packet_type_t::SCANREQ)) {
 				//netreach_key_t endkey = generate_endkey(tmpkey);
@@ -546,8 +600,13 @@ void *run_fg(void *param) {
 
 				size_t received_scannum = 0;
 				dynamic_array_t *scanbufs = NULL;
+				set_recvtimeout(clientsock, CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
 				//is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
-				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
+				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, uint8_t(packet_type_t::SCANRES_SPLIT), tmpkey);
+				set_recvtimeout(clientsock, 0, CLIENT_SOCKET_TIMEOUT_USECS); // 100ms for other reqs
+				if (is_timeout) {
+					continue;
+				}
 
 				int snapshotid = -1;
 				int totalnum = 0;
@@ -574,10 +633,6 @@ void *run_fg(void *param) {
 				if (scanbufs != NULL) {
 					delete [] scanbufs;
 					scanbufs = NULL;
-				}
-
-				if (is_timeout) {
-					continue;
 				}
 			}
 			else {

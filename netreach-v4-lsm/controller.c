@@ -22,6 +22,11 @@
 #include <map>
 #include <mutex>
 
+// CPU affinity
+#define _GNU_SOURCE
+#include <sched.h>
+#include <pthread.h>
+
 #include "helper.h"
 #include "io_helper.h"
 
@@ -79,32 +84,59 @@ void *run_controller_snapshotclient_start_subthread(void *param);
 void *run_controller_snapshotclient_senddata_subthread(void *param);
 void close_controller();
 
+cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other threads
+
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
 	parse_control_ini("control_type.ini");
 
+	int ret = 0;
+
 	prepare_controller();
+
+	// NOTE: now we deploy controller in the same physical machine with servers
+	// If we use an individual physical machine, we can comment all the setaffinity statements
+	CPU_ZERO(&nonserverworker_cpuset);
+	for (int i = server_cores; i < total_cores; i++) {
+		CPU_SET(i, &nonserverworker_cpuset);
+	}
 
 	pthread_t popserver_threads[server_num];
 	uint16_t popserver_params[server_num];
 	for (uint16_t i = 0; i < server_num; i++) {
 		popserver_params[i] = i;
-		int ret = pthread_create(&popserver_threads[i], nullptr, run_controller_popserver, &popserver_params[i]);
+		ret = pthread_create(&popserver_threads[i], nullptr, run_controller_popserver, &popserver_params[i]);
 		if (ret) {
 			COUT_N_EXIT("Error: " << ret);
+		}
+		ret = pthread_setaffinity_np(popserver_threads[i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+		if (ret) {
+			printf("Error of setaffinity for controller.popserver; errno: %d\n", errno);
+			exit(-1);
 		}
 	}
 
 	pthread_t evictserver_thread;
-	int ret = pthread_create(&evictserver_thread, nullptr, run_controller_evictserver, nullptr);
+	ret = pthread_create(&evictserver_thread, nullptr, run_controller_evictserver, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error: " << ret);
+	}
+	ret = pthread_setaffinity_np(evictserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	if (ret) {
+		printf("Error of setaffinity for controller.evictserver; errno: %d\n", errno);
+		exit(-1);
 	}
 
 	pthread_t snapshotclient_thread;
 	ret = pthread_create(&snapshotclient_thread, nullptr, run_controller_snapshotclient, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error: " << ret);
+	}
+	// NOTE: subthreads created by controller.snapshotclient via pthread_create will inherit the CPU affinity mask of snapshotclient_thread
+	ret = pthread_setaffinity_np(snapshotclient_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	if (ret) {
+		printf("Error of setaffinity for controller.snapshotclient; errno: %d\n", errno);
+		exit(-1);
 	}
 
 	while (controller_ready_threads < controller_expected_ready_threads) sleep(1);

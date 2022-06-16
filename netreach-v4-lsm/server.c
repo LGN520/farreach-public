@@ -17,6 +17,11 @@
 #include <string.h>
 #include <map>
 
+// CPU affinity
+#define _GNU_SOURCE
+#include <sched.h>
+#include <pthread.h>
+
 #include "helper.h"
 #include "latency_helper.h"
 #include "socket_helper.h"
@@ -83,11 +88,23 @@ void transaction_main() {
 
 	transaction_running = false;
 
+	cpu_set_t serverworker_cpuset; // [0, server_cores-1] for each server.worker
+	cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other threads
+	CPU_ZERO(&nonserverworker_cpuset);
+	for (int i = server_cores; i < total_cores; i++) {
+		CPU_SET(i, &nonserverworker_cpuset);
+	}
+
 	// launch reflector.popserver
 	pthread_t reflector_popserver_thread;
 	ret = pthread_create(&reflector_popserver_thread, nullptr, run_reflector_popserver, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error of launching reflector.popserver: " << ret);
+	}
+	ret = pthread_setaffinity_np(reflector_popserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	if (ret) {
+		printf("Error of setaffinity for reflector.popserver; errno: %d\n", errno);
+		exit(-1);
 	}
 
 	// launch reflector.worker
@@ -95,6 +112,11 @@ void transaction_main() {
 	ret = pthread_create(&reflector_worker_thread, nullptr, run_reflector_worker, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error of launching reflector.worker: " << ret);
+	}
+	ret = pthread_setaffinity_np(reflector_worker_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	if (ret) {
+		printf("Error of setaffinity for reflector.worker; errno: %d\n", errno);
+		exit(-1);
 	}
 
 	// launch popclients
@@ -105,6 +127,11 @@ void transaction_main() {
 		ret = pthread_create(&popclient_threads[popclient_i], nullptr, run_server_popclient, &popclient_params[popclient_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.popclient:" << ret);
+		}
+		ret = pthread_setaffinity_np(popclient_threads[popclient_i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+		if (ret) {
+			printf("Error of setaffinity for server.popclient; errno: %d\n", errno);
+			exit(-1);
 		}
 	}
 
@@ -125,6 +152,14 @@ void transaction_main() {
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.worker:" << ret);
 		}
+
+		CPU_ZERO(&serverworker_cpuset);
+		CPU_SET(worker_i % server_cores, &serverworker_cpuset);
+		ret = pthread_setaffinity_np(worker_threads[worker_i], sizeof(serverworker_cpuset), &serverworker_cpuset);
+		if (ret) {
+			printf("Error of setaffinity for server.worker; errno: %d\n", errno);
+			exit(-1);
+		}
 	}
 	//COUT_THIS("[tranasaction phase] prepare server worker threads...")
 
@@ -133,6 +168,11 @@ void transaction_main() {
 	ret = pthread_create(&evictserver_thread, nullptr, run_server_evictserver, nullptr);
 	if (ret) {
 		COUT_N_EXIT("Error of launching server.evictserver: " << ret);
+	}
+	ret = pthread_setaffinity_np(evictserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	if (ret) {
+		printf("Error of setaffinity for server.evictserver; errno: %d\n", errno);
+		exit(-1);
 	}
 
 	// launch snapshotservers
@@ -144,6 +184,11 @@ void transaction_main() {
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.snapshotserver:" << ret);
 		}
+		ret = pthread_setaffinity_np(snapshotserver_threads[snapshotserver_i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+		if (ret) {
+			printf("Error of setaffinity for server.snapshotserver; errno: %d\n", errno);
+			exit(-1);
+		}
 	}
 
 	// launch snapshotdataservers
@@ -154,6 +199,11 @@ void transaction_main() {
 		ret = pthread_create(&snapshotdataserver_threads[snapshotdataserver_i], nullptr, run_server_snapshotdataserver, &snapshotdataserver_params[snapshotdataserver_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.snapshotdataserver:" << ret);
+		}
+		ret = pthread_setaffinity_np(snapshotdataserver_threads[snapshotdataserver_i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+		if (ret) {
+			printf("Error of setaffinity for server.snapshotdataserver; errno: %d\n", errno);
+			exit(-1);
 		}
 	}
 

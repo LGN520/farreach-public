@@ -30,6 +30,7 @@ class IniparserWrapper {
 		//const char *get_client_ip_for_server();
 		
 		// server
+		int get_server_cores();
 		uint32_t get_load_factor();
 		//uint32_t get_split_num();
 		uint32_t get_server_num();
