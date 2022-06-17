@@ -22,16 +22,20 @@
 #include "io_helper.h"
 
 // Default configuration of rocksdb
-#define MEMTABLE_SIZE 64 * 1024 * 1024 // x
-#define MIN_IMMUTABLE_FLUSH_NUM 4
-#define MAX_MEMTABLE_IMMUTABLE_NUM 5
-#define SST_SIZE 64 * 1024 * 1024 // x
-#define COMPACTION_THREAD_NUM 2
-#define LEVEL0_SST_NUM 4
+#define MEMTABLE_SIZE 256 * 1024 * 1024 // X
+#define MIN_IMMUTABLE_FLUSH_NUM 1024
+#define MAX_MEMTABLE_IMMUTABLE_NUM 1536
+//#define WRITE_PARALLISM 16
+#define SST_SIZE 512 * 1024 * 1024 // 2X
+#define GLOBAL_MAX_FLUSH_THREAD_NUM 16
+#define GLOBAL_MAX_COMPACTION_THREAD_NUM 4
+//#define GLOBAL_LOW_THREADPOOL_SIZE 16
+//#define GLOBAL_HIGH_THREADPOOL_SIZE 16
+#define LEVEL0_SST_NUM 16
 #define LEVEL_NUM 7
-#define LEVEL1_TOTAL_SIZE 256 * 1024 * 1024 // 4x
+#define LEVEL1_TOTAL_SIZE 8 * 1024 * 1024 * 1024 // 16*2X
 #define LEVEL_MULTIPLIER 10
-#define BLOCKCACHE_SIZE 64 * 1024 * 1024 // x
+#define BLOCKCACHE_SIZE 256 * 1024 * 1024 // X
 #define BLOCKCACHE_SHARDBITS 4
 #define SYNC_WRITE false // flush WAL instead of memtable for each operation
 #define DISABLE_WAL false // disable WAL flush

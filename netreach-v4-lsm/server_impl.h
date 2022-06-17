@@ -29,6 +29,7 @@ typedef ServerWorkerParam server_worker_param_t;
 
 RocksdbWrapper *db_wrappers = NULL;
 int * server_worker_udpsock_list = NULL;
+int * server_worker_lwpid_list = NULL;
 
 // Per-server popclient <-> one popserver in controller
 int * server_popclient_udpsock_list = NULL;
@@ -68,6 +69,8 @@ void prepare_server() {
 	for (size_t i = 0; i < server_num; i++) {
 		prepare_udpserver(server_worker_udpsock_list[i], true, server_port_start + i, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 	}
+	server_worker_lwpid_list = new int[server_num];
+	memset(server_worker_lwpid_list, 0, server_num);
 
 	// Prepare for cache population
 	server_popclient_udpsock_list = new int[server_num];
@@ -115,6 +118,10 @@ void close_server() {
 	if (server_worker_udpsock_list != NULL) {
 		delete [] server_worker_udpsock_list;
 		server_worker_udpsock_list = NULL;
+	}
+	if (server_worker_lwpid_list != NULL) {
+		delete [] server_worker_lwpid_list;
+		server_worker_lwpid_list = NULL;
 	}
 	if (server_popclient_udpsock_list != NULL) {
 		delete [] server_popclient_udpsock_list;
@@ -203,6 +210,9 @@ void *run_server_worker(void * param) {
   // Parse param
   server_worker_param_t &thread_param = *(server_worker_param_t *)param;
   uint16_t serveridx = thread_param.serveridx; // [0, server_num-1]
+
+  // NOTE: pthread id != LWP id (linux thread id)
+  server_worker_lwpid_list[serveridx] = CUR_LWPID();
 
   bool is_existing = db_wrappers[serveridx].open(serveridx);
   if (!is_existing) {
@@ -529,7 +539,9 @@ void *run_server_worker(void * param) {
 				//memset(val_buf, 0x11, Val::SWITCH_MAX_VALLEN);
 				//val_t tmp_val(val_buf, Val::SWITCH_MAX_VALLEN);
 				uint32_t tmp_seq = 0;
-				bool tmp_stat = db_wrappers[serveridx].force_put(req.key(), req.val());
+				// NOTE: we do not need to write the key-value pair for WARMUPREQ except cache population
+				//bool tmp_stat = db_wrappers[serveridx].force_put(req.key(), req.val());
+				//INVARIANT(tmp_stat == true);
 				
 				warmup_ack_t rsp(req.key());
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -539,7 +551,6 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				INVARIANT(tmp_stat == true);
 				bool is_cached_before = server_cached_keyset_list[serveridx].is_exist(req.key());
 				INVARIANT(!is_cached_before);
 				server_cached_keyset_list[serveridx].insert(req.key());

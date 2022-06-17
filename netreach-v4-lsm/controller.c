@@ -98,7 +98,9 @@ int main(int argc, char **argv) {
 	for (int i = server_cores; i < total_cores; i++) {
 		CPU_SET(i, &nonserverworker_cpuset);
 	}
-	ret = sched_setaffinity(0, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	//ret = sched_setaffinity(0, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	pthread_t main_thread = pthread_self();
+	ret = pthread_setaffinity_np(main_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
 	if (ret) {
 		printf("[Error] fail to set affinity of controller.main; errno: %d\n", errno);
 		exit(-1);

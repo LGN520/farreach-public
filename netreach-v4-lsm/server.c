@@ -56,8 +56,10 @@ int main(int argc, char **argv) {
   for (int i = server_cores; i < total_cores; i++) {
 	CPU_SET(i, &nonserverworker_cpuset);
   }
-  int result = sched_setaffinity(0, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-  if (result) {
+  //int ret = sched_setaffinity(0, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+  pthread_t main_thread = pthread_self();
+  int ret = pthread_setaffinity_np(main_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+  if (ret) {
 	  printf("[Error] fail to set affinity of server.main; errno: %d\n", errno);
 	  exit(-1);
   }
@@ -216,17 +218,84 @@ void transaction_main() {
 
 	while (transaction_ready_threads < transaction_expected_ready_threads) sleep(1);
 
+	// IMPORTANT: avoid CPU contention between server.workers and rocksdb's background threads
+	printf("Reset CPU affinity of rocksdb's background threads\n");
+	char command[256];
+	sprintf(command, "./reset_rocksdb_affinity.sh %d %d %d ", server_cores, total_cores, server_num);
+	for (size_t i = 0; i < server_num; i++) {
+		if (i != server_num - 1) {
+			sprintf(command + strlen(command), "%d ", server_worker_lwpid_list[i]);
+		}
+		else {
+			sprintf(command + strlen(command), "%d", server_worker_lwpid_list[i]);
+		}
+	}
+	printf("Execute %s\n", command);
+	system(command);
+
 	transaction_running = true;
 	COUT_THIS("[transaction.main] all threads ready");
 
 	signal(SIGTERM, kill); // Set for main thread (kill -15)
 
+	std::vector<std::vector<int>> persec_perserver_aggpktcnt;
 	while (!killed) {
 		sleep(1);
+		std::vector<int> cursec_perserver_aggpktcnt(server_num);
+		for (size_t i = 0; i < server_num; i++) {
+			cursec_perserver_aggpktcnt[i] = server_worker_params[i].process_latency_list.size();
+		}
+		persec_perserver_aggpktcnt.push_back(cursec_perserver_aggpktcnt);
 	}
 	transaction_running = false;
 
 	/* Processing Statistics */
+
+#ifdef DEBUG_PERSEC
+	// dump per-sec statistics
+	int seccnt = persec_perserver_aggpktcnt.size();
+	std::vector<int> cursec_perserver_pktcnt = persec_perserver_aggpktcnt[0];
+	for (size_t i = 0; i < seccnt; i++) {
+		if (i != 0) {
+			for (size_t j = 0; j < server_num; j++) {
+				cursec_perserver_pktcnt[j] = persec_perserver_aggpktcnt[i][j] - persec_perserver_aggpktcnt[i-1][j];
+			}
+		}
+
+		printf("[sec %d]\n", i);
+
+		int cursec_total_pktcnt = 0;
+		for (size_t j = 0; j < server_num; j++) {
+			cursec_total_pktcnt += cursec_perserver_pktcnt[j];
+		}
+		printf("per-server load ratio: %d-", cursec_total_pktcnt);
+		for (size_t j = 0; j < server_num; j++) {
+			printf("%f ", cursec_perserver_pktcnt[j]/double(cursec_total_pktcnt));
+		}
+		printf("\n");
+
+		std::vector<double> cursec_wait_latency_list;
+		std::vector<double> cursec_process_latency_list;
+		for (size_t j = 0; j < server_num; j++) {
+			int startidx = 0;
+			if (i != 0) startidx = persec_perserver_aggpktcnt[i-1][j];
+			int endidx = persec_perserver_aggpktcnt[i][j];
+			std::vector<double> cursec_curserver_wait_latency_list(server_worker_params[j].wait_latency_list.begin() + startidx, server_worker_params[j].wait_latency_list.begin() + endidx);
+			cursec_wait_latency_list.insert(cursec_wait_latency_list.end(), cursec_curserver_wait_latency_list.begin(), cursec_curserver_wait_latency_list.end());
+			std::vector<double> cursec_curserver_process_latency_list(server_worker_params[j].process_latency_list.begin() + startidx, server_worker_params[j].process_latency_list.begin() + endidx);
+			cursec_process_latency_list.insert(cursec_process_latency_list.end(), cursec_curserver_process_latency_list.begin(), cursec_curserver_process_latency_list.end());
+
+			std::string tmplabel;
+			GET_STRING(tmplabel, "wait_latency_list server "<<j);
+			dump_latency(cursec_curserver_wait_latency_list, tmplabel);
+			GET_STRING(tmplabel, "process_latency_list server "<<j);
+			dump_latency(cursec_curserver_process_latency_list, tmplabel);
+		}
+		dump_latency(cursec_wait_latency_list, "wait_latency_list overall");
+		dump_latency(cursec_process_latency_list, "process_latency_list overall");
+	}
+	printf("\n");
+#endif
 
 	// dump per-server load ratio
 	size_t overall_pktcnt = 0;
@@ -239,30 +308,6 @@ void transaction_main() {
 		double tmp_load_balance_ratio = double(server_worker_params[i].process_latency_list.size()) / avg_per_server_thpt;
 		COUT_THIS("Load balance ratio of server " << i << ": " << tmp_load_balance_ratio);
 	}
-
-	// dump process latency
-	printf("\nprocess latency:\n");
-	/*std::vector<double> worker_process_latency_list;
-	for (size_t i = 0; i < server_num; i++) {
-		printf("[server %d]\n", i);
-		std::string tmp_label;
-		GET_STRING(tmp_label, "worker_process_latency_list " << i);
-		dump_latency(server_worker_params[i].process_latency_list, tmp_label);
-
-		worker_process_latency_list.insert(worker_process_latency_list.end(), server_worker_params[i].process_latency_list.begin(), server_worker_params[i].process_latency_list.end());
-	}
-	printf("[overall]\n");
-	dump_latency(worker_process_latency_list, "worker_process_latency_list overall");*/
-	std::vector<double> worker_avg_process_latency_list(server_num);
-	for (size_t i = 0; i < server_num; i++) {
-		double tmp_avg_process_latency = 0.0;
-		for (size_t j = 0; j < server_worker_params[i].process_latency_list.size(); j++) {
-			tmp_avg_process_latency += server_worker_params[i].process_latency_list[j];
-		}
-		tmp_avg_process_latency /= server_worker_params[i].process_latency_list.size();
-		worker_avg_process_latency_list[i] = tmp_avg_process_latency;
-	}
-	dump_latency(worker_avg_process_latency_list, "worker_avg_process_latency_list");
 
 	// dump wait latency
 	printf("\nwait latency:\n");
@@ -287,6 +332,30 @@ void transaction_main() {
 		worker_avg_wait_latency_list[i] = tmp_avg_wait_latency;
 	}
 	dump_latency(worker_avg_wait_latency_list, "worker_avg_wait_latency_list");
+
+	// dump process latency
+	printf("\nprocess latency:\n");
+	/*std::vector<double> worker_process_latency_list;
+	for (size_t i = 0; i < server_num; i++) {
+		printf("[server %d]\n", i);
+		std::string tmp_label;
+		GET_STRING(tmp_label, "worker_process_latency_list " << i);
+		dump_latency(server_worker_params[i].process_latency_list, tmp_label);
+
+		worker_process_latency_list.insert(worker_process_latency_list.end(), server_worker_params[i].process_latency_list.begin(), server_worker_params[i].process_latency_list.end());
+	}
+	printf("[overall]\n");
+	dump_latency(worker_process_latency_list, "worker_process_latency_list overall");*/
+	std::vector<double> worker_avg_process_latency_list(server_num);
+	for (size_t i = 0; i < server_num; i++) {
+		double tmp_avg_process_latency = 0.0;
+		for (size_t j = 0; j < server_worker_params[i].process_latency_list.size(); j++) {
+			tmp_avg_process_latency += server_worker_params[i].process_latency_list[j];
+		}
+		tmp_avg_process_latency /= server_worker_params[i].process_latency_list.size();
+		worker_avg_process_latency_list[i] = tmp_avg_process_latency;
+	}
+	dump_latency(worker_avg_process_latency_list, "worker_avg_process_latency_list");
 
 	void *status;
 	printf("wait for server.workers\n");

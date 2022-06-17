@@ -141,30 +141,33 @@ void run_benchmark() {
 	struct timespec total_t1, total_t2, total_t3;
 	running = true;
 
-	std::vector<int> perinterval_totalpktcnts;
-	std::vector<int> perinterval_cachehitcnts;
-	std::vector<std::vector<int>> perinterval_perserver_pktcnts;
-	//int interval_usecs = 5 * 1000 * 1000; // 5s
-	int interval_usecs = 1 * 1000 * 1000; // 1s
+	// NOTE: by now we get aggregate pktcnts from the first interval until the ith interval
+	std::vector<std::vector<int>> perinterval_perclient_aggpktcnts;
+	std::vector<std::vector<int>> perinterval_perclient_aggcachehitcnts;
+	std::vector<std::vector<std::vector<int>>> perinterval_perclient_perserver_aggcachemisscnts;
+	int interval_usecs = 5 * 1000 * 1000; // 5s
+	//int interval_usecs = 1 * 1000 * 1000; // 1s
 	CUR_TIME(total_t1);
 	if (workload_mode == 0) { // send all workloads in static mode
 		while (finish_threads < client_num) {
 			CUR_TIME(total_t2);
 			DELTA_TIME(total_t2, total_t1, total_t3);
-			if (GET_MICROSECOND(total_t3) >= (perinterval_totalpktcnts.size()+1) * interval_usecs) {
-				int curinterval_totalpktcnt = 0;
-				int curinterval_cachehitcnt = 0;
-				std::vector<int> curinterval_perserver_pktcnts(server_num);
+			if (GET_MICROSECOND(total_t3) >= (perinterval_perclient_aggpktcnts.size()+1) * interval_usecs) {
+				std::vector<int> curinterval_perclient_aggpktcnts(client_num);
+				std::vector<int> curinterval_perclient_aggcachehitcnts(client_num);
+				std::vector<std::vector<int>> curinterval_perclient_perserver_aggcachemisscnts(client_num);
 				for (size_t i = 0; i < client_num; i++) {
-					curinterval_totalpktcnt += fg_params[i].process_latency_list.size();
-					curinterval_cachehitcnt += fg_params[i].nodeidx_pktcnt_map[0xFFFF];
+					curinterval_perclient_aggpktcnts[i] = fg_params[i].process_latency_list.size();
+					curinterval_perclient_aggcachehitcnts[i] = fg_params[i].nodeidx_pktcnt_map[0xFFFF];
+					std::vector<int> curinterval_curclient_perserver_aggcachemisscnts(server_num);
 					for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
-						curinterval_perserver_pktcnts[serveridx] += fg_params[i].nodeidx_pktcnt_map[serveridx];
+						curinterval_curclient_perserver_aggcachemisscnts[serveridx] = fg_params[i].nodeidx_pktcnt_map[serveridx];
 					}
+					curinterval_perclient_perserver_aggcachemisscnts[i] = curinterval_curclient_perserver_aggcachemisscnts;
 				}
-				perinterval_totalpktcnts.push_back(curinterval_totalpktcnt);
-				perinterval_cachehitcnts.push_back(curinterval_cachehitcnt);
-				perinterval_perserver_pktcnts.push_back(curinterval_perserver_pktcnts);
+				perinterval_perclient_aggpktcnts.push_back(curinterval_perclient_aggpktcnts);
+				perinterval_perclient_aggcachehitcnts.push_back(curinterval_perclient_aggcachehitcnts);
+				perinterval_perclient_perserver_aggcachemisscnts.push_back(curinterval_perclient_perserver_aggcachemisscnts);
 			}
 			usleep(10 * 1000); // 10ms
 		}
@@ -222,6 +225,115 @@ void run_benchmark() {
 
 	COUT_THIS("[client] processing statistics");
 
+	// Dump perinterval statistics for debugging
+	// NOTE: we need to use the ith aggregate pktcnt - the {i-1}th aggregate pktcnt to get the ith interval pktcnt
+	int intervalcnt = perinterval_perclient_aggpktcnts.size();
+	printf("\nthpt interval: %d s; intervalcnt: %d\n", interval_usecs/1000/1000, intervalcnt);
+	std::vector<int> curinterval_perclient_pktcnts = perinterval_perclient_aggpktcnts[0];
+	std::vector<int> curinterval_perclient_cachehitcnts = perinterval_perclient_aggcachehitcnts[0];
+	std::vector<std::vector<int>> curinterval_perclient_perserver_cachemisscnts = perinterval_perclient_perserver_aggcachemisscnts[0];
+	bool first_stopped = true;
+	for (size_t i = 0; i < intervalcnt; i++) {
+		if (i != 0) {
+			for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
+				curinterval_perclient_pktcnts[clientidx] = perinterval_perclient_aggpktcnts[i][clientidx] - perinterval_perclient_aggpktcnts[i-1][clientidx];
+				curinterval_perclient_cachehitcnts[clientidx] = perinterval_perclient_aggcachehitcnts[i][clientidx] - perinterval_perclient_aggcachehitcnts[i-1][clientidx];
+				for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
+					curinterval_perclient_perserver_cachemisscnts[clientidx][serveridx] = perinterval_perclient_perserver_aggcachemisscnts[i][clientidx][serveridx] - perinterval_perclient_perserver_aggcachemisscnts[i-1][clientidx][serveridx];
+				}
+			}
+		}
+
+		printf("[interval %d]\n", i);
+
+#ifdef DEBUG_PERSEC
+		// Dump pre-stopped threads
+		printf("per-stopped-client agg pktcnt: ");
+		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
+			if (curinterval_perclient_pktcnts[clientidx] == 0) {
+				if (first_stopped) {
+					printf("client%d-", clientidx);
+					for (size_t prev_interval_idx = 0; prev_interval_idx < i; prev_interval_idx++) {
+						printf("%d-", perinterval_perclient_aggpktcnts[prev_interval_idx][clientidx]);
+					}
+					printf("%d ", perinterval_perclient_aggpktcnts[i][clientidx]);
+				}
+				else {
+					printf("client%d-%d ", clientidx, perinterval_perclient_aggpktcnts[i][clientidx]);
+				}
+			}
+		}
+		printf("\n");
+
+		printf("per-client throughput (MOPS): ");
+		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
+			printf("%f ", double(curinterval_perclient_pktcnts[clientidx])/(interval_usecs/1000/1000)/1024.0/1024.0);
+		}
+#endif
+		int curinterval_total_pktcnt = 0;
+		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
+			curinterval_total_pktcnt += curinterval_perclient_pktcnts[clientidx];
+		}
+		printf("\noverall totalpktcnt: %d, throughput (MOPS): %f\n", curinterval_total_pktcnt, double(curinterval_total_pktcnt)/(interval_usecs/1000/1000)/1024.0/1024.0);
+
+#ifdef DEBUG_PERSEC
+		printf("per-client cachehit rate: ");
+		int curinterval_total_cachehitcnt = 0;
+		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
+			curinterval_total_cachehitcnt += curinterval_perclient_cachehitcnts[clientidx];
+			printf("%f ", double(curinterval_perclient_cachehitcnts[clientidx])/double(curinterval_perclient_pktcnts[clientidx]));
+		}
+		printf("\noverall cachehit cnt: %d, cachehit rate: %f\n", curinterval_total_cachehitcnt, double(curinterval_total_cachehitcnt)/double(curinterval_total_pktcnt));
+
+		printf("per-client servers' load ratio: ");
+		int curinterval_total_cachemisscnt = 0;
+		int curinterval_perserver_cachemisscnts[server_num];
+		memset(curinterval_perserver_cachemisscnts, 0, sizeof(int)*server_num);
+		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
+			int curinterval_curclient_total_cachemisscnt = 0;
+			for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
+				curinterval_curclient_total_cachemisscnt += curinterval_perclient_perserver_cachemisscnts[clientidx][serveridx];
+				curinterval_perserver_cachemisscnts[serveridx] += curinterval_perclient_perserver_cachemisscnts[clientidx][serveridx];
+			}
+			curinterval_total_cachemisscnt += curinterval_curclient_total_cachemisscnt;
+
+			printf("%d-", curinterval_curclient_total_cachemisscnt);
+			for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
+				if (serveridx != server_num - 1) printf("%f-", curinterval_perclient_perserver_cachemisscnts[clientidx][serveridx]/double(curinterval_curclient_total_cachemisscnt));
+				else printf("%f ", curinterval_perclient_perserver_cachemisscnts[clientidx][serveridx]/double(curinterval_curclient_total_cachemisscnt));
+			}
+		}
+		printf("\noverall load ratio: %d-", curinterval_total_cachemisscnt);
+		for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
+			if (serveridx != server_num - 1) printf("%f-", curinterval_perserver_cachemisscnts[serveridx]/double(curinterval_total_cachemisscnt));
+			else printf("%f\n", curinterval_perserver_cachemisscnts[serveridx]/double(curinterval_total_cachemisscnt));
+		}
+
+		std::vector<double> curinterval_send_latency_list;
+		std::vector<double> curinterval_wait_latency_list;
+		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
+			int startidx = 0;
+			if (i != 0) {
+				startidx = perinterval_perclient_aggpktcnts[i-1][clientidx];
+			}
+			int endidx = perinterval_perclient_aggpktcnts[i][clientidx];
+			std::vector<double> curinterval_curclient_send_latency_list(fg_params[clientidx].send_latency_list.begin() + startidx, fg_params[clientidx].send_latency_list.begin() + endidx);
+			std::vector<double> curinterval_curclient_wait_latency_list(fg_params[clientidx].wait_latency_list.begin() + startidx, fg_params[clientidx].wait_latency_list.begin() + endidx);
+			curinterval_send_latency_list.insert(curinterval_send_latency_list.end(), curinterval_curclient_send_latency_list.begin(), curinterval_curclient_send_latency_list.end());
+			curinterval_wait_latency_list.insert(curinterval_wait_latency_list.end(), curinterval_curclient_wait_latency_list.begin(), curinterval_curclient_wait_latency_list.end());
+
+			/*std::string tmplabel;
+			GET_STRING(tmplabel, "send_latency_list client "<<clientidx);
+			dump_latency(curinterval_curclient_send_latency_list, tmplabel.c_str());
+			GET_STRING(tmplabel, "wait_latency_list client "<<clientidx);
+			dump_latency(curinterval_curclient_wait_latency_list, tmplabel.c_str());*/
+		}
+		dump_latency(curinterval_send_latency_list, "send_latency_list overall");
+		dump_latency(curinterval_wait_latency_list, "wait_latency_list overall");
+#endif
+	}
+	printf("\n");
+
 	// Process latency statistics
 	std::map<uint16_t, int> nodeidx_pktcnt_map;
 	std::vector<double> total_latency_list;
@@ -237,27 +349,27 @@ void run_benchmark() {
 		}
 		total_latency_list.insert(total_latency_list.end(), fg_params[i].process_latency_list.begin(), fg_params[i].process_latency_list.end());
 	}
-	std::vector<double> avg_send_latency_list(client_num);
-	std::vector<double> avg_wait_latency_list(client_num);
+	std::vector<double> perclient_avgsend_latency_list(client_num);
+	std::vector<double> perclient_avgwait_latency_list(client_num);
 	for (size_t i = 0; i < client_num; i++) {
-		avg_send_latency_list[i] = 0.0;
-		avg_wait_latency_list[i] = 0.0;
+		perclient_avgsend_latency_list[i] = 0.0;
+		perclient_avgwait_latency_list[i] = 0.0;
 	}
 	for (size_t i = 0; i < client_num; i++) {
 		for (size_t j = 0; j < fg_params[i].send_latency_list.size(); j++) {
-			avg_send_latency_list[i] += fg_params[i].send_latency_list[j];
-			avg_wait_latency_list[i] += fg_params[i].wait_latency_list[j];
+			perclient_avgsend_latency_list[i] += fg_params[i].send_latency_list[j];
+			perclient_avgwait_latency_list[i] += fg_params[i].wait_latency_list[j];
 		}
 	}
 	for (size_t i = 0; i < client_num; i++) {
-		avg_send_latency_list[i] /= fg_params[i].send_latency_list.size();
-		avg_wait_latency_list[i] /= fg_params[i].wait_latency_list.size();
+		perclient_avgsend_latency_list[i] /= fg_params[i].send_latency_list.size();
+		perclient_avgwait_latency_list[i] /= fg_params[i].wait_latency_list.size();
 	}
 
 	// Dump latency statistics
 	dump_latency(total_latency_list, "total_latency_list");
-	dump_latency(avg_send_latency_list, "avg_send_latency_list");
-	dump_latency(avg_wait_latency_list, "avg_wait_latency_list");
+	dump_latency(perclient_avgsend_latency_list, "perclient_avgsend_latency_list");
+	dump_latency(perclient_avgwait_latency_list, "perclient_avgwait_latency_list");
 
 	int total_unmatched_cnt = 0;
 	for (size_t i = 0; i < client_num; i++) {
@@ -266,28 +378,6 @@ void run_benchmark() {
 	COUT_VAR(total_unmatched_cnt);
 
 	// Dump throughput statistics
-	printf("thpt interval: %d s\n", interval_usecs/1000/1000);
-	int previnterval_pktcnt = 0;
-	int previnterval_cachehitcnt = 0;
-	int previnterval_perserver_pktcnts[server_num];
-	memset(previnterval_perserver_pktcnts, 0, server_num*sizeof(int));
-	for (size_t i = 0; i < perinterval_totalpktcnts.size(); i++) {
-		int curinterval_pktcnt = perinterval_totalpktcnts[i] - previnterval_pktcnt;
-		int curinterval_cachehitcnt = perinterval_cachehitcnts[i] - previnterval_cachehitcnt;
-		printf("interval[%d]: throughput = %f MOPS; cache hit rate: %f\n", i, double(curinterval_pktcnt)/(interval_usecs/1000/1000)/1024.0/1024.0, double(curinterval_cachehitcnt)/double(curinterval_pktcnt));
-		int curinterval_serverpktcnt = 0;
-		for (size_t j = 0; j < server_num; j++) {
-			curinterval_serverpktcnt += perinterval_perserver_pktcnts[i][j] - previnterval_perserver_pktcnts[j];
-		}
-		printf("perserver load ratio: ");
-		for (size_t j = 0; j < server_num; j++) {
-			printf(" %f ", (perinterval_perserver_pktcnts[i][j] - previnterval_perserver_pktcnts[j]) / double(curinterval_serverpktcnt));
-		}
-		printf("\n");
-		previnterval_pktcnt = perinterval_totalpktcnts[i];
-		previnterval_cachehitcnt = perinterval_cachehitcnts[i];
-		memcpy(previnterval_perserver_pktcnts, perinterval_perserver_pktcnts[i].data(), server_num*sizeof(int));
-	}
 	int total_pktcnt = total_latency_list.size();
 	printf("client-side total pktcnt: %d, total time: %f s, total thpt: %f MOPS\n", total_pktcnt, total_secs, double(total_pktcnt) / total_secs / 1024.0 / 1024.0);
 	

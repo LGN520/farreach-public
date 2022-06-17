@@ -5,6 +5,7 @@
 #include <sstream>
 #include <time.h>
 #include <execinfo.h> // backtrace
+#include <sys/syscall.h>
 #include <unistd.h>
 
 #if !defined(HELPER_H)
@@ -102,6 +103,7 @@ static inline void dump_buf(char *buf, uint32_t bufsize)
 /***** Debuging *****/
 
 //#define DEBUG_SNAPSHOT
+//#define DEBUG_PERSEC
 
 // 1: assert
 // 0: ignore assert
@@ -158,6 +160,8 @@ static inline void dump_buf(char *buf, uint32_t bufsize)
 
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
+
+#define CUR_LWPID() syscall(SYS_gettid) // <-> syscall(__NR_gettid)
 
 #define MAX_BUFSIZE 40960 // 40KB; TODO: increase for large value / more threads
 #define MAX_LARGE_BUFSIZE 8388608 // 8MB

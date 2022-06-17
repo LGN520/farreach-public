@@ -18,7 +18,11 @@ void RocksdbWrapper::prepare_rocksdb() {
   // max # of memtable and immutable: if # = max-1, limit write speed; if # = max, forbid write operations
   rocksdb_options.max_write_buffer_number = MAX_MEMTABLE_IMMUTABLE_NUM;
   rocksdb_options.target_file_size_base = SST_SIZE; // single sst size
-  rocksdb_options.max_background_compactions = COMPACTION_THREAD_NUM; // compaction thread number
+  //rocksdb_options.IncreaseParallelism(WRITE_PARALLISM);
+  rocksdb_options.max_background_flushes = GLOBAL_MAX_FLUSH_THREAD_NUM; // flush thread number 
+  //rocksdb_options.env->SetBackgroundThreads(GLOBAL_LOW_THREADPOOL_SIZE, rocksdb::Env::Priority::LOW);
+  rocksdb_options.max_background_compactions = GLOBAL_MAX_COMPACTION_THREAD_NUM; // compaction thread number 
+  //rocksdb_options.env->SetBackgroundThreads(GLOBAL_HIGH_THREADPOOL_SIZE, rocksdb::Env::Priority::HIGH);
   rocksdb_options.level0_file_num_compaction_trigger = LEVEL0_SST_NUM; // sst number in level0
   rocksdb_options.num_levels = LEVEL_NUM; // level number
   rocksdb_options.max_bytes_for_level_base = LEVEL1_TOTAL_SIZE; // byte number in level1
