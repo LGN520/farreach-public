@@ -226,3 +226,7 @@
 	* `sudo vim /etc/security/limits.conf` to set hard and soft limits on maximum # of open files
 	* logout and re-login
 	* `ulimit -n number` to set soft # of open files
+- IMPORTANT: disable THP to reduce write_memtable_time in rocksdb
+	* `sudo apt-get install hugepages`
+	* `sudo hugeadm --thp-never`
+	* `cat /sys/kernel/mm/transparent_hugepage/enabled` to check

@@ -95,8 +95,9 @@ int main(int argc, char **argv) {
 
 void transaction_main() {
 	// reflector: popserver + worker
-	// server: server_num * (workers + popclients + snapshotserver + snapshotdataserver) + evictserver
-	transaction_expected_ready_threads = 2 + 4*server_num + 1;
+	//// server: server_num * (workers + popclients + snapshotserver + snapshotdataserver) + evictserver
+	// server: server_num * (workers + snapshotserver + snapshotdataserver) + evictserver
+	transaction_expected_ready_threads = 2 + 3*server_num + 1;
 
 	int ret = 0;
 
@@ -129,7 +130,7 @@ void transaction_main() {
 	}
 
 	// launch popclients
-	pthread_t popclient_threads[server_num];
+	/*pthread_t popclient_threads[server_num];
 	uint16_t popclient_params[server_num];
 	for (uint16_t popclient_i = 0; popclient_i < server_num; popclient_i++) {
 		popclient_params[popclient_i] = popclient_i;
@@ -142,7 +143,7 @@ void transaction_main() {
 			printf("Error of setaffinity for server.popclient; errno: %d\n", errno);
 			exit(-1);
 		}
-	}
+	}*/
 
 	// launch workers (processing normal packets)
 	pthread_t worker_threads[server_num];
@@ -157,6 +158,7 @@ void transaction_main() {
 		server_worker_params[worker_i].serveridx = worker_i;
 		server_worker_params[worker_i].process_latency_list.clear();
 		server_worker_params[worker_i].wait_latency_list.clear();
+		server_worker_params[worker_i].rocksdb_latency_list.clear();
 		ret = pthread_create(&worker_threads[worker_i], nullptr, run_server_worker, (void *)&server_worker_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.worker:" << ret);
@@ -276,6 +278,7 @@ void transaction_main() {
 
 		std::vector<double> cursec_wait_latency_list;
 		std::vector<double> cursec_process_latency_list;
+		std::vector<double> cursec_rocksdb_latency_list;
 		for (size_t j = 0; j < server_num; j++) {
 			int startidx = 0;
 			if (i != 0) startidx = persec_perserver_aggpktcnt[i-1][j];
@@ -284,15 +287,21 @@ void transaction_main() {
 			cursec_wait_latency_list.insert(cursec_wait_latency_list.end(), cursec_curserver_wait_latency_list.begin(), cursec_curserver_wait_latency_list.end());
 			std::vector<double> cursec_curserver_process_latency_list(server_worker_params[j].process_latency_list.begin() + startidx, server_worker_params[j].process_latency_list.begin() + endidx);
 			cursec_process_latency_list.insert(cursec_process_latency_list.end(), cursec_curserver_process_latency_list.begin(), cursec_curserver_process_latency_list.end());
+			std::vector<double> cursec_curserver_rocksdb_latency_list(server_worker_params[j].rocksdb_latency_list.begin() + startidx, server_worker_params[j].rocksdb_latency_list.begin() + endidx);
+			cursec_rocksdb_latency_list.insert(cursec_rocksdb_latency_list.end(), cursec_curserver_rocksdb_latency_list.begin(), cursec_curserver_rocksdb_latency_list.end());
 
 			std::string tmplabel;
 			GET_STRING(tmplabel, "wait_latency_list server "<<j);
 			dump_latency(cursec_curserver_wait_latency_list, tmplabel);
 			GET_STRING(tmplabel, "process_latency_list server "<<j);
 			dump_latency(cursec_curserver_process_latency_list, tmplabel);
+			GET_STRING(tmplabel, "rocksdb_latency_list server "<<j);
+			dump_latency(cursec_curserver_rocksdb_latency_list, tmplabel);
 		}
 		dump_latency(cursec_wait_latency_list, "wait_latency_list overall");
 		dump_latency(cursec_process_latency_list, "process_latency_list overall");
+		dump_latency(cursec_rocksdb_latency_list, "rocksdb_latency_list overall");
+		printf("\n");
 	}
 	printf("\n");
 #endif
@@ -357,6 +366,19 @@ void transaction_main() {
 	}
 	dump_latency(worker_avg_process_latency_list, "worker_avg_process_latency_list");
 
+	// dump rocksdb latency
+	printf("\nrocksdb latency:\n");
+	std::vector<double> worker_avg_rocksdb_latency_list(server_num);
+	for (size_t i = 0; i < server_num; i++) {
+		double tmp_avg_rocksdb_latency = 0.0;
+		for (size_t j = 0; j < server_worker_params[i].rocksdb_latency_list.size(); j++) {
+			tmp_avg_rocksdb_latency += server_worker_params[i].rocksdb_latency_list[j];
+		}
+		tmp_avg_rocksdb_latency /= server_worker_params[i].rocksdb_latency_list.size();
+		worker_avg_rocksdb_latency_list[i] = tmp_avg_rocksdb_latency;
+	}
+	dump_latency(worker_avg_rocksdb_latency_list, "worker_avg_rocksdb_latency_list");
+
 	void *status;
 	printf("wait for server.workers\n");
 	for (size_t i = 0; i < server_num; i++) {
@@ -366,14 +388,14 @@ void transaction_main() {
 		}
 	}
 	printf("server.workers finish\n");
-	printf("wait for server.popclients\n");
+	/*printf("wait for server.popclients\n");
 	for (size_t i = 0; i < server_num; i++) {
 		int rc = pthread_join(popclient_threads[i], &status);
 		if (rc) {
 		  COUT_N_EXIT("Error: unable to join server.popclient " << rc);
 		}
 	}
-	printf("server.popclients finish\n");
+	printf("server.popclients finish\n");*/
 	printf("wait for sever.evictserver\n");
 	int rc = pthread_join(evictserver_thread, &status);
 	if (rc) {

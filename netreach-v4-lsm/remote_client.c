@@ -145,8 +145,8 @@ void run_benchmark() {
 	std::vector<std::vector<int>> perinterval_perclient_aggpktcnts;
 	std::vector<std::vector<int>> perinterval_perclient_aggcachehitcnts;
 	std::vector<std::vector<std::vector<int>>> perinterval_perclient_perserver_aggcachemisscnts;
-	int interval_usecs = 5 * 1000 * 1000; // 5s
-	//int interval_usecs = 1 * 1000 * 1000; // 1s
+	//int interval_usecs = 5 * 1000 * 1000; // 5s
+	int interval_usecs = 1 * 1000 * 1000; // 1s
 	CUR_TIME(total_t1);
 	if (workload_mode == 0) { // send all workloads in static mode
 		while (finish_threads < client_num) {

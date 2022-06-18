@@ -25,8 +25,16 @@ void RocksdbWrapper::prepare_rocksdb() {
   //rocksdb_options.env->SetBackgroundThreads(GLOBAL_HIGH_THREADPOOL_SIZE, rocksdb::Env::Priority::HIGH);
   rocksdb_options.level0_file_num_compaction_trigger = LEVEL0_SST_NUM; // sst number in level0
   rocksdb_options.num_levels = LEVEL_NUM; // level number
-  rocksdb_options.max_bytes_for_level_base = LEVEL1_TOTAL_SIZE; // byte number in level1
+  rocksdb_options.max_bytes_for_level_base = LEVEL1_SST_NUM * SST_SIZE; // byte number in level1
   rocksdb_options.max_bytes_for_level_multiplier = LEVEL_MULTIPLIER;
+  //rocksdb_options.wal_bytes_per_sync = WAL_BYTES_PER_SYNC;
+
+#ifdef DEBUG_ROCKSDB
+  //rocksdb_options.statistics = rocksdb::CreateDBStatistics();
+  rocksdb_options.stats_dump_period_sec = 1;
+#endif
+
+  //rocksdb_options.max_successive_merges = 1000;
   
   rocksdb_options.enable_write_thread_adaptive_yield = true;
   rocksdb_options.allow_concurrent_memtable_write = true;
@@ -76,7 +84,8 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 	std::string db_path;
 	get_server_db_path(db_path, tmpworkerid);
 	is_runtime_existing = isexist(db_path);
-	rocksdb::Status s = rocksdb::TransactionDB::Open(rocksdb_options, rocksdb::TransactionDBOptions(), db_path, &db_ptr);
+	//rocksdb::Status s = rocksdb::TransactionDB::Open(rocksdb_options, rocksdb::TransactionDBOptions(), db_path, &db_ptr);
+	rocksdb::Status s = rocksdb::DB::Open(rocksdb_options, db_path, &db_ptr);
 	INVARIANT(s.ok());
 	INVARIANT(db_ptr != NULL);
 
@@ -131,18 +140,19 @@ bool RocksdbWrapper::force_multiput(netreach_key_t *keys, val_t *vals, int maxid
 	rocksdb::WriteOptions write_options;
 	write_options.sync = SYNC_WRITE; // Write through for persistency
 	write_options.disableWAL = DISABLE_WAL;
-	rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
+	//rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
 
 	for (int i = 0; i < maxidx; i++) {
 		std::string keystr = keys[i].to_string_for_rocksdb();
 		std::string valstr = vals[i].to_string_for_rocksdb(0);
-		s = txn->Put(keystr, valstr);
+		//s = txn->Put(keystr, valstr);
+		s = db_ptr->Put(write_options, keystr, valstr);
 	}
-	s = txn->Commit();
+	//s = txn->Commit();
 	INVARIANT(s.ok());
 
-	delete txn;
-	txn = NULL;
+	//delete txn;
+	//txn = NULL;
 	return true;
 }
 
@@ -152,15 +162,16 @@ bool RocksdbWrapper::force_put(netreach_key_t key, val_t val) {
 	rocksdb::WriteOptions write_options;
 	write_options.sync = SYNC_WRITE; // Write through for persistency
 	write_options.disableWAL = DISABLE_WAL;
-	rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
+	//rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
 
 	std::string keystr = key.to_string_for_rocksdb();
-	s = txn->Put(keystr, valstr);
-	s = txn->Commit();
+	//s = txn->Put(keystr, valstr);
+	//s = txn->Commit();
+	s = db_ptr->Put(write_options, keystr, valstr);
 	INVARIANT(s.ok());
 
-	delete txn;
-	txn = NULL;
+	//delete txn;
+	//txn = NULL;
 	return true;
 }
 
@@ -174,14 +185,15 @@ bool RocksdbWrapper::get(netreach_key_t key, val_t &val, uint32_t &seq) {
 
 	rocksdb::Status s;
 	std::string valstr;
-	rocksdb::Transaction* txn = db_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
-	INVARIANT(txn != nullptr);
+	//rocksdb::Transaction* txn = db_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+	//INVARIANT(txn != nullptr);
 
 	//read_options.fill_cache = false; // Bypass OS-cache (page cache), use block cache only
-	s = txn->Get(rocksdb::ReadOptions(), key.to_string_for_rocksdb(), &valstr);
-	s = txn->Commit();
-	delete txn;
-	txn = NULL;
+	//s = txn->Get(rocksdb::ReadOptions(), key.to_string_for_rocksdb(), &valstr);
+	//s = txn->Commit();
+	//delete txn;
+	//txn = NULL;
+	s = db_ptr->Get(rocksdb::ReadOptions(), key.to_string_for_rocksdb(), &valstr);
 
 	bool stat = false;
 	seq = 0;
@@ -225,22 +237,23 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 	rocksdb::WriteOptions write_options;
 	write_options.sync = SYNC_WRITE; // Write through for persistency
 	write_options.disableWAL = DISABLE_WAL;
-	rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
+	//rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
 	std::string keystr = key.to_string_for_rocksdb();
 
 	// check seq of undeleted keys if necessary
 	if (checkseq) {
 		uint32_t tmp_seq = 0;
 		std::string tmp_valstr;
-		s = txn->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
+		//s = txn->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
+		s = db_ptr->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
 		if (tmp_valstr != "") {
 			val_t tmp_val;
 			tmp_seq = tmp_val.from_string_for_rocksdb(tmp_valstr);
 			if (tmp_seq > seq) {
-				s = txn->Commit();
+				//s = txn->Commit();
 				INVARIANT(s.ok());
-				delete txn;
-				txn = NULL;
+				//delete txn;
+				//txn = NULL;
 
 				//mutexlock.unlock();
 				rwlock.unlock();
@@ -249,12 +262,29 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 		}
 	}
 
+#ifdef DEBUG_ROCKSDB
+	struct timespec debug_t1, debug_t2, debug_t3;
+	rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTimeExceptForMutex);
+	rocksdb::get_perf_context()->Reset();
+	rocksdb::get_iostats_context()->Reset();
+	CUR_TIME(debug_t1);
+#endif
 	// update seq of undeleted keys
-	s = txn->Put(keystr, valstr);
-	s = txn->Commit();
+	//s = txn->Put(keystr, valstr);
+	//s = txn->Commit();
+	s = db_ptr->Put(write_options, keystr, valstr);
 	INVARIANT(s.ok());
-	delete txn;
-	txn = NULL;
+	//delete txn;
+	//txn = NULL;
+#ifdef DEBUG_ROCKSDB
+	CUR_TIME(debug_t2);
+	rocksdb::SetPerfLevel(rocksdb::PerfLevel::kDisable);
+	DELTA_TIME(debug_t2, debug_t1, debug_t3);
+	int abnormal_usecs = 1 * 1000 * 1000; // 1s
+	if (GET_MICROSECOND(debug_t3) > abnormal_usecs) {
+		COUT_THIS(rocksdb::get_perf_context()->ToString());
+	}
+#endif
 
 	//mutexlock.unlock();
 	rwlock.unlock();
@@ -281,22 +311,23 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 	rocksdb::WriteOptions write_options;
 	write_options.sync = SYNC_WRITE; // Write through for persistency
 	write_options.disableWAL = DISABLE_WAL;
-	rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
+	//rocksdb::Transaction* txn = db_ptr->BeginTransaction(write_options, rocksdb::TransactionOptions());
 	std::string keystr = key.to_string_for_rocksdb();
 
 	// check seq of undeleted keys if necessary
 	if (checkseq) {
 		uint32_t tmp_seq = 0;
 		std::string tmp_valstr;
-		s = txn->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
+		//s = txn->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
+		s = db_ptr->Get(rocksdb::ReadOptions(), keystr, &tmp_valstr);
 		if (tmp_valstr != "") {
 			val_t tmp_val;
 			tmp_seq = tmp_val.from_string_for_rocksdb(tmp_valstr);
 			if (tmp_seq > seq) {
-				s = txn->Commit();
+				//s = txn->Commit();
 				INVARIANT(s.ok());
-				delete txn;
-				txn = NULL;
+				//delete txn;
+				//txn = NULL;
 
 				//mutexlock.unlock();
 				rwlock.unlock();
@@ -306,11 +337,12 @@ bool RocksdbWrapper::remove(netreach_key_t key, uint32_t seq, bool checkseq) {
 	}
 
 	// update seq pf undeleted keys
-	s = txn->Delete(keystr);
-	s = txn->Commit();
+	//s = txn->Delete(keystr);
+	//s = txn->Commit();
+	s = db_ptr->Delete(write_options, keystr);
 	INVARIANT(s.ok());
-	delete txn;
-	txn = NULL;
+	//delete txn;
+	//txn = NULL;
 
 	deleted_set.add(key, seq);
 
@@ -328,17 +360,19 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 	INVARIANT(sp_ptr != NULL || snapshotdb_ptr != NULL);
 
 	rocksdb::Status s;
-	rocksdb::Transaction* txn = NULL;
+	//rocksdb::Transaction* txn = NULL;
 	rocksdb::Iterator* iter = NULL;
 	rocksdb::ReadOptions read_options;
 	if (sp_ptr != NULL) {
-		txn = db_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+		//txn = db_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
 		read_options.snapshot = sp_ptr;
-		iter = txn->GetIterator(read_options);
+		//iter = txn->GetIterator(read_options);
+		iter = db_ptr->NewIterator(read_options);
 	}
 	else if (snapshotdb_ptr != NULL) {
-		txn = snapshotdb_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
-		iter = txn->GetIterator(read_options);
+		//txn = snapshotdb_ptr->BeginTransaction(rocksdb::WriteOptions(), rocksdb::TransactionOptions());
+		//iter = txn->GetIterator(read_options);
+		iter = snapshotdb_ptr->NewIterator(read_options);
 	}
 	INVARIANT(iter != NULL);
 
@@ -374,10 +408,10 @@ size_t RocksdbWrapper::range_scan(netreach_key_t startkey, netreach_key_t endkey
 		db_results.push_back(std::pair<netreach_key_t, snapshot_record_t>(tmpkey, tmprecord));
 		iter->Next();
 	}
-	s = txn->Commit();
-	INVARIANT(s.ok());
-	delete txn;
-	txn = NULL;
+	//s = txn->Commit();
+	//INVARIANT(s.ok());
+	//delete txn;
+	//txn = NULL;
 
 	// get results from snapshot deleted set
 	std::vector<std::pair<netreach_key_t, snapshot_record_t>> deleted_results;
@@ -579,6 +613,9 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 		CUR_TIME(create_t2);
 		CUR_TIME(store_t1);
 
+		// TODO: (1) we should store a checkpoint database of latest_snapshotdbseq with latest_snapshotid? but how to keep time efficiency?
+		// TODO: (2) can we use stored seq to create a snapshot when opening? (3) we need to check whether records before/after seq will be merged?
+
 		//while (true) {
 		//	if (rwlock_for_snapshot.try_lock_shared()) break;
 		//}
@@ -636,7 +673,7 @@ void RocksdbWrapper::update_snapshot(std::map<netreach_key_t, snapshot_record_t>
 		sp_ptr = latest_sp_ptr;
 		snapshot_deleted_set = latest_snapshot_deleted_set;
 	}
-	else { // both latest_sp_ptr and sp_ptr are NULL here
+	else { // both latest_sp_ptr and sp_ptr are NULL here (rare)
 		// load snapshot of snapshotid+1
 		load_serverside_snapshot_files(snapshotid + 1);
 	}
@@ -697,7 +734,8 @@ void RocksdbWrapper::create_snapshotdb_checkpoint(uint64_t snapshotdbseq) {
 	// log_size_for_flush = 0; sequence_number_ptr = &snapshotdbseq
 	s = checkpoint_ptr->CreateCheckpoint(snapshotdb_path, 0, &snapshotdbseq); // snapshot database has been stored into disk by hardlink
 	INVARIANT(s.ok());
-	s = rocksdb::TransactionDB::Open(rocksdb_options, rocksdb::TransactionDBOptions(), snapshotdb_path, &snapshotdb_ptr);
+	//s = rocksdb::TransactionDB::Open(rocksdb_options, rocksdb::TransactionDBOptions(), snapshotdb_path, &snapshotdb_ptr);
+	s = rocksdb::DB::Open(rocksdb_options, snapshotdb_path, &snapshotdb_ptr);
 	INVARIANT(s.ok());
 	INVARIANT(snapshotdb_ptr != NULL);
 	return;

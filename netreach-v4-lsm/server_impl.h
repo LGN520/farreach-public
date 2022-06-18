@@ -24,6 +24,7 @@ struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   uint16_t serveridx;
   std::vector<double> process_latency_list;
   std::vector<double> wait_latency_list;
+  std::vector<double> rocksdb_latency_list;
 };
 typedef ServerWorkerParam server_worker_param_t;
 
@@ -36,7 +37,7 @@ int * server_popclient_udpsock_list = NULL;
 concurrent_set_t * server_cached_keyset_list = NULL;
 
 // per-server worker <-> per-server popclient
-MessagePtrQueue<cache_pop_t> *server_cache_pop_ptr_queue_list;
+//MessagePtrQueue<cache_pop_t> *server_cache_pop_ptr_queue_list;
 
 // server.evictservers <-> controller.evictserver.evictclients
 //int * server_evictserver_tcpsock_list = NULL;
@@ -51,7 +52,8 @@ std::atomic<bool> *server_issnapshot_list = NULL; // TODO: be atomic
 void prepare_server();
 // server.workers for processing pkts
 void *run_server_worker(void *param);
-void *run_server_popclient(void *param);
+//void *run_server_popclient(void *param);
+void send_cachepop(const int &sockfd, const char *buf, const int &buflen, const struct sockaddr_in &dstaddr, const socklen_t &dstaddrlen, char *recvbuf, const int& maxrecvbuflen, int &recvsize);
 void *run_server_evictserver(void *param);
 void *run_server_snapshotserver(void *param);
 void *run_server_snapshotdataserver(void *param);
@@ -80,10 +82,10 @@ void prepare_server() {
 	}
 
 	// Prepare message queue between per-server worker and per-server popclient
-	server_cache_pop_ptr_queue_list = new MessagePtrQueue<cache_pop_t>[server_num];
+	/*server_cache_pop_ptr_queue_list = new MessagePtrQueue<cache_pop_t>[server_num];
 	for (size_t i = 0; i < server_num; i++) {
 		server_cache_pop_ptr_queue_list[i].init(MQ_SIZE);
-	}
+	}*/
 
 	// prepare for cache eviction
 	/*server_evictserver_tcpksock_list = new int[server_num];
@@ -127,10 +129,10 @@ void close_server() {
 		delete [] server_popclient_udpsock_list;
 		server_popclient_udpsock_list = NULL;
 	}
-	if (server_cache_pop_ptr_queue_list != NULL) {
+	/*if (server_cache_pop_ptr_queue_list != NULL) {
 		delete [] server_cache_pop_ptr_queue_list;
 		server_cache_pop_ptr_queue_list = NULL;
-	}
+	}*/
 	if (server_cached_keyset_list != NULL) {
 		delete [] server_cached_keyset_list;
 		server_cached_keyset_list = NULL;
@@ -153,7 +155,7 @@ void close_server() {
 	}*/
 }
 
-void *run_server_popclient(void *param) {
+/*void *run_server_popclient(void *param) {
   // Parse param
   uint16_t serveridx = *((uint16_t *)param); // [0, server_num-1]
 
@@ -168,28 +170,17 @@ void *run_server_popclient(void *param) {
 
   while (!transaction_running) {}
 
+  char buf[MAX_BUFSIZE];
+  char recvbuf[MAX_BUFSIZE];
+  int recvsize = 0;
   while (transaction_running) {
-	char buf[MAX_BUFSIZE];
   	cache_pop_t *tmp_cache_pop_ptr = server_cache_pop_ptr_queue_list[serveridx].read();
-	int recvsize = 0;
   	if (tmp_cache_pop_ptr != NULL) {
+		uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
 		while (true) {
-			uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
-			//printf("send CACHE_POP to controller\n");
-			//dump_buf(buf, popsize);
-			udpsendto(server_popclient_udpsock_list[serveridx], buf, popsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "server.popclient");
-
-			// wait for CACHE_POP_ACK
-			// NOTE: we do not wait for CACHE_POP_INSWITCH_ACK, as it needs to wait for finishing entire cache population workflow, and cannot utilize max thpt of switchos<->ptf
-			bool is_timeout = udprecvfrom(server_popclient_udpsock_list[serveridx], buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "server.popclient");
-			if (unlikely(is_timeout)) {
-				continue;
-			}
-			else {
-				cache_pop_ack_t rsp(buf, recvsize);
-				INVARIANT(rsp.key() == tmp_cache_pop_ptr->key());
-				break;
-			}
+			send_cachepop(server_popclient_udpsock_list[serveridx], buf, popsize, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recvsize);
+			cache_pop_ack_t rsp(recvbuf, recvsize);
+			INVARIANT(rsp.key() == tmp_cache_pop_ptr->key());
 		}
 
 		delete tmp_cache_pop_ptr;
@@ -200,6 +191,26 @@ void *run_server_popclient(void *param) {
   close(server_popclient_udpsock_list[serveridx]);
   pthread_exit(nullptr);
   return 0;
+}*/
+
+void send_cachepop(const int &sockfd, const char *buf, const int &buflen, const struct sockaddr_in &dstaddr, const socklen_t &dstaddrlen, char *recvbuf, const int& maxrecvbuflen, int &recvsize) {
+	INVARIANT(buf != recvbuf && &buflen != &recvsize);
+	while (true) {
+		//printf("send CACHE_POP to controller\n");
+		//dump_buf(buf, popsize);
+		udpsendto(sockfd, buf, buflen, 0, &dstaddr, dstaddrlen, "server.popclient");
+
+		// wait for CACHE_POP_ACK
+		// NOTE: we do not wait for CACHE_POP_INSWITCH_ACK, as it needs to wait for finishing entire cache population workflow, and cannot utilize max thpt of switchos<->ptf
+		bool is_timeout = udprecvfrom(sockfd, recvbuf, maxrecvbuflen, 0, NULL, NULL, recvsize, "server.popclient");
+		if (unlikely(is_timeout)) {
+			printf("Cache population timeout!\n");
+			continue;
+		}
+		else {
+			return;
+		}
+	}
 }
 
 /*
@@ -214,11 +225,30 @@ void *run_server_worker(void * param) {
   // NOTE: pthread id != LWP id (linux thread id)
   server_worker_lwpid_list[serveridx] = CUR_LWPID();
 
+  // open rocksdb
   bool is_existing = db_wrappers[serveridx].open(serveridx);
   if (!is_existing) {
 	  printf("You need to run ycsb_loader before ycsb_server\n");
 	  exit(-1);
   }
+
+  // packet headers (only needed by dpdk / raw socket)
+  //uint8_t srcmac[6];
+  //uint8_t dstmac[6];
+  //char srcip[16];
+  //char dstip[16];
+  //uint16_t srcport;
+  //uint16_t unused_dstport; // we use server_port_start instead of received dstport to hide server-side partition for client
+  
+  // client address (only needed by udp socket)
+  // NOTE: udp socket uses binded port as server.srcport; if we use raw socket, we need to judge client.dstport in every worker, which is time-consumine; -> we resort switch to hide server.srcport
+  struct sockaddr_in client_addr;
+  socklen_t client_addrlen = sizeof(struct sockaddr_in);
+
+  // NOTE: controller and switchos should have been launched before servers
+  struct sockaddr_in controller_popserver_addr;
+  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + serveridx);
+  socklen_t controller_popserver_addrlen = sizeof(struct sockaddr_in);
 
   // scan.startkey <= max_startkey; scan.endkey >= min_startkey
   // use size_t to avoid int overflow
@@ -236,19 +266,7 @@ void *run_server_worker(void * param) {
   dynamic_array_t scanbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
   int recv_size = 0;
   int rsp_size = 0;
-
-  // packet headers (only needed by dpdk / raw socket)
-  //uint8_t srcmac[6];
-  //uint8_t dstmac[6];
-  //char srcip[16];
-  //char dstip[16];
-  //uint16_t srcport;
-  //uint16_t unused_dstport; // we use server_port_start instead of received dstport to hide server-side partition for client
-  
-  // client address (only needed by udp socket)
-  // NOTE: udp socket uses binded port as server.srcport; if we use raw socket, we need to judge client.dstport in every worker, which is time-consumine; -> we resort switch to hide server.srcport
-  struct sockaddr_in client_addr;
-  socklen_t client_addrlen = sizeof(struct sockaddr_in);
+  char recvbuf[MAX_BUFSIZE];
 
   printf("[server.worker%d] ready\n", int(serveridx));
   transaction_ready_threads++;
@@ -258,6 +276,7 @@ void *run_server_worker(void * param) {
 
   struct timespec process_t1, process_t2, process_t3;
   struct timespec wait_t1, wait_t2, wait_t3;
+  struct timespec rocksdb_t1, rocksdb_t2, rocksdb_t3;
   bool is_first_pkt = true;
   while (transaction_running) {
 
@@ -325,7 +344,9 @@ void *run_server_worker(void * param) {
 			{
 				put_request_seq_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
+				CUR_TIME(rocksdb_t1);
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
+				CUR_TIME(rocksdb_t2);
 				//COUT_THIS("[server] stat = " << tmp_stat)
 				put_response_t rsp(req.key(), true, serveridx);
 #ifdef DUMP_BUF
@@ -415,8 +436,14 @@ void *run_server_worker(void * param) {
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
 						// Send CACHE_POP to server.popclient
-						cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, serveridx); // freed by server.popclient
-						server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+						//cache_pop_t cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, serveridx); // freed by server.popclient
+						//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+						
+						cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, serveridx);
+						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+						send_cachepop(server_popclient_udpsock_list[serveridx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
+						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
+						INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 					}
 				}
 				break;
@@ -425,7 +452,9 @@ void *run_server_worker(void * param) {
 			{
 				put_request_pop_seq_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
+				CUR_TIME(rocksdb_t1);
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
+				CUR_TIME(rocksdb_t2);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				
 				put_response_t rsp(req.key(), true, serveridx);
@@ -444,8 +473,14 @@ void *run_server_worker(void * param) {
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
 						// Send CACHE_POP to server.popclient
-						cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), serveridx); // freed by server.popclient
-						server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+						//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), serveridx); // freed by server.popclient
+						//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+						
+						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
+						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+						send_cachepop(server_popclient_udpsock_list[serveridx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
+						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
+						INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 					}
 				}
 				break;
@@ -500,8 +535,14 @@ void *run_server_worker(void * param) {
 					if (!is_cached_before) {
 						server_cached_keyset_list[serveridx].insert(req.key());
 						// Send CACHE_POP to server.popclient
-						cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), serveridx); // freed by server.popclient
-						server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+						//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), serveridx); // freed by server.popclient
+						//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+						
+						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), serveridx);
+						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+						send_cachepop(server_popclient_udpsock_list[serveridx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
+						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
+						INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 					}
 				}
 				break;
@@ -555,8 +596,14 @@ void *run_server_worker(void * param) {
 				INVARIANT(!is_cached_before);
 				server_cached_keyset_list[serveridx].insert(req.key());
 				// Send CACHE_POP to server.popclient
-				cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), tmp_seq, serveridx); // freed by server.popclient
-				server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+				//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), tmp_seq, serveridx); // freed by server.popclient
+				//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
+						
+				cache_pop_t cache_pop_req(req.key(), req.val(), tmp_seq, serveridx);
+				rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
+				send_cachepop(server_popclient_udpsock_list[serveridx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
+				cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
+				INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 				break;
 			}
 		case packet_type_t::LOADREQ:
@@ -595,6 +642,9 @@ void *run_server_worker(void * param) {
 		CUR_TIME(process_t2);
 		DELTA_TIME(process_t2, process_t1, process_t3);
 		thread_param.process_latency_list.push_back(GET_MICROSECOND(process_t3));
+
+		DELTA_TIME(rocksdb_t2, rocksdb_t1, rocksdb_t3);
+		thread_param.rocksdb_latency_list.push_back(GET_MICROSECOND(rocksdb_t3));
 	}
 
   } // end of while(transaction_running)
