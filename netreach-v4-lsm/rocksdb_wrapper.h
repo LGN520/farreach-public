@@ -44,7 +44,7 @@
 #define BLOCKCACHE_SHARDBITS 4
 #define SYNC_WRITE false // flush WAL instead of memtable for each operation
 #define DISABLE_WAL false // disable WAL flush
-//#define WAL_BYTES_PER_SYNC 1 * 1024 * 1024
+#define WAL_BYTES_PER_SYNC 16 * 1024 * 1024 // used to alleviate write slowdown due to OS flushing WAL cache
 
 class RocksdbWrapper {
 

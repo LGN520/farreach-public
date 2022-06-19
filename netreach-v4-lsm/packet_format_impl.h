@@ -400,7 +400,7 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 template<class key_t>
 void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
-	INVARIANT(my_size <= recv_size);
+	INVARIANT(my_size >= recv_size);
 	const char *begin = data;
 	memcpy((void *)&this->_type, begin, sizeof(uint8_t));
 	begin += sizeof(uint8_t);

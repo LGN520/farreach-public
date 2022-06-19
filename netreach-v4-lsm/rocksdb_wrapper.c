@@ -27,7 +27,7 @@ void RocksdbWrapper::prepare_rocksdb() {
   rocksdb_options.num_levels = LEVEL_NUM; // level number
   rocksdb_options.max_bytes_for_level_base = LEVEL1_SST_NUM * SST_SIZE; // byte number in level1
   rocksdb_options.max_bytes_for_level_multiplier = LEVEL_MULTIPLIER;
-  //rocksdb_options.wal_bytes_per_sync = WAL_BYTES_PER_SYNC;
+  rocksdb_options.wal_bytes_per_sync = WAL_BYTES_PER_SYNC;
 
 #ifdef DEBUG_ROCKSDB
   //rocksdb_options.statistics = rocksdb::CreateDBStatistics();
@@ -280,9 +280,11 @@ bool RocksdbWrapper::put(netreach_key_t key, val_t val, uint32_t seq, bool check
 	CUR_TIME(debug_t2);
 	rocksdb::SetPerfLevel(rocksdb::PerfLevel::kDisable);
 	DELTA_TIME(debug_t2, debug_t1, debug_t3);
-	int abnormal_usecs = 1 * 1000 * 1000; // 1s
+	int abnormal_usecs = 0.5 * 1000 * 1000; // 0.5s
 	if (GET_MICROSECOND(debug_t3) > abnormal_usecs) {
 		COUT_THIS(rocksdb::get_perf_context()->ToString());
+		COUT_THIS(rocksdb::get_iostats_context()->ToString());
+		printf("\n");
 	}
 #endif
 

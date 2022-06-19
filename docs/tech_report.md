@@ -230,3 +230,6 @@
 	* `sudo apt-get install hugepages`
 	* `sudo hugeadm --thp-never`
 	* `cat /sys/kernel/mm/transparent_hugepage/enabled` to check
+- Performance monitoring
+	* Use PerfStat and IOStat in rocksdb (see rocksdb_wrapper.c)
+	* Use htop, iotop (e.g., sudo iotop -u ssy), and iostat (e.g., iostat -x 1)

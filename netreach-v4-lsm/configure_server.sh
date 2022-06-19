@@ -6,6 +6,9 @@ sudo sysctl -w net.core.rmem_default=212992
 
 sudo hugeadm --thp-never
 
+#sudo sysctl -w vm.dirty_background_ratio=5
+#sudo sysctl -w vm.dirty_ratio=40
+
 ulimit -n
 
 # Must execute in your terminal

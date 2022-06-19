@@ -1151,6 +1151,43 @@
 		* NOTE: if we treat both switch and server as storage node, we have already trade availability for failure consistency based on snapshot
 		* TODO: We can use sync write for recoverable failure -> undermine deployability/generality
 		* TODO: For unrecoverable failure, we can use server-side replication -> undermine thpt
++ Deprecated: Re-implement client-side throughput calculation
+	* For each client thread: total pktcnt / sum latency
+	* For system thpt: sum over throughputs of all clients
+	* Deprecation reason: we should use (total opcnt / system running time) to get system average throughput as in YCSB client.java
+		- It is ok to sum over per-client average throughput to get the system throughput, but be careful about calculating way
+		- Correct way of calculating per-client thpt
+			+ (1) per-client opcnt / system running time
+			+ (2) average value of per-client per-sec opcnt based on entire system running time
+		- Wrong way of calculating per-client thpt
+			+ WRONG: per-client opcnt / per-client time of finishing those operations to reduce client overhead
+			+ Reason: if one client thread finishes before system running time, the calculated per-client thpt is not averaged based on the entire system running time, and system throughput will infinitely increase as # of client threads increases
+			+ Example: system thpt of 100; per-client max thpt of 50
+				* 2 client threads: 50 + 50 = 100
+				* 4 client threads (2 finish in the 1st second, and 2 finish in the 2nd second): 50 + 50 + 25 + 25 = 150
+					- NOTE: we do NOT consider 0 op/s thpt of the first 2 client threads in the 2nd second
+				* 6 client threads (2 finish in 1st sec, 2 finish in 2nd sec, 2 finish in 3rd sec): 50*2 + 25*2 + 16*2 = 182
++ Reduce memory overhead in end-hosts by dynamic array
+	+ Change udprecvlarge_multisrc to assign dynamic memory structures in runtime instead of max server num
+	+ Implement dynamic array to reduce memory usage of MAX_LARGE_BUFSIZE
+		+ Implement DynamicArray::dyanmic_memcpy: increase memory each time until achieving MAX_LARGE_BUFSIZE
+		+ Implement DynamicArray::clear: decrease memory to MAX_BUFSIZE and reset metadata
+		+ Implement DynamicArray::dynamic_memset: increase memory each time until achieving MAX_LARGE_BUFSIZE
+		+ Implement ScanResponseSplit::dynamic_serialize
+		+ Implement Key::dynamic_serialize
+		+ Implement Val::dynamic_serialize
+	+ Deploy dynamic array for scan response
+		+ Server: use dynamic array to serialize scan response in server.worker
+		+ Client: use dynamic array to receive scan response in socket_helper.udprecvlarge_multisrc
+	+ Deploy dynamic array for snapshot data
+		+ switchos: use dynamic memory to receive snapshot from ptf in socket_helper.udprecvlarge, and send to controller by SNAPSHOT_GETDATA_ACK
+		+ controller: use dynamic memory to receive snapshot from switchos, split snapshot, and send to each server by SNAPSHOT_SENDDATA
+		+ server: use dynamic memory to receive large snapshot data from SNAPSHOT_SENDDATA
+	+ Test large scan response from single/multiple src
+	+ Test large snapshot
+		+ Issue: switchos cannot receive all snapshot data from ptf
+		+ Reason: dynamic array is slightly slower than raw buf, so switchos cannot receive all fragments immediately
+		+ Solution: run configure_switchos.sh to enlarge max udp rcvbuf size; set udp rcvbuf size of switchos_snapshotserver_for_ptf_udpsock to avoid pktloss of snapshot data from ptf
 
 ## Run
 

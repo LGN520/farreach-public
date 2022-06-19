@@ -104,7 +104,7 @@ static inline void dump_buf(char *buf, uint32_t bufsize)
 
 //#define DEBUG_SNAPSHOT
 //#define DEBUG_PERSEC
-#define DEBUG_ROCKSDB
+//#define DEBUG_ROCKSDB
 
 // 1: assert
 // 0: ignore assert

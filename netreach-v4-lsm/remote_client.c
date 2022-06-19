@@ -85,6 +85,8 @@ volatile bool running = false;
 std::atomic<size_t> ready_threads(0);
 std::atomic<size_t> finish_threads(0);
 
+int *client_udpsock_list = NULL;
+
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
 
@@ -93,6 +95,13 @@ int main(int argc, char **argv) {
 		dynamic_rulemap_ptr = new dynamic_rulemap_t(dynamic_periodnum, dynamic_ruleprefix);
 		INVARIANT(dynamic_rulemap_ptr != NULL);
 		dynamic_rulemap_ptr->nextperiod();
+	}
+
+	client_udpsock_list = new int[client_num];
+	INVARIANT(client_udpsock_list != NULL);
+	for (size_t i = 0; i < client_num; i++) {
+		//create_udpsock(client_udpsock_list[i], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+		create_udpsock(client_udpsock_list[i], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_DEFAULT_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
 	}
 
 	run_benchmark();
@@ -509,8 +518,6 @@ void *run_fg(void *param) {
 	char buf[MAX_BUFSIZE];
 	int req_size = 0;
 	int recv_size = 0;
-	int clientsock = -1;
-	create_udpsock(clientsock, true, "ycsb_remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
 	struct sockaddr_in server_addr;
 	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
@@ -586,12 +593,12 @@ void *run_fg(void *param) {
 					wait_time = GET_MICROSECOND(wait_t3);
 				}
 				CUR_TIME(send_t1);
-				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(client_udpsock_list[thread_id], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
 				while (true) {
-					is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					is_timeout = udprecvfrom(client_udpsock_list[thread_id], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 					CUR_TIME(wait_t1);
 #ifdef DUMP_BUF
 					dump_buf(buf, recv_size);
@@ -651,13 +658,35 @@ void *run_fg(void *param) {
 					wait_time = GET_MICROSECOND(wait_t3);
 				}
 				CUR_TIME(send_t1);
-				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(client_udpsock_list[thread_id], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
 				while (true) {
-					is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					// TMPDEBUG
+					/*bool prevtimeout = is_timeout;
+					if (is_timeout && thread_id == 0) {
+						dump_buf(buf, req_size);
+					}*/
+
+					is_timeout = udprecvfrom(client_udpsock_list[thread_id], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 					CUR_TIME(wait_t1);
+
+					/*if (is_timeout && thread_id != 0) { // TMPDEBUG
+						printf("client %d exit\n", thread_id);
+						close(client_udpsock_list[thread_id]);
+						pthread_exit(nullptr);
+					}
+
+					if (prevtimeout && thread_id == 0) { // TMPDEBUG
+						if (is_timeout) {
+							printf("still timeout; errno: %d!\n", errno);
+						}
+						else {
+							COUT_VAR(recv_size);
+							dump_buf(buf, recv_size);
+						}
+					}*/
 #ifdef DUMP_BUF
 					dump_buf(buf, recv_size);
 #endif
@@ -703,12 +732,12 @@ void *run_fg(void *param) {
 					wait_time = GET_MICROSECOND(wait_t3);
 				}
 				CUR_TIME(send_t1);
-				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(client_udpsock_list[thread_id], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
 				while (true) {
-					is_timeout = udprecvfrom(clientsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					is_timeout = udprecvfrom(client_udpsock_list[thread_id], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 					CUR_TIME(wait_t1);
 #ifdef DUMP_BUF
 					dump_buf(buf, recv_size);
@@ -763,16 +792,16 @@ void *run_fg(void *param) {
 					wait_time = GET_MICROSECOND(wait_t3);
 				}
 				CUR_TIME(send_t1);
-				udpsendto(clientsock, buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(client_udpsock_list[thread_id], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
 				size_t received_scannum = 0;
 				dynamic_array_t *scanbufs = NULL;
-				set_recvtimeout(clientsock, CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
-				//is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
-				is_timeout = udprecvlarge_multisrc_ipfrag(clientsock, &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, uint8_t(packet_type_t::SCANRES_SPLIT), tmpkey);
+				set_recvtimeout(client_udpsock_list[thread_id], CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
+				//is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[thread_id], scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
+				is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[thread_id], &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, uint8_t(packet_type_t::SCANRES_SPLIT), tmpkey);
 				CUR_TIME(wait_t1);
-				set_recvtimeout(clientsock, CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
+				set_recvtimeout(client_udpsock_list[thread_id], CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
 				if (is_timeout) {
 					continue;
 				}
@@ -860,7 +889,7 @@ void *run_fg(void *param) {
 	delete iter;
 	iter = NULL;
 
-	close(clientsock);
+	close(client_udpsock_list[thread_id]);
 #if !defined(NDEBUGGING_LOG)
 	ofs.close();
 #endif

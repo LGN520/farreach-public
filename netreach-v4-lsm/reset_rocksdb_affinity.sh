@@ -75,5 +75,5 @@ do
 done
 
 # Check results (NOTE: it may not show the latest CPU affinity)
-ps -eLF | grep "./server" | grep -v "grep"
+#ps -eLF | grep "./server" | grep -v "grep"
 
