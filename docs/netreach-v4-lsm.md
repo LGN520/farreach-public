@@ -1188,6 +1188,44 @@
 		+ Issue: switchos cannot receive all snapshot data from ptf
 		+ Reason: dynamic array is slightly slower than raw buf, so switchos cannot receive all fragments immediately
 		+ Solution: run configure_switchos.sh to enlarge max udp rcvbuf size; set udp rcvbuf size of switchos_snapshotserver_for_ptf_udpsock to avoid pktloss of snapshot data from ptf
++ Test static workload under range partition
+	* Use settings after fixing bottleneck issues (see docs/bottleneck-find-process-20220618.md for details)
+	* FarReach w/o inswitch cache
+		- server 1 + client 64: 0.09 MOPS
+		- server 8 + client 512: 0.17 MOPS
+		- server 16
+			+ client 1024: 0.19 MOPS
+			+ client 2048: 0.18 MOPS
+			+ client 1024 w/ disable WAL: 0.257 MOPS
+		- server 32 + client 2048: 0.196 MOPS
+	* FarReach w/ inswitch cache
+		- server 1 + client 64: 0.1776 MOPS (1.97X runtime; 1.97X normalized)
+		- server 8 + client 512: 1.08 MOPS (6.35X runtime; 6.75X normalized)
+		- server 16 
+			+ client 1024: 1.67 MOPS (8.8X runtime; 11.3X normalized)
+			+ client 2048: 1.4~1.5 MOPS
+			+ client 1024 w/ disable WAL: 1.72 MOPS (6.7X runtime; 11.3X normalized)
+				* Reason of limited improvement: no disk overhead; yet input traffic is not sufficient
+			+ client 2048 w/ disable WAL: 1.73 MOPS
+				* Reason of limited improvement: client-side input traffic is insufficient
+				* NOTE: 2048 client threads makes no sense vs. 1024 client threads, as wait latency increases from ~400us to ~800us
+		- server 32 
+			+ client 1024: 1.68 MOPS (8.5X runtime; 18.4X normalized)
+				* Reason: FarReach does not improve thpt due to disk overhead; FarReachNoCache improves thpt due to CPU bottleneck
+			+ client 2048: 1.67 MOPS
+				* Reason of no improvement: disk overhead
+			+ client 2048 w/ 8M wal_bytes_per_sync: 1.4 MOPS
+				+ More write stalls and slowdowns
+			+ client 2048 w/ 32M wal_bytes_per_sync: 1.7 MOPS
+				+ Still w/ write stall/slowdown
+			+ client 2048 w/o wal_bytes_per_sync: 1.73 MOPS
+				+ Still w/ write stall/slowdown
+			+ client 2048 w/ disable WAL: 1.74 MOPS
+				+ Issue: no disk overhead, yet server-side CPU is not fully utilized
+				+ Observation: server-side throughput is relatively stable; even if for the second with smaller system throughput, the process latency including rocksdb process latency is still small, but the wait latency is large -> input traffic is not large enough
+				+ Observation: client-side wait latency (from receiving response to sending next request) is relatively large due to CPU contention (~800us)
+			+ client 3096 w/ disable WAL: 1.68 MOPS
+				+ Reason of no improvement: no sufficient input traffic due to client-side CPU contention
 
 ## Run
 

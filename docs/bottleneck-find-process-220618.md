@@ -531,6 +531,31 @@
 						* NOTE: w/o write stall/slowdown
 					+ 20th of server 16 + client 1024 w/ 100M queries (restart and reset with empty) w/ 13th w/ 16MB memtable w/ 64 flushnum + 128 maxnum: 1.57 MOPS
 						* w/ limited write slowdown
++ Fix performance degradation issue due to OS flush
+	* Monitor IO by rocksdb::IOStat, iotop, and iostat
+	* Configure system dirty options -> FAIL
+		+ sysctl -w vm.dirty_background_ratio=50
+		+ sysctl -w vm.dirty_ratio=80
+		+ sysctl -w vm.dirty_writeback_centisecs=500
+		+ sysctl -w vm.dirty_expire_centisecs=18000
+		+ NOTE: linux is still flushing OS cache into disk
+		+ GUESS: rocksdb may use sync to flush WAL into disk automatically? -> NO
+	* Enable kernel sync debugging -> FAIL
+		+ `sudo -i`
+			* `echo 1 > /sys/kernel/debug/tracing/events/ext4/ext4_sync_file_enter/enable`
+		+ `sudo cat /sys/kernel/debug/tracing/trace`
+			* No one invokes sync() during transaction phase, but kernel does write data into disk even if we set a large dirty ratio and dirty expire time -> write slowdown/stall
+		+ NOTE: rocksdb does not use sync to flush WAL into disk
+		+ GUESS: linux write data into disk due to closing some WAL logs?
+	* Tune wal_bytes_per_sync to avoid linux flushing too much data once a time -> seems to WORK
+		+ Force to flush WAL in prior to avoid disk latency spike
+		+ Alleviate write slowdown but cannot achieve absolutely stable throughput
++ Issue under 2048 client threads
+	* Client-side segmentation fault, and client socket cannot receive response from switch/server yet tcpdump can see
+		* Reason 1: we create client udp socket in each thread, which may allocate the same port to different udp client threads especially under large # of client threads -> FAIL
+			* Solution: create the client-side udp sockets in main thread
+		* Reason 2: we assign 8MB receive buffer for each udp socket; under 2048 client threads, it costs 16GB kernel memory which may exceed kernel limitation and hence incur segmentation fault or misbehavior
+	* NOTE: client thread from 1024 to 2048 in one physical machine does not make any sense
 * Final conclusion
 	- Disk overhead
 		+ Implementation issue of GET seq from rocksdb for each normal write, where block cache prefers skewed workload
@@ -570,10 +595,16 @@
 				- Smaller time for all server threads to switch WAL due to load balance -> shorter write stall/slowdown period
 		+ Solution
 			* NOTE: use default wal_bytes_per_sync (aka 0) is better, which leaves OS to decide which time to flush WAL -> maximum runtime throughput
-				- If we set wal_bytes_per_sync, under load balance, all server threads write WAL in near time, which incurs large write_wal_time and hence write stall/slowdown
+				- wal_bytes_per_sync cannot be too small (e.g., sync write), which undermines system throughput due to frequent disk operation
+				- wal_bytes_per_sync cannot be too large, which incurs a long time linux flush due to huge data volumn, and incurs write stall/breakdown
+				- NOTE: linux OS flushes cache into disk for every dirty seconds or every dirty bytes/ratio
 			* NOTE: Use proper memtable size to reduce switch_memtable/WAL_time and write_wal_time
 				- Although larger memtable can reduce # of switching memtable/WAL, yet incur large overhead of switching memtable/WAL -> write stall/slowdown
 					+ Unless it is large enough and all data hit in memory, yet it is tricky
 				- Using smaller memtable can reduce overhead of switching memtable/WAL, but increase # of switching and hence # of WAL flush -> longer write_wal_time
+		+ Summary
+			* Reason: rocksdb flushes WAL into linux OS cache periodically, and linux OS flushes OS cache into disk periodically; based on monitoring tools (iotop and iostat), when linux OS flushes OS cache, disk utilization becomes 100%; if some server thread is perform a disk operation in rocksdb (e.g., write WAL or create new WAL file), it suffers from a long latency and hence undermine system throughput
+			* Alleviation: set a proper wal_bytes_per_sync to flush WAL into disk for every fixed amount of bytes -> avoid linux OS flush a large number of page cache, which utilizes 100% disk for a relatively long time and hence incur write stall/slowdown
+			* NOTE: it alleviates write slowdown issue but cannot avoid it, because if server OS flushes data into disk and server thread is performing some disk operation at the same time, system throughput must be affected
 	- Remaining small gap between runtime and normalized thpt improvement
 		+ Reason: memory access prefers skewed workload to uniform workload
