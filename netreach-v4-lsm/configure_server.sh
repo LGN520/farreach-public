@@ -9,7 +9,7 @@ sudo hugeadm --thp-never
 #sudo sysctl -w vm.dirty_background_ratio=5
 #sudo sysctl -w vm.dirty_ratio=40
 
+# Only work for current shell process (inherited by subprocess) -> so we need to source the script
+ulimit -n 1024000
+# Display
 ulimit -n
-
-# Must execute in your terminal
-#ulimit -n 102400

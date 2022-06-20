@@ -1233,10 +1233,9 @@
 	+ DPDK
 		* Follow [tech_report](./tech_report.md) to confiure dpdk
 	+ Configure after each login
-		* `sudo bash configure_client.sh`: configure NIC ipv4 address, arp table, and UDP rcvbuf size
-		* `sudo bash configure_server.sh`: configure NIC ipv4 address, arp table, and UDP rcvbuf size
-		* `sudo bash configure_switchos.sh`: ocnfigure UDP rcvbuf size
-		* Run `ulimit -n 102400` in both client and server to remove openfd limitation
+		* `source configure_client.sh`: configure NIC ipv4 address, arp table, UDP rcvbuf size, and openfd limitation
+		* `source configure_server.sh`: configure NIC ipv4 address, arp table, UDP rcvbuf size, and openfd limitation
+		* `sudo bash configure_switchos.sh`: configure UDP rcvbuf size
 	+ Max # of open files
 		* `sudo vim /etc/security/limits.conf` to set hard and soft limits on maximum # of open files
 		* logout and re-login
