@@ -526,6 +526,11 @@ void *run_switchos_popworker(void *param) {
 	val_t switchos_evictvalue = val_t();
 	uint32_t switchos_evictseq = 0;
 	bool switchos_evictstat = false;
+
+	// TMPDEBUG
+	//std::vector<double> evict_load_time_list, evict_sendrecv_time_list, evict_remove_time_list, evict_total_time_list;
+	//struct timespec evict_load_t1, evict_load_t2, evict_load_t3, evict_sendrecv_t1, evict_sendrecv_t2, evict_sendrecv_t3, evict_remove_t1, evict_remove_t2, evict_remove_t3, evict_total_t1, evict_total_t2, evict_total_t3;
+
 	while (switchos_running) {
 		if (is_stop_cachepop && !popworker_know_stop_cachepop) {
 			popworker_know_stop_cachepop = true;
@@ -549,8 +554,10 @@ void *run_switchos_popworker(void *param) {
 					// NOTE: as freeidx of new record must > switchos_cached_empty_index_backup, no case2 for cache population
 				}
 				else { // Without free idx
+					//CUR_TIME(evict_total_t1);
 					bool is_case2 = is_snapshot || (is_snapshot_end && !popworker_know_snapshot_end);
 
+					//CUR_TIME(evict_load_t1);
 					// get evictdata from ptf framework 
 					//system("bash tofino/get_evictdata_setvalid3.sh");
 					ptf_sendsize = serialize_get_evictdata_setvalid3(ptfbuf);
@@ -558,6 +565,7 @@ void *run_switchos_popworker(void *param) {
 					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 					INVARIANT(*((int *)ptfbuf) == SWITCHOS_GET_EVICTDATA_SETVALID3_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
 					parse_evictdata(ptfbuf, ptf_recvsize, switchos_evictidx, switchos_evictvalue, switchos_evictseq, switchos_evictstat);
+					//CUR_TIME(evict_load_t2);
 
 					// switchos.popworker.evictclient sends CACHE_EVICT to controller.evictserver
 					INVARIANT(switchos_evictidx >= 0 && switchos_evictidx < switch_kv_bucket_num);
@@ -568,6 +576,7 @@ void *run_switchos_popworker(void *param) {
 						exit(-1);
 					}
 
+					//CUR_TIME(evict_sendrecv_t1);
 					if (!is_case2) {
 						cache_evict_t tmp_cache_evict(cur_evictkey, \
 								//val_t(switchos_evictvalbytes, switchos_evictvallen),
@@ -602,6 +611,7 @@ void *run_switchos_popworker(void *param) {
 							break;
 						}
 					}
+					//CUR_TIME(evict_sendrecv_t2);
 
 					// store case2
 					if (is_case2) {
@@ -611,6 +621,7 @@ void *run_switchos_popworker(void *param) {
 								uint32_t(switchos_evictseq), bool(switchos_evictstat));
 					}
 
+					//CUR_TIME(evict_remove_t1);
 					// remove evicted data from cache_lookup_tbl
 					//system("bash tofino/remove_cache_lookup.sh");
 					////switchos_cached_key_idx_map.erase(cur_evictkey);
@@ -618,6 +629,9 @@ void *run_switchos_popworker(void *param) {
 					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 					INVARIANT(*((int *)ptfbuf) == SWITCHOS_REMOVE_CACHE_LOOKUP_ACK); // wait for SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
+					//CUR_TIME(evict_remove_t2);
+
+					//printf("Evict %x to %x\n", switchos_cached_keyarray[switchos_evictidx].keyhihi, tmp_cache_pop_ptr->key().keyhihi);
 
 					// set freeidx as evictidx for cache popluation later
 					switchos_freeidx = switchos_evictidx;
@@ -626,6 +640,29 @@ void *run_switchos_popworker(void *param) {
 					switchos_cached_keyidx_map.erase(cur_evictkey);
 					switchos_cached_keyarray[switchos_evictidx] = netreach_key_t();
 					switchos_cached_serveridxarray[switchos_evictidx] = -1;
+
+					//CUR_TIME(evict_total_t2);
+
+					/*DELTA_TIME(evict_load_t2, evict_load_t1, evict_load_t3);
+					DELTA_TIME(evict_sendrecv_t2, evict_sendrecv_t1, evict_sendrecv_t3);
+					DELTA_TIME(evict_remove_t2, evict_remove_t1, evict_remove_t3);
+					DELTA_TIME(evict_total_t2, evict_total_t1, evict_total_t3);
+					evict_load_time_list.push_back(GET_MICROSECOND(evict_load_t3));
+					evict_sendrecv_time_list.push_back(GET_MICROSECOND(evict_sendrecv_t3));
+					evict_remove_time_list.push_back(GET_MICROSECOND(evict_remove_t3));
+					evict_total_time_list.push_back(GET_MICROSECOND(evict_total_t3));
+
+					if ((evict_total_time_list.size() + 1) % 100 == 0) {
+						double load_time = 0, sendrecv_time = 0, remove_time = 0, total_time = 0;
+						for (size_t i = 0; i < evict_total_time_list.size(); i++) {
+							load_time += evict_load_time_list[i];
+							sendrecv_time += evict_sendrecv_time_list[i];
+							remove_time += evict_remove_time_list[i];
+							total_time += evict_total_time_list[i];
+						}
+						int tmpsize = evict_total_time_list.size();
+						printf("average load time: %f, sendrecv time: %f, remove time: %f, total time: %f\n", load_time/tmpsize, sendrecv_time/tmpsize, remove_time/tmpsize, total_time/tmpsize);
+					}*/
 				}
 
 				/* cache population for new record */
