@@ -144,6 +144,7 @@ void run_benchmark() {
 
 	COUT_THIS("[client] prepare clients ...");
 	while (ready_threads < client_num) sleep(1);
+	COUT_THIS("[client] all clients ready...");
 
 	// used for dynamic workload
 	std::map<uint16_t, int> persec_perclient_nodeidx_pktcnt_map[dynamic_periodnum * dynamic_periodinterval][client_num];
@@ -204,10 +205,20 @@ void run_benchmark() {
 
 						// collect for runtime throughput
 						std::vector<int> cursec_perclient_aggpktcnts(client_num);
+						std::vector<int> cursec_perclient_aggcachehitcnts(client_num);
+						std::vector<std::vector<int>> cursec_perclient_perserver_aggcachemisscnts(client_num);
 						for (size_t i = 0; i < client_num; i++) {
 							cursec_perclient_aggpktcnts[i] = fg_params[i].process_latency_list.size();
+							cursec_perclient_aggcachehitcnts[i] = fg_params[i].nodeidx_pktcnt_map[0xFFFF];
+							std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_num);
+							for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
+								cursec_curclient_perserver_aggcachemisscnts[serveridx] = fg_params[i].nodeidx_pktcnt_map[serveridx];
+							}
+							cursec_perclient_perserver_aggcachemisscnts[i] = cursec_curclient_perserver_aggcachemisscnts;
 						}
 						persec_perclient_aggpktcnts.push_back(cursec_perclient_aggpktcnts);
+						persec_perclient_aggcachehitcnts.push_back(cursec_perclient_aggcachehitcnts);
+						persec_perclient_perserver_aggcachemisscnts.push_back(cursec_perclient_perserver_aggcachemisscnts);
 
 						break;
 					}

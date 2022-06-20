@@ -3,7 +3,7 @@
 SyntheticParserIterator::SyntheticParserIterator(const char* filename) {
 	_fd = open(filename, O_RDONLY);
 	if (_fd == -1) {
-		printf("No such file: %s\n", filename);
+		printf("Cannot open file: %s, errno: %d\n", filename, errno);
 		exit(-1);
 	}
 
