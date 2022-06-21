@@ -1080,7 +1080,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 10
 
-            # Table: eg_port_forward_tbl (default: nop; size: 936/938)
+            # Table: eg_port_forward_tbl (default: nop; size: 931/933)
             print "Configuring eg_port_forward_tbl"
             if RANGE_SUPPORT == False:
                 self.configure_eg_port_forward_tbl()
@@ -1325,7 +1325,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     (self.sess_hdl, self.dev_tgt, entry.match_spec)
 
     def configure_eg_port_forward_tbl(self):
-        # Table: eg_port_forward_tbl (default: nop; size: 936)
+        # Table: eg_port_forward_tbl (default: nop; size: 931)
         for is_cached in cached_list:
             for is_hot in hot_list:
                 for validvalue in validvalue_list:
@@ -1492,7 +1492,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 #    self.client.eg_port_forward_tbl_table_add_with_drop_getres_latest_seq_inswitch(\
                                                 #            self.sess_hdl, self.dev_tgt, matchspec0)
                                             # is_cached=1, is_wrong_pipeline=0, tmp_client_sid=0, and snapshot_flag=1 (same inswitch_hdr as GETRES_LATEST_SEQ_INSWITCH); is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_case1 should be 0 for GETRES_LATEST_SEQ_INSWITCH_CASE1
-                                            # size: 2
+                                            # size: 1
                                             #if is_cached == 1 and is_wrong_pipeline == 0 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
                                             if is_cached == 1 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_case1 == 0:
                                                 matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
@@ -1514,8 +1514,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                 elif is_lastclone_for_pktloss == 1:
                                                     # Forward GETRES_LATEST_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector
-                                                    self.client.eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_inswitch_case1(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    #self.client.eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_inswitch_case1(\
+                                                    #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                    pass
                                             # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_DELETED_SEQ
                                             # size: 1
                                             #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
@@ -1567,7 +1569,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 #    self.client.eg_port_forward_tbl_table_add_with_drop_getres_deleted_seq_inswitch(\
                                                 #            self.sess_hdl, self.dev_tgt, matchspec0)
                                             # is_cached=1, is_wrong_pipeline=0, tmp_client_sid=0, and snapshot_flag=1 (same inswitch_hdr as GETRES_LATEST_SEQ_INSWITCH); is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_case1 should be 0 for GETRES_DELETED_SEQ_INSWITCH_CASE1
-                                            # size: 2
+                                            # size: 1
                                             #if is_cached == 1 and is_wrong_pipeline == 0 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
                                             if is_cached == 1 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_case1 == 0:
                                                 matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
@@ -1589,8 +1591,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                 elif is_lastclone_for_pktloss == 1:
                                                     # Forward GETRES_DELETED_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector
-                                                    self.client.eg_port_forward_tbl_table_add_with_forward_getres_deleted_seq_inswitch_case1(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    #self.client.eg_port_forward_tbl_table_add_with_forward_getres_deleted_seq_inswitch_case1(\
+                                                    #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                    pass
                                             # is_cached (memset inswitch_hdr by end-host), is_hot (cm_predicate=1), validvalue, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_POP_INSWITCH
                                             # size: 4
                                             #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
@@ -1612,7 +1616,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 self.client.eg_port_forward_tbl_table_add_with_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), snapshot_flag, is_case1, is_lastclone_for_pktloss should be 0 for CACHE_POP_INSWITCH_ACK
-                                            # size: 1
+                                            # size: 0
                                             #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and snapshot_flag == 0 and is_case1 == 0:
                                             if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and snapshot_flag == 0 and is_case1 == 0 and is_lastclone_for_pktloss == 0:
                                                 matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
@@ -1638,8 +1642,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 #            self.sess_hdl, self.dev_tgt, matchspec0)
 
                                                 # Forward CACHE_POP_INSWITCH_ACK (by clone_e2e) to reflector
-                                                self.client.eg_port_forward_tbl_table_add_with_forward_cache_pop_inswitch_ack(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                #self.client.eg_port_forward_tbl_table_add_with_forward_cache_pop_inswitch_ack(\
+                                                #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                pass
                                             # is_lastclone_for_pktloss should be 0 for PUTREQ_INSWITCH
                                             # size: 512
                                             if is_lastclone_for_pktloss == 0:
@@ -1831,7 +1837,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached (memset inswitch_hdr by end-host), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADFREQ_INSWITCH
-                                            # size: 1
+                                            # size: 0
                                             if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
                                                 matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH,
@@ -1850,7 +1856,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADFREQ_INSWITCH_ACK
-                                            # size: 1
+                                            # size: 0
                                             if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
                                                 matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH_ACK,
@@ -1865,8 +1871,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     inswitch_hdr_snapshot_flag = snapshot_flag,
                                                     meta_is_case1 = is_case1)
                                                 # Forward CACHE_EVICT_LOADFREQ_INSWITCH_ACK (by clone_e2e) to reflector
-                                                self.client.eg_port_forward_tbl_table_add_with_forward_cache_evict_loadfreq_inswitch_ack(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                #self.client.eg_port_forward_tbl_table_add_with_forward_cache_evict_loadfreq_inswitch_ack(\
+                                                #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                pass
                                             # is_cached (memset inswitch_hdr by end-host), is_hot (cm_predicate=1), validvalue, is_latest, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADDATA_INSWITCH
                                             # size: 2
                                             if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
@@ -1892,7 +1900,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADDATA_INSWITCH_ACK
-                                            # size: 1
+                                            # size: 0
                                             if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
                                                 matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = CACHE_EVICT_LOADDATA_INSWITCH_ACK,
@@ -1907,11 +1915,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     inswitch_hdr_snapshot_flag = snapshot_flag,
                                                     meta_is_case1 = is_case1)
                                                 # Forward CACHE_EVICT_LOADDATA_INSWITCH_ACK (by clone_e2e) to reflector
-                                                self.client.eg_port_forward_tbl_table_add_with_forward_cache_evict_loaddata_inswitch_ack(\
-                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                #self.client.eg_port_forward_tbl_table_add_with_forward_cache_evict_loaddata_inswitch_ack(\
+                                                #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                pass
 
     def configure_eg_port_forward_tbl_with_range(self):
-        # Table: eg_port_forward_tbl (default: nop; size: 938)
+        # Table: eg_port_forward_tbl (default: nop; size: 933)
         for is_cached in cached_list:
             for is_hot in hot_list:
                 for validvalue in validvalue_list:
@@ -2090,7 +2100,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         #            self.sess_hdl, self.dev_tgt, matchspec0)
                                                     # is_cached=1, is_wrong_pipeline=0, tmp_client_sid=0, and snapshot_flag=1 (same inswitch_hdr as GETRES_LATEST_SEQ_INSWITCH); is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_case1 should be 0 for GETRES_LATEST_SEQ_INSWITCH_CASE1
                                                     # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size: 2
+                                                    # size: 1
                                                     #if is_cached == 1 and is_wrong_pipeline == 0 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
                                                     if is_cached == 1 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
@@ -2114,8 +2124,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         elif is_lastclone_for_pktloss == 1:
                                                             # Forward GETRES_LATEST_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector
-                                                            self.client.eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_inswitch_case1(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            #self.client.eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_inswitch_case1(\
+                                                            #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                            pass
                                                     # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_DELETED_SEQ
                                                     # is_last_scansplit and tmp_server_sid must be 0
                                                     # size: 1
@@ -2174,7 +2186,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         #            self.sess_hdl, self.dev_tgt, matchspec0)
                                                     # is_cached=1, is_wrong_pipeline=0, tmp_client_sid=0, and snapshot_flag=1 (same inswitch_hdr as GETRES_LATEST_SEQ_INSWITCH); is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_case1 should be 0 for GETRES_DELETED_SEQ_INSWITCH_CASE1
                                                     # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size: 2
+                                                    # size: 1
                                                     #if is_cached == 1 and is_wrong_pipeline == 0 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_case1 == 0:
                                                     if is_cached == 1 and snapshot_flag == 1 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
@@ -2198,8 +2210,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         elif is_lastclone_for_pktloss == 1:
                                                             # Forward GETRES_DELETED_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector
-                                                            self.client.eg_port_forward_tbl_table_add_with_forward_getres_deleted_seq_inswitch_case1(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            #self.client.eg_port_forward_tbl_table_add_with_forward_getres_deleted_seq_inswitch_case1(\
+                                                            #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                            # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                            pass
                                                     # is_cached (memset inswitch_hdr by end-host), is_hot (cm_predicate=1), validvalue, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_POP_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0
                                                     # size: 4
@@ -2225,7 +2239,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), snapshot_flag, is_case1, is_lastclone_for_pktloss should be 0 for CACHE_POP_INSWITCH_ACK
                                                     # is_last_scansplit and tmp_server_sid must be 0
-                                                    # size: 1
+                                                    # size: 0
                                                     #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and snapshot_flag == 0 and is_case1 == 0:
                                                     if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and snapshot_flag == 0 and is_case1 == 0 and is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
@@ -2253,8 +2267,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         #            self.sess_hdl, self.dev_tgt, matchspec0)
 
                                                         # Forward CACHE_POP_INSWITCH_ACK (by clone_e2e) to reflector
-                                                        self.client.eg_port_forward_tbl_table_add_with_forward_cache_pop_inswitch_ack(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                        #self.client.eg_port_forward_tbl_table_add_with_forward_cache_pop_inswitch_ack(\
+                                                        #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                        # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                        pass
                                                     # is_lastclone_for_pktloss should be 0 for PUTREQ_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0
                                                     # size: 512
@@ -2503,7 +2519,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                 # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADFREQ_INSWITCH_ACK
-                                                # size: 1
+                                                # size: 0
                                                 if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH_ACK,
@@ -2520,8 +2536,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         meta_is_last_scansplit = is_last_scansplit,
                                                         meta_server_sid = tmp_server_sid)
                                                     # Forward CACHE_EVICT_LOADFREQ_INSWITCH_ACK (by clone_e2e) to reflector
-                                                    self.client.eg_port_forward_tbl_table_add_with_forward_cache_evict_loadfreq_inswitch_ack(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    #self.client.eg_port_forward_tbl_table_add_with_forward_cache_evict_loadfreq_inswitch_ack(\
+                                                    #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                    pass
                                                 # is_cached (memset inswitch_hdr by end-host), is_hot (cm_predicate=1), validvalue, is_latest, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADDATA_INSWITCH
                                                 # size: 2
                                                 if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
@@ -2549,7 +2567,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                 # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADDATA_INSWITCH_ACK
-                                                # size: 1
+                                                # size: 0
                                                 if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                     matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                         op_hdr_optype = CACHE_EVICT_LOADDATA_INSWITCH_ACK,
@@ -2566,6 +2584,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         meta_is_last_scansplit = is_last_scansplit,
                                                         meta_server_sid = tmp_server_sid)
                                                     # Forward CACHE_EVICT_LOADDATA_INSWITCH_ACK (by clone_e2e) to reflector
-                                                    self.client.eg_port_forward_tbl_table_add_with_forward_cache_evict_loaddata_inswitch_ack(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    #self.client.eg_port_forward_tbl_table_add_with_forward_cache_evict_loaddata_inswitch_ack(\
+                                                    #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                    pass
 

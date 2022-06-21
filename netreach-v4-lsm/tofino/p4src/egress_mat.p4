@@ -81,7 +81,7 @@ table save_client_udpport_tbl {
 	size: 4;
 }
 
-// Stage 9
+// Stage 8
 
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
@@ -114,7 +114,7 @@ action reset_is_lastclone_lastscansplit() {
 #endif
 }
 
-@pragma stage 9
+@pragma stage 8
 table lastclone_lastscansplit_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -134,7 +134,7 @@ table lastclone_lastscansplit_tbl {
 	size: 8;
 }
 
-// Stage 10
+// Stage 9
 
 action update_getreq_inswitch_to_getreq() {
 	modify_field(op_hdr.optype, GETREQ);
@@ -324,8 +324,8 @@ action forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(switchos_sid) 
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
 }
 
-action forward_getres_latest_seq_inswitch_case1() {
-}
+//action forward_getres_latest_seq_inswitch_case1() {
+//}
 
 action update_getres_deleted_seq_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
@@ -362,8 +362,8 @@ action forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(switchos_sid)
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
 }
 
-action forward_getres_deleted_seq_inswitch_case1() {
-}
+//action forward_getres_deleted_seq_inswitch_case1() {
+//}
 
 /*action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss(switchos_sid, reflector_port) {
 	modify_field(op_hdr.optype, CACHE_POP_INSWITCH_ACK);
@@ -371,23 +371,23 @@ action forward_getres_deleted_seq_inswitch_case1() {
 	//modify_field(meta.clonenum_for_pktloss, 1); // 3 ACKs (clone w/ 1 -> clone w/ 0 -> no clone w/ ack)
 	modify_field(clone_hdr.clonenum_for_pktloss, 2); // 3 ACKs (drop w/ 2 -> clone w/ 1 -> clone w/ 0 -> no clone w/ ack)
 
-	/*remove_header(vallen_hdr);
-	remove_header(val1_hdr);
-	remove_header(val2_hdr);
-	remove_header(val3_hdr);
-	remove_header(val4_hdr);
-	remove_header(val5_hdr);
-	remove_header(val6_hdr);
-	remove_header(val7_hdr);
-	remove_header(val8_hdr);
-	remove_header(val9_hdr);
-	remove_header(val10_hdr);
-	remove_header(val11_hdr);
-	remove_header(val12_hdr);
-	remove_header(val13_hdr);
-	remove_header(val14_hdr);
-	remove_header(val15_hdr);
-	remove_header(val16_hdr);*/
+	//remove_header(vallen_hdr);
+	//remove_header(val1_hdr);
+	//remove_header(val2_hdr);
+	//remove_header(val3_hdr);
+	//remove_header(val4_hdr);
+	//remove_header(val5_hdr);
+	//remove_header(val6_hdr);
+	//remove_header(val7_hdr);
+	//remove_header(val8_hdr);
+	//remove_header(val9_hdr);
+	//remove_header(val10_hdr);
+	//remove_header(val11_hdr);
+	//remove_header(val12_hdr);
+	//remove_header(val13_hdr);
+	//remove_header(val14_hdr);
+	//remove_header(val15_hdr);
+	//remove_header(val16_hdr);
 	remove_header(shadowtype_hdr);
 	remove_header(seq_hdr);
 	remove_header(inswitch_hdr);
@@ -419,8 +419,8 @@ action update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(switch
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
 }
 
-action forward_cache_pop_inswitch_ack() {
-}
+//action forward_cache_pop_inswitch_ack() {
+//}
 
 action update_putreq_inswitch_to_putreq_seq() {
 	modify_field(op_hdr.optype, PUTREQ_SEQ);
@@ -804,8 +804,8 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
 }
 
-action forward_cache_evict_loadfreq_inswitch_ack() {
-}
+//action forward_cache_evict_loadfreq_inswitch_ack() {
+//}
 
 action update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(switchos_sid, reflector_port) {
 	modify_field(op_hdr.optype, CACHE_EVICT_LOADDATA_INSWITCH_ACK);
@@ -837,8 +837,8 @@ action update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
 }
 
-action forward_cache_evict_loaddata_inswitch_ack() {
-}
+//action forward_cache_evict_loaddata_inswitch_ack() {
+//}
 
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
@@ -848,7 +848,7 @@ counter eg_port_forward_counter {
 }
 #endif
 
-@pragma stage 10
+@pragma stage 9
 table eg_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -881,16 +881,16 @@ table eg_port_forward_tbl {
 		update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss; // drop original packet of GETRES_LATEST_SEQ -> clone for first GETRES_LATEST_SEQ_INSWITCH_CASE1
 		//drop_getres_latest_seq_inswitch; // drop original packet of GETRES_LATEST_SEQ
 		forward_getres_latest_seq_inswitch_case1_clone_for_pktloss; // not last clone of GETRES_LATEST_SEQ_INSWITCH_CASE1
-		forward_getres_latest_seq_inswitch_case1; // last clone of GETRES_LATEST_SEQ_INSWITCH_CASE1
+		//forward_getres_latest_seq_inswitch_case1; // last clone of GETRES_LATEST_SEQ_INSWITCH_CASE1
 		update_getres_deleted_seq_to_getres; // GETRES_DELETED_SEQ must be cloned from ingress to egress
 		update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss; // drop original packet of GETRES_DELETED_SEQ -> clone for first GETRES_DELETED_SEQ_INSWITCH_CASE1
 		//drop_getres_deleted_seq_inswitch; // original packet of GETRES_DELETED_SEQ
 		forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss; // not last clone of GETRES_DELETED_SEQ_INSWITCH_CASE1
-		forward_getres_deleted_seq_inswitch_case1; // last clone of GETRES_DELETED_SEQ_INSWITCH_CASE1
+		//forward_getres_deleted_seq_inswitch_case1; // last clone of GETRES_DELETED_SEQ_INSWITCH_CASE1
 		//update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss; // clone for first CACHE_POP_INSWITCH_ACK
 		//forward_cache_pop_inswitch_ack_clone_for_pktloss; // not last clone of CACHE_POP_INSWITCH_ACK
 		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone; // clone for first CACHE_POP_INSWITCH_ACK (not need to clone for duplication due to switchos-side timeout-and-retry)
-		forward_cache_pop_inswitch_ack; // last clone of CACHE_POP_INSWITCH_ACK
+		//forward_cache_pop_inswitch_ack; // last clone of CACHE_POP_INSWITCH_ACK
 		update_putreq_inswitch_to_putreq_seq;
 		update_putreq_inswitch_to_putreq_pop_seq;
 		//update_putreq_inswitch_to_putres;
@@ -914,15 +914,51 @@ table eg_port_forward_tbl {
 		forward_scanreq_split;
 #endif
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
-		forward_cache_evict_loadfreq_inswitch_ack;
+		//forward_cache_evict_loadfreq_inswitch_ack;
 		update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
-		forward_cache_evict_loaddata_inswitch_ack;
+		//forward_cache_evict_loaddata_inswitch_ack;
 		nop;
 	}
 	default_action: nop();
 	size: 1024;
 }
 
+// stage 10
+
+action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, server_ip, server_port) {
+	modify_field(ethernet_hdr.srcAddr, server_mac);
+	modify_field(ethernet_hdr.dstAddr, client_mac);
+	modify_field(ipv4_hdr.srcAddr, server_ip);
+	modify_field(ipv4_hdr.dstAddr, client_ip);
+	modify_field(udp_hdr.srcPort, server_port);
+}
+
+// NOTE: as we use software link, switch_mac/ip = reflector_mac/ip
+// NOTE: although we use client_port to update srcport here, reflector does not care about the specific value of srcport
+action update_ipmac_srcport_client2switch(client_mac, switch_mac, client_ip, switch_ip, client_port) {
+	modify_field(ethernet_hdr.srcAddr, client_mac);
+	modify_field(ethernet_hdr.dstAddr, switch_mac);
+	modify_field(ipv4_hdr.srcAddr, client_ip);
+	modify_field(ipv4_hdr.dstAddr, switch_ip);
+	modify_field(udp_hdr.srcPort, client_port);
+}
+
+// NOTE: dstport of REQ, RES, and notification has been updated in partition_tbl, server, and eg_port_forward_tbl
+@pragma stage 10
+table update_ipmac_srcport_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		update_ipmac_srcport_server2client;
+		update_ipmac_srcport_client2switch;
+		nop;
+	}
+	default_action: nop();
+	size: 16;
+}
+
+// stage 11
 
 // NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
 /*// CACHE_POP_INSWITCH_ACK
@@ -1024,38 +1060,6 @@ table update_pktlen_tbl {
 	}
 	default_action: nop(); // not change udp_hdr.hdrlen (GETREQ/GETREQ_POP/GETREQ_NLATEST)
 	size: 256;
-}
-
-action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, server_ip, server_port) {
-	modify_field(ethernet_hdr.srcAddr, server_mac);
-	modify_field(ethernet_hdr.dstAddr, client_mac);
-	modify_field(ipv4_hdr.srcAddr, server_ip);
-	modify_field(ipv4_hdr.dstAddr, client_ip);
-	modify_field(udp_hdr.srcPort, server_port);
-}
-
-// NOTE: as we use software link, switch_mac/ip = reflector_mac/ip
-// NOTE: although we use client_port to update srcport here, reflector does not care about the specific value of srcport
-action update_ipmac_srcport_client2switch(client_mac, switch_mac, client_ip, switch_ip, client_port) {
-	modify_field(ethernet_hdr.srcAddr, client_mac);
-	modify_field(ethernet_hdr.dstAddr, switch_mac);
-	modify_field(ipv4_hdr.srcAddr, client_ip);
-	modify_field(ipv4_hdr.dstAddr, switch_ip);
-	modify_field(udp_hdr.srcPort, client_port);
-}
-
-// NOTE: dstport of REQ, RES, and notification has been updated in partition_tbl, server, and eg_port_forwardtbl
-table update_ipmac_srcport_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		update_ipmac_srcport_server2client;
-		update_ipmac_srcport_client2switch;
-		nop;
-	}
-	default_action: nop();
-	size: 16;
 }
 
 action add_only_vallen() {

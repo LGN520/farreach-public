@@ -53,13 +53,13 @@ parser parse_udp {
 	return parse_op;
 }
 
-// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr
+// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr
 
 parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
 		//CACHE_POP_INSWITCH_ACK: parse_clone;
-		CACHE_EVICT_LOADFREQ_ACK: parse_frequency;
+		CACHE_EVICT_LOADFREQ_INSWITCH_ACK: parse_frequency;
 		1 mask 0x01: parse_vallen;
 		/*2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
@@ -288,6 +288,7 @@ parser parse_seq {
 	//return select(op_hdr.optype) {
 	return select(shadowtype_hdr.shadowtype) {
 		4 mask 0x04: parse_inswitch;
+		8 mask 0x08: parse_stat;
 		default: ingress;
 		//default: parse_debug;
 		

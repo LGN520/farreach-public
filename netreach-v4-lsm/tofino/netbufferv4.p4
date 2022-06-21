@@ -250,7 +250,8 @@ control egress {
 	apply(access_savedseq_tbl);
 	apply(access_case1_tbl);
 
-	// Stage 4-9
+	// Stage 4-7
+	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
 	apply(update_vallo2_tbl);
@@ -267,32 +268,35 @@ control egress {
 	apply(update_valhi7_tbl);
 	apply(update_vallo8_tbl);
 	apply(update_valhi8_tbl);
+
+	// Stage 8
+	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
 	apply(update_vallo9_tbl);
 	apply(update_valhi9_tbl);
 	apply(update_vallo10_tbl);
 	apply(update_valhi10_tbl);
+
+	// Stage 9
+	apply(eg_port_forward_tbl); // including scan forwarding
 	apply(update_vallo11_tbl);
 	apply(update_valhi11_tbl);
 	apply(update_vallo12_tbl);
 	apply(update_valhi12_tbl);
 
-	// Stage 9
-	apply(lastclone_lastscansplit_tbl); // including is_last_scansplit
-
-	// Stage 10
+	// stage 10
+	// NOTE: resource in stage 11 is not enough for update_ipmac_src_port_tbl, so we place it into stage 10
+	apply(update_ipmac_srcport_tbl); // Update ip, mac, and srcport for RES to client and notification to switchos
 	apply(update_vallo13_tbl);
 	apply(update_valhi13_tbl);
 	apply(update_vallo14_tbl);
 	apply(update_valhi14_tbl);
-	apply(eg_port_forward_tbl); // including scan forwarding
 
 	// Stage 11
+	apply(update_pktlen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
+	apply(add_and_remove_value_header_tbl); // Add or remove vallen and val according to optype and vallen
+	apply(drop_tbl); // drop GETRES_LATEST_SEQ_INSWITCH and GETRES_DELETED_SEQ_INSWITCH
 	apply(update_vallo15_tbl);
 	apply(update_valhi15_tbl);
 	apply(update_vallo16_tbl);
 	apply(update_valhi16_tbl);
-	apply(update_pktlen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
-	apply(update_ipmac_srcport_tbl); // Update ip, mac, and srcport for RES to client and notification to switchos
-	apply(add_and_remove_value_header_tbl); // Add or remove vallen and val according to optype and vallen
-	apply(drop_tbl); // drop GETRES_LATEST_SEQ_INSWITCH and GETRES_DELETED_SEQ_INSWITCH
 }
