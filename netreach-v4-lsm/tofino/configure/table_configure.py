@@ -365,11 +365,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             if RANGE_SUPPORT:
                 # # Table: range_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
-                # Table: range_partition_tbl (default: nop; size <= 7 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring range_partition_tbl"
                 #key_range_per_server = pow(2, 32) / server_num
                 key_range_per_server = pow(2, 16) / server_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH]:
                     #for iport in self.devPorts:
                     ##key_start = -pow(2, 31) # [-2^31, 2^31-1]
                     #key_start = 0 # [0, 2^32-1]
@@ -404,11 +404,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
             else:
-                # Table: hash_for_partition_tbl (default: nop; size: 6)
+                # Table: hash_for_partition_tbl (default: nop; size: 7)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH]:
                     matchspec0 = netbufferv4_hash_for_partition_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u8_to_i8(tmpoptype),
+                            op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             meta_need_recirculate = 0)
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
@@ -442,10 +442,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     endkey_start = endkey_end + 1
             else:
                 # # Table: hash_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
-                # Table: hash_partition_tbl (default: nop; size <= 6 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 7 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_server = partition_count / server_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH]:
                     #for iport in self.devPorts:
                     hash_start = 0 # [0, partition_count-1]
                     for i in range(server_num):
@@ -455,7 +455,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             hash_end = hash_start + hash_range_per_server - 1
                         # NOTE: both start and end are included
                         matchspec0 = netbufferv4_hash_partition_tbl_match_spec_t(\
-                                op_hdr_optype = convert_u8_to_i8(tmpoptype),
+                                op_hdr_optype = convert_u16_to_i16(tmpoptype),
                                 meta_hashval_for_partition_start = convert_u16_to_i16(hash_start),
                                 meta_hashval_for_partition_end = convert_u16_to_i16(hash_end),
                                 #ig_intr_md_ingress_port = iport,
@@ -540,7 +540,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             ipv4addr0 = ipv4Addr_to_i32(client_ip)
             for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
                 matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
-                        op_hdr_optype = convert_u8_to_i8(tmpoptype),
+                        op_hdr_optype = convert_u16_to_i16(tmpoptype),
                         ipv4_hdr_dstAddr = ipv4addr0,
                         ipv4_hdr_dstAddr_prefix_length = 32,
                         meta_need_recirculate = 0)
@@ -656,7 +656,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.is_hot_tbl_table_add_with_set_is_hot(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_cache_frequency_tbl (default: nop; size: 6)
+            # Table: access_cache_frequency_tbl (default: nop; size: 10)
             print "Configuring access_cache_frequency_tbl"
             for tmpoptype in [GETREQ_INSWITCH, PUTREQ_INSWITCH]:
                 matchspec0 = netbufferv4_access_cache_frequency_tbl_match_spec_t(\
@@ -672,6 +672,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             inswitch_hdr_is_sampled = is_sampled,
                             inswitch_hdr_is_cached = is_cached)
                     self.client.access_cache_frequency_tbl_table_add_with_reset_cache_frequency(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+                    matchspec0 = netbufferv4_access_cache_frequency_tbl_match_spec_t(\
+                            op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH,
+                            inswitch_hdr_is_sampled = is_sampled,
+                            inswitch_hdr_is_cached = is_cached)
+                    self.client.access_cache_frequency_tbl_table_add_with_get_cache_frequency(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_validvalue_tbl (default: reset_meta_validvalue; size: 5)
@@ -1051,14 +1057,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 10
 
-            # Table: eg_port_forward_tbl (default: nop; size: 932)
+            # Table: eg_port_forward_tbl (default: nop; size: 934/936)
             print "Configuring eg_port_forward_tbl"
             if RANGE_SUPPORT == False:
                 self.configure_eg_port_forward_tbl()
             else:
                 self.configure_eg_port_forward_tbl_with_range()
 
-            # Table: update_pktlen_tbl (default: nop; 159)
+            # Table: update_pktlen_tbl (default: nop; 160)
             print "Configuring update_pktlen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
@@ -1070,18 +1076,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     vallen_end = (i-1)*8+8 # 8, 16, ..., 128
                     aligned_vallen = vallen_end # 8, 16, ..., 128
                 ## DEPRECATED: including 1B debug_hdr
-                #val_stat_udplen = aligned_vallen + 32
-                #val_stat_iplen = aligned_vallen + 52
-                #val_seq_inswitch_stat_udplen = aligned_vallen + 45
-                #val_seq_inswitch_stat_iplen = aligned_vallen + 65
-                #val_seq_udplen = aligned_vallen + 33
-                #val_seq_iplen = aligned_vallen + 53
-                val_stat_udplen = aligned_vallen + 31
-                val_stat_iplen = aligned_vallen + 51
-                val_seq_inswitch_stat_udplen = aligned_vallen + 44
-                val_seq_inswitch_stat_iplen = aligned_vallen + 64
-                val_seq_udplen = aligned_vallen + 32
-                val_seq_iplen = aligned_vallen + 52
+                #val_stat_udplen = aligned_vallen + 34
+                #val_stat_iplen = aligned_vallen + 54
+                #val_seq_inswitch_stat_udplen = aligned_vallen + 47
+                #val_seq_inswitch_stat_iplen = aligned_vallen + 67
+                #val_seq_udplen = aligned_vallen + 35
+                #val_seq_iplen = aligned_vallen + 55
+                val_stat_udplen = aligned_vallen + 33
+                val_stat_iplen = aligned_vallen + 53
+                val_seq_inswitch_stat_udplen = aligned_vallen + 46
+                val_seq_inswitch_stat_iplen = aligned_vallen + 66
+                val_seq_udplen = aligned_vallen + 34
+                val_seq_iplen = aligned_vallen + 54
                 matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=GETRES,
                         vallen_hdr_vallen_start=vallen_start,
@@ -1106,20 +1112,22 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             ## DEPRECATED: including 1B debug_hdr
-            #onlyop_udplen = 26
-            #onlyop_iplen = 46
-            #stat_udplen = 30
-            #stat_iplen = 50
-            #seq_udplen = 31
-            #seq_iplen = 51
-            onlyop_udplen = 25
-            onlyop_iplen = 45
-            stat_udplen = 29
-            stat_iplen = 49
-            seq_udplen = 30
-            seq_iplen = 50
-            scanreqsplit_udplen = 46
-            scanreqsplit_iplen = 66
+            #onlyop_udplen = 27
+            #onlyop_iplen = 47
+            #stat_udplen = 32
+            #stat_iplen = 52
+            #seq_udplen = 33
+            #seq_iplen = 53
+            onlyop_udplen = 26
+            onlyop_iplen = 46
+            stat_udplen = 31
+            stat_iplen = 51
+            seq_udplen = 32
+            seq_iplen = 52
+            scanreqsplit_udplen = 47
+            scanreqsplit_iplen = 67
+            frequency_udplen = 30
+            frequency_iplen = 50
             matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
                     op_hdr_optype=CACHE_POP_INSWITCH_ACK,
                     vallen_hdr_vallen_start=0,
@@ -1150,6 +1158,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             actnspec0 = netbufferv4_update_pktlen_action_spec_t(scanreqsplit_udplen, scanreqsplit_iplen)
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
+                    op_hdr_optype=CACHE_EVICT_LOADFREQ_INSWITCH_ACK,
+                    vallen_hdr_vallen_start=0,
+                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+            actnspec0 = netbufferv4_update_pktlen_action_spec_t(frequency_udplen, frequency_iplen)
+            self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
             # Table: update_ipmac_srcport_tbl (default: nop; 9)
             print "Configuring update_ipmac_srcport_tbl"
@@ -1166,12 +1181,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     ipv4Addr_to_i32(client_ip), \
                     ipv4Addr_to_i32(server_ip), \
                     client_port)
-            matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(GETRES))
-            matchspec1 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(PUTRES))
-            matchspec2 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(DELRES))
-            matchspec3 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(SCANRES_SPLIT))
-            matchspec4 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(WARMUPACK))
-            matchspec5 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(LOADACK))
+            matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u16_to_i16(GETRES))
+            matchspec1 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u16_to_i16(PUTRES))
+            matchspec2 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u16_to_i16(DELRES))
+            matchspec3 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u16_to_i16(SCANRES_SPLIT))
+            matchspec4 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u16_to_i16(WARMUPACK))
+            matchspec5 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u16_to_i16(LOADACK))
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
@@ -1184,15 +1199,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec4, actnspec0)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
                     self.sess_hdl, self.dev_tgt, matchspec5, actnspec0)
-            matchspec6 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(GETRES_LATEST_SEQ_INSWITCH_CASE1))
-            matchspec7 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(GETRES_DELETED_SEQ_INSWITCH_CASE1))
-            matchspec8 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u8_to_i8(CACHE_POP_INSWITCH_ACK))
+            matchspec6 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u16_to_i16(GETRES_LATEST_SEQ_INSWITCH_CASE1))
+            matchspec7 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u16_to_i16(GETRES_DELETED_SEQ_INSWITCH_CASE1))
+            matchspec8 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u16_to_i16(CACHE_POP_INSWITCH_ACK))
+            matchspec9 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(op_hdr_optype=convert_u16_to_i16(CACHE_EVICT_LOADFREQ_INSWITCH_ACK))
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
                     self.sess_hdl, self.dev_tgt, matchspec6, actnspec1)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
                     self.sess_hdl, self.dev_tgt, matchspec7, actnspec1)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
                     self.sess_hdl, self.dev_tgt, matchspec8, actnspec1)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
+                    self.sess_hdl, self.dev_tgt, matchspec9, actnspec1)
 
             # Table: add_and_remove_value_header_tbl (default: remove_all; 17*11=187)
             print "Configuring add_and_remove_value_header_tbl"
@@ -1272,7 +1290,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     (self.sess_hdl, self.dev_tgt, entry.match_spec)
 
     def configure_eg_port_forward_tbl(self):
-        # Table: eg_port_forward_tbl (default: nop; size: 932)
+        # Table: eg_port_forward_tbl (default: nop; size: 934)
         for is_cached in cached_list:
             for is_hot in hot_list:
                 for validvalue in validvalue_list:
@@ -1775,9 +1793,46 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     actnspec0 = netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring_action_spec_t(tmp_client_sid, server_port)
                                                     self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            # is_cached (memset inswitch_hdr by end-host), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADFREQ_INSWITCH
+                                            # size: 1
+                                            if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    inswitch_hdr_client_sid = 0,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                # Update CACHE_EVICT_LOADFREQ_INSWITCH as CACHE_EVICT_LOADFREQ_INSWITCH_ACK to reflector (w/ clone)
+                                                actnspec0 = netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone_action_spec_t(self.switchos_sid, reflector_port)
+                                                self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADFREQ_INSWITCH_ACK
+                                            # size: 1
+                                            if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH_ACK,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    inswitch_hdr_client_sid = 0,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                # Forward CACHE_EVICT_LOADFREQ_INSWITCH_ACK (by clone_e2e) to reflector
+                                                self.client.eg_port_forward_tbl_table_add_with_forward_cache_evict_loadfreq_inswitch_ack(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_eg_port_forward_tbl_with_range(self):
-        # Table: eg_port_forward_tbl (default: nop; size: 934)
+        # Table: eg_port_forward_tbl (default: nop; size: 936)
         for is_cached in cached_list:
             for is_hot in hot_list:
                 for validvalue in validvalue_list:
@@ -2345,4 +2400,45 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             actnspec0 = netbufferv4_forward_scanreq_split_and_clone_action_spec_t(tmp_server_sid)
                                                             self.client.eg_port_forward_tbl_table_add_with_forward_scanreq_split_and_clone(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                # is_cached (memset inswitch_hdr by end-host), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADFREQ_INSWITCH
+                                                # size: 1
+                                                if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                        op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH,
+                                                        inswitch_hdr_is_cached = is_cached,
+                                                        meta_is_hot = is_hot,
+                                                        meta_validvalue = validvalue,
+                                                        meta_is_latest = is_latest,
+                                                        meta_is_deleted = is_deleted,
+                                                        #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                        inswitch_hdr_client_sid = 0,
+                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                        meta_is_case1 = is_case1,
+                                                        meta_is_last_scansplit = is_last_scansplit,
+                                                        meta_server_sid = tmp_server_sid)
+                                                    # Update CACHE_EVICT_LOADFREQ_INSWITCH as CACHE_EVICT_LOADFREQ_INSWITCH_ACK to reflector (w/ clone)
+                                                    actnspec0 = netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone_action_spec_t(self.switchos_sid, reflector_port)
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                # is_cached (no inswitch_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADFREQ_INSWITCH_ACK
+                                                # size: 1
+                                                if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == self.client_sid and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                    matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                        op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH_ACK,
+                                                        inswitch_hdr_is_cached = is_cached,
+                                                        meta_is_hot = is_hot,
+                                                        meta_validvalue = validvalue,
+                                                        meta_is_latest = is_latest,
+                                                        meta_is_deleted = is_deleted,
+                                                        #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                        inswitch_hdr_client_sid = 0,
+                                                        meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                        inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                        meta_is_case1 = is_case1,
+                                                        meta_is_last_scansplit = is_last_scansplit,
+                                                        meta_server_sid = tmp_server_sid)
+                                                    # Forward CACHE_EVICT_LOADFREQ_INSWITCH_ACK (by clone_e2e) to reflector
+                                                    self.client.eg_port_forward_tbl_table_add_with_forward_cache_evict_loadfreq_inswitch_ack(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
 

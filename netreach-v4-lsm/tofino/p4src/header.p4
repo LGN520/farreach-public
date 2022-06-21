@@ -38,7 +38,7 @@ header_type udp_t {
 
 header_type op_t {
 	fields {
-		optype: 8;
+		optype: 16;
 		keylolo: 32;
 		keylohi: 32;
 		keyhilo: 32;
@@ -84,7 +84,7 @@ header_type val_t {
 
 header_type shadowtype_t {
 	fields {
-		shadowtype: 8;
+		shadowtype: 16;
 	}
 }
 
@@ -125,6 +125,12 @@ header_type clone_t {
 	fields {
 		clonenum_for_pktloss: 8;
 		client_udpport: 16;
+	}
+}
+
+header_type frequency_t {
+	fields {
+		frequency: 32;
 	}
 }
 
@@ -194,6 +200,7 @@ header seq_t seq_hdr;
 header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
 header clone_t clone_hdr;
+header frequency_t frequency_hdr;
 metadata metadata_t meta;
 
 //header debug_t debug_hdr;

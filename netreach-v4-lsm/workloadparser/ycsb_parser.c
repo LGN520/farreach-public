@@ -17,7 +17,7 @@ YcsbParserIterator::YcsbParserIterator(const char* filename) {
 
 	_keys = new Key[ParserIterator::load_batch_size];
 	_vals = new Val[ParserIterator::load_batch_size];
-	_types = new uint8_t[ParserIterator::load_batch_size];
+	_types = new optype_t[ParserIterator::load_batch_size];
 	_lines = new std::string[ParserIterator::load_batch_size];
 
 	/*bool next_res = next();
@@ -64,7 +64,7 @@ Val YcsbParserIterator::val() {
 	return _vals[_idx];
 }
 
-uint8_t YcsbParserIterator::type() {
+optype_t YcsbParserIterator::type() {
 	INVARIANT(_idx >= 0 && _idx <= _maxidx);
 	return _types[_idx];
 }
@@ -110,7 +110,7 @@ Val *YcsbParserIterator::vals() {
 	return _vals;
 }
 
-uint8_t *YcsbParserIterator::types() {
+optype_t *YcsbParserIterator::types() {
 	INVARIANT(_types != NULL);
 	return _types;
 }

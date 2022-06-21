@@ -29,16 +29,16 @@
 // (1) vallen&value: mask 0b0001; seq: mask 0b0010; inswitch_hdr: mask 0b0100; stat: mask 0b1000;
 // (2) scan/split: specific value (X + 0b0000); not parsed optypes: X + 0b0000
 enum class PacketType {
-	PUTREQ=0x01, WARMUPREQ=0x11, LOADREQ=0x21,
-	GETRES_LATEST_SEQ=0x03, GETRES_DELETED_SEQ=0x13, PUTREQ_SEQ=0x23, PUTREQ_POP_SEQ=0x33, PUTREQ_SEQ_CASE3=0x43, PUTREQ_POP_SEQ_CASE3=0x53,
-	GETRES_LATEST_SEQ_INSWITCH=0x07, GETRES_DELETED_SEQ_INSWITCH=0x17, CACHE_POP_INSWITCH=0x27,
-	GETRES_LATEST_SEQ_INSWITCH_CASE1=0x0f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x1f, PUTREQ_SEQ_INSWITCH_CASE1=0x2f, DELREQ_SEQ_INSWITCH_CASE1=0x3f,
-	GETRES=0x09,
-	PUTREQ_INSWITCH=0x05,
-	GETREQ_INSWITCH=0x04, DELREQ_INSWITCH=0x14,
-	DELREQ_SEQ=0x02, DELREQ_SEQ_CASE3=0x12,
-	PUTRES=0x08, DELRES=0x18,
-	SCANREQ=0x10, SCANREQ_SPLIT=0x20, GETREQ=0x30, DELREQ=0x40, GETREQ_POP=0x50, GETREQ_NLATEST=0x60, CACHE_POP_INSWITCH_ACK=0x70, SCANRES_SPLIT=0x80, CACHE_POP=0x90, CACHE_EVICT=0xa0, CACHE_EVICT_ACK=0xb0, CACHE_EVICT_CASE2=0xc0, WARMUPACK=0xd0, LOADACK=0xe0, CACHE_POP_ACK=0xf0
+	PUTREQ=0x0001, WARMUPREQ=0x0011, LOADREQ=0x0021,
+	GETRES_LATEST_SEQ=0x0003, GETRES_DELETED_SEQ=0x0013, PUTREQ_SEQ=0x0023, PUTREQ_POP_SEQ=0x0033, PUTREQ_SEQ_CASE3=0x0043, PUTREQ_POP_SEQ_CASE3=0x0053,
+	GETRES_LATEST_SEQ_INSWITCH=0x0007, GETRES_DELETED_SEQ_INSWITCH=0x0017, CACHE_POP_INSWITCH=0x0027,
+	GETRES_LATEST_SEQ_INSWITCH_CASE1=0x000f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x001f, PUTREQ_SEQ_INSWITCH_CASE1=0x002f, DELREQ_SEQ_INSWITCH_CASE1=0x003f,
+	GETRES=0x0009,
+	PUTREQ_INSWITCH=0x0005,
+	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024,
+	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012,
+	PUTRES=0x0008, DELRES=0x0018,
+	SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100
 };
 /*enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES_SPLIT, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 
@@ -50,6 +50,8 @@ enum class PacketType {
 	CACHE_POP, CACHE_POP_INSWITCH, CACHE_POP_INSWITCH_ACK, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2,
 };*/
 typedef PacketType packet_type_t;
+
+typedef uint16_t optype_t;
 
 template<class key_t> class ScanRequestSplit;
 
@@ -65,7 +67,7 @@ class Packet {
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size) = 0;
 	protected:
-		uint8_t _type;
+		optype_t _type;
 		key_t _key;
 
 		virtual uint32_t size() = 0;
@@ -496,7 +498,23 @@ class CachePopAck : public GetRequest<key_t> { // ophdr
 		CachePopAck(const char * data, uint32_t recv_size);
 };
 
+template<class key_t>
+class CacheEvictLoadfreqInswitch : public Packet<key_t> { // ophdr + shadowtype + inswitch_hdr
+	public: 
+		CacheEvictLoadFreqInswitch(key_t key, uint16_t evictidx);
+
+		uint16_t evictidx() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	private:
+		uint16_t _evictidx;
+
+		virtual uint32_t size();
+};
+
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size);
+uint32_t serialize_packet_type(optype_t type, const char * data, uint32_t maxsize);
+uint32_t dynamic_serialize_packet_type(optype_t type, dynamic_array_t &dynamic_data);
 
 #endif

@@ -211,11 +211,11 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 }
 
 
-bool udprecvlarge_multisrc_udpfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, uint8_t optype, netreach_key_t targetkey) {
+bool udprecvlarge_multisrc_udpfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
 	return udprecvlarge_multisrc(sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, 0, UDP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion, isfilter, optype, targetkey);
 }
 
-bool udprecvlarge_multisrc_ipfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, uint8_t optype, netreach_key_t targetkey) {
+bool udprecvlarge_multisrc_ipfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
 	return udprecvlarge_multisrc(sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion, isfilter, optype, targetkey);
 }
 
@@ -224,7 +224,7 @@ bool udprecvlarge_multisrc_ipfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t
 // bufnum: max_srcnum; if is_timeout = true, bufnum = 0;
 // src_addrs: NULL or bufnum; addrlens: NULL or bufnum
 // For example, srcnum for SCANRES_SPLIT is split_hdr.max_scannum; srcid for SCANRES_SPLIT is split_hdr.cur_scanidx
-bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, uint8_t optype, netreach_key_t targetkey) {
+bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
 	INVARIANT(srcnum_len == 1 || srcnum_len == 2 || srcnum_len == 4);
 	INVARIANT(srcid_len == 1 || srcid_len == 2 || srcid_len == 4);
 	INVARIANT(srcnum_off <= frag_hdrsize && srcid_off <= frag_hdrsize);
@@ -255,10 +255,10 @@ bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnu
 		INVARIANT(frag_recvsize >= final_frag_hdrsize);
 
 		if (isfilter) {
-			if (*((uint8_t* )fragbuf) != optype) {
+			if (optype_t(get_packet_type(fragbuf, frag_recvsize)) != optype)
 				continue; // filter the unmatched packet
 			}
-			tmpkey.deserialize(fragbuf, frag_recvsize - sizeof(uint8_t));
+			tmpkey.deserialize(fragbuf, frag_recvsize - sizeof(optype_t));
 			if (tmpkey != targetkey) {
 				continue;
 			}

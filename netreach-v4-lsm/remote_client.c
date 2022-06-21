@@ -605,7 +605,7 @@ void *run_fg(void *param) {
 				dynamic_rulemap_ptr->trymap(tmpkey);
 			}
 
-			if (iter->type() == uint8_t(packet_type_t::GETREQ)) { // get
+			if (iter->type() == optype_t(packet_type_t::GETREQ)) { // get
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				get_request_t req(tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
@@ -631,7 +631,7 @@ void *run_fg(void *param) {
 #endif
 					if (!is_timeout) {
 						INVARIANT(recv_size > 0);
-						if (*((uint8_t *)buf) != uint8_t(packet_type_t::GETRES)) {
+						if (get_packet_type(buf, recv_size) != packet_type_t::GETRES) {
 							thread_param.unmatched_cnt++;
 							continue; // continue to receive next packet
 						}
@@ -656,7 +656,7 @@ void *run_fg(void *param) {
 					continue; // continue to resend
 				}
 			}
-			else if (iter->type() == uint8_t(packet_type_t::PUTREQ)) { // update or insert
+			else if (iter->type() == optype_t(packet_type_t::PUTREQ)) { // update or insert
 				tmpval = iter->val();
 
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
@@ -718,7 +718,7 @@ void *run_fg(void *param) {
 #endif
 					if (!is_timeout) {
 						INVARIANT(recv_size > 0);
-						if (*((uint8_t *)buf) != uint8_t(packet_type_t::PUTRES)) {
+						if (get_packet_type(buf, recv_size) != packet_type_t::PUTRES) {
 							thread_param.unmatched_cnt++;
 							continue; // continue to receive next packet
 						}
@@ -743,7 +743,7 @@ void *run_fg(void *param) {
 					continue; // continue to resend
 				}
 			}
-			else if (iter->type() == uint8_t(packet_type_t::DELREQ)) {
+			else if (iter->type() == optype_t(packet_type_t::DELREQ)) {
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				del_request_t req(tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
@@ -770,7 +770,7 @@ void *run_fg(void *param) {
 #endif
 					if (!is_timeout) {
 						INVARIANT(recv_size > 0);
-						if (*((uint8_t *)buf) != uint8_t(packet_type_t::DELRES)) {
+						if (get_packet_type(buf, recv_size) != packet_type_t::DELRES) {
 							thread_param.unmatched_cnt++;
 							continue; // continue to receive next packet
 						}
@@ -795,7 +795,7 @@ void *run_fg(void *param) {
 					continue; // continue to resend
 				}
 			}
-			else if (iter->type() == uint8_t(packet_type_t::SCANREQ)) {
+			else if (iter->type() == optype_t(packet_type_t::SCANREQ)) {
 				//netreach_key_t endkey = generate_endkey(tmpkey);
 				netreach_key_t endkey = netreach_key_t(tmpkey.keylolo, tmpkey.keylohi, tmpkey.keyhilo, (((tmpkey.keyhihi>>16)&0xFFFF)+513)<<16); // TMPDEBUG
 				/*size_t first_server_idx = get_server_idx(tmpkey);
@@ -825,7 +825,7 @@ void *run_fg(void *param) {
 				dynamic_array_t *scanbufs = NULL;
 				set_recvtimeout(client_udpsock_list[thread_id], CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
 				//is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[thread_id], scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
-				is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[thread_id], &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, uint8_t(packet_type_t::SCANRES_SPLIT), tmpkey);
+				is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[thread_id], &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, optype_t(packet_type_t::SCANRES_SPLIT), tmpkey);
 				CUR_TIME(wait_t1);
 				set_recvtimeout(client_udpsock_list[thread_id], CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
 				if (is_timeout) {

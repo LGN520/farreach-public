@@ -21,14 +21,14 @@ class YcsbParserIterator : public ParserIterator {
 
 		virtual Key key();
 		virtual Val val();
-		virtual uint8_t type();
+		virtual optype_t type();
 		virtual std::string line();
 		virtual bool next();
 		virtual void reset();
 
 		virtual Key *keys();
 		virtual Val *vals();
-		virtual uint8_t *types();
+		virtual optype_t *types();
 		virtual int maxidx();
 		virtual bool next_batch();
 
@@ -48,7 +48,7 @@ class YcsbParserIterator : public ParserIterator {
 
 		Key *_keys = NULL;
 		Val *_vals = NULL;
-		uint8_t *_types = NULL;
+		optype_t *_types = NULL;
 		std::string *_lines = NULL;
 
 		void unmap_content();

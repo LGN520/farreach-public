@@ -51,6 +51,7 @@ void prepare_reflector() {
 	printf("[reflector] prepare end\n");
 }
 
+// forward pkt from switchos to switch
 void *run_reflector_popserver(void *param) {
 	// client address (switch will not hide CACHE_POP_INSWITCH from clients)
 	struct sockaddr_in client_addr;
@@ -82,8 +83,7 @@ void *run_reflector_popserver(void *param) {
 		}
 		INVARIANT(recvsize >= 0);
 
-		// send CACHE_POP_INSWITCH to data plane
-		//cache_pop_inswitch_t tmp_cache_pop_inswitch_pkt(buf, recvsize); // TODO: check whether buf is CACHE_POP_INSWITCH
+		// send CACHE_POP_INSWITCH or CACHE_EVICT_LOADFREQ_INSWITCH to data plane
 		udpsendto(reflector_popserver_udpsock, buf, recvsize, 0, &client_addr, client_addrlen, "reflector.popserver");
 	}
 
@@ -91,6 +91,7 @@ void *run_reflector_popserver(void *param) {
 	pthread_exit(nullptr);
 }
 
+// forward pkt from switch to switchos
 void *run_reflector_worker(void *param) {
 	char buf[MAX_BUFSIZE];
 	int recvsize = 0;
@@ -115,6 +116,14 @@ void *run_reflector_worker(void *param) {
 		packet_type_t pkt_type = get_packet_type(buf, recvsize);
 		switch (pkt_type) {
 			case packet_type_t::CACHE_POP_INSWITCH_ACK:
+				{
+					INVARIANT(reflector_with_switchos_popworker_addr == true);
+					// send CACHE_POP_INSWITCH_ACK to switchos.popworker
+					// NOTE: not use popserver.popclient due to duplicate packets for packet loss issued by switch
+					udpsendto(reflector_worker_popclient_udpsock, buf, recvsize, 0, &reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, "reflector.worker.popclient");
+					break;
+				}
+			case packet_type_t::CACHE_EVICT_LOADFREQ_INSWITCH_ACK:
 				{
 					INVARIANT(reflector_with_switchos_popworker_addr == true);
 					// send CACHE_POP_INSWITCH_ACK to switchos.popworker

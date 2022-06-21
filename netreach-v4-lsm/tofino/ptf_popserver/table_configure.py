@@ -94,6 +94,9 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
 
     def get_evictdata_setvalid3(self):
+        print "We directly load evictdata from data plane instead of via ptf channel!"
+        exit(-1)
+
         # NOTE: cache must be full (i.e., all idxes are valid) when cache eviction
         #print "Get sampled indexes for in-switch cache eviction"
         cur_sample_cnt = switchos_sample_cnt

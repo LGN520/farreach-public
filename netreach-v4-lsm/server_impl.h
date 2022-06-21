@@ -689,11 +689,11 @@ void *run_server_evictserver(void *param) {
 		//printf("receive CACHE_EVICT from controller\n");
 		//dump_buf(recvbuf, recvsize);
 		cache_evict_t *tmp_cache_evict_ptr;
-		uint8_t optype = *((uint8_t *)recvbuf);
-		if (packet_type_t(optype) == packet_type_t::CACHE_EVICT) {
+		packet_type_t optype = get_packet_type(recvbuf, recvsize);
+		if (optype == packet_type_t::CACHE_EVICT) {
 			tmp_cache_evict_ptr = new cache_evict_t(recvbuf, recvsize);
 		}
-		else if (packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2) {
+		else if (optype == packet_type_t::CACHE_EVICT_CASE2) {
 			tmp_cache_evict_ptr = new cache_evict_case2_t(recvbuf, recvsize);
 		}
 		else {
