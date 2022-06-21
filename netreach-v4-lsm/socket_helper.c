@@ -175,7 +175,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 			if (is_timeout) {
 				break;
 			}
-			INVARIANT(frag_recvsize >= final_frag_hdrsize && frag_recvsize <= frag_maxsize);
+			INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize && size_t(frag_recvsize) <= frag_maxsize);
 			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
 
 			buf.dynamic_memcpy(0, fragbuf, frag_hdrsize);
@@ -187,7 +187,7 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 			if (is_timeout) {
 				break;
 			}
-			INVARIANT(frag_recvsize >= final_frag_hdrsize);
+			INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize);
 		}
 
 		uint16_t cur_fragidx = 0;
@@ -252,10 +252,10 @@ bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnu
 		if (is_timeout) {
 			break;
 		}
-		INVARIANT(frag_recvsize >= final_frag_hdrsize);
+		INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize);
 
 		if (isfilter) {
-			if (optype_t(get_packet_type(fragbuf, frag_recvsize)) != optype)
+			if (optype_t(get_packet_type(fragbuf, frag_recvsize)) != optype) {
 				continue; // filter the unmatched packet
 			}
 			tmpkey.deserialize(fragbuf, frag_recvsize - sizeof(optype_t));

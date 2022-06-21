@@ -44,6 +44,19 @@ register savedseq_reg {
 	instance_count: KV_BUCKET_COUNT;
 }
 
+blackbox stateful_alu get_savedseq_alu {
+	reg: savedseq_reg;
+
+	update_lo_1_value: register_lo;
+
+	output_value: register_lo;
+	output_dst: seq_hdr.seq;
+}
+
+action get_savedseq() {
+	get_savedseq_alu.execute_stateful_alu(inswitch_hdr.idx);
+}
+
 blackbox stateful_alu set_and_get_savedseq_alu {
 	reg: savedseq_reg;
 
@@ -66,6 +79,7 @@ table access_savedseq_tbl {
 		meta.is_latest: exact;
 	}
 	actions {
+		get_savedseq;
 		set_and_get_savedseq;
 		nop;
 	}

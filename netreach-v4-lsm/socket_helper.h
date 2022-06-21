@@ -11,7 +11,7 @@
 #include "helper.h"
 #include "dynamic_array.h"
 #include "key.h"
-#include "../packet_format.h"
+#include "packet_format_impl.h"
 
 #define SOCKET_TIMEOUT 5 // 5s
 #define CLIENT_SOCKET_TIMEOUT_SECS 5 // 5s

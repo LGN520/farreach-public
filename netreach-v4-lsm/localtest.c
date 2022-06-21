@@ -252,7 +252,7 @@ void *run_loader(void * param) {
   size_t exist_key_n_per_thread = exist_keys.size() / server_num;
   size_t exist_key_n_per_loader = exist_keys.size() / server_num / load_factor;
   size_t exist_key_start = worker_id * exist_key_n_per_thread + loader_id * exist_key_n_per_loader;
-  size_t exist_key_end = exist_key_start + exist_key_n_per_loader;
+  //size_t exist_key_end = exist_key_start + exist_key_n_per_loader;
 
   //bool is_existing = db_wrappers[worker_id].open(worker_id);
   std::vector<val_t> init_vals(exist_key_n_per_loader, init_val);

@@ -36,7 +36,7 @@ enum class PacketType {
 	CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x000b,
 	GETRES=0x0009,
 	PUTREQ_INSWITCH=0x0005,
-	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034
+	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034,
 	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012,
 	PUTRES=0x0008, DELRES=0x0018,
 	SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100
@@ -502,24 +502,25 @@ class CachePopAck : public GetRequest<key_t> { // ophdr
 template<class key_t>
 class CacheEvictLoadfreqInswitch : public Packet<key_t> { // ophdr + shadowtype + inswitch_hdr
 	public: 
-		CacheEvictLoadFreqInswitch(key_t key, uint16_t evictidx);
+		CacheEvictLoadfreqInswitch(key_t key, uint16_t evictidx);
 
 		uint16_t evictidx() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	private:
-		uint16_t _evictidx;
-
 		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint16_t _evictidx;
 };
 
 template<class key_t>
 class CacheEvictLoadfreqInswitchAck : public Packet<key_t> { // ophdr + frequency_hdr
 	public: 
-		CacheEvictLoadFreqInswitchAck(const char * data, uint32_t recv_size);
+		CacheEvictLoadfreqInswitchAck(const char * data, uint32_t recv_size);
 
 		uint32_t frequency() const;
 
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	private:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
@@ -541,6 +542,8 @@ class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + shadowty
 		val_t val() const;
 		uint32_t seq() const;
 		bool stat() const;
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	private:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
@@ -550,8 +553,9 @@ class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + shadowty
 };
 
 // APIs
-packet_type_t get_packet_type(const char * data, uint32_t recv_size);
-uint32_t serialize_packet_type(optype_t type, const char * data, uint32_t maxsize);
-uint32_t dynamic_serialize_packet_type(optype_t type, dynamic_array_t &dynamic_data);
+static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize);
+static uint32_t dynamic_serialize_packet_type(optype_t type, dynamic_array_t &dynamic_data);
+static packet_type_t get_packet_type(const char * data, uint32_t recv_size);
+static uint32_t deserialize_packet_type(optype_t &type, const char * data, uint32_t recvsize);
 
 #endif

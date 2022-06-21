@@ -346,6 +346,7 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 				CUR_TIME(rocksdb_t1);
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
+				UNUSED(tmp_stat);
 				CUR_TIME(rocksdb_t2);
 				//COUT_THIS("[server] stat = " << tmp_stat)
 				put_response_t rsp(req.key(), true, serveridx);
@@ -364,6 +365,7 @@ void *run_server_worker(void * param) {
 				del_request_seq_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				bool tmp_stat = db_wrappers[serveridx].remove(req.key(), req.seq());
+				UNUSED(tmp_stat);
 				//COUT_THIS("[server] stat = " << tmp_stat)
 				del_response_t rsp(req.key(), true, serveridx);
 #ifdef DUMP_BUF
@@ -495,6 +497,7 @@ void *run_server_worker(void * param) {
 				}
 
 				bool tmp_stat = db_wrappers[serveridx].put(req.key(), req.val(), req.seq());
+				UNUSED(tmp_stat);
 				//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
 				put_response_t rsp(req.key(), true, serveridx);
 #ifdef DUMP_BUF
@@ -557,6 +560,7 @@ void *run_server_worker(void * param) {
 				}
 
 				bool tmp_stat = db_wrappers[serveridx].remove(req.key(), req.seq());
+				UNUSED(tmp_stat);
 				//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
 				del_response_t rsp(req.key(), true, serveridx);
 #ifdef DUMP_BUF
@@ -616,8 +620,8 @@ void *run_server_worker(void * param) {
 				//char val_buf[Val::SWITCH_MAX_VALLEN];
 				//memset(val_buf, 0x11, Val::SWITCH_MAX_VALLEN);
 				//val_t tmp_val(val_buf, Val::SWITCH_MAX_VALLEN);
-				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[serveridx].force_put(req.key(), req.val());
+				UNUSED(tmp_stat);
 				
 				load_ack_t rsp(req.key());
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);

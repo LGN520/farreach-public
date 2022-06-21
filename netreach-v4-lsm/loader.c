@@ -149,7 +149,7 @@ void *run_loader(void * param) {
 		tmpkey = iter->key();
 		uint32_t tmp_worker_id = tmpkey.get_hashpartition_idx(partition_num, server_num);
 		tmpval = iter->val();	
-		if (iter->type() == uint8_t(packet_type_t::PUTREQ)) {	// INESRT
+		if (iter->type() == optype_t(packet_type_t::PUTREQ)) {	// INESRT
 #ifndef CORRECTNESS_TEST
 			bool tmp_stat = db_wrappers[tmp_worker_id].force_put(tmpkey, tmpval);
 			if (!tmp_stat) {
@@ -172,17 +172,17 @@ void *run_loader(void * param) {
 			break;
 		}
 
-		uint8_t *tmptypes = iter->types();
+		optype_t *tmptypes = iter->types();
 		int tmpmaxidx = iter->maxidx();
-		for (size_t i = 0; i < tmpmaxidx; i++) {
-			if (tmptypes[i] != uint8_t(packet_type_t::PUTREQ)) {
+		for (int i = 0; i < tmpmaxidx; i++) {
+			if (tmptypes[i] != optype_t(packet_type_t::PUTREQ)) {
 				COUT_N_EXIT("Invalid type: !" << int(tmptypes[i]));
 			}
 		}
 
 		// split current batch into different databases by hash partition
 		std::map<uint16_t, std::pair<std::vector<netreach_key_t>, std::vector<val_t>>> tmpmap;
-		for (size_t i = 0; i < tmpmaxidx; i++) {
+		for (int i = 0; i < tmpmaxidx; i++) {
 #ifdef USE_HASH
 			uint16_t tmp_worker_id = iter->keys()[i].get_hashpartition_idx(partition_count, server_num);
 #elif defined USE_RANGE

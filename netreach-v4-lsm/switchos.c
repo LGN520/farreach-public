@@ -53,10 +53,10 @@ typedef CacheEvictAck<netreach_key_t> cache_evict_ack_t;
 typedef CacheEvictCase2<netreach_key_t, val_t> cache_evict_case2_t;
 typedef ConcurrentMap<uint16_t, special_case_t> concurrent_specicalcase_map_t;
 typedef CachePopAck<netreach_key_t> cache_pop_ack_t;
-typedef CacheEvictLoadreqInswitch<netreach_key_t> cache_evict_loadfreq_inswich_t;
-typedef CacheEvictLoadreqInswitchAck<netreach_key_t> cache_evict_loadfreq_inswich_ack_t;
-typedef CacheEvictLoaddataInswitch<netreach_key_t> cache_evict_loaddata_inswich_t;
-typedef CacheEvictLoaddataInswitchAck<netreach_key_t, val_t> cache_evict_loaddata_inswich_ack_t;
+typedef CacheEvictLoadfreqInswitch<netreach_key_t> cache_evict_loadfreq_inswitch_t;
+typedef CacheEvictLoadfreqInswitchAck<netreach_key_t> cache_evict_loadfreq_inswitch_ack_t;
+typedef CacheEvictLoaddataInswitch<netreach_key_t> cache_evict_loaddata_inswitch_t;
+typedef CacheEvictLoaddataInswitchAck<netreach_key_t, val_t> cache_evict_loaddata_inswitch_ack_t;
 
 bool recover_mode = false;
 
@@ -192,6 +192,7 @@ void close_switchos();
 // switchos <-> ptf.popserver
 inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx);
 inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx);
+inline uint32_t serialize_setvalid3(char *buf, uint16_t evictidx);
 //inline uint32_t serialize_get_evictdata_setvalid3(char *buf);
 //inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
 inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key);
@@ -439,8 +440,10 @@ void recover() {
 			tmp_offset += tmp_valsize;
 			uint32_t seq = *((uint32_t *)(content + tmp_offset));
 			tmp_offset += sizeof(uint32_t);
+			UNUSED(seq);
 			bool stat = *((bool *)(content + tmp_offset));
 			tmp_offset += sizeof(bool);
+			UNUSED(stat);
 
 			// Update switchos inswitch cache metadata
 			switchos_cached_keyarray[switchos_cached_empty_index] = tmp_key;
@@ -597,7 +600,7 @@ void *run_switchos_popworker(void *param) {
 
 						// loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
 						bool is_timeout = false;
-						int tmp_acknum = 0
+						int tmp_acknum = 0;
 						while (true) {
 							is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.popclient_for_reflector");
 							if (unlikely(is_timeout)) {
@@ -606,7 +609,7 @@ void *run_switchos_popworker(void *param) {
 
 							cache_evict_loadfreq_inswitch_ack_t tmp_cache_evict_loadfreq_inswitch_ack(ackbuf, ack_recvsize);
 							for (size_t i = 0; i < switchos_sample_cnt; i++) {
-								if (switchos_cached_keyarray[sampled_idxes[i]] == tmp_cache_evict_loadfreq_inswitch_ack.key()) {
+								if (static_cast<netreach_key_t>(switchos_cached_keyarray[sampled_idxes[i]]) == tmp_cache_evict_loadfreq_inswitch_ack.key()) {
 									frequency_counters[i] = tmp_cache_evict_loadfreq_inswitch_ack.frequency();
 									tmp_acknum += 1;
 								}
@@ -673,7 +676,7 @@ void *run_switchos_popworker(void *param) {
 						}
 
 						cache_evict_loaddata_inswitch_ack_t tmp_cache_evict_loaddata_inswitch_ack(ackbuf, ack_recvsize);
-						INVARIANT(tmp_cache_evict_loadfreq_inswitch_ack.key() == cur_evictkey);
+						INVARIANT(tmp_cache_evict_loaddata_inswitch_ack.key() == cur_evictkey);
 						switchos_evictvalue = tmp_cache_evict_loaddata_inswitch_ack.val();
 						switchos_evictseq = tmp_cache_evict_loaddata_inswitch_ack.seq();
 						switchos_evictstat = tmp_cache_evict_loaddata_inswitch_ack.stat();

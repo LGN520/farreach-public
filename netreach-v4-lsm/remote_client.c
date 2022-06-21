@@ -139,6 +139,7 @@ void run_benchmark() {
 		fg_params[worker_i].unmatched_cnt = 0;
 		fg_params[worker_i].wait_latency_list.clear();
 		int ret = pthread_create(&threads[worker_i], nullptr, run_fg, (void *)&fg_params[worker_i]);
+		UNUSED(ret);
 		COUT_THIS("[client] Lanuch client " << worker_i)
 	}
 
@@ -258,9 +259,14 @@ void run_benchmark() {
 	// NOTE: we need to use the ith aggregate pktcnt - the {i-1}th aggregate pktcnt to get the ith sec pktcnt
 	int seccnt = persec_perclient_aggpktcnts.size();
 	printf("\nthpt interval: %d s, seccnt: %d\n", onesec_usecs/1000/1000, seccnt);
-	std::vector<int> cursec_perclient_pktcnts = persec_perclient_aggpktcnts[0];
-	std::vector<int> cursec_perclient_cachehitcnts = persec_perclient_aggcachehitcnts[0];
-	std::vector<std::vector<int>> cursec_perclient_perserver_cachemisscnts = persec_perclient_perserver_aggcachemisscnts[0];
+	std::vector<int> cursec_perclient_pktcnts;
+	std::vector<int> cursec_perclient_cachehitcnts;
+	std::vector<std::vector<int>> cursec_perclient_perserver_cachemisscnts;
+	if (seccnt > 0) {
+		cursec_perclient_pktcnts = persec_perclient_aggpktcnts[0];
+		cursec_perclient_cachehitcnts = persec_perclient_aggcachehitcnts[0];
+		cursec_perclient_perserver_cachemisscnts = persec_perclient_perserver_aggcachemisscnts[0];
+	}
 	bool first_stopped = true;
 	for (size_t i = 0; i < seccnt; i++) {
 		if (i != 0) {
@@ -440,8 +446,8 @@ void run_benchmark() {
 		// get persec nodeidx-pktcnt mapping data
 		std::map<uint16_t, int> persec_nodeidx_pktcnt_map[dynamic_periodnum*dynamic_periodinterval];
 		// aggregate perclient pktcnt for each previous i seconds -> accumulative pktcnt for each previous i seconds
-		for (size_t i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
-			for (size_t j = 0; j < client_num; j++) {
+		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+			for (int j = 0; j < client_num; j++) {
 				for (std::map<uint16_t, int>::iterator iter = persec_perclient_nodeidx_pktcnt_map[i][j].begin(); \
 						iter != persec_perclient_nodeidx_pktcnt_map[i][j].end(); iter++) {
 					if (persec_nodeidx_pktcnt_map[i].find(iter->first) == persec_nodeidx_pktcnt_map[i].end()) {
@@ -454,7 +460,7 @@ void run_benchmark() {
 			}
 		}
 		// accumulative pktcnt for previous i seconds - that for previous i-1 seconds -> pktcnt for the ith second
-		for (size_t i = dynamic_periodnum*dynamic_periodinterval-1; i > 0; i--) {
+		for (int i = dynamic_periodnum*dynamic_periodinterval-1; i > 0; i--) {
 			int tmptotalpktcnt = 0;
 			for (std::map<uint16_t, int>::iterator iter = persec_nodeidx_pktcnt_map[i].begin(); \
 					iter != persec_nodeidx_pktcnt_map[i].end(); iter++) {
@@ -468,14 +474,14 @@ void run_benchmark() {
 		// get persec total pktcnt
 		int persec_totalpktcnt_list[dynamic_periodnum*dynamic_periodinterval];
 		memset(persec_totalpktcnt_list, 0, dynamic_periodnum*dynamic_periodinterval*sizeof(int));
-		for (size_t i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
 			for (std::map<uint16_t, int>::iterator iter = persec_nodeidx_pktcnt_map[i].begin(); \
 					iter != persec_nodeidx_pktcnt_map[i].end(); iter++) {
 				persec_totalpktcnt_list[i] += iter->second;
 			}
 		}
 		printf("\nper-sec total throughput:\n");
-		for (size_t i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
 			if (i != dynamic_periodnum * dynamic_periodinterval - 1) {
 				printf("%d ", persec_totalpktcnt_list[i]);
 			}
@@ -484,7 +490,7 @@ void run_benchmark() {
 			}
 		}
 		printf("\nper-sec per-server throughput:\n");
-		for (size_t i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
 			for (uint16_t j = 0; j < server_num; j++) {
 				int tmppktcnt = 0;
 				if (persec_nodeidx_pktcnt_map[i].find(j) != persec_nodeidx_pktcnt_map[i].end()) {

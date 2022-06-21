@@ -51,8 +51,8 @@ typedef WarmupAck<netreach_key_t> warmup_ack_t;
 typedef LoadRequest<netreach_key_t, val_t> load_request_t;
 typedef LoadAck<netreach_key_t> load_ack_t;
 typedef CachePopAck<netreach_key_t> cache_pop_ack_t;
-typedef CacheEvictLoadreqInswitch<netreach_key_t> cache_evict_loadfreq_inswich_t;
-typedef CacheEvictLoadreqInswitchAck<netreach_key_t> cache_evict_loadfreq_inswich_ack_t;
+typedef CacheEvictLoadfreqInswitch<netreach_key_t> cache_evict_loadfreq_inswich_t;
+typedef CacheEvictLoadfreqInswitchAck<netreach_key_t> cache_evict_loadfreq_inswich_ack_t;
 typedef CacheEvictLoaddataInswitch<netreach_key_t> cache_evict_loaddata_inswich_t;
 typedef CacheEvictLoaddataInswitchAck<netreach_key_t, val_t> cache_evict_loaddata_inswich_ack_t;
 
@@ -271,7 +271,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(server_snapshotdataserver_port_start);
 	//COUT_VAR(server_dynamicserver_port);
 	//printf("server_ip_for_client: %s\n", server_ip_for_client);
-	if (server_num > server_cores) {
+	if (server_num > uint32_t(server_cores)) {
 		printf("[WARNING] server_num %d > server_cores %d, which could incur CPU contention!\n", server_num, server_cores);
 	}
 	if (server_cores > total_cores) {

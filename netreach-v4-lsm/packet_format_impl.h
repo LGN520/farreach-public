@@ -385,7 +385,7 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	begin += tmp_typesize;
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize);
 	begin += tmp_keysize; 
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize - tmp_valsize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
 	begin += tmp_shadowtypesize;
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
@@ -580,7 +580,7 @@ uint32_t ScanResponseSplit<key_t, val_t>::dynamic_serialize(dynamic_array_t &dyn
 	//INVARIANT(max_size >= my_size);
 	int tmpoff = 0;
 	uint32_t tmp_typesize = dynamic_serialize_packet_type(this->_type, dynamic_data);
-	begin += tmp_typesize;
+	tmpoff += tmp_typesize;
 	uint32_t tmp_keysize = this->_key.dynamic_serialize(dynamic_data, tmpoff);
 	tmpoff += tmp_keysize;
 	uint32_t tmp_endkeysize = this->_endkey.dynamic_serialize(dynamic_data, tmpoff);
@@ -1544,6 +1544,12 @@ uint32_t CacheEvictLoadfreqInswitch<key_t>::size() { // unused
 	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t);
 }
 
+template<class key_t>
+void CacheEvictLoadfreqInswitch<key_t>::deserialize(const char * data, uint32_t recv_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for CacheEvictLoadfreqInswitch");
+}
+
+
 // CacheEvictLoadfreqInswitchAck
 
 template<class key_t>
@@ -1555,27 +1561,31 @@ CacheEvictLoadfreqInswitchAck<key_t>::CacheEvictLoadfreqInswitchAck(const char *
 }
 
 template<class key_t>
-uint32_t CacheEvictLoadfreqInswitch<key_t>::deserialize(const char * data, uint32_t recv_size) {
+void CacheEvictLoadfreqInswitchAck<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(recv_size >= my_size);
-	char *begin = data;
+	const char *begin = data;
 	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
 	begin += tmp_typesize;
 	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
 	begin += tmp_keysize;
 	memcpy(&this->_frequency, begin, sizeof(uint32_t));
 	this->_frequency = ntohl(this->_frequency);
-	return tmp_typesize + tmp_keysize + sizeof(uint32_t);
 }
 
 template<class key_t>
-uint32_t CacheEvictLoadfreqInswitch<key_t>::frequency() const {
+uint32_t CacheEvictLoadfreqInswitchAck<key_t>::frequency() const {
 	return _frequency;
 }
 
 template<class key_t>
-uint32_t CacheEvictLoadfreqInswitch<key_t>::size() { // unused
+uint32_t CacheEvictLoadfreqInswitchAck<key_t>::size() { // unused
 	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t);
+}
+
+template<class key_t>
+uint32_t CacheEvictLoadfreqInswitchAck<key_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of deserialize for CacheEvictLoadfreqInswitchAck");
 }
 
 // CacheEvictLoaddataInswitch
@@ -1638,9 +1648,27 @@ void CacheEvictLoaddataInswitchAck<key_t, val_t>::deserialize(const char * data,
 	//begin += sizeof(uint16_t); // stat_hdr.nodeidx_foreval
 }
 
+template<class key_t, class val_t>
+uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for CacheEvictLoaddataInswitchAck");
+}
+
 
 // APIs
-packet_type_t get_packet_type(const char * data, uint32_t recv_size) {
+static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
+	INVARIANT(maxsize >= sizeof(optype_t));
+	uint16_t bigendian_type = htons(type);
+	memcpy(data, (void *)&bigendian_type, sizeof(optype_t));
+	return sizeof(optype_t);
+}
+
+static uint32_t dynamic_serialize_packet_type(optype_t type, dynamic_array_t &dynamic_data) {
+	uint16_t bigendian_type = htons(type);
+	dynamic_data.dynamic_memcpy(0, (char *)&bigendian_type, sizeof(optype_t));
+	return sizeof(optype_t);
+}
+
+static packet_type_t get_packet_type(const char * data, uint32_t recv_size) {
 	INVARIANT(recv_size >= sizeof(optype_t));
 	optype_t tmp;
 	memcpy((void *)&tmp, data, sizeof(optype_t));
@@ -1648,20 +1676,7 @@ packet_type_t get_packet_type(const char * data, uint32_t recv_size) {
 	return static_cast<packet_type_t>(tmp);
 }
 
-uint32_t serialize_packet_type(optype_t type, const char * data, uint32_t maxsize) {
-	INVARIANT(maxsize >= sizeof(optype_t));
-	uint16_t bigendian_type = htons(type);
-	memcpy(data, (void *)&bigendian_type, sizeof(optype_t));
-	return sizeof(optype_t);
-}
-
-uint32_t dynamic_serialize_packet_type(optype_t type, dynamic_array_t &dynamic_data, uint32_t maxsize) {
-	uint16_t bigendian_type = htons(type);
-	dynamic_data.dynamic_memcpy(0, (void *)&bigendian_type, sizeof(optype_t));
-	return sizeof(optype_t);
-}
-
-uint32_t deserialize_packet_type(optype_t &type, const char * data, uint32_t recvsize) {
+static uint32_t deserialize_packet_type(optype_t &type, const char * data, uint32_t recvsize) {
 	INVARIANT(recvsize >= sizeof(optype_t));
 	memcpy(&type, data, sizeof(optype_t));
 	type = ntohs(type);

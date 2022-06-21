@@ -521,7 +521,7 @@ int IniparserWrapper::get_switchos_add_cache_lookup_setvalid1_ack() {
 	return tmp;
 }
 
-int IniparserWrapper::get_switchos_get_evictdata_setvalid3() {
+/*int IniparserWrapper::get_switchos_get_evictdata_setvalid3() {
 	int tmp = iniparser_getint(ini, "switchos:switchos_get_evictdata_setvalid3", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switchos:switchos_get_evictdata_setvalid3]: %d\n", tmp);
@@ -534,6 +534,24 @@ int IniparserWrapper::get_switchos_get_evictdata_setvalid3_ack() {
 	int tmp = iniparser_getint(ini, "switchos:switchos_get_evictdata_setvalid3_ack", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switchos:switchos_get_evictdata_setvalid3_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}*/
+
+int IniparserWrapper::get_switchos_setvalid3() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_setvalid3", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_setvalid3]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_setvalid3_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_setvalid3_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_setvalid3_ack]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;
