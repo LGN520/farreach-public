@@ -61,5 +61,5 @@ table access_deleted_tbl {
 		reset_is_deleted;
 	}
 	default_action: reset_is_deleted();
-	size: 32;
+	size: 64;
 }

@@ -51,6 +51,10 @@ typedef WarmupAck<netreach_key_t> warmup_ack_t;
 typedef LoadRequest<netreach_key_t, val_t> load_request_t;
 typedef LoadAck<netreach_key_t> load_ack_t;
 typedef CachePopAck<netreach_key_t> cache_pop_ack_t;
+typedef CacheEvictLoadreqInswitch<netreach_key_t> cache_evict_loadfreq_inswich_t;
+typedef CacheEvictLoadreqInswitchAck<netreach_key_t> cache_evict_loadfreq_inswich_ack_t;
+typedef CacheEvictLoaddataInswitch<netreach_key_t> cache_evict_loaddata_inswich_t;
+typedef CacheEvictLoaddataInswitchAck<netreach_key_t, val_t> cache_evict_loaddata_inswich_ack_t;
 
 /*
  * Constants
@@ -146,8 +150,10 @@ int SWITCHOS_SETVALID0 = -1;
 int SWITCHOS_SETVALID0_ACK = -1;
 int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = -1;
 int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = -1;
-int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
-int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
+//int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
+//int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
+int SWITCHOS_SETVALID3 = -1;
+int SWITCHOS_SETVALID3_ACK = -1;
 int SWITCHOS_REMOVE_CACHE_LOOKUP = -1;
 int SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = -1;
 int SWITCHOS_CLEANUP = -1;
@@ -366,8 +372,10 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_SETVALID0_ACK = ini.get_switchos_setvalid0_ack();
 	SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = ini.get_switchos_add_cache_lookup_setvalid1();
 	SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = ini.get_switchos_add_cache_lookup_setvalid1_ack();
-	SWITCHOS_GET_EVICTDATA_SETVALID3 = ini.get_switchos_get_evictdata_setvalid3();
-	SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
+	//SWITCHOS_GET_EVICTDATA_SETVALID3 = ini.get_switchos_get_evictdata_setvalid3();
+	//SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
+	SWITCHOS_SETVALID3 = ini.get_switchos_setvalid3();
+	SWITCHOS_SETVALID3_ACK = ini.get_switchos_setvalid3_ack();
 	SWITCHOS_REMOVE_CACHE_LOOKUP = ini.get_switchos_remove_cache_lookup();
 	SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = ini.get_switchos_remove_cache_lookup_ack();
 	SWITCHOS_CLEANUP = ini.get_switchos_cleanup();

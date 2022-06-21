@@ -68,7 +68,7 @@ table update_vallen_tbl {
 		nop;
 	}
 	default_action: reset_access_val_mode();
-	size: 32;
+	size: 64;
 }
 
 register vallo1_reg {

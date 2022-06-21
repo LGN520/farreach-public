@@ -116,14 +116,8 @@ void *run_reflector_worker(void *param) {
 		packet_type_t pkt_type = get_packet_type(buf, recvsize);
 		switch (pkt_type) {
 			case packet_type_t::CACHE_POP_INSWITCH_ACK:
-				{
-					INVARIANT(reflector_with_switchos_popworker_addr == true);
-					// send CACHE_POP_INSWITCH_ACK to switchos.popworker
-					// NOTE: not use popserver.popclient due to duplicate packets for packet loss issued by switch
-					udpsendto(reflector_worker_popclient_udpsock, buf, recvsize, 0, &reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, "reflector.worker.popclient");
-					break;
-				}
 			case packet_type_t::CACHE_EVICT_LOADFREQ_INSWITCH_ACK:
+			case packet_type_t::CACHE_EVICT_LOADDATA_INSWITCH_ACK:
 				{
 					INVARIANT(reflector_with_switchos_popworker_addr == true);
 					// send CACHE_POP_INSWITCH_ACK to switchos.popworker

@@ -70,5 +70,5 @@ table access_savedseq_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 32;
+	size: 64;
 }

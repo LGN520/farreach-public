@@ -23,7 +23,7 @@
 // NOTE: followings are ended with 0b0000
 // op_hdr + scan_hdr (specific value): SCANREQ
 // op_hdr + scan_hdr + split_hdr (specific value): SCANREQ_SPLIT
-// only op_hdr (default): GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK (w/ clone_hdr), WARMUPACK, LOADACK, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK (w/ frequency_hdr)
+// only op_hdr (default): GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK (deprecated: w/ clone_hdr), WARMUPACK, LOADACK, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK (w/ frequency_hdr)
 // not parsed in switch: SCANRES_SPLIT, CACHE_POP, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2, CACHE_POP_ACK
 
 parser start {
@@ -58,7 +58,7 @@ parser parse_udp {
 parser parse_op {
 	extract(op_hdr);
 	return select(op_hdr.optype) {
-		CACHE_POP_INSWITCH_ACK: parse_clone;
+		//CACHE_POP_INSWITCH_ACK: parse_clone;
 		CACHE_EVICT_LOADFREQ_ACK: parse_frequency;
 		1 mask 0x01: parse_vallen;
 		/*2 mask 0x02: parse_seq;

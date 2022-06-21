@@ -53,6 +53,10 @@ typedef CacheEvictAck<netreach_key_t> cache_evict_ack_t;
 typedef CacheEvictCase2<netreach_key_t, val_t> cache_evict_case2_t;
 typedef ConcurrentMap<uint16_t, special_case_t> concurrent_specicalcase_map_t;
 typedef CachePopAck<netreach_key_t> cache_pop_ack_t;
+typedef CacheEvictLoadreqInswitch<netreach_key_t> cache_evict_loadfreq_inswich_t;
+typedef CacheEvictLoadreqInswitchAck<netreach_key_t> cache_evict_loadfreq_inswich_ack_t;
+typedef CacheEvictLoaddataInswitch<netreach_key_t> cache_evict_loaddata_inswich_t;
+typedef CacheEvictLoaddataInswitchAck<netreach_key_t, val_t> cache_evict_loaddata_inswich_ack_t;
 
 bool recover_mode = false;
 
@@ -80,8 +84,10 @@ int SWITCHOS_SETVALID0 = -1;
 int SWITCHOS_SETVALID0_ACK = -1;
 int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = -1;
 int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = -1;
-int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
-int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
+//int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
+//int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
+int SWITCHOS_SETVALID3 = -1;
+int SWITCHOS_SETVALID3_ACK = -1;
 int SWITCHOS_REMOVE_CACHE_LOOKUP = -1;
 int SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = -1;
 int SWITCHOS_CLEANUP = -1;
@@ -186,8 +192,8 @@ void close_switchos();
 // switchos <-> ptf.popserver
 inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx);
 inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx);
-inline uint32_t serialize_get_evictdata_setvalid3(char *buf);
-inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
+//inline uint32_t serialize_get_evictdata_setvalid3(char *buf);
+//inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
 inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key);
 inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx);
 void parse_snapshotdata_fromptf(char *buf, uint32_t buflen, val_t *values, uint32_t *seqs, bool *stats, uint32_t record_cnt);
@@ -302,8 +308,10 @@ inline void parse_control_ini(const char* config_file) {
 	SWITCHOS_SETVALID0_ACK = ini.get_switchos_setvalid0_ack();
 	SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = ini.get_switchos_add_cache_lookup_setvalid1();
 	SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = ini.get_switchos_add_cache_lookup_setvalid1_ack();
-	SWITCHOS_GET_EVICTDATA_SETVALID3 = ini.get_switchos_get_evictdata_setvalid3();
-	SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
+	//SWITCHOS_GET_EVICTDATA_SETVALID3 = ini.get_switchos_get_evictdata_setvalid3();
+	//SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
+	SWITCHOS_SETVALID3 = ini.get_switchos_setvalid3();
+	SWITCHOS_SETVALID3_ACK = ini.get_switchos_setvalid3_ack();
 	SWITCHOS_REMOVE_CACHE_LOOKUP = ini.get_switchos_remove_cache_lookup();
 	SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = ini.get_switchos_remove_cache_lookup_ack();
 	SWITCHOS_CLEANUP = ini.get_switchos_cleanup();
@@ -645,7 +653,11 @@ void *run_switchos_popworker(void *param) {
 						exit(-1);
 					}
 
-					// TODO: set valid = 3 by ptf channel (cannot perform it in data plane due to stateful ALU API limitation)
+					// set valid = 3 by ptf channel (cannot perform it in data plane due to stateful ALU API limitation)
+					ptf_sendsize = serialize_setvalid3(ptfbuf, switchos_evictidx);
+					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
+					INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID3_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
 					
 					// load evicted data of victim from data plane and set valid=3 at the same time for availability of latest value
 					while (true) {
@@ -1355,7 +1367,13 @@ inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t k
 	return sizeof(int) + tmp_keysize + sizeof(uint16_t);
 }
 
-inline uint32_t serialize_get_evictdata_setvalid3(char *buf) {
+inline uint32_t serialize_setvalid3(char *buf, uint16_t evictidx) {
+	memcpy(buf, &SWITCHOS_SETVALID3, sizeof(int));
+	memcpy(buf + sizeof(int), &evictidx, sizeof(uint16_t));
+	return sizeof(int) + sizeof(uint16_t);
+}
+
+/*inline uint32_t serialize_get_evictdata_setvalid3(char *buf) {
 	memcpy(buf, &SWITCHOS_GET_EVICTDATA_SETVALID3, sizeof(int));
 	return sizeof(int);
 }
@@ -1369,7 +1387,7 @@ inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx
 	switchos_evictseq = *((uint32_t *)curptr);
 	curptr += sizeof(uint32_t);
 	switchos_evictstat = *((bool *)curptr);
-}
+}*/
 
 inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key) {
 	memcpy(buf, &SWITCHOS_REMOVE_CACHE_LOOKUP, sizeof(int));

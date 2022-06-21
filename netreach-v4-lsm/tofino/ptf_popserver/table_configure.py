@@ -93,31 +93,29 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         value = 1
         self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
 
-    def get_evictdata_setvalid3(self):
-        print "We directly load evictdata from data plane instead of via ptf channel!"
-        exit(-1)
-
+    #def get_evictdata_setvalid3(self):
+    def setvalid3(self, evictidx):
         # NOTE: cache must be full (i.e., all idxes are valid) when cache eviction
         #print "Get sampled indexes for in-switch cache eviction"
-        cur_sample_cnt = switchos_sample_cnt
-        if kv_bucket_num < cur_sample_cnt:
-            cur_sample_cnt = kv_bucket_num
-        random.seed(time.time())
-        sampled_idxes = random.sample(range(0, kv_bucket_num), cur_sample_cnt)
+        #cur_sample_cnt = switchos_sample_cnt
+        #if kv_bucket_num < cur_sample_cnt:
+        #    cur_sample_cnt = kv_bucket_num
+        #random.seed(time.time())
+        #sampled_idxes = random.sample(range(0, kv_bucket_num), cur_sample_cnt)
 
         #print "Load frequency counters for sampled indexes"
-        frequency_counters = []
-        for i in range(len(sampled_idxes)):
-            tmp_frequency_counter = convert_i32_to_u32(self.client.register_read_cache_frequency_reg(self.sess_hdl, self.dev_tgt, sampled_idxes[i], flags)[egress_pipeidx])
-            frequency_counters.append(tmp_frequency_counter)
+        #frequency_counters = []
+        #for i in range(len(sampled_idxes)):
+        #    tmp_frequency_counter = convert_i32_to_u32(self.client.register_read_cache_frequency_reg(self.sess_hdl, self.dev_tgt, sampled_idxes[i], flags)[egress_pipeidx])
+        #    frequency_counters.append(tmp_frequency_counter)
 
         #print "Get evictidx by approximate LRF"
-        min_frequency = frequency_counters[0]
-        evictidx = sampled_idxes[0]
-        for i in range(1, len(frequency_counters)):
-            if min_frequency > frequency_counters[i]:
-                min_frequency = frequency_counters[i]
-                evictidx = sampled_idxes[i]
+        #min_frequency = frequency_counters[0]
+        #evictidx = sampled_idxes[0]
+        #for i in range(1, len(frequency_counters)):
+        #    if min_frequency > frequency_counters[i]:
+        #        min_frequency = frequency_counters[i]
+        #        evictidx = sampled_idxes[i]
 
         #print "Set validvalue[{}] = 3 for atomicity".format(evictidx)
         index = evictidx
@@ -125,36 +123,36 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
 
         #print "Load evicted data"
-        tmp_deleted = self.client.register_read_deleted_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
-        if tmp_deleted == 0:
-            evictstat = True
-        elif tmp_deleted == 1:
-            evictstat = False
-        else:
-            print "Invalid tmp_deleted: {}".format(tmp_deleted)
-            exit(-1)
-        #evictvallen = convert_i32_to_u32(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
-        evictvallen = convert_i16_to_u16(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
-        eightbyte_cnt = (evictvallen+7) / 8;
-        val_list = []
-        for i in range(1, eightbyte_cnt+1):
-            # int32_t
-            tmp_vallo = eval("self.client.register_read_vallo{}_reg".format(i))(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
-            tmp_valhi = eval("self.client.register_read_valhi{}_reg".format(i))(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
-            val_list.append(tmp_vallo)
-            val_list.append(tmp_valhi)
-        evictvalbytes = bytes()
-        for i in range(len(val_list)):
-            # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
-            evictvalbytes = evictvalbytes + struct.pack("!i", val_list[i])
-        # load savedseq
-        evictseq = convert_i32_to_u32(self.client.register_read_savedseq_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
+        #tmp_deleted = self.client.register_read_deleted_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
+        #if tmp_deleted == 0:
+        #    evictstat = True
+        #elif tmp_deleted == 1:
+        #    evictstat = False
+        #else:
+        #    print "Invalid tmp_deleted: {}".format(tmp_deleted)
+        #    exit(-1)
+        ##evictvallen = convert_i32_to_u32(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
+        #evictvallen = convert_i16_to_u16(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
+        #eightbyte_cnt = (evictvallen+7) / 8;
+        #val_list = []
+        #for i in range(1, eightbyte_cnt+1):
+        #    # int32_t
+        #    tmp_vallo = eval("self.client.register_read_vallo{}_reg".format(i))(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
+        #    tmp_valhi = eval("self.client.register_read_valhi{}_reg".format(i))(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
+        #    val_list.append(tmp_vallo)
+        #    val_list.append(tmp_valhi)
+        #evictvalbytes = bytes()
+        #for i in range(len(val_list)):
+        #    # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
+        #    evictvalbytes = evictvalbytes + struct.pack("!i", val_list[i])
+        ## load savedseq
+        #evictseq = convert_i32_to_u32(self.client.register_read_savedseq_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
 
-        #print "Serialize evicted data"
-        sendbuf = struct.pack("=iH", SWITCHOS_GET_EVICTDATA_SETVALID3_ACK, evictidx)
-        sendbuf = sendbuf + struct.pack("!H", evictvallen)
-        sendbuf = sendbuf + struct.pack("={}sI?".format(len(evictvalbytes)), evictvalbytes, evictseq, evictstat)
-        return sendbuf
+        ##print "Serialize evicted data"
+        #sendbuf = struct.pack("=iH", SWITCHOS_GET_EVICTDATA_SETVALID3_ACK, evictidx)
+        #sendbuf = sendbuf + struct.pack("!H", evictvallen)
+        #sendbuf = sendbuf + struct.pack("={}sI?".format(len(evictvalbytes)), evictvalbytes, evictseq, evictstat)
+        #return sendbuf
 
     def remove_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi):
         #print "Remove key from cache_lookup_tbl"
@@ -214,9 +212,16 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_GET_EVICTDATA_SETVALID3:
                 # calculate sample index, set valid = 3, and load evict data from data plane
-                sendbuf = self.get_evictdata_setvalid3()
+                #sendbuf = self.get_evictdata_setvalid3()
 
                 # send back SWITCHOS_GET_EVICTDATA_SETVALID3_ACK
+                #switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
+
+                evictidx = struct.unpack("=H", recvbuf)[0]
+                self.setvalid3(evictidx)
+
+                # send back SWITCHOS_SETVALID3_ACK
+                sendbuf = struct.pack("=i", SWITCHOS_SETVALID3_ACK)
                 switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_REMOVE_CACHE_LOOKUP:
                 # parse key

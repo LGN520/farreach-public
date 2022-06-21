@@ -419,7 +419,7 @@ class CachePopInswitch : public GetResponseLatestSeq<key_t, val_t> { // ophdr + 
 };
 
 template<class key_t>
-class CachePopInswitchAck : public GetRequest<key_t> { // ophdr + clone_hdr
+class CachePopInswitchAck : public GetRequest<key_t> { // ophdr
 	public: 
 		CachePopInswitchAck(const char * data, uint32_t recv_size);
 
