@@ -33,9 +33,10 @@ enum class PacketType {
 	GETRES_LATEST_SEQ=0x0003, GETRES_DELETED_SEQ=0x0013, PUTREQ_SEQ=0x0023, PUTREQ_POP_SEQ=0x0033, PUTREQ_SEQ_CASE3=0x0043, PUTREQ_POP_SEQ_CASE3=0x0053,
 	GETRES_LATEST_SEQ_INSWITCH=0x0007, GETRES_DELETED_SEQ_INSWITCH=0x0017, CACHE_POP_INSWITCH=0x0027,
 	GETRES_LATEST_SEQ_INSWITCH_CASE1=0x000f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x001f, PUTREQ_SEQ_INSWITCH_CASE1=0x002f, DELREQ_SEQ_INSWITCH_CASE1=0x003f,
+	CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x000b,
 	GETRES=0x0009,
 	PUTREQ_INSWITCH=0x0005,
-	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024,
+	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034
 	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012,
 	PUTRES=0x0008, DELRES=0x0018,
 	SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100
@@ -510,6 +511,42 @@ class CacheEvictLoadfreqInswitch : public Packet<key_t> { // ophdr + shadowtype 
 		uint16_t _evictidx;
 
 		virtual uint32_t size();
+};
+
+template<class key_t>
+class CacheEvictLoadfreqInswitchAck : public Packet<key_t> { // ophdr + frequency_hdr
+	public: 
+		CacheEvictLoadFreqInswitchAck(const char * data, uint32_t recv_size);
+
+		uint32_t frequency() const;
+
+	private:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint32_t _frequency;
+};
+
+
+template<class key_t>
+class CacheEvictLoaddataInswitch : public CacheEvictLoadfreqInswitch<key_t> { // ophdr + shadowtype + inswitch_hdr
+	public: 
+		CacheEvictLoaddataInswitch(key_t key, uint16_t evictidx);
+};
+
+template<class key_t, class val_t>
+class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + shadowtype + inswitch_hdr
+	public: 
+		CacheEvictLoaddataInswitchAck(const char * data, uint32_t recv_size);
+
+		val_t val() const;
+		uint32_t seq() const;
+		bool stat() const;
+	private:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		val_t _val;
+		uint32_t _seq;
+		bool _stat;
 };
 
 // APIs

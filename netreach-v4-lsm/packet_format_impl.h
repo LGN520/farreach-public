@@ -1507,6 +1507,138 @@ CachePopAck<key_t>::CachePopAck(const char * data, uint32_t recv_size) {
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_POP_ACK);
 }
 
+// CacheEvictLoadfreqInswitch
+
+template<class key_t>
+CacheEvictLoadfreqInswitch<key_t>::CacheEvictLoadfreqInswitch(key_t key, uint16_t evictidx)
+	: Packet<key_t>(PacketType::CACHE_EVICT_LOADFREQ_INSWITCH, key), _evictidx(evictidx)
+{
+	INVARIANT(evictidx >= 0);
+}
+
+template<class key_t>
+uint32_t CacheEvictLoadfreqInswitch<key_t>::serialize(char * const data, uint32_t max_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_typesize = serialize_packet_type(this->_type, begin, max_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize);
+	begin += tmp_keysize;
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
+	begin += tmp_shadowtypesize;
+	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
+	begin += INSWITCH_PREV_BYTES;
+	uint16_t bigendian_evictidx = htons(uint16_t(this->_evictidx));
+	memcpy(begin, (void *)&bigendian_evictidx, sizeof(uint16_t)); // little-endian to big-endian
+	return tmp_typesize + tmp_keysize + tmp_shadowtypesize + INSWITCH_PREV_BYTES + sizeof(uint16_t);
+}
+
+template<class key_t>
+uint16_t CacheEvictLoadfreqInswitch<key_t>::evictidx() const {
+	return _evictidx;
+}
+
+template<class key_t>
+uint32_t CacheEvictLoadfreqInswitch<key_t>::size() { // unused
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t);
+}
+
+// CacheEvictLoadfreqInswitchAck
+
+template<class key_t>
+CacheEvictLoadfreqInswitchAck<key_t>::CacheEvictLoadfreqInswitchAck(const char * data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(this->_type == optype_t(packet_type_t::CACHE_EVICT_LOADFREQ_INSWITCH_ACK));
+	INVARIANT(_frequency >= 0);
+}
+
+template<class key_t>
+uint32_t CacheEvictLoadfreqInswitch<key_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(recv_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
+	begin += tmp_keysize;
+	memcpy(&this->_frequency, begin, sizeof(uint32_t));
+	this->_frequency = ntohl(this->_frequency);
+	return tmp_typesize + tmp_keysize + sizeof(uint32_t);
+}
+
+template<class key_t>
+uint32_t CacheEvictLoadfreqInswitch<key_t>::frequency() const {
+	return _frequency;
+}
+
+template<class key_t>
+uint32_t CacheEvictLoadfreqInswitch<key_t>::size() { // unused
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t);
+}
+
+// CacheEvictLoaddataInswitch
+
+template<class key_t>
+CacheEvictLoaddataInswitch<key_t>::CacheEvictLoaddataInswitch(key_t key, uint16_t evictidx)
+	: CacheEvictLoadfreqInswitch<key_t>(key, evictidx)
+{
+	this->_type = optype_t(packet_type_t::CACHE_EVICT_LOADDATA_INSWITCH);
+	INVARIANT(evictidx >= 0);
+}
+
+// CacheEvictLoaddataInswitchAck (value must <= 128B)
+
+template<class key_t, class val_t>
+CacheEvictLoaddataInswitchAck<key_t, val_t>::CacheEvictLoaddataInswitchAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_EVICT_LOADDATA_INSWITCH_ACK);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t, class val_t>
+val_t CacheEvictLoaddataInswitchAck<key_t, val_t>::val() const {
+	return _val;
+}
+
+template<class key_t, class val_t>
+uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::seq() const {
+	return _seq;
+}
+
+template<class key_t, class val_t>
+bool CacheEvictLoaddataInswitchAck<key_t, val_t>::stat() const {
+	return _stat;
+}
+
+template<class key_t, class val_t>
+uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::size() { // unused
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+}
+
+template<class key_t, class val_t>
+void CacheEvictLoaddataInswitchAck<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	//uint32_t my_size = this->size();
+	//INVARIANT(my_size == recv_size);
+	const char *begin = data;
+	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	begin += tmp_valsize;
+	begin += sizeof(optype_t); // deserialize shadowtype
+	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
+	this->_seq = ntohl(this->_seq);
+	begin += sizeof(uint32_t);
+	memcpy((void *)&this->_stat, begin, sizeof(bool));
+	begin += sizeof(bool); // stat_hdr.stat
+	//begin += sizeof(uint16_t); // stat_hdr.nodeidx_foreval
+}
+
+
 // APIs
 packet_type_t get_packet_type(const char * data, uint32_t recv_size) {
 	INVARIANT(recv_size >= sizeof(optype_t));
@@ -1534,43 +1666,6 @@ uint32_t deserialize_packet_type(optype_t &type, const char * data, uint32_t rec
 	memcpy(&type, data, sizeof(optype_t));
 	type = ntohs(type);
 	return sizeof(optype_t);
-}
-
-// CacheEvictLoadfreqInswitch
-
-template<class key_t>
-CacheEvictLoadfreqInswitch<key_t>::CacheEvictLoadfreqInswitch(key_t key, uint16_t evictidx)
-	: Packet<key_t>(PacketType::CACHE_EVICT_LOADFREQ_INSWITCH, key)
-{
-	INVARIANT(evictidx >= 0);
-}
-
-template<class key_t>
-uint32_t CacheEvictLoadfreqInswitch<key_t>::serialize(char * const data, uint32_t max_size) {
-	//uint32_t my_size = this->size();
-	//INVARIANT(max_size >= my_size);
-	char *begin = data;
-	uint32_t tmp_typesize = serialize_packet_type(this->_type, begin, max_size);
-	begin += tmp_typesize;
-	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize);
-	begin += tmp_keysize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
-	begin += tmp_shadowtypesize;
-	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
-	begin += INSWITCH_PREV_BYTES;
-	uint16_t bigendian_evictidx = htons(uint16_t(this->_evictidx));
-	memcpy(begin, (void *)&bigendian_evictidx, sizeof(uint16_t)); // little-endian to big-endian
-	return tmp_typesize + tmp_keysize + tmp_shadowtypesize + INSWITCH_PREV_BYTES + sizeof(uint16_t);
-}
-
-template<class key_t>
-uint16_t CacheEvictLoadfreqInswitch<key_t>::evictidx() const {
-	return _evictidx;
-}
-
-template<class key_t>
-uint32_t CacheEvictLoadfreqInswitch<key_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t);
 }
 
 #endif

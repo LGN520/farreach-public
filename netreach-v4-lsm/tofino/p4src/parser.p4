@@ -14,9 +14,10 @@
 // op_hdr + vallen&value + shadowtype + seq (0b0011): GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3
 // op_hdr + vallen&value + shadowtype + seq + inswitch_hdr (0b0111): GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH
 // op_hdr + vallen&value + shadowtype + seq + inswitch_hdr + stat (0b1111) (XXX_CASE1 w/ clone_hdr): GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
+// op_hdr + vallen&value + shadowtype + seq + stat (0b1011): CACHE_EVICT_LOADDATA_INSWITCH_ACK
 // op_hdr + vallen&value + shadowtype + stat (0b1001): GETRES
 // op_hdr + vallen&value + shadowtype + inswitch (0b0101): PUTREQ_INSWITCH
-// op_hdr + shadowtype + inswitch_hdr (0b0100): GETREQ_INSWITCH, DELREQ_INSWITCH, CACHE_EVICT_LOADFREQ_INSWITCH
+// op_hdr + shadowtype + inswitch_hdr (0b0100): GETREQ_INSWITCH, DELREQ_INSWITCH, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH
 // op_hdr + shadowtype + seq (0b0010): DELREQ_SEQ, DELREQ_SEQ_CASE3
 // op_hdr + shadowtype + stat (0b1000): PUTRES, DELRES
 // NOTE: followings are ended with 0b0000
