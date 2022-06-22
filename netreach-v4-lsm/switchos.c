@@ -612,9 +612,11 @@ void *run_switchos_popworker(void *param) {
 								if (static_cast<netreach_key_t>(switchos_cached_keyarray[sampled_idxes[i]]) == tmp_cache_evict_loadfreq_inswitch_ack.key()) {
 									frequency_counters[i] = tmp_cache_evict_loadfreq_inswitch_ack.frequency();
 									tmp_acknum += 1;
+									break;
 								}
 								else if (i == switchos_sample_cnt - 1) {
-									printf("Not match any sampled key from %d CACHE_EVICT_LOADFREQ_INSWITCH_ACKs, continue to receive!\n", switchos_sample_cnt);
+									printf("Receive CACHE_EVICT_LOADFREQ_ACK of key %x, not match any sampled key from %d CACHE_EVICT_LOADFREQ_INSWITCH_ACKs!\n", tmp_cache_evict_loadfreq_inswitch_ack.key().keyhihi, switchos_sample_cnt);
+									exit(-1);
 								}
 							}
 
@@ -631,20 +633,13 @@ void *run_switchos_popworker(void *param) {
 						}
 					}
 
-					// TMPDEBUG
-					for (size_t i = 0; i < switchos_sample_cnt; i++) {
-						COUT_VAR(sampled_idxes[i]);
-					}
-					printf("Type after checking frequency counters...\n");
-					getchar();
-
 					// choose the idx with minimum frequency counter as victim
 					uint32_t min_frequency_counter = 0;
 					uint32_t switchos_evictidx = 0;
 					for (size_t i = 0; i < switchos_sample_cnt; i++) {
 						if ((i == 0) || (min_frequency_counter > frequency_counters[i])) {
 							min_frequency_counter = frequency_counters[i];
-							switchos_evictidx = i;
+							switchos_evictidx = sampled_idxes[i];
 						}
 					}
 

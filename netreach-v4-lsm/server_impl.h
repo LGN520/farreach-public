@@ -229,7 +229,7 @@ void *run_server_worker(void * param) {
   bool is_existing = db_wrappers[serveridx].open(serveridx);
   if (!is_existing) {
 	  printf("You need to run ycsb_loader before ycsb_server\n");
-	  exit(-1);
+	  //exit(-1);
   }
 
   // packet headers (only needed by dpdk / raw socket)

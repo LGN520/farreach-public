@@ -1140,7 +1140,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         op_hdr_optype=CACHE_EVICT_LOADDATA_INSWITCH_ACK,
                         vallen_hdr_vallen_start=vallen_start,
                         vallen_hdr_vallen_end=vallen_end) # [vallen_start, vallen_end]
-                actnspec0 = netbufferv4_update_pktlen_action_spec_t(val_seq_udplen, val_seq_stat_iplen)
+                actnspec0 = netbufferv4_update_pktlen_action_spec_t(val_seq_stat_udplen, val_seq_stat_iplen)
                 self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             ## DEPRECATED: including 1B debug_hdr

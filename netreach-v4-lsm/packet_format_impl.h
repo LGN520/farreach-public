@@ -400,7 +400,7 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 template<class key_t>
 void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
-	INVARIANT(my_size >= recv_size);
+	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
 	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
 	begin += tmp_typesize;
@@ -1630,8 +1630,8 @@ uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::size() { // unused
 
 template<class key_t, class val_t>
 void CacheEvictLoaddataInswitchAck<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
-	//uint32_t my_size = this->size();
-	//INVARIANT(my_size == recv_size);
+	uint32_t my_size = this->size();
+	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
 	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
 	begin += tmp_typesize;
