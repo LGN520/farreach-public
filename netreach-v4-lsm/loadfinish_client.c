@@ -5,6 +5,7 @@
 #include "common_impl.h"
 
 int main(int argc, char **argv) {
+	parse_ini("config.ini");
 
 	char buf[256];
 	int sendval = 1;

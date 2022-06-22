@@ -478,6 +478,7 @@ void *run_transaction_loadfinishserver(void *param) {
 			// make server-side snapshot of snapshot id 0 if necessary
 			db_wrappers[tmpserveridx].init_snapshot();
 		}
+		break;
 	}
 
 	printf("[transaction.main.loadfinishserver] exit\n");

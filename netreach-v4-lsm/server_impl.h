@@ -489,7 +489,7 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::PUTREQ_SEQ_CASE3:
 			{
-				COUT_THIS("PUTREQ_SEQ_CASE3")
+				//COUT_THIS("PUTREQ_SEQ_CASE3")
 				put_request_seq_case3_t req(buf, recv_size);
 
 				if (!server_issnapshot_list[serveridx]) {
@@ -512,7 +512,7 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::PUTREQ_POP_SEQ_CASE3: 
 			{
-				COUT_THIS("PUTREQ_POP_SEQ_CASE3")
+				//COUT_THIS("PUTREQ_POP_SEQ_CASE3")
 				put_request_pop_seq_case3_t req(buf, recv_size);
 
 				if (!server_issnapshot_list[serveridx]) {
@@ -552,7 +552,7 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::DELREQ_SEQ_CASE3:
 			{
-				COUT_THIS("DELREQ_SEQ_CASE3")
+				//COUT_THIS("DELREQ_SEQ_CASE3")
 				del_request_seq_case3_t req(buf, recv_size);
 
 				if (!server_issnapshot_list[serveridx]) {

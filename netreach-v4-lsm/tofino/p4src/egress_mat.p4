@@ -990,11 +990,11 @@ action update_val_stat_pktlen(aligned_vallen) {
 
 // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
 action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 9(inswitch) + 3(stat) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 47);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 67);
-	add(udp_hdr.hdrlen, aligned_vallen, 46);
-	add(ipv4_hdr.totalLen, aligned_vallen, 66);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 16(inswitch) + 3(stat) + 3(clone_hdr) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 57);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 77);
+	add(udp_hdr.hdrlen, aligned_vallen, 56);
+	add(ipv4_hdr.totalLen, aligned_vallen, 76);
 }
 
 // PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3
