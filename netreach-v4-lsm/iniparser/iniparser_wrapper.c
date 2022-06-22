@@ -230,6 +230,15 @@ short IniparserWrapper::get_server_snapshotdataserver_port() {
 	return short(tmp);
 }
 
+short IniparserWrapper::get_transaction_loadfinishserver_port() {
+	int tmp = iniparser_getint(ini, "server:transaction_loadfinishserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:transaction_loadfinishserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 /*short IniparserWrapper::get_server_dynamicserver_port() {
 	int tmp = iniparser_getint(ini, "server:server_dynamicserver_port", -1);
 	if (tmp == -1) {

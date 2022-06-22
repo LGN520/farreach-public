@@ -580,9 +580,6 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 
-				//char val_buf[Val::SWITCH_MAX_VALLEN];
-				//memset(val_buf, 0x11, Val::SWITCH_MAX_VALLEN);
-				//val_t tmp_val(val_buf, Val::SWITCH_MAX_VALLEN);
 				uint32_t tmp_seq = 0;
 				// NOTE: we do not need to write the key-value pair for WARMUPREQ except cache population
 				//bool tmp_stat = db_wrappers[serveridx].force_put(req.key(), req.val());

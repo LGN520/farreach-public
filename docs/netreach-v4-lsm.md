@@ -1258,8 +1258,9 @@
 	+ RANGE_SUPPORT in tofino/netbufferv4.p4
 	+ USE_HASH/RANGE in helper.h
 	+ RANGE_SUPPORT in tofino/common.py
-- Loading phase
+- Local loading phase
 	- `./loader` to launch loaders in end host
+	- If using ycsb, after ycsb loading phase, run `./loadfinish_client` in each physical server
 - Warmup/Transaciton phase
 	- Switch
 		- Run `cd tofino`

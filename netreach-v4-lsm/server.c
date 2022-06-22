@@ -38,6 +38,8 @@ std::atomic<size_t> transaction_ready_threads(0);
 size_t transaction_expected_ready_threads = 0;
 bool volatile killed = false;
 
+int transaction_loadfinishserver_udpsock = -1;
+
 cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other threads
 
 /* functions */
@@ -46,6 +48,7 @@ cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other
 #include "reflector_impl.h"
 #include "server_impl.h"
 void transaction_main(); // transaction phase
+void *run_transaction_loadfinishserver(void *param);
 void kill(int signum);
 
 int main(int argc, char **argv) {
@@ -97,7 +100,8 @@ void transaction_main() {
 	// reflector: popserver + worker
 	//// server: server_num * (workers + popclients + snapshotserver + snapshotdataserver) + evictserver
 	// server: server_num * (workers + snapshotserver + snapshotdataserver) + evictserver
-	transaction_expected_ready_threads = 2 + 3*server_num + 1;
+	// transaction.main: loadfinishserver
+	transaction_expected_ready_threads = 2 + (3*server_num + 1) + 1;
 
 	int ret = 0;
 
@@ -216,6 +220,14 @@ void transaction_main() {
 			printf("Error of setaffinity for server.snapshotdataserver; errno: %d\n", errno);
 			exit(-1);
 		}
+	}
+
+	// launch loadfinishserver
+	prepare_udpserver(transaction_loadfinishserver_udpsock, true, transaction_loadfinishserver_port, "transaction.main.loadfinishserver");
+	pthread_t loadfinishserver_thread;
+	ret = pthread_create(&loadfinishserver_thread, nullptr, run_transaction_loadfinishserver, nullptr);
+	if (ret) {
+	  COUT_N_EXIT("Error of launching transaction.main.loadfinishserver: " << ret);
 	}
 
 	while (transaction_ready_threads < transaction_expected_ready_threads) sleep(1);
@@ -388,6 +400,7 @@ void transaction_main() {
 		}
 	}
 	printf("server.workers finish\n");
+
 	/*printf("wait for server.popclients\n");
 	for (size_t i = 0; i < server_num; i++) {
 		int rc = pthread_join(popclient_threads[i], &status);
@@ -396,12 +409,14 @@ void transaction_main() {
 		}
 	}
 	printf("server.popclients finish\n");*/
+
 	printf("wait for sever.evictserver\n");
 	int rc = pthread_join(evictserver_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join server.evictserver " << rc);
 	}
 	printf("server.evictserver finish\n");
+
 	printf("wait for server.snapshotservers\n");
 	for (size_t i = 0; i < server_num; i++) {
 		rc = pthread_join(snapshotserver_threads[i], &status);
@@ -410,6 +425,7 @@ void transaction_main() {
 		}
 	}
 	printf("server.snapshotservers finish\n");
+
 	printf("wait for server.snapshotdataservers\n");
 	for (size_t i = 0; i < server_num; i++) {
 		rc = pthread_join(snapshotdataserver_threads[i], &status);
@@ -418,12 +434,14 @@ void transaction_main() {
 		}
 	}
 	printf("server.snapshotdataservers finish\n");
+
 	printf("wait for reflector.popserver\n");
 	rc = pthread_join(reflector_popserver_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join reflector.popserver " << rc);
 	}
 	printf("reflector.popserver finish\n");
+
 	printf("wait for reflector.worker\n");
 	rc = pthread_join(reflector_worker_thread, &status);
 	if (rc) {
@@ -431,7 +449,40 @@ void transaction_main() {
 	}
 	printf("reflector.worker finish\n");
 
+	printf("wait for transaction.main.loadfinishserver\n");
+	rc = pthread_join(loadfinishserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error: unable to join transaction.main.loadfinishserver " << rc);
+	}
+	printf("transaction.main.loadfinishserver finish\n");
+
 	printf("[transaction.main] all threads end\n");
+}
+
+void *run_transaction_loadfinishserver(void *param) {
+	printf("[transaction.main.loadfinishserver] ready\n");
+	transaction_ready_threads++;
+
+	while(!transaction_running) {}
+
+	char buf[256];
+	int recvsize = 0;
+	while (transaction_running) {
+		bool is_timeout = udprecvfrom(transaction_loadfinishserver_udpsock, buf, 256, 0, NULL, NULL, recvsize, "transaction.main.loadfinishserver");
+		if (is_timeout) {
+			continue;
+		}
+
+		printf("Receive loadfinish notification!\n");
+		for (size_t tmpserveridx = 0; tmpserveridx < server_num; tmpserveridx++) {
+			// make server-side snapshot of snapshot id 0 if necessary
+			db_wrappers[tmpserveridx].init_snapshot();
+		}
+	}
+
+	printf("[transaction.main.loadfinishserver] exit\n");
+	close(transaction_loadfinishserver_udpsock);
+	pthread_exit(nullptr);
 }
 
 void kill(int signum) {

@@ -41,6 +41,7 @@ class IniparserWrapper {
 		short get_server_evictserver_port();
 		short get_server_snapshotserver_port();
 		short get_server_snapshotdataserver_port();
+		short get_transaction_loadfinishserver_port();
 		//short get_server_dynamicserver_port();
 		//const char *get_server_ip_for_client();
 

@@ -75,6 +75,9 @@ class RocksdbWrapper {
 		bool put(netreach_key_t key, val_t val, uint32_t seq, bool checkseq=false);
 		bool remove(netreach_key_t key, uint32_t seq, bool checkseq=false);
 
+		// after loading phase (the first WARMUP will trigger snapshot initialization, which creates server-side snapshot of snapshot id 0)
+		void init_snapshot();
+
 		// transaction phase (per-server worker, evictserver, and consnapshotserver touch both rocksdb and deleted set; need mutex for atomicity)
 		void clean_snapshot(int tmpsnapshotid);
 		void make_snapshot(int tmpsnapshotid = 0);
@@ -122,11 +125,12 @@ class RocksdbWrapper {
 		/* utils */
 
 		void merge_sort(const std::vector<std::pair<netreach_key_t, snapshot_record_t>> &veca, const std::vector<std::pair<netreach_key_t, snapshot_record_t>> &vecb, std::vector<std::pair<netreach_key_t, snapshot_record_t>> &results, bool need_exist = false);
+
 		void create_snapshotdb_checkpoint(uint64_t snapshotdbseq);
-		void load_inswitch_snapshot(std::string inswitchsnapshot_path);
-		void store_inswitch_snapshot(std::string inswitchsnapshot_path);
 		void load_serverside_snapshot_files(int tmpsnapshotid);
+		void load_inswitch_snapshot(int tmpsnapshotid);
 		void load_snapshot_files(int tmpsnapshotid);
+		void store_inswitch_snapshot(int tmpsnapshotid);
 		void remove_snapshot_files(int tmpsnapshotid);
 };
 

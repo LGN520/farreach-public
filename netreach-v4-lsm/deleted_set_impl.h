@@ -20,6 +20,12 @@ DeletedSet<key_t, seq_t>& DeletedSet<key_t, seq_t>::operator=(const DeletedSet& 
 }
 
 template<class key_t, class seq_t>
+int DeletedSet<key_t, seq_t>::size() const {
+	INVARIANT(records_sorted_bykey.size() == records_sorted_byseq.size());
+	return records_sorted_bykey.size();
+}
+
+template<class key_t, class seq_t>
 void DeletedSet<key_t, seq_t>::add(key_t key, seq_t seq) {
 	/*while (true) {
 		if (mutex_lock.try_lock()) break;

@@ -22,12 +22,15 @@ class DeletedSet {
 
 		DeletedSet<key_t, seq_t>& operator=(const DeletedSet& other);
 
+		int size() const;
+
 		void add(key_t key, seq_t seq);
 		//bool getseq(key_t key, seq_t &seq);
 		bool check_and_remove(key_t key, seq_t seq, seq_t *deleted_seq_ptr=NULL); // check if isdeleted
 		size_t range_scan(key_t startkey, key_t endkey, std::vector<std::pair<key_t, snapshot_record_t>> &results);
-
 		void clear();
+
+		// I/O on disk
 		void load(std::string &path);
 		void store(std::string &path);
 

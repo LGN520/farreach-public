@@ -34,3 +34,4 @@ recover/server_recover
 *.txt
 warmup_client
 !results/*
+loadfinish_client

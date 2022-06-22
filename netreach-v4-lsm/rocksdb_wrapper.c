@@ -538,8 +538,63 @@ void RocksdbWrapper::merge_sort(const std::vector<std::pair<netreach_key_t, snap
 
 // snapshot
 
+// invoked by WARMUPREQ after loading phase (only the first WARMUPREQ could success; create server-side snapshot of snapshot id 0)
+void RocksdbWrapper::init_snapshot() {
+	if (snapshotid != -1) {
+		return;
+	}
+
+	if (!is_snapshot.test_and_set(std::memory_order_acquire)) {
+		if (snapshotid != -1) { // check one more time
+			is_snapshot.clear(std::memory_order_release);
+			return;
+		}
+
+		// make snapshot of database
+		sp_ptr = db_ptr->GetSnapshot();
+		uint64_t snapshotdbseq = sp_ptr->GetSequenceNumber();
+		INVARIANT(sp_ptr != NULL);
+		INVARIANT(snapshotdb_ptr == NULL); // checkpointdb must be null after loading phase
+
+		// snapshot of deleted set must be empty after loading phase
+		INVARIANT(deleted_set.size() == 0);
+		INVARIANT(snapshot_deleted_set.size() == 0);
+
+		// in-switch snapshot must be empty after loading phase
+		INVARIANT(inswitch_snapshot.size() == 0);
+
+		// latest server-side snapshot must be empty after loading phase
+		INVARIANT(latest_sp_ptr == NULL);
+		INVARIANT(latest_snapshot_deleted_set.size() == 0);
+
+		// increase snapshot id from -1 to 0
+		snapshotid += 1;
+		INVARIANT(snapshotid == 0);
+
+		// store snapshot database seq (sp_ptr->dbseq) into disk
+		std::string snapshotdbseq_path;
+		get_server_snapshotdbseq_path(snapshotdbseq_path, workerid, snapshotid);
+		store_snapshotdbseq(snapshotdbseq, snapshotdbseq_path);
+
+		// store snapshot deleted set into disk (NOTE: empty now)
+		std::string snapshotdeletedset_path;
+		get_server_snapshotdeletedset_path(snapshotdeletedset_path, workerid, snapshotid);
+		snapshot_deleted_set.store(snapshotdeletedset_path);
+		
+		// store inswitch snapshot (NOTE: empty now)
+		store_inswitch_snapshot(snapshotid);
+
+		// flush all memtables into disk after loading phase, which also clears WAL buffer (delete old WAL files)
+		db_ptr->Flush(rocksdb::FlushOptions());
+
+		is_snapshot.clear(std::memory_order_release);
+		return;
+	}
+}
+
 // invoked by SNAPSHOT_CLEANUP
 void RocksdbWrapper::clean_snapshot(int tmpsnapshotid) {
+	// common case: tmpsnapshotid == snapshotid + 1; rare case tmpsnapshotid == snapshotid due to controller failure
 	INVARIANT(tmpsnapshotid == snapshotid || tmpsnapshotid == snapshotid + 1);
 
 	// remove snapshot files of tmpsnapshotid
@@ -581,22 +636,14 @@ void RocksdbWrapper::clean_snapshot(int tmpsnapshotid) {
 // invoked by worker due to case3 (tmpsnapshotid == 0); invoked by SNAPSHOT_START (tmpsnapshotid == snapshotid/snapshotid+1)
 void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 	INVARIANT(tmpsnapshotid >= 0);
-
-	//// common case: +1; rare case due to controller failure: +2
-	//INVARIANT(tmpsnapshotid == snapshotid + 1 || tmpsnapshotid == snapshotid + 2);
 	
 	// NOTE: if tmpsnapshotid == snapshotid, it has been solevd by SNAPSHOT_CLEANUP
 	INVARIANT(tmpsnapshotid == 0 || tmpsnapshotid == snapshotid + 1)
 
 	if (!is_snapshot.test_and_set(std::memory_order_acquire)) {
 
-		//if (tmpsnapshotid == snapshotid + 2) {
-		//	update_snapshot(); // snapshotid <- snapshotid + 1
-		//}
-		//INVARIANT(tmpsnapshotid == snapshotid + 1);
-
-		struct timespec create_t1, create_t2, create_t3, store_t1, store_t2, store_t3;
-		CUR_TIME(create_t1);
+		//struct timespec create_t1, create_t2, create_t3, store_t1, store_t2, store_t3;
+		//CUR_TIME(create_t1);
 
 		// create new snapshot database and snapshot deleted set
 		while (true) {
@@ -612,17 +659,13 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 		// NOTE: we can unlock rwlock after accessing db_ptr and deleted_set -> limited effect on put/delete
 		rwlock.unlock_shared();
 
-		CUR_TIME(create_t2);
-		CUR_TIME(store_t1);
+		//CUR_TIME(create_t2);
+		//CUR_TIME(store_t1);
 
-		// TODO: (1) we should store a checkpoint database of latest_snapshotdbseq with latest_snapshotid? but how to keep time efficiency?
+		// TODO: (1) we should store a checkpoint database of latest_snapshotdbseq with latest_snapshotid? but how to keep time efficiency instead of bottlenecked by disk?
 		// TODO: (2) can we use stored seq to create a snapshot when opening? (3) we need to check whether records before/after seq will be merged?
 
-		//while (true) {
-		//	if (rwlock_for_snapshot.try_lock_shared()) break;
-		//}
-
-		// store snapshot database seq (sp_ptr->dbseq) into disk
+		// store snapshot database seq (latest_sp_ptr->dbseq) into disk
 		std::string latest_snapshotdbseq_path;
 		get_server_snapshotdbseq_path(latest_snapshotdbseq_path, workerid, snapshotid+1);
 		store_snapshotdbseq(latest_snapshotdbseq, latest_snapshotdbseq_path);
@@ -632,12 +675,9 @@ void RocksdbWrapper::make_snapshot(int tmpsnapshotid) {
 		get_server_snapshotdeletedset_path(latest_snapshotdeletedset_path, workerid, snapshotid+1);
 		snapshot_deleted_set.store(latest_snapshotdeletedset_path);
 
-		// NOTE: get shared lock of rwlock_for_snapshot does not affect range_scan
-		//rwlock_for_snapshot.unlock_shared();
-
-		CUR_TIME(store_t2);
-		DELTA_TIME(create_t2, create_t1, create_t3);
-		DELTA_TIME(store_t2, store_t1, store_t3);
+		//CUR_TIME(store_t2);
+		//DELTA_TIME(create_t2, create_t1, create_t3);
+		//DELTA_TIME(store_t2, store_t1, store_t3);
 		//COUT_VAR(GET_MICROSECOND(create_t3));
 		//COUT_VAR(GET_MICROSECOND(store_t3));
 	}
@@ -692,9 +732,7 @@ void RocksdbWrapper::update_snapshot(std::map<netreach_key_t, snapshot_record_t>
 	rwlock_for_snapshot.unlock();
 
 	// store inswitch snapshot
-	std::string inswitchsnapshot_path;
-	get_server_inswitchsnapshot_path(inswitchsnapshot_path, workerid, snapshotid);
-	store_inswitch_snapshot(inswitchsnapshot_path);
+	store_inswitch_snapshot(snapshotid);
 
 	// store snapshotid at last (snapshotid for range query)
 	std::string snapshotid_path;
@@ -743,7 +781,33 @@ void RocksdbWrapper::create_snapshotdb_checkpoint(uint64_t snapshotdbseq) {
 	return;
 }
 
-void RocksdbWrapper::load_inswitch_snapshot(std::string inswitchsnapshot_path) {
+void RocksdbWrapper::load_serverside_snapshot_files(int tmpsnapshotid) {
+	std::string snapshotdbseq_path;
+	get_server_snapshotdbseq_path(snapshotdbseq_path, workerid, tmpsnapshotid);
+	INVARIANT(isexist(snapshotdbseq_path));
+	uint64_t snapshotdbseq = 0;
+	load_snapshotdbseq(snapshotdbseq, snapshotdbseq_path);
+	create_snapshotdb_checkpoint(snapshotdbseq); // set snapshotdb_ptr
+	if (sp_ptr != NULL) {
+		db_ptr->ReleaseSnapshot(sp_ptr); // TODO: need protect db_ptr here?
+		sp_ptr = NULL;
+	}
+
+	std::string snapshotdeletedset_path;
+	get_server_snapshotdeletedset_path(snapshotdeletedset_path, workerid, tmpsnapshotid);
+	INVARIANT(isexist(snapshotdeletedset_path));
+	snapshot_deleted_set.load(snapshotdeletedset_path);
+	return;
+}
+
+void RocksdbWrapper::load_inswitch_snapshot(int tmpsnapshotid) {
+	std::string inswitchsnapshot_path;
+	get_server_inswitchsnapshot_path(inswitchsnapshot_path, workerid, tmpsnapshotid);
+	if (unlikely(!isexist(inswitchsnapshot_path))) {
+		printf("no inswitch snapshot: %s\n", inswitchsnapshot_path.c_str());
+		return;
+	}
+
 	// <int recordcnt, key1, value1, seq1, stat1, ..., keyn, valuen, seqn, statn>
 	uint32_t tmpfilesize = get_filesize(inswitchsnapshot_path);
 	char *tmpbuf = readonly_mmap(inswitchsnapshot_path, 0, tmpfilesize);
@@ -773,7 +837,16 @@ void RocksdbWrapper::load_inswitch_snapshot(std::string inswitchsnapshot_path) {
 	return;
 }
 
-void RocksdbWrapper::store_inswitch_snapshot(std::string inswitchsnapshot_path) {
+void RocksdbWrapper::load_snapshot_files(int tmpsnapshotid) {
+	load_serverside_snapshot_files(tmpsnapshotid);
+	load_inswitch_snapshot(tmpsnapshotid);
+	return;
+}
+
+void RocksdbWrapper::store_inswitch_snapshot(int tmpsnapshotid) {
+	std::string inswitchsnapshot_path;
+	get_server_inswitchsnapshot_path(inswitchsnapshot_path, workerid, tmpsnapshotid);
+
 	// <int recordcnt, key1, value1, seq1, stat1, ..., keyn, valuen, seqn, statn>
 	char *tmpbuf = new char[MAX_LARGE_BUFSIZE];
 	int tmpbuflen = 0;
@@ -797,39 +870,6 @@ void RocksdbWrapper::store_inswitch_snapshot(std::string inswitchsnapshot_path) 
 	store_buf(tmpbuf, tmpbuflen, inswitchsnapshot_path);
 	delete [] tmpbuf;
 	tmpbuf = NULL;
-	return;
-}
-
-void RocksdbWrapper::load_serverside_snapshot_files(int tmpsnapshotid) {
-	std::string snapshotdbseq_path;
-	get_server_snapshotdbseq_path(snapshotdbseq_path, workerid, tmpsnapshotid);
-	INVARIANT(isexist(snapshotdbseq_path));
-	uint64_t snapshotdbseq = 0;
-	load_snapshotdbseq(snapshotdbseq, snapshotdbseq_path);
-	create_snapshotdb_checkpoint(snapshotdbseq); // set snapshotdb_ptr
-	if (sp_ptr != NULL) {
-		db_ptr->ReleaseSnapshot(sp_ptr); // TODO: need protect db_ptr here?
-		sp_ptr = NULL;
-	}
-
-	std::string snapshotdeletedset_path;
-	get_server_snapshotdeletedset_path(snapshotdeletedset_path, workerid, tmpsnapshotid);
-	INVARIANT(isexist(snapshotdeletedset_path));
-	snapshot_deleted_set.load(snapshotdeletedset_path);
-	return;
-}
-
-void RocksdbWrapper::load_snapshot_files(int tmpsnapshotid) {
-	load_serverside_snapshot_files(tmpsnapshotid);
-
-	std::string inswitchsnapshot_path;
-	get_server_inswitchsnapshot_path(inswitchsnapshot_path, workerid, tmpsnapshotid);
-	if (unlikely(!isexist(inswitchsnapshot_path))) {
-		printf("no inswitch snapshot: %s\n", inswitchsnapshot_path.c_str());
-	}
-	else {
-		load_inswitch_snapshot(inswitchsnapshot_path);
-	}
 	return;
 }
 

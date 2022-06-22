@@ -1127,6 +1127,7 @@ void *run_switchos_snapshotserver(void *param) {
 			INVARIANT(switchos_specialcases_ptr != NULL);
 			concurrent_specicalcase_map_t::DataSource source(0, (concurrent_specicalcase_map_t *)switchos_specialcases_ptr);
 			source.advance_to_next_valid();
+			int specialcase_cnt = 0;
 			while (source.has_next) {
 				special_case_t tmpcase = source.get_val();
 				INVARIANT(switchos_cached_keyarray_backup[source.get_key()] == tmpcase._key);
@@ -1134,7 +1135,9 @@ void *run_switchos_snapshotserver(void *param) {
 				switchos_snapshot_seqs[source.get_key()] = tmpcase._seq;
 				switchos_snapshot_stats[source.get_key()] = tmpcase._valid;
 				source.advance_to_next_valid();
+				specialcase_cnt += 1;
 			}
+			COUT_VAR(specialcase_cnt);
 
 #ifdef DEBUG_SNAPSHOT
 			// TMPDEBUG

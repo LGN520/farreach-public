@@ -100,6 +100,7 @@ const char* server_ip_for_controller = nullptr;
 short server_evictserver_port_start = -1;
 short server_snapshotserver_port_start = -1;
 short server_snapshotdataserver_port_start = -1;
+short transaction_loadfinishserver_port = -1;
 //short server_dynamicserver_port = -1;
 //const char *server_ip_for_client;
 
@@ -253,6 +254,7 @@ inline void parse_ini(const char* config_file) {
 	server_evictserver_port_start = ini.get_server_evictserver_port();
 	server_snapshotserver_port_start = ini.get_server_snapshotserver_port();
 	server_snapshotdataserver_port_start = ini.get_server_snapshotdataserver_port();
+	transaction_loadfinishserver_port = ini.get_transaction_loadfinishserver_port();
 	//server_dynamicserver_port = ini.get_server_dynamicserver_port();
 	//server_ip_for_client = ini.get_server_ip_for_client();
 	COUT_VAR(total_cores);
@@ -269,6 +271,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(server_evictserver_port_start);
 	COUT_VAR(server_snapshotserver_port_start);
 	COUT_VAR(server_snapshotdataserver_port_start);
+	COUT_VAR(transaction_loadfinishserver_port);
 	//COUT_VAR(server_dynamicserver_port);
 	//printf("server_ip_for_client: %s\n", server_ip_for_client);
 	if (server_num > uint32_t(server_cores)) {
