@@ -30,10 +30,10 @@ void prepare_reflector() {
 	printf("[reflector] prepare start\n");
 
 	// prepare worker socket
-	prepare_udpserver(reflector_worker_udpsock, true, reflector_port, "reflector.worker");
+	prepare_udpserver(reflector_worker_udpsock, true, reflector_port, "reflector.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 
 	// prepare popserver socket
-	prepare_udpserver(reflector_popserver_udpsock, true, reflector_popserver_port, "reflector.popserver");
+	prepare_udpserver(reflector_popserver_udpsock, true, reflector_popserver_port, "reflector.popserver", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 
 	// From receiver to reflector.worker
 	/*reflector_pkts_for_popack_snapshot = new struct rte_mbuf*[MQ_SIZE];

@@ -916,6 +916,7 @@ table eg_port_forward_tbl {
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loadfreq_inswitch_ack;
 		update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
+		update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loaddata_inswitch_ack;
 		nop;
 	}
@@ -924,6 +925,14 @@ table eg_port_forward_tbl {
 }
 
 // stage 10
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter update_ipmac_srcport_counter {
+	type : packets_and_bytes;
+	direct: update_ipmac_srcport_tbl;
+}
+#endif
 
 action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, server_ip, server_port) {
 	modify_field(ethernet_hdr.srcAddr, server_mac);

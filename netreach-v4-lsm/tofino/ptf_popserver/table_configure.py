@@ -210,7 +210,8 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 # send back SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK)
                 switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
-            elif control_type == SWITCHOS_GET_EVICTDATA_SETVALID3:
+            #elif control_type == SWITCHOS_GET_EVICTDATA_SETVALID3:
+            elif control_type == SWITCHOS_SETVALID3:
                 # calculate sample index, set valid = 3, and load evict data from data plane
                 #sendbuf = self.get_evictdata_setvalid3()
 

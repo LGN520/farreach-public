@@ -258,7 +258,7 @@ bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnu
 			if (optype_t(get_packet_type(fragbuf, frag_recvsize)) != optype) {
 				continue; // filter the unmatched packet
 			}
-			tmpkey.deserialize(fragbuf, frag_recvsize - sizeof(optype_t));
+			tmpkey.deserialize(fragbuf + sizeof(optype_t), frag_recvsize - sizeof(optype_t));
 			if (tmpkey != targetkey) {
 				continue;
 			}
