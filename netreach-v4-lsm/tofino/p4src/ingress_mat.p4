@@ -399,7 +399,7 @@ table prepare_for_cachehit_tbl {
 		nop;
 	}
 	default_action: set_client_sid(0); // deprecated: configured as set_client_sid(sids[0]) in ptf
-	size: 4;
+	size: 32;
 }
 
 action forward_normal_response(eport) {

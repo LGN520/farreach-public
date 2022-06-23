@@ -1,5 +1,7 @@
 import ConfigParser
 
+hot_threshold = 200 # for 8 server threads
+
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
 config = ConfigParser.ConfigParser()
@@ -8,16 +10,12 @@ with open(os.path.join(os.path.dirname(this_dir), "config.ini"), "r") as f:
 
 client_physical_num = int(config.get("global", "client_physical_num"))
 server_physical_num = int(config.get("global", "server_physical_num"))
-# server_num
 server_total_logical_num = int(config.get("global", "server_total_logical_num"))
 
-# server_port
 server_worker_port_start = int(config.get("server", "server_worker_port_start"))
-#client_port = int(config.get("client", "client_port"))
 
 # kv_bucket_num
 switch_kv_bucket_num = int(config.get("switch", "switch_kv_bucket_num"))
-# partition_count
 switch_partition_count = int(config.get("switch", "switch_partition_count"))
 switch_max_vallen = int(config.get("switch", "switch_max_vallen"))
 switchos_sample_cnt = int(config.get("switch", "switchos_sample_cnt"))
@@ -27,12 +25,12 @@ switchos_ptf_snapshotserver_port = int(config.get("switch", "switchos_ptf_snapsh
 # reflector port
 reflector_dp2cpserver_port = int(config.get("reflector", "reflector_dp2cpserver_port"))
 
-#client_mac = str(config.get("client", "client_mac"))
-#server_mac = str(config.get("server", "server_mac"))
-#client_ip = str(config.get("client", "client_ip"))
-#server_ip = str(config.get("server", "server_ip"))
-#ingress_pipeidx = int(config.get("hardware", "ingress_pipeidx"))
-#egress_pipeidx = int(config.get("hardware", "egress_pipeidx"))
+# Front Panel Ports
+#   List of front panel ports to use. Each front panel port has 4 channels.
+#   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
+#
+#   ex: ["1/0", "1/1"]
+#
 client_ips = []
 client_macs = []
 client_fpports = []
@@ -46,24 +44,18 @@ server_ips = []
 server_macs = []
 server_fpports = []
 server_pipeidxes = []
+server_logical_idxes_list = []
 for i in range(server_physical_num):
     server_ips.append(str(config.get("server{}".format(i), "server_ip")))
     server_macs.append(str(config.get("server{}".format(i), "server_mac")))
     server_fpportss.append(str(config.get("server{}".format(i), "server_fpports")))
     server_pipeidxes.append(int(config.get("server{}".format(i), "server_pipeidxe")))
-
-# Front Panel Ports
-#   List of front panel ports to use. Each front panel port has 4 channels.
-#   Port 1 is broken to 1/0, 1/1, 1/2, 1/3. Test uses 2 ports.
-#
-#   ex: ["1/0", "1/1"]
-#
-fp_ports = []
-src_fpport = str(config.get("hardware", "src_fpport"))
-fp_ports.append(src_fpport)
-dst_fpport = str(config.get("hardware", "dst_fpport"))
-fp_ports.append(dst_fpport)
-#fp_ports = ["2/0", "3/0"]
+    tmpstr = str(config.get("server{}".format(i), "server_logical_idxes"))
+    server_logical_idxes = tmpstr.split(':')
+    for j  in range(server_logical_idxes):
+        server_logical_idxes[j] = int(server_logical_idxes[j])
+    print server_logical_idxes
+    server_logical_idxes_list.append(server_logical_idxes)
 
 control_config = ConfigParser.ConfigParser()
 with open(os.path.join(os.path.dirname(this_dir), "control_type.ini"), "r") as f:

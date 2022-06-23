@@ -37,7 +37,7 @@
 //#define DUMP_BUF
 
 struct alignas(CACHELINE_SIZE) FGParam {
-	uint16_t thread_id;
+	uint16_t local_client_logical_idx;
 	std::map<uint16_t, int> nodeidx_pktcnt_map;
 	std::vector<double> process_latency_list;
 	std::vector<double> send_latency_list; // time of sending packet
@@ -47,7 +47,6 @@ struct alignas(CACHELINE_SIZE) FGParam {
 typedef FGParam fg_param_t;
 
 void run_benchmark();
-
 void * run_fg(void *param); // sender
 
 const uint32_t range_gap = 1024; // add 2^10 to keylo of startkey
@@ -73,9 +72,18 @@ std::atomic<size_t> ready_threads(0);
 std::atomic<size_t> finish_threads(0);
 
 int *client_udpsock_list = NULL;
+int client_physical_idx = -1;
 
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
+
+	if (argc != 2) {
+		printf("Usage: ./remote_client client_physical_idx\n");
+		exit(-1);
+	}
+	client_physical_idx = atoi(argv[1]);
+	INVARIANT(client_physical_idx > 0);
+	INVARIANT(client_physical_idx < client_physical_num);
 
 	// prepare for clients
 	if (workload_mode != 0) {
@@ -84,11 +92,13 @@ int main(int argc, char **argv) {
 		dynamic_rulemap_ptr->nextperiod();
 	}
 
-	client_udpsock_list = new int[client_num];
+	uint32_t current_client_logical_num = client_logical_nums[client_physical_idx];
+	client_udpsock_list = new int[current_client_logical_num];
 	INVARIANT(client_udpsock_list != NULL);
-	for (size_t i = 0; i < client_num; i++) {
-		//create_udpsock(client_udpsock_list[i], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
-		create_udpsock(client_udpsock_list[i], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_DEFAULT_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+	for (size_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+		// NOTE: udp recv buffer size cannot be too larger under > 1024 server threads in one phsyical server
+		//create_udpsock(client_udpsock_list[local_client_logical_idx], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+		create_udpsock(client_udpsock_list[local_client_logical_idx], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_DEFAULT_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
 	}
 
 	run_benchmark();
@@ -107,26 +117,27 @@ void run_benchmark() {
 	running = false;
 
 	// Prepare fg params
-	pthread_t threads[client_num];
-	fg_param_t fg_params[client_num];
+	uint32_t current_client_logical_num = client_logical_nums[client_physical_idx];
+	pthread_t threads[current_client_logical_num];
+	fg_param_t fg_params[current_client_logical_num];
 	// check if parameters are cacheline aligned
-	for (size_t i = 0; i < client_num; i++) {
-		if ((uint64_t)(&(fg_params[i])) % CACHELINE_SIZE != 0) {
-			COUT_N_EXIT("wrong parameter address: " << &(fg_params[i]));
+	for (size_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+		if ((uint64_t)(&(fg_params[local_client_logical_idx])) % CACHELINE_SIZE != 0) {
+			COUT_N_EXIT("wrong parameter address: " << &(fg_params[local_client_logical_idx]));
 		}
 	}
 
 	// Launch workers
-	for (uint16_t worker_i = 0; worker_i < client_num; worker_i++) {
-		fg_params[worker_i].thread_id = worker_i;
-		fg_params[worker_i].nodeidx_pktcnt_map.clear();
-		fg_params[worker_i].process_latency_list.clear();
-		fg_params[worker_i].send_latency_list.clear();
-		fg_params[worker_i].unmatched_cnt = 0;
-		fg_params[worker_i].wait_latency_list.clear();
-		int ret = pthread_create(&threads[worker_i], nullptr, run_fg, (void *)&fg_params[worker_i]);
+	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+		fg_params[local_client_logical_idx].local_client_logical_idx = local_client_logical_idx;
+		fg_params[local_client_logical_idx].nodeidx_pktcnt_map.clear();
+		fg_params[local_client_logical_idx].process_latency_list.clear();
+		fg_params[local_client_logical_idx].send_latency_list.clear();
+		fg_params[local_client_logical_idx].unmatched_cnt = 0;
+		fg_params[local_client_logical_idx].wait_latency_list.clear();
+		int ret = pthread_create(&threads[local_client_logical_idx], nullptr, run_fg, (void *)&fg_params[local_client_logical_idx]);
 		UNUSED(ret);
-		COUT_THIS("[client] Lanuch client " << worker_i)
+		COUT_THIS("[client] Lanuch client " << local_client_logical_idx)
 	}
 
 	COUT_THIS("[client] prepare clients ...");
@@ -134,7 +145,7 @@ void run_benchmark() {
 	COUT_THIS("[client] all clients ready...");
 
 	// used for dynamic workload
-	std::map<uint16_t, int> persec_perclient_nodeidx_pktcnt_map[dynamic_periodnum * dynamic_periodinterval][client_num];
+	std::map<uint16_t, int> persec_perclient_nodeidx_aggpktcnt_map[dynamic_periodnum * dynamic_periodinterval][current_client_logical_num];
 
 	struct timespec total_t1, total_t2, total_t3;
 	running = true;
@@ -147,22 +158,22 @@ void run_benchmark() {
 	const int onesec_usecs = 1 * 1000 * 1000; // 1s
 	CUR_TIME(total_t1);
 	if (workload_mode == 0) { // send all workloads in static mode
-		while (finish_threads < client_num) {
+		while (finish_threads < current_client_logical_num) {
 			CUR_TIME(total_t2);
 			DELTA_TIME(total_t2, total_t1, total_t3);
 			if (GET_MICROSECOND(total_t3) >= (persec_perclient_aggpktcnts.size()+1) * onesec_usecs) { // per second
 				// collect for runtime throughput
-				std::vector<int> cursec_perclient_aggpktcnts(client_num);
-				std::vector<int> cursec_perclient_aggcachehitcnts(client_num);
-				std::vector<std::vector<int>> cursec_perclient_perserver_aggcachemisscnts(client_num);
-				for (size_t i = 0; i < client_num; i++) {
-					cursec_perclient_aggpktcnts[i] = fg_params[i].process_latency_list.size();
-					cursec_perclient_aggcachehitcnts[i] = fg_params[i].nodeidx_pktcnt_map[0xFFFF];
-					std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_num);
-					for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
-						cursec_curclient_perserver_aggcachemisscnts[serveridx] = fg_params[i].nodeidx_pktcnt_map[serveridx];
+				std::vector<int> cursec_perclient_aggpktcnts(current_client_logical_num);
+				std::vector<int> cursec_perclient_aggcachehitcnts(current_client_logical_num);
+				std::vector<std::vector<int>> cursec_perclient_perserver_aggcachemisscnts(current_client_logical_num);
+				for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+					cursec_perclient_aggpktcnts[local_client_logical_idx] = fg_params[local_client_logical_idx].process_latency_list.size();
+					cursec_perclient_aggcachehitcnts[local_client_logical_idx] = fg_params[local_client_logical_idx].nodeidx_pktcnt_map[0xFFFF];
+					std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_total_logical_num);
+					for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
+						cursec_curclient_perserver_aggcachemisscnts[global_server_logical_idx] = fg_params[local_client_logical_idx].nodeidx_pktcnt_map[global_server_logical_idx];
 					}
-					cursec_perclient_perserver_aggcachemisscnts[i] = cursec_curclient_perserver_aggcachemisscnts;
+					cursec_perclient_perserver_aggcachemisscnts[local_client_logical_idx] = cursec_curclient_perserver_aggcachemisscnts;
 				}
 				persec_perclient_aggpktcnts.push_back(cursec_perclient_aggpktcnts);
 				persec_perclient_aggcachehitcnts.push_back(cursec_perclient_aggcachehitcnts);
@@ -186,22 +197,22 @@ void run_benchmark() {
 
 						// collect for normalized throughput
 						int global_secidx = periodidx * dynamic_periodinterval + secidx;
-						for (size_t i = 0; i < client_num; i++) {
-							persec_perclient_nodeidx_pktcnt_map[global_secidx][i] = fg_params[i].nodeidx_pktcnt_map;
+						for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+							persec_perclient_nodeidx_aggpktcnt_map[global_secidx][local_client_logical_idx] = fg_params[local_client_logical_idx].nodeidx_pktcnt_map;
 						}
 
 						// collect for runtime throughput
-						std::vector<int> cursec_perclient_aggpktcnts(client_num);
-						std::vector<int> cursec_perclient_aggcachehitcnts(client_num);
-						std::vector<std::vector<int>> cursec_perclient_perserver_aggcachemisscnts(client_num);
-						for (size_t i = 0; i < client_num; i++) {
-							cursec_perclient_aggpktcnts[i] = fg_params[i].process_latency_list.size();
-							cursec_perclient_aggcachehitcnts[i] = fg_params[i].nodeidx_pktcnt_map[0xFFFF];
+						std::vector<int> cursec_perclient_aggpktcnts(current_client_logical_num);
+						std::vector<int> cursec_perclient_aggcachehitcnts(current_client_logical_num);
+						std::vector<std::vector<int>> cursec_perclient_perserver_aggcachemisscnts(current_client_logical_num);
+						for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+							cursec_perclient_aggpktcnts[local_client_logical_idx] = fg_params[local_client_logical_idx].process_latency_list.size();
+							cursec_perclient_aggcachehitcnts[local_client_logical_idx] = fg_params[local_client_logical_idx].nodeidx_pktcnt_map[0xFFFF];
 							std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_num);
-							for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
-								cursec_curclient_perserver_aggcachemisscnts[serveridx] = fg_params[i].nodeidx_pktcnt_map[serveridx];
+							for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
+								cursec_curclient_perserver_aggcachemisscnts[global_server_logical_idx] = fg_params[local_client_logical_idx].nodeidx_pktcnt_map[global_server_logical_idx];
 							}
-							cursec_perclient_perserver_aggcachemisscnts[i] = cursec_curclient_perserver_aggcachemisscnts;
+							cursec_perclient_perserver_aggcachemisscnts[local_client_logical_idx] = cursec_curclient_perserver_aggcachemisscnts;
 						}
 						persec_perclient_aggpktcnts.push_back(cursec_perclient_aggpktcnts);
 						persec_perclient_aggcachehitcnts.push_back(cursec_perclient_aggcachehitcnts);
@@ -256,11 +267,11 @@ void run_benchmark() {
 	bool first_stopped = true;
 	for (size_t i = 0; i < seccnt; i++) {
 		if (i != 0) {
-			for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
-				cursec_perclient_pktcnts[clientidx] = persec_perclient_aggpktcnts[i][clientidx] - persec_perclient_aggpktcnts[i-1][clientidx];
-				cursec_perclient_cachehitcnts[clientidx] = persec_perclient_aggcachehitcnts[i][clientidx] - persec_perclient_aggcachehitcnts[i-1][clientidx];
-				for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
-					cursec_perclient_perserver_cachemisscnts[clientidx][serveridx] = persec_perclient_perserver_aggcachemisscnts[i][clientidx][serveridx] - persec_perclient_perserver_aggcachemisscnts[i-1][clientidx][serveridx];
+			for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+				cursec_perclient_pktcnts[local_client_logical_idx] = persec_perclient_aggpktcnts[i][local_client_logical_idx] - persec_perclient_aggpktcnts[i-1][local_client_logical_idx];
+				cursec_perclient_cachehitcnts[local_client_logical_idx] = persec_perclient_aggcachehitcnts[i][local_client_logical_idx] - persec_perclient_aggcachehitcnts[i-1][local_client_logical_idx];
+				for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
+					cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][serveridx] = persec_perclient_perserver_aggcachemisscnts[i][local_client_logical_idx][global_server_logical_idx] - persec_perclient_perserver_aggcachemisscnts[i-1][local_client_logical_idx][global_server_logical_idx];
 				}
 			}
 		}
@@ -270,39 +281,39 @@ void run_benchmark() {
 #ifdef DEBUG_PERSEC
 		// Dump pre-stopped threads
 		printf("per-stopped-client agg pktcnt: ");
-		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
-			if (cursec_perclient_pktcnts[clientidx] == 0) {
+		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+			if (cursec_perclient_pktcnts[local_client_logical_idx] == 0) {
 				if (first_stopped) {
-					printf("client%d-", clientidx);
+					printf("client%d-", local_client_logical_idx);
 					for (size_t prev_sec_idx = 0; prev_sec_idx < i; prev_sec_idx++) {
-						printf("%d-", persec_perclient_aggpktcnts[prev_sec_idx][clientidx]);
+						printf("%d-", persec_perclient_aggpktcnts[prev_sec_idx][local_client_logical_idx]);
 					}
-					printf("%d ", persec_perclient_aggpktcnts[i][clientidx]);
+					printf("%d ", persec_perclient_aggpktcnts[i][local_client_logical_idx]);
 				}
 				else {
-					printf("client%d-%d ", clientidx, persec_perclient_aggpktcnts[i][clientidx]);
+					printf("client%d-%d ", local_client_logical_idx, persec_perclient_aggpktcnts[i][local_client_logical_idx]);
 				}
 			}
 		}
 		printf("\n");
 
 		printf("per-client throughput (MOPS): ");
-		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
-			printf("%f ", double(cursec_perclient_pktcnts[clientidx])/(onesec_usecs/1000/1000)/1024.0/1024.0);
+		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+			printf("%f ", double(cursec_perclient_pktcntslocal_client_logical_idx)/(onesec_usecs/1000/1000)/1024.0/1024.0);
 		}
 #endif
 		int cursec_total_pktcnt = 0;
-		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
-			cursec_total_pktcnt += cursec_perclient_pktcnts[clientidx];
+		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+			cursec_total_pktcnt += cursec_perclient_pktcntslocal_client_logical_idx;
 		}
 		printf("\noverall totalpktcnt: %d, throughput (MOPS): %f\n", cursec_total_pktcnt, double(cursec_total_pktcnt)/(onesec_usecs/1000/1000)/1024.0/1024.0);
 
 #ifdef DEBUG_PERSEC
 		printf("per-client cachehit rate: ");
 		int cursec_total_cachehitcnt = 0;
-		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
-			cursec_total_cachehitcnt += cursec_perclient_cachehitcnts[clientidx];
-			printf("%f ", double(cursec_perclient_cachehitcnts[clientidx])/double(cursec_perclient_pktcnts[clientidx]));
+		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+			cursec_total_cachehitcnt += cursec_perclient_cachehitcntslocal_client_logical_idx;
+			printf("%f ", double(cursec_perclient_cachehitcntslocal_client_logical_idx)/double(cursec_perclient_pktcntslocal_client_logical_idx));
 		}
 		printf("\noverall cachehit cnt: %d, cachehit rate: %f\n", cursec_total_cachehitcnt, double(cursec_total_cachehitcnt)/double(cursec_total_pktcnt));
 
@@ -310,18 +321,18 @@ void run_benchmark() {
 		int cursec_total_cachemisscnt = 0;
 		int cursec_perserver_cachemisscnts[server_num];
 		memset(cursec_perserver_cachemisscnts, 0, sizeof(int)*server_num);
-		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
+		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 			int cursec_curclient_total_cachemisscnt = 0;
 			for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
-				cursec_curclient_total_cachemisscnt += cursec_perclient_perserver_cachemisscnts[clientidx][serveridx];
-				cursec_perserver_cachemisscnts[serveridx] += cursec_perclient_perserver_cachemisscnts[clientidx][serveridx];
+				cursec_curclient_total_cachemisscnt += cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][serveridx];
+				cursec_perserver_cachemisscnts[serveridx] += cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][serveridx];
 			}
 			cursec_total_cachemisscnt += cursec_curclient_total_cachemisscnt;
 
 			printf("%d-", cursec_curclient_total_cachemisscnt);
-			for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
-				if (serveridx != server_num - 1) printf("%f-", cursec_perclient_perserver_cachemisscnts[clientidx][serveridx]/double(cursec_curclient_total_cachemisscnt));
-				else printf("%f ", cursec_perclient_perserver_cachemisscnts[clientidx][serveridx]/double(cursec_curclient_total_cachemisscnt));
+			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
+				if (serveridx != server_num - 1) printf("%f-", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
+				else printf("%f ", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
 			}
 		}
 		printf("\noverall load ratio: %d-", cursec_total_cachemisscnt);
@@ -332,14 +343,14 @@ void run_benchmark() {
 
 		std::vector<double> cursec_send_latency_list;
 		std::vector<double> cursec_wait_latency_list;
-		for (size_t clientidx = 0; clientidx < client_num; clientidx++) {
+		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 			int startidx = 0;
 			if (i != 0) {
-				startidx = persec_perclient_aggpktcnts[i-1][clientidx];
+				startidx = persec_perclient_aggpktcnts[i-1]local_client_logical_idx;
 			}
-			int endidx = persec_perclient_aggpktcnts[i][clientidx];
-			std::vector<double> cursec_curclient_send_latency_list(fg_params[clientidx].send_latency_list.begin() + startidx, fg_params[clientidx].send_latency_list.begin() + endidx);
-			std::vector<double> cursec_curclient_wait_latency_list(fg_params[clientidx].wait_latency_list.begin() + startidx, fg_params[clientidx].wait_latency_list.begin() + endidx);
+			int endidx = persec_perclient_aggpktcnts[i]local_client_logical_idx;
+			std::vector<double> cursec_curclient_send_latency_list(fg_paramslocal_client_logical_idx.send_latency_list.begin() + startidx, fg_paramslocal_client_logical_idx.send_latency_list.begin() + endidx);
+			std::vector<double> cursec_curclient_wait_latency_list(fg_paramslocal_client_logical_idx.wait_latency_list.begin() + startidx, fg_paramslocal_client_logical_idx.wait_latency_list.begin() + endidx);
 			cursec_send_latency_list.insert(cursec_send_latency_list.end(), cursec_curclient_send_latency_list.begin(), cursec_curclient_send_latency_list.end());
 			cursec_wait_latency_list.insert(cursec_wait_latency_list.end(), cursec_curclient_wait_latency_list.begin(), cursec_curclient_wait_latency_list.end());
 
@@ -358,9 +369,9 @@ void run_benchmark() {
 	// Process latency statistics
 	std::map<uint16_t, int> nodeidx_pktcnt_map;
 	std::vector<double> total_latency_list;
-	for (size_t i = 0; i < client_num; i++) {
-		for (std::map<uint16_t, int>::iterator iter = fg_params[i].nodeidx_pktcnt_map.begin(); \
-				iter != fg_params[i].nodeidx_pktcnt_map.end(); iter++) {
+	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+		for (std::map<uint16_t, int>::iterator iter = fg_params[local_client_logical_idx].nodeidx_pktcnt_map.begin(); \
+				iter != fg_params[local_client_logical_idx].nodeidx_pktcnt_map.end(); iter++) {
 			if (nodeidx_pktcnt_map.find(iter->first) == nodeidx_pktcnt_map.end()) {
 				nodeidx_pktcnt_map.insert(*iter);
 			}
@@ -368,23 +379,23 @@ void run_benchmark() {
 				nodeidx_pktcnt_map[iter->first] += iter->second;
 			}
 		}
-		total_latency_list.insert(total_latency_list.end(), fg_params[i].process_latency_list.begin(), fg_params[i].process_latency_list.end());
+		total_latency_list.insert(total_latency_list.end(), fg_params[local_client_logical_idx].process_latency_list.begin(), fg_params[local_client_logical_idx].process_latency_list.end());
 	}
 	std::vector<double> perclient_avgsend_latency_list(client_num);
 	std::vector<double> perclient_avgwait_latency_list(client_num);
-	for (size_t i = 0; i < client_num; i++) {
-		perclient_avgsend_latency_list[i] = 0.0;
-		perclient_avgwait_latency_list[i] = 0.0;
+	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+		perclient_avgsend_latency_list[local_client_logical_idx] = 0.0;
+		perclient_avgwait_latency_list[local_client_logical_idx] = 0.0;
 	}
-	for (size_t i = 0; i < client_num; i++) {
-		for (size_t j = 0; j < fg_params[i].send_latency_list.size(); j++) {
-			perclient_avgsend_latency_list[i] += fg_params[i].send_latency_list[j];
-			perclient_avgwait_latency_list[i] += fg_params[i].wait_latency_list[j];
+	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+		for (size_t j = 0; j < fg_paramslocal_client_logical_idx.send_latency_list.size(); j++) {
+			perclient_avgsend_latency_listlocal_client_logical_idx += fg_paramslocal_client_logical_idx.send_latency_list[j];
+			perclient_avgwait_latency_listlocal_client_logical_idx += fg_paramslocal_client_logical_idx.wait_latency_list[j];
 		}
 	}
-	for (size_t i = 0; i < client_num; i++) {
-		perclient_avgsend_latency_list[i] /= fg_params[i].send_latency_list.size();
-		perclient_avgwait_latency_list[i] /= fg_params[i].wait_latency_list.size();
+	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+		perclient_avgsend_latency_listlocal_client_logical_idx /= fg_paramslocal_client_logical_idx.send_latency_list.size();
+		perclient_avgwait_latency_listlocal_client_logical_idx /= fg_paramslocal_client_logical_idx.wait_latency_list.size();
 	}
 
 	// Dump latency statistics
@@ -393,8 +404,8 @@ void run_benchmark() {
 	dump_latency(perclient_avgwait_latency_list, "perclient_avgwait_latency_list");
 
 	int total_unmatched_cnt = 0;
-	for (size_t i = 0; i < client_num; i++) {
-		total_unmatched_cnt += fg_params[i].unmatched_cnt;
+	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+		total_unmatched_cnt += fg_params[local_client_logical_idx].unmatched_cnt;
 	}
 	COUT_VAR(total_unmatched_cnt);
 
@@ -419,12 +430,12 @@ void run_benchmark() {
 
 	COUT_THIS("cache hit pktcnt: " << nodeidx_pktcnt_map[0xFFFF]);
 	printf("per-server pktcnt: ");
-	for (uint16_t i = 0; i < server_num; i++) {
+	for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
 		if (i != server_num - 1) {
-			printf("%d ", nodeidx_pktcnt_map[i]);
+			printf("%d ", nodeidx_pktcnt_map[global_server_logical_idx]);
 		}
 		else {
-			printf("%d\n", nodeidx_pktcnt_map[i]);
+			printf("%d\n", nodeidx_pktcnt_map[global_server_logical_idx]);
 		}
 	}
 
@@ -433,9 +444,9 @@ void run_benchmark() {
 		std::map<uint16_t, int> persec_nodeidx_pktcnt_map[dynamic_periodnum*dynamic_periodinterval];
 		// aggregate perclient pktcnt for each previous i seconds -> accumulative pktcnt for each previous i seconds
 		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
-			for (int j = 0; j < client_num; j++) {
-				for (std::map<uint16_t, int>::iterator iter = persec_perclient_nodeidx_pktcnt_map[i][j].begin(); \
-						iter != persec_perclient_nodeidx_pktcnt_map[i][j].end(); iter++) {
+			for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+				for (std::map<uint16_t, int>::iterator iter = persec_perclient_nodeidx_aggpktcnt_map[i][local_client_logical_idx].begin(); \
+						iter != persec_perclient_nodeidx_aggpktcnt_map[i][local_client_logical_idx].end(); iter++) {
 					if (persec_nodeidx_pktcnt_map[i].find(iter->first) == persec_nodeidx_pktcnt_map[i].end()) {
 						persec_nodeidx_pktcnt_map[i].insert(*iter);
 					}
@@ -477,12 +488,12 @@ void run_benchmark() {
 		}
 		printf("\nper-sec per-server throughput:\n");
 		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
-			for (uint16_t j = 0; j < server_num; j++) {
+			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
 				int tmppktcnt = 0;
-				if (persec_nodeidx_pktcnt_map[i].find(j) != persec_nodeidx_pktcnt_map[i].end()) {
-					tmppktcnt = persec_nodeidx_pktcnt_map[i][j];
+				if (persec_nodeidx_pktcnt_map[i].find(global_server_logical_idx) != persec_nodeidx_pktcnt_map[i].end()) {
+					tmppktcnt = persec_nodeidx_pktcnt_map[i][global_server_logical_idx];
 				}
-				if (j != server_num - 1) {
+				if (global_server_logical_idx != server_total_logical_num - 1) {
 					printf("%d ", tmppktcnt);
 				}
 				else {
@@ -496,8 +507,8 @@ void run_benchmark() {
 	COUT_THIS("Finish dumping statistics!")
 
 	void *status;
-	for (size_t i = 0; i < client_num; i++) {
-		int rc = pthread_join(threads[i], &status);
+	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+		int rc = pthread_join(threads[local_client_logical_idx], &status);
 		if (rc) {
 			COUT_N_EXIT("Error:unable to join " << rc);
 		}
@@ -506,14 +517,20 @@ void run_benchmark() {
 
 void *run_fg(void *param) {
 	fg_param_t &thread_param = *(fg_param_t *)param;
-	uint16_t thread_id = thread_param.thread_id;
+	uint16_t local_client_logical_idx = thread_param.local_client_logical_idx;
 
 	int res = 0;
 
 	// ycsb parser
 	char load_filename[256];
 	memset(load_filename, '\0', 256);
-	RUN_SPLIT_WORKLOAD(load_filename, client_workload_dir, thread_id);
+	uint16_t global_client_logical_idx = local_client_logical_idx;
+	if (client_physical_idx > 0) {
+		for (uint32_t i = 0; i < client_physical_idx; i++) {
+			global_client_logical_idx += client_logical_nums[i];
+		}
+	}
+	RUN_SPLIT_WORKLOAD(load_filename, client_workload_dir, global_client_logical_idx);
 
 	ParserIterator *iter = NULL;
 #ifdef USE_YCSB
@@ -531,7 +548,8 @@ void *run_fg(void *param) {
 	int req_size = 0;
 	int recv_size = 0;
 	struct sockaddr_in server_addr;
-	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
+	// all client threads use the ip of the first physical server and the port of the first server.worker as destination address (switch covers server-side partition)
+	set_sockaddr(server_addr, inet_addr(server_ips[0]), server_worker_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
 
 	// DEPRECATED: we only support small range scan -> client_num * server_num * MAX_BUFSIZE memory overhead
@@ -542,35 +560,24 @@ void *run_fg(void *param) {
 
 #if !defined(NDEBUGGING_LOG)
 	std::string logname;
-	GET_STRING(logname, "tmp_client"<< uint32_t(thread_id)<<".out");
+	GET_STRING(logname, "tmp_client"<< uint32_t(local_client_logical_idx)<<".out");
 	std::ofstream ofs(logname, std::ofstream::out);
 #endif
 
-	COUT_THIS("[client " << uint32_t(thread_id) << "] Ready.");
+	COUT_THIS("[client " << uint32_t(local_client_logical_idx) << "] Ready.");
 	ready_threads++;
 
 	// For rate limit
-	double cur_sending_time = 0.0; // Set to 0 periodically
-	size_t cur_sending_rate = 0;
+	//double cur_sending_time = 0.0; // Set to 0 periodically
+	//size_t cur_sending_rate = 0;
 
 	while (!running)
 		;
 
 	bool is_timeout = false;
-	//int runtimes = 1;
-	//int runtimes = 5;
-	//int currun = 0;
 	bool isfirst_pkt = true;
 	while (running) {
 		if (!iter->next()) {
-			/*currun += 1;
-			if (currun >= runtimes) {
-				break;
-			}
-			else {
-				iter->reset();
-				iter->next();
-			}*/
 			if (workload_mode != 0) { // dynamic mode
 				iter->reset();
 				iter->next();
@@ -600,7 +607,7 @@ void *run_fg(void *param) {
 			if (iter->type() == optype_t(packet_type_t::GETREQ)) { // get
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				get_request_t req(tmpkey);
-				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
+				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
@@ -611,12 +618,12 @@ void *run_fg(void *param) {
 					wait_time = GET_MICROSECOND(wait_t3);
 				}
 				CUR_TIME(send_t1);
-				udpsendto(client_udpsock_list[thread_id], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(client_udpsock_list[local_client_logical_idx], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
 				while (true) {
-					is_timeout = udprecvfrom(client_udpsock_list[thread_id], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					is_timeout = udprecvfrom(client_udpsock_list[local_client_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 					CUR_TIME(wait_t1);
 #ifdef DUMP_BUF
 					dump_buf(buf, recv_size);
@@ -635,7 +642,7 @@ void *run_fg(void *param) {
 							}
 							else {
 								tmp_nodeidx_foreval = rsp.nodeidx_foreval();
-								FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
+								FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << rsp.key().to_string() << " val = " << rsp.val().to_string());
 								break; // break to update statistics and send next packet
 							}
 						}
@@ -653,7 +660,7 @@ void *run_fg(void *param) {
 
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 
-				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
+				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
 				INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
 				put_request_t req(tmpkey, tmpval);
 				req_size = req.serialize(buf, MAX_BUFSIZE);
@@ -676,27 +683,27 @@ void *run_fg(void *param) {
 					wait_time = GET_MICROSECOND(wait_t3);
 				}
 				CUR_TIME(send_t1);
-				udpsendto(client_udpsock_list[thread_id], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(client_udpsock_list[local_client_logical_idx], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
 				while (true) {
 					// TMPDEBUG
 					/*bool prevtimeout = is_timeout;
-					if (is_timeout && thread_id == 0) {
+					if (is_timeout && local_client_logical_idx == 0) {
 						dump_buf(buf, req_size);
 					}*/
 
-					is_timeout = udprecvfrom(client_udpsock_list[thread_id], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					is_timeout = udprecvfrom(client_udpsock_list[local_client_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 					CUR_TIME(wait_t1);
 
-					/*if (is_timeout && thread_id != 0) { // TMPDEBUG
-						printf("client %d exit\n", thread_id);
-						close(client_udpsock_list[thread_id]);
+					/*if (is_timeout && local_client_logical_idx != 0) { // TMPDEBUG
+						printf("client %d exit\n", local_client_logical_idx);
+						close(client_udpsock_list[local_client_logical_idx]);
 						pthread_exit(nullptr);
 					}
 
-					if (prevtimeout && thread_id == 0) { // TMPDEBUG
+					if (prevtimeout && local_client_logical_idx == 0) { // TMPDEBUG
 						if (is_timeout) {
 							printf("still timeout; errno: %d!\n", errno);
 						}
@@ -722,7 +729,7 @@ void *run_fg(void *param) {
 							}
 							else {
 								tmp_nodeidx_foreval = rsp.nodeidx_foreval();
-								FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+								FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] stat = " << rsp.stat());
 								break; // break to update statistics and send next packet
 							}
 						}
@@ -738,7 +745,7 @@ void *run_fg(void *param) {
 			else if (iter->type() == optype_t(packet_type_t::DELREQ)) {
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				del_request_t req(tmpkey);
-				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] key = " << tmpkey.to_string());
+				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 				dump_buf(buf, req_size);
@@ -750,12 +757,12 @@ void *run_fg(void *param) {
 					wait_time = GET_MICROSECOND(wait_t3);
 				}
 				CUR_TIME(send_t1);
-				udpsendto(client_udpsock_list[thread_id], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(client_udpsock_list[local_client_logical_idx], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
 				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
 				while (true) {
-					is_timeout = udprecvfrom(client_udpsock_list[thread_id], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+					is_timeout = udprecvfrom(client_udpsock_list[local_client_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
 					CUR_TIME(wait_t1);
 #ifdef DUMP_BUF
 					dump_buf(buf, recv_size);
@@ -774,7 +781,7 @@ void *run_fg(void *param) {
 							}
 							else {
 								tmp_nodeidx_foreval = rsp.nodeidx_foreval();
-								FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] stat = " << rsp.stat());
+								FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] stat = " << rsp.stat());
 								break; // break to update statistics and send next packet
 							}
 						}
@@ -797,7 +804,7 @@ void *run_fg(void *param) {
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				//scan_request_t req(tmpkey, endkey, range_num);
 				scan_request_t req(tmpkey, endkey);
-				FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << tmpkey.to_string() 
+				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] startkey = " << tmpkey.to_string() 
 						<< "endkey = " << endkey.to_string());
 				req_size = req.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
@@ -810,16 +817,16 @@ void *run_fg(void *param) {
 					wait_time = GET_MICROSECOND(wait_t3);
 				}
 				CUR_TIME(send_t1);
-				udpsendto(client_udpsock_list[thread_id], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
+				udpsendto(client_udpsock_list[local_client_logical_idx], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
 				size_t received_scannum = 0;
 				dynamic_array_t *scanbufs = NULL;
-				set_recvtimeout(client_udpsock_list[thread_id], CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
-				//is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[thread_id], scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
-				is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[thread_id], &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, optype_t(packet_type_t::SCANRES_SPLIT), tmpkey);
+				set_recvtimeout(client_udpsock_list[local_client_logical_idx], CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
+				//is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[local_client_logical_idx], scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
+				is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[local_client_logical_idx], &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, optype_t(packet_type_t::SCANRES_SPLIT), tmpkey);
 				CUR_TIME(wait_t1);
-				set_recvtimeout(client_udpsock_list[thread_id], CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
+				set_recvtimeout(client_udpsock_list[local_client_logical_idx], CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
 				if (is_timeout) {
 					continue;
 				}
@@ -829,7 +836,7 @@ void *run_fg(void *param) {
 				for (int tmpscanidx = 0; tmpscanidx < received_scannum; tmpscanidx++) {
 					//scan_response_split_t rsp(scanbufs + tmpscanidx * MAX_BUFSIZE, scan_recvsizes[tmpscanidx]);
 					scan_response_split_t rsp(scanbufs[tmpscanidx].array(), scanbufs[tmpscanidx].size());
-					FDEBUG_THIS(ofs, "[client " << uint32_t(thread_id) << "] startkey = " << rsp.key().to_string()
+					FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] startkey = " << rsp.key().to_string()
 							<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
 					totalnum += rsp.pairnum();
 					// check scan response consistency
@@ -865,7 +872,7 @@ void *run_fg(void *param) {
 			break;
 		}
 
-		INVARIANT(tmp_nodeidx_foreval == 0xFFFF || tmp_nodeidx_foreval < server_num);
+		INVARIANT(tmp_nodeidx_foreval == 0xFFFF || tmp_nodeidx_foreval < server_total_logical_num);
 		if (thread_param.nodeidx_pktcnt_map.find(tmp_nodeidx_foreval) == thread_param.nodeidx_pktcnt_map.end()) {
 			thread_param.nodeidx_pktcnt_map.insert(std::pair<uint16_t, int>(tmp_nodeidx_foreval, 1));
 		}
@@ -907,7 +914,7 @@ void *run_fg(void *param) {
 	delete iter;
 	iter = NULL;
 
-	close(client_udpsock_list[thread_id]);
+	close(client_udpsock_list[local_client_logical_idx]);
 #if !defined(NDEBUGGING_LOG)
 	ofs.close();
 #endif

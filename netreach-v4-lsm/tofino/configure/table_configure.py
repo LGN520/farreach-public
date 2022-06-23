@@ -45,16 +45,12 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(this_dir))
 from common import *
 
-port_pipeidx_map = {} # mapping between port and pipeline
-pipeidx_ports_map = {} # mapping between pipeline and ports
-
 cached_list = [0, 1]
 hot_list = [0, 1]
 validvalue_list = [0, 1, 3]
 #validvalue_list = [0, 1, 2, 3] # If with PUTREQ_LARGE
 latest_list = [0, 1]
 deleted_list = [0, 1]
-#wrong_pipeline_list = [0, 1]
 sampled_list = [0, 1]
 lastclone_list = [0, 1]
 snapshot_flag_list = [0, 1]
@@ -183,7 +179,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         pd_base_tests.ThriftInterfaceDataPlane.setUp(self)
         self.sess_hdl = self.conn_mgr.client_init()
         self.dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
-        self.devPorts = []
+        self.client_devports = []
+        self.server_devports = []
 
         self.platform_type = "mavericks"
         board_type = self.pltfm_pm.pltfm_pm_board_type_get()
@@ -193,27 +190,24 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
         # get the device ports from front panel ports
-        for fpPort in fp_ports:
-            port, chnl = fpPort.split("/")
-            devPort = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-            self.devPorts.append(devPort)
-
-        port_pipeidx_map[self.devPorts[0]] = ingress_pipeidx
-        port_pipeidx_map[self.devPorts[1]] = egress_pipeidx
-        pipeidx_ports_map[ingress_pipeidx] = [self.devPorts[0]]
-        if egress_pipeidx not in pipeidx_ports_map:
-            pipeidx_ports_map[egress_pipeidx] = [self.devPorts[1]]
-        else:
-            if self.devPorts[1] not in pipeidx_ports_map[egress_pipeidx]:
-                pipeidx_ports_map[egress_pipeidx].append(self.devPorts[1])
+        for client_fpport in client_fpports:
+            port, chnl = client_fpport.split("/")
+            devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+            self.client_devports.append(devport)
+        for server_fpport in server_fpports:
+            port, chnl = server_fpport.split("/")
+            devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+            self.server_devports.append(devport)
 
         self.recirPorts = [64, 192]
 
         # NOTE: in each pipeline, 64-67 are recir/cpu ports, 68-71 are recir/pktgen ports
         #self.cpuPorts = [64, 192] # CPU port is 100G
 
-        sidnum = 2
-        self.sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
+        sidnum = len(self.client_devports) + len(self.server_devports)
+        sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
+        self.client_sids = sids[0:len(self.client_devports)]
+        self.server_sids = sids[len(self.client_devports):sidnum]
 
     ### MAIN ###
 
@@ -242,7 +236,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.conn_mgr.recirculation_enable(self.sess_hdl, 0, i);
 
             # Add and enable the platform ports
-            for i in self.devPorts:
+            for i in self.client_devports:
+               self.pal.pal_port_add(0, i,
+                                     pal_port_speed_t.BF_SPEED_39G,
+                                     pal_fec_type_t.BF_FEC_TYP_NONE)
+               self.pal.pal_port_enable(0, i)
+            for i in self.server_devports:
                self.pal.pal_port_add(0, i,
                                      pal_port_speed_t.BF_SPEED_40G,
                                      pal_fec_type_t.BF_FEC_TYP_NONE)
@@ -289,25 +288,24 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 #                                  self.devPorts[1],
 #                                  True)
 #            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-            print "Binding sid {} with port {} for both direction mirroring".format(self.sids[0], self.devPorts[0]) # clone to client
-            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-                                  Direction_e.PD_DIR_BOTH,
-                                  self.sids[0],
-                                  self.devPorts[0],
-                                  True)
-            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-            print "Binding sid {} with port {} for both direction mirroring".format(self.sids[1], self.devPorts[1]) # clone to server
-            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-                                  Direction_e.PD_DIR_BOTH,
-                                  self.sids[1],
-                                  self.devPorts[1],
-                                  True)
-            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+            for i in range(client_physical_num):
+                print "Binding sid {} with client devport {} for both direction mirroring".format(self.client_sids[i], self.client_devports[i]) # clone to client
+                info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                      Direction_e.PD_DIR_BOTH,
+                                      self.client_sids[i],
+                                      self.client_devports[i],
+                                      True)
+                self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+            for i in range(server_physical_num):
+                print "Binding sid {} with server devport {} for both direction mirroring".format(self.server_sids[i], self.server_devports[i]) # clone to server
+                info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                      Direction_e.PD_DIR_BOTH,
+                                      self.server_sides[i],
+                                      self.server_devports[i],
+                                      True)
+                self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
-            self.server_sid = self.sids[1] # clone to server
-            self.switchos_sid = self.sids[1] # clone to switchos (i.e., reflector)
-            self.client_sid = self.sids[0] # clone to client
+            self.switchos_sid = self.server_sids[0] # clone to switchos (i.e., reflector at the first physical server)
 
 
             ################################
@@ -344,7 +342,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: set_hot_threshold_tbl (default: set_hot_threshold; size: 1)
             print "Configuring set_hot_threshold_tbl"
-            hot_threshold = 200 # for 8 server threads
             actnspec0 = netbufferv4_set_hot_threshold_action_spec_t(hot_threshold)
             self.client.set_hot_threshold_tbl_set_default_action_set_hot_threshold(\
                     self.sess_hdl, self.dev_tgt, actnspec0)
@@ -357,51 +354,44 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 matchspec0 = netbufferv4_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
-                actnspec0 = netbufferv4_recirculate_pkt_action_spec_t(self.recirPorts[ingress_pipeidx])
+                # recirculate to the first pipeline for atomicity of setting snapshot flag
+                actnspec0 = netbufferv4_recirculate_pkt_action_spec_t(self.recirPorts[0])
                 self.client.recirculate_tbl_table_add_with_recirculate_pkt(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Stage 1
 
             if RANGE_SUPPORT:
-                # # Table: range_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
                 # Table: range_partition_tbl (default: nop; size <= 9 * 128)
                 print "Configuring range_partition_tbl"
-                #key_range_per_server = pow(2, 32) / server_num
-                key_range_per_server = pow(2, 16) / server_num
+                key_range_per_server = pow(2, 16) / server_total_logical_num
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH]:
-                    #for iport in self.devPorts:
-                    ##key_start = -pow(2, 31) # [-2^31, 2^31-1]
-                    #key_start = 0 # [0, 2^32-1]
                     key_start = 0 # [0, 2^16-1]
-                    for i in range(server_num):
-                        if i == server_num - 1:
-                            ##key_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
-                            #key_end = pow(2, 32) - 1
+                    for global_server_logical_idx in range(server_total_logical_num):
+                        if global_server_logical_idx == server_total_logical_num - 1:
                             key_end = pow(2, 16) - 1
                         else:
                             key_end = key_start + key_range_per_server - 1
                         # NOTE: both start and end are included
                         matchspec0 = netbufferv4_range_partition_tbl_match_spec_t(\
                                 op_hdr_optype = tmpoptype,
-                                #op_hdr_keyhihi_start = convert_u32_to_i32(key_start),
-                                #op_hdr_keyhihi_end = convert_u32_to_i32(key_end),
                                 op_hdr_keyhihihi_start = convert_u16_to_i16(key_start),
                                 op_hdr_keyhihihi_end = convert_u16_to_i16(key_end),
-                                #ig_intr_md_ingress_port = iport,
                                 meta_need_recirculate = 0)
                         # Forward to the egress pipeline of server
-                        eport = self.devPorts[1]
-                        #if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
-                        #    actnspec0 = netbufferv4_range_partition_action_spec_t(\
-                        #            server_port + i, eport, 0)
-                        #else: # in wrong pipeline
-                        #    actnspec0 = netbufferv4_range_partition_action_spec_t(\
-                        #            server_port + i, eport, 1)
-                        actnspec0 = netbufferv4_range_partition_action_spec_t(\
-                                server_port + i, eport)
-                        self.client.range_partition_tbl_table_add_with_range_partition(\
-                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        server_physical_idx = -1
+                        for tmp_server_physical_idx in range(server_physical_num):
+                            if global_server_logical_idx in server_logical_idxes_list[tmp_server_physical_idx]:
+                                server_physical_idx = tmp_server_physical_idx
+                                break
+                        if server_physical_idx == -1:
+                            print "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in range_partition_tbl".format(global_server_logical_idx)
+                        else:
+                            udp_dstport = server_worker_port_start + global_server_logical_idx
+                            eport = self.server_devports[server_physical_idx]
+                            actnspec0 = netbufferv4_range_partition_action_spec_t(udp_dstport, eport)
+                            self.client.range_partition_tbl_table_add_with_range_partition(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
             else:
                 # Table: hash_for_partition_tbl (default: nop; size: 8)
@@ -419,12 +409,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # Table: range_partition_for_scan_endkey_tbl (default: nop; size <= 1 * 128)
                 # TODO: limit max_scannum <= constant (e.g., 32)
                 print "Configuring range_partition_for_scan_endkey_tbl"
-                key_range_per_server = pow(2, 16) / server_num
+                key_range_per_server = pow(2, 16) / server_total_logical_num
                 endkey_start = 0 # [0, 2^16-1]
-                for i in range(server_num):
-                    if i == server_num - 1:
-                        ##endkey_end = pow(2, 31) - 1 # if end is not included, then it is just processed by port 1111
-                        #endkey_end = pow(2, 32) - 1
+                for global_server_logical_idx in range(server_total_logical_num):
+                    if global_server_logical_idx == server_total_logical_num - 1:
                         endkey_end = pow(2, 16) - 1
                     else:
                         endkey_end = endkey_start + key_range_per_server - 1
@@ -434,23 +422,21 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
                             scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end),
                             meta_need_recirculate = 0)
-                    last_udpport_plus_one = server_port + i + 1
+                    last_udpport_plus_one = server_worker_port_start + global_server_logical_idx + 1 # used to calculate max_scannum in data plane
                     actnspec0 = netbufferv4_range_partition_for_scan_endkey_action_spec_t(last_udpport_plus_one)
                     # set cur_scanidx = 0; set max_scannum = last_udpport_plus_one - udp_hdr.dstPort (first_udpport)
                     self.client.range_partition_for_scan_endkey_tbl_table_add_with_range_partition_for_scan_endkey(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                     endkey_start = endkey_end + 1
             else:
-                # # Table: hash_partition_tbl (default: reset_is_wrong_pipeline; size <= 8 * 128)
                 # Table: hash_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring hash_partition_tbl"
-                hash_range_per_server = partition_count / server_num
+                hash_range_per_server = partition_count / server_total_logical_num
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH]:
-                    #for iport in self.devPorts:
                     hash_start = 0 # [0, partition_count-1]
-                    for i in range(server_num):
-                        if i == server_num - 1:
-                            hash_end = partition_count - 1 # if end is not included, then it is just processed by port 1111
+                    for global_server_logical_idx in range(server_total_logical_num):
+                        if global_server_logical_idx == server_total_logical_num - 1:
+                            hash_end = switch_partition_count - 1 # if end is not included, then it is just processed by port 1111
                         else:
                             hash_end = hash_start + hash_range_per_server - 1
                         # NOTE: both start and end are included
@@ -458,20 +444,21 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 op_hdr_optype = convert_u16_to_i16(tmpoptype),
                                 meta_hashval_for_partition_start = convert_u16_to_i16(hash_start),
                                 meta_hashval_for_partition_end = convert_u16_to_i16(hash_end),
-                                #ig_intr_md_ingress_port = iport,
                                 meta_need_recirculate = 0)
                         # Forward to the egress pipeline of server
-                        eport = self.devPorts[1]
-                        #if port_pipeidx_map[iport] == port_pipeidx_map[eport]: # in correct pipeline
-                        #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                        #            server_port + i, eport, 0)
-                        #else: # in wrong pipeline
-                        #    actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                        #            server_port + i, eport, 1)
-                        actnspec0 = netbufferv4_hash_partition_action_spec_t(\
-                                server_port + i, eport)
-                        self.client.hash_partition_tbl_table_add_with_hash_partition(\
-                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        server_physical_idx = -1
+                        for tmp_server_physical_idx in range(server_physical_num):
+                            if global_server_logical_idx in server_logical_idxes_list[tmp_server_physical_idx]:
+                                server_physical_idx = tmp_server_physical_idx
+                                break
+                        if server_physical_idx == -1:
+                            print "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in hash_partition_tbl".format(global_server_logical_idx)
+                        else:
+                            udp_dstport = server_worker_port_start + global_server_logical_idx
+                            eport = self.server_devports[server_physical_idx]
+                            actnspec0 = netbufferv4_hash_partition_action_spec_t(udp_dstport, eport)
+                            self.client.hash_partition_tbl_table_add_with_hash_partition(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         hash_start = hash_end + 1
 
             # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
@@ -507,29 +494,26 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #    self.client.snapshot_flag_tbl_table_add_with_reset_snapshot_flag(\
             #            self.sess_hdl, self.dev_tgt, matchspec0)
 
-            ## Table: prepare_for_cachehit_tbl (default: set_client_sid[self.sids[0]]; size: 6)
-            #print "Configuring prepare_for_cachehit_tbl w/ default sid {}".format(self.sids[0])
-            # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 3)
+            # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 3*client_physical_num = 6)
             print "Configuring prepare_for_cachehit_tbl"
             for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
-                matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ig_intr_md_ingress_port = self.devPorts[0],
-                        meta_need_recirculate = 0)
-                #actnspec0 = netbufferv4_set_client_sid_action_spec_t(self.sids[0], self.devPorts[0])
-                #actnspec0 = netbufferv4_set_client_sid_action_spec_t(self.sids[0])
-                actnspec0 = netbufferv4_set_client_sid_action_spec_t(self.client_sid)
-                self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                for tmp_client_physical_idx in range(client_physical_num):
+                    matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
+                            op_hdr_optype = tmpoptype,
+                            ig_intr_md_ingress_port = self.client_devports[tmp_client_physical_idx],
+                            meta_need_recirculate = 0)
+                    actnspec0 = netbufferv4_set_client_sid_action_spec_t(self.client_sids[tmp_client_physical_idx])
+                    self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 # Should not used: no req from server
-                #matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
-                #        op_hdr_optype = tmpoptype,
-                #        ig_intr_md_ingress_port = self.devPorts[1],
-                #        meta_need_recirculate = 0)
-                ##actnspec0 = netbufferv4_set_client_sid_action_spec_t(self.sids[1], self.devPorts[1])
-                #actnspec0 = netbufferv4_set_client_sid_action_spec_t(self.sids[1])
-                #self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
-                #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                #for tmp_server_physical_idx in range(len(self.server_devports)):
+                #    matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
+                #            op_hdr_optype = tmpoptype,
+                #            ig_intr_md_ingress_port = self.server_devports[tmp_server_physical_idx],
+                #            meta_need_recirculate = 0)
+                #    actnspec0 = netbufferv4_set_client_sid_action_spec_t(self.server_sids[tmp_server_physical_idx])
+                #    self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
+                #            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             # set default sid as sids[0]
             #actnspec0 = netbufferv4_set_client_sid_action_spec_t(self.sids[0])
             #self.client.prepare_for_cachehit_tbl_set_default_action_set_client_sid(\
@@ -537,25 +521,28 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: ipv4_forward_tbl (default: nop; size: 8)
             print "Configuring ipv4_forward_tbl"
-            ipv4addr0 = ipv4Addr_to_i32(client_ip)
-            for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
-                matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
-                        op_hdr_optype = convert_u16_to_i16(tmpoptype),
-                        ipv4_hdr_dstAddr = ipv4addr0,
-                        ipv4_hdr_dstAddr_prefix_length = 32,
-                        meta_need_recirculate = 0)
-                actnspec0 = netbufferv4_forward_normal_response_action_spec_t(self.devPorts[0])
-                self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
-                matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ipv4_hdr_dstAddr = ipv4addr0,
-                        ipv4_hdr_dstAddr_prefix_length = 32,
-                        meta_need_recirculate = 0)
-                actnspec0 = netbufferv4_forward_special_get_response_action_spec_t(self.sids[0])
-                self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for tmp_client_physical_idx in range(client_physical_num):
+                ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
+                eport = self.client_devports[tmp_client_physical_idx]
+                tmpsid = self.client_sidds[tmp_client_physical_idx]
+                for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
+                    matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
+                            op_hdr_optype = convert_u16_to_i16(tmpoptype),
+                            ipv4_hdr_dstAddr = ipv4addr0,
+                            ipv4_hdr_dstAddr_prefix_length = 32,
+                            meta_need_recirculate = 0)
+                    actnspec0 = netbufferv4_forward_normal_response_action_spec_t(eport)
+                    self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                    matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
+                            op_hdr_optype = tmpoptype,
+                            ipv4_hdr_dstAddr = ipv4addr0,
+                            ipv4_hdr_dstAddr_prefix_length = 32,
+                            meta_need_recirculate = 0)
+                    actnspec0 = netbufferv4_forward_special_get_response_action_spec_t(tmpsid)
+                    self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Stage 4
 
