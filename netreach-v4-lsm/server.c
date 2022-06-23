@@ -84,6 +84,7 @@ int main(int argc, char **argv) {
 
   /* (3) free phase */
 
+  free_common();
   // close_load_server();
   close_reflector();
   close_server();

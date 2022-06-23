@@ -15,62 +15,64 @@ class IniparserWrapper {
 		// global
 		const char *get_workload_name();
 		int get_workload_mode();
-		//uint32_t get_max_vallen();
-		uint16_t get_max_vallen();
-		uint32_t get_load_batch_size();
 		int get_dynamic_periodnum();
 		int get_dynamic_periodinterval();
 		const char *get_dynamic_ruleprefix();
+		uint16_t get_max_vallen();
+		uint32_t get_load_batch_size();
+		uint32_t get_client_physical_num();
+		uint32_t get_server_physical_num();
+		uint32_t get_client_total_logical_num();
+		uint32_t get_server_total_logical_num();
 
-		// client
-		size_t get_client_num();
-		short get_client_port();
-		const char *get_client_ip();
-		void get_client_mac(uint8_t* macaddr);
-		//const char *get_client_ip_for_server();
+		// each physical client
+		uint32_t get_client_logical_num(uint32_t client_physical_idx);
+		const char *get_client_ip(uint32_t client_physical_idx);
+		void get_client_mac(uint8_t* macaddr, uint32_t client_physical_idx);
+		const char *get_client_fpport(uint3_t client_physical_idx);
+		uint32_t get_client_pipeidx(uint32_t client_physical_idx);
 		
-		// server
-		int get_server_cores();
-		uint32_t get_load_factor();
-		//uint32_t get_split_num();
-		uint32_t get_server_num();
-		short get_server_port();
-		const char *get_server_ip();
-		void get_server_mac(uint8_t* macaddr);
-		const char *get_server_ip_for_controller();
-		short get_server_evictserver_port();
-		short get_server_snapshotserver_port();
-		short get_server_snapshotdataserver_port();
+		// server common configuration
+		uint32_t get_server_load_factor();
+		short get_server_worker_port_start();
+		short get_server_evictserver_port_start();
+		short get_server_snapshotserver_port_start();
+		short get_server_snapshotdataserver_port_start();
 		short get_transaction_loadfinishserver_port();
-		//short get_server_dynamicserver_port();
-		//const char *get_server_ip_for_client();
+		
+		// each physical server
+		uint32_t get_server_worker_corenum(uint32_t server_physical_idx);
+		uint32_t get_server_total_corenum(uint32_t server_physical_idx);
+		std::vector<uint16_t> get_server_logical_idxes(uint32_t server_physical_idx);
+		const char *get_server_ip(uint32_t server_physical_idx);
+		void get_server_mac(uint8_t* macaddr, uint32_t server_physical_idx);
+		const char *get_server_fpport(uint32_t server_physical_idx);
+		uint32_t get_server_pipeidx(uint32_t server_physical_idx);
+		const char *get_server_ip_for_controller(uint32_t server_physical_idx);
+		const char *get_controller_ip_for_server(uint32_t server_physical_idx);
 
 		// controller
-		const char *get_controller_ip_for_server();
 		const char *get_controller_ip_for_switchos();
-		short get_controller_popserver_port();
+		short get_controller_popserver_port_start();
 		short get_controller_evictserver_port();
 		uint32_t get_controller_snapshot_period();
 
-		// reflector
-		const char *get_reflector_ip_for_switchos();
-		short get_reflector_port();
-		short get_reflector_popserver_port();
-
 		// switch
-		uint32_t get_partition_count();
+		uint32_t get_switch_partition_count();
 		uint32_t get_switch_kv_bucket_num();
-		//uint32_t get_switch_max_vallen();
 		uint16_t get_switch_max_vallen();
-		short get_switchos_popserver_port();
-		//short get_switchos_paramserver_port();
 		const char *get_switchos_ip();
 		uint32_t get_switchos_sample_cnt();
+		short get_switchos_popserver_port();
 		short get_switchos_snapshotserver_port();
 		short get_switchos_specialcaseserver_port();
-		//short get_switchos_snapshotdataserver_port();
 		short get_switchos_ptf_popserver_port();
 		short get_switchos_ptf_snapshotserver_port();
+
+		// reflector
+		const char *get_reflector_ip_for_switchos();
+		short get_reflector_dp2cpserver_port();
+		short get_reflector_cp2dpserver_port();
 
 		/* control_type.ini */
 

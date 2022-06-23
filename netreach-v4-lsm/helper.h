@@ -100,6 +100,14 @@ static inline void dump_buf(char *buf, uint32_t bufsize)
 	printf("\n");
 }
 
+static inline void dump_macaddr(uint8_t *macaddr) {
+	for (size_t i = 0; i < 6; i++) {
+		printf("%02x", macaddr[i]);
+		if (i != 5) printf(":");
+		else printf("\n");
+	}
+}
+
 /***** Debuging *****/
 
 //#define DEBUG_SNAPSHOT

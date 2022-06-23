@@ -62,14 +62,12 @@ const char *IniparserWrapper::get_dynamic_ruleprefix() {
 	return dynamic_ruleprefix;
 }
 
-//uint32_t IniparserWrapper::get_max_vallen() {
 uint16_t IniparserWrapper::get_max_vallen() {
 	int tmp = iniparser_getint(ini, "global:max_vallen", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [global:max_vallen]: %d\n", tmp);
 		exit(-1);
 	}
-	//return uint32_t(tmp);
 	return uint16_t(tmp);
 }
 
@@ -82,149 +80,133 @@ uint32_t IniparserWrapper::get_load_batch_size() {
 	return uint32_t(tmp);
 }
 
-// Client
-
-size_t IniparserWrapper::get_client_num() {
-	int tmp = iniparser_getint(ini, "client:client_num", -1);
+uint32_t IniparserWrapper::get_client_physical_num() {
+	int tmp = iniparser_getint(ini, "global:client_physical_num", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [client:client_num]: %d\n", tmp);
+		printf("Invalid entry of [global:client_physical_num]: %d\n", tmp);
 		exit(-1);
 	}
-	return size_t(tmp);
+	return uint32_t(tmp);
 }
 
-short IniparserWrapper::get_client_port() {
-	int tmp = iniparser_getint(ini, "client:client_port", -1);
+uint32_t IniparserWrapper::get_server_physical_num() {
+	int tmp = iniparser_getint(ini, "global:server_physical_num", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [client:client_port]: %d\n", tmp);
+		printf("Invalid entry of [global:server_physical_num]: %d\n", tmp);
 		exit(-1);
 	}
-	return short(tmp);
+	return uint32_t(tmp);
 }
 
-const char *IniparserWrapper::get_client_ip() {
-	const char *client_ip = iniparser_getstring(ini, "client:client_ip", nullptr);
+uint32_t IniparserWrapper::get_client_total_logical_num() {
+	int tmp = iniparser_getint(ini, "global:client_total_logical_num", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [global:client_total_logical_num]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
+uint32_t IniparserWrapper::get_server_total_logical_num() {
+	int tmp = iniparser_getint(ini, "global:server_total_logical_num", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [global:server_total_logical_num]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
+// each physical client
+
+uint32_t IniparserWrapper::get_client_logical_num(uint32_t client_physical_idx) {
+	char key[256];
+	sprintf(key, "client%u:client_logical_num", client_physical_idx);
+	int tmp = iniparser_getint(ini, key, -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [%s]: %d\n", key, tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
+const char *IniparserWrapper::get_client_ip(uint32_t client_physical_idx) {
+	char key[256];
+	sprintf(key, "client%u:client_ip", client_physical_idx);
+	const char *client_ip = iniparser_getstring(ini, key, nullptr);
 	if (client_ip == nullptr) {
-		printf("Invalid entry of [client:client_ip]\n");
+		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
 	}
 	return client_ip;
 }
 
-void IniparserWrapper::get_client_mac(uint8_t *macaddr) {
-	const char *client_mac = iniparser_getstring(ini, "client:client_mac", nullptr);
+void IniparserWrapper::get_client_mac(uint8_t *macaddr, uint32_t client_physical_idx) {
+	char key[256];
+	sprintf(key, "client%u:client_mac", client_physical_idx);
+	const char *client_mac = iniparser_getstring(ini, key, nullptr);
 	if (client_mac == nullptr) {
-		printf("Invalid entry of [client:client_mac]\n");
+		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
 	}
 	parse_mac(macaddr, client_mac);
 }
 
-/*const char *IniparserWrapper::get_client_ip_for_server() {
-	const char *client_ip_for_server = iniparser_getstring(ini, "client:client_ip_for_server", nullptr);
-	if (client_ip_for_server == nullptr) {
-		printf("Invalid entry of [client:client_ip_for_server]\n");
+const char *InfpportarserWrapper::get_client_fpport(uint32_t client_physical_idx) {
+	char key[256];
+	sprintf(key, "client%u:client_fpport", client_physical_idx);
+	const char *client_fpport = infpportarser_getstring(ini, key, nullptr);
+	if (client_fpport == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
 	}
-	return client_ip_for_server;
-}*/
-
-// Server
-
-int IniparserWrapper::get_server_cores() {
-	int tmp = iniparser_getint(ini, "server:server_cores", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [server:server_cores]: %d\n", tmp);
-		exit(-1);
-	}
-	return tmp;
+	return client_fpport;
 }
 
-uint32_t IniparserWrapper::get_load_factor() {
-	int tmp = iniparser_getint(ini, "server:load_factor", -1);
+uint32_t IniparserWrapper::get_client_pipeidx(uint32_t client_physical_idx) {
+	char key[256];
+	sprintf(key, "client%u:client_pipeidx", client_physical_idx);
+	int tmp = iniparser_getint(ini, key, -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [server:load_factor]: %d\n", tmp);
+		printf("Invalid entry of [%s]: %d\n", key, tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);
 }
 
-/*uint32_t IniparserWrapper::get_split_num() {
-	int tmp = iniparser_getint(ini, "server:split_num", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [server:split_num]: %d\n", tmp);
-		exit(-1);
-	}
-	return uint32_t(tmp);
-}*/
 
-uint32_t IniparserWrapper::get_server_num() {
-	int tmp = iniparser_getint(ini, "server:server_num", -1);
+// server common configuration
+
+uint32_t IniparserWrapper::get_server_load_factor() {
+	int tmp = iniparser_getint(ini, "server:server_load_factor", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [server:server_num]: %d\n", tmp);
+		printf("Invalid entry of [server:server_load_factor]: %d\n", tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);
 }
 
-short IniparserWrapper::get_server_port() {
-	int tmp = iniparser_getint(ini, "server:server_port", -1);
+short IniparserWrapper::get_server_evictserver_port_start() {
+	int tmp = iniparser_getint(ini, "server:server_evictserver_port_start", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [server:server_port]: %d\n", tmp);
+		printf("Invalid entry of [server:server_evictserver_port_start]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);
 }
 
-const char *IniparserWrapper::get_server_ip() {
-	const char *server_ip = iniparser_getstring(ini, "server:server_ip", nullptr);
-	if (server_ip == nullptr) {
-		printf("Invalid entry of [server:server_ip]\n");
-		exit(-1);
-	}
-	return server_ip;
-}
-
-void IniparserWrapper::get_server_mac(uint8_t *macaddr) {
-	const char *server_mac = iniparser_getstring(ini, "server:server_mac", nullptr);
-	if (server_mac == nullptr) {
-		printf("Invalid entry of [server:server_mac]\n");
-		exit(-1);
-	}
-	parse_mac(macaddr, server_mac);
-}
-
-const char *IniparserWrapper::get_server_ip_for_controller() {
-	const char *server_ip = iniparser_getstring(ini, "server:server_ip_for_controller", nullptr);
-	if (server_ip == nullptr) {
-		printf("Invalid entry of [server:server_ip_for_controller]\n");
-		exit(-1);
-	}
-	return server_ip;
-}
-
-short IniparserWrapper::get_server_evictserver_port() {
-	int tmp = iniparser_getint(ini, "server:server_evictserver_port", -1);
+short IniparserWrapper::get_server_snapshotserver_port_start() {
+	int tmp = iniparser_getint(ini, "server:server_snapshotserver_port_start", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [server:server_evictserver_port]: %d\n", tmp);
+		printf("Invalid entry of [server:server_snapshotserver_port_start]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);
 }
 
-short IniparserWrapper::get_server_snapshotserver_port() {
-	int tmp = iniparser_getint(ini, "server:server_snapshotserver_port", -1);
+short IniparserWrapper::get_server_snapshotdataserver_port_start() {
+	int tmp = iniparser_getint(ini, "server:server_snapshotdataserver_port_start", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [server:server_snapshotserver_port]: %d\n", tmp);
-		exit(-1);
-	}
-	return short(tmp);
-}
-
-short IniparserWrapper::get_server_snapshotdataserver_port() {
-	int tmp = iniparser_getint(ini, "server:server_snapshotdataserver_port", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [server:server_snapshotdataserver_port]: %d\n", tmp);
+		printf("Invalid entry of [server:server_snapshotdataserver_port_start]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);
@@ -239,146 +221,127 @@ short IniparserWrapper::get_transaction_loadfinishserver_port() {
 	return short(tmp);
 }
 
-/*short IniparserWrapper::get_server_dynamicserver_port() {
-	int tmp = iniparser_getint(ini, "server:server_dynamicserver_port", -1);
+// each physical server
+
+uint32_t IniparserWrapper::get_server_worker_corenum(uint32_t server_physical_idx) {
+	char key[256];
+	sprintf(key, "server%u:server_worker_corenum", server_physical_idx);
+	int tmp = iniparser_getint(ini, key, -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [server:server_dynamicserver_port]: %d\n", tmp);
-		exit(-1);
-	}
-	return short(tmp);
-}
-
-const char *IniparserWrapper::get_server_ip_for_client() {
-	const char *server_ip_for_client = iniparser_getstring(ini, "server:server_ip_for_client", nullptr);
-	if (server_ip_for_client == nullptr) {
-		printf("Invalid entry of [server:server_ip_for_client]\n");
-		exit(-1);
-	}
-	return server_ip_for_client;
-}*/
-
-// Switch
-
-uint32_t IniparserWrapper::get_partition_count() {
-	int tmp = iniparser_getint(ini, "switch:partition_count", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [switch:partition_count]: %d\n", tmp);
+		printf("Invalid entry of [%s]: %d\n", key, tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);
 }
 
-uint32_t IniparserWrapper::get_switch_kv_bucket_num() {
-	int tmp = iniparser_getint(ini, "switch:switch_kv_bucket_num", -1);
+uint32_t IniparserWrapper::get_server_total_corenum(uint32_t server_physical_idx) {
+	char key[256];
+	sprintf(key, "server%u:server_total_corenum", server_physical_idx);
+	int tmp = iniparser_getint(ini, key, -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [switch:switch_kv_bucket_num]: %d\n", tmp);
+		printf("Invalid entry of [%s]: %d\n", key, tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);
 }
 
-//uint32_t IniparserWrapper::get_switch_max_vallen() {
-uint16_t IniparserWrapper::get_switch_max_vallen() {
-	int tmp = iniparser_getint(ini, "switch:switch_max_vallen", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [switch:switch_max_vallen]: %d\n", tmp);
+std::vector<uint16_t> get_server_logical_idxes(uint32_t server_physical_idx) {
+	char key[256];
+	sprintf(key, "server%u:server_logical_idxes", server_physical_idx);
+	const char *tmpstr = infpportarser_getstring(ini, key, nullptr);
+	if (tmpstr == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
 	}
-	//return uint32_t(tmp);
-	return uint16_t(tmp);
+
+	std::vector<uint16_t> result;
+	const char *begin = tmpstr;
+	while (true) {
+		char *end = strchr(begin, ':');
+		if (end == NULL) {
+			break;
+		}
+
+		INVARIANT(end - begin > 0);
+		std::string idxstr(begin, end - begin);
+		uint16_t tmpidx = uint16_t(std::stoul(idxstr));
+		result.push_back(tmpidx);
+
+		begin = end + 1;
+		if (begin - tmpstr > strlen(tmpstr)) {
+			break;
+		}
+	}
+	return result;
 }
 
-short IniparserWrapper::get_switchos_popserver_port() {
-	int tmp = iniparser_getint(ini, "switch:switchos_popserver_port", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [switch:switchos_popserver_port]: %d\n", tmp);
+const char *IniparserWrapper::get_server_ip(uint32_t server_physical_idx) {
+	char key[256];
+	sprintf(key, "server%u:server_ip", server_physical_idx);
+	const char *server_ip = iniparser_getstring(ini, key, nullptr);
+	if (server_ip == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
 	}
-	return short(tmp);
+	return server_ip;
 }
 
-/*short IniparserWrapper::get_switchos_paramserver_port() {
-	int tmp = iniparser_getint(ini, "switch:switchos_paramserver_port", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [switch:switchos_paramserver_port]: %d\n", tmp);
+void IniparserWrapper::get_server_mac(uint8_t *macaddr, uint32_t server_physical_idx) {
+	char key[256];
+	sprintf(key, "server%u:server_mac", server_physical_idx);
+	const char *server_mac = iniparser_getstring(ini, key, nullptr);
+	if (server_mac == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
 	}
-	return short(tmp);
-}*/
-
-const char* IniparserWrapper::get_switchos_ip() {
-	const char *switchos_ip = iniparser_getstring(ini, "switch:switchos_ip", nullptr);
-	if (switchos_ip == nullptr) {
-		printf("Invalid entry of [switch:switchos_ip]\n");
-		exit(-1);
-	}
-	return switchos_ip;
+	parse_mac(macaddr, server_mac);
 }
 
-uint32_t IniparserWrapper::get_switchos_sample_cnt() {
-	int tmp = iniparser_getint(ini, "switch:switchos_sample_cnt", -1);
+const char *IniparserWrapper::get_server_fpport(uint32_t server_physical_idx) {
+	char key[256];
+	sprintf(key, "server%u:server_fpport", server_physical_idx);
+	const char *server_fpport = iniparser_getstring(ini, key, nullptr);
+	if (server_fpport == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
+		exit(-1);
+	}
+	return server_fpport;
+}
+
+uint32_t IniparserWrapper::get_server_pipeidx(uint32_t server_physical_idx) {
+	char key[256];
+	sprintf(key, "server%u:server_pipeidx", server_physical_idx);
+	int tmp = iniparser_getint(ini, key, -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [switch:switchos_sample_cnt]: %d\n", tmp);
+		printf("Invalid entry of [%s]: %d\n", key, tmp);
 		exit(-1);
 	}
 	return uint32_t(tmp);
 }
 
-short IniparserWrapper::get_switchos_snapshotserver_port() {
-	int tmp = iniparser_getint(ini, "switch:switchos_snapshotserver_port", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [switch:switchos_snapshotserver_port]: %d\n", tmp);
+const char *IniparserWrapper::get_server_ip_for_controller(uint32_t server_physical_idx) {
+	char key[256];
+	sprintf(key, "server%u:server_ip_for_controller", server_physical_idx);
+	const char *server_ip_for_controller = iniparser_getstring(ini, key, nullptr);
+	if (server_ip == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
 	}
-	return short(tmp);
+	return server_ip_for_controller;
 }
 
-short IniparserWrapper::get_switchos_specialcaseserver_port() {
-	int tmp = iniparser_getint(ini, "switch:switchos_specialcaseserver_port", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [switch:switchos_specialcaseserver_port]: %d\n", tmp);
-		exit(-1);
-	}
-	return short(tmp);
-}
-
-/*short IniparserWrapper::get_switchos_snapshotdataserver_port() {
-	int tmp = iniparser_getint(ini, "switch:switchos_snapshotdataserver_port", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [switch:switchos_snapshotdataserver_port]: %d\n", tmp);
-		exit(-1);
-	}
-	return short(tmp);
-}*/
-
-short IniparserWrapper::get_switchos_ptf_popserver_port() {
-	int tmp = iniparser_getint(ini, "switch:switchos_ptf_popserver_port", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [switch:switchos_ptf_popserver_port]: %d\n", tmp);
-		exit(-1);
-	}
-	return short(tmp);
-}
-
-short IniparserWrapper::get_switchos_ptf_snapshotserver_port() {
-	int tmp = iniparser_getint(ini, "switch:switchos_ptf_snapshotserver_port", -1);
-	if (tmp == -1) {
-		printf("Invalid entry of [switch:switchos_ptf_snapshotserver_port]: %d\n", tmp);
-		exit(-1);
-	}
-	return short(tmp);
-}
-
-// Controller
-
-const char* IniparserWrapper::get_controller_ip_for_server() {
-	const char *controller_ip_for_server = iniparser_getstring(ini, "controller:controller_ip_for_server", nullptr);
-	if (controller_ip_for_server == nullptr) {
-		printf("Invalid entry of [controller:controller_ip_for_server]\n");
+const char *IniparserWrapper::get_controller_ip_for_server(uint32_t server_physical_idx) {
+	char key[256];
+	sprintf(key, "server%u:controller_ip_for_server", server_physical_idx);
+	const char *controller_ip_for_server = iniparser_getstring(ini, key, nullptr);
+	if (server_ip == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
 	}
 	return controller_ip_for_server;
 }
+
+// Controller
 
 const char* IniparserWrapper::get_controller_ip_for_switchos() {
 	const char *controller_ip_for_switchos = iniparser_getstring(ini, "controller:controller_ip_for_switchos", nullptr);
@@ -389,10 +352,10 @@ const char* IniparserWrapper::get_controller_ip_for_switchos() {
 	return controller_ip_for_switchos;
 }
 
-short IniparserWrapper::get_controller_popserver_port() {
-	int tmp = iniparser_getint(ini, "controller:controller_popserver_port", -1);
+short IniparserWrapper::get_controller_popserver_port_start() {
+	int tmp = iniparser_getint(ini, "controller:controller_popserver_port_start", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [controller:controller_popserver_port]: %d\n", tmp);
+		printf("Invalid entry of [controller:controller_popserver_port_start]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);
@@ -416,6 +379,98 @@ uint32_t IniparserWrapper::get_controller_snapshot_period() {
 	return uint32_t(tmp);
 }
 
+// Switch
+
+uint32_t IniparserWrapper::get_switch_partition_count() {
+	int tmp = iniparser_getint(ini, "switch:switch_partition_count", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switch_partition_count]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
+uint32_t IniparserWrapper::get_switch_kv_bucket_num() {
+	int tmp = iniparser_getint(ini, "switch:switch_kv_bucket_num", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switch_kv_bucket_num]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
+uint16_t IniparserWrapper::get_switch_max_vallen() {
+	int tmp = iniparser_getint(ini, "switch:switch_max_vallen", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switch_max_vallen]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint16_t(tmp);
+}
+
+const char* IniparserWrapper::get_switchos_ip() {
+	const char *switchos_ip = iniparser_getstring(ini, "switch:switchos_ip", nullptr);
+	if (switchos_ip == nullptr) {
+		printf("Invalid entry of [switch:switchos_ip]\n");
+		exit(-1);
+	}
+	return switchos_ip;
+}
+
+uint32_t IniparserWrapper::get_switchos_sample_cnt() {
+	int tmp = iniparser_getint(ini, "switch:switchos_sample_cnt", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_sample_cnt]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
+short IniparserWrapper::get_switchos_popserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_popserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_popserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+short IniparserWrapper::get_switchos_snapshotserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_snapshotserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_snapshotserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+short IniparserWrapper::get_switchos_specialcaseserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_specialcaseserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_specialcaseserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+short IniparserWrapper::get_switchos_ptf_popserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_ptf_popserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_ptf_popserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+short IniparserWrapper::get_switchos_ptf_snapshotserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_ptf_snapshotserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_ptf_snapshotserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 // Reflector
 
 const char* IniparserWrapper::get_reflector_ip_for_switchos() {
@@ -427,19 +482,19 @@ const char* IniparserWrapper::get_reflector_ip_for_switchos() {
 	return reflector_ip_for_switchos;
 }
 
-short IniparserWrapper::get_reflector_port() {
-	int tmp = iniparser_getint(ini, "reflector:reflector_port", -1);
+short IniparserWrapper::get_reflector_dp2cpserver_port() {
+	int tmp = iniparser_getint(ini, "reflector:reflector_dp2cpserver_port", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [reflector:reflector_port]: %d\n", tmp);
+		printf("Invalid entry of [reflector:reflector_dp2cpserver_port]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);
 }
 
-short IniparserWrapper::get_reflector_popserver_port() {
-	int tmp = iniparser_getint(ini, "reflector:reflector_popserver_port", -1);
+short IniparserWrapper::get_reflector_cp2dpserver_port() {
+	int tmp = iniparser_getint(ini, "reflector:reflector_cp2dpserver_port", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [reflector:reflector_popserver_port]: %d\n", tmp);
+		printf("Invalid entry of [reflector:reflector_cp2dpserver_port]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);

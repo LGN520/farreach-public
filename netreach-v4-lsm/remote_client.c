@@ -50,21 +50,7 @@ void run_benchmark();
 
 void * run_fg(void *param); // sender
 
-// SCAN split
-/*size_t get_server_idx(netreach_key_t key) {
-#ifdef LARGE_KEY
-	size_t server_idx = key.keyhihi / perserver_keyrange;
-#else
-	size_t server_idx = key.keyhi / perserver_keyrange;
-#endif
-	if (server_idx >= server_num) {
-		server_idx = server_num - 1;
-	}
-	return server_idx;
-}*/
-
 const uint32_t range_gap = 1024; // add 2^10 to keylo of startkey
-//const uint32_t range_gap = 0x80000000; // add 2^31 to keylo of startkey
 //const int range_num = 10; // max number of returned kv pairs
 netreach_key_t generate_endkey(netreach_key_t &startkey) {
 	netreach_key_t endkey = startkey;
@@ -506,7 +492,9 @@ void run_benchmark() {
 		}
 	}
 
+	free_common();
 	COUT_THIS("Finish dumping statistics!")
+
 	void *status;
 	for (size_t i = 0; i < client_num; i++) {
 		int rc = pthread_join(threads[i], &status);
@@ -521,8 +509,6 @@ void *run_fg(void *param) {
 	uint16_t thread_id = thread_param.thread_id;
 
 	int res = 0;
-	short src_port = client_port_start + thread_id;
-	//short server_port = server_port_start + thread_id;
 
 	// ycsb parser
 	char load_filename[256];

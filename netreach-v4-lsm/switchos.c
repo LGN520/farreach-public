@@ -23,8 +23,7 @@
 #include "io_helper.h"
 #include "key.h"
 #include "val.h"
-//#include "common_impl.h"
-//
+
 #include "socket_helper.h"
 #include "special_case.h"
 #include "iniparser/iniparser_wrapper.h"
@@ -32,6 +31,8 @@
 #include "packet_format_impl.h"
 #include "concurrent_map_impl.h"
 #include "dynamic_array.h"
+
+#include "common_impl.h"
 
 // ptf scripts used by switchos
 // cache eviction: get_evictdata_setvalid3.sh, remove_cache_lookup.sh
@@ -65,7 +66,7 @@ std::atomic<size_t> switchos_ready_threads(0);
 const size_t switchos_expected_ready_threads = 4;
 bool volatile switchos_popserver_finish = false;
 
-// Parameters
+/*// Parameters
 size_t server_num = 1;
 short switchos_popserver_port = 0;
 uint32_t switch_kv_bucket_num = 0;
@@ -117,7 +118,7 @@ int SNAPSHOT_START_ACK = -1;
 int SNAPSHOT_GETDATA = -1;
 int SNAPSHOT_GETDATA_ACK = -1;
 int SNAPSHOT_SENDDATA = -1;
-int SNAPSHOT_SENDDATA_ACK = -1;
+int SNAPSHOT_SENDDATA_ACK = -1;*/
 
 // Cache population
 
@@ -178,8 +179,8 @@ int switchos_popworker_popclient_for_ptf_udpsock = -1;
 // switchos.snapshotserver <-> ptf.snapshotserver
 int switchos_snapshotserver_snapshotclient_for_ptf_udpsock = -1; 
 
-inline void parse_ini(const char *config_file);
-inline void parse_control_ini(const char *config_file);
+//inline void parse_ini(const char *config_file);
+//inline void parse_control_ini(const char *config_file);
 void prepare_switchos();
 void recover();
 void *run_switchos_popserver(void *param);
@@ -261,12 +262,13 @@ int main(int argc, char **argv) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
 
-	printf("[switchos] all threads end\n");
+	free_common();
 	close_switchos();
+	printf("[switchos] all threads end\n");
 }
 
 // TODO: try common_impl.h
-inline void parse_ini(const char* config_file) {
+/*inline void parse_ini(const char* config_file) {
 	IniparserWrapper ini;
 	ini.load(config_file);
 
@@ -342,7 +344,7 @@ inline void parse_control_ini(const char* config_file) {
 	SNAPSHOT_GETDATA_ACK = ini.get_snapshot_getdata_ack();
 	SNAPSHOT_SENDDATA = ini.get_snapshot_senddata();
 	SNAPSHOT_SENDDATA_ACK = ini.get_snapshot_senddata_ack();
-}
+}*/
 
 void prepare_switchos() {
 	printf("[switchos] prepare start\n");

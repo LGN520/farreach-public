@@ -173,8 +173,9 @@ int main(int argc, char **argv) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
 
-	printf("[controller] all threads end\n");
+	free_common();
 	close_controller();
+	printf("[controller] all threads end\n");
 }
 
 void prepare_controller() {
