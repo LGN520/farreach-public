@@ -921,7 +921,7 @@ table eg_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 1024;
+	size: 8192;
 }
 
 // stage 10
@@ -957,6 +957,7 @@ action update_ipmac_srcport_client2switch(client_mac, switch_mac, client_ip, swi
 table update_ipmac_srcport_tbl {
 	reads {
 		op_hdr.optype: exact;
+		eg_intr_md.egress_port: exact;
 	}
 	actions {
 		update_ipmac_srcport_server2client;
