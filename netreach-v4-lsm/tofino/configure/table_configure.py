@@ -238,7 +238,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Add and enable the platform ports
             for i in self.client_devports:
                self.pal.pal_port_add(0, i,
-                                     pal_port_speed_t.BF_SPEED_39G,
+                                     pal_port_speed_t.BF_SPEED_40G,
                                      pal_fec_type_t.BF_FEC_TYP_NONE)
                self.pal.pal_port_enable(0, i)
             for i in self.server_devports:
@@ -300,7 +300,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 print "Binding sid {} with server devport {} for both direction mirroring".format(self.server_sids[i], self.server_devports[i]) # clone to server
                 info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
                                       Direction_e.PD_DIR_BOTH,
-                                      self.server_sides[i],
+                                      self.server_sids[i],
                                       self.server_devports[i],
                                       True)
                 self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
@@ -523,7 +523,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             for tmp_client_physical_idx in range(client_physical_num):
                 ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
                 eport = self.client_devports[tmp_client_physical_idx]
-                tmpsid = self.client_sidds[tmp_client_physical_idx]
+                tmpsid = self.client_sids[tmp_client_physical_idx]
                 for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
                     matchspec0 = netbufferv4_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
@@ -1265,7 +1265,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # (2) eg_intr_md.egress_port of cloned GETRES_CASE1s is set by clone_e2e, which must be the devport towards switchos (aka reflector)
             # (3) eg_intr_md.egress_port of the first ACK for cache population/eviction is set by partition_tbl in ingress pipeline, which will be finally dropped -> update ip/mac/srcport or not is not important
             # (4) eg_intr_md.egress_port of the cloned ACK for cache population/eviction is set by clone_e2e, which must be the devport towards switchos (aka reflector)
-            tmp_devport = reflector_port
+            tmp_devport = reflector_dp2cpserver_port
             tmp_client_ip = client_ips[0]
             tmp_client_mac = client_macs[0]
             tmp_client_port = 1111 # not cared by servers
@@ -1668,7 +1668,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     inswitch_hdr_snapshot_flag = snapshot_flag,
                                                     meta_is_case1 = is_case1)
                                                 # Update CACHE_POP_INSWITCH as CACHE_POP_INSWITCH_ACK to reflector (deprecated: w/ clone)
-                                                actnspec0 = netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone_action_spec_t(self.switchos_sid, reflector_port)
+                                                actnspec0 = netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone_action_spec_t(self.switchos_sid, reflector_dp2cpserver_port)
                                                 self.client.eg_port_forward_tbl_table_add_with_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=0 (no inswitch_hdr after clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), snapshot_flag, is_case1, is_lastclone_for_pktloss should be 0 for CACHE_POP_INSWITCH_ACK
@@ -2296,7 +2296,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             meta_is_last_scansplit = is_last_scansplit,
                                                             meta_server_sid = tmp_server_sid)
                                                         # Update CACHE_POP_INSWITCH as CACHE_POP_INSWITCH_ACK to reflector (deprecated: w/ clone)
-                                                        actnspec0 = netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone_action_spec_t(self.switchos_sid, reflector_port)
+                                                        actnspec0 = netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone_action_spec_t(self.switchos_sid, reflector_dp2cpserver_port)
                                                         self.client.eg_port_forward_tbl_table_add_with_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached=0 (no inswitch_hdr after clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), snapshot_flag, is_case1, is_lastclone_for_pktloss should be 0 for CACHE_POP_INSWITCH_ACK

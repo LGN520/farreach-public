@@ -38,8 +38,8 @@ client_pipeidxes = []
 for i in range(client_physical_num):
     client_ips.append(str(config.get("client{}".format(i), "client_ip")))
     client_macs.append(str(config.get("client{}".format(i), "client_mac")))
-    client_fpportss.append(str(config.get("client{}".format(i), "client_fpports")))
-    client_pipeidxes.append(int(config.get("client{}".format(i), "client_pipeidxe")))
+    client_fpports.append(str(config.get("client{}".format(i), "client_fpport")))
+    client_pipeidxes.append(int(config.get("client{}".format(i), "client_pipeidx")))
 server_ips = []
 server_macs = []
 server_fpports = []
@@ -48,11 +48,11 @@ server_logical_idxes_list = []
 for i in range(server_physical_num):
     server_ips.append(str(config.get("server{}".format(i), "server_ip")))
     server_macs.append(str(config.get("server{}".format(i), "server_mac")))
-    server_fpportss.append(str(config.get("server{}".format(i), "server_fpports")))
-    server_pipeidxes.append(int(config.get("server{}".format(i), "server_pipeidxe")))
+    server_fpports.append(str(config.get("server{}".format(i), "server_fpport")))
+    server_pipeidxes.append(int(config.get("server{}".format(i), "server_pipeidx")))
     tmpstr = str(config.get("server{}".format(i), "server_logical_idxes"))
     server_logical_idxes = tmpstr.split(':')
-    for j  in range(server_logical_idxes):
+    for j in range(len(server_logical_idxes)):
         server_logical_idxes[j] = int(server_logical_idxes[j])
     print server_logical_idxes
     server_logical_idxes_list.append(server_logical_idxes)
