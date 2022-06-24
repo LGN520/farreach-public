@@ -732,8 +732,8 @@ GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq()
 {}
 
 template<class key_t, class val_t>
-GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key_t key, val_t val, uint32_t seq)
-	: Packet<key_t>(packet_type_t::GETRES_LATEST_SEQ, key), _val(val), _seq(seq)
+GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
+	: Packet<key_t>(packet_type_t::GETRES_LATEST_SEQ, key), _val(val), _seq(seq), _nodeidx_foreval(nodeidx_foreval)
 {
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(seq >= 0);
@@ -754,8 +754,13 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::serialize(char * const data, uint32
 	begin += tmp_shadowtypesize;
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
-	return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t);
-	//begin += sizeof(uint32_t);
+	begin += sizeof(uint32_t);
+	memcpy(begin, (void *)&this->_stat, sizeof(bool));
+	begin += sizeof(bool);
+	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
+	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
+	return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+	//begin += sizeof(uint16_t);
 	//memset(begin, 0, DEBUG_BYTES);
 	//return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + DEBUG_BYTES;
 }
@@ -771,9 +776,14 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::seq() const {
 }
 
 template<class key_t, class val_t>
+uint16_t GetResponseLatestSeq<key_t, val_t>::nodeidx_foreval() const {
+	return this->_nodeidx_foreval;
+}
+
+template<class key_t, class val_t>
 uint32_t GetResponseLatestSeq<key_t, val_t>::size() { // unused
-	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t);
+	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + DEBUG_BYTES;
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
 }
 
 template<class key_t, class val_t>
@@ -885,8 +895,8 @@ void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * d
 // GetResponseDeletedSeq (value must = 0B)
 
 template<class key_t, class val_t>
-GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(key_t key, val_t val, uint32_t seq)
-	: GetResponseLatestSeq<key_t, val_t>(key, val, seq)
+GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, nodeidx_foreval)
 {
 	this->_type = static_cast<optype_t>(PacketType::GETRES_DELETED_SEQ);
 	INVARIANT(this->_val.val_length == 0);

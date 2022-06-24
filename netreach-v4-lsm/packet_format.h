@@ -30,10 +30,10 @@
 // (2) scan/split: specific value (X + 0b0000); not parsed optypes: X + 0b0000
 enum class PacketType {
 	PUTREQ=0x0001, WARMUPREQ=0x0011, LOADREQ=0x0021,
-	GETRES_LATEST_SEQ=0x0003, GETRES_DELETED_SEQ=0x0013, PUTREQ_SEQ=0x0023, PUTREQ_POP_SEQ=0x0033, PUTREQ_SEQ_CASE3=0x0043, PUTREQ_POP_SEQ_CASE3=0x0053,
-	GETRES_LATEST_SEQ_INSWITCH=0x0007, GETRES_DELETED_SEQ_INSWITCH=0x0017, CACHE_POP_INSWITCH=0x0027,
-	GETRES_LATEST_SEQ_INSWITCH_CASE1=0x000f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x001f, PUTREQ_SEQ_INSWITCH_CASE1=0x002f, DELREQ_SEQ_INSWITCH_CASE1=0x003f,
-	CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x000b,
+	PUTREQ_SEQ=0x0003, PUTREQ_POP_SEQ=0x0013, PUTREQ_SEQ_CASE3=0x0023, PUTREQ_POP_SEQ_CASE3=0x0033,
+	CACHE_POP_INSWITCH=0x0007,
+	GETRES_LATEST_SEQ_INSWITCH=0x000f, GETRES_DELETED_SEQ_INSWITCH=0x001f, GETRES_LATEST_SEQ_INSWITCH_CASE1=0x002f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x003f, PUTREQ_SEQ_INSWITCH_CASE1=0x004f, DELREQ_SEQ_INSWITCH_CASE1=0x005f,
+	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b,
 	GETRES=0x0009,
 	PUTREQ_INSWITCH=0x0005,
 	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034,
@@ -242,22 +242,24 @@ class GetRequestNLatest : public GetRequest<key_t> { // ophdr
 };
 
 template<class key_t, class val_t>
-class GetResponseLatestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
+class GetResponseLatestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq + stat_hdr
 	public: 
 		GetResponseLatestSeq();
-		GetResponseLatestSeq(key_t key, val_t val, uint32_t seq);
+		GetResponseLatestSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
 		virtual ~GetResponseLatestSeq(){}
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
 		val_t val() const;
 		uint32_t seq() const;
+		uint16_t nodeidx_foreval() const;
 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		val_t _val;
 		uint32_t _seq;
+		uint16_t _nodeidx_foreval;
 };
 
 template<class key_t, class val_t>
@@ -279,9 +281,9 @@ class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val
 };
 
 template<class key_t, class val_t>
-class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
+class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr
 	public: 
-		GetResponseDeletedSeq(key_t key, val_t val, uint32_t seq);
+		GetResponseDeletedSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
 
 	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);
@@ -535,7 +537,7 @@ class CacheEvictLoaddataInswitch : public CacheEvictLoadfreqInswitch<key_t> { //
 };
 
 template<class key_t, class val_t>
-class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + shadowtype + inswitch_hdr
+class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + val + shadowtype + seq + stat_hdr
 	public: 
 		CacheEvictLoaddataInswitchAck(const char * data, uint32_t recv_size);
 

@@ -39,6 +39,7 @@ size_t transaction_expected_ready_threads = 0;
 bool volatile killed = false;
 
 int transaction_loadfinishserver_udpsock = -1;
+int server_physical_idx = -1;
 
 cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other threads
 
@@ -54,6 +55,14 @@ void kill(int signum);
 int main(int argc, char **argv) {
   parse_ini("config.ini");
   parse_control_ini("control_type.ini");
+
+  if (argc != 2) {
+	printf("Usage: ./server server_physical_idx\n");
+	exit(-1);
+  }
+  server_physical_idx = atoi(argv[1]);
+  INVARIANT(server_physical_idx > 0);
+  INVARIANT(server_physical_idx < server_physical_num);
 
   CPU_ZERO(&nonserverworker_cpuset);
   for (int i = server_cores; i < total_cores; i++) {
@@ -75,9 +84,6 @@ int main(int argc, char **argv) {
   /* (2) transaction phase */
   printf("[main] transaction phase start\n");
 
-  // update transaction_expected_ready_threads
-  transaction_expected_ready_threads = server_num + 3 + 2;
-
   prepare_reflector();
   prepare_server();
   transaction_main();
@@ -98,11 +104,18 @@ int main(int argc, char **argv) {
  */
 
 void transaction_main() {
+	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
+
+	// update transaction_expected_ready_threads
 	// reflector: popserver + worker
-	//// server: server_num * (workers + popclients + snapshotserver + snapshotdataserver) + evictserver
-	// server: server_num * (workers + snapshotserver + snapshotdataserver) + evictserver
+	// server: server_num * (worker + evictserver + snapshotserver + snapshotdataserver)
 	// transaction.main: loadfinishserver
-	transaction_expected_ready_threads = 2 + (3*server_num + 1) + 1;
+	if (server_physical_idx == 0) { // deploy reflector in the first physical server
+		transaction_expected_ready_threads = 2 + 4*current_server_logical_num + 1;
+	}
+	else {
+		transaction_expected_ready_threads = 4*current_server_logical_num + 1;
+	}
 
 	int ret = 0;
 
@@ -110,28 +123,30 @@ void transaction_main() {
 
 	cpu_set_t serverworker_cpuset; // [0, server_cores-1] for each server.worker
 
-	// launch reflector.popserver
 	pthread_t reflector_popserver_thread;
-	ret = pthread_create(&reflector_popserver_thread, nullptr, run_reflector_popserver, nullptr);
-	if (ret) {
-		COUT_N_EXIT("Error of launching reflector.popserver: " << ret);
-	}
-	ret = pthread_setaffinity_np(reflector_popserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-	if (ret) {
-		printf("Error of setaffinity for reflector.popserver; errno: %d\n", errno);
-		exit(-1);
-	}
-
-	// launch reflector.worker
 	pthread_t reflector_worker_thread;
-	ret = pthread_create(&reflector_worker_thread, nullptr, run_reflector_worker, nullptr);
-	if (ret) {
-		COUT_N_EXIT("Error of launching reflector.worker: " << ret);
-	}
-	ret = pthread_setaffinity_np(reflector_worker_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-	if (ret) {
-		printf("Error of setaffinity for reflector.worker; errno: %d\n", errno);
-		exit(-1);
+	if (server_physical_idx == 0) {
+		// launch reflector.popserver
+		ret = pthread_create(&reflector_popserver_thread, nullptr, run_reflector_popserver, nullptr);
+		if (ret) {
+			COUT_N_EXIT("Error of launching reflector.popserver: " << ret);
+		}
+		ret = pthread_setaffinity_np(reflector_popserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+		if (ret) {
+			printf("Error of setaffinity for reflector.popserver; errno: %d\n", errno);
+			exit(-1);
+		}
+
+		// launch reflector.worker
+		ret = pthread_create(&reflector_worker_thread, nullptr, run_reflector_worker, nullptr);
+		if (ret) {
+			COUT_N_EXIT("Error of launching reflector.worker: " << ret);
+		}
+		ret = pthread_setaffinity_np(reflector_worker_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+		if (ret) {
+			printf("Error of setaffinity for reflector.worker; errno: %d\n", errno);
+			exit(-1);
+		}
 	}
 
 	// launch popclients
@@ -151,16 +166,16 @@ void transaction_main() {
 	}*/
 
 	// launch workers (processing normal packets)
-	pthread_t worker_threads[server_num];
-	server_worker_param_t server_worker_params[server_num];
+	pthread_t worker_threads[current_server_logical_num];
+	server_worker_param_t server_worker_params[current_server_logical_num];
 	// check if parameters are cacheline aligned
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		if ((uint64_t)(&(server_worker_params[i])) % CACHELINE_SIZE != 0) {
 			COUT_N_EXIT("wrong parameter address: " << &(server_worker_params[i]));
 		}
 	}
-	for (uint16_t worker_i = 0; worker_i < server_num; worker_i++) {
-		server_worker_params[worker_i].serveridx = worker_i;
+	for (uint16_t worker_i = 0; worker_i < current_server_logical_num; worker_i++) {
+		server_worker_params[worker_i].local_server_logical_idx = worker_i;
 		server_worker_params[worker_i].process_latency_list.clear();
 		server_worker_params[worker_i].wait_latency_list.clear();
 		server_worker_params[worker_i].rocksdb_latency_list.clear();
@@ -180,21 +195,25 @@ void transaction_main() {
 	//COUT_THIS("[tranasaction phase] prepare server worker threads...")
 
 	// launch evictserver
-	pthread_t evictserver_thread;
-	ret = pthread_create(&evictserver_thread, nullptr, run_server_evictserver, nullptr);
-	if (ret) {
-		COUT_N_EXIT("Error of launching server.evictserver: " << ret);
-	}
-	ret = pthread_setaffinity_np(evictserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-	if (ret) {
-		printf("Error of setaffinity for server.evictserver; errno: %d\n", errno);
-		exit(-1);
+	uint16_t evictserver_params[current_server_logical_num]
+	pthread_t evictserver_threads[current_server_logical_num];
+	for (uint16_t evictserver_i = 0; evictserver_i < current_server_logical_num; evictserver_i++) {
+		evictserver_params[evictserver_i] = evictserver_i;
+		ret = pthread_create(&evictserver_threads[evictserver_i], nullptr, run_server_evictserver, &evictserver_params[evictserver_i]);
+		if (ret) {
+			COUT_N_EXIT("Error of launching server.evictserver: " << ret);
+		}
+		ret = pthread_setaffinity_np(evictserver_threads[evictserver_i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+		if (ret) {
+			printf("Error of setaffinity for server.evictserver; errno: %d\n", errno);
+			exit(-1);
+		}
 	}
 
 	// launch snapshotservers
-	uint16_t snapshotserver_params[server_num];
-	pthread_t snapshotserver_threads[server_num];
-	for (uint16_t snapshotserver_i = 0; snapshotserver_i < server_num; snapshotserver_i++) {
+	uint16_t snapshotserver_params[current_server_logical_num];
+	pthread_t snapshotserver_threads[current_server_logical_num];
+	for (uint16_t snapshotserver_i = 0; snapshotserver_i < current_server_logical_num; snapshotserver_i++) {
 		snapshotserver_params[snapshotserver_i] = snapshotserver_i;
 		ret = pthread_create(&snapshotserver_threads[snapshotserver_i], nullptr, run_server_snapshotserver, &snapshotserver_params[snapshotserver_i]);
 		if (ret) {
@@ -208,9 +227,9 @@ void transaction_main() {
 	}
 
 	// launch snapshotdataservers
-	uint16_t snapshotdataserver_params[server_num];
-	pthread_t snapshotdataserver_threads[server_num];
-	for (uint16_t snapshotdataserver_i = 0; snapshotdataserver_i < server_num; snapshotdataserver_i++) {
+	uint16_t snapshotdataserver_params[current_server_logical_num];
+	pthread_t snapshotdataserver_threads[current_server_logical_num];
+	for (uint16_t snapshotdataserver_i = 0; snapshotdataserver_i < current_server_logical_num; snapshotdataserver_i++) {
 		snapshotdataserver_params[snapshotdataserver_i] = snapshotdataserver_i;
 		ret = pthread_create(&snapshotdataserver_threads[snapshotdataserver_i], nullptr, run_server_snapshotdataserver, &snapshotdataserver_params[snapshotdataserver_i]);
 		if (ret) {
@@ -236,8 +255,8 @@ void transaction_main() {
 	// IMPORTANT: avoid CPU contention between server.workers and rocksdb's background threads
 	printf("Reset CPU affinity of rocksdb's background threads\n");
 	char command[256];
-	sprintf(command, "./reset_rocksdb_affinity.sh %d %d %d ", server_cores, total_cores, server_num);
-	for (size_t i = 0; i < server_num; i++) {
+	sprintf(command, "./reset_rocksdb_affinity.sh %d %d %d ", server_worker_corenums[server_physical_idx], server_total_corenums[server_physical_idx], current_server_logical_num);
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		if (i != server_num - 1) {
 			sprintf(command + strlen(command), "%d ", server_worker_lwpid_list[i]);
 		}
@@ -256,8 +275,8 @@ void transaction_main() {
 	std::vector<std::vector<int>> persec_perserver_aggpktcnt;
 	while (!killed) {
 		sleep(1);
-		std::vector<int> cursec_perserver_aggpktcnt(server_num);
-		for (size_t i = 0; i < server_num; i++) {
+		std::vector<int> cursec_perserver_aggpktcnt(current_server_logical_num);
+		for (size_t i = 0; i < current_server_logical_num; i++) {
 			cursec_perserver_aggpktcnt[i] = server_worker_params[i].process_latency_list.size();
 		}
 		persec_perserver_aggpktcnt.push_back(cursec_perserver_aggpktcnt);
@@ -272,7 +291,7 @@ void transaction_main() {
 	std::vector<int> cursec_perserver_pktcnt = persec_perserver_aggpktcnt[0];
 	for (size_t i = 0; i < seccnt; i++) {
 		if (i != 0) {
-			for (size_t j = 0; j < server_num; j++) {
+			for (size_t j = 0; j < current_server_logical_num; j++) {
 				cursec_perserver_pktcnt[j] = persec_perserver_aggpktcnt[i][j] - persec_perserver_aggpktcnt[i-1][j];
 			}
 		}
@@ -280,11 +299,11 @@ void transaction_main() {
 		printf("[sec %d]\n", i);
 
 		int cursec_total_pktcnt = 0;
-		for (size_t j = 0; j < server_num; j++) {
+		for (size_t j = 0; j < current_server_logical_num; j++) {
 			cursec_total_pktcnt += cursec_perserver_pktcnt[j];
 		}
 		printf("per-server load ratio: %d-", cursec_total_pktcnt);
-		for (size_t j = 0; j < server_num; j++) {
+		for (size_t j = 0; j < current_server_logical_num; j++) {
 			printf("%f ", cursec_perserver_pktcnt[j]/double(cursec_total_pktcnt));
 		}
 		printf("\n");
@@ -292,7 +311,7 @@ void transaction_main() {
 		std::vector<double> cursec_wait_latency_list;
 		std::vector<double> cursec_process_latency_list;
 		std::vector<double> cursec_rocksdb_latency_list;
-		for (size_t j = 0; j < server_num; j++) {
+		for (size_t j = 0; j < current_server_logical_num; j++) {
 			int startidx = 0;
 			if (i != 0) startidx = persec_perserver_aggpktcnt[i-1][j];
 			int endidx = persec_perserver_aggpktcnt[i][j];
@@ -321,12 +340,12 @@ void transaction_main() {
 
 	// dump per-server load ratio
 	size_t overall_pktcnt = 0;
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		overall_pktcnt += server_worker_params[i].process_latency_list.size();
 	}
 	COUT_THIS("Server-side overall pktcnt: " << overall_pktcnt);
-	double avg_per_server_thpt = double(overall_pktcnt) / double(server_num);
-	for (size_t i = 0; i < server_num; i++) {
+	double avg_per_server_thpt = double(overall_pktcnt) / double(current_server_logical_num);
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		double tmp_load_balance_ratio = double(server_worker_params[i].process_latency_list.size()) / avg_per_server_thpt;
 		COUT_THIS("Load balance ratio of server " << i << ": " << tmp_load_balance_ratio);
 	}
@@ -345,7 +364,7 @@ void transaction_main() {
 	printf("[overall]\n");
 	dump_latency(worker_wait_latency_list, "worker_wait_latency_list overall");*/
 	std::vector<double> worker_avg_wait_latency_list(server_num);
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		double tmp_avg_wait_latency = 0.0;
 		for (size_t j = 0; j < server_worker_params[i].wait_latency_list.size(); j++) {
 			tmp_avg_wait_latency += server_worker_params[i].wait_latency_list[j];
@@ -369,7 +388,7 @@ void transaction_main() {
 	printf("[overall]\n");
 	dump_latency(worker_process_latency_list, "worker_process_latency_list overall");*/
 	std::vector<double> worker_avg_process_latency_list(server_num);
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		double tmp_avg_process_latency = 0.0;
 		for (size_t j = 0; j < server_worker_params[i].process_latency_list.size(); j++) {
 			tmp_avg_process_latency += server_worker_params[i].process_latency_list[j];
@@ -382,7 +401,7 @@ void transaction_main() {
 	// dump rocksdb latency
 	printf("\nrocksdb latency:\n");
 	std::vector<double> worker_avg_rocksdb_latency_list(server_num);
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		double tmp_avg_rocksdb_latency = 0.0;
 		for (size_t j = 0; j < server_worker_params[i].rocksdb_latency_list.size(); j++) {
 			tmp_avg_rocksdb_latency += server_worker_params[i].rocksdb_latency_list[j];
@@ -394,7 +413,7 @@ void transaction_main() {
 
 	void *status;
 	printf("wait for server.workers\n");
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		int rc = pthread_join(worker_threads[i], &status);
 		if (rc) {
 		  COUT_N_EXIT("Error: unable to join server.worker " << rc);
@@ -411,15 +430,17 @@ void transaction_main() {
 	}
 	printf("server.popclients finish\n");*/
 
-	printf("wait for sever.evictserver\n");
-	int rc = pthread_join(evictserver_thread, &status);
-	if (rc) {
-		COUT_N_EXIT("Error: unable to join server.evictserver " << rc);
+	printf("wait for server.evictserver\n");
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		int rc = pthread_join(evictserver_threads[i], &status);
+		if (rc) {
+			COUT_N_EXIT("Error: unable to join server.evictserver " << rc);
+		}
 	}
 	printf("server.evictserver finish\n");
 
 	printf("wait for server.snapshotservers\n");
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		rc = pthread_join(snapshotserver_threads[i], &status);
 		if (rc) {
 			COUT_N_EXIT("Error: unable to join server.snapshotserver " << rc);
@@ -428,7 +449,7 @@ void transaction_main() {
 	printf("server.snapshotservers finish\n");
 
 	printf("wait for server.snapshotdataservers\n");
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		rc = pthread_join(snapshotdataserver_threads[i], &status);
 		if (rc) {
 			COUT_N_EXIT("Error: unable to join server.snapshotdataserver " << rc);
@@ -436,19 +457,21 @@ void transaction_main() {
 	}
 	printf("server.snapshotdataservers finish\n");
 
-	printf("wait for reflector.popserver\n");
-	rc = pthread_join(reflector_popserver_thread, &status);
-	if (rc) {
-		COUT_N_EXIT("Error: unable to join reflector.popserver " << rc);
-	}
-	printf("reflector.popserver finish\n");
+	if (server_physical_idx == 0) {
+		printf("wait for reflector.popserver\n");
+		rc = pthread_join(reflector_popserver_thread, &status);
+		if (rc) {
+			COUT_N_EXIT("Error: unable to join reflector.popserver " << rc);
+		}
+		printf("reflector.popserver finish\n");
 
-	printf("wait for reflector.worker\n");
-	rc = pthread_join(reflector_worker_thread, &status);
-	if (rc) {
-		COUT_N_EXIT("Error: unable to join reflector.worker " << rc);
+		printf("wait for reflector.worker\n");
+		rc = pthread_join(reflector_worker_thread, &status);
+		if (rc) {
+			COUT_N_EXIT("Error: unable to join reflector.worker " << rc);
+		}
+		printf("reflector.worker finish\n");
 	}
-	printf("reflector.worker finish\n");
 
 	printf("wait for transaction.main.loadfinishserver\n");
 	rc = pthread_join(loadfinishserver_thread, &status);
@@ -475,9 +498,9 @@ void *run_transaction_loadfinishserver(void *param) {
 		}
 
 		printf("Receive loadfinish notification!\n");
-		for (size_t tmpserveridx = 0; tmpserveridx < server_num; tmpserveridx++) {
+		for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
 			// make server-side snapshot of snapshot id 0 if necessary
-			db_wrappers[tmpserveridx].init_snapshot();
+			db_wrappers[tmp_local_server_logical_idx].init_snapshot();
 		}
 		break;
 	}

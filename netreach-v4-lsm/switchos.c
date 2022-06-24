@@ -505,9 +505,9 @@ void *run_switchos_popserver(void *param) {
 
 void *run_switchos_popworker(void *param) {
 	// used by udp socket for cache population
-	sockaddr_in reflector_popserver_addr;
-	set_sockaddr(reflector_popserver_addr, inet_addr(reflector_ip_for_switchos), reflector_popserver_port);
-	int reflector_popserver_addr_len = sizeof(struct sockaddr);
+	sockaddr_in reflector_cp2dpserver_addr;
+	set_sockaddr(reflector_cp2dpserver_addr, inet_addr(reflector_ip_for_switchos), reflector_cp2dpserver_port);
+	int reflector_cp2dpserver_addr_len = sizeof(struct sockaddr);
 
 	// used by udpsocket to communicate with ptf.popserver
 	sockaddr_in ptf_popserver_addr;
@@ -519,12 +519,21 @@ void *run_switchos_popworker(void *param) {
 	set_sockaddr(controller_evictserver_addr, inet_addr(controller_ip_for_switchos), controller_evictserver_port);
 	socklen_t controller_evictserver_addrlen = sizeof(struct sockaddr_in);
 
+	// get valid server logical idxes (TMPDEBUG)
+	std::vector<uint16_t> valid_global_server_logical_idxes;
+	for (int i = 0; i < server_physical_num; i++) {
+		for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
+			uint16_t tmp_global_server_logical_idx = server_logical_idxes_list[i][j];
+			valid_global_server_logical_idxes.push_back(tmp_global_server_logical_idx);
+		}
+	}
+
 	printf("[switchos.popworker] ready\n");
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
 
-	// (1) communicate with controller.evictserver or reflector.popserer
+	// (1) communicate with controller.evictserver or reflector.cp2dpserer
 	// send CACHE_POP_INSWITCH and CACHE_EVICT to controller
 	char pktbuf[MAX_BUFSIZE];
 	uint32_t pktsize = 0;
@@ -556,6 +565,16 @@ void *run_switchos_popworker(void *param) {
 			if (tmp_cache_pop_ptr != NULL) {
 				//cache_pop_t *tmp_cache_pop_ptr = switchos_cache_pop_ptrs[switchos_tail_for_pop];
 				//INVARIANT(tmp_cache_pop_ptr != NULL);
+				
+				// TMPDEBUG
+				bool is_valid = false;
+				for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
+					if (tmp_cache_pop_ptr->serveridx() == valid_global_server_logical_idxes[i]) {
+						is_valid = true;
+						break;
+					}
+				}
+				INVARIANT(is_valid == true);
 				
 				if (switchos_cached_keyidx_map.find(tmp_cache_pop_ptr->key()) != switchos_cached_keyidx_map.end()) {
 					printf("Error: populating a key %x cached at %u from server %d\n", tmp_cache_pop_ptr->key().keyhihi, switchos_cached_keyidx_map[tmp_cache_pop_ptr->key()], int(tmp_cache_pop_ptr->serveridx()));
@@ -597,7 +616,7 @@ void *run_switchos_popworker(void *param) {
 						for (size_t i = 0; i < switchos_sample_cnt; i++) {
 							cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(switchos_cached_keyarray[sampled_idxes[i]], sampled_idxes[i]);
 							pktsize = tmp_cache_evict_loadfreq_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
-							udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_popserver_addr, reflector_popserver_addr_len, "switchos.popworker.popclient_for_reflector");
+							udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 						}
 
 						// loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
@@ -664,7 +683,7 @@ void *run_switchos_popworker(void *param) {
 						//printf("send CACHE_EVICT_LOADDATA_INSWITCH to reflector\n");
 						cache_evict_loaddata_inswitch_t tmp_cache_evict_loaddata_inswitch_req(cur_evictkey, switchos_evictidx);
 						pktsize = tmp_cache_evict_loaddata_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
-						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_popserver_addr, reflector_popserver_addr_len, "switchos.popworker.popclient_for_reflector");
+						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
 						bool is_timeout = false;
 						is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
@@ -790,7 +809,7 @@ void *run_switchos_popworker(void *param) {
 				pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 
 				while (true) {
-					udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_popserver_addr, reflector_popserver_addr_len, "switchos.popworker.popclient");
+					udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient");
 
 					// loop until receiving corresponding ACK (ignore unmatched ACKs which are duplicate ACKs of previous cache population)
 					bool is_timeout = false;
@@ -876,14 +895,14 @@ void *run_switchos_snapshotserver(void *param) {
 	dynamic_array_t ptf_largebuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	
 	// for consistent snapshot data to controller
-	dynamic_array_t tmp_sendbuf_list[server_num];
-	for (uint16_t i = 0; i < server_num; i++) {
-		tmp_sendbuf_list[i].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
+	dynamic_array_t tmp_sendbuf_list[server_total_logical_num];
+	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num; tmp_global_server_logical_idx++) {
+		tmp_sendbuf_list[tmp_global_server_logical_idx].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	}
-	int tmp_send_bytes[server_num];
-	memset((void *)tmp_send_bytes, 0, server_num*sizeof(int));
-	int tmp_record_cnts[server_num];
-	memset((void *)tmp_record_cnts, 0, server_num*sizeof(int));
+	int tmp_send_bytes[server_total_logical_num];
+	memset((void *)tmp_send_bytes, 0, server_total_logical_num*sizeof(int));
+	int tmp_record_cnts[server_total_logical_num];
+	memset((void *)tmp_record_cnts, 0, server_total_logical_num*sizeof(int));
 	dynamic_array_t sendbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 
 	printf("[switchos.snapshotserver] ready\n");
@@ -1157,10 +1176,10 @@ void *run_switchos_snapshotserver(void *param) {
 			// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes, per-server data>
 			// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
-			memset((void *)tmp_send_bytes, 0, server_num*sizeof(int));
-			memset((void *)tmp_record_cnts, 0, server_num*sizeof(int));
-			for (size_t i = 0; i < server_num; i++) {
-				tmp_sendbuf_list[i].clear();
+			memset((void *)tmp_send_bytes, 0, server_total_logical_num*sizeof(int));
+			memset((void *)tmp_record_cnts, 0, server_total_logical_num*sizeof(int));
+			for (size_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num; tmp_global_server_logical_idx++) {
+				tmp_sendbuf_list[tmp_global_server_logical_idx].clear();
 			}
 			sendbuf.clear();
 			for (uint32_t tmpidx = 0; tmpidx < switchos_cached_empty_index_backup; tmpidx++) { // prepare per-server per-record data
@@ -1177,7 +1196,7 @@ void *run_switchos_snapshotserver(void *param) {
 				tmp_record_cnts[tmp_serveridx] += 1;
 			}
 			int total_bytes = sizeof(int) + sizeof(int32_t); // leave 4B for SNAPSHOT_DATA and total_bytes
-			for (uint16_t tmp_serveridx = 0; tmp_serveridx < server_num; tmp_serveridx++) {
+			for (uint16_t tmp_serveridx = 0; tmp_serveridx < server_total_logical_num; tmp_serveridx++) {
 				if (tmp_record_cnts[tmp_serveridx] > 0) {
 					int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int);
 					sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_perserver_bytes, sizeof(int32_t));
@@ -1264,7 +1283,7 @@ void *run_switchos_specialcaseserver(void *param) {
 					}
 				default:
 					{
-						printf("[switchos.specialcaseserver] Invalid packet type from reflector.worker.specialcaseclient!\n");
+						printf("[switchos.specialcaseserver] Invalid packet type from reflector.dp2cpserver.specialcaseclient!\n");
 						exit(-1);
 					}
 			} // end of switch
