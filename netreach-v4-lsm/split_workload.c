@@ -50,12 +50,12 @@ int main(int argc, char **argv) {
 	}*/
 
 	if (op == 0) { // load
-		splitnum = server_num;
+		splitnum = server_total_logical_num;
 		memcpy(output_dir, server_load_workload_dir, 256);
 		memcpy(filename, raw_load_workload_filename, 256);
 	}
 	else if (op == 1) { // transaction / run
-		splitnum = client_num;
+		splitnum = client_total_logical_num;
 		memcpy(output_dir, client_workload_dir, 256);
 		memcpy(filename, raw_run_workload_filename, 256);
 	}
@@ -73,15 +73,15 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	pthread_t split_worker_threads[client_num];
-	int split_worker_params[client_num];
-	for (size_t i = 0; i < client_num; i++) {
+	pthread_t split_worker_threads[client_total_logical_num];
+	int split_worker_params[client_total_logical_num];
+	for (size_t i = 0; i < client_total_logical_num; i++) {
 		split_worker_params[i] = i;
 		pthread_create(&split_worker_threads[i], nullptr, run_split_worker, (void *)&split_worker_params[i]);
 	}
 	COUT_THIS("start to split...\n");
 
-	for (size_t i = 0; i < client_num; i++) {
+	for (size_t i = 0; i < client_total_logical_num; i++) {
 		pthread_join(split_worker_threads[i], NULL);
 	}
 	COUT_THIS("finish split...\n");
@@ -92,15 +92,15 @@ void *run_split_worker(void *param) {
 
 	char command[256];
 	if (op == 0) { // load
-		int per_loader_linenum = linenum / splitnum / load_factor;
-		int line_startidx = splitidx * load_factor * per_loader_linenum + 1;
+		int per_loader_linenum = linenum / splitnum / server_load_factor;
+		int line_startidx = splitidx * server_load_factor * per_loader_linenum + 1;
 		int line_endidx = 0;
 
-		char *output_names[load_factor] = {nullptr};
+		char *output_names[server_load_factor] = {nullptr};
 		//FILE *fps[splitnum * load_factor] = {nullptr};
-		for (uint32_t i = 0; i < load_factor; i++) {
-			int globalidx = splitidx * load_factor + i;
-			if (globalidx == splitnum * load_factor - 1) {
+		for (uint32_t i = 0; i < server_load_factor; i++) {
+			int globalidx = splitidx * server_load_factor + i;
+			if (globalidx == splitnum * server_load_factor - 1) {
 				line_endidx = linenum;
 			}
 			else {
@@ -121,7 +121,7 @@ void *run_split_worker(void *param) {
 			line_startidx = line_endidx + 1;
 		}
 
-		for (uint32_t i = 0; i < splitnum * load_factor; i++) {
+		for (uint32_t i = 0; i < server_load_factor; i++) {
 			delete [] output_names[i];
 			output_names[i] = nullptr;
 			//close(fps[i]);

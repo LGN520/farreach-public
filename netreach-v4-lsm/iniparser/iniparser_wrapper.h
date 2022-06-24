@@ -2,7 +2,11 @@
 #define INIPARSER_WRAPPER_H
 
 #include <stdint.h>
+#include <vector>
+#include <string>
+
 #include "iniparser.h"
+#include "../helper.h"
 
 class IniparserWrapper {
 	public:
@@ -29,7 +33,7 @@ class IniparserWrapper {
 		uint32_t get_client_logical_num(uint32_t client_physical_idx);
 		const char *get_client_ip(uint32_t client_physical_idx);
 		void get_client_mac(uint8_t* macaddr, uint32_t client_physical_idx);
-		const char *get_client_fpport(uint3_t client_physical_idx);
+		const char *get_client_fpport(uint32_t client_physical_idx);
 		uint32_t get_client_pipeidx(uint32_t client_physical_idx);
 		
 		// server common configuration

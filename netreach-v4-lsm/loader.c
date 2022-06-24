@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
 
 	RocksdbWrapper::prepare_rocksdb();
 
-	db_wrappers = new RocksdbWrapper[server_num];
+	db_wrappers = new RocksdbWrapper[server_total_logical_num];
 	INVARIANT(db_wrappers != NULL);
 
 	run_server();
@@ -60,7 +60,7 @@ void run_server() {
 	running = false;
 
 	bool is_existing = false;
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < server_total_logical_num; i++) {
   		is_existing = db_wrappers[i].open(i);
 	}
 	if (is_existing) {
@@ -69,9 +69,9 @@ void run_server() {
 	}
 
 	// Launch loaders
-	pthread_t loader_threads[server_num * load_factor];
-	size_t loader_ids[server_num * load_factor];
-	for (size_t loader_i = 0; loader_i < server_num * load_factor; loader_i++) {
+	pthread_t loader_threads[server_total_logical_num * server_load_factor];
+	size_t loader_ids[server_total_logical_num * server_load_factor];
+	for (size_t loader_i = 0; loader_i < server_total_logical_num * server_load_factor; loader_i++) {
 		loader_ids[loader_i] = loader_i;
 		ret = pthread_create(&loader_threads[loader_i], nullptr, run_loader, (void *)&loader_ids[loader_i]);
 		if (ret) {
@@ -80,13 +80,13 @@ void run_server() {
 	}
 
 	COUT_THIS("[ycsb_loader] prepare loaders...")
-	while (ready_threads < server_num * load_factor) sleep(1);
+	while (ready_threads < server_total_logical_num * server_load_factor) sleep(1);
 
 	running = true;
 	COUT_THIS("[ycsb_loader] start running...")
 
 	void *status;
-	for (size_t i = 0; i < server_num * load_factor; i++) {
+	for (size_t i = 0; i < server_total_logical_num * server_load_factor; i++) {
 		int rc = pthread_join(loader_threads[i], &status);
 		if (rc) {
 			COUT_N_EXIT("Error:unable to join," << rc);
@@ -94,7 +94,7 @@ void run_server() {
 	}
 
 	COUT_THIS("[ycsb_loader] all loaders finish -> make snapshot...")
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < server_total_logical_num; i++) {
   		db_wrappers[i].make_snapshot();
 		db_wrappers[i].stop_snapshot();
 	}
@@ -103,7 +103,7 @@ void run_server() {
 void *run_loader(void * param) {
 	// Parse param
 	size_t loader_id = *((size_t *)param);
-	uint16_t worker_id = static_cast<uint16_t>(loader_id/load_factor);
+	uint16_t worker_id = static_cast<uint16_t>(loader_id/server_load_factor);
 	printf("loader_id: %d, worker_id: %d\n", int(loader_id), int(worker_id));
 
 	/*bool is_existing = db_wrappers[thread_id].open(thread_id);
@@ -147,7 +147,7 @@ void *run_loader(void * param) {
 		}
 
 		tmpkey = iter->key();
-		uint32_t tmp_worker_id = tmpkey.get_hashpartition_idx(partition_num, server_num);
+		uint32_t tmp_worker_id = tmpkey.get_hashpartition_idx(partition_num, server_total_logical_num);
 		tmpval = iter->val();	
 		if (iter->type() == optype_t(packet_type_t::PUTREQ)) {	// INESRT
 #ifndef CORRECTNESS_TEST
@@ -184,9 +184,9 @@ void *run_loader(void * param) {
 		std::map<uint16_t, std::pair<std::vector<netreach_key_t>, std::vector<val_t>>> tmpmap;
 		for (int i = 0; i < tmpmaxidx; i++) {
 #ifdef USE_HASH
-			uint16_t tmp_worker_id = iter->keys()[i].get_hashpartition_idx(partition_count, server_num);
+			uint16_t tmp_worker_id = iter->keys()[i].get_hashpartition_idx(partition_count, server_total_logical_num);
 #elif defined USE_RANGE
-			uint16_t tmp_worker_id = iter->keys()[i].get_rangepartition_idx(server_num);
+			uint16_t tmp_worker_id = iter->keys()[i].get_rangepartition_idx(server_total_logical_num);
 #endif
 			if (tmpmap.find(tmp_worker_id) == tmpmap.end()) {
 				std::vector<netreach_key_t> tmpkeyvec;

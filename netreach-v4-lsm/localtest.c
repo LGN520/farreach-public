@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
 
   RocksdbWrapper::prepare_rocksdb();
 
-  db_wrappers = new RocksdbWrapper[server_num];
+  db_wrappers = new RocksdbWrapper[server_total_logical_num];
   INVARIANT(db_wrappers != NULL);
 
   load();
@@ -162,15 +162,15 @@ void run_server(size_t sec) {
 	running = false;
 
 	bool is_existing = false;
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < server_total_logical_num; i++) {
   		is_existing = db_wrappers[i].open(i);
 	}
 
 	// Launch loaders
 	if (!is_existing) {
-		pthread_t loader_threads[server_num * load_factor];
-		size_t loader_ids[server_num * load_factor];
-		for (size_t loader_i = 0; loader_i < server_num * load_factor; loader_i++) {
+		pthread_t loader_threads[server_total_logical_num * server_load_factor];
+		size_t loader_ids[server_total_logical_num * server_load_factor];
+		for (size_t loader_i = 0; loader_i < server_total_logical_num * server_load_factor; loader_i++) {
 			loader_ids[loader_i] = loader_i;
 			ret = pthread_create(&loader_threads[loader_i], nullptr, run_loader, (void *)&loader_ids[loader_i]);
 			if (ret) {
@@ -180,7 +180,7 @@ void run_server(size_t sec) {
 
 		// wait for loaders
 		void *loader_status;
-		for (size_t i = 0; i < server_num * load_factor; i++) {
+		for (size_t i = 0; i < server_total_logical_num * server_load_factor; i++) {
 			int loader_rc = pthread_join(loader_threads[i], &loader_status);
 			if (loader_rc) {
 			  COUT_N_EXIT("Error:unable to join," << loader_rc);
@@ -189,17 +189,17 @@ void run_server(size_t sec) {
 	}
 
 	// Prepare fg params
-	pthread_t threads[server_num];
-	sfg_param_t sfg_params[server_num];
+	pthread_t threads[server_total_logical_num];
+	sfg_param_t sfg_params[server_total_logical_num];
 	// check if parameters are cacheline aligned
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < server_total_logical_num; i++) {
 		if ((uint64_t)(&(sfg_params[i])) % CACHELINE_SIZE != 0) {
 			COUT_N_EXIT("wrong parameter address: " << &(sfg_params[i]));
 		}
 	}
 
 	// Launch workers
-	for (size_t worker_i = 0; worker_i < server_num; worker_i++) {
+	for (size_t worker_i = 0; worker_i < server_total_logical_num; worker_i++) {
     	sfg_params[worker_i].throughput = 0;
 		sfg_params[worker_i].thread_id = static_cast<uint16_t>(worker_i);
 		ret = pthread_create(&threads[worker_i], nullptr, run_sfg, (void *)&sfg_params[worker_i]);
@@ -209,16 +209,16 @@ void run_server(size_t sec) {
 	}
 
 	COUT_THIS("[localtest] prepare server foreground threads...")
-	while (ready_threads < server_num) sleep(1);
+	while (ready_threads < server_total_logical_num) sleep(1);
 
 	running = true;
 	COUT_THIS("[localtest] start running...")
-	std::vector<size_t> tput_history(server_num, 0);
+	std::vector<size_t> tput_history(server_total_logical_num, 0);
 	size_t current_sec = 0;
 	while (current_sec < sec) {
 		sleep(1);
 		uint64_t tput = 0;
-		for (size_t i = 0; i < server_num; i++) {
+		for (size_t i = 0; i < server_total_logical_num; i++) {
 		  tput += sfg_params[i].throughput - tput_history[i];
 		  tput_history[i] = sfg_params[i].throughput;
 		}
@@ -235,7 +235,7 @@ void run_server(size_t sec) {
 	COUT_THIS("[localtest] Throughput(op/s): " << throughput / sec);
 
 	void *status;
-	for (size_t i = 0; i < server_num; i++) {
+	for (size_t i = 0; i < server_total_logical_num; i++) {
 		int rc = pthread_join(threads[i], &status);
 		if (rc) {
 		  COUT_N_EXIT("Error:unable to join," << rc);
@@ -246,11 +246,11 @@ void run_server(size_t sec) {
 void *run_loader(void * param) {
   // Parse param
   size_t loader_id = *((size_t *)param);
-  uint16_t worker_id = static_cast<uint16_t>(loader_id/load_factor);
+  uint16_t worker_id = static_cast<uint16_t>(loader_id/server_load_factor);
   printf("loader_id: %d, worker_id: %d\n", int(loader_id), int(worker_id));
 
-  size_t exist_key_n_per_thread = exist_keys.size() / server_num;
-  size_t exist_key_n_per_loader = exist_keys.size() / server_num / load_factor;
+  size_t exist_key_n_per_thread = exist_keys.size() / server_total_logical_num;
+  size_t exist_key_n_per_loader = exist_keys.size() / server_total_logical_num / server_load_factor;
   size_t exist_key_start = worker_id * exist_key_n_per_thread + loader_id * exist_key_n_per_loader;
   //size_t exist_key_end = exist_key_start + exist_key_n_per_loader;
 
@@ -271,7 +271,7 @@ void *run_sfg(void * param) {
   std::mt19937 gen(rd());
   std::uniform_real_distribution<> ratio_dis(0, 1);
 
-  size_t exist_key_n_per_thread = exist_keys.size() / server_num;
+  size_t exist_key_n_per_thread = exist_keys.size() / server_total_logical_num;
   size_t exist_key_start = thread_id * exist_key_n_per_thread;
   size_t exist_key_end = (thread_id + 1) * exist_key_n_per_thread;
   //std::vector<netreach_key_t> op_keys(exist_keys.begin() + exist_key_start,
@@ -281,7 +281,7 @@ void *run_sfg(void * param) {
   size_t op_keys_size = op_exist_keys_size;
 
   if (non_exist_keys.size() > 0) {
-    size_t non_exist_key_n_per_thread = non_exist_keys.size() / server_num;
+    size_t non_exist_key_n_per_thread = non_exist_keys.size() / server_total_logical_num;
     size_t non_exist_key_start = thread_id * non_exist_key_n_per_thread,
            non_exist_key_end = (thread_id + 1) * non_exist_key_n_per_thread;
     //op_keys.insert(op_keys.end(), non_exist_keys.begin() + non_exist_key_start,

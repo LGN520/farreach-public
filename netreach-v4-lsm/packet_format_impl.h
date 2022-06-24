@@ -728,13 +728,14 @@ uint32_t GetRequestNLatest<key_t>::serialize(char * const data, uint32_t max_siz
 
 template<class key_t, class val_t>
 GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq()
-	: Packet<key_t>(), _val(), _seq(0)
+	: PutRequestSeq<key_t, val_t>(), _stat(true), _nodeidx_foreval(0)
 {}
 
 template<class key_t, class val_t>
 GetResponseLatestSeq<key_t, val_t>::GetResponseLatestSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
-	: Packet<key_t>(packet_type_t::GETRES_LATEST_SEQ, key), _val(val), _seq(seq), _nodeidx_foreval(nodeidx_foreval)
+	: PutRequestSeq<key_t, val_t>(key, val, seq), _stat(true), _nodeidx_foreval(nodeidx_foreval)
 {
+	this->_type = optype_t(packet_type_t::GETRES_LATEST_SEQ);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(seq >= 0);
 }
@@ -766,13 +767,8 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::serialize(char * const data, uint32
 }
 
 template<class key_t, class val_t>
-val_t GetResponseLatestSeq<key_t, val_t>::val() const {
-	return this->_val;
-}
-
-template<class key_t, class val_t>
-uint32_t GetResponseLatestSeq<key_t, val_t>::seq() const {
-	return this->_seq;
+bool GetResponseLatestSeq<key_t, val_t>::stat() const {
+	return this->_stat;
 }
 
 template<class key_t, class val_t>
@@ -796,14 +792,15 @@ void GetResponseLatestSeq<key_t, val_t>::deserialize(const char * data, uint32_t
 
 template<class key_t, class val_t>
 GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1()
-	: GetResponseLatestSeq<key_t, val_t>(), _idx(0), _stat(false)
+	: GetResponseLatestSeq<key_t, val_t>(), _idx(0), _stat(false), _nodeidx_foreval(0)
 {
 }
 
 template<class key_t, class val_t>
 GetResponseLatestSeqInswitchCase1<key_t, val_t>::GetResponseLatestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat) 
-	: GetResponseLatestSeq<key_t, val_t>(key, val, seq), _idx(idx), _stat(stat)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, 0), _idx(idx)
 {
+	this->_stat = stat;
 	this->_type = static_cast<optype_t>(PacketType::GETRES_LATEST_SEQ_INSWITCH_CASE1);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(seq >= 0);
@@ -898,6 +895,7 @@ template<class key_t, class val_t>
 GetResponseDeletedSeq<key_t, val_t>::GetResponseDeletedSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
 	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, nodeidx_foreval)
 {
+	this->_stat = false;
 	this->_type = static_cast<optype_t>(PacketType::GETRES_DELETED_SEQ);
 	INVARIANT(this->_val.val_length == 0);
 	INVARIANT(seq >= 0);
@@ -934,7 +932,14 @@ GetResponseDeletedSeqInswitchCase1<key_t, val_t>::GetResponseDeletedSeqInswitchC
 
 template<class key_t, class val_t>
 PutRequestSeq<key_t, val_t>::PutRequestSeq()
-	: GetResponseLatestSeq<key_t, val_t>()
+	: Packet<key_t>(), _val(), _seq(0)
+{
+	this->_type = optype_t(packet_type_t::PUTREQ_SEQ);
+}
+
+template<class key_t, class val_t>
+PutRequestSeq<key_t, val_t>::PutRequestSeq(key_t key, val_t val, uint32_t seq)
+	: Packet<key_t>(packet_type_t::PUTREQ_SEQ, key), _val(val), _seq(seq)
 {
 }
 
@@ -945,6 +950,21 @@ PutRequestSeq<key_t, val_t>::PutRequestSeq(const char * data, uint32_t recv_size
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::PUTREQ_SEQ);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
 	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t, class val_t>
+val_t PutRequestSeq<key_t, val_t>::val() const {
+	return this->_val;
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestSeq<key_t, val_t>::seq() const {
+	return this->_seq;
+}
+
+template<class key_t, class val_t>
+uint32_t PutRequestSeq<key_t, val_t>::size() {
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t);
 }
 
 template<class key_t, class val_t>
@@ -1190,7 +1210,7 @@ void ScanRequestSplit<key_t>::deserialize(const char * data, uint32_t recv_size)
 
 template<class key_t, class val_t>
 CachePop<key_t, val_t>::CachePop(key_t key, val_t val, uint32_t seq, uint16_t serveridx)
-	: GetResponseLatestSeq<key_t, val_t>(key, val, seq), _serveridx(serveridx)
+	: PutRequestSeq<key_t, val_t>(key, val, seq), _serveridx(serveridx)
 {
 	this->_type = static_cast<optype_t>(PacketType::CACHE_POP);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -1259,7 +1279,7 @@ void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 
 template<class key_t, class val_t>
 CachePopInswitch<key_t, val_t>::CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx)
-	: GetResponseLatestSeq<key_t, val_t>(key, val, seq), _freeidx(freeidx)
+	: PutRequestSeq<key_t, val_t>(key, val, seq), _freeidx(freeidx)
 {
 	this->_type = static_cast<optype_t>(PacketType::CACHE_POP_INSWITCH);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -1329,14 +1349,15 @@ uint32_t CachePopInswitchAck<key_t>::serialize(char * const data, uint32_t max_s
 
 template<class key_t, class val_t>
 CacheEvict<key_t, val_t>::CacheEvict() 
-	: GetResponseLatestSeq<key_t, val_t>(), _stat(false), _serveridx(0)
+	: GetResponseLatestSeq<key_t, val_t>(), _serveridx(0)
 {
 }
 
 template<class key_t, class val_t>
 CacheEvict<key_t, val_t>::CacheEvict(key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx) 
-	: GetResponseLatestSeq<key_t, val_t>(key, val, seq), _stat(stat), _serveridx(serveridx)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, 0), _serveridx(serveridx)
 {
+	this->_stat = stat;
 	this->_type = static_cast<optype_t>(PacketType::CACHE_EVICT);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(seq >= 0);
@@ -1349,11 +1370,6 @@ CacheEvict<key_t, val_t>::CacheEvict(const char * data, uint32_t recv_size) {
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_EVICT);
 	INVARIANT(this->_seq >= 0);
 	INVARIANT(this->_serveridx >= 0);
-}
-
-template<class key_t, class val_t>
-bool CacheEvict<key_t, val_t>::stat() const {
-	return _stat;
 }
 
 template<class key_t, class val_t>
@@ -1502,7 +1518,7 @@ LoadAck<key_t>::LoadAck(const char * data, uint32_t recv_size) {
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::LOADACK);
 }
 
-// CachePopAck
+// CachePopAck (only used by end-hosts)
 
 template<class key_t>
 CachePopAck<key_t>::CachePopAck(key_t key) 

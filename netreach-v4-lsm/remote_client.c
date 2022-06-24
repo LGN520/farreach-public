@@ -141,7 +141,7 @@ void run_benchmark() {
 	}
 
 	COUT_THIS("[client] prepare clients ...");
-	while (ready_threads < client_num) sleep(1);
+	while (ready_threads < current_client_logical_num) sleep(1);
 	COUT_THIS("[client] all clients ready...");
 
 	// used for dynamic workload
@@ -208,7 +208,7 @@ void run_benchmark() {
 						for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 							cursec_perclient_aggpktcnts[local_client_logical_idx] = fg_params[local_client_logical_idx].process_latency_list.size();
 							cursec_perclient_aggcachehitcnts[local_client_logical_idx] = fg_params[local_client_logical_idx].nodeidx_pktcnt_map[0xFFFF];
-							std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_num);
+							std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_total_logical_num);
 							for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
 								cursec_curclient_perserver_aggcachemisscnts[global_server_logical_idx] = fg_params[local_client_logical_idx].nodeidx_pktcnt_map[global_server_logical_idx];
 							}
@@ -271,7 +271,7 @@ void run_benchmark() {
 				cursec_perclient_pktcnts[local_client_logical_idx] = persec_perclient_aggpktcnts[i][local_client_logical_idx] - persec_perclient_aggpktcnts[i-1][local_client_logical_idx];
 				cursec_perclient_cachehitcnts[local_client_logical_idx] = persec_perclient_aggcachehitcnts[i][local_client_logical_idx] - persec_perclient_aggcachehitcnts[i-1][local_client_logical_idx];
 				for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
-					cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][serveridx] = persec_perclient_perserver_aggcachemisscnts[i][local_client_logical_idx][global_server_logical_idx] - persec_perclient_perserver_aggcachemisscnts[i-1][local_client_logical_idx][global_server_logical_idx];
+					cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx] = persec_perclient_perserver_aggcachemisscnts[i][local_client_logical_idx][global_server_logical_idx] - persec_perclient_perserver_aggcachemisscnts[i-1][local_client_logical_idx][global_server_logical_idx];
 				}
 			}
 		}
@@ -299,12 +299,12 @@ void run_benchmark() {
 
 		printf("per-client throughput (MOPS): ");
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
-			printf("%f ", double(cursec_perclient_pktcntslocal_client_logical_idx)/(onesec_usecs/1000/1000)/1024.0/1024.0);
+			printf("%f ", double(cursec_perclient_pktcnts[local_client_logical_idx])/(onesec_usecs/1000/1000)/1024.0/1024.0);
 		}
 #endif
 		int cursec_total_pktcnt = 0;
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
-			cursec_total_pktcnt += cursec_perclient_pktcntslocal_client_logical_idx;
+			cursec_total_pktcnt += cursec_perclient_pktcnts[local_client_logical_idx];
 		}
 		printf("\noverall totalpktcnt: %d, throughput (MOPS): %f\n", cursec_total_pktcnt, double(cursec_total_pktcnt)/(onesec_usecs/1000/1000)/1024.0/1024.0);
 
@@ -312,8 +312,8 @@ void run_benchmark() {
 		printf("per-client cachehit rate: ");
 		int cursec_total_cachehitcnt = 0;
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
-			cursec_total_cachehitcnt += cursec_perclient_cachehitcntslocal_client_logical_idx;
-			printf("%f ", double(cursec_perclient_cachehitcntslocal_client_logical_idx)/double(cursec_perclient_pktcntslocal_client_logical_idx));
+			cursec_total_cachehitcnt += cursec_perclient_cachehitcnts[local_client_logical_idx];
+			printf("%f ", double(cursec_perclient_cachehitcnts[local_client_logical_idx])/double(cursec_perclient_pktcntslocal_client_logical_idx));
 		}
 		printf("\noverall cachehit cnt: %d, cachehit rate: %f\n", cursec_total_cachehitcnt, double(cursec_total_cachehitcnt)/double(cursec_total_pktcnt));
 
@@ -381,21 +381,21 @@ void run_benchmark() {
 		}
 		total_latency_list.insert(total_latency_list.end(), fg_params[local_client_logical_idx].process_latency_list.begin(), fg_params[local_client_logical_idx].process_latency_list.end());
 	}
-	std::vector<double> perclient_avgsend_latency_list(client_num);
-	std::vector<double> perclient_avgwait_latency_list(client_num);
+	std::vector<double> perclient_avgsend_latency_list(current_client_logical_num);
+	std::vector<double> perclient_avgwait_latency_list(current_client_logical_num);
 	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 		perclient_avgsend_latency_list[local_client_logical_idx] = 0.0;
 		perclient_avgwait_latency_list[local_client_logical_idx] = 0.0;
 	}
 	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
-		for (size_t j = 0; j < fg_paramslocal_client_logical_idx.send_latency_list.size(); j++) {
-			perclient_avgsend_latency_listlocal_client_logical_idx += fg_paramslocal_client_logical_idx.send_latency_list[j];
-			perclient_avgwait_latency_listlocal_client_logical_idx += fg_paramslocal_client_logical_idx.wait_latency_list[j];
+		for (size_t j = 0; j < fg_params[local_client_logical_idx].send_latency_list.size(); j++) {
+			perclient_avgsend_latency_list[local_client_logical_idx] += fg_params[local_client_logical_idx].send_latency_list[j];
+			perclient_avgwait_latency_list[local_client_logical_idx] += fg_params[local_client_logical_idx].wait_latency_list[j];
 		}
 	}
 	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
-		perclient_avgsend_latency_listlocal_client_logical_idx /= fg_paramslocal_client_logical_idx.send_latency_list.size();
-		perclient_avgwait_latency_listlocal_client_logical_idx /= fg_paramslocal_client_logical_idx.wait_latency_list.size();
+		perclient_avgsend_latency_list[local_client_logical_idx] /= fg_params[local_client_logical_idx].send_latency_list.size();
+		perclient_avgwait_latency_list[local_client_logical_idx] /= fg_params[local_client_logical_idx].wait_latency_list.size();
 	}
 
 	// Dump latency statistics
@@ -431,7 +431,7 @@ void run_benchmark() {
 	COUT_THIS("cache hit pktcnt: " << nodeidx_pktcnt_map[0xFFFF]);
 	printf("per-server pktcnt: ");
 	for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
-		if (i != server_num - 1) {
+		if (global_server_logical_idx != server_total_logical_num - 1) {
 			printf("%d ", nodeidx_pktcnt_map[global_server_logical_idx]);
 		}
 		else {

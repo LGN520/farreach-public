@@ -55,6 +55,7 @@ typedef PacketType packet_type_t;
 typedef uint16_t optype_t;
 
 template<class key_t> class ScanRequestSplit;
+template<class key_t, class val_t> class PutRequestSeq;
 
 template<class key_t>
 class Packet {
@@ -242,7 +243,7 @@ class GetRequestNLatest : public GetRequest<key_t> { // ophdr
 };
 
 template<class key_t, class val_t>
-class GetResponseLatestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq + stat_hdr
+class GetResponseLatestSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=true)
 	public: 
 		GetResponseLatestSeq();
 		GetResponseLatestSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
@@ -250,20 +251,18 @@ class GetResponseLatestSeq : public Packet<key_t> { // ophdr + val + shadowtype 
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
-		val_t val() const;
-		uint32_t seq() const;
+		bool stat() const;
 		uint16_t nodeidx_foreval() const;
 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-		val_t _val;
-		uint32_t _seq;
+		bool _stat; // must be true for GetResponseLatestSeq
 		uint16_t _nodeidx_foreval;
 };
 
 template<class key_t, class val_t>
-class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat_hdr + clone_hdr
+class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat_hdr (nodeidx_foreval=0) + clone_hdr
 	public: 
 		GetResponseLatestSeqInswitchCase1();
 		GetResponseLatestSeqInswitchCase1(key_t key, val_t val, uint32_t seq, uint16_t idx, bool stat);
@@ -278,15 +277,17 @@ class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint16_t _idx;
 		bool _stat;
+		uint16_t _nodeidx_foreval;
 };
 
 template<class key_t, class val_t>
-class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr
+class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=false)
 	public: 
 		GetResponseDeletedSeq(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
 
 	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		// NOTE: _stat must be false for GetResponseDeletedSeq
 };
 
 template<class key_t, class val_t>
@@ -297,15 +298,22 @@ class GetResponseDeletedSeqInswitchCase1 : public GetResponseLatestSeqInswitchCa
 };
 
 template<class key_t, class val_t>
-class PutRequestSeq : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq
+class PutRequestSeq : public Packet<key_t> { // ophdr + val + shadowtype + seq
 	public: 
 		PutRequestSeq();
+		PutRequestSeq(key_t key, val_t val, uint32_t seq);
 		PutRequestSeq(const char * data, uint32_t recv_size);
+
+		val_t val() const;
+		uint32_t seq() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
 	protected:
+		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		val_t _val;
+		uint32_t _seq;
 };
 
 template<class key_t, class val_t>
@@ -390,7 +398,7 @@ class ScanRequestSplit : public ScanRequest<key_t> { // ophdr + scanhdr + splith
 
 // NOTE: only used in end-hosts
 template<class key_t, class val_t>
-class CachePop : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + seq + serveridx
+class CachePop : public PutRequestSeq<key_t, val_t> { // ophdr + val + seq + serveridx
 	public: 
 		CachePop(key_t key, val_t val, uint32_t seq, uint16_t serveridx);
 		CachePop(const char * data, uint32_t recv_size);
@@ -406,7 +414,7 @@ class CachePop : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + se
 };
 
 template<class key_t, class val_t>
-class CachePopInswitch : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr
+class CachePopInswitch : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr
 	public: 
 		CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx);
 
@@ -437,14 +445,12 @@ class CacheEvict : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + 
 		CacheEvict(const char * data, uint32_t recv_size);
 		virtual ~CacheEvict(){}
 
-		bool stat() const;
 		uint16_t serveridx() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-		bool _stat;
 		uint16_t _serveridx;
 };
 

@@ -151,10 +151,10 @@ void IniparserWrapper::get_client_mac(uint8_t *macaddr, uint32_t client_physical
 	parse_mac(macaddr, client_mac);
 }
 
-const char *InfpportarserWrapper::get_client_fpport(uint32_t client_physical_idx) {
+const char *IniparserWrapper::get_client_fpport(uint32_t client_physical_idx) {
 	char key[256];
 	sprintf(key, "client%u:client_fpport", client_physical_idx);
-	const char *client_fpport = infpportarser_getstring(ini, key, nullptr);
+	const char *client_fpport = iniparser_getstring(ini, key, nullptr);
 	if (client_fpport == nullptr) {
 		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
@@ -183,6 +183,15 @@ uint32_t IniparserWrapper::get_server_load_factor() {
 		exit(-1);
 	}
 	return uint32_t(tmp);
+}
+
+short IniparserWrapper::get_server_worker_port_start() {
+	int tmp = iniparser_getint(ini, "server:server_worker_port_start", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:server_worker_port_start]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
 }
 
 short IniparserWrapper::get_server_evictserver_port_start() {
@@ -245,10 +254,10 @@ uint32_t IniparserWrapper::get_server_total_corenum(uint32_t server_physical_idx
 	return uint32_t(tmp);
 }
 
-std::vector<uint16_t> get_server_logical_idxes(uint32_t server_physical_idx) {
+std::vector<uint16_t> IniparserWrapper::get_server_logical_idxes(uint32_t server_physical_idx) {
 	char key[256];
 	sprintf(key, "server%u:server_logical_idxes", server_physical_idx);
-	const char *tmpstr = infpportarser_getstring(ini, key, nullptr);
+	const char *tmpstr = iniparser_getstring(ini, key, nullptr);
 	if (tmpstr == nullptr) {
 		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
@@ -257,7 +266,7 @@ std::vector<uint16_t> get_server_logical_idxes(uint32_t server_physical_idx) {
 	std::vector<uint16_t> result;
 	const char *begin = tmpstr;
 	while (true) {
-		char *end = strchr(begin, ':');
+		char *end = strchr((char *)begin, ':');
 		if (end == NULL) {
 			break;
 		}
@@ -323,7 +332,7 @@ const char *IniparserWrapper::get_server_ip_for_controller(uint32_t server_physi
 	char key[256];
 	sprintf(key, "server%u:server_ip_for_controller", server_physical_idx);
 	const char *server_ip_for_controller = iniparser_getstring(ini, key, nullptr);
-	if (server_ip == nullptr) {
+	if (server_ip_for_controller == nullptr) {
 		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
 	}
@@ -334,7 +343,7 @@ const char *IniparserWrapper::get_controller_ip_for_server(uint32_t server_physi
 	char key[256];
 	sprintf(key, "server%u:controller_ip_for_server", server_physical_idx);
 	const char *controller_ip_for_server = iniparser_getstring(ini, key, nullptr);
-	if (server_ip == nullptr) {
+	if (controller_ip_for_server == nullptr) {
 		printf("Invalid entry of [%s]\n", key);
 		exit(-1);
 	}

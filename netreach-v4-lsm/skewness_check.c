@@ -63,24 +63,24 @@ void run_benchmark() {
 	int ret = 0;
 
 	// Prepare fg params
-	pthread_t threads[client_num];
-	fg_param_t fg_params[client_num];
+	pthread_t threads[client_total_logical_num];
+	fg_param_t fg_params[client_total_logical_num];
 	// check if parameters are cacheline aligned
-	for (size_t i = 0; i < client_num; i++) {
+	for (size_t i = 0; i < client_total_logical_num; i++) {
 		if ((uint64_t)(&(fg_params[i])) % CACHELINE_SIZE != 0) {
 			COUT_N_EXIT("wrong parameter address: " << &(fg_params[i]));
 		}
 	}
 
 	// Launch checkers
-	for (uint16_t checker_i = 0; checker_i < client_num; checker_i++) {
+	for (uint16_t checker_i = 0; checker_i < client_total_logical_num; checker_i++) {
 		fg_params[checker_i].thread_id = checker_i;
 		fg_params[checker_i].frequency_map.clear();
 		int ret = pthread_create(&threads[checker_i], nullptr, run_checker,
 														 (void *)&fg_params[checker_i]);
 	}
 
-	while (finish_threads < client_num) sleep(1);
+	while (finish_threads < client_total_logical_num) sleep(1);
 	COUT_THIS("[client] all checkers finish!");
 
 	/* Process statistics */
@@ -88,7 +88,7 @@ void run_benchmark() {
 
 	std::map<netreach_key_t, int> total_frequency_map;
 	std::map<netreach_key_t, int> union_hot_frequency_map;
-	for (uint16_t checker_i = 0; checker_i < client_num; checker_i++) {
+	for (uint16_t checker_i = 0; checker_i < client_total_logical_num; checker_i++) {
 		//std::vector<std::pair<netreach_key_t, int>> hotfrequency_list;
 		int hot_keynum = 0;
 		int hot_sumfrequency = 0;

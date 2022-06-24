@@ -98,7 +98,7 @@ short transaction_loadfinishserver_port = -1;
 // each physical server
 std::vector<uint32_t> server_worker_corenums;
 std::vector<uint32_t> server_total_corenums;
-std::vector<std::vector<uint16_t> server_logical_idxes_list;
+std::vector<std::vector<uint16_t>> server_logical_idxes_list;
 std::vector<const char*> server_ips;
 std::vector<uint8_t *> server_macs;
 std::vector<const char*> server_fpports;
@@ -277,14 +277,16 @@ inline void parse_ini(const char* config_file) {
 			printf("[ERROR] server[%d] worker corenum %d < thread num %d, which could incur CPU contention!\n", server_physical_idx, server_worker_corenums[server_physical_idx], server_logical_idxes_list[server_physical_idx].size());
 		}
 		for (size_t i = 0; i < server_logical_idxes_list[server_physical_idx].size(); i++) {
-			if (server_logical_idxes_list[server_physical_idx] >= server_total_logical_num) {
+			if (server_logical_idxes_list[server_physical_idx][i] >= server_total_logical_num) {
 				printf("[ERROR] server logical idx %d cannot >= server_total_logical_num %d\n", server_logical_idxes_list[server_physical_idx][i], server_total_logical_num);
 				exit(-1);
 			}
 		}
 		tmp_server_total_logical_num += server_logical_idxes_list[server_physical_idx].size();
 		server_ips.push_back(ini.get_server_ip(server_physical_idx));
-		server_macs.push_back(ini.get_server_mac(server_physical_idx));
+		uint8_t *tmp_server_mac = new uint8_t[6];
+		ini.get_server_mac(tmp_server_mac, server_physical_idx);
+		server_macs.push_back(tmp_server_mac);
 		server_fpports.push_back(ini.get_server_fpport(server_physical_idx));
 		server_pipeidxes.push_back(ini.get_server_pipeidx(server_physical_idx));
 		server_ip_for_controller_list.push_back(ini.get_server_ip_for_controller(server_physical_idx));
@@ -363,7 +365,7 @@ inline void parse_ini(const char* config_file) {
 	RUN_SPLIT_DIR(client_workload_dir, workload_name, client_total_logical_num);
 	//max_sending_rate *= server_num;
 	//per_client_per_period_max_sending_rate = max_sending_rate / client_num / (1 * 1000 * 1000 / rate_limit_period);
-	perserver_keyrange = 64*1024 / server_num; // 2^16 / server_num
+	perserver_keyrange = 64*1024 / server_total_logical_num; // 2^16 / server_num
 
 	printf("raw_load_workload_filename for loading phase: %s\n", raw_load_workload_filename);
 	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);
@@ -441,6 +443,12 @@ void free_common() {
 		if (client_macs[client_physical_idx] != NULL) {
 			delete [] client_macs[client_physical_idx];
 			client_macs[client_physical_idx] = NULL;
+		}
+	}
+	for (uint32_t server_physical_idx = 0; server_physical_idx < server_physical_num; server_physical_idx++) {
+		if (server_macs[server_physical_idx] != NULL) {
+			delete [] server_macs[server_physical_idx];
+			server_macs[server_physical_idx] = NULL;
 		}
 	}
 }

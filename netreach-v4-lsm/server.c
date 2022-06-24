@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
   INVARIANT(server_physical_idx < server_physical_num);
 
   CPU_ZERO(&nonserverworker_cpuset);
-  for (int i = server_cores; i < total_cores; i++) {
+  for (int i = server_worker_corenums[server_physical_idx]; i < server_total_corenums[server_physical_idx]; i++) {
 	CPU_SET(i, &nonserverworker_cpuset);
   }
   //int ret = sched_setaffinity(0, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
@@ -123,28 +123,28 @@ void transaction_main() {
 
 	cpu_set_t serverworker_cpuset; // [0, server_cores-1] for each server.worker
 
-	pthread_t reflector_popserver_thread;
-	pthread_t reflector_worker_thread;
+	pthread_t reflector_cp2dpserver_thread;
+	pthread_t reflector_dp2cpserver_thread;
 	if (server_physical_idx == 0) {
-		// launch reflector.popserver
-		ret = pthread_create(&reflector_popserver_thread, nullptr, run_reflector_popserver, nullptr);
+		// launch reflector.cp2dpserver
+		ret = pthread_create(&reflector_cp2dpserver_thread, nullptr, run_reflector_cp2dpserver, nullptr);
 		if (ret) {
-			COUT_N_EXIT("Error of launching reflector.popserver: " << ret);
+			COUT_N_EXIT("Error of launching reflector.cp2dpserver: " << ret);
 		}
-		ret = pthread_setaffinity_np(reflector_popserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+		ret = pthread_setaffinity_np(reflector_cp2dpserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
 		if (ret) {
-			printf("Error of setaffinity for reflector.popserver; errno: %d\n", errno);
+			printf("Error of setaffinity for reflector.cp2dpserver; errno: %d\n", errno);
 			exit(-1);
 		}
 
-		// launch reflector.worker
-		ret = pthread_create(&reflector_worker_thread, nullptr, run_reflector_worker, nullptr);
+		// launch reflector.dp2cpserver
+		ret = pthread_create(&reflector_dp2cpserver_thread, nullptr, run_reflector_dp2cpserver, nullptr);
 		if (ret) {
-			COUT_N_EXIT("Error of launching reflector.worker: " << ret);
+			COUT_N_EXIT("Error of launching reflector.dp2cpserver: " << ret);
 		}
-		ret = pthread_setaffinity_np(reflector_worker_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+		ret = pthread_setaffinity_np(reflector_dp2cpserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
 		if (ret) {
-			printf("Error of setaffinity for reflector.worker; errno: %d\n", errno);
+			printf("Error of setaffinity for reflector.dp2cpserver; errno: %d\n", errno);
 			exit(-1);
 		}
 	}
@@ -185,7 +185,7 @@ void transaction_main() {
 		}
 
 		CPU_ZERO(&serverworker_cpuset);
-		CPU_SET(worker_i % server_cores, &serverworker_cpuset);
+		CPU_SET(worker_i % server_worker_corenums[server_physical_idx], &serverworker_cpuset);
 		ret = pthread_setaffinity_np(worker_threads[worker_i], sizeof(serverworker_cpuset), &serverworker_cpuset);
 		if (ret) {
 			printf("Error of setaffinity for server.worker; errno: %d\n", errno);
@@ -195,7 +195,7 @@ void transaction_main() {
 	//COUT_THIS("[tranasaction phase] prepare server worker threads...")
 
 	// launch evictserver
-	uint16_t evictserver_params[current_server_logical_num]
+	uint16_t evictserver_params[current_server_logical_num];
 	pthread_t evictserver_threads[current_server_logical_num];
 	for (uint16_t evictserver_i = 0; evictserver_i < current_server_logical_num; evictserver_i++) {
 		evictserver_params[evictserver_i] = evictserver_i;
@@ -257,7 +257,7 @@ void transaction_main() {
 	char command[256];
 	sprintf(command, "./reset_rocksdb_affinity.sh %d %d %d ", server_worker_corenums[server_physical_idx], server_total_corenums[server_physical_idx], current_server_logical_num);
 	for (size_t i = 0; i < current_server_logical_num; i++) {
-		if (i != server_num - 1) {
+		if (i != current_server_logical_num - 1) {
 			sprintf(command + strlen(command), "%d ", server_worker_lwpid_list[i]);
 		}
 		else {
@@ -363,7 +363,7 @@ void transaction_main() {
 	}
 	printf("[overall]\n");
 	dump_latency(worker_wait_latency_list, "worker_wait_latency_list overall");*/
-	std::vector<double> worker_avg_wait_latency_list(server_num);
+	std::vector<double> worker_avg_wait_latency_list(current_server_logical_num);
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		double tmp_avg_wait_latency = 0.0;
 		for (size_t j = 0; j < server_worker_params[i].wait_latency_list.size(); j++) {
@@ -387,7 +387,7 @@ void transaction_main() {
 	}
 	printf("[overall]\n");
 	dump_latency(worker_process_latency_list, "worker_process_latency_list overall");*/
-	std::vector<double> worker_avg_process_latency_list(server_num);
+	std::vector<double> worker_avg_process_latency_list(current_server_logical_num);
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		double tmp_avg_process_latency = 0.0;
 		for (size_t j = 0; j < server_worker_params[i].process_latency_list.size(); j++) {
@@ -400,7 +400,7 @@ void transaction_main() {
 
 	// dump rocksdb latency
 	printf("\nrocksdb latency:\n");
-	std::vector<double> worker_avg_rocksdb_latency_list(server_num);
+	std::vector<double> worker_avg_rocksdb_latency_list(current_server_logical_num);
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		double tmp_avg_rocksdb_latency = 0.0;
 		for (size_t j = 0; j < server_worker_params[i].rocksdb_latency_list.size(); j++) {
@@ -441,7 +441,7 @@ void transaction_main() {
 
 	printf("wait for server.snapshotservers\n");
 	for (size_t i = 0; i < current_server_logical_num; i++) {
-		rc = pthread_join(snapshotserver_threads[i], &status);
+		int rc = pthread_join(snapshotserver_threads[i], &status);
 		if (rc) {
 			COUT_N_EXIT("Error: unable to join server.snapshotserver " << rc);
 		}
@@ -450,7 +450,7 @@ void transaction_main() {
 
 	printf("wait for server.snapshotdataservers\n");
 	for (size_t i = 0; i < current_server_logical_num; i++) {
-		rc = pthread_join(snapshotdataserver_threads[i], &status);
+		int rc = pthread_join(snapshotdataserver_threads[i], &status);
 		if (rc) {
 			COUT_N_EXIT("Error: unable to join server.snapshotdataserver " << rc);
 		}
@@ -458,23 +458,23 @@ void transaction_main() {
 	printf("server.snapshotdataservers finish\n");
 
 	if (server_physical_idx == 0) {
-		printf("wait for reflector.popserver\n");
-		rc = pthread_join(reflector_popserver_thread, &status);
+		printf("wait for reflector.cp2dpserver\n");
+		int rc = pthread_join(reflector_cp2dpserver_thread, &status);
 		if (rc) {
-			COUT_N_EXIT("Error: unable to join reflector.popserver " << rc);
+			COUT_N_EXIT("Error: unable to join reflector.cp2dpserver " << rc);
 		}
-		printf("reflector.popserver finish\n");
+		printf("reflector.cp2dpserver finish\n");
 
-		printf("wait for reflector.worker\n");
-		rc = pthread_join(reflector_worker_thread, &status);
+		printf("wait for reflector.dp2cpserver\n");
+		rc = pthread_join(reflector_dp2cpserver_thread, &status);
 		if (rc) {
-			COUT_N_EXIT("Error: unable to join reflector.worker " << rc);
+			COUT_N_EXIT("Error: unable to join reflector.dp2cpserver " << rc);
 		}
-		printf("reflector.worker finish\n");
+		printf("reflector.dp2cpserver finish\n");
 	}
 
 	printf("wait for transaction.main.loadfinishserver\n");
-	rc = pthread_join(loadfinishserver_thread, &status);
+	int rc = pthread_join(loadfinishserver_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error: unable to join transaction.main.loadfinishserver " << rc);
 	}
@@ -484,6 +484,8 @@ void transaction_main() {
 }
 
 void *run_transaction_loadfinishserver(void *param) {
+	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
+
 	printf("[transaction.main.loadfinishserver] ready\n");
 	transaction_ready_threads++;
 

@@ -11,22 +11,24 @@
 #include "../rocksdb_wrapper.h"
 
 int main(int argc, char **argv) {
-	if (argc != 2) {
-		printf("Usgae: ./server_recover latest_snapshotid\n");
+	if (argc != 3) {
+		printf("Usgae: ./server_recover server_physical_idx latest_snapshotid\n");
 		exit(-1);
 	}
 
-	int snapshotid = atoi(argv[1]);
+	int server_physical_idx = atoi(argv[1]);
+	COUT_VAR(server_physical_idx);
+	int snapshotid = atoi(argv[2]);
 	COUT_VAR(snapshotid);
 
 	IniparserWrapper ini;
 	ini.load("../config.ini");
-	uint32_t server_num = ini.get_server_num();
-	COUT_VAR(server_num);
+
+	std::vector<uint16_t> current_server_logical_idxes = ini.get_server_logical_idxes(server_physical_idx);
 
 	RocksdbWrapper::prepare_rocksdb();
 
-	for (uint16_t i = 0; i < server_num; i++) {
+	for (uint16_t i = 0; i < current_server_logical_idxes.size(); i++) {
 		// overwrite snapshotid
 		std::string snapshotid_path;
 		get_server_snapshotid_path(snapshotid_path, i);

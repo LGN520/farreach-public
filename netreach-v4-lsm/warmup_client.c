@@ -47,7 +47,6 @@ int main(int argc, char **argv) {
 
 void run_warmuper() {
 	int res = 0;
-	short src_port = client_port_start;
 
 	// workload parser
 	ParserIterator *iter = NULL;
@@ -68,7 +67,7 @@ void run_warmuper() {
 	int clientsock = -1;
 	create_udpsock(clientsock, false, "warmup_client");
 	struct sockaddr_in server_addr;
-	set_sockaddr(server_addr, inet_addr(server_ip), server_port_start);
+	set_sockaddr(server_addr, inet_addr(server_ips[0]), server_worker_port_start);
 	socklen_t server_addrlen = sizeof(struct sockaddr_in);
 
 	while (true) {

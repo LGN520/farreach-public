@@ -151,7 +151,8 @@ LDFLAGS += $(EXTRA_LDFLAGS)
 
 ##############################################################################
 
-TARGETS := prepare localtest split_workload remote_client loader server switchos controller skewness_check recover/controller_get_snapshotid recover/server_recover warmup_client loadfinish_client
+TARGETS := prepare split_workload remote_client loader server switchos controller skewness_check recover/controller_get_snapshotid warmup_client loadfinish_client
+#recover/server_recover localtest
 #dpdktest_client dpdktest_server socktest_client socktest_server
 
 prepare: prepare.o $(UTILS_OBJECTS)

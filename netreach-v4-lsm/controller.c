@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
 	// NOTE: now we deploy controller in the same physical machine with servers
 	// If we use an individual physical machine, we can comment all the setaffinity statements
 	CPU_ZERO(&nonserverworker_cpuset);
-	for (int i = server_cores; i < total_cores; i++) {
+	for (int i = server_worker_corenums[0]; i < server_total_corenums[0]; i++) {
 		CPU_SET(i, &nonserverworker_cpuset);
 	}
 	//ret = sched_setaffinity(0, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
@@ -400,8 +400,8 @@ void *run_controller_snapshotclient(void *param) {
 
 	struct sockaddr_in server_snapshotserver_addr_list[server_total_logical_num];
 	socklen_t server_snapshotserver_addrlen_list[server_total_logical_num];
-	struct sockaddr_in server_snapshotdataserver_addr_list[server_num];
-	socklen_t server_snapshotdataserver_addrlen_list[server_num];
+	struct sockaddr_in server_snapshotdataserver_addr_list[server_total_logical_num];
+	socklen_t server_snapshotdataserver_addrlen_list[server_total_logical_num];
 	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num; tmp_global_server_logical_idx++) {
 		int tmp_server_physical_idx = -1;
 		for (int i = 0; i < server_physical_num; i++) {
@@ -425,13 +425,13 @@ void *run_controller_snapshotclient(void *param) {
 	cleanup_subthread_param_for_switchos.udpsock = controller_snapshotclient_for_switchos_udpsock;
 	cleanup_subthread_param_for_switchos.dstaddr = switchos_snapshotserver_addr;
 	cleanup_subthread_param_for_switchos.dstaddrlen = switchos_snapshotserver_addrlen;
-	pthread_t cleanup_subthread_for_server_list[server_num];
-	snapshotclient_subthread_param_t cleanup_subthread_param_for_server_list[server_num];
+	pthread_t cleanup_subthread_for_server_list[server_total_logical_num];
+	snapshotclient_subthread_param_t cleanup_subthread_param_for_server_list[server_total_logical_num];
 	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num; tmp_global_server_logical_idx++) {
 		cleanup_subthread_param_for_server_list[tmp_global_server_logical_idx].udpsock = controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx];
 		cleanup_subthread_param_for_server_list[tmp_global_server_logical_idx].dstaddr = server_snapshotserver_addr_list[tmp_global_server_logical_idx];
 		cleanup_subthread_param_for_server_list[tmp_global_server_logical_idx].dstaddrlen = server_snapshotserver_addrlen_list[tmp_global_server_logical_idx];
-		cleanup_subthread_param_for_server_list[tmp_global_server_logical_idx].serveridx = tmp_global_server_logical_idx;
+		cleanup_subthread_param_for_server_list[tmp_global_server_logical_idx].global_server_logical_idx = tmp_global_server_logical_idx;
 	}
 
 	// prepare for concurrent SNAPSHOT_START (param.serveridx not used)
@@ -446,7 +446,7 @@ void *run_controller_snapshotclient(void *param) {
 		start_subthread_param_for_server_list[tmp_global_server_logical_idx].udpsock = controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx];
 		start_subthread_param_for_server_list[tmp_global_server_logical_idx].dstaddr = server_snapshotserver_addr_list[tmp_global_server_logical_idx];
 		start_subthread_param_for_server_list[tmp_global_server_logical_idx].dstaddrlen = server_snapshotserver_addrlen_list[tmp_global_server_logical_idx];
-		start_subthread_param_for_server_list[tmp_global_server_logical_idx].serveridx = i;
+		start_subthread_param_for_server_list[tmp_global_server_logical_idx].global_server_logical_idx = tmp_global_server_logical_idx;
 	}
 
 	// prepare for concurrent SNAPSHOT_SENDDATA
@@ -456,7 +456,7 @@ void *run_controller_snapshotclient(void *param) {
 		senddata_subthread_param_for_server_list[tmp_global_server_logical_idx].udpsock = controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx];
 		senddata_subthread_param_for_server_list[tmp_global_server_logical_idx].dstaddr = server_snapshotdataserver_addr_list[tmp_global_server_logical_idx];
 		senddata_subthread_param_for_server_list[tmp_global_server_logical_idx].dstaddrlen = server_snapshotdataserver_addrlen_list[tmp_global_server_logical_idx];
-		senddata_subthread_param_for_server_list[tmp_global_server_logical_idx].serveridx = tmp_global_server_logical_idx;
+		senddata_subthread_param_for_server_list[tmp_global_server_logical_idx].global_server_logical_idx = tmp_global_server_logical_idx;
 	}
 
 	// get valid server logical idxes
@@ -722,7 +722,7 @@ void *run_controller_snapshotclient_senddata_subthread(void *param) {
 	int recvsize = 0;
 	bool is_timeout = false;
 	while (true) {
-		udpsendlarge_udpfrag(subthread_param.udpsock, controller_snapshotclient_for_server_databuf_list[subthread_param.serveridx].array(), controller_snapshotclient_for_server_databuf_list[subthread_param.global_server_logical_idx].size(), 0, &subthread_param.dstaddr, subthread_param.dstaddrlen, "controller.snapshotclient.senddata_subthread");
+		udpsendlarge_udpfrag(subthread_param.udpsock, controller_snapshotclient_for_server_databuf_list[subthread_param.global_server_logical_idx].array(), controller_snapshotclient_for_server_databuf_list[subthread_param.global_server_logical_idx].size(), 0, &subthread_param.dstaddr, subthread_param.dstaddrlen, "controller.snapshotclient.senddata_subthread");
 
 		// wait for SNAPSHOT_SENDDATA_ACK
 		is_timeout = udprecvfrom(subthread_param.udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient.senddata_subthread");

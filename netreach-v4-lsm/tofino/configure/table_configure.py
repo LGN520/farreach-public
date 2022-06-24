@@ -1268,7 +1268,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             tmp_devport = reflector_dp2cpserver_port
             tmp_client_ip = client_ips[0]
             tmp_client_mac = client_macs[0]
-            tmp_client_port = 1111 # not cared by servers
+            tmp_client_port = 0 # not cared by servers
             tmp_reflector_ip = server_ips[0]
             tmp_reflector_mac = server_macs[0]
             actnspec1 = netbufferv4_update_ipmac_srcport_client2switch_action_spec_t(\

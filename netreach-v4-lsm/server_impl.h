@@ -241,7 +241,7 @@ void *run_server_worker(void * param) {
   // open rocksdb
   bool is_existing = db_wrappers[local_server_logical_idx].open(global_server_logical_idx);
   if (!is_existing) {
-	  printf("[server.worker %d-%d] you need to run loader before server\n"m local_server_logical_idx, global_server_logical_idx);
+	  printf("[server.worker %d-%d] you need to run loader before server\n", local_server_logical_idx, global_server_logical_idx);
 	  //exit(-1);
   }
 
@@ -744,7 +744,7 @@ void *run_server_evictserver(void *param) {
 		delete tmp_cache_evict_ptr;
 		tmp_cache_evict_ptr = NULL;
 	}
-	close(server_evictserver_udpsock);
+	close(server_evictserver_udpsock_list[local_server_logical_idx]);
 	pthread_exit(nullptr);
 }
 
@@ -756,7 +756,7 @@ void *run_server_snapshotserver(void *param) {
 	socklen_t controller_snapshotclient_addrlen = sizeof(struct sockaddr_in);
 	//bool with_controller_snapshotclient_addr = false;
 
-	printf("[server.snapshotserver %d] ready\n", serveridx);
+	printf("[server.snapshotserver %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
 	transaction_ready_threads += 1;
 
 	while (!transaction_running) {}
@@ -882,7 +882,7 @@ void *run_server_snapshotdataserver(void *param) {
 			int32_t tmp_serverbytes = *((int32_t *)(recvbuf.array() + sizeof(int) + sizeof(int)));
 			INVARIANT(recvbuf.size() == tmp_serverbytes);
 			uint16_t tmp_serveridx = *((uint16_t *)(recvbuf.array() + sizeof(int) + sizeof(int) + sizeof(int32_t)));
-			INVARIANT(tmp_serveridx == serveridx);
+			INVARIANT(tmp_serveridx == global_server_logical_idx);
 			int32_t tmp_recordcnt = *((int32_t *)(recvbuf.array() + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
 
 			std::map<netreach_key_t, snapshot_record_t> tmp_inswitch_snapshot;
