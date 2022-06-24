@@ -12,7 +12,7 @@ num_query = 100 * 1000 * 1000
 zipf = 0.99
 
 # six 10-sec periods in 60 secs
-period_num = 6
+period_num = 7
 # change popularity of 200 keys in each period
 evict_num = 200
 #evict_num = 10000
