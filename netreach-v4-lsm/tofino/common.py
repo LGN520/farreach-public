@@ -54,7 +54,6 @@ for i in range(server_physical_num):
     server_logical_idxes = tmpstr.split(':')
     for j in range(len(server_logical_idxes)):
         server_logical_idxes[j] = int(server_logical_idxes[j])
-    print server_logical_idxes
     server_logical_idxes_list.append(server_logical_idxes)
 
 control_config = ConfigParser.ConfigParser()

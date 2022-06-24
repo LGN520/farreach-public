@@ -34,7 +34,7 @@
 
 #include "common_impl.h"
 
-//#define DUMP_BUF
+#define DUMP_BUF
 
 struct alignas(CACHELINE_SIZE) FGParam {
 	uint16_t local_client_logical_idx;
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
 		exit(-1);
 	}
 	client_physical_idx = atoi(argv[1]);
-	INVARIANT(client_physical_idx > 0);
+	INVARIANT(client_physical_idx >= 0);
 	INVARIANT(client_physical_idx < client_physical_num);
 
 	// prepare for clients

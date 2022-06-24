@@ -268,7 +268,7 @@ std::vector<uint16_t> IniparserWrapper::get_server_logical_idxes(uint32_t server
 	while (true) {
 		char *end = strchr((char *)begin, ':');
 		if (end == NULL) {
-			break;
+			end = (char *)tmpstr + strlen(tmpstr);
 		}
 
 		INVARIANT(end - begin > 0);
@@ -277,7 +277,7 @@ std::vector<uint16_t> IniparserWrapper::get_server_logical_idxes(uint32_t server
 		result.push_back(tmpidx);
 
 		begin = end + 1;
-		if (begin - tmpstr > strlen(tmpstr)) {
+		if (begin - tmpstr >= strlen(tmpstr)) {
 			break;
 		}
 	}

@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 	exit(-1);
   }
   server_physical_idx = atoi(argv[1]);
-  INVARIANT(server_physical_idx > 0);
+  INVARIANT(server_physical_idx >= 0);
   INVARIANT(server_physical_idx < server_physical_num);
 
   CPU_ZERO(&nonserverworker_cpuset);

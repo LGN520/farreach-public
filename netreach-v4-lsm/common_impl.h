@@ -295,8 +295,8 @@ inline void parse_ini(const char* config_file) {
 		printf("server_worker_corenums[%d]: %d\n", server_physical_idx, server_worker_corenums[server_physical_idx]);
 		printf("server_total_corenums[%d]: %d\n", server_physical_idx, server_total_corenums[server_physical_idx]);
 		printf("server_logical_idxes_list[%d]: ", server_physical_idx);
-		for (size_t i = 0; i < server_logical_idxes_list.size(); i++) {
-			printf("%d ", server_logical_idxes_list[i]);
+		for (size_t i = 0; i < server_logical_idxes_list[server_physical_idx].size(); i++) {
+			printf("%d ", server_logical_idxes_list[server_physical_idx][i]);
 		}
 		printf("\n");
 		printf("server_ips[%d]: %s\n", server_physical_idx, server_ips[server_physical_idx]);
@@ -331,8 +331,8 @@ inline void parse_ini(const char* config_file) {
 	switchos_popserver_port = ini.get_switchos_popserver_port();
 	switchos_snapshotserver_port = ini.get_switchos_snapshotserver_port();
 	switchos_specialcaseserver_port = ini.get_switchos_specialcaseserver_port();
-	switchos_ptf_popserver_port = ini.get_switchos_popserver_port();
-	switchos_ptf_snapshotserver_port = ini.get_switchos_snapshotserver_port();
+	switchos_ptf_popserver_port = ini.get_switchos_ptf_popserver_port();
+	switchos_ptf_snapshotserver_port = ini.get_switchos_ptf_snapshotserver_port();
 
 	COUT_VAR(switch_partition_count);
 	COUT_VAR(switch_kv_bucket_num);

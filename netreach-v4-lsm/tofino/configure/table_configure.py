@@ -353,8 +353,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 matchspec0 = netbufferv4_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
-                # recirculate to the first pipeline for atomicity of setting snapshot flag
-                actnspec0 = netbufferv4_recirculate_pkt_action_spec_t(self.recirPorts[0])
+                # recirculate to the pipeline of the first physical client for atomicity of setting snapshot flag
+                actnspec0 = netbufferv4_recirculate_pkt_action_spec_t(self.recirPorts[client_pipeidxes[0]])
                 self.client.recirculate_tbl_table_add_with_recirculate_pkt(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
@@ -1265,10 +1265,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # (2) eg_intr_md.egress_port of cloned GETRES_CASE1s is set by clone_e2e, which must be the devport towards switchos (aka reflector)
             # (3) eg_intr_md.egress_port of the first ACK for cache population/eviction is set by partition_tbl in ingress pipeline, which will be finally dropped -> update ip/mac/srcport or not is not important
             # (4) eg_intr_md.egress_port of the cloned ACK for cache population/eviction is set by clone_e2e, which must be the devport towards switchos (aka reflector)
-            tmp_devport = reflector_dp2cpserver_port
+            tmp_devport = self.server_devports[0] 
             tmp_client_ip = client_ips[0]
             tmp_client_mac = client_macs[0]
-            tmp_client_port = 0 # not cared by servers
+            tmp_client_port = 123 # not cared by servers
             tmp_reflector_ip = server_ips[0]
             tmp_reflector_mac = server_macs[0]
             actnspec1 = netbufferv4_update_ipmac_srcport_client2switch_action_spec_t(\

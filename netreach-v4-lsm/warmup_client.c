@@ -31,7 +31,7 @@
 
 #include "common_impl.h"
 
-//#define DUMP_BUF
+#define DUMP_BUF
 
 void run_warmuper();
 

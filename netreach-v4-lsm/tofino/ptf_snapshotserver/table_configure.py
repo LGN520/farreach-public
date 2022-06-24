@@ -48,9 +48,6 @@ switchos_ptf_snapshotserver_udpsock.bind(("127.0.0.1", switchos_ptf_snapshotserv
 
 flags = netbufferv4_register_flags_t(read_hw_sync=True)
 
-port_pipeidx_map = {} # mapping between port and pipeline
-pipeidx_ports_map = {} # mapping between pipeline and ports
-
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
@@ -71,37 +68,36 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         elif re.search("0x2234|0x3234", hex(board_type)):
             self.platform_type = "montara"
 
-        # get the device ports from front panel ports
-        self.devPorts = []
-        for fpPort in fp_ports:
-            port, chnl = fpPort.split("/")
-            devPort = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-            self.devPorts.append(devPort)
+        # force to recirculate to ingress pipeline of the first physical client fpport
+        single_ingress_pipeidx = client_pipeidxes[0]
 
-        port_pipeidx_map[self.devPorts[0]] = ingress_pipeidx
-        port_pipeidx_map[self.devPorts[1]] = egress_pipeidx
-        pipeidx_ports_map[ingress_pipeidx] = [self.devPorts[0]]
-        if egress_pipeidx not in pipeidx_ports_map:
-            pipeidx_ports_map[egress_pipeidx] = [self.devPorts[1]]
-        else:
-            if self.devPorts[1] not in pipeidx_ports_map[egress_pipeidx]:
-                pipeidx_ports_map[egress_pipeidx].append(self.devPorts[1])
+        self.unmatched_devports = []
+        for client_physical_idx in range(client_physical_num):
+            if client_pipeidxes[client_physical_idx] != single_ingress_pipeidx:
+                # get devport fro front panel port
+                port, chnl = client_fpports[client_physical_idx].split("/")
+                tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+                self.unmatched_devports.append(tmp_devport)
+        # GETRES_LATEST/DELETED_SEQ may also incur CASE1s (need to read snapshot flag)
+        for server_physical_idx in range(server_physical_num):
+            if server_pipeidxes[server_physical_idx] != single_ingress_pipeidx:
+                # get devport fro front panel port
+                port, chnl = server_fpports[server_physical_idx].split("/")
+                tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+                self.unmatched_devports.append(tmp_devport)
 
     def cleanup(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
         # get entry count
         entrynum = self.client.need_recirculate_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
         if entrynum > 0:
-            for tmppipeidx in pipeidx_ports_map.keys():
-                if tmppipeidx != ingress_pipeidx:
-                    tmpports = pipeidx_ports_map[tmppipeidx]
-                    for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
-                        for iport in tmpports:
-                            matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
-                                    op_hdr_optype = tmpoptype,
-                                    ig_intr_md_ingress_port = iport)
-                            self.client.need_recirculate_tbl_table_delete_by_match_spec(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
+            for iport in self.unmatched_devports:
+                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                    matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
+                            op_hdr_optype = tmpoptype,
+                            ig_intr_md_ingress_port = iport)
+                    self.client.need_recirculate_tbl_table_delete_by_match_spec(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
         print "Reset snapshot_flag=0 for all ingress pipelines"
         entrynum = self.client.snapshot_flag_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
         if entrynum > 0:
@@ -116,16 +112,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def enable_singlepath(self):
         print "Set need_recirculate=1 for iports in different ingress pipelines"
-        for tmppipeidx in pipeidx_ports_map.keys():
-            if tmppipeidx != ingress_pipeidx:
-                tmpports = pipeidx_ports_map[tmppipeidx]
-                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
-                    for iport in tmpports:
-                        matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
-                                op_hdr_optype = tmpoptype,
-                                ig_intr_md_ingress_port = iport)
-                        self.client.need_recirculate_tbl_table_add_with_set_need_recirculate(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
+        for iport in self.unmatched_devports:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ig_intr_md_ingress_port = iport)
+                self.client.need_recirculate_tbl_table_add_with_set_need_recirculate(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
 
     def set_snapshot_flag(self):
         print "Set snapshot_flag=1 for all ingress pipelines"
@@ -140,23 +133,21 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def disable_singlepath(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
-        for tmppipeidx in pipeidx_ports_map.keys():
-            if tmppipeidx != ingress_pipeidx:
-                tmpports = pipeidx_ports_map[tmppipeidx]
-                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
-                    for iport in tmpports:
-                        matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
-                                op_hdr_optype = tmpoptype,
-                                ig_intr_md_ingress_port = iport)
-                        self.client.need_recirculate_tbl_table_delete_by_match_spec(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
+        for iport in self.unmatched_devports:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                matchspec0 = netbufferv4_need_recirculate_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ig_intr_md_ingress_port = iport)
+                self.client.need_recirculate_tbl_table_delete_by_match_spec(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
 
     def load_snapshot_data(self, cached_empty_index_backup):
         start_index = 0
         end_index = cached_empty_index_backup - 1
         print "Load snapshot data in [{}, {}] from data plane".format(start_index, end_index)
         record_cnt = end_index - start_index + 1
-        # TODO: check len of vallen_list
+        # TODO: switchos should give per-pipeline empty index to support multi-pipeline
+        egress_pipeidx = 0
         vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, self.dev_tgt, start_index, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt]
         for i in range(len(vallen_list)):
             #vallen_list[i] = convert_i32_to_u32(vallen_list[i])
@@ -274,7 +265,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             elif control_type == SWITCHOS_LOAD_SNAPSHOT_DATA:
                 # parse empty index
                 cached_empty_index_backup = struct.unpack("=I", recvbuf)[0] # must > 0
-                if cached_empty_index_backup <= 0 or cached_empty_index_backup > kv_bucket_num:
+                if cached_empty_index_backup <= 0 or cached_empty_index_backup > switch_kv_bucket_num:
                     print "Invalid cached_empty_index_backup: {}".format(cached_empty_index_backup)
                     exit(-1)
 
