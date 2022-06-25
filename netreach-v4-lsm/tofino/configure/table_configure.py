@@ -430,7 +430,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             else:
                 # Table: hash_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring hash_partition_tbl"
-                hash_range_per_server = partition_count / server_total_logical_num
+                hash_range_per_server = switch_partition_count / server_total_logical_num
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH]:
                     hash_start = 0 # [0, partition_count-1]
                     for global_server_logical_idx in range(server_total_logical_num):

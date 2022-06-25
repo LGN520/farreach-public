@@ -184,7 +184,7 @@ void *run_loader(void * param) {
 		std::map<uint16_t, std::pair<std::vector<netreach_key_t>, std::vector<val_t>>> tmpmap;
 		for (int i = 0; i < tmpmaxidx; i++) {
 #ifdef USE_HASH
-			uint16_t tmp_worker_id = iter->keys()[i].get_hashpartition_idx(partition_count, server_total_logical_num);
+			uint16_t tmp_worker_id = iter->keys()[i].get_hashpartition_idx(switch_partition_count, server_total_logical_num);
 #elif defined USE_RANGE
 			uint16_t tmp_worker_id = iter->keys()[i].get_rangepartition_idx(server_total_logical_num);
 #endif
