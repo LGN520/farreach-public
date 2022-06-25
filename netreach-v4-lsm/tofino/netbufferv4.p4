@@ -4,7 +4,8 @@
 #include "tofino/primitives.p4"
 
 // Uncomment it if support range query, or comment it otherwise
-#define RANGE_SUPPORT
+// Change netbufferv4.p4, common.py, and helper.h accordingly
+//#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly

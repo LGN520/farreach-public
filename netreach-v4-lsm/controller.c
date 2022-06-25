@@ -223,7 +223,7 @@ void prepare_controller() {
 	controller_snapshotclient_for_server_udpsock_list = new int[server_total_logical_num];
 	controller_snapshotclient_for_server_databuf_list = new dynamic_array_t[server_total_logical_num];
 	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num; tmp_global_server_logical_idx++) {
-		create_udpsock(controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx], true, "controller.snapshotclient_for_server");
+		create_udpsock(controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx], true, "controller.snapshotclient_for_server", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 		controller_snapshotclient_for_server_databuf_list[tmp_global_server_logical_idx].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	}
 
@@ -413,9 +413,13 @@ void *run_controller_snapshotclient(void *param) {
 			}
 		}
 		INVARIANT(tmp_server_physical_idx != -1);
-		set_sockaddr(server_snapshotserver_addr_list[tmp_global_server_logical_idx], inet_addr(server_ip_for_controller_list[tmp_server_physical_idx]), server_snapshotserver_port_start + tmp_global_server_logical_idx);
+		const char *tmp_dstip = server_ip_for_controller_list[tmp_server_physical_idx];
+		/*if (strcmp(server_ip_for_controller_list[tmp_server_physical_idx], controller_ip_for_server) == 0) {
+			tmp_dstip = "127.0.0.1";
+		}*/
+		set_sockaddr(server_snapshotserver_addr_list[tmp_global_server_logical_idx], inet_addr(tmp_dstip), server_snapshotserver_port_start + tmp_global_server_logical_idx);
 		server_snapshotserver_addrlen_list[tmp_global_server_logical_idx] = sizeof(struct sockaddr_in);
-		set_sockaddr(server_snapshotdataserver_addr_list[tmp_global_server_logical_idx], inet_addr(server_ip_for_controller_list[tmp_server_physical_idx]), server_snapshotdataserver_port_start + tmp_global_server_logical_idx);
+		set_sockaddr(server_snapshotdataserver_addr_list[tmp_global_server_logical_idx], inet_addr(tmp_dstip), server_snapshotdataserver_port_start + tmp_global_server_logical_idx);
 		server_snapshotdataserver_addrlen_list[tmp_global_server_logical_idx] = sizeof(struct sockaddr_in);
 	}
 
@@ -672,11 +676,15 @@ void *run_controller_snapshotclient_cleanup_subthread(void *param) {
 	int recvsize = 0;
 	bool is_timeout = false;
 	while (true) {
+		//char tmpip[256];
+		//inet_ntop(AF_INET, &subthread_param.dstaddr.sin_addr, tmpip, 256);
+		//printf("dstip %s, dstport %d, serveridx: %d\n", tmpip, ntohs(subthread_param.dstaddr.sin_port), subthread_param.global_server_logical_idx);
 		udpsendto(subthread_param.udpsock, sendbuf, 2*sizeof(int), 0, &subthread_param.dstaddr, subthread_param.dstaddrlen, "controller.snapshotclient.cleanup_subthread");
 
 		// wait for SNAPSHOT_CLEANUP_ACK
 		is_timeout = udprecvfrom(subthread_param.udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient.cleanup_subthread");
 		if (is_timeout) {
+			//printf("timeout dstip %s, dstport %d, serveridx %d", tmpip, ntohs(subthread_param.dstaddr.sin_port), subthread_param.global_server_logical_idx);
 			continue;
 		}
 		else {

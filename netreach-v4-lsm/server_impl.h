@@ -173,7 +173,13 @@ void close_server() {
 
   // NOTE: controller and switchos should have been launched before servers
   struct sockaddr_in controller_popserver_addr;
-  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + serveridx);
+//  if (strcmp(controller_ip_for_server, server_ip_for_controller_list[server_physical_idx]) == 0) {
+//	  set_sockaddr(controller_popserver_addr, inet_addr("127.0.0.1"), controller_popserver_port_start + global_server_logical_idx);
+//  }
+//  else {
+//	  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + global_server_logical_idx);
+//  }
+  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + global_server_logical_idx);
   socklen_t controller_popserver_addrlen = sizeof(struct sockaddr_in);
   
   printf("[server.popclient%d] ready\n", int(serveridx));
@@ -260,6 +266,12 @@ void *run_server_worker(void * param) {
 
   // NOTE: controller and switchos should have been launched before servers
   struct sockaddr_in controller_popserver_addr;
+  /*if (strcmp(controller_ip_for_server, server_ip_for_controller_list[server_physical_idx]) == 0) {
+	  set_sockaddr(controller_popserver_addr, inet_addr("127.0.0.1"), controller_popserver_port_start + global_server_logical_idx);
+  }
+  else {
+	  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + global_server_logical_idx);
+  }*/
   set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + global_server_logical_idx);
   socklen_t controller_popserver_addrlen = sizeof(struct sockaddr_in);
 

@@ -1266,15 +1266,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 tmp_devport = self.server_devports[tmp_server_physical_idx]
                 tmp_server_mac = server_macs[tmp_server_physical_idx]
                 tmp_server_ip = server_ips[tmp_server_physical_idx]
-                actnspec1 = netbufferv4_update_ipmac_srcport_client2server_action_spec_t(\
+                actnspec1 = netbufferv4_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
                 for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ]:
                     matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)
-                    self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                    self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_client2server(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec1)
             # Here we use server_mac/ip to simulate reflector_mac/ip = switchos_mac/ip
             # (1) eg_intr_md.egress_port of the first GETRES_CASE1 is set by ipv4_forward_tbl (as ingress port), which will be finally dropped -> update ip/mac/srcport or not is not important
             # (2) eg_intr_md.egress_port of cloned GETRES_CASE1s is set by clone_e2e, which must be the devport towards switchos (aka reflector)
@@ -1288,9 +1288,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             tmp_reflector_mac = server_macs[0]
             actnspec2 = netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t(\
                     macAddr_to_string(tmp_client_mac), \
-                    macAddr_to_string(tmp_server_mac), \
+                    macAddr_to_string(tmp_reflector_mac), \
                     ipv4Addr_to_i32(tmp_client_ip), \
-                    ipv4Addr_to_i32(tmp_server_ip), \
+                    ipv4Addr_to_i32(tmp_reflector_ip), \
                     tmp_client_port)
             matchspec6 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
                     op_hdr_optype=convert_u16_to_i16(GETRES_LATEST_SEQ_INSWITCH_CASE1), 
