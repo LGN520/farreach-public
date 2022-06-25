@@ -53,9 +53,9 @@ class IniparserWrapper {
 		const char *get_server_fpport(uint32_t server_physical_idx);
 		uint32_t get_server_pipeidx(uint32_t server_physical_idx);
 		const char *get_server_ip_for_controller(uint32_t server_physical_idx);
-		const char *get_controller_ip_for_server(uint32_t server_physical_idx);
 
 		// controller
+		const char *get_controller_ip_for_server();
 		const char *get_controller_ip_for_switchos();
 		short get_controller_popserver_port_start();
 		short get_controller_evictserver_port();

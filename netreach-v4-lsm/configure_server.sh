@@ -1,5 +1,23 @@
-sudo ifconfig enp129s0f0 10.0.1.13/24
-sudo arp -s 10.0.1.11 3c:fd:fe:bb:ca:79
+if [ $# -ne 1 ]
+then
+	echo "Usage: bash configure_server.sh server_physical_idx"
+fi
+
+server_physical_idx=$1
+
+# TODO: you need to change the following configuration according to your own testbed
+# NOTE: we use dl11/dl13 as two physical clients, and dl15/dl16 as two physical servers
+if [ ${server_physical_idx} -eq 0 ]
+then
+	sudo ifconfig enp129s0f1 10.0.1.15/24
+	sudo arp -s 10.0.1.11 3c:fd:fe:bb:ca:79
+	sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8
+elif [ ${server_physical_idx} -eq 1 ]
+then
+	sudo ifconfig enp129s0f1 10.0.1.16/24
+	sudo arp -s 10.0.1.11 3c:fd:fe:bb:ca:79
+	sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8
+fi
 
 sudo sysctl -w net.core.rmem_max=8388608
 sudo sysctl -w net.core.rmem_default=212992

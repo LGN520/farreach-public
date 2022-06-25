@@ -339,18 +339,16 @@ const char *IniparserWrapper::get_server_ip_for_controller(uint32_t server_physi
 	return server_ip_for_controller;
 }
 
-const char *IniparserWrapper::get_controller_ip_for_server(uint32_t server_physical_idx) {
-	char key[256];
-	sprintf(key, "server%u:controller_ip_for_server", server_physical_idx);
-	const char *controller_ip_for_server = iniparser_getstring(ini, key, nullptr);
+// Controller
+
+const char *IniparserWrapper::get_controller_ip_for_server() {
+	const char *controller_ip_for_server = iniparser_getstring(ini, "controller:controller_ip_for_server", nullptr);
 	if (controller_ip_for_server == nullptr) {
-		printf("Invalid entry of [%s]\n", key);
+		printf("Invalid entry of [controller:controller_ip_for_server]\n");
 		exit(-1);
 	}
 	return controller_ip_for_server;
 }
-
-// Controller
 
 const char* IniparserWrapper::get_controller_ip_for_switchos() {
 	const char *controller_ip_for_switchos = iniparser_getstring(ini, "controller:controller_ip_for_switchos", nullptr);

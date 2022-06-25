@@ -260,7 +260,7 @@ void *run_server_worker(void * param) {
 
   // NOTE: controller and switchos should have been launched before servers
   struct sockaddr_in controller_popserver_addr;
-  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server_list[server_physical_idx]), controller_popserver_port_start + global_server_logical_idx);
+  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + global_server_logical_idx);
   socklen_t controller_popserver_addrlen = sizeof(struct sockaddr_in);
 
   // scan.startkey <= max_startkey; scan.endkey >= min_startkey

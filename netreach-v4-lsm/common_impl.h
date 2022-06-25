@@ -104,9 +104,9 @@ std::vector<uint8_t *> server_macs;
 std::vector<const char*> server_fpports;
 std::vector<uint32_t> server_pipeidxes;
 std::vector<const char*> server_ip_for_controller_list;
-std::vector<const char*> controller_ip_for_server_list;
 
 // controller
+const char *controller_ip_for_server = nullptr;
 const char *controller_ip_for_switchos = nullptr;
 short controller_popserver_port_start = -1;
 short controller_evictserver_port = -1;
@@ -290,7 +290,6 @@ inline void parse_ini(const char* config_file) {
 		server_fpports.push_back(ini.get_server_fpport(server_physical_idx));
 		server_pipeidxes.push_back(ini.get_server_pipeidx(server_physical_idx));
 		server_ip_for_controller_list.push_back(ini.get_server_ip_for_controller(server_physical_idx));
-		controller_ip_for_server_list.push_back(ini.get_controller_ip_for_server(server_physical_idx));
 
 		printf("server_worker_corenums[%d]: %d\n", server_physical_idx, server_worker_corenums[server_physical_idx]);
 		printf("server_total_corenums[%d]: %d\n", server_physical_idx, server_total_corenums[server_physical_idx]);
@@ -305,17 +304,18 @@ inline void parse_ini(const char* config_file) {
 		printf("server_fpports[%d]: %s\n", server_physical_idx, server_fpports[server_physical_idx]);
 		printf("server_pipeidxes[%d]: %d\n", server_physical_idx, server_pipeidxes[server_physical_idx]);
 		printf("server_ip_for_controller_list[%d]: %s\n", server_physical_idx, server_ip_for_controller_list[server_physical_idx]);
-		printf("controller_ip_for_server_list[%d]: %s\n", server_physical_idx, controller_ip_for_server_list[server_physical_idx]);
 	}
 	INVARIANT(tmp_server_total_logical_num == server_total_logical_num);
 	printf("\n");
 
 	// controller
+	controller_ip_for_server = ini.get_controller_ip_for_server();
 	controller_ip_for_switchos = ini.get_controller_ip_for_switchos();
 	controller_popserver_port_start = ini.get_controller_popserver_port_start();
 	controller_evictserver_port = ini.get_controller_evictserver_port();
 	controller_snapshot_period = ini.get_controller_snapshot_period();
 
+	printf("controller ip for server: %s\n", controller_ip_for_server);
 	printf("controller ip for switchos: %s\n", controller_ip_for_switchos);
 	COUT_VAR(controller_popserver_port_start);
 	COUT_VAR(controller_evictserver_port);
