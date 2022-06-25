@@ -518,7 +518,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #self.client.prepare_for_cachehit_tbl_set_default_action_set_client_sid(\
             #        self.sess_hdl, self.dev_tgt, actnspec0)
 
-            # Table: ipv4_forward_tbl (default: nop; size: 8)
+            # Table: ipv4_forward_tbl (default: nop; size: 8*client_physical_num=16 < 8*8=64)
             print "Configuring ipv4_forward_tbl"
             for tmp_client_physical_idx in range(client_physical_num):
                 ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
@@ -1213,11 +1213,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
-            # Table: update_ipmac_srcport_tbl (default: nop; 10)
+            # Table: update_ipmac_srcport_tbl (default: nop; 6*client_physical_num+12*server_physical_num+5=41 < 18*8+5=149 < 256)
+            # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
+            # NOTE: update_ipmac_srcport_tbl focues on src/dst ip/mac and udp.srcport
             print "Configuring update_ipmac_srcport_tbl"
             # (1) for response from server to client, egress port has been set based on ip.dstaddr (or by clone_i2e) in ingress pipeline
             # (2) for response from switch to client, egress port has been set by clone_e2e in egress pipeline
-            # TODO: check whether cloned pkt via clone_i2e/e2e will be set with correct egress port
             for tmp_client_physical_idx in range(client_physical_num):
                 tmp_devport = self.client_devports[tmp_client_physical_idx]
                 tmp_client_mac = client_macs[tmp_client_physical_idx]
@@ -1260,6 +1261,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec4, actnspec0)
                 self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
                         self.sess_hdl, self.dev_tgt, matchspec5, actnspec0)
+            # for request from client to server, egress port has been set by partition_tbl in ingress pipeline
+            for tmp_server_physical_idx in range(server_physical_num):
+                tmp_devport = self.server_devports[tmp_server_physical_idx]
+                tmp_server_mac = server_macs[tmp_server_physical_idx]
+                tmp_server_ip = server_ips[tmp_server_physical_idx]
+                actnspec1 = netbufferv4_update_ipmac_srcport_client2server_action_spec_t(\
+                        macAddr_to_string(tmp_server_mac), \
+                        ipv4Addr_to_i32(tmp_server_ip))
+                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ]:
+                    matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
+                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
+                            eg_intr_md_egress_port = tmp_devport)
+                    self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             # Here we use server_mac/ip to simulate reflector_mac/ip = switchos_mac/ip
             # (1) eg_intr_md.egress_port of the first GETRES_CASE1 is set by ipv4_forward_tbl (as ingress port), which will be finally dropped -> update ip/mac/srcport or not is not important
             # (2) eg_intr_md.egress_port of cloned GETRES_CASE1s is set by clone_e2e, which must be the devport towards switchos (aka reflector)
@@ -1271,7 +1286,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             tmp_client_port = 123 # not cared by servers
             tmp_reflector_ip = server_ips[0]
             tmp_reflector_mac = server_macs[0]
-            actnspec1 = netbufferv4_update_ipmac_srcport_client2switch_action_spec_t(\
+            actnspec2 = netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t(\
                     macAddr_to_string(tmp_client_mac), \
                     macAddr_to_string(tmp_server_mac), \
                     ipv4Addr_to_i32(tmp_client_ip), \
@@ -1292,16 +1307,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec10 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
                     op_hdr_optype=convert_u16_to_i16(CACHE_EVICT_LOADDATA_INSWITCH_ACK),
                     eg_intr_md_egress_port=tmp_devport)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
-                    self.sess_hdl, self.dev_tgt, matchspec6, actnspec1)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
-                    self.sess_hdl, self.dev_tgt, matchspec7, actnspec1)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
-                    self.sess_hdl, self.dev_tgt, matchspec8, actnspec1)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
-                    self.sess_hdl, self.dev_tgt, matchspec9, actnspec1)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2switch(\
-                    self.sess_hdl, self.dev_tgt, matchspec10, actnspec1)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
+                    self.sess_hdl, self.dev_tgt, matchspec6, actnspec2)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
+                    self.sess_hdl, self.dev_tgt, matchspec7, actnspec2)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
+                    self.sess_hdl, self.dev_tgt, matchspec8, actnspec2)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
+                    self.sess_hdl, self.dev_tgt, matchspec9, actnspec2)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
+                    self.sess_hdl, self.dev_tgt, matchspec10, actnspec2)
 
             # Table: add_and_remove_value_header_tbl (default: remove_all; 17*12=204)
             print "Configuring add_and_remove_value_header_tbl"

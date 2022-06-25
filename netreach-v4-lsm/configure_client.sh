@@ -7,12 +7,12 @@ client_physical_idx=$1
 
 # TODO: you need to change the following configuration according to your own testbed
 # NOTE: we use dl11/dl13 as two physical clients, and dl15/dl16 as two physical servers
-if [ ${server_physical_idx} -eq 0 ]
+if [ ${client_physical_idx} -eq 0 ]
 then
 	sudo ifconfig enp129s0f1 10.0.1.11/24
 	sudo arp -s 10.0.1.15 3c:fd:fe:b5:28:59
 	sudo arp -s 10.0.1.16 3c:fd:fe:b5:1f:e1
-elif [ ${server_physical_idx} -eq 1 ]
+elif [ ${client_physical_idx} -eq 1 ]
 then
 	sudo ifconfig enp129s0f0 10.0.1.13/24
 	sudo arp -s 10.0.1.15 3c:fd:fe:b5:28:59

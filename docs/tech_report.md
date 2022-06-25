@@ -177,7 +177,7 @@
 		* `bash tldk_fix.sh` to solve error of `dereferencing pointer incomplete type`
 	+ Test
 		* `sudo ./x86_64-native-linuxapp-gcc/app/l4fwd -- --udp --mbuf-num 1000 --becfg ~/projects/NetBuffer/tofino-xindex-dpdk/client.cfg`
-- Deprecated: Install RocksDB (we use the modified version)
+- Install RocksDB
 	+ `sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev`
 	+ `wget https://github.com/facebook/rocksdb/archive/refs/tags/v6.22.1.tar.gz`
 	+ `gunzip v6.22.1.tar.gz`

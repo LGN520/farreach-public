@@ -944,12 +944,17 @@ action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, ser
 
 // NOTE: as we use software link, switch_mac/ip = reflector_mac/ip
 // NOTE: although we use client_port to update srcport here, reflector does not care about the specific value of srcport
-action update_ipmac_srcport_client2switch(client_mac, switch_mac, client_ip, switch_ip, client_port) {
+action update_ipmac_srcport_switch2switchos(client_mac, switch_mac, client_ip, switch_ip, client_port) {
 	modify_field(ethernet_hdr.srcAddr, client_mac);
 	modify_field(ethernet_hdr.dstAddr, switch_mac);
 	modify_field(ipv4_hdr.srcAddr, client_ip);
 	modify_field(ipv4_hdr.dstAddr, switch_ip);
 	modify_field(udp_hdr.srcPort, client_port);
+}
+
+action update_dstipmac_client2server(server_mac, server_ip) {
+	modify_field(ethernet_hdr.dstAddr, server_mac);
+	modify_field(ipv4_hdr.dstAddr, server_ip);
 }
 
 // NOTE: dstport of REQ, RES, and notification has been updated in partition_tbl, server, and eg_port_forward_tbl
@@ -960,12 +965,13 @@ table update_ipmac_srcport_tbl {
 		eg_intr_md.egress_port: exact;
 	}
 	actions {
-		update_ipmac_srcport_server2client;
-		update_ipmac_srcport_client2switch;
+		update_ipmac_srcport_server2client; // focus on dstip and dstmac to corresponding client; use server[0] as srcip and srcmac; use server_worker_port_start as srcport
+		update_ipmac_srcport_switch2switchos; // focus on dstip and dstmac to reflector; use client[0] as srcip and srcmac; use constant (123) as srcport
+		update_dstipmac_client2server; // focus on dstip and dstmac to corresponding server; NOT change srcip, srcmac, and srcport
 		nop;
 	}
 	default_action: nop();
-	size: 16;
+	size: 256;
 }
 
 // stage 11
