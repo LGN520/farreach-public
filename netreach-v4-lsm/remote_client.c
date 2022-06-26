@@ -57,7 +57,6 @@ std::atomic<size_t> ready_threads(0);
 std::atomic<size_t> finish_threads(0);
 
 int *client_udpsock_list = NULL;
-int client_sendpktserver_udpsock = -1;
 int client_physical_idx = -1;
 int server_total_logical_num_for_client;
 
@@ -126,8 +125,6 @@ int main(int argc, char **argv) {
 		create_udpsock(client_udpsock_list[local_client_logical_idx], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_DEFAULT_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
 	}
 
-	// prepare for client.sendpktserver
-	prepare_udpserver(client_sendpktserver_udpsock, false, client_sendpktserver_port_start + client_physical_idx, "client.sendpktserver");
 	run_benchmark();
 
 	if (dynamic_rulemap_ptr != NULL) {
@@ -142,6 +139,8 @@ void run_benchmark() {
 	int ret = 0;
 
 	running = false;
+
+	/* (1) launch all client worker threads and sendpktserver thread if any */
 
 	// Prepare client worker params
 	uint32_t current_client_logical_num = client_logical_nums[client_physical_idx];
@@ -167,25 +166,63 @@ void run_benchmark() {
 		COUT_THIS("[client] Lanuch client " << local_client_logical_idx)
 	}
 
-	// launch sendpktserver
+	// launch sendpktserver for non-first physical client
 	pthread_t sendpktserver_thread;
-	ret = pthread_create(&sendpktserver_thread, nullptr, run_client_sendpktserver, nullptr);
-	INVARIANT(ret == 0);
+	if (client_physical_idx != 0) {
+		ret = pthread_create(&sendpktserver_thread, nullptr, run_client_sendpktserver, nullptr);
+		INVARIANT(ret == 0);
+	}
 
 	COUT_THIS("[client] prepare clients ...");
-	// NOTE: current_client_logical_num * client.worker + client.sendpktserver
-	while (ready_threads < current_client_logical_num + 1) sleep(1);
+	// NOTE: current_client_logical_num * client.worker + [client.sendpktserver]
+	if (client_physical_idx != 0) {
+		while (ready_threads < current_client_logical_num + 1) sleep(1);
+	}
+	else {
+		while (ready_threads < current_client_logical_num) sleep(1);
+	}
 	COUT_THIS("[client] all clients ready...");
 
-	// used for dynamic workload
-	std::map<uint16_t, int> persec_perclient_nodeidx_aggpktcnt_map[dynamic_periodnum * dynamic_periodinterval][current_client_logical_num];
+	/* (2) the first physical client is responsible for starting packet send of all physical clients */
 
-	printf("wait to be able to send pkt if necessary\n");
-	while (!can_sendpkt) {}
+	if (client_physical_idx != 0) { // wait for the first physical client
+		printf("wait to be able to send pkt if necessary\n");
+		while (!can_sendpkt) {}
+	}
+	else { // sendpktclient of the first physical client notifies other physical clients to start to send packets
+		if (client_physical_num > 1) { // notify other physical clients if any to send packets
+			int client_sendpktclient_udpsock = -1;
+			create_udpsock(client_sendpktclient_udpsock, false, "client.sendpktclient");
+			char snapshotclientbuf[256];
+			int recvsize = -1;
+
+			// NOTE: the first entry will no be initialized and used
+			struct sockaddr_in other_client_sendpktserver_addr[client_physical_num - 1];
+			socklen_t other_client_sendpktserver_addrlen[client_physical_num - 1];
+			for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
+				set_sockaddr(other_client_sendpktserver_addr[other_client_physical_idx - 1], inet_addr(client_ip_for_client0_list[other_client_physical_idx]), client_sendpktserver_port_start + other_client_physical_idx - 1);
+				other_client_sendpktserver_addrlen[other_client_physical_idx - 1] = sizeof(struct sockaddr_in);
+			}
+
+			// NOTE: we launch other physical clients first; after they are waiting for can_sendpkt, we launch the first physical client to tell them send pkt at the same time
+			for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
+				*((int *)snapshotclientbuf) = client_sendpktserver_port_start + other_client_physical_idx - 1;
+				udpsendto(client_sendpktclient_udpsock, snapshotclientbuf, sizeof(int), 0, &other_client_sendpktserver_addr[other_client_physical_idx - 1], other_client_sendpktserver_addrlen[other_client_physical_idx - 1], "client.sendpktclient");
+			}
+
+			for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
+				udprecvfrom(client_sendpktclient_udpsock, snapshotclientbuf, 256, 0, NULL, NULL, recvsize, "client.sendpktclient");
+				INVARIANT(recvsize == sizeof(int));
+			}
+			close(client_sendpktclient_udpsock);
+		}
+	}
 
 	printf("start to send pkt\n");
 	struct timespec total_t1, total_t2, total_t3;
 	running = true;
+
+	/* (3) collect persec statistics for static/dynamic workload */
 
 	// NOTE: by now we get aggregate pktcnts from the first sec until the ith sec
 	std::vector<std::vector<int>> persec_perclient_aggpktcnts;
@@ -193,6 +230,8 @@ void run_benchmark() {
 	std::vector<std::vector<std::vector<int>>> persec_perclient_perserver_aggcachemisscnts;
 	const int sleep_usecs = 1000; // 1000us = 1ms
 	const int onesec_usecs = 1 * 1000 * 1000; // 1s
+	// used for dynamic workload
+	std::map<uint16_t, int> persec_perclient_nodeidx_aggpktcnt_map[dynamic_periodnum * dynamic_periodinterval][current_client_logical_num];
 	CUR_TIME(total_t1);
 	if (workload_mode == 0) { // send all workloads in static mode
 		while (finish_threads < current_client_logical_num) {
@@ -284,7 +323,7 @@ void run_benchmark() {
 	//stop_for_dynamic_control = false;
 	COUT_THIS("[client] all clients finish!");
 
-	/* Process statistics */
+	/* (4) process and dump statistics */
 
 	COUT_THIS("[client] processing statistics");
 
@@ -477,6 +516,8 @@ void run_benchmark() {
 		}
 	}
 
+	/* (5) the first physical client aggregates results of server rotation from other physical clients */
+
 #ifdef SERVER_ROTATION
 	double avg_total_latency = 0.0;
 	for (size_t i = 0; i < total_latency_list.size(); i++) {
@@ -491,7 +532,79 @@ void run_benchmark() {
 		printf("result for server rotation of client %d: %d %d %f %f\n", client_physical_idx, nodeidx_pktcnt_map[valid_global_server_logical_idxes[0]], \
 				total_pktcnt, total_thpt, avg_total_latency);
 	}
+
+	if (client_physical_idx != 0) {
+		struct sockaddr_in client0_rotationdataserver_addr;
+		set_sockaddr(client0_rotationdataserver_addr, inet_addr(client_ip_for_client0_list[0]), client_rotationdataserver_port);
+		socklen_t client0_rotationdataserver_addrlen = sizeof(struct sockaddr_in);
+
+		int client_rotationdataclient_udpsock = -1;
+		create_udpsock(client_rotationdataclient_udpsock, false, "client.rotationdataclient");
+		char rotationdataclient_buf[256];
+		int tmpoff = 0;
+		*((int *)(rotationdataclient_buf + tmpoff)) = nodeidx_pktcnt_map[valid_global_server_logical_idxes[0]];
+		tmpoff += sizeof(int);
+		if (valid_global_server_logical_idxes.size() == 2) {
+			*((int *)(rotationdataclient_buf + tmpoff)) = nodeidx_pktcnt_map[valid_global_server_logical_idxes[1]];
+		}
+		else {
+			*((int *)(rotationdataclient_buf + tmpoff)) = 0;
+		}
+		tmpoff += sizeof(int);
+		*((int *)(rotationdataclient_buf + tmpoff)) = total_pktcnt;
+		tmpoff += sizeof(int);
+		*((double *)(rotationdataclient_buf + tmpoff)) = total_thpt;
+		tmpoff += sizeof(double);
+		*((double *)(rotationdataclient_buf + tmpoff)) = avg_total_latency;
+		tmpoff += sizeof(double);
+
+		udpsendto(client_rotationdataclient_udpsock, rotationdataclient_buf, tmpoff, 0, &client0_rotationdataserver_addr, client0_rotationdataserver_addrlen, "client.rotationdataclient");
+
+		close(client_rotationdataclient_udpsock);
+	}
+	else {
+		if (client_physical_num > 1) {
+			char rotationdataserver_buf[256];
+			int recvsize = -1;
+			int client_rotationdataserver_udpsock = -1;
+			prepare_udpserver(client_rotationdataserver_udpsock, false, client_rotationdataserver_port, "client.rotationdataserver");
+			int agg_bottleneckserver_pktcnt = nodeidx_pktcnt_map[valid_global_server_logical_idxes[0]];
+			int agg_rotateserver_pktcnt = nodeidx_pktcnt_map[valid_global_server_logical_idxes[1]];
+			int agg_total_pktcnt = total_pktcnt;
+			double agg_total_thpt = total_thpt;
+			double agg_avg_total_latency = avg_total_latency;
+			for (uint16_t other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
+				udprecvfrom(client_rotationdataserver_udpsock, rotationdataserver_buf, 256, 0, NULL, NULL, recvsize, "client.rotationdataserver");
+
+				int tmpoff = 0;
+				agg_bottleneckserver_pktcnt += *((int *)(rotationdataserver_buf + tmpoff));
+				tmpoff += sizeof(int);
+				agg_rotateserver_pktcnt += *((int *)(rotationdataserver_buf + tmpoff));
+				tmpoff += sizeof(int);
+				agg_total_pktcnt += *((int *)(rotationdataserver_buf + tmpoff));
+				tmpoff += sizeof(int);
+				agg_total_thpt += *((double *)(rotationdataserver_buf + tmpoff));
+				tmpoff += sizeof(double);
+				agg_avg_total_latency += *((double *)(rotationdataserver_buf + tmpoff));
+				tmpoff += sizeof(double);
+			}
+			agg_avg_total_latency /= client_physical_num;
+
+			if (valid_global_server_logical_idxes.size() == 2) {
+				printf("result for server rotation of all clients: %d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
+						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
+			}
+			else if (valid_global_server_logical_idxes.size() == 1) {
+				printf("result for server rotation of all clients: %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
+						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
+			}
+
+			close(client_rotationdataserver_udpsock);
+		}
+	}
 #endif
+
+	/* (6) process and dump dynamic workload statisics */
 
 	if (workload_mode != 0) {
 		// get persec nodeidx-pktcnt mapping data
@@ -567,9 +680,11 @@ void run_benchmark() {
 			COUT_N_EXIT("Error: unable to join worker " << rc);
 		}
 	}
-	int rc = pthread_join(sendpktserver_thread, &status);
-	if (rc) {
-		COUT_N_EXIT("Error: unable to join sendpktserver " << rc);
+	if (client_physical_idx != 0) {
+		int rc = pthread_join(sendpktserver_thread, &status);
+		if (rc) {
+			COUT_N_EXIT("Error: unable to join sendpktserver " << rc);
+		}
 	}
 }
 
@@ -994,53 +1109,26 @@ void *run_client_worker(void *param) {
 }
 
 void *run_client_sendpktserver(void *param) {
-	INVARIANT(running == false);
+	INVARIANT(running == false && client_physical_idx != 0);
+
+	// prepare for client.sendpktserver
+	int client_sendpktserver_udpsock = -1;
+	prepare_udpserver(client_sendpktserver_udpsock, false, client_sendpktserver_port_start + client_physical_idx - 1, "client.sendpktserver");
 
 	printf("[client.sendpktserver] ready\n");
 	ready_threads++;
 
-	if (client_physical_num == 1) {
-		can_sendpkt = true;
-		close(client_sendpktserver_udpsock);
-		pthread_exit(nullptr);
-	}
-
-	char buf[256];
+	char sendpktserverbuf[256];
 	int recvsize = -1;
-	if (client_physical_idx == 0) {
-		// NOTE: the first entry will no be initialized and used
-		struct sockaddr_in other_client_sendpktserver_addr[client_physical_num];
-		socklen_t other_client_sendpktserver_addrlen[client_physical_num];
-		for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
-			set_sockaddr(other_client_sendpktserver_addr[other_client_physical_idx], inet_addr(client_ip_for_client0_list[other_client_physical_idx]), client_sendpktserver_port_start + other_client_physical_idx);
-			other_client_sendpktserver_addrlen[other_client_physical_idx] = sizeof(struct sockaddr_in);
-		}
+	struct sockaddr_in client0_addr;
+	memset(&client0_addr, 0, sizeof(struct sockaddr_in));
+	socklen_t client0_addrlen = sizeof(struct sockaddr_in);
 
-		// NOTE: we launch other physical clients first; after they are waiting for can_sendpkt, we launch the first physical client to tell them send pkt at the same time
-		for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
-			*((int *)buf) = client_sendpktserver_port_start + other_client_physical_idx;
-			udpsendto(client_sendpktserver_udpsock, buf, sizeof(int), 0, &other_client_sendpktserver_addr[other_client_physical_idx], other_client_sendpktserver_addrlen[other_client_physical_idx], "client.sendpktserver");
-		}
+	udprecvfrom(client_sendpktserver_udpsock, sendpktserverbuf, 256, 0, &client0_addr, &client0_addrlen, recvsize, "client.sendpktserver");
+	INVARIANT(recvsize == sizeof(int) && *((int *)sendpktserverbuf) == client_sendpktserver_port_start + client_physical_idx - 1);
 
-		for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
-			udprecvfrom(client_sendpktserver_udpsock, buf, 256, 0, NULL, NULL, recvsize, "client.sendpktserver");
-			INVARIANT(recvsize == sizeof(int));
-		}
-		can_sendpkt = true;
-		close(client_sendpktserver_udpsock);
-		pthread_exit(nullptr);
-	}
-	else {
-		struct sockaddr_in client0_addr;
-		memset(&client0_addr, 0, sizeof(struct sockaddr_in));
-		socklen_t client0_addrlen = sizeof(struct sockaddr_in);
-
-		udprecvfrom(client_sendpktserver_udpsock, buf, 256, 0, &client0_addr, &client0_addrlen, recvsize, "client.sendpktserver");
-		INVARIANT(recvsize == sizeof(int) && *((int *)buf) == client_sendpktserver_port_start + client_physical_idx);
-
-		udpsendto(client_sendpktserver_udpsock, buf, recvsize, 0, &client0_addr, client0_addrlen, "client.sendpktserver");
-		can_sendpkt = true;
-		close(client_sendpktserver_udpsock);
-		pthread_exit(nullptr);
-	}
+	udpsendto(client_sendpktserver_udpsock, sendpktserverbuf, recvsize, 0, &client0_addr, client0_addrlen, "client.sendpktserver");
+	can_sendpkt = true;
+	close(client_sendpktserver_udpsock);
+	pthread_exit(nullptr);
 }

@@ -25,9 +25,11 @@ server_total_logical_num = 128
 server_total_logical_num_for_rotation = 128
 
 [client]
+; a single port (the first physical client uses the port the receive rotation data from other physical clients)
+client_rotationdataserver_port=1025
 ; [client_sendpktserver_port_start, client_sendpktserver_port_start + client_physical_num - 1]
 ; NOTE: launch other physical clients first; after they are waiting for can_sendpkt, launch the first physical client (client 0) to tell them that they can send pkt at the same time
-client_sendpktserver_port_start=1025
+client_sendpktserver_port_start=1026
 
 [client0]
 ; client thread num for transaction phase in remote client

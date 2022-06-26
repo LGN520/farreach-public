@@ -127,6 +127,15 @@ uint32_t IniparserWrapper::get_server_total_logical_num_for_rotation() {
 
 // common client configuration
 
+short IniparserWrapper::get_client_rotationdataserver_port() {
+	int tmp = iniparser_getint(ini, "client:client_rotationdataserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [client:client_rotationdataserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 short IniparserWrapper::get_client_sendpktserver_port_start() {
 	int tmp = iniparser_getint(ini, "client:client_sendpktserver_port_start", -1);
 	if (tmp == -1) {

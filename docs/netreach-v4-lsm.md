@@ -1445,12 +1445,25 @@
 		+ Start clients and servers for warmup phase
 	- Use config.ini.farreach-rotation-transaction
 		+ Start clients and servers for transaction phase (repeat 127 times)
+		+ Example of 128 server threads
+			* 1 server physical num + 1 server total logical num
+				- (1) set server0.server_logical_idxes as bottleneck server logical index in config,ini
+				- (2) launch bottleneck server thread in server0
+				- (3) Run `./remote_client 1` in client 1
+				- (4) Run `./remote_client 0` in client 0
+				- (5) Record client0's server rotation data of all physical clients into result.out
+			* 2 server physical num + 2 server total logical num
+				- (1) set server0.server_logical_idxes as bottleneck server logical index in config.ini
+				- (2) Change server1.server_logical_idxes (not equal to server0.server_logical_idxes), e.g., from 0 to 1, in config.ini
+				- (3) Run `bash test_server_rotation.sh` in client0
+				- (4) Record client0's server rotation data of all physical clients into result.out
+				- (5) Go back to step (1) until repeating 127 times
 - Utils scripts
 	- Help to update config.ini
 		+ gen_logical_idxes: generate server logical indexes from startidx to endidx
 	- Help to generate throughput result files
 		+ sum_tworows_for_bottleneckserver.py: sum over per-server pktcnts of two clients to find bottleneck partition
-		+ gen_rotation_onerow_result.py: generate one row of rotation throughput result files by summing over per-client rotation result line 
+		+ Deprecated (covered by client0.rotationdataserver): gen_rotation_onerow_result.py: generate one row of rotation throughput result files by summing over per-client rotation result line 
 	- Analyze throughput result files: dynamic/static/rotation_calculate_thpt.py
 	- sync_file.sh: sync one file (filepath relateive to netreach-v4-lsm/) to all other machines
 	- ../sync.sh: sync entire netreach-v4-lsm directory to other machines (NOTE: old directory of other machines will be deleted first)

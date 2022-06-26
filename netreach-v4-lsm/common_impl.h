@@ -80,6 +80,7 @@ uint32_t server_total_logical_num = 0;
 uint32_t server_total_logical_num_for_rotation = 0;
 
 // common client configuration
+short client_rotationdataserver_port = 0;
 short client_sendpktserver_port_start = 0;
 
 // each physical client
@@ -231,7 +232,9 @@ inline void parse_ini(const char* config_file) {
 	printf("\n");
 
 	// common client configuration
+	client_rotationdataserver_port = ini.get_client_rotationdataserver_port();
 	client_sendpktserver_port_start = ini.get_client_sendpktserver_port_start();
+	COUT_VAR(client_rotationdataserver_port);
 	COUT_VAR(client_sendpktserver_port_start);
 	printf("\n");
 
