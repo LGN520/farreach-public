@@ -25,6 +25,7 @@
 #include "socket_helper.h"
 #include "dynamic_rulemap.h"
 #include "dynamic_array.h"
+#include "io_helper.h"
 
 #ifdef USE_YCSB
 #include "workloadparser/ycsb_parser.h"
@@ -163,7 +164,7 @@ void run_benchmark() {
 		client_worker_params[local_client_logical_idx].wait_latency_list.clear();
 		ret = pthread_create(&threads[local_client_logical_idx], nullptr, run_client_worker, (void *)&client_worker_params[local_client_logical_idx]);
 		UNUSED(ret);
-		COUT_THIS("[client] Lanuch client " << local_client_logical_idx)
+		//COUT_THIS("[client] Lanuch client " << local_client_logical_idx)
 	}
 
 	// launch sendpktserver for non-first physical client
@@ -192,7 +193,7 @@ void run_benchmark() {
 	else { // sendpktclient of the first physical client notifies other physical clients to start to send packets
 		if (client_physical_num > 1) { // notify other physical clients if any to send packets
 			int client_sendpktclient_udpsock = -1;
-			create_udpsock(client_sendpktclient_udpsock, false, "client.sendpktclient");
+			create_udpsock(client_sendpktclient_udpsock, true, "client.sendpktclient");
 			char snapshotclientbuf[256];
 			int recvsize = -1;
 
@@ -204,16 +205,30 @@ void run_benchmark() {
 				other_client_sendpktserver_addrlen[other_client_physical_idx - 1] = sizeof(struct sockaddr_in);
 			}
 
-			// NOTE: we launch other physical clients first; after they are waiting for can_sendpkt, we launch the first physical client to tell them send pkt at the same time
-			for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
-				*((int *)snapshotclientbuf) = client_sendpktserver_port_start + other_client_physical_idx - 1;
-				udpsendto(client_sendpktclient_udpsock, snapshotclientbuf, sizeof(int), 0, &other_client_sendpktserver_addr[other_client_physical_idx - 1], other_client_sendpktserver_addrlen[other_client_physical_idx - 1], "client.sendpktclient");
+			while (true) {
+				// NOTE: we launch other physical clients first; after they are waiting for can_sendpkt, we launch the first physical client to tell them send pkt at the same time
+				for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
+					*((int *)snapshotclientbuf) = client_sendpktserver_port_start + other_client_physical_idx - 1;
+					udpsendto(client_sendpktclient_udpsock, snapshotclientbuf, sizeof(int), 0, &other_client_sendpktserver_addr[other_client_physical_idx - 1], other_client_sendpktserver_addrlen[other_client_physical_idx - 1], "client.sendpktclient");
+				}
+
+				bool is_timeout = false;
+				for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
+					is_timeout = udprecvfrom(client_sendpktclient_udpsock, snapshotclientbuf, 256, 0, NULL, NULL, recvsize, "client.sendpktclient");
+					if (is_timeout) {
+						break;
+					}
+					INVARIANT(recvsize == sizeof(int));
+				}
+
+				if (is_timeout) {
+					continue;
+				}
+				else {
+					break;
+				}
 			}
 
-			for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
-				udprecvfrom(client_sendpktclient_udpsock, snapshotclientbuf, 256, 0, NULL, NULL, recvsize, "client.sendpktclient");
-				INVARIANT(recvsize == sizeof(int));
-			}
 			close(client_sendpktclient_udpsock);
 		}
 	}
@@ -539,26 +554,39 @@ void run_benchmark() {
 		socklen_t client0_rotationdataserver_addrlen = sizeof(struct sockaddr_in);
 
 		int client_rotationdataclient_udpsock = -1;
-		create_udpsock(client_rotationdataclient_udpsock, false, "client.rotationdataclient");
-		char rotationdataclient_buf[256];
-		int tmpoff = 0;
-		*((int *)(rotationdataclient_buf + tmpoff)) = nodeidx_pktcnt_map[valid_global_server_logical_idxes[0]];
-		tmpoff += sizeof(int);
-		if (valid_global_server_logical_idxes.size() == 2) {
-			*((int *)(rotationdataclient_buf + tmpoff)) = nodeidx_pktcnt_map[valid_global_server_logical_idxes[1]];
-		}
-		else {
-			*((int *)(rotationdataclient_buf + tmpoff)) = 0;
-		}
-		tmpoff += sizeof(int);
-		*((int *)(rotationdataclient_buf + tmpoff)) = total_pktcnt;
-		tmpoff += sizeof(int);
-		*((double *)(rotationdataclient_buf + tmpoff)) = total_thpt;
-		tmpoff += sizeof(double);
-		*((double *)(rotationdataclient_buf + tmpoff)) = avg_total_latency;
-		tmpoff += sizeof(double);
+		create_udpsock(client_rotationdataclient_udpsock, true, "client.rotationdataclient");
 
-		udpsendto(client_rotationdataclient_udpsock, rotationdataclient_buf, tmpoff, 0, &client0_rotationdataserver_addr, client0_rotationdataserver_addrlen, "client.rotationdataclient");
+		char rotationdataclient_buf[256];
+		int recvsize = -1;
+
+		while (true) {
+			int tmpoff = 0;
+			*((int *)(rotationdataclient_buf + tmpoff)) = nodeidx_pktcnt_map[valid_global_server_logical_idxes[0]];
+			tmpoff += sizeof(int);
+			if (valid_global_server_logical_idxes.size() == 2) {
+				*((int *)(rotationdataclient_buf + tmpoff)) = nodeidx_pktcnt_map[valid_global_server_logical_idxes[1]];
+			}
+			else {
+				*((int *)(rotationdataclient_buf + tmpoff)) = 0;
+			}
+			tmpoff += sizeof(int);
+			*((int *)(rotationdataclient_buf + tmpoff)) = total_pktcnt;
+			tmpoff += sizeof(int);
+			*((double *)(rotationdataclient_buf + tmpoff)) = total_thpt;
+			tmpoff += sizeof(double);
+			*((double *)(rotationdataclient_buf + tmpoff)) = avg_total_latency;
+			tmpoff += sizeof(double);
+
+			udpsendto(client_rotationdataclient_udpsock, rotationdataclient_buf, tmpoff, 0, &client0_rotationdataserver_addr, client0_rotationdataserver_addrlen, "client.rotationdataclient");
+
+			bool is_timeout = udprecvfrom(client_rotationdataclient_udpsock, rotationdataclient_buf, 256, 0, NULL, NULL, recvsize, "client.rotationdataclient");
+			if (is_timeout) {
+				continue;
+			}
+			else {
+				break;
+			}
+		}
 
 		close(client_rotationdataclient_udpsock);
 	}
@@ -566,15 +594,19 @@ void run_benchmark() {
 		if (client_physical_num > 1) {
 			char rotationdataserver_buf[256];
 			int recvsize = -1;
+
 			int client_rotationdataserver_udpsock = -1;
 			prepare_udpserver(client_rotationdataserver_udpsock, false, client_rotationdataserver_port, "client.rotationdataserver");
+
 			int agg_bottleneckserver_pktcnt = nodeidx_pktcnt_map[valid_global_server_logical_idxes[0]];
 			int agg_rotateserver_pktcnt = nodeidx_pktcnt_map[valid_global_server_logical_idxes[1]];
 			int agg_total_pktcnt = total_pktcnt;
 			double agg_total_thpt = total_thpt;
 			double agg_avg_total_latency = avg_total_latency;
 			for (uint16_t other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
-				udprecvfrom(client_rotationdataserver_udpsock, rotationdataserver_buf, 256, 0, NULL, NULL, recvsize, "client.rotationdataserver");
+				struct sockaddr_in other_client_rotationdataclient_addr;
+				socklen_t other_client_rotationdataclient_addrlen = sizeof(struct sockaddr_in);
+				udprecvfrom(client_rotationdataserver_udpsock, rotationdataserver_buf, 256, 0, &other_client_rotationdataclient_addr, &other_client_rotationdataclient_addrlen, recvsize, "client.rotationdataserver");
 
 				int tmpoff = 0;
 				agg_bottleneckserver_pktcnt += *((int *)(rotationdataserver_buf + tmpoff));
@@ -587,17 +619,31 @@ void run_benchmark() {
 				tmpoff += sizeof(double);
 				agg_avg_total_latency += *((double *)(rotationdataserver_buf + tmpoff));
 				tmpoff += sizeof(double);
+
+				udpsendto(client_rotationdataserver_udpsock, rotationdataserver_buf, recvsize, 0, &other_client_rotationdataclient_addr, other_client_rotationdataclient_addrlen, "client.rotationdataserver");
 			}
 			agg_avg_total_latency /= client_physical_num;
 
+			std::string rotationdata_filepath = "tmp_rotation.out";
+			bool rotationdata_isexist = isexist(rotationdata_filepath);
+			FILE *fd = fopen(rotationdata_filepath.c_str(), "a+");
+			if (!rotationdata_isexist) {
+				fprintf(fd, "%d\n", server_total_logical_num_for_rotation);
+			}
 			if (valid_global_server_logical_idxes.size() == 2) {
 				printf("result for server rotation of all clients: %d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
+						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
+				fprintf(fd, "%d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
 						agg_rotateserver_pktcnt, agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
 			}
 			else if (valid_global_server_logical_idxes.size() == 1) {
 				printf("result for server rotation of all clients: %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
 						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
+				fprintf(fd, "%d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
+						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
 			}
+			fflush(fd);
+			fclose(fd);
 
 			close(client_rotationdataserver_udpsock);
 		}
@@ -715,6 +761,7 @@ void *run_client_worker(void *param) {
 
 	netreach_key_t tmpkey;
 	val_t tmpval;
+	optype_t tmptype;
 
 	// for network communication
 	char buf[MAX_BUFSIZE];
@@ -737,6 +784,32 @@ void *run_client_worker(void *param) {
 	std::ofstream ofs(logname, std::ofstream::out);
 #endif
 
+	// pre-load key-value requests destinated to the one/two server partitions under server rotation in order to saturate servers
+#ifdef SERVER_ROTATION
+	std::vector<optype_t> rotationload_types;
+	std::vector<netreach_key_t> rotationload_keys;
+	std::vector<val_t> rotationload_vals;
+	int rotationload_idx = 0;
+	while (true) {
+		if (!iter->next()) {
+			break;
+		}
+#ifdef USE_HASH
+		uint32_t expected_serveridx = iter->key().get_hashpartition_idx(switch_partition_count, server_total_logical_num_for_client);
+#elif defined(USE_RANGE)
+		uint32_t expected_serveridx = iter->key().get_rangepartition_idx(server_total_logical_num_for_client);
+#endif
+		if ((valid_global_server_logical_idxes.size() == 1 && expected_serveridx != valid_global_server_logical_idxes[0]) || \
+			(valid_global_server_logical_idxes.size() == 2 && expected_serveridx != valid_global_server_logical_idxes[0] && expected_serveridx != valid_global_server_logical_idxes[1])) {
+			continue;
+		}
+		rotationload_types.push_back(iter->type());
+		rotationload_keys.push_back(iter->key());
+		rotationload_vals.push_back(iter->val());
+	}
+#endif
+
+
 	COUT_THIS("[client " << uint32_t(local_client_logical_idx) << "] Ready.");
 	ready_threads++;
 
@@ -750,27 +823,30 @@ void *run_client_worker(void *param) {
 	bool is_timeout = false;
 	bool isfirst_pkt = true;
 	while (running) {
+#ifndef SERVER_ROTATION
 		if (!iter->next()) {
 			if (workload_mode != 0) { // dynamic mode
 				iter->reset();
 				iter->next();
 			}
 			else { // static mode
+				iter->closeiter();
+				delete iter;
+				iter = NULL;
 				break;
 			}
 		}
-
+		tmptype = iter->type();
 		tmpkey = iter->key();
-
-#ifdef SERVER_ROTATION
-#ifdef USE_HASH
-		uint32_t expected_serveridx = tmpkey.get_hashpartition_idx(switch_partition_count, server_total_logical_num_for_client);
-#elif defined(USE_RANGE)
-		uint32_t expected_serveridx = tmpkey.get_rangepartition_idx(server_total_logical_num_for_client);
-#endif
-		if (expected_serveridx != valid_global_server_logical_idxes[0] && expected_serveridx != valid_global_server_logical_idxes[1]) {
-			continue;
+		tmpval = iter->val();
+#else
+		if (rotationload_idx >= rotationload_types.size()) {
+			break; // workload_mode must be 0 (aka static mode)
 		}
+		tmptype = rotationload_types[rotationload_idx];
+		tmpkey = rotationload_keys[rotationload_idx];
+		tmpval = rotationload_vals[rotationload_idx];
+		rotationload_idx += 1;
 #endif
 
 		struct timespec process_t1, process_t2, process_t3, send_t1, send_t2, send_t3, wait_t1, wait_t2, wait_t3;
@@ -789,7 +865,7 @@ void *run_client_worker(void *param) {
 				dynamic_rulemap_ptr->trymap(tmpkey);
 			}
 
-			if (iter->type() == optype_t(packet_type_t::GETREQ)) { // get
+			if (tmptype == optype_t(packet_type_t::GETREQ)) { // get
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				get_request_t req(tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string());
@@ -840,9 +916,7 @@ void *run_client_worker(void *param) {
 					continue; // continue to resend
 				}
 			}
-			else if (iter->type() == optype_t(packet_type_t::PUTREQ)) { // update or insert
-				tmpval = iter->val();
-
+			else if (tmptype == optype_t(packet_type_t::PUTREQ)) { // update or insert
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
@@ -927,7 +1001,7 @@ void *run_client_worker(void *param) {
 					continue; // continue to resend
 				}
 			}
-			else if (iter->type() == optype_t(packet_type_t::DELREQ)) {
+			else if (tmptype == optype_t(packet_type_t::DELREQ)) {
 				//uint16_t hashidx = uint16_t(crc32((unsigned char *)(&tmpkey), netreach_key_t::model_key_size() * 8) % kv_bucket_num);
 				del_request_t req(tmpkey);
 				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string());
@@ -979,7 +1053,7 @@ void *run_client_worker(void *param) {
 					continue; // continue to resend
 				}
 			}
-			else if (iter->type() == optype_t(packet_type_t::SCANREQ)) {
+			else if (tmptype == optype_t(packet_type_t::SCANREQ)) {
 				//netreach_key_t endkey = generate_endkey(tmpkey);
 				netreach_key_t endkey = netreach_key_t(tmpkey.keylolo, tmpkey.keylohi, tmpkey.keyhilo, (((tmpkey.keyhihi>>16)&0xFFFF)+513)<<16); // TMPDEBUG
 				/*size_t first_server_idx = get_server_idx(tmpkey);
@@ -1044,7 +1118,7 @@ void *run_client_worker(void *param) {
 				}
 			}
 			else {
-				printf("Invalid request type: %u\n", uint32_t(iter->type()));
+				printf("Invalid request type: %u\n", uint32_t(tmptype));
 				exit(-1);
 			}
 			break;
@@ -1094,10 +1168,6 @@ void *run_client_worker(void *param) {
 			cur_sending_time = 0.0;
 		}*/
 	}
-
-	iter->closeiter();
-	delete iter;
-	iter = NULL;
 
 	close(client_udpsock_list[local_client_logical_idx]);
 #if !defined(NDEBUGGING_LOG)
