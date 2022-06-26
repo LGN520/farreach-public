@@ -116,6 +116,17 @@ uint32_t IniparserWrapper::get_server_total_logical_num() {
 	return uint32_t(tmp);
 }
 
+// common client configuration
+
+short IniparserWrapper::get_client_sendpktserver_port_start() {
+	int tmp = iniparser_getint(ini, "server:client_sendpktserver_port_start", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [server:client_sendpktserver_port_start]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 // each physical client
 
 uint32_t IniparserWrapper::get_client_logical_num(uint32_t client_physical_idx) {

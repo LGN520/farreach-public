@@ -78,6 +78,9 @@ uint32_t server_physical_num = 0;
 uint32_t client_total_logical_num = 0;
 uint32_t server_total_logical_num = 0;
 
+// common client configuration
+short client_sendpktserver_port_start = 0;
+
 // each physical client
 std::vector<uint32_t> client_logical_nums;
 std::vector<const char *> client_ips;
@@ -221,6 +224,11 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(server_physical_num);
 	COUT_VAR(client_total_logical_num);
 	COUT_VAR(server_total_logical_num);
+	printf("\n");
+
+	// common client configuration
+	client_sendpktserver_port_start = ini.get_client_sendpktserver_port_start();
+	COUT_VAR(client_sendpktserver_port_start);
 	printf("\n");
 
 	// each physical client

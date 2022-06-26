@@ -29,6 +29,9 @@ class IniparserWrapper {
 		uint32_t get_client_total_logical_num();
 		uint32_t get_server_total_logical_num();
 
+		// client common configuration
+		short get_client_sendpktserver_port_start();
+
 		// each physical client
 		uint32_t get_client_logical_num(uint32_t client_physical_idx);
 		const char *get_client_ip(uint32_t client_physical_idx);
