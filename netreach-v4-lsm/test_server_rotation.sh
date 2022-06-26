@@ -19,7 +19,7 @@ echo "(4) start servers"
 ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp.out 2>&1 &"
 ssh ssy@dl15 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >tmp.out 2>&1 &"
 
-sleep 8s
+sleep 5s
 
 echo "(5) start clients"
 ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./remote_client 1 >tmp.out 2>&1 &"

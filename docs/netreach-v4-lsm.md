@@ -1458,6 +1458,9 @@
 				- (3) Run `bash test_server_rotation.sh` in client0
 				- (4) Record client0's server rotation data of all physical clients into result.out
 				- (5) Go back to step (1) until repeating 127 times
+	- IMPORTANT: try different # of client threads to sature servers
+		+ NOTE: more client threads does not mean better throughput, as client threads have CPU contention overhead
+		+ We MUST try different # of client threads to get the best runtime thpt improvement
 - Utils scripts
 	- Help to update config.ini
 		+ gen_logical_idxes: generate server logical indexes from startidx to endidx
