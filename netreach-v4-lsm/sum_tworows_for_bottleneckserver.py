@@ -15,8 +15,15 @@ rowc = []
 for i in range(len(rowa)):
     rowc.append(int(rowa[i]) + int(rowb[i]))
 
+print("sum of two rows:", end=' ')
+maxelement = -1
+maxidx = -1
 for i in range(len(rowc)):
     if i != len(rowc) - 1:
         print("{}".format(rowc[i]), end=' ')
     else:
         print("{}".format(rowc[i]), end='\n')
+    if maxelement == -1 or maxelement < rowc[i]:
+        maxelement = rowc[i]
+        maxidx = i
+print("max element: {}; max idx: {}".format(maxelement, maxidx))

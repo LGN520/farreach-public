@@ -59,6 +59,11 @@ std::atomic<size_t> finish_threads(0);
 int *client_udpsock_list = NULL;
 int client_sendpktserver_udpsock = -1;
 int client_physical_idx = -1;
+int server_total_logical_num_for_client;
+
+#ifdef SERVER_ROTATION
+std::vector<uint16_t> valid_global_server_logical_idxes;
+#endif
 
 const uint32_t range_gap = 1024; // add 2^10 to keylo of startkey
 //const int range_num = 10; // max number of returned kv pairs
@@ -79,6 +84,22 @@ void * run_client_sendpktserver(void *param); // sendpktserver (enforce all phys
 
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
+
+#ifdef SERVER_ROTATION
+	server_total_logical_num_for_client = server_total_logical_num_for_rotation;
+#else
+	server_total_logical_num_for_client = server_total_logical_num;
+#endif
+
+#ifdef SERVER_ROTATION
+	INVARIANT(workload_mode == 0);
+	for (int tmp_server_physical_idx = 0; tmp_server_physical_idx < server_physical_num; tmp_server_physical_idx++) {
+		for (int i = 0; i < server_logical_idxes_list[tmp_server_physical_idx].size(); i++) {
+			valid_global_server_logical_idxes.push_back(server_logical_idxes_list[tmp_server_physical_idx][i]);
+		}
+	}
+	INVARIANT(valid_global_server_logical_idxes.size() == 1 || valid_global_server_logical_idxes.size() == 2);
+#endif
 
 	if (argc != 2) {
 		printf("Usage: ./remote_client client_physical_idx\n");
@@ -149,7 +170,7 @@ void run_benchmark() {
 	// launch sendpktserver
 	pthread_t sendpktserver_thread;
 	ret = pthread_create(&sendpktserver_thread, nullptr, run_client_sendpktserver, nullptr);
-	INVARIANT(ret > 0);
+	INVARIANT(ret == 0);
 
 	COUT_THIS("[client] prepare clients ...");
 	// NOTE: current_client_logical_num * client.worker + client.sendpktserver
@@ -162,6 +183,7 @@ void run_benchmark() {
 	printf("wait to be able to send pkt if necessary\n");
 	while (!can_sendpkt) {}
 
+	printf("start to send pkt\n");
 	struct timespec total_t1, total_t2, total_t3;
 	running = true;
 
@@ -184,8 +206,8 @@ void run_benchmark() {
 				for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 					cursec_perclient_aggpktcnts[local_client_logical_idx] = client_worker_params[local_client_logical_idx].process_latency_list.size();
 					cursec_perclient_aggcachehitcnts[local_client_logical_idx] = client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map[0xFFFF];
-					std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_total_logical_num);
-					for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
+					std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_total_logical_num_for_client);
+					for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
 						cursec_curclient_perserver_aggcachemisscnts[global_server_logical_idx] = client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map[global_server_logical_idx];
 					}
 					cursec_perclient_perserver_aggcachemisscnts[local_client_logical_idx] = cursec_curclient_perserver_aggcachemisscnts;
@@ -223,8 +245,8 @@ void run_benchmark() {
 						for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 							cursec_perclient_aggpktcnts[local_client_logical_idx] = client_worker_params[local_client_logical_idx].process_latency_list.size();
 							cursec_perclient_aggcachehitcnts[local_client_logical_idx] = client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map[0xFFFF];
-							std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_total_logical_num);
-							for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
+							std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_total_logical_num_for_client);
+							for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
 								cursec_curclient_perserver_aggcachemisscnts[global_server_logical_idx] = client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map[global_server_logical_idx];
 							}
 							cursec_perclient_perserver_aggcachemisscnts[local_client_logical_idx] = cursec_curclient_perserver_aggcachemisscnts;
@@ -285,7 +307,7 @@ void run_benchmark() {
 			for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 				cursec_perclient_pktcnts[local_client_logical_idx] = persec_perclient_aggpktcnts[i][local_client_logical_idx] - persec_perclient_aggpktcnts[i-1][local_client_logical_idx];
 				cursec_perclient_cachehitcnts[local_client_logical_idx] = persec_perclient_aggcachehitcnts[i][local_client_logical_idx] - persec_perclient_aggcachehitcnts[i-1][local_client_logical_idx];
-				for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
+				for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
 					cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx] = persec_perclient_perserver_aggcachemisscnts[i][local_client_logical_idx][global_server_logical_idx] - persec_perclient_perserver_aggcachemisscnts[i-1][local_client_logical_idx][global_server_logical_idx];
 				}
 			}
@@ -345,7 +367,7 @@ void run_benchmark() {
 			cursec_total_cachemisscnt += cursec_curclient_total_cachemisscnt;
 
 			printf("%d-", cursec_curclient_total_cachemisscnt);
-			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
+			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
 				if (serveridx != server_num - 1) printf("%f-", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
 				else printf("%f ", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
 			}
@@ -426,7 +448,8 @@ void run_benchmark() {
 
 	// Dump throughput statistics
 	int total_pktcnt = total_latency_list.size();
-	printf("client-side total pktcnt: %d, total time: %f s, total thpt: %f MOPS\n", total_pktcnt, total_secs, double(total_pktcnt) / total_secs / 1024.0 / 1024.0);
+	double total_thpt = double(total_pktcnt) / total_secs / 1024.0 / 1024.0;
+	printf("client-side total pktcnt: %d, total time: %f s, total thpt: %f MOPS\n", total_pktcnt, total_secs, total_thpt);
 	
 	// WRONG way of calculating system average throughput (not including 0ops if client finishes before system running time)
 	/*double total_thpt = 0.0;
@@ -445,14 +468,30 @@ void run_benchmark() {
 
 	COUT_THIS("cache hit pktcnt: " << nodeidx_pktcnt_map[0xFFFF]);
 	printf("per-server pktcnt: ");
-	for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
-		if (global_server_logical_idx != server_total_logical_num - 1) {
+	for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
+		if (global_server_logical_idx != server_total_logical_num_for_client - 1) {
 			printf("%d ", nodeidx_pktcnt_map[global_server_logical_idx]);
 		}
 		else {
 			printf("%d\n", nodeidx_pktcnt_map[global_server_logical_idx]);
 		}
 	}
+
+#ifdef SERVER_ROTATION
+	double avg_total_latency = 0.0;
+	for (size_t i = 0; i < total_latency_list.size(); i++) {
+		avg_total_latency += total_latency_list[i];
+	}
+	avg_total_latency /= total_latency_list.size();
+	if (valid_global_server_logical_idxes.size() == 2) {
+		printf("result for server rotation of client %d: %d %d %d %f %f\n", client_physical_idx, nodeidx_pktcnt_map[valid_global_server_logical_idxes[0]], \
+				nodeidx_pktcnt_map[valid_global_server_logical_idxes[1]], total_pktcnt, total_thpt, avg_total_latency);
+	}
+	else if (valid_global_server_logical_idxes.size() == 1) {
+		printf("result for server rotation of client %d: %d %d %f %f\n", client_physical_idx, nodeidx_pktcnt_map[valid_global_server_logical_idxes[0]], \
+				total_pktcnt, total_thpt, avg_total_latency);
+	}
+#endif
 
 	if (workload_mode != 0) {
 		// get persec nodeidx-pktcnt mapping data
@@ -503,12 +542,12 @@ void run_benchmark() {
 		}
 		printf("\nper-sec per-server throughput:\n");
 		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
-			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num; global_server_logical_idx++) {
+			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
 				int tmppktcnt = 0;
 				if (persec_nodeidx_pktcnt_map[i].find(global_server_logical_idx) != persec_nodeidx_pktcnt_map[i].end()) {
 					tmppktcnt = persec_nodeidx_pktcnt_map[i][global_server_logical_idx];
 				}
-				if (global_server_logical_idx != server_total_logical_num - 1) {
+				if (global_server_logical_idx != server_total_logical_num_for_client - 1) {
 					printf("%d ", tmppktcnt);
 				}
 				else {
@@ -606,13 +645,25 @@ void *run_client_worker(void *param) {
 			}
 		}
 
+		tmpkey = iter->key();
+
+#ifdef SERVER_ROTATION
+#ifdef USE_HASH
+		uint32_t expected_serveridx = tmpkey.get_hashpartition_idx(switch_partition_count, server_total_logical_num_for_client);
+#elif defined(USE_RANGE)
+		uint32_t expected_serveridx = tmpkey.get_rangepartition_idx(server_total_logical_num_for_client);
+#endif
+		if (expected_serveridx != valid_global_server_logical_idxes[0] && expected_serveridx != valid_global_server_logical_idxes[1]) {
+			continue;
+		}
+#endif
+
 		struct timespec process_t1, process_t2, process_t3, send_t1, send_t2, send_t3, wait_t1, wait_t2, wait_t3;
 		uint16_t tmp_nodeidx_foreval = 0;
 		double wait_time = 0.0;
 		while (true) { // timeout-and-retry mechanism
 			CUR_TIME(process_t1);
 
-			tmpkey = iter->key();
 			//printf("expected server of key %x: %d\n", tmpkey.keyhihi, tmpkey.get_hashpartition_idx(server_num));
 			//printf("expected server of key %x: %d\n", tmpkey.keyhihi, tmpkey.get_rangepartition_idx(server_num));
 			if (workload_mode != 0) { // change key popularity if necessary
@@ -891,7 +942,7 @@ void *run_client_worker(void *param) {
 			break;
 		}
 
-		INVARIANT(tmp_nodeidx_foreval == 0xFFFF || tmp_nodeidx_foreval < server_total_logical_num);
+		INVARIANT(tmp_nodeidx_foreval == 0xFFFF || tmp_nodeidx_foreval < server_total_logical_num_for_client);
 		if (thread_param.nodeidx_pktcnt_map.find(tmp_nodeidx_foreval) == thread_param.nodeidx_pktcnt_map.end()) {
 			thread_param.nodeidx_pktcnt_map.insert(std::pair<uint16_t, int>(tmp_nodeidx_foreval, 1));
 		}
@@ -961,13 +1012,13 @@ void *run_client_sendpktserver(void *param) {
 		struct sockaddr_in other_client_sendpktserver_addr[client_physical_num];
 		socklen_t other_client_sendpktserver_addrlen[client_physical_num];
 		for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
-			set_sockaddr(other_client_sendpktserver_addr[other_client_physical_idx], inet_addr(client_ips[other_client_physical_idx]), client_sendpktserver_port_start + other_client_physical_idx);
+			set_sockaddr(other_client_sendpktserver_addr[other_client_physical_idx], inet_addr(client_ip_for_client0_list[other_client_physical_idx]), client_sendpktserver_port_start + other_client_physical_idx);
 			other_client_sendpktserver_addrlen[other_client_physical_idx] = sizeof(struct sockaddr_in);
 		}
 
 		// NOTE: we launch other physical clients first; after they are waiting for can_sendpkt, we launch the first physical client to tell them send pkt at the same time
 		for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
-			*((int *)buf) = client_sendpktserver_port_start + client_physical_idx;
+			*((int *)buf) = client_sendpktserver_port_start + other_client_physical_idx;
 			udpsendto(client_sendpktserver_udpsock, buf, sizeof(int), 0, &other_client_sendpktserver_addr[other_client_physical_idx], other_client_sendpktserver_addrlen[other_client_physical_idx], "client.sendpktserver");
 		}
 

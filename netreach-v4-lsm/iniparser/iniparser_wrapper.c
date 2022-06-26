@@ -116,12 +116,21 @@ uint32_t IniparserWrapper::get_server_total_logical_num() {
 	return uint32_t(tmp);
 }
 
+uint32_t IniparserWrapper::get_server_total_logical_num_for_rotation() {
+	int tmp = iniparser_getint(ini, "global:server_total_logical_num_for_rotation", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [global:server_total_logical_num_for_rotation]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
 // common client configuration
 
 short IniparserWrapper::get_client_sendpktserver_port_start() {
-	int tmp = iniparser_getint(ini, "server:client_sendpktserver_port_start", -1);
+	int tmp = iniparser_getint(ini, "client:client_sendpktserver_port_start", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [server:client_sendpktserver_port_start]: %d\n", tmp);
+		printf("Invalid entry of [client:client_sendpktserver_port_start]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);
@@ -182,6 +191,17 @@ uint32_t IniparserWrapper::get_client_pipeidx(uint32_t client_physical_idx) {
 		exit(-1);
 	}
 	return uint32_t(tmp);
+}
+
+const char *IniparserWrapper::get_client_ip_for_client0(uint32_t client_physical_idx) {
+	char key[256];
+	sprintf(key, "client%u:client_ip_for_client0", client_physical_idx);
+	const char *client_ip_for_client0 = iniparser_getstring(ini, key, nullptr);
+	if (client_ip_for_client0 == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
+		exit(-1);
+	}
+	return client_ip_for_client0;
 }
 
 

@@ -1226,6 +1226,163 @@
 				+ Observation: client-side wait latency (from receiving response to sending next request) is relatively large due to CPU contention (~800us)
 			+ client 3096 w/ disable WAL: 1.68 MOPS
 				+ Reason of no improvement: no sufficient input traffic due to client-side CPU contention
++ Dynamic workload under range partition
+	* Issue: only the first second matches our expectation, while the following seconds are always load imbalance
+		- Reason: after we fix bottleneck issues, system throughput increases and the original hot threshold is too small for one-second cleanup period -> due to ptf processing capability limitation, inswitch cache cannot follow the latest change of key popularity
+		- Solution 1: use larger hot threshold -> OK
+		- Solution 2: speed up cache eviction
+	* server 8 + client 512: OK (0.3~0.5 MOPS -> 1.0~1.1 MOPS)
+	* server 16 + client 1024: OK (0.3~0.5MOPS -> ~2 MOPS; w/ throughput fluctuation due to write stall/slowdown)
++ Optimize cahce eviction to reduce latency (smaller cache eviction time means better performance in dynamic workload)
+	* Test breakdown latency of cache eviction
+		- load evicted data by ptf: ~14.5ms
+			+ load frequency counters: ~4ms
+			+ load vallen + val + seq: ~10.5ms
+		- send/recv evicted data/ack to/from server: ~130us
+		- remove key from cache lookup MAT: ~400us
+	* Details
+		- Use uint16_t instead of uint8_t for op_hdr.optype and shadowtype
+			+ op_hdr.optype, shadowtype, and frequency_hdr
+				* P4: tofino/netbufferv4.p4, tofino/p4src/header.p4, tofino/p4src/parser.p4, tofino/p4src/regs/cache_frequency.p4, tofino/configure/table_configure.py
+				* C/C++: packet_format.*, workloadparser/*.*, remote_client.c, socket_helper.*, server_impl.h, loader.c
+			+ udp_hdr.pktlen and ipv4_hdr.pktlen: tofino/p4src/egress_mat.p4, tofino/configre/table_configure.py
+		- switchos sends CACHE_EVICT_LOADFREQ_INSWITCHs w/ sampled inswitcache.idxes to data plane by reflector	
+			+ packet_format.*, tofino/p4src/parser.p4, netbufferv4.p4, tofino/common.py, switchos.c
+		- data plane sends CACHE_EVICT_LOADFREQ_INSWITCH_ACKs w/ frequency counter to switchos
+			+ tofino/p4src/egress_mat.p4, tofino/configure/table_configure.py, reflector_impl.h, switchos.c
+		- switchos chooses the idx with minimum frequency counter as victim
+			+ switchos.c
+		- NOTE: due to statful ALU API limitation, data plane can only access validvalue register for reading, 1 -> 2, and 2 -> 1
+			+ NOTE: the latter two APIs are left for PUTREQ_LARGE if necessary
+			+ All conversions of validvalue for 1 -> 3, 3 -> 0, and 0 -> 1 are performed by switchos.ptf
+		- switchos sets validvalue = 3 by ptf channel
+			+ control_type.ini, switchos.c, common_impl.h. iniparser/iniparser_wrapper.*, tofino/common.py, tofino/ptf_popserver/table_configure.py
+		- switchos sends CACHE_EVICT_LOADDATA_INSWITCH w/ victim idx to data plane by reflector
+			+ packet_format.*, tofino/p4src/parser.p4, netbufferv4.p4, tofino/common.py, switchos.c
+		- data plane loads vallen + value + seq + stat as CACHE_EVICT_LOADDATA_INSWITCH_ACK to switchos
+			+ configure/table_configure.py, p4src/egress_mat.p4, reflector_impl.h, switchos.c
+		- switchos parses evicted val+seq+stat from CACHE_LOADDATA_INSWITCH_ACK
+		- NOTE: all ACKs of switchos-issued pkts do not need data-plane-based duplication -> we can use timeout-and-retry mechanism in switchos
+			+ CACHE_POP_INSWITCH_ACK (remove clone_hdr for this optype)
+			+ CACHE_EVICT_LOAD_FREQUENCY_INSWITCH_ACK
+			+ CACHE_EVICT_LOADDATA_ACK
++ Test cache population/eviction again
+	- Pass compilation of P4
+		+ Issue: cannot allocate enough resources for action data of update_ipmac_srcport_tbl -> reason is unclear
+		+ Solution: move lastclone_lastscansplit_tbl and eg_port_forward_tbl into stage 8 and stage 9, such that we can place update_ipmac_srcport_tbl into stage 10
+	- Pass compilation of C/C++
+	- Pass some normal test cases, e.g., GETREQ_NLATEST, GETRES_DELETED_SEQ, PUTREQ w/ cache hit
+	- Pass test of cache population (no duplicate ack)
+	- Pass test of cache eviction (no duplicate ack)
+		+ Issue: no CACHE_EVICT_LOADFREQ_INSWITCH_ACK
+			+ Reason: not add related MAT entries into eg_port_forward_tbl
+		+ Issue: still no CACHE_EVICT_LOADFREQ_INSWITCH_ACL
+			+ Reason: cache_lookup_tbl does not match op_hdr.optype to save TCAM -> is_cached must be 1 for CACHE_EVICT_XXX
+		+ Result: reduce per cache eviction latency from ~15ms to ~1.2ms -> system throughput can be resumes faster under dynamic workload
+	- Test effect of cache eviction optimization on dynamic workload
+		+ server 16 + client 1024: ~0.65 MOPS -> ~2.1 MOPS w/ throughput fluctuation (6 -> 24 normalized throughput)
+			* Reason of not close to normalized thpt: disk becomes overhead in server with 16 server threads
+		+ server 8 + client 512: ~0.55 MOPS -> ~1.1 MOPS w/o throughput fluctuation (or very limited) (6 -> 12 normalized thpt)
++ Prepare for YCSB
+	* Implement loadfinish_client.c (and server.c) to notify servers the end of loading phase
+	* Init server-side snapshot of snapshot id 0 after loading phase
+	* Manually flush memetable after loading phase, which syncs WAL into disk (actually delete old WAL files)
++ Check effect of snapshot on runtime throughput
+	* Limited effect as we use rocksb::snapshot which is just a sequence number, except normal throughput fluctuation of rocksdb
+	* Fix issue of incorrect specical case count
+		+ Reason: incorrect udp and ip pktlen in MATs of update_pktlen_tbl
+	* 1000~7000 special cases (case1 must <= 10000; case2 must be limited under dynamic workload due to limited cache evictions)
+		+ 10000 * 200B / 10s -> 200KB/s -> very limited bandwidth overhead to controller
++ Code for multiple physical clients/servers (NOTE: only 1 reflector and controller)
+	* Update configuration format
+		- config.ini, iniparser/iniparser_wrapper.*, common_impl.h, tofino/common.py
+		- NOTE: we specify serveridxes of each physical server to prepare for server rotation
+	* Update client-side remote_client.c
+		- NOTE: we use global client logical idx to load workload files
+	* Update switch-side configre/table_configre.py
+		- switch -> servers
+			+ set egress port and udp.dstport based on key for hash/range partition in ingress pipeline
+			+ set meta.server_sid (and increase udp.dstport by 1 if is_clone = 1) based on udp.dstport for (cloned) SCANREQ_SPILT at process_scanreq_split_tbl in egress pipeline
+			+ update ip, mac, and udp.srcport based on eg_intr_md.egress_port in egress pipeline
+		- switch -> clients
+			+ set inswitch_hdr.client_sid based on ingress port to prepare for cache hit in ingress pipeline
+			+ set egress port based on dstip for responses in ingress piepeline
+		- add more MAT entries to clone for different physical clients and servers (and single reflector)
+	* Update server-side server_impl.h, server.c
+		- NOTE: we use global server logical idx to create udpservers for worker.udpsocks, evictserver.udpsocks, snapshotserver.udpsocks, and snapshotdataserver.udpsocks
+		- NOTE: we use global server logical idx to prepare dstaddrs for server.popclient.udpsocks
+		- NOTE: we use global server logical idx to open rocksdb database, calculate valid key range for scan request, set stat_hdr.nodeidx_for_eval for each response, set CachePop.serveridx and CacheEvict.serveridx
+	* Update controller-side controller.c
+		- NOTE: we always use global server logical idx
+	* Update switchos-side switchos.c, reflector_impl.h
+		- NOTE: send snapshot data to corresponding logical server only if record cnt > 0
+		- Update reflector.worker as reflector.dp2cpserver, and reflector.popserver as reflector.cp2dpserver
++ Issue: no stat_hdr for GETRES_LATEST/DELETED_SEQ -> no nodeidx_for_eval
+	* Add stat_hdr for GETRES_LATEST/DELETED_SEQ
+	* Add stat_hdr for GETRES_LATEST/DELETED_SEQ_INSWITCH
++ Correctness test: normal; cachehit; conservative read; population; snapshot
+	* NOTE: we can receive GETRES with udp.srcport specified by update_ipmac_srcport_tbl from GETRES_DELETED_SEQ (conservative read) -> eg_intr_md.egress_port of cloned packet from clone_i2e is updated correctly
+	* NOTE: we can receive PUTRES with udp.srcport specified by update_ipmac_srcport_tbl from cache hit -> eg_intr_md.egress_port of cloend packet fro clone_e2e is also updated correctly
++ Test one-physical-client (512 threads) to one-physical-server (8 threads) with new source code
+	* client512 + server8 under static workload: ~1.06 MOPS w/ slight perf fluctuation
+	* client512 + server8 under dynamic workload: 0.5~1.0 MOPS w/ slight perf fluctuation
++ Configure multi-clients/servers testbed
++ Issue: incorrect ipaddress for multi-servers
+	* Solution: set ipaddress for packet from client to server
++ Test runtime throughput with different physical servers under range partition
+	* 2 physical clients (each w/ 512 client threads) + 1 physical server (16 server threads) w/o disable WAL
+		- FarReach w/o inswitch cache: 0.062 + 0.062 = 0.124 MOPS
+		- FarReach w/ inswitch cache: 0.57 + 0.61 = 1.18 MOPS (9.5X runtime; 11.3X normalized)
+			+ NOTE: close to 1 physical client w/ 1024 client threads: 1.1 MOPS
+	* 2 physical clients (each w/ 512 client threads) + 1 physical server (16 server threads) w/ disable WAL
+		- FarReach w/o inswitch cache: 0.097 + 0.097 = 0.194 MOPS
+		- FarReach w/ inswitch cache: 0.86 + 1.02 = 1.88 MOPS (9.7X runtime; 11.3X normalized)
+			+ NOTE: close to 1 physical client w/ 1024 client threads: 1.67 MOPS
+		- Reasons
+			+ NOTE: CPU should not become bottleneck, as we assign an individual CPU core to each server.worker
+				* Very limited CPU cores of dl16?
+			+ Memory becomes bottleneck? -> memory access prefers skewed workload, while server receives non-skewed workload if w/ inswitch cache
+			+ Although w/o WAL disk operations, rocksdb still has other disk operations (e.g., flush/compaction) -> flush/compaction also prefers skewed workload
+	* 2 physical clients (each w/ 512 client threads) + 2 physical servers (8 server threads each)
+		- FarReach w/o inswitch cache: 0.062 + 0.062 = 0.124 MOPS
+		- FarReach w/ inswitch cache: 0.56 + 0.56 = 1.12 MOPS (9X runtime; 11.3X normalized)
+	* 2 physical clients (each w/ 1024 client threads) + 2 physical servers (8 server threads each)
+		- FarReach w/ inswith cache: 0.55 + 0.6 = 1.15 MOPS (9.3X runtime; 11.3X normalized)
+		- NOTE: dl15 CPU is fully utilized yet dl16 CPU is only ~60%
+	* 2 physical clients (each w/ 1024 client threads) + 2 physical servers (8 server threads each) (swap dl15 and dl16)
+		- FarReach w/ inswith cache: 0.79 + 0.78 = 1.57 MOPS (12.7X runtime; 11.3X normalized)
+		- NOTE: both dl15 and dl16 CPU are fully utilized
+	* 2 physical clients (each w/ 512 client threads) + 2 physical servers (8 server threads each) (swap dl15 and dl16)
+		- FarReach w/ inswith cache: 0.79 + 0.73 = 1.52 MOPS (12.2X runtime; 11.3X normalized)
+		- NOTE: both dl15 and dl16 CPU are fully utilized
+	* 2 physical clients (each w/ 1024 client threads) + 2 physical servers (16 server threads each) (dl15: server0; dl16: server1)
+		- FarReach w/ inswitch cache: 0.6 + 0.88 = 1.48 MOPS (7.8X runtime; 18.4X normalized)
+		- NOTE: dl15 CPU is ~70~85% utilization, yet dl16 CPU is only ~50% utilization
+	* 2 physical clients (each w/ 1024 client threads) + 2 physical servers (16 server threads each) (swap dl15 and dl16)
+		- FarReach w/o inswitch cache: 0.095 + 0.095 = 0.19 MOPS
+		- FarReach w/ inswitch cache: 0.95 + 0.96 = 1.91 MOPS (10X runtime; 18.4X normalized)
+		- NOTE: both dl15 and dl16 CPU is only ~70% utilization
+	* Trick: dl16 as server 0 and dl15 as server 1 (aka dl16-dl15) is better than dl15-dl16
+	* 2 physical clients (each w/ 512 client threads) + 2 physical servers (8 server threads each) (dl13: server0; dl15: server1)
+		- FarReach w/ inswitch cache: 0.91 + 0.59 = 1.5 MOPS (12.1X runtime; 11.3X normalized)
+		- NOTE: dl16 has smaller thpt than dl11 due to very limited CPU cores
+		- NOTE: dl15 is fully utilized, yet dl13 is only ~60% utilization
+	* 2 physical clients (each w/ 1024 client threads) + 2 physical servers (16 server threads each) (dl13: server0; dl15: server1)
+		- FarReach w/ inswitch cache: 0.97 + 0.56 = 1.53 MOPS (8.1X runtime; 18.4X normalized)
+		- NOTE: dl16 only has 24 CPU cores, which send packets much slower than dl13 -> too large send latency and lower thpt
+		- NOTE: both dl13 and dl15 is only 30~70% utilization
+	* Trick: dl16 cannot be used as client due to very limited CPU cores
+	* Test dynacmic workload w/ 2 physical clients (each w/ 512 threads) + 2 physical servers (8 threads each) (dl16-dl15)
+		- 0.4 ~ 1.0 MOPS: w/ serious perf fluctuation
+	* Test snapshot with 2 physical clients + 2 physical servers
++ Test static workload (under hash partition)
+	* 1024/2 clients + 16/2 servers (2.9X runtime; 3.1X normalized)
+		- w/o inswitch cache: 0.27 + 0.26 = 0.53 MOPS
+		- w/ inswitch cache: 0.8 + 0.74 = 1.54 MOPS
+	* 2048/2 clients + 32/2 servers (2.8X runtime; 4.6X normalized)
+		- w/o inswitch cache: 0.35 + 0.35 = 0.7 MOPS
+		- w/ inswitch cache: 0.96 + 0.99 = 1.95 MOPS
+	* NOTE: we can launch at most 8 server threads in each physical server such that we can match runtime thpt to normalized thpt
 
 ## Run
 
@@ -1280,6 +1437,23 @@
 	- Launch clients in end host
 		- Warmup phase: `./warmup_client`
 		- Transaction phase: `./remote_client`
+- Server rotation for static workload
+	- Use config.ini.farreach-rotation-switch-switchos-loading-warmupclient
+		+ Start switch and configure data plane
+		+ Start switchos and ptf.pop/snapshotserver
+		+ Start clients and servers for loading phase
+		+ Start clients and servers for warmup phase
+	- Use config.ini.farreach-rotation-transaction
+		+ Start clients and servers for transaction phase (repeat 127 times)
+- Utils scripts
+	- Help to update config.ini
+		+ gen_logical_idxes: generate server logical indexes from startidx to endidx
+	- Help to generate throughput result files
+		+ sum_tworows_for_bottleneckserver.py: sum over per-server pktcnts of two clients to find bottleneck partition
+		+ gen_rotation_onerow_result.py: generate one row of rotation throughput result files by summing over per-client rotation result line 
+	- Analyze throughput result files: dynamic/static/rotation_calculate_thpt.py
+	- sync_file.sh: sync one file (filepath relateive to netreach-v4-lsm/) to all other machines
+	- ../sync.sh: sync entire netreach-v4-lsm directory to other machines (NOTE: old directory of other machines will be deleted first)
 
 ## Simple test
 

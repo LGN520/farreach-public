@@ -28,6 +28,7 @@ class IniparserWrapper {
 		uint32_t get_server_physical_num();
 		uint32_t get_client_total_logical_num();
 		uint32_t get_server_total_logical_num();
+		uint32_t get_server_total_logical_num_for_rotation();
 
 		// client common configuration
 		short get_client_sendpktserver_port_start();
@@ -38,6 +39,7 @@ class IniparserWrapper {
 		void get_client_mac(uint8_t* macaddr, uint32_t client_physical_idx);
 		const char *get_client_fpport(uint32_t client_physical_idx);
 		uint32_t get_client_pipeidx(uint32_t client_physical_idx);
+		const char *get_client_ip_for_client0(uint32_t client_physical_idx);
 		
 		// server common configuration
 		uint32_t get_server_load_factor();
