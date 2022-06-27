@@ -256,6 +256,7 @@ void transaction_main() {
 	printf("Reset CPU affinity of rocksdb's background threads\n");
 	char command[256];
 	sprintf(command, "./reset_rocksdb_affinity.sh %d %d %d ", server_worker_corenums[server_physical_idx], server_total_corenums[server_physical_idx], current_server_logical_num);
+	//sprintf(command, "./reset_all_affinity.sh %d %d %d ", server_worker_corenums[server_physical_idx], server_total_corenums[server_physical_idx], current_server_logical_num);
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		if (i != current_server_logical_num - 1) {
 			sprintf(command + strlen(command), "%d ", server_worker_lwpid_list[i]);
@@ -335,8 +336,8 @@ void transaction_main() {
 		dump_latency(cursec_rocksdb_latency_list, "rocksdb_latency_list overall");
 		printf("\n");
 	}
-	printf("\n");
 #endif
+	printf("\n");
 
 	// dump per-server load ratio
 	size_t overall_pktcnt = 0;
@@ -352,8 +353,8 @@ void transaction_main() {
 
 	// dump wait latency
 	printf("\nwait latency:\n");
-	/*std::vector<double> worker_wait_latency_list;
-	for (size_t i = 0; i < server_num; i++) {
+	std::vector<double> worker_wait_latency_list;
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		printf("[server %d]\n", i);
 		std::string tmp_label;
 		GET_STRING(tmp_label, "worker_wait_latency_list " << i);
@@ -362,7 +363,8 @@ void transaction_main() {
 		worker_wait_latency_list.insert(worker_wait_latency_list.end(), server_worker_params[i].wait_latency_list.begin(), server_worker_params[i].wait_latency_list.end());
 	}
 	printf("[overall]\n");
-	dump_latency(worker_wait_latency_list, "worker_wait_latency_list overall");*/
+	dump_latency(worker_wait_latency_list, "worker_wait_latency_list overall");
+	printf("\n");
 	std::vector<double> worker_avg_wait_latency_list(current_server_logical_num);
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		double tmp_avg_wait_latency = 0.0;
@@ -376,8 +378,8 @@ void transaction_main() {
 
 	// dump process latency
 	printf("\nprocess latency:\n");
-	/*std::vector<double> worker_process_latency_list;
-	for (size_t i = 0; i < server_num; i++) {
+	std::vector<double> worker_process_latency_list;
+	for (size_t i = 0; i < current_server_logical_num; i++) {
 		printf("[server %d]\n", i);
 		std::string tmp_label;
 		GET_STRING(tmp_label, "worker_process_latency_list " << i);
@@ -386,7 +388,8 @@ void transaction_main() {
 		worker_process_latency_list.insert(worker_process_latency_list.end(), server_worker_params[i].process_latency_list.begin(), server_worker_params[i].process_latency_list.end());
 	}
 	printf("[overall]\n");
-	dump_latency(worker_process_latency_list, "worker_process_latency_list overall");*/
+	dump_latency(worker_process_latency_list, "worker_process_latency_list overall");
+	printf("\n");
 	std::vector<double> worker_avg_process_latency_list(current_server_logical_num);
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		double tmp_avg_process_latency = 0.0;
@@ -400,6 +403,18 @@ void transaction_main() {
 
 	// dump rocksdb latency
 	printf("\nrocksdb latency:\n");
+	std::vector<double> rocksdb_latency_list;
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		printf("[server %d]\n", i);
+		std::string tmp_label;
+		GET_STRING(tmp_label, "rocksdb_latency_list " << i);
+		dump_latency(server_worker_params[i].rocksdb_latency_list, tmp_label);
+
+		rocksdb_latency_list.insert(rocksdb_latency_list.end(), server_worker_params[i].rocksdb_latency_list.begin(), server_worker_params[i].rocksdb_latency_list.end());
+	}
+	printf("[overall]\n");
+	dump_latency(rocksdb_latency_list, "rocksdb_latency_list overall");
+	printf("\n");
 	std::vector<double> worker_avg_rocksdb_latency_list(current_server_logical_num);
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		double tmp_avg_rocksdb_latency = 0.0;
