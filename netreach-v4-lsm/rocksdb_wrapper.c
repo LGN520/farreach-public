@@ -93,11 +93,18 @@ bool RocksdbWrapper::open(uint16_t tmpworkerid) {
 	std::string deletedset_path;
 	get_server_deletedset_path(deletedset_path, tmpworkerid);
 	if (is_runtime_existing) {
-		INVARIANT(isexist(deletedset_path));
-		deleted_set.load(deletedset_path);
+		if (isexist(deletedset_path)) {
+			deleted_set.load(deletedset_path);
+		}
+		else {
+			printf("[WARNING] no deleted set for non-empty server %d\n", tmpworkerid);
+			deleted_set.clear();
+		}
 	}
 	else {
-		INVARIANT(!isexist(deletedset_path));
+		if (isexist(deletedset_path)) {
+			printf("[WARNING] with deleted set for empty server %d\n", tmpworkerid);
+		}
 		deleted_set.clear();
 	}
 

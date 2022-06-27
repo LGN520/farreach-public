@@ -29,8 +29,8 @@ sleep 1s
 
 # TODO: retrieve dl16.bottleneckserver to the state just after loading phase
 echo "retrieve bottleneck partition back to the state after loading phase"
-ssh ssy@dl16 "rm -r /tmp/netreach-v4-lsm/*"
-ssh ssy@dl13 "rm -r /tmp/netreach-v4-lsm/*"
+#ssh ssy@dl16 "rm -r /tmp/netreach-v4-lsm/*"
+#ssh ssy@dl13 "rm -r /tmp/netreach-v4-lsm/*"
 
 echo "prepare and sync config.ini"
 cp configs/config.ini.rotation-transaction1p.dl16dl13 config.tmp
@@ -78,8 +78,8 @@ do
 
 	# TODO: retrieve dl16.bottleneckserver to the state just after loading phase
 	echo "retrieve bottleneck partition back to the state after loading phase"
-	ssh ssy@dl16 "rm -r /tmp/netreach-v4-lsm/*"
-	ssh ssy@dl13 "rm -r /tmp/netreach-v4-lsm/*"
+	#ssh ssy@dl16 "rm -r /tmp/netreach-v4-lsm/*"
+	#ssh ssy@dl13 "rm -r /tmp/netreach-v4-lsm/*"
 
 	echo "prepare and sync config.ini"
 	cp configs/config.ini.rotation-transaction2p.dl16dl13 config.tmp
@@ -102,5 +102,9 @@ do
 	ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash stop_server.sh >/dev/null"
 	sleep 5s
 
-	exit
+	#read -p "Continue[y/n]: " is_continue
+	#if [ ${is_continue}x == nx ]
+	#then
+	#	exit
+	#fi
 done

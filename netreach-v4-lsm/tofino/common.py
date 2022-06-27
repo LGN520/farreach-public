@@ -24,6 +24,7 @@ switchos_ptf_snapshotserver_port = int(config.get("switch", "switchos_ptf_snapsh
 
 # reflector port
 reflector_dp2cpserver_port = int(config.get("reflector", "reflector_dp2cpserver_port"))
+reflector_ip_for_switchos = str(config.get("reflector", "reflector_ip_for_switchos"))
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.
@@ -45,11 +46,13 @@ server_macs = []
 server_fpports = []
 server_pipeidxes = []
 server_logical_idxes_list = []
+server_ip_for_controller_list = []
 for i in range(server_physical_num):
     server_ips.append(str(config.get("server{}".format(i), "server_ip")))
     server_macs.append(str(config.get("server{}".format(i), "server_mac")))
     server_fpports.append(str(config.get("server{}".format(i), "server_fpport")))
     server_pipeidxes.append(int(config.get("server{}".format(i), "server_pipeidx")))
+    server_ip_for_controller_list.append(str(config.get("server{}".format(i), "server_ip_for_controller")))
     tmpstr = str(config.get("server{}".format(i), "server_logical_idxes"))
     server_logical_idxes = tmpstr.split(':')
     for j in range(len(server_logical_idxes)):

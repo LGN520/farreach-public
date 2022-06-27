@@ -43,6 +43,7 @@ struct alignas(CACHELINE_SIZE) ClientWorkerParam {
 	std::vector<double> process_latency_list;
 	std::vector<double> send_latency_list; // time of sending packet
 	int unmatched_cnt;
+	int timeout_cnt;
 	std::vector<double> wait_latency_list; // time between receiving response and sending next request
 };
 typedef ClientWorkerParam client_worker_param_t;
@@ -122,8 +123,12 @@ int main(int argc, char **argv) {
 	INVARIANT(client_udpsock_list != NULL);
 	for (size_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 		// NOTE: udp recv buffer size cannot be too larger under > 1024 server threads in one phsyical server
-		//create_udpsock(client_udpsock_list[local_client_logical_idx], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
-		create_udpsock(client_udpsock_list[local_client_logical_idx], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_DEFAULT_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+		if (current_client_logical_num <= 1024) { // avoid linux kernel overflow
+			create_udpsock(client_udpsock_list[local_client_logical_idx], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_LARGE_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+		}
+		else {
+			create_udpsock(client_udpsock_list[local_client_logical_idx], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_DEFAULT_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
+		}
 	}
 
 	run_benchmark();
@@ -161,6 +166,7 @@ void run_benchmark() {
 		client_worker_params[local_client_logical_idx].process_latency_list.clear();
 		client_worker_params[local_client_logical_idx].send_latency_list.clear();
 		client_worker_params[local_client_logical_idx].unmatched_cnt = 0;
+		client_worker_params[local_client_logical_idx].timeout_cnt = 0;
 		client_worker_params[local_client_logical_idx].wait_latency_list.clear();
 		ret = pthread_create(&threads[local_client_logical_idx], nullptr, run_client_worker, (void *)&client_worker_params[local_client_logical_idx]);
 		UNUSED(ret);
@@ -495,10 +501,13 @@ void run_benchmark() {
 	dump_latency(perclient_avgwait_latency_list, "perclient_avgwait_latency_list");
 
 	int total_unmatched_cnt = 0;
+	int total_timeout_cnt = 0;
 	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 		total_unmatched_cnt += client_worker_params[local_client_logical_idx].unmatched_cnt;
+		total_timeout_cnt += client_worker_params[local_client_logical_idx].timeout_cnt;
 	}
 	COUT_VAR(total_unmatched_cnt);
+	COUT_VAR(total_timeout_cnt);
 
 	// Dump throughput statistics
 	int total_pktcnt = total_latency_list.size();
@@ -639,7 +648,7 @@ void run_benchmark() {
 			else if (valid_global_server_logical_idxes.size() == 1) {
 				printf("result for server rotation of all clients: %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
 						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
-				fprintf(fd, "%d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
+				fprintf(fd, "%d %d %f %f\n", agg_bottleneckserver_pktcnt, \
 						agg_total_pktcnt, agg_total_thpt, agg_avg_total_latency);
 			}
 			fflush(fd);
@@ -913,6 +922,7 @@ void *run_client_worker(void *param) {
 					}
 				}
 				if (is_timeout) {
+					thread_param.timeout_cnt += 1;
 					continue; // continue to resend
 				}
 			}
@@ -998,6 +1008,9 @@ void *run_client_worker(void *param) {
 					}
 				}
 				if (is_timeout) {
+					COUT_VAR(rotationload_idx);
+					printf("timeout key %x\n", tmpkey.keyhihi);
+					thread_param.timeout_cnt += 1;
 					continue; // continue to resend
 				}
 			}
@@ -1050,6 +1063,7 @@ void *run_client_worker(void *param) {
 					}
 				}
 				if (is_timeout) {
+					thread_param.timeout_cnt += 1;
 					continue; // continue to resend
 				}
 			}
@@ -1087,6 +1101,7 @@ void *run_client_worker(void *param) {
 				CUR_TIME(wait_t1);
 				set_recvtimeout(client_udpsock_list[local_client_logical_idx], CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
 				if (is_timeout) {
+					thread_param.timeout_cnt += 1;
 					continue;
 				}
 

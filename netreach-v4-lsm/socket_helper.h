@@ -14,8 +14,8 @@
 #include "packet_format_impl.h"
 
 #define SOCKET_TIMEOUT 5 // 5s
-#define CLIENT_SOCKET_TIMEOUT_SECS 5 // 5s
-#define CLIENT_SCAN_SOCKET_TIMEOUT_SECS 10 // 10s
+#define CLIENT_SOCKET_TIMEOUT_SECS 1 // 5s
+#define CLIENT_SCAN_SOCKET_TIMEOUT_SECS 5 // 10s
 
 // payload only used by end-hosts -> linux kernel performs ip-level fragmentation
 // max payload size to avoid udp fragmentation (manual udp fragmentation): 65535(ipmax) - 20(iphdr) - 8(udphdr)
