@@ -810,10 +810,15 @@ void *run_switchos_snapshotserver(void *param) {
 	int reflector_cp2dpserver_addr_len = sizeof(struct sockaddr);
 
 	// for snapshot data from data plane instead of ptf
-	val_t * switchos_snapshot_values = NULL;
-	uint32_t * switchos_snapshot_seqs = NULL;
-	bool * switchos_snapshot_stats = NULL;
 	//dynamic_array_t ptf_largebuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
+	val_t ** switchos_perpipeline_snapshot_values = new val_t*[switch_pipeline_num];
+	uint32_t ** switchos_perpipeline_snapshot_seqs = new uint32_t*[switch_pipeline_num];
+	bool ** switchos_perpipeline_snapshot_stats = new bool*[switch_pipeline_num];
+	for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+		switchos_perpipeline_snapshot_values[tmp_pipeidx] = NULL;
+		switchos_perpipeline_snapshot_seqs[tmp_pipeidx] = NULL;
+		switchos_perpipeline_snapshot_stats[tmp_pipeidx] = NULL;
+	}
 	
 	// for consistent snapshot data to controller
 	dynamic_array_t tmp_sendbuf_list[server_total_logical_num];
@@ -830,6 +835,8 @@ void *run_switchos_snapshotserver(void *param) {
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
+
+	bool is_first_snapshot = true;
 
 	// communicate with controller.snapshotclient
 	char recvbuf[MAX_BUFSIZE];
@@ -880,7 +887,7 @@ void *run_switchos_snapshotserver(void *param) {
 			is_stop_cachepop = false;
 			popworker_know_stop_cachepop = false;
 
-			if (likely(switchos_specialcases_ptr != NULL)) { // not the first snapshot
+			if (likely(is_first_snapshot == false)) { // not the first snapshot
 				for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
 					INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] != NULL && switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] != NULL);
 				}
@@ -891,50 +898,63 @@ void *run_switchos_snapshotserver(void *param) {
 				popworker_know_snapshot_end = false;
 				specialcaseserver_know_snapshot_end = false;
 
-				// wait for case2 from popworker and case1 from specialcaseserver (finish using switchos_specialcases_ptr)
+				// wait for case2 from popworker and case1 from specialcaseserver (finish using switchos_perpipeline_specialcases_ptr)
 				while (!popworker_know_snapshot_end || !specialcaseserver_know_snapshot_end) {}
 
-				// end stale snapshot (by now popworker/specialcaseserver will not access switchos_specialcases_ptr and backuped metadata)
+				// end stale snapshot (by now popworker/specialcaseserver will not access switchos_perpipeline_specialcases_ptr and backuped metadata)
 				is_snapshot_end = false;
 				popworker_know_snapshot_end = false;
 				specialcaseserver_know_snapshot_end = false;
 
-				// free stale special cases
-				// NOTE: popserver/specialcaseserver will not touch speicalcases_ptr now, as both is_snapshot/is_snapshot_end are false
-				delete switchos_specialcases_ptr;
-				switchos_specialcases_ptr = NULL;
-
-				// free backuped metadata
-				// NOTE: popserver/specialcaseserver will not touch backuped metadata now, as both is_snapshot/is_snapshot_end are false
+				INVARIANT(switchos_perpipeline_snapshot_values != NULL && switchos_perpipeline_snapshot_seqs != NULL && switchos_perpipeline_snapshot_stats != NULL);
 				for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+					// free stale special cases
+					// NOTE: popserver/specialcaseserver will not touch speicalcases_ptr now, as both is_snapshot/is_snapshot_end are false
+					delete switchos_perpipeline_specialcases_ptr[tmp_pipeidx];
+					switchos_perpipeline_specialcases_ptr[tmp_pipeidx] = NULL;
+
+					// free backuped metadata
+					// NOTE: popserver/specialcaseserver will not touch backuped metadata now, as both is_snapshot/is_snapshot_end are false
 					delete [] switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx];
 					switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] = NULL;
 					delete [] switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx];
 					switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] = NULL;
 					switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx] = 0;
+
+
+					// free snapshot data
+					if (switchos_perpipeline_snapshot_values[tmp_pipeidx] != NULL) {
+						delete [] switchos_perpipeline_snapshot_values[tmp_pipeidx];
+						switchos_perpipeline_snapshot_values[tmp_pipeidx] = NULL;
+					}
+					if (switchos_perpipeline_snapshot_seqs[tmp_pipeidx] != NULL) {
+						delete [] switchos_perpipeline_snapshot_seqs[tmp_pipeidx];
+						switchos_perpipeline_snapshot_seqs[tmp_pipeidx] = NULL;
+					}
+					if (switchos_perpipeline_snapshot_stats[tmp_pipeidx] != NULL) {
+						delete [] switchos_perpipeline_snapshot_stats[tmp_pipeidx];
+						switchos_perpipeline_snapshot_stats[tmp_pipeidx] = NULL;
+					}
 				}
 			}
 			else { // the first snapshot
+				INVARIANT(switchos_perpipeline_snapshot_values != NULL && switchos_perpipeline_snapshot_seqs != NULL && switchos_perpipeline_snapshot_stats != NULL);
 				for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+					INVARIANT(switchos_perpipeline_specialcases_ptr[tmp_pipeidx] == NULL);
 					INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] == NULL && switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] == NULL);
+					INVARIANT(switchos_perpipeline_snapshot_values[tmp_pipeidx] == NULL && switchos_perpipeline_snapshot_seqs[tmp_pipeidx] == NULL && switchos_perpipeline_snapshot_stats[tmp_pipeidx] == NULL);
 				}
 				INVARIANT(is_snapshot == false && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false);
 			}
 
-			// free snapshot data
-			if (switchos_snapshot_values != NULL) {
-				delete [] switchos_snapshot_values;
-				switchos_snapshot_values = NULL;
-				delete [] switchos_snapshot_seqs;
-				switchos_snapshot_seqs = NULL;
-				delete [] switchos_snapshot_stats;
-				switchos_snapshot_stats = NULL;
-			}
-
 			// (2) init for new snapshot
 			
+			is_first_snapshot = false;
+			
 			// create new speical cases (freed by next SNAPSHOT_CLEANUP)
-			switchos_specialcases_ptr = new concurrent_specicalcase_map_t();
+			for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+				switchos_perpipeline_specialcases_ptr[tmp_pipeidx] = new concurrent_specicalcase_map_t();
+			}
 
 			CUR_TIME(stop_cachepop_t1);
 			// stop cache population/eviction (stop until we can ensure that snapshot has started aka SNAPSHOT_START)
@@ -1018,9 +1038,9 @@ void *run_switchos_snapshotserver(void *param) {
 			for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
 				if (switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx] > 0) {
 					// NOTE: freed by next SNAPSHOT_CLEANUP
-					switchos_snapshot_values = new val_t[switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]];
-					switchos_snapshot_seqs = new uint32_t[switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]];
-					switchos_snapshot_stats = new bool[switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]];
+					switchos_perpipeline_snapshot_values[tmp_pipeidx] = new val_t[switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]];
+					switchos_perpipeline_snapshot_seqs[tmp_pipeidx] = new uint32_t[switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]];
+					switchos_perpipeline_snapshot_stats[tmp_pipeidx] = new bool[switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]];
 
 					// load snapshot data from data plane
 					////system("bash tofino/load_snapshot_data.sh"); // load snapshot (maybe inconsistent -> need rollback later)
@@ -1029,7 +1049,7 @@ void *run_switchos_snapshotserver(void *param) {
 					//ptf_largebuf.clear();
 					//udprecvlarge_udpfrag(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptf_largebuf, 0, NULL, NULL, "switchos.snapshotserver.snapshotclient_for_ptf");
 					//parse_snapshotdata_fromptf(ptf_largebuf.array(), ptf_largebuf.size(), 
-					//		switchos_snapshot_values, switchos_snapshot_seqs, switchos_snapshot_stats, switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]);
+					//		switchos_perpipeline_snapshot_values[tmp_pipeidx], switchos_perpipeline_snapshot_seqs[tmp_pipeidx], switchos_perpipeline_snapshot_stats[tmp_pipeidx], switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]);
 
 					// NOTE: now we directly send all LOADSNAPSHOTDATA_INSWITCH reqs once a time
 					// TODO: we can send LOADSNAPSHOTDATA_INSWITCH reqs batch by batch (e.g., 1000 pkts each time) if necessary
@@ -1059,9 +1079,9 @@ void *run_switchos_snapshotserver(void *param) {
 						else {
 							loadsnapshotdata_inswitch_ack_t tmp_loadsnapshotdata_inswitch_ack(pktbuf, pkt_recvsize);
 							INVARIANT(tmp_loadsnapshotdata_inswitch_ack.key() == switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()]);
-							switchos_snapshot_values[tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.val();
-							switchos_snapshot_seqs[tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.seq();
-							switchos_snapshot_stats[tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.stat();
+							switchos_perpipeline_snapshot_values[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.val();
+							switchos_perpipeline_snapshot_seqs[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.seq();
+							switchos_perpipeline_snapshot_stats[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.stat();
 							received_bitmap[tmp_loadsnapshotdata_inswitch_ack.idx()] = true;
 						}
 					}
@@ -1091,7 +1111,7 @@ void *run_switchos_snapshotserver(void *param) {
 			// wait for case2 from popworker and case1 from specialcaseserver
 			while (!popworker_know_snapshot_end || !specialcaseserver_know_snapshot_end) {}
 
-			// end snapshot (by now popworker/specialcaseserver will not access switchos_specialcases_ptr and backuped metadata)
+			// end snapshot (by now popworker/specialcaseserver will not access switchos_perpipeline_specialcases_ptr and backuped metadata)
 			is_snapshot_end = false;
 			popworker_know_snapshot_end = false;
 			specialcaseserver_know_snapshot_end = false;
@@ -1103,30 +1123,30 @@ void *run_switchos_snapshotserver(void *param) {
 				/*for (size_t debugi = 0; debugi < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; debugi++) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
-					uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
+					uint32_t debugvalsize = switchos_perpipeline_snapshot_values[tmp_pipeidx][debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
 					printf("serialized debug key-value[%d]:\n", int(debugi));
 					dump_buf(debugbuf, debugkeysize+debugvalsize);
-					printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
+					printf("seq: %d, stat %d\n", switchos_perpipeline_snapshot_seqs[tmp_pipeidx][debugi], switchos_perpipeline_snapshot_stats[tmp_pipeidx][debugi]?1:0);
 				}*/
 #endif
 
 				// perform rollback (now both popserver/specicalserver will not touch specialcases)
 				/*for (std::map<uint16_t, special_case_t>::iterator iter = switchos_specialcases.begin(); iter != switchos_specialcases.end(); iter++) {
 					INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][iter->first] == iter->second._key);
-					switchos_snapshot_values[iter->first] = iter->second._val;
-					switchos_snapshot_seqs[iter->first] = iter->second._seq;
-					switchos_snapshot_stats[iter->first] = iter->second._valid;
+					switchos_perpipeline_snapshot_values[tmp_pipeidx][iter->first] = iter->second._val;
+					switchos_perpipeline_snapshot_seqs[tmp_pipeidx][iter->first] = iter->second._seq;
+					switchos_perpipeline_snapshot_stats[tmp_pipeidx][iter->first] = iter->second._valid;
 				}*/
-				INVARIANT(switchos_specialcases_ptr != NULL);
-				concurrent_specicalcase_map_t::DataSource source(0, (concurrent_specicalcase_map_t *)switchos_specialcases_ptr);
+				INVARIANT(switchos_perpipeline_specialcases_ptr[tmp_pipeidx] != NULL);
+				concurrent_specicalcase_map_t::DataSource source(0, (concurrent_specicalcase_map_t *)switchos_perpipeline_specialcases_ptr[tmp_pipeidx]);
 				source.advance_to_next_valid();
 				int specialcase_cnt = 0;
 				while (source.has_next) {
 					special_case_t tmpcase = source.get_val();
 					INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][source.get_key()] == tmpcase._key);
-					switchos_snapshot_values[source.get_key()] = tmpcase._val;
-					switchos_snapshot_seqs[source.get_key()] = tmpcase._seq;
-					switchos_snapshot_stats[source.get_key()] = tmpcase._valid;
+					switchos_perpipeline_snapshot_values[tmp_pipeidx][source.get_key()] = tmpcase._val;
+					switchos_perpipeline_snapshot_seqs[tmp_pipeidx][source.get_key()] = tmpcase._seq;
+					switchos_perpipeline_snapshot_stats[tmp_pipeidx][source.get_key()] = tmpcase._valid;
 					source.advance_to_next_valid();
 					specialcase_cnt += 1;
 				}
@@ -1138,10 +1158,10 @@ void *run_switchos_snapshotserver(void *param) {
 				/*for (size_t debugi = 0; debugi < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; debugi++) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
-					uint32_t debugvalsize = switchos_snapshot_values[debugi].serialize(debugbuf+debugkeysize, MAX_BUFSIZE-debugkeysize);
+					uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);
 					printf("serialized debug key-value[%d]:\n", int(debugi));
 					dump_buf(debugbuf, debugkeysize+debugvalsize);
-					printf("seq: %d, stat %d\n", switchos_snapshot_seqs[debugi], switchos_snapshot_stats[debugi]?1:0);
+					printf("seq: %d, stat %d\n", switchos_perpipeline_snapshot_seqs[tmp_pipeidx][debugi], switchos_perpipeline_snapshot_stats[tmp_pipeidx][debugi]?1:0);
 				}*/
 #endif
 			}
@@ -1161,11 +1181,11 @@ void *run_switchos_snapshotserver(void *param) {
 					dynamic_array_t &tmp_sendbuf = tmp_sendbuf_list[tmp_serveridx];
 					uint32_t tmp_keysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmpidx].dynamic_serialize(tmp_sendbuf, tmp_send_bytes[tmp_serveridx]);
 					tmp_send_bytes[tmp_serveridx] += tmp_keysize;
-					uint32_t tmp_valsize = switchos_snapshot_values[tmpidx].dynamic_serialize(tmp_sendbuf, tmp_send_bytes[tmp_serveridx]);
+					uint32_t tmp_valsize = switchos_perpipeline_snapshot_values[tmp_pipeidx][tmpidx].dynamic_serialize(tmp_sendbuf, tmp_send_bytes[tmp_serveridx]);
 					tmp_send_bytes[tmp_serveridx] += tmp_valsize;
-					tmp_sendbuf.dynamic_memcpy(tmp_send_bytes[tmp_serveridx], (char *)&switchos_snapshot_seqs[tmpidx], sizeof(uint32_t));
+					tmp_sendbuf.dynamic_memcpy(tmp_send_bytes[tmp_serveridx], (char *)&switchos_perpipeline_snapshot_seqs[tmp_pipeidx][tmpidx], sizeof(uint32_t));
 					tmp_send_bytes[tmp_serveridx] += sizeof(uint32_t);
-					tmp_sendbuf.dynamic_memcpy(tmp_send_bytes[tmp_serveridx], (char *)&switchos_snapshot_stats[tmpidx], sizeof(bool));
+					tmp_sendbuf.dynamic_memcpy(tmp_send_bytes[tmp_serveridx], (char *)&switchos_perpipeline_snapshot_stats[tmp_pipeidx][tmpidx], sizeof(bool));
 					tmp_send_bytes[tmp_serveridx] += sizeof(bool);
 					tmp_record_cnts[tmp_serveridx] += 1;
 				}
@@ -1201,6 +1221,29 @@ void *run_switchos_snapshotserver(void *param) {
 	// send SWITCHOS_PTF_SNAPSHOTSERVER_END to ptf.snapshotserver
 	memcpy(ptfbuf, &SWITCHOS_PTF_SNAPSHOTSERVER_END, sizeof(int));
 	udpsendto(switchos_snapshotserver_snapshotclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_addr, ptf_addrlen, "switchos.snapshotserver.snapshotclient_for_ptf");
+
+	if (switchos_perpipeline_snapshot_values != NULL) {
+		for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+			if (switchos_perpipeline_snapshot_values[tmp_pipeidx] != NULL) {
+				delete [] switchos_perpipeline_snapshot_values[tmp_pipeidx];
+				switchos_perpipeline_snapshot_values[tmp_pipeidx] = NULL;
+			}
+			if (switchos_perpipeline_snapshot_seqs[tmp_pipeidx] != NULL) {
+				delete [] switchos_perpipeline_snapshot_seqs[tmp_pipeidx];
+				switchos_perpipeline_snapshot_seqs[tmp_pipeidx] = NULL;
+			}
+			if (switchos_perpipeline_snapshot_stats[tmp_pipeidx] != NULL) {
+				delete [] switchos_perpipeline_snapshot_stats[tmp_pipeidx];
+				switchos_perpipeline_snapshot_stats[tmp_pipeidx] = NULL;
+			}
+		}
+		delete [] switchos_perpipeline_snapshot_values;
+		switchos_perpipeline_snapshot_values = NULL;
+		delete [] switchos_perpipeline_snapshot_seqs;
+		switchos_perpipeline_snapshot_seqs = NULL;
+		delete [] switchos_perpipeline_snapshot_stats;
+		switchos_perpipeline_snapshot_stats = NULL;
+	}
 
 	close(switchos_snapshotserver_udpsock);
 	close(switchos_snapshotserver_snapshotclient_for_ptf_udpsock);
@@ -1270,21 +1313,28 @@ void *run_switchos_specialcaseserver(void *param) {
 }
 
 void process_specialcase(const uint16_t &tmpidx, const netreach_key_t &tmpkey, const val_t &tmpval, const uint32_t &tmpseq, const bool &tmpstat) {
-	// verify key (NOTE: use switchos_cached_key_idx_map_backup) 
-	/*std::map<netreach_key_t, uint16_t>::iterator key_idx_map_iter = switchos_cached_key_idx_map_backup.find(req.key()); 
-	if (key_idx_map_iter == switchos_cached_key_idx_map_backup.end()) { // unmatched key 
-		break; 
-	} 
-	uint16_t tmpidx = key_idx_map_iter->second;*/
-
 	INVARIANT(tmpidx >= 0 && tmpidx < switch_kv_bucket_num);
-	INVARIANT(switchos_specialcases_ptr != NULL && switchos_cached_keyarray_backup != NULL);
-	INVARIANT(switchos_cached_empty_index_backup >=0 && switchos_cached_empty_index_backup <= switch_kv_bucket_num);
-	if (tmpidx < switchos_cached_empty_index_backup && switchos_cached_keyarray_backup[tmpidx] == tmpkey) { 
+
+	// find correpsonding pipeline idx
+	// NOTE: for each given key, it can only be stored into cached metadata of at most one pipeline
+	int tmp_pipeidx = -1;
+	for (int i = 0; i < switch_pipeline_num; i++) {
+		INVARIANT(switchos_perpipeline_specialcases_ptr[tmp_pipeidx] != NULL && switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] != NULL);
+		if (switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmpidx] == tmpkey) {
+			tmp_pipeidx = i;
+			break;
+		}
+	}
+	if (tmp_pipeidx == -1) { // no matched pipeidx means the key was not cached at the snapshot timepoint
+		return;
+	}
+
+	INVARIANT(switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx] >= 0 && switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx] <= switch_kv_bucket_num);
+	if (tmpidx < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx] && switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmpidx] == tmpkey) { 
 		//switchos_mutex_for_specialcases.lock(); 
 		//std::map<uint16_t, special_case_t>::iterator specialcase_iter = switchos_specialcases.find(tmpidx); 
 		special_case_t tmpcase;
-		bool res = switchos_specialcases_ptr->get(tmpidx, tmpcase);
+		bool res = switchos_perpipeline_specialcases_ptr[tmp_pipeidx]->get(tmpidx, tmpcase);
 		//if (specialcase_iter == switchos_specialcases.end()) { // no special case for the idx/key
 		if (!res) { // no special case for the idx/key
 			//special_case_t tmpcase; 
@@ -1293,7 +1343,7 @@ void process_specialcase(const uint16_t &tmpidx, const netreach_key_t &tmpkey, c
 			tmpcase._seq = tmpseq;
 			tmpcase._valid = tmpstat; // stat=1 means not deleted
 			//switchos_specialcases.insert(std::pair<uint16_t, special_case_t>(tmpidx, tmpcase)); 
-			switchos_specialcases_ptr->insert(tmpidx, tmpcase);
+			switchos_perpipeline_specialcases_ptr[tmp_pipeidx]->insert(tmpidx, tmpcase);
 		} 
 		//else if (req.seq() < specialcase_iter->second.seq()) { // current special case is more close to snapshot timepoint
 		else if (tmpseq < tmpcase._seq) { // current special case is more close to snapshot timepoint
@@ -1305,7 +1355,7 @@ void process_specialcase(const uint16_t &tmpidx, const netreach_key_t &tmpkey, c
 			tmpcase._val = tmpval;
 			tmpcase._seq = tmpseq;
 			tmpcase._valid = tmpstat; // stat=1 means not deleted
-			res = switchos_specialcases_ptr->update(tmpidx, tmpcase);
+			res = switchos_perpipeline_specialcases_ptr[tmp_pipeidx]->update(tmpidx, tmpcase);
 			INVARIANT(res == true);
 		} 
 		//switchos_mutex_for_specialcases.unlock(); 
@@ -1323,29 +1373,55 @@ void close_switchos() {
 		delete [] switchos_cache_pop_ptrs;
 		switchos_cache_pop_ptrs = NULL;
 	}*/
-	if (switchos_cached_keyarray != NULL) {
-		delete [] switchos_cached_keyarray;
-		switchos_cached_keyarray = NULL;
+	if (switchos_perpipeline_cached_keyarray != NULL) {
+		for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+			if (switchos_perpipeline_cached_keyarray[tmp_pipeidx] != NULL) {
+				delete [] switchos_perpipeline_cached_keyarray[tmp_pipeidx];
+				switchos_perpipeline_cached_keyarray[tmp_pipeidx] = NULL;
+			}
+		}
+		delete [] switchos_perpipeline_cached_keyarray;
+		switchos_perpipeline_cached_keyarray = NULL;
 	}
-	if (switchos_cached_serveridxarray != NULL) {
-		delete [] switchos_cached_serveridxarray;
-		switchos_cached_serveridxarray = NULL;
+	if (switchos_perpipeline_cached_serveridxarray != NULL) {
+		for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+			if (switchos_perpipeline_cached_serveridxarray[tmp_pipeidx] != NULL) {
+				delete [] switchos_perpipeline_cached_serveridxarray[tmp_pipeidx];
+				switchos_perpipeline_cached_serveridxarray[tmp_pipeidx] = NULL;
+			}
+		}
+		delete [] switchos_perpipeline_cached_serveridxarray;
+		switchos_perpipeline_cached_serveridxarray = NULL;
 	}
-	/*if (switchos_evictvalbytes != NULL) {
-		delete [] switchos_evictvalbytes;
-		switchos_evictvalbytes = NULL;
-	}*/
-	if (switchos_cached_keyarray_backup != NULL) {
-		delete [] switchos_cached_keyarray_backup;
-		switchos_cached_keyarray_backup = NULL;
+	if (switchos_perpipeline_cached_keyarray_backup != NULL) {
+		for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+			if (switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] != NULL) {
+				delete [] switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx];
+				switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] = NULL;
+			}
+		}
+		delete [] switchos_perpipeline_cached_keyarray_backup;
+		switchos_perpipeline_cached_keyarray_backup = NULL;
 	}
-	if (switchos_cached_serveridxarray_backup != NULL) {
-		delete [] switchos_cached_serveridxarray_backup;
-		switchos_cached_serveridxarray_backup = NULL;
+	if (switchos_perpipeline_cached_serveridxarray_backup != NULL) {
+		for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+			if (switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] != NULL) {
+				delete [] switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx];
+				switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] = NULL;
+			}
+		}
+		delete [] switchos_perpipeline_cached_serveridxarray_backup;
+		switchos_perpipeline_cached_serveridxarray_backup = NULL;
 	}
-	if (switchos_specialcases_ptr != NULL) {
-		delete switchos_specialcases_ptr;
-		switchos_specialcases_ptr = NULL;
+	if (switchos_perpipeline_specialcases_ptr != NULL) {
+		for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+			if (switchos_perpipeline_specialcases_ptr[tmp_pipeidx] != NULL) {
+				delete switchos_perpipeline_specialcases_ptr[tmp_pipeidx];
+				switchos_perpipeline_specialcases_ptr[tmp_pipeidx] = NULL;
+			}
+		}
+		delete [] switchos_perpipeline_specialcases_ptr;
+		switchos_perpipeline_specialcases_ptr = NULL;
 	}
 }
 
