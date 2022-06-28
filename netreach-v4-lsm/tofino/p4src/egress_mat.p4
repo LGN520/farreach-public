@@ -163,100 +163,10 @@ action update_getreq_inswitch_to_getreq_nlatest() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-/*action update_getreq_inswitch_to_getres_for_deleted() {
+action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
-	modify_field(stat_hdr.stat, 0);
-	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-
-	remove_header(inswitch_hdr);
-	add_header(vallen_hdr);
-	add_header(val1_hdr);
-	add_header(val2_hdr);
-	add_header(val3_hdr);
-	add_header(val4_hdr);
-	add_header(val5_hdr);
-	add_header(val6_hdr);
-	add_header(val7_hdr);
-	add_header(val8_hdr);
-	add_header(val9_hdr);
-	add_header(val10_hdr);
-	add_header(val11_hdr);
-	add_header(val12_hdr);
-	add_header(val13_hdr);
-	add_header(val14_hdr);
-	add_header(val15_hdr);
-	add_header(val16_hdr);
-	add_header(stat_hdr);
-
-	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
-}*/
-
-action update_getreq_inswitch_to_getres_for_deleted_by_mirroring(client_sid, server_port) {
-	modify_field(op_hdr.optype, GETRES);
-	modify_field(shadowtype_hdr.shadowtype, GETRES);
-	modify_field(stat_hdr.stat, 0);
-	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-	modify_field(udp_hdr.srcPort, server_port);
-	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
-
-	remove_header(inswitch_hdr);
-	/*add_header(vallen_hdr);
-	add_header(val1_hdr);
-	add_header(val2_hdr);
-	add_header(val3_hdr);
-	add_header(val4_hdr);
-	add_header(val5_hdr);
-	add_header(val6_hdr);
-	add_header(val7_hdr);
-	add_header(val8_hdr);
-	add_header(val9_hdr);
-	add_header(val10_hdr);
-	add_header(val11_hdr);
-	add_header(val12_hdr);
-	add_header(val13_hdr);
-	add_header(val14_hdr);
-	add_header(val15_hdr);
-	add_header(val16_hdr);*/
-	add_header(stat_hdr);
-
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
-	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
-}
-
-/*action update_getreq_inswitch_to_getres() {
-	modify_field(op_hdr.optype, GETRES);
-	modify_field(shadowtype_hdr.shadowtype, GETRES);
-	modify_field(stat_hdr.stat, 1);
-	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-
-	remove_header(inswitch_hdr);
-	add_header(vallen_hdr);
-	add_header(val1_hdr);
-	add_header(val2_hdr);
-	add_header(val3_hdr);
-	add_header(val4_hdr);
-	add_header(val5_hdr);
-	add_header(val6_hdr);
-	add_header(val7_hdr);
-	add_header(val8_hdr);
-	add_header(val9_hdr);
-	add_header(val10_hdr);
-	add_header(val11_hdr);
-	add_header(val12_hdr);
-	add_header(val13_hdr);
-	add_header(val14_hdr);
-	add_header(val15_hdr);
-	add_header(val16_hdr);
-	add_header(stat_hdr);
-
-	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
-}*/
-
-action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port) {
-	modify_field(op_hdr.optype, GETRES);
-	modify_field(shadowtype_hdr.shadowtype, GETRES);
-	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.stat, stat);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
@@ -807,26 +717,11 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 //action forward_cache_evict_loadfreq_inswitch_ack() {
 //}
 
-action update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(switchos_sid, reflector_port) {
+action update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(switchos_sid, reflector_port, stat) {
 	modify_field(op_hdr.optype, CACHE_EVICT_LOADDATA_INSWITCH_ACK);
 	modify_field(udp_hdr.dstPort, reflector_port);
 	modify_field(shadowtype_hdr.shadowtype, CACHE_EVICT_LOADDATA_INSWITCH_ACK);
-	modify_field(stat_hdr.stat, 1);
-
-	remove_header(inswitch_hdr);
-	// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
-	add_header(seq_hdr);
-	add_header(stat_hdr);
-
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
-	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
-}
-
-action update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone(switchos_sid, reflector_port) {
-	modify_field(op_hdr.optype, CACHE_EVICT_LOADDATA_INSWITCH_ACK);
-	modify_field(udp_hdr.dstPort, reflector_port);
-	modify_field(shadowtype_hdr.shadowtype, CACHE_EVICT_LOADDATA_INSWITCH_ACK);
-	modify_field(stat_hdr.stat, 0);
+	modify_field(stat_hdr.stat, stat);
 
 	remove_header(inswitch_hdr);
 	// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
@@ -840,25 +735,11 @@ action update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack
 //action forward_cache_evict_loaddata_inswitch_ack() {
 //}
 
-action update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(switchos_sid, reflector_port) {
+action update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(switchos_sid, reflector_port, stat) {
 	modify_field(op_hdr.optype, LOADSNAPSHOTDATA_INSWITCH_ACK);
 	modify_field(udp_hdr.dstPort, reflector_port);
 	modify_field(shadowtype_hdr.shadowtype, LOADSNAPSHOTDATA_INSWITCH_ACK);
 	modify_field(stat_hdr.stat, 1);
-
-	// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
-	add_header(seq_hdr);
-	add_header(stat_hdr);
-
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
-	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
-}
-
-action update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_for_deleted_drop_and_clone(switchos_sid, reflector_port) {
-	modify_field(op_hdr.optype, LOADSNAPSHOTDATA_INSWITCH_ACK);
-	modify_field(udp_hdr.dstPort, reflector_port);
-	modify_field(shadowtype_hdr.shadowtype, LOADSNAPSHOTDATA_INSWITCH_ACK);
-	modify_field(stat_hdr.stat, 0);
 
 	// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
 	add_header(seq_hdr);
@@ -904,9 +785,6 @@ table eg_port_forward_tbl {
 		update_getreq_inswitch_to_getreq;
 		update_getreq_inswitch_to_getreq_pop;
 		update_getreq_inswitch_to_getreq_nlatest;
-		//update_getreq_inswitch_to_getres_for_deleted;
-		update_getreq_inswitch_to_getres_for_deleted_by_mirroring;
-		//update_getreq_inswitch_to_getres;
 		update_getreq_inswitch_to_getres_by_mirroring;
 		update_getres_latest_seq_to_getres; // GETRES_LATEST_SEQ must be cloned from ingress to egress
 		update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss; // drop original packet of GETRES_LATEST_SEQ -> clone for first GETRES_LATEST_SEQ_INSWITCH_CASE1
@@ -947,10 +825,8 @@ table eg_port_forward_tbl {
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loadfreq_inswitch_ack;
 		update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
-		update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loaddata_inswitch_ack;
 		update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
-		update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_for_deleted_drop_and_clone;
 		//forward_loadsnapshotdata_inswitch_ack;
 		nop;
 	}

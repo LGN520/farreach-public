@@ -1110,7 +1110,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 10
 
             # Table: eg_port_forward_tbl (default: nop; size: < 2048 < 8192)
-            # NOTE: we assign 2048 entires now as we only have 4 physical machines
             print "Configuring eg_port_forward_tbl"
             if RANGE_SUPPORT == False:
                 self.configure_eg_port_forward_tbl()
@@ -1429,6 +1428,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 for validvalue in validvalue_list:
                     for is_latest in latest_list:
                         for is_deleted in deleted_list:
+                            # Use tmpstat as action data to reduce action number
+                            if is_deleted == 1:
+                                tmpstat = 0
+                            else:
+                                tmpstat = 1
                             # NOTE: eg_intr_md.egress_port is read-only
                             #for is_wrong_pipeline in pipeline_list:
                             #for tmp_client_sid in self.sids:
@@ -1475,34 +1479,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_nlatest(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         else:
-                                                            #if is_wrong_pipeline == 0:
-                                                            #    if is_deleted == 1:
-                                                            #        # Update GETREQ_INSWITCH as GETRES for deleted value to client
-                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
-                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            #    else:
-                                                            #        # Update GETREQ_INSWITCH as GETRES to client
-                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
-                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            #elif is_wrong_pipeline == 1:
-                                                            #    if is_deleted == 1:
-                                                            #        # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
-                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
-                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            #    else:
-                                                            #        # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
-                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            if is_deleted == 1:
-                                                                # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
-                                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_for_deleted_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                            else:
-                                                                # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                            # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                            actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     elif validvalue == 3:
                                                         if is_latest == 0:
                                                             # Update GETREQ_INSWITCH as GETREQ to server
@@ -1510,34 +1490,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         else:
-                                                            #if is_wrong_pipeline == 0:
-                                                            #    if is_deleted == 1:
-                                                            #        # Update GETREQ_INSWITCH as GETRES for deleted value to client
-                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
-                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            #    else:
-                                                            #        # Update GETREQ_INSWITCH as GETRES to client
-                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
-                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            #elif is_wrong_pipeline == 1:
-                                                            #    if is_deleted == 1:
-                                                            #        # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
-                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
-                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            #    else:
-                                                            #        # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                            #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
-                                                            #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            if is_deleted == 1:
-                                                                # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
-                                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_for_deleted_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                            else:
-                                                                # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                                actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
-                                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                            # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                            actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
+                                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ
                                             # NOTE: we use sid == self.sids[0] to avoid duplicate entry; we use inswitch_hdr_client_sid = 0 to match the default value of inswitch_hdr.client_sid
                                             # size: 1
@@ -1992,14 +1948,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     inswitch_hdr_snapshot_flag = snapshot_flag,
                                                     meta_is_case1 = is_case1)
                                                 # Update CACHE_EVICT_LOADDATA_INSWITCH as CACHE_EVICT_LOADDATA_INSWITCH_ACK to reflector
-                                                if is_deleted == 0:
-                                                    actnspec0 = netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port)
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                elif is_deleted == 1:
-                                                    actnspec0 = netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port)
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                actnspec0 = netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port, tmpstat)
+                                                self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=0 (no inswitch_hdr after clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADDATA_INSWITCH_ACK
                                             # size: 0
                                             if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
@@ -2036,14 +1987,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     inswitch_hdr_snapshot_flag = snapshot_flag,
                                                     meta_is_case1 = is_case1)
                                                 # Update LOADSNAPSHOTDATA_INSWITCH as LOADSNAPSHOTDATA_INSWITCH_ACK to reflector
-                                                if is_deleted == 0:
-                                                    actnspec0 = netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port)
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                elif is_deleted == 1:
-                                                    actnspec0 = netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_for_deleted_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port)
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_for_deleted_drop_and_clone(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                actnspec0 = netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port, tmpstat)
+                                                self.client.eg_port_forward_tbl_table_add_with_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for LOADSNAPSHOTDATA_INSWITCH_ACK
                                             # NOTE: is_cached can be 0 or 1 (inswitch_hdr inherited from LOADSNAPSHOTDATA_INSWITCH)
                                             # size: 0
@@ -2075,6 +2021,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 for validvalue in validvalue_list:
                     for is_latest in latest_list:
                         for is_deleted in deleted_list:
+                            # Use tmpstat as action data to reduce action number
+                            if is_deleted == 1:
+                                tmpstat = 0
+                            else:
+                                tmpstat = 1
                             # NOTE: eg_intr_md.egress_port is read-only
                             #for is_wrong_pipeline in pipeline_list:
                             #for tmp_client_sid in self.sids:
@@ -2126,34 +2077,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_nlatest(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 else:
-                                                                    #if is_wrong_pipeline == 0:
-                                                                    #    if is_deleted == 1:
-                                                                    #        # Update GETREQ_INSWITCH as GETRES for deleted value to client
-                                                                    #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
-                                                                    #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    #    else:
-                                                                    #        # Update GETREQ_INSWITCH as GETRES to client
-                                                                    #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
-                                                                    #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    #elif is_wrong_pipeline == 1:
-                                                                    #    if is_deleted == 1:
-                                                                    #        # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
-                                                                    #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
-                                                                    #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    #    else:
-                                                                    #        # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                                    #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
-                                                                    #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    if is_deleted == 1:
-                                                                        # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
-                                                                        actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_for_deleted_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                                    else:
-                                                                        # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                                        actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                                    # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                                    actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
+                                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                             elif validvalue == 3:
                                                                 if is_latest == 0:
                                                                     # Update GETREQ_INSWITCH as GETREQ to server
@@ -2161,34 +2088,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 else:
-                                                                    #if is_wrong_pipeline == 0:
-                                                                    #    if is_deleted == 1:
-                                                                    #        # Update GETREQ_INSWITCH as GETRES for deleted value to client
-                                                                    #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted(\
-                                                                    #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    #    else:
-                                                                    #        # Update GETREQ_INSWITCH as GETRES to client
-                                                                    #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres(\
-                                                                    #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    #elif is_wrong_pipeline == 1:
-                                                                    #    if is_deleted == 1:
-                                                                    #        # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
-                                                                    #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
-                                                                    #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    #    else:
-                                                                    #        # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                                    #        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
-                                                                    #                self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    if is_deleted == 1:
-                                                                        # Update GETREQ_INSWITCH as GETRES for deleted value to client by mirroring
-                                                                        actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_for_deleted_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_for_deleted_by_mirroring(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                                    else:
-                                                                        # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                                        actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
-                                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                                    # Update GETREQ_INSWITCH as GETRES to client by mirroring
+                                                                    actnspec0 = netbufferv4_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
+                                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ
                                                     # is_last_scansplit and tmp_server_sid must be 0
                                                     # NOTE: we use sid == self.sids[0] to avoid duplicate entry; we use inswitch_hdr_client_sid = 0 to match the default value of inswitch_hdr.client_sid
@@ -2709,14 +2612,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             meta_is_last_scansplit = is_last_scansplit,
                                                             meta_server_sid = tmp_server_sid)
                                                         # Update CACHE_EVICT_LOADDATA_INSWITCH as CACHE_EVICT_LOADDATA_INSWITCH_ACK to reflector
-                                                        if is_deleted == 0:
-                                                            actnspec0 = netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port)
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                        elif is_deleted == 1:
-                                                            actnspec0 = netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port)
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                        actnspec0 = netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port, tmpstat)
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached=0 (no inswitch_hdr after clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for CACHE_EVICT_LOADDATA_INSWITCH_ACK
                                                     # size: 0
                                                     if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
@@ -2758,14 +2656,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             meta_is_last_scansplit = is_last_scansplit,
                                                             meta_server_sid = tmp_server_sid)
                                                         # Update LOADSNAPSHOTDATA_INSWITCH as LOADSNAPSHOTDATA_INSWITCH_ACK to reflector
-                                                        if is_deleted == 0:
-                                                            actnspec0 = netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port)
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                        elif is_deleted == 1:
-                                                            actnspec0 = netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_for_deleted_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port)
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_for_deleted_drop_and_clone(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                        actnspec0 = netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port, tmpstat)
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for LOADSNAPSHOTDATA_INSWITCH_ACK
                                                     # NOTE: is_cached can be 0 or 1 (inswitch_hdr inherited from LOADSNAPSHOTDATA_INSWITCH)
                                                     # size: 0
