@@ -828,8 +828,8 @@ bool GetResponseLatestSeqInswitchCase1<key_t, val_t>::stat() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::size() { // unused
-	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(bool) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + CLONE_BYTES;
+	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + CLONE_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -1677,6 +1677,55 @@ void CacheEvictLoaddataInswitchAck<key_t, val_t>::deserialize(const char * data,
 template<class key_t, class val_t>
 uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::serialize(char * const data, uint32_t max_size) {
 	COUT_N_EXIT("Invalid invoke of serialize for CacheEvictLoaddataInswitchAck");
+}
+
+// LoadsnapshotdataInswich
+
+template<class key_t>
+LoadsnapshotdataInswich<key_t>::LoadsnapshotdataInswich(key_t key, uint16_t evictidx)
+	: CacheEvictLoaddataInswitch<key_t>(key, evictidx)
+{
+	this->_type = optype_t(packet_type_t::LOADSNAPSHOTDATA_INSWITCH);
+	INVARIANT(evictidx >= 0);
+}
+
+// LoadsnapshotdataInswitchAck (value must <= 128B)
+
+template<class key_t, class val_t>
+LoadsnapshotdataInswitchAck<key_t, val_t>::LoadsnapshotdataInswitchAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::LOADSNAPSHOTDATA_INSWITCH_ACK);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(this->_seq >= 0);
+}
+
+template<class key_t, class val_t>
+uint32_t LoadsnapshotdataInswitchAck<key_t, val_t>::size() { // unused
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t);
+}
+
+template<class key_t, class val_t>
+void LoadsnapshotdataInswitchAck<key_t, val_t>::deserialize(const char * data, uint32_t recv_size) {
+	//uint32_t my_size = this->size();
+	//INVARIANT(my_size == recv_size);
+	const char *begin = data;
+	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
+	begin += tmp_keysize;
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	begin += tmp_valsize;
+	begin += sizeof(optype_t); // deserialize shadowtype
+	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
+	this->_seq = ntohl(this->_seq);
+	begin += sizeof(uint32_t);
+	begin += INSWITCH_PREV_BYTES; // the first bytes of inswitch_hdr
+	memcpy((void *)&this->_idx, begin, sizeof(uint16_t));
+	this->_idx = ntohs(this->_idx); // big-endian to little-endian
+	begin += sizeof(uint16_t);
+	memcpy((void *)&this->_stat, begin, sizeof(bool));
+	begin += sizeof(bool); // stat_hdr.stat
+	//begin += sizeof(uint16_t); // stat_hdr.nodeidx_foreval
 }
 
 

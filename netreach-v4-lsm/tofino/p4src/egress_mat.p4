@@ -840,6 +840,37 @@ action update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack
 //action forward_cache_evict_loaddata_inswitch_ack() {
 //}
 
+action update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(switchos_sid, reflector_port) {
+	modify_field(op_hdr.optype, LOADSNAPSHOTDATA_INSWITCH_ACK);
+	modify_field(udp_hdr.dstPort, reflector_port);
+	modify_field(shadowtype_hdr.shadowtype, LOADSNAPSHOTDATA_INSWITCH_ACK);
+	modify_field(stat_hdr.stat, 1);
+
+	// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
+	add_header(seq_hdr);
+	add_header(stat_hdr);
+
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
+}
+
+action update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_for_deleted_drop_and_clone(switchos_sid, reflector_port) {
+	modify_field(op_hdr.optype, LOADSNAPSHOTDATA_INSWITCH_ACK);
+	modify_field(udp_hdr.dstPort, reflector_port);
+	modify_field(shadowtype_hdr.shadowtype, LOADSNAPSHOTDATA_INSWITCH_ACK);
+	modify_field(stat_hdr.stat, 0);
+
+	// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
+	add_header(seq_hdr);
+	add_header(stat_hdr);
+
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
+}
+
+//action forward_loadsnapshotdata_inswitch_ack() {
+//}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -918,6 +949,9 @@ table eg_port_forward_tbl {
 		update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loaddata_inswitch_ack;
+		update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
+		update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_for_deleted_drop_and_clone;
+		//forward_loadsnapshotdata_inswitch_ack;
 		nop;
 	}
 	default_action: nop();
@@ -996,7 +1030,7 @@ action update_val_stat_pktlen(aligned_vallen) {
 }
 
 // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
-action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
+action update_val_seq_inswitch_stat_clone_pktlen(aligned_vallen) {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 16(inswitch) + 3(stat) + 3(clone_hdr) + 1(debug_hdr)
 	//add(udp_hdr.hdrlen, aligned_vallen, 57);
 	//add(ipv4_hdr.totalLen, aligned_vallen, 77);
@@ -1056,6 +1090,15 @@ action update_val_seq_stat_pktlen(aligned_vallen) {
 action update_pktlen(udplen, iplen) {
 	modify_field(udp_hdr.hdrlen, udplen);
 	modify_field(ipv4_hdr.totalLen, iplen);
+}
+
+// LOADSNAPSHOTDATA_INSWITCH_ACK
+action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 16(inswitch) + 3(stat) + 1(debug_hdr)
+	//add(udp_hdr.hdrlen, aligned_vallen, 54);
+	//add(ipv4_hdr.totalLen, aligned_vallen, 74);
+	add(udp_hdr.hdrlen, aligned_vallen, 53);
+	add(ipv4_hdr.totalLen, aligned_vallen, 73);
 }
 
 @pragma stage 11

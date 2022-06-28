@@ -118,6 +118,10 @@
 	+ Two ways to test system max throughput
 		* Like ycsb: each client follows request-response-request + sufficient client threads
 		* Like pkt generator: each client continuously send large # of requests -> pkt loss due to queue overflow
+- NOTE: for distributed deployment under server rotation
+	+ More client threads does not mean better performance due to larger cliend-side overhead under limited client-side CPU cores
+	+ We should use two machines with similar performance for bottleneck/rotated partitions
+		* Machine for bottleneck partition should have slightly slower performance than that for rotated partition, otherwise rotated partition may become bottleneck due to hardware perf difference
 
 ## Overview
 
