@@ -70,6 +70,7 @@ class IniparserWrapper {
 		// switch
 		uint32_t get_switch_partition_count();
 		uint32_t get_switch_kv_bucket_num();
+		uint32_t get_switch_pipeline_num();
 		uint16_t get_switch_max_vallen();
 		const char *get_switchos_ip();
 		uint32_t get_switchos_sample_cnt();

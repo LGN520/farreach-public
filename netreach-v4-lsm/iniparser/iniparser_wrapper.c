@@ -446,6 +446,15 @@ uint32_t IniparserWrapper::get_switch_kv_bucket_num() {
 	return uint32_t(tmp);
 }
 
+uint32_t IniparserWrapper::get_switch_pipeline_num() {
+	int tmp = iniparser_getint(ini, "switch:switch_pipeline_num", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switch_pipeline_num]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
 uint16_t IniparserWrapper::get_switch_max_vallen() {
 	int tmp = iniparser_getint(ini, "switch:switch_max_vallen", -1);
 	if (tmp == -1) {

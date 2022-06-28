@@ -127,6 +127,7 @@ uint32_t controller_snapshot_period = 0; // ms
 // switch
 uint32_t switch_partition_count;
 uint32_t switch_kv_bucket_num;
+uint32_t switch_pipeline_num;
 const char *switchos_ip = nullptr;
 uint32_t switchos_sample_cnt = 0;
 short switchos_popserver_port = -1;
@@ -349,6 +350,7 @@ inline void parse_ini(const char* config_file) {
 	// switch
 	switch_partition_count = ini.get_switch_partition_count();
 	switch_kv_bucket_num = ini.get_switch_kv_bucket_num();
+	switch_pipeline_num = ini.get_switch_pipeline_num();
 	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
 	switchos_ip = ini.get_switchos_ip();
 	switchos_sample_cnt = ini.get_switchos_sample_cnt();
@@ -358,8 +360,17 @@ inline void parse_ini(const char* config_file) {
 	switchos_ptf_popserver_port = ini.get_switchos_ptf_popserver_port();
 	switchos_ptf_snapshotserver_port = ini.get_switchos_ptf_snapshotserver_port();
 
+	// validate pipeidxes of clients and servers
+	for (size_t i = 0; i < client_physical_num; i++) {
+		INVARIANT(client_pipeidxes[i] >= 0 && client_pipeidxes[i] < switch_pipeline_num);
+	}
+	for (size_t i = 0; i <server_physical_num; i++) {
+		INVARIANT(server_pipeidxes[i] >= 0 && server_pipeidxes[i] < switch_pipeline_num);
+	}
+
 	COUT_VAR(switch_partition_count);
 	COUT_VAR(switch_kv_bucket_num);
+	COUT_VAR(switch_pipeline_num);
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 	COUT_VAR(switchos_popserver_port);
 	printf("switchos ip: %s\n", switchos_ip);

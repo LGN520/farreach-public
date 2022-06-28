@@ -59,7 +59,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         # initialize the connection
         pd_base_tests.ThriftInterfaceDataPlane.setUp(self)
         self.sess_hdl = self.conn_mgr.client_init()
-        self.dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
+        self.dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF)) # 0xFFFF means setting all pipelines
 
         self.platform_type = "mavericks"
         board_type = self.pltfm_pm.pltfm_pm_board_type_get()
@@ -68,14 +68,15 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         elif re.search("0x2234|0x3234", hex(board_type)):
             self.platform_type = "montara"
 
-    def set_valid0(self, freeidx):
-        #print "Set validvalue_reg as 0"
+    def set_valid0(self, freeidx, pipeidx):
+        #print "Set validvalue_reg as 0 for pipeline {}".format(pipeidx)
+        tmp_devtgt = DevTarget_t(0, hex_to_i16(pipeidx))
         index = freeidx
         value = 0
-        self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
+        self.client.register_write_validvalue_reg(self.sess_hdl, tmp_devtgt, index, value)
 
-    def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx):
-        #print "Add key into cache_lookup_tbl"
+    def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, piptidx):
+        #print "Add key into cache_lookup_tbl for all pipelines"
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
                 op_hdr_keylohi = convert_u32_to_i32(keylohi),
@@ -88,13 +89,14 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         self.client.cache_lookup_tbl_table_add_with_cached_action(\
                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-        #print "Set validvalue_reg as 1"
+        #print "Set validvalue_reg as 1 for pipeline {}".format(pipeidx)
+        tmp_devtgt = DevTarget_t(0, hex_to_i16(pipeidx)) # for specific pipeline
         index = freeidx
         value = 1
-        self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
+        self.client.register_write_validvalue_reg(self.sess_hdl, tmp_devtgt, index, value)
 
-    #def get_evictdata_setvalid3(self):
-    def setvalid3(self, evictidx):
+    #def get_evictdata_setvalid3(self, pipeidx):
+    def setvalid3(self, evictidx, pipeidx):
         # NOTE: cache must be full (i.e., all idxes are valid) when cache eviction
         #print "Get sampled indexes for in-switch cache eviction"
         #cur_sample_cnt = switchos_sample_cnt
@@ -103,10 +105,12 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #random.seed(time.time())
         #sampled_idxes = random.sample(range(0, kv_bucket_num), cur_sample_cnt)
 
-        #print "Load frequency counters for sampled indexes"
+        tmp_devtgt = DevTarget_t(0, hex_to_i16(pipeidx))
+
+        #print "Load frequency counters for sampled indexes from pipeline {}".format(pipeidx)
         #frequency_counters = []
         #for i in range(len(sampled_idxes)):
-        #    tmp_frequency_counter = convert_i32_to_u32(self.client.register_read_cache_frequency_reg(self.sess_hdl, self.dev_tgt, sampled_idxes[i], flags)[egress_pipeidx])
+        #    tmp_frequency_counter = convert_i32_to_u32(self.client.register_read_cache_frequency_reg(self.sess_hdl, tmp_devtgt, sampled_idxes[i], flags)[0]
         #    frequency_counters.append(tmp_frequency_counter)
 
         #print "Get evictidx by approximate LRF"
@@ -117,13 +121,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #        min_frequency = frequency_counters[i]
         #        evictidx = sampled_idxes[i]
 
-        #print "Set validvalue[{}] = 3 for atomicity".format(evictidx)
+        #print "Set validvalue[{}] = 3 for atomicity in pipeline {}".format(evictidx, pipeidx)
         index = evictidx
         value = 3
-        self.client.register_write_validvalue_reg(self.sess_hdl, self.dev_tgt, index, value)
+        self.client.register_write_validvalue_reg(self.sess_hdl, tmp_devtgt, index, value)
 
-        #print "Load evicted data"
-        #tmp_deleted = self.client.register_read_deleted_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
+        #print "Load evicted data from pipeline {}".format(pipeidx)
+        #tmp_deleted = self.client.register_read_deleted_reg(self.sess_hdl, tmp_devtgt, evictidx, flags)[0]
         #if tmp_deleted == 0:
         #    evictstat = True
         #elif tmp_deleted == 1:
@@ -131,14 +135,14 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #else:
         #    print "Invalid tmp_deleted: {}".format(tmp_deleted)
         #    exit(-1)
-        ##evictvallen = convert_i32_to_u32(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
-        #evictvallen = convert_i16_to_u16(self.client.register_read_vallen_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
+        ##evictvallen = convert_i32_to_u32(self.client.register_read_vallen_reg(self.sess_hdl, tmp_devtgt, evictidx, flags)[0]
+        #evictvallen = convert_i16_to_u16(self.client.register_read_vallen_reg(self.sess_hdl, tmp_devtgt, evictidx, flags)[0]
         #eightbyte_cnt = (evictvallen+7) / 8;
         #val_list = []
         #for i in range(1, eightbyte_cnt+1):
         #    # int32_t
-        #    tmp_vallo = eval("self.client.register_read_vallo{}_reg".format(i))(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
-        #    tmp_valhi = eval("self.client.register_read_valhi{}_reg".format(i))(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx]
+        #    tmp_vallo = eval("self.client.register_read_vallo{}_reg".format(i))(self.sess_hdl, tmp_devtgt, evictidx, flags)[0]
+        #    tmp_valhi = eval("self.client.register_read_valhi{}_reg".format(i))(self.sess_hdl, tmp_devtgt, evictidx, flags)[0]
         #    val_list.append(tmp_vallo)
         #    val_list.append(tmp_valhi)
         #evictvalbytes = bytes()
@@ -146,7 +150,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #    # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
         #    evictvalbytes = evictvalbytes + struct.pack("!i", val_list[i])
         ## load savedseq
-        #evictseq = convert_i32_to_u32(self.client.register_read_savedseq_reg(self.sess_hdl, self.dev_tgt, evictidx, flags)[egress_pipeidx])
+        #evictseq = convert_i32_to_u32(self.client.register_read_savedseq_reg(self.sess_hdl, tmp_devtgt, evictidx, flags)[0])
 
         ##print "Serialize evicted data"
         #sendbuf = struct.pack("=iH", SWITCHOS_GET_EVICTDATA_SETVALID3_ACK, evictidx)
@@ -155,7 +159,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #return sendbuf
 
     def remove_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi):
-        #print "Remove key from cache_lookup_tbl"
+        #print "Remove key from cache_lookup_tbl for all pipelines"
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
                 op_hdr_keylohi = convert_u32_to_i32(keylohi),
@@ -185,10 +189,10 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
             if control_type == SWITCHOS_SETVALID0:
                 # parse freeidx
-                freeidx = struct.unpack("=H", recvbuf)[0]
+                freeidx, pipeidx = struct.unpack("=HI", recvbuf)
 
                 # set valid = 0
-                self.set_valid0(freeidx)
+                self.set_valid0(freeidx, pipeidx)
 
                 # send back SWITCHOS_SETVALID0_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_SETVALID0_ACK)
@@ -196,13 +200,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             elif control_type == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1:
                 # parse key and freeidx
                 keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, recvbuf = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
-                freeidx = struct.unpack("=H", recvbuf)[0]
+                freeidx, pipeidx = struct.unpack("=HI", recvbuf)
 
                 #if (keylolo, keylohi, keyhilo, keyhihilo, keyhihihi) not in ptf_cached_keyset:
                 #   ptf_cached_keyset.add((keylolo, keylohi, keyhilo, keyhihilo, keyhihihi))
 
                 # add <key, idx> into cache_lookup_tbl, and set valid = 1
-                self.add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx)
+                self.add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, pipeidx)
 
                 #else:
                 #    print "Duplicate cache population key {} {} {} {} {}".format(hex(keylolo), hex(keylohi), hex(keyhilo), hex(kyhihilo), hex(keyhihihi))
@@ -213,13 +217,14 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             #elif control_type == SWITCHOS_GET_EVICTDATA_SETVALID3:
             elif control_type == SWITCHOS_SETVALID3:
                 # calculate sample index, set valid = 3, and load evict data from data plane
-                #sendbuf = self.get_evictdata_setvalid3()
+                #pipeidx = struct.unpack("=I", recvbuf)
+                #sendbuf = self.get_evictdata_setvalid3(pipeidx)
 
                 # send back SWITCHOS_GET_EVICTDATA_SETVALID3_ACK
                 #switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
 
-                evictidx = struct.unpack("=H", recvbuf)[0]
-                self.setvalid3(evictidx)
+                evictidx, pipeidx = struct.unpack("=HI", recvbuf)
+                self.setvalid3(evictidx, pipeidx)
 
                 # send back SWITCHOS_SETVALID3_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_SETVALID3_ACK)

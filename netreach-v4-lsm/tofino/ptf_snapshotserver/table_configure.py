@@ -107,7 +107,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                         meta_need_recirculate = 0)
                 self.client.snapshot_flag_tbl_table_delete_by_match_spec(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
-        print "Reset case1_reg"
+        print "Reset case1_reg for all pipelines"
         self.client.register_reset_all_case1_reg(self.sess_hdl, self.dev_tgt)
 
     def enable_singlepath(self):
@@ -141,23 +141,25 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.need_recirculate_tbl_table_delete_by_match_spec(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-    def load_snapshot_data(self, cached_empty_index_backup):
+    def load_snapshot_data(self, cached_empty_index_backup, pipeidx):
+        tmp_devtgt = DevTarget_t(0, pipeidx)
+
         start_index = 0
         end_index = cached_empty_index_backup - 1
-        print "Load snapshot data in [{}, {}] from data plane".format(start_index, end_index)
+        print "Load snapshot data in [{}, {}] from data plane's pipeline {}".format(start_index, end_index, pipeidx)
         record_cnt = end_index - start_index + 1
         # TODO: switchos should give per-pipeline empty index to support multi-pipeline
         egress_pipeidx = 0
-        vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, self.dev_tgt, start_index, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt]
+        vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, tmp_devtgt, start_index, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt]
         for i in range(len(vallen_list)):
             #vallen_list[i] = convert_i32_to_u32(vallen_list[i])
             vallen_list[i] = convert_i16_to_u16(vallen_list[i])
         vallo_list_list = []
         valhi_list_list = []
         for i in range(switch_max_vallen/8): # 128 bytes / 8 = 16 register arrays
-            vallo_list_list.append(eval("self.client.register_range_read_vallo{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt])
-            valhi_list_list.append(eval("self.client.register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, self.dev_tgt, 0, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt])
-        deleted_list = self.client.register_range_read_deleted_reg(self.sess_hdl, self.dev_tgt, start_index, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt]
+            vallo_list_list.append(eval("self.client.register_range_read_vallo{}_reg".format(i+1))(self.sess_hdl, tmp_devtgt, 0, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt])
+            valhi_list_list.append(eval("self.client.register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, tmp_devtgt, 0, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt])
+        deleted_list = self.client.register_range_read_deleted_reg(self.sess_hdl, tmp_devtgt, start_index, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt]
         stat_list = []
         for i in range(len(deleted_list)):
             if deleted_list[i] == 0:
@@ -167,7 +169,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             else:
                 print "Invalid deleted_list[{}]: {}".format(i, deleted_list[i])
                 exit(-1)
-        savedseq_list = self.client.register_range_read_savedseq_reg(self.sess_hdl, self.dev_tgt, start_index, record_cnt, flags)[egress_pipeidx * record_cnt:egress_pipeidx * record_cnt + record_cnt]
+        savedseq_list = self.client.register_range_read_savedseq_reg(self.sess_hdl, tmp_devtgt, start_index, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt]
         for i in range(len(savedseq_list)):
             savedseq_list[i] = convert_i32_to_u32(savedseq_list[i])
 
@@ -264,13 +266,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 switchos_ptf_snapshotserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_LOAD_SNAPSHOT_DATA:
                 # parse empty index
-                cached_empty_index_backup = struct.unpack("=I", recvbuf)[0] # must > 0
+                cached_empty_index_backup, pipeidx = struct.unpack("=2I", recvbuf) # must > 0
                 if cached_empty_index_backup <= 0 or cached_empty_index_backup > switch_kv_bucket_num:
                     print "Invalid cached_empty_index_backup: {}".format(cached_empty_index_backup)
                     exit(-1)
 
                 # load snapshot data from data plane
-                sendbuf = self.load_snapshot_data(cached_empty_index_backup)
+                sendbuf = self.load_snapshot_data(cached_empty_index_backup, pipeidx)
 
                 # send back snapshot data
                 self.send_snapshotdata(switchos_ptf_snapshotserver_udpsock, sendbuf, switchos_addr)
