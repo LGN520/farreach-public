@@ -151,7 +151,7 @@ header_type metadata_t {
 		cm3_predicate: 4;
 		cm4_predicate: 4;
 		is_hot: 1;
-		validvalue: 8; // validvalue of the entry
+		//validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		is_case1: 1;

@@ -52,7 +52,7 @@ table access_latest_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		meta.validvalue: exact;
+		validvalue_hdr.validvalue: exact;
 	}
 	actions {
 		get_latest;

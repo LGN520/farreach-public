@@ -9,7 +9,7 @@ blackbox stateful_alu get_validvalue_alu {
 	update_lo_1_value: register_lo;
 
 	output_value: register_lo;
-	output_dst: meta.validvalue;
+	output_dst: validvalue_hdr.validvalue;
 }
 
 action get_validvalue() {
@@ -27,7 +27,7 @@ action set_validvalue() {
 }
 
 action reset_meta_validvalue() {
-	modify_field(meta.validvalue, 0);
+	modify_field(validvalue_hdr.validvalue, 0);
 }
 
 @pragma stage 1

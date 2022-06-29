@@ -782,7 +782,7 @@ table eg_port_forward_tbl {
 		inswitch_hdr.is_cached: exact;
 		meta.is_hot: exact;
 		//debug_hdr.is_hot: exact;
-		meta.validvalue: exact;
+		validvalue_hdr.validvalue: exact;
 		meta.is_latest: exact;
 		meta.is_deleted: exact;
 		//inswitch_hdr.is_wrong_pipeline: exact;
