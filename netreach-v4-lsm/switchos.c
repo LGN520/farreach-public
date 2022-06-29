@@ -239,16 +239,16 @@ void prepare_switchos() {
 
 	// cached metadata
 	switchos_cached_keyidx_map.clear();
-	switchos_perpipeline_cached_keyarray = new netreach_key_t*[switch_pipeline_num];
-	switchos_perpipeline_cached_serveridxarray = new netreach_key_t*[switch_pipeline_num];
+	switchos_perpipeline_cached_keyarray = (netreach_key_t volatile **)(new netreach_key_t*[switch_pipeline_num]);
+	switchos_perpipeline_cached_serveridxarray = (uint16_t volatile **)new uint16_t*[switch_pipeline_num];
 	switchos_perpipeline_cached_empty_index = new uint32_t[switch_pipeline_num];
 	switchos_perpipeline_cached_keyarray_backup = new netreach_key_t*[switch_pipeline_num];
-	switchos_perpipeline_cached_serveridxarray_backup = new netreach_key_t*[switch_pipeline_num];
+	switchos_perpipeline_cached_serveridxarray_backup = new uint16_t*[switch_pipeline_num];
 	switchos_perpipeline_cached_empty_index_backup = new uint32_t[switch_pipeline_num];
 	for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
 		switchos_perpipeline_cached_keyarray[tmp_pipeidx] = new netreach_key_t[switch_kv_bucket_num]();
 		switchos_perpipeline_cached_serveridxarray[tmp_pipeidx] = new uint16_t[switch_kv_bucket_num];
-		memset(switchos_perpipeline_cached_serveridxarray[tmp_pipeidx], 0, sizeof(uint16_t) * switch_kv_bucket_num);
+		memset((void *)switchos_perpipeline_cached_serveridxarray[tmp_pipeidx], 0, sizeof(uint16_t) * switch_kv_bucket_num);
 		switchos_perpipeline_cached_empty_index[tmp_pipeidx] = 0;
 
 		switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] = NULL;
@@ -586,7 +586,7 @@ void *run_switchos_popworker(void *param) {
 					INVARIANT(switchos_evictidx >= 0 && switchos_evictidx < switch_kv_bucket_num);
 					netreach_key_t cur_evictkey = switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_evictidx];
 					if (switchos_cached_keyidx_map.find(cur_evictkey) == switchos_cached_keyidx_map.end()) {
-						printf("Evicted key %x at kvidx %d is not cached\n", switchos_cached_keyarray[switchos_evictidx].keyhihi, switchos_evictidx);
+						printf("Evicted key %x at kvidx %d is not cached\n", switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_evictidx].keyhihi, switchos_evictidx);
 						exit(-1);
 					}
 

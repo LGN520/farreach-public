@@ -1682,7 +1682,7 @@ uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::serialize(char * const dat
 // LoadsnapshotdataInswich
 
 template<class key_t>
-LoadsnapshotdataInswich<key_t>::LoadsnapshotdataInswich(key_t key, uint16_t evictidx)
+LoadsnapshotdataInswitch<key_t>::LoadsnapshotdataInswitch(key_t key, uint16_t evictidx)
 	: CacheEvictLoaddataInswitch<key_t>(key, evictidx)
 {
 	this->_type = optype_t(packet_type_t::LOADSNAPSHOTDATA_INSWITCH);
