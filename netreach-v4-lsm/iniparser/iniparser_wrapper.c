@@ -623,7 +623,7 @@ int IniparserWrapper::get_switchos_setvalid0_ack() {
 	return tmp;
 }
 
-int IniparserWrapper::get_switchos_add_cache_lookup_setvalid1() {
+/*int IniparserWrapper::get_switchos_add_cache_lookup_setvalid1() {
 	int tmp = iniparser_getint(ini, "switchos:switchos_add_cache_lookup_setvalid1", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switchos:switchos_add_cache_lookup_setvalid1]: %d\n", tmp);
@@ -636,6 +636,24 @@ int IniparserWrapper::get_switchos_add_cache_lookup_setvalid1_ack() {
 	int tmp = iniparser_getint(ini, "switchos:switchos_add_cache_lookup_setvalid1_ack", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switchos:switchos_add_cache_lookup_setvalid1_ack]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}*/
+
+int IniparserWrapper::get_switchos_add_cache_lookup() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_add_cache_lookup", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_add_cache_lookup]: %d\n", tmp);
+		exit(-1);
+	}
+	return tmp;
+}
+
+int IniparserWrapper::get_switchos_add_cache_lookup_ack() {
+	int tmp = iniparser_getint(ini, "switchos:switchos_add_cache_lookup_ack", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switchos:switchos_add_cache_lookup_ack]: %d\n", tmp);
 		exit(-1);
 	}
 	return tmp;

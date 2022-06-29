@@ -17,7 +17,7 @@
 // op_hdr + vallen&value + shadowtype + seq + stat (0b1011): CACHE_EVICT_LOADDATA_INSWITCH_ACK
 // op_hdr + vallen&value + shadowtype + stat (0b1001): GETRES
 // op_hdr + vallen&value + shadowtype + inswitch (0b0101): PUTREQ_INSWITCH
-// op_hdr + shadowtype + inswitch_hdr (0b0100): GETREQ_INSWITCH, DELREQ_INSWITCH, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH
+// op_hdr + shadowtype + inswitch_hdr (0b0100): GETREQ_INSWITCH, DELREQ_INSWITCH, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, SETVALID_INSWITCH (w/ validvalue_hdr)
 // op_hdr + shadowtype + seq (0b0010): DELREQ_SEQ, DELREQ_SEQ_CASE3
 // op_hdr + shadowtype + stat (0b1000): PUTRES, DELRES
 // NOTE: followings are ended with 0b0000
@@ -53,7 +53,7 @@ parser parse_udp {
 	return parse_op;
 }
 
-// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr
+// op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr
 
 parser parse_op {
 	extract(op_hdr);
@@ -275,6 +275,7 @@ parser parse_val_len16 {
 parser parse_shadowtype {
 	extract(shadowtype_hdr);
 	return select(shadowtype_hdr.shadowtype) {
+		SETVALID_INSWITCH: parse_validvalue;
 		2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
 		8 mask 0x08: parse_stat;
@@ -343,7 +344,12 @@ parser parse_clone {
 
 parser parse_frequency {
 	extract(frequency_hdr);
-	return ingress; // CACHE_EVICT_LOADFREQ_ACK
+	return ingress; // CACHE_EVICT_LOADFREQ_INSWITCH_ACK
+}
+
+parser parse_validvalue {
+	extract(validvalue_hdr);
+	return ingress; // SETVALID_INSWITCH
 }
 
 /*parser parse_debug {

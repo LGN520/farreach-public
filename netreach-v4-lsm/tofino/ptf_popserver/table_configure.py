@@ -69,13 +69,20 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
     def set_valid0(self, freeidx, pipeidx):
+        # NOTE: if you want to set MAT in a specific pipeline, you must set it as an asymmetric table -> not supported now
+        #self.client.access_validvalue_tbl_set_property(self.sess_hdl, self.dev_tgt.dev_id, tbl_property_t.TBL_PROP_TBL_ENTRY_SCOPE, tbl_property_value_t.ENTRY_SCOPE_SINGLE_PIPELINE, 0)
+
+        print "[ERROR] you should setvalid0 by data plane instead of via ptf channel"
+        exit(-1)
+
         #print "Set validvalue_reg as 0 for pipeline {}".format(pipeidx)
         tmp_devtgt = DevTarget_t(0, hex_to_i16(pipeidx))
         index = freeidx
         value = 0
         self.client.register_write_validvalue_reg(self.sess_hdl, tmp_devtgt, index, value)
 
-    def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, piptidx):
+    #def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, piptidx):
+    def add_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx)
         #print "Add key into cache_lookup_tbl for all pipelines"
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
@@ -90,13 +97,16 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
         #print "Set validvalue_reg as 1 for pipeline {}".format(pipeidx)
-        tmp_devtgt = DevTarget_t(0, hex_to_i16(pipeidx)) # for specific pipeline
-        index = freeidx
-        value = 1
-        self.client.register_write_validvalue_reg(self.sess_hdl, tmp_devtgt, index, value)
+        #tmp_devtgt = DevTarget_t(0, hex_to_i16(pipeidx)) # for specific pipeline
+        #index = freeidx
+        #value = 1
+        #self.client.register_write_validvalue_reg(self.sess_hdl, tmp_devtgt, index, value)
 
     #def get_evictdata_setvalid3(self, pipeidx):
     def setvalid3(self, evictidx, pipeidx):
+        print "[ERROR] you should setvalid3 by data plane instead of via ptf channel"
+        exit(-1)
+
         # NOTE: cache must be full (i.e., all idxes are valid) when cache eviction
         #print "Get sampled indexes for in-switch cache eviction"
         #cur_sample_cnt = switchos_sample_cnt
@@ -187,48 +197,53 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 recvbuf, _ = switchos_ptf_popserver_udpsock.recvfrom(1024)
             control_type, recvbuf = struct.unpack("=i{}s".format(len(recvbuf) - 4), recvbuf)
 
-            if control_type == SWITCHOS_SETVALID0:
-                # parse freeidx
-                freeidx, pipeidx = struct.unpack("=HI", recvbuf)
-
-                # set valid = 0
-                self.set_valid0(freeidx, pipeidx)
-
-                # send back SWITCHOS_SETVALID0_ACK
-                sendbuf = struct.pack("=i", SWITCHOS_SETVALID0_ACK)
-                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
-            elif control_type == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1:
+#            if control_type == SWITCHOS_SETVALID0:
+#                # parse freeidx
+#                freeidx, pipeidx = struct.unpack("=HI", recvbuf)
+#
+#                # set valid = 0
+#                self.set_valid0(freeidx, pipeidx)
+#
+#                # send back SWITCHOS_SETVALID0_ACK
+#                sendbuf = struct.pack("=i", SWITCHOS_SETVALID0_ACK)
+#                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
+#            elif control_type == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1:
+            if control_type == SWITCHOS_ADD_CACHE_LOOKUP:
                 # parse key and freeidx
                 keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, recvbuf = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
-                freeidx, pipeidx = struct.unpack("=HI", recvbuf)
+                #freeidx, pipeidx = struct.unpack("=HI", recvbuf)
+                freeidx = struct.unpack("=H", recvbuf)[0]
 
                 #if (keylolo, keylohi, keyhilo, keyhihilo, keyhihihi) not in ptf_cached_keyset:
                 #   ptf_cached_keyset.add((keylolo, keylohi, keyhilo, keyhihilo, keyhihihi))
 
                 # add <key, idx> into cache_lookup_tbl, and set valid = 1
-                self.add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, pipeidx)
+                #self.add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, pipeidx)
+                self.add_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx)
 
                 #else:
                 #    print "Duplicate cache population key {} {} {} {} {}".format(hex(keylolo), hex(keylohi), hex(keyhilo), hex(kyhihilo), hex(keyhihihi))
 
                 # send back SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
-                sendbuf = struct.pack("=i", SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK)
+                #sendbuf = struct.pack("=i", SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK)
+                # send back SWITCHOS_ADD_CACHE_LOOKUP_ACK
+                sendbuf = struct.pack("=i", SWITCHOS_ADD_CACHE_LOOKUP_ACK)
                 switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
-            #elif control_type == SWITCHOS_GET_EVICTDATA_SETVALID3:
-            elif control_type == SWITCHOS_SETVALID3:
-                # calculate sample index, set valid = 3, and load evict data from data plane
-                #pipeidx = struct.unpack("=I", recvbuf)
-                #sendbuf = self.get_evictdata_setvalid3(pipeidx)
-
-                # send back SWITCHOS_GET_EVICTDATA_SETVALID3_ACK
-                #switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
-
-                evictidx, pipeidx = struct.unpack("=HI", recvbuf)
-                self.setvalid3(evictidx, pipeidx)
-
-                # send back SWITCHOS_SETVALID3_ACK
-                sendbuf = struct.pack("=i", SWITCHOS_SETVALID3_ACK)
-                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
+#            #elif control_type == SWITCHOS_GET_EVICTDATA_SETVALID3:
+#            elif control_type == SWITCHOS_SETVALID3:
+#                # calculate sample index, set valid = 3, and load evict data from data plane
+#                #pipeidx = struct.unpack("=I", recvbuf)
+#                #sendbuf = self.get_evictdata_setvalid3(pipeidx)
+#
+#                # send back SWITCHOS_GET_EVICTDATA_SETVALID3_ACK
+#                #switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
+#
+#                evictidx, pipeidx = struct.unpack("=HI", recvbuf)
+#                self.setvalid3(evictidx, pipeidx)
+#
+#                # send back SWITCHOS_SETVALID3_ACK
+#                sendbuf = struct.pack("=i", SWITCHOS_SETVALID3_ACK)
+#                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_REMOVE_CACHE_LOOKUP:
                 # parse key
                 keylolo, keylohi, keyhilo, keyhihilo, keyhihihi = struct.unpack("!3I2H", recvbuf)

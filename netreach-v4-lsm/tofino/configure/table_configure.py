@@ -706,13 +706,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.access_cache_frequency_tbl_table_add_with_get_cache_frequency(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_validvalue_tbl (default: reset_meta_validvalue; size: 5)
+            # Table: access_validvalue_tbl (default: reset_meta_validvalue; size: 7)
             print "Configuring access_validvalue_tbl"
             for tmpoptype in [GETREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH]:
                 matchspec0 = netbufferv4_access_validvalue_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         inswitch_hdr_is_cached = 1)
                 self.client.access_validvalue_tbl_table_add_with_get_validvalue(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
+            for is_cached in cached_list:
+                matchspec0 = netbufferv4_access_validvalue_tbl_match_spec_t(\
+                        op_hdr_optype = SETVALID_INSWITCH,
+                        inswitch_hdr_is_cached = is_cached) # key may or may not be cached for SETVALID_INSWITCH
+                self.client.access_validvalue_tbl_table_add_with_set_validvalue(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_seq_tbl (default: nop; size: 2)
@@ -1116,7 +1122,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             else:
                 self.configure_eg_port_forward_tbl_with_range()
 
-            # Table: update_pktlen_tbl (default: nop; 194)
+            # Table: update_pktlen_tbl (default: nop; 195)
             print "Configuring update_pktlen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
@@ -1235,8 +1241,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             actnspec0 = netbufferv4_update_pktlen_action_spec_t(frequency_udplen, frequency_iplen)
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\
+                    op_hdr_optype=SETVALID_INSWITCH_ACK,
+                    vallen_hdr_vallen_start=0,
+                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+            actnspec0 = netbufferv4_update_pktlen_action_spec_t(onlyop_udplen, onlyop_iplen)
+            self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
-            # Table: update_ipmac_srcport_tbl (default: nop; 6*client_physical_num+12*server_physical_num+6=42 < 18*8+6=150 < 256)
+            # Table: update_ipmac_srcport_tbl (default: nop; 6*client_physical_num+12*server_physical_num+7=43 < 18*8+7=151 < 256)
             # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
             # NOTE: update_ipmac_srcport_tbl focues on src/dst ip/mac and udp.srcport
             print "Configuring update_ipmac_srcport_tbl"
@@ -1331,6 +1344,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec11 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
                     op_hdr_optype=convert_u16_to_i16(LOADSNAPSHOTDATA_INSWITCH_ACK),
                     eg_intr_md_egress_port=tmp_devport)
+            matchspec12 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
+                    op_hdr_optype=convert_u16_to_i16(SETVALID_INSWITCH_ACK),
+                    eg_intr_md_egress_port=tmp_devport)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
                     self.sess_hdl, self.dev_tgt, matchspec6, actnspec2)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
@@ -1343,6 +1359,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, matchspec10, actnspec2)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
                     self.sess_hdl, self.dev_tgt, matchspec11, actnspec2)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
+                    self.sess_hdl, self.dev_tgt, matchspec12, actnspec2)
 
             # Table: add_and_remove_value_header_tbl (default: remove_all; 17*13=221)
             print "Configuring add_and_remove_value_header_tbl"
@@ -1421,7 +1439,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     (self.sess_hdl, self.dev_tgt, entry.match_spec)
 
     def configure_eg_port_forward_tbl(self):
-        # Table: eg_port_forward_tbl (default: nop; size: 19+852*client_physical_num=19+852*2=1723 < 2048 < 19+852*8=6835 < 8192)
+        # Table: eg_port_forward_tbl (default: nop; size: 19+852*client_physical_num=21+852*2=1725 < 2048 < 21+852*8=6837 < 8192)
         tmp_client_sids = [0] + self.client_sids
         for is_cached in cached_list:
             for is_hot in hot_list:
@@ -2011,9 +2029,49 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                 # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                 pass
+                                            # is_hot (cm_predicate=1), validvalue (set but not get validvalue), is_latest, is_deleted, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for SETVALID_INSWITCH
+                                            # NOTE: is_cached can be 0 or 1 (key may be / may not be cached for SETVALID_INSWITCH)
+                                            # size: 2
+                                            if is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = LOADSNAPSHOTDATA_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    inswitch_hdr_client_sid = tmp_client_sid,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                # Update SETVALID_INSWITCH as SETVALID_INSWITCH_ACK to reflector
+                                                actnspec0 = netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port)
+                                                self.client.eg_port_forward_tbl_table_add_with_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            # is_cached=0 (no inswtich_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for SETVALID_INSWITCH_ACK
+                                            # NOTE: is_cached must be 0 (SETVALID_INSWITCH_ACK does not have inswitch_hdr)
+                                            # size: 0
+                                            if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
+                                                matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = SETVALID_INSWITCH_ACK,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    inswitch_hdr_client_sid = tmp_client_sid,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                # Forward SETVALID_INSWITCH_ACK (by clone_e2e) to reflector
+                                                #self.client.eg_port_forward_tbl_table_add_with_forward_setvalid_inswitch_ack(\
+                                                #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                pass
 
     def configure_eg_port_forward_tbl_with_range(self):
-        # Table: eg_port_forward_tbl (default: nop; size: 19+852*client_physical_num+2*server_physical_num=19+854*2=1727 < 2048 < 19+854*8=6851 < 8192)
+        # Table: eg_port_forward_tbl (default: nop; size: 21+852*client_physical_num+2*server_physical_num=21+854*2=1729 < 2048 < 21+854*8=6853 < 8192)
         tmp_client_sids = [0] + self.client_sids
         tmp_server_sids = [0] + self.server_sids
         for is_cached in cached_list:
@@ -2679,6 +2737,50 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             meta_server_sid = tmp_server_sid)
                                                         # Forward LOADSNAPSHOTDATA_INSWITCH_ACK (by clone_e2e) to reflector
                                                         #self.client.eg_port_forward_tbl_table_add_with_forward_loadsnapshotdata_inswitch_ack(\
+                                                        #        self.sess_hdl, self.dev_tgt, matchspec0)
+                                                        # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
+                                                        pass
+                                                    # is_hot (cm_predicate=1), validvalue (set but not get validvalue), is_latest, is_deleted, tmp_client_sid=0, is_lastclone_for_pktloss, snapshot_flag, is_case1 should be 0 for SETVALID_INSWITCH
+                                                    # NOTE: is_cached can be 0 or 1 (key may be / may not be cached for SETVALID_INSWITCH)
+                                                    # size: 2
+                                                    if is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                        matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                            op_hdr_optype = LOADSNAPSHOTDATA_INSWITCH,
+                                                            inswitch_hdr_is_cached = is_cached,
+                                                            meta_is_hot = is_hot,
+                                                            meta_validvalue = validvalue,
+                                                            meta_is_latest = is_latest,
+                                                            meta_is_deleted = is_deleted,
+                                                            inswitch_hdr_client_sid = tmp_client_sid,
+                                                            meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                            inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                            meta_is_case1 = is_case1,
+                                                            meta_is_last_scansplit = is_last_scansplit,
+                                                            meta_server_sid = tmp_server_sid)
+                                                        # Update SETVALID_INSWITCH as SETVALID_INSWITCH_ACK to reflector
+                                                        actnspec0 = netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone_action_spec_t(self.refletor_sid, reflector_dp2cpserver_port)
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                    # is_cached=0 (no inswtich_hdr), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline, tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktlos, snapshot_flag, is_case1 should be 0 for SETVALID_INSWITCH_ACK
+                                                    # NOTE: is_cached must be 0 (SETVALID_INSWITCH_ACK does not have inswitch_hdr)
+                                                    # size: 0
+                                                    if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                        matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
+                                                            op_hdr_optype = SETVALID_INSWITCH_ACK,
+                                                            inswitch_hdr_is_cached = is_cached,
+                                                            meta_is_hot = is_hot,
+                                                            meta_validvalue = validvalue,
+                                                            meta_is_latest = is_latest,
+                                                            meta_is_deleted = is_deleted,
+                                                            #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                            inswitch_hdr_client_sid = tmp_client_sid,
+                                                            meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                            inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                            meta_is_case1 = is_case1,
+                                                            meta_is_last_scansplit = is_last_scansplit,
+                                                            meta_server_sid = tmp_server_sid)
+                                                        # Forward SETVALID_INSWITCH_ACK (by clone_e2e) to reflector
+                                                        #self.client.eg_port_forward_tbl_table_add_with_forward_setvalid_inswitch_ack(\
                                                         #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                         # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                         pass

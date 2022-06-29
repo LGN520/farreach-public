@@ -752,6 +752,21 @@ action update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_an
 //action forward_loadsnapshotdata_inswitch_ack() {
 //}
 
+action update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(switchos_sid, reflector_port) {
+	modify_field(op_hdr.optype, SETVALID_INSWITCH_ACK);
+	modify_field(udp_hdr.dstPort, reflector_port);
+
+	remove_header(shadowtype_hdr);
+	remove_header(inswitch_hdr);
+	remove_header(validvalue_hdr);
+
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
+}
+
+//action forward_setvalid_inswitch_ack() {
+//}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -828,6 +843,8 @@ table eg_port_forward_tbl {
 		//forward_cache_evict_loaddata_inswitch_ack;
 		update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
 		//forward_loadsnapshotdata_inswitch_ack;
+		update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
+		//forward_setvalid_inswitch_ack;
 		nop;
 	}
 	default_action: nop();
@@ -887,7 +904,8 @@ table update_ipmac_srcport_tbl {
 // stage 11
 
 // NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
-/*// CACHE_POP_INSWITCH_ACK
+/*
+// CACHE_POP_INSWITCH_ACK, SETVALID_INSWITCH_ACK
 action update_onlyop_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 1(debug_hdr)
 	//modify_field(udp_hdr.hdrlen, 27);

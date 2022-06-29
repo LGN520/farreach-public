@@ -142,53 +142,56 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
     def load_snapshot_data(self, cached_empty_index_backup, pipeidx):
-        tmp_devtgt = DevTarget_t(0, pipeidx)
+        print "[ERROR] now we directly load snapshot data from data plane instead of via ptf channel"
+        exit(-1)
 
-        start_index = 0
-        end_index = cached_empty_index_backup - 1
-        print "Load snapshot data in [{}, {}] from data plane's pipeline {}".format(start_index, end_index, pipeidx)
-        record_cnt = end_index - start_index + 1
-        # TODO: switchos should give per-pipeline empty index to support multi-pipeline
-        egress_pipeidx = 0
-        vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, tmp_devtgt, start_index, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt]
-        for i in range(len(vallen_list)):
-            #vallen_list[i] = convert_i32_to_u32(vallen_list[i])
-            vallen_list[i] = convert_i16_to_u16(vallen_list[i])
-        vallo_list_list = []
-        valhi_list_list = []
-        for i in range(switch_max_vallen/8): # 128 bytes / 8 = 16 register arrays
-            vallo_list_list.append(eval("self.client.register_range_read_vallo{}_reg".format(i+1))(self.sess_hdl, tmp_devtgt, 0, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt])
-            valhi_list_list.append(eval("self.client.register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, tmp_devtgt, 0, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt])
-        deleted_list = self.client.register_range_read_deleted_reg(self.sess_hdl, tmp_devtgt, start_index, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt]
-        stat_list = []
-        for i in range(len(deleted_list)):
-            if deleted_list[i] == 0:
-                stat_list.append(True)
-            elif deleted_list[i] == 1:
-                stat_list.append(False)
-            else:
-                print "Invalid deleted_list[{}]: {}".format(i, deleted_list[i])
-                exit(-1)
-        savedseq_list = self.client.register_range_read_savedseq_reg(self.sess_hdl, tmp_devtgt, start_index, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt]
-        for i in range(len(savedseq_list)):
-            savedseq_list[i] = convert_i32_to_u32(savedseq_list[i])
-
-        print "Prepare sendbuf to switchos.snapshotdataserver"
-        sendbuf = bytes()
-        # <SWITCHOS_LOAD_SNAPSHOT_DATA_ACK, total_bytesnum, records> -> for each record: <uint16_t vallen (big-endian for Val::deserialize), valbytes (same order), uint32_t seq (little-endian), result>
-        for i in range(record_cnt):
-            tmpvallen = vallen_list[i]
-            #sendbuf = sendbuf + struct.pack("!I", tmpvallen)
-            sendbuf = sendbuf + struct.pack("!H", tmpvallen)
-            tmp_eightbyte_cnt = (tmpvallen + 7) / 8
-            for j in range(tmp_eightbyte_cnt):
-                # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
-                # NOTE: deparser valbytes from val16 to val1
-                sendbuf = sendbuf + struct.pack("!2i", vallo_list_list[tmp_eightbyte_cnt-1-j][i], valhi_list_list[tmp_eightbyte_cnt-1-j][i])
-            sendbuf = sendbuf + struct.pack("=I?", savedseq_list[i], stat_list[i])
-        total_bytesnum = 4 + 4 + len(sendbuf) # total # of bytes in sendbuf including total_bytesnum itself
-        sendbuf = struct.pack("=2i", SWITCHOS_LOAD_SNAPSHOT_DATA_ACK, total_bytesnum) + sendbuf
-        return sendbuf
+#        tmp_devtgt = DevTarget_t(0, pipeidx)
+#
+#        start_index = 0
+#        end_index = cached_empty_index_backup - 1
+#        print "Load snapshot data in [{}, {}] from data plane's pipeline {}".format(start_index, end_index, pipeidx)
+#        record_cnt = end_index - start_index + 1
+#        # TODO: switchos should give per-pipeline empty index to support multi-pipeline
+#        egress_pipeidx = 0
+#        vallen_list = self.client.register_range_read_vallen_reg(self.sess_hdl, tmp_devtgt, start_index, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt]
+#        for i in range(len(vallen_list)):
+#            #vallen_list[i] = convert_i32_to_u32(vallen_list[i])
+#            vallen_list[i] = convert_i16_to_u16(vallen_list[i])
+#        vallo_list_list = []
+#        valhi_list_list = []
+#        for i in range(switch_max_vallen/8): # 128 bytes / 8 = 16 register arrays
+#            vallo_list_list.append(eval("self.client.register_range_read_vallo{}_reg".format(i+1))(self.sess_hdl, tmp_devtgt, 0, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt])
+#            valhi_list_list.append(eval("self.client.register_range_read_valhi{}_reg".format(i+1))(self.sess_hdl, tmp_devtgt, 0, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt])
+#        deleted_list = self.client.register_range_read_deleted_reg(self.sess_hdl, tmp_devtgt, start_index, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt]
+#        stat_list = []
+#        for i in range(len(deleted_list)):
+#            if deleted_list[i] == 0:
+#                stat_list.append(True)
+#            elif deleted_list[i] == 1:
+#                stat_list.append(False)
+#            else:
+#                print "Invalid deleted_list[{}]: {}".format(i, deleted_list[i])
+#                exit(-1)
+#        savedseq_list = self.client.register_range_read_savedseq_reg(self.sess_hdl, tmp_devtgt, start_index, record_cnt, flags)[0 * record_cnt:0 * record_cnt + record_cnt]
+#        for i in range(len(savedseq_list)):
+#            savedseq_list[i] = convert_i32_to_u32(savedseq_list[i])
+#
+#        print "Prepare sendbuf to switchos.snapshotdataserver"
+#        sendbuf = bytes()
+#        # <SWITCHOS_LOAD_SNAPSHOT_DATA_ACK, total_bytesnum, records> -> for each record: <uint16_t vallen (big-endian for Val::deserialize), valbytes (same order), uint32_t seq (little-endian), result>
+#        for i in range(record_cnt):
+#            tmpvallen = vallen_list[i]
+#            #sendbuf = sendbuf + struct.pack("!I", tmpvallen)
+#            sendbuf = sendbuf + struct.pack("!H", tmpvallen)
+#            tmp_eightbyte_cnt = (tmpvallen + 7) / 8
+#            for j in range(tmp_eightbyte_cnt):
+#                # NOTE: we serialize each 4B value as big-endian to keep the same byte order as end-hosts
+#                # NOTE: deparser valbytes from val16 to val1
+#                sendbuf = sendbuf + struct.pack("!2i", vallo_list_list[tmp_eightbyte_cnt-1-j][i], valhi_list_list[tmp_eightbyte_cnt-1-j][i])
+#            sendbuf = sendbuf + struct.pack("=I?", savedseq_list[i], stat_list[i])
+#        total_bytesnum = 4 + 4 + len(sendbuf) # total # of bytes in sendbuf including total_bytesnum itself
+#        sendbuf = struct.pack("=2i", SWITCHOS_LOAD_SNAPSHOT_DATA_ACK, total_bytesnum) + sendbuf
+#        return sendbuf
 
     def reset_snapshot_flag_and_reg(self):
         print "Reset snapshot_flag=0 for all ingress pipelines"

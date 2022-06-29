@@ -68,14 +68,17 @@ with open(os.path.join(os.path.dirname(this_dir), "control_type.ini"), "r") as f
 #SWITCHOS_SET_EVICTDATA = int(control_config.get("switchos", "switchos_set_evictdata"))
 #SWITCHOS_GET_CACHEDEMPTYINDEX = int(control_config.get("switchos", "switchos_get_cachedemptyindex"))
 #SWITCHOS_GET_EVICTKEY = int(control_config.get("switchos", "switchos_get_evictkey"))
-SWITCHOS_SETVALID0 = int(control_config.get("switchos", "SWITCHOS_SETVALID0"))
-SWITCHOS_SETVALID0_ACK = int(control_config.get("switchos", "SWITCHOS_SETVALID0_ACK"))
-SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = int(control_config.get("switchos", "SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1"))
-SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = int(control_config.get("switchos", "SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK"))
+
+#SWITCHOS_SETVALID0 = int(control_config.get("switchos", "SWITCHOS_SETVALID0"))
+#SWITCHOS_SETVALID0_ACK = int(control_config.get("switchos", "SWITCHOS_SETVALID0_ACK"))
+#SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = int(control_config.get("switchos", "SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1"))
+#SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = int(control_config.get("switchos", "SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK"))
+SWITCHOS_ADD_CACHE_LOOKUP = int(control_config.get("switchos", "SWITCHOS_ADD_CACHE_LOOKUP"))
+SWITCHOS_ADD_CACHE_LOOKUP_ACK = int(control_config.get("switchos", "SWITCHOS_ADD_CACHE_LOOKUP_ACK"))
 #SWITCHOS_GET_EVICTDATA_SETVALID3 = int(control_config.get("switchos", "SWITCHOS_GET_EVICTDATA_SETVALID3"))
 #SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = int(control_config.get("switchos", "SWITCHOS_GET_EVICTDATA_SETVALID3_ACK"))
-SWITCHOS_SETVALID3 = int(control_config.get("switchos", "SWITCHOS_SETVALID3"))
-SWITCHOS_SETVALID3_ACK = int(control_config.get("switchos", "SWITCHOS_SETVALID3_ACK"))
+#SWITCHOS_SETVALID3 = int(control_config.get("switchos", "SWITCHOS_SETVALID3"))
+#SWITCHOS_SETVALID3_ACK = int(control_config.get("switchos", "SWITCHOS_SETVALID3_ACK"))
 SWITCHOS_REMOVE_CACHE_LOOKUP = int(control_config.get("switchos", "SWITCHOS_REMOVE_CACHE_LOOKUP"))
 SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = int(control_config.get("switchos", "SWITCHOS_REMOVE_CACHE_LOOKUP_ACK"))
 SWITCHOS_CLEANUP = int(control_config.get("switchos", "SWITCHOS_CLEANUP"))
@@ -132,6 +135,7 @@ DELREQ_INSWITCH = 0x0014
 CACHE_EVICT_LOADFREQ_INSWITCH = 0x0024
 CACHE_EVICT_LOADDATA_INSWITCH = 0x0034
 LOADSNAPSHOTDATA_INSWITCH = 0x0044
+SETVALID_INSWITCH = 0x0054
 # 0b0010
 DELREQ_SEQ = 0x0002
 DELREQ_SEQ_CASE3 = 0x0012
@@ -155,6 +159,7 @@ WARMUPACK = 0x00d0
 LOADACK = 0x00e0
 CACHE_POP_ACK = 0x00f0
 CACHE_EVICT_LOADFREQ_INSWITCH_ACK = 0x0100
+SETVALID_INSWITCH_ACK = 0x0110
 
 #GETREQ = 0x00
 #PUTREQ = 0x01

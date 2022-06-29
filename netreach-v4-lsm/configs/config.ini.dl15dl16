@@ -113,6 +113,8 @@ switch_partition_count=32768
 ; change KV_BUCKET_COUNT in tofino/netbufferv4.p4 accordingly (one stage can hold at most 32700 instead of 32768)
 ;switch_kv_bucket_num=32700
 switch_kv_bucket_num=10000
+; max # of pipelines in switch
+switch_pipeline_num=2
 ; max # of bytes supported in switch (8B aligned)
 switch_max_vallen=128
 switchos_ip=172.16.112.17

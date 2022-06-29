@@ -61,6 +61,8 @@ typedef CacheEvictLoaddataInswitchAck<netreach_key_t, val_t> cache_evict_loaddat
 // NOTE: we cannot simply reuse cache_evict_loaddata_inswich_/ack_t, as reflector cannot distinguish the two optypes and does not know which one of switchos,popserver.popclient_for_reflector or switchos.snapshotserver.snapshotclient_for_reflector it should forward ACK to; actually loading evicted data or snapshot data can happen simultaneously!
 typedef LoadsnapshotdataInswitch<netreach_key_t> loadsnapshotdata_inswitch_t;
 typedef LoadsnapshotdataInswitchAck<netreach_key_t, val_t> loadsnapshotdata_inswitch_ack_t;
+typedef SetvalidInswitch<netreach_key_t> setvalid_inswitch_t;
+typedef SetvalidInswitchAck<netreach_key_t> setvalid_inswitch_ack_t;
 
 /*
  * Constants
@@ -159,14 +161,16 @@ int SWITCHOS_GET_KEY_FREEIDX = -1; // ptf get key and freeidx from paramserver
 int SWITCHOS_SET_EVICTDATA = -1; // ptf set evictidx, evictvallen, evictval, evictstat, and evictseq to paramserver
 int SWITCHOS_GET_EVICTKEY = -1; // ptf get evictkey
 int SWITCHOS_GET_CACHEDEMPTYINDEX = -1; // ptf get cached_empty_index*/
-int SWITCHOS_SETVALID0 = -1;
-int SWITCHOS_SETVALID0_ACK = -1;
-int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = -1;
-int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = -1;
+//int SWITCHOS_SETVALID0 = -1;
+//int SWITCHOS_SETVALID0_ACK = -1;
+//int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = -1;
+//int SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = -1;
+int SWITCHOS_ADD_CACHE_LOOKUP = -1;
+int SWITCHOS_ADD_CACHE_LOOKUP_ACK = -1;
 //int SWITCHOS_GET_EVICTDATA_SETVALID3 = -1;
 //int SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = -1;
-int SWITCHOS_SETVALID3 = -1;
-int SWITCHOS_SETVALID3_ACK = -1;
+//int SWITCHOS_SETVALID3 = -1;
+//int SWITCHOS_SETVALID3_ACK = -1;
 int SWITCHOS_REMOVE_CACHE_LOOKUP = -1;
 int SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = -1;
 int SWITCHOS_CLEANUP = -1;
@@ -442,14 +446,16 @@ inline void parse_control_ini(const char* config_file) {
 	COUT_VAR(SNAPSHOT_SERVERSIDE_ACK);
 	COUT_VAR(SNAPSHOT_DATA);*/
 
-	SWITCHOS_SETVALID0 = ini.get_switchos_setvalid0();
-	SWITCHOS_SETVALID0_ACK = ini.get_switchos_setvalid0_ack();
-	SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = ini.get_switchos_add_cache_lookup_setvalid1();
-	SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = ini.get_switchos_add_cache_lookup_setvalid1_ack();
+	//SWITCHOS_SETVALID0 = ini.get_switchos_setvalid0();
+	//SWITCHOS_SETVALID0_ACK = ini.get_switchos_setvalid0_ack();
+	//SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1 = ini.get_switchos_add_cache_lookup_setvalid1();
+	//SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK = ini.get_switchos_add_cache_lookup_setvalid1_ack();
+	SWITCHOS_ADD_CACHE_LOOKUP = ini.get_switchos_add_cache_lookup();
+	SWITCHOS_ADD_CACHE_LOOKUP_ACK = ini.get_switchos_add_cache_lookup_ack();
 	//SWITCHOS_GET_EVICTDATA_SETVALID3 = ini.get_switchos_get_evictdata_setvalid3();
 	//SWITCHOS_GET_EVICTDATA_SETVALID3_ACK = ini.get_switchos_get_evictdata_setvalid3_ack();
-	SWITCHOS_SETVALID3 = ini.get_switchos_setvalid3();
-	SWITCHOS_SETVALID3_ACK = ini.get_switchos_setvalid3_ack();
+	//SWITCHOS_SETVALID3 = ini.get_switchos_setvalid3();
+	//SWITCHOS_SETVALID3_ACK = ini.get_switchos_setvalid3_ack();
 	SWITCHOS_REMOVE_CACHE_LOOKUP = ini.get_switchos_remove_cache_lookup();
 	SWITCHOS_REMOVE_CACHE_LOOKUP_ACK = ini.get_switchos_remove_cache_lookup_ack();
 	SWITCHOS_CLEANUP = ini.get_switchos_cleanup();

@@ -1728,6 +1728,71 @@ void LoadsnapshotdataInswitchAck<key_t, val_t>::deserialize(const char * data, u
 	//begin += sizeof(uint16_t); // stat_hdr.nodeidx_foreval
 }
 
+// SetvalidInswitch
+
+template<class key_t>
+SetvalidInswitch<key_t>::SetvalidInswitch(key_t key, uint16_t idx, uint8_t validvalue)
+	: Packet<key_t>(PacketType::SETVALID_INSWITCH, key), _idx(idx), _validvalue(validvalue)
+{
+	INVARIANT(idx >= 0);
+	INVARIANT(validvalue == 0 || validvalue == 1 || validvalue == 3);
+}
+
+template<class key_t>
+uint32_t SetvalidInswitch<key_t>::serialize(char * const data, uint32_t max_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_typesize = serialize_packet_type(this->_type, begin, max_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize);
+	begin += tmp_keysize;
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
+	begin += tmp_shadowtypesize;
+	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
+	begin += INSWITCH_PREV_BYTES;
+	uint16_t bigendian_idx = htons(uint16_t(this->_idx));
+	memcpy(begin, (void *)&bigendian_idx, sizeof(uint16_t)); // little-endian to big-endian
+	begin += sizeof(uint16_t);
+	memcpy(begin, (void *)&_validvalue, sizeof(uint8_t));
+	return tmp_typesize + tmp_keysize + tmp_shadowtypesize + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(uint8_t);
+}
+
+template<class key_t>
+uint16_t SetvalidInswitch<key_t>::idx() const {
+	return _idx;
+}
+
+template<class key_t>
+uint8_t SetvalidInswitch<key_t>::validvalue() const {
+	return _validvalue;
+}
+
+template<class key_t>
+uint32_t SetvalidInswitch<key_t>::size() { // unused
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(uint8_t);
+}
+
+template<class key_t>
+void SetvalidInswitch<key_t>::deserialize(const char * data, uint32_t recv_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for SetvalidInswitch");
+}
+
+// SetvalidInswitchAck (no value)
+
+template<class key_t>
+SetvalidInswitchAck<key_t>::SetvalidInswitchAck(const char *data, uint32_t recv_size)
+{
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::SETVALID_INSWITCH_ACK);
+}
+
+template<class key_t>
+uint32_t SetvalidInswitchAck<key_t>::serialize(char * const data, uint32_t max_size)
+{
+	COUT_N_EXIT("Invalid invoke of serialize for SetvalidInswitchAck");
+}
+
 
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {

@@ -36,10 +36,10 @@ enum class PacketType {
 	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b,
 	GETRES=0x0009,
 	PUTREQ_INSWITCH=0x0005,
-	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034, LOADSNAPSHOTDATA_INSWITCH=0x0044,
+	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034, LOADSNAPSHOTDATA_INSWITCH=0x0044, SETVALID_INSWITCH=0x0054,
 	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012,
 	PUTRES=0x0008, DELRES=0x0018,
-	SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100
+	SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100, SETVALID_INSWITCH_ACK=0x0110
 };
 /*enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES_SPLIT, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 
@@ -561,7 +561,7 @@ class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + val + sh
 };
 
 template<class key_t>
-class LoadsnapshotdataInswitch : public CacheEvictLoaddataInswitch<key_t> { // ophdr + shadowtype + inswitch_hdr
+class LoadsnapshotdataInswitch : public CacheEvictLoadfreqInswitch<key_t> { // ophdr + shadowtype + inswitch_hdr
 	public: 
 		LoadsnapshotdataInswitch(key_t key, uint16_t evictidx);
 };
@@ -573,6 +573,30 @@ class LoadsnapshotdataInswitchAck : public GetResponseLatestSeqInswitchCase1<key
 	private:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+};
+
+template<class key_t>
+class SetvalidInswitch : public Packet<key_t> { // ophdr + shadowtype + inswitch_hdr + validvalue_hdr
+	public: 
+		SetvalidInswitch(key_t key, uint16_t idx, uint8_t validvalue);
+
+		uint16_t idx(); // freeidx or evictidx
+		uint8_t validvalue();
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+	private:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint16_t _idx;
+		uint8_t _validvalue;
+};
+
+template<class key_t>
+class SetvalidInswitchAck : public GetRequest<key_t> { // ophdr
+	public: 
+		SetvalidInswitchAck(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
 };
 
 // APIs

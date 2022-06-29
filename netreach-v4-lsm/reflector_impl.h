@@ -2,9 +2,12 @@
 #define REFLECTOR_IMPL_H
 
 // shared by reflector.cp2dpserver and reflector.dp2cpserver, but no contention
-bool volatile reflector_with_switchos_popworker_addr = false;
-struct sockaddr_in reflector_switchos_popworker_addr;
-unsigned int reflector_switchos_popworker_addr_len = sizeof(struct sockaddr);
+bool volatile reflector_with_switchos_popworker_popclient_for_reflector_addr = false;
+struct sockaddr_in reflector_switchos_popworker_popclient_for_reflector_addr;
+unsigned int reflector_switchos_popworker_popclient_for_reflector_addr_len = sizeof(struct sockaddr);
+bool volatile reflector_with_switchos_snapshotserver_snapshotclient_for_reflector_addr = false;
+struct sockaddr_in reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr;
+unsigned int reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr_len = sizeof(struct sockaddr);
 
 // switchos.popworker -> (udp channel) -> one reflector.cp2dpserver -> data plane
 int reflector_cp2dpserver_udpsock = -1;
@@ -58,6 +61,9 @@ void *run_reflector_cp2dpserver(void *param) {
 	set_sockaddr(client_addr, inet_addr(client_ips[0]), 123); // client ip and client port are not important
 	socklen_t client_addrlen = sizeof(struct sockaddr_in);
 
+	struct sockaddr_in tmp_addr;
+	socklen_t tmp_addrlen = sizeof(struct sockaddr_in);
+
 	char buf[MAX_BUFSIZE];
 	printf("[reflector.cp2dpserver] ready\n");
 	transaction_ready_threads++;
@@ -67,23 +73,45 @@ void *run_reflector_cp2dpserver(void *param) {
 	while (transaction_running) {
 		int recvsize = -1;
 		bool is_timeout = true;
-		if (!reflector_with_switchos_popworker_addr) {
-			is_timeout = udprecvfrom(reflector_cp2dpserver_udpsock, buf, MAX_BUFSIZE, 0, &reflector_switchos_popworker_addr, (socklen_t *)&reflector_switchos_popworker_addr_len, recvsize, "reflector.cp2dpserver");
-			memory_fence();
-			if (!is_timeout) {
-				reflector_with_switchos_popworker_addr = true;
-			}
-		}
-		else {
-			is_timeout = udprecvfrom(reflector_cp2dpserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.cp2dpserver");
-		}
+		is_timeout = udprecvfrom(reflector_cp2dpserver_udpsock, buf, MAX_BUFSIZE, 0, &tmp_addr, &tmp_addrlen, recvsize, "reflector.cp2dpserver");
 
 		if (is_timeout) {
+			tmp_addrlen = sizeof(struct sockaddr_in);
 			continue;
 		}
+
 		INVARIANT(recvsize >= 0);
 
-		// send CACHE_POP_INSWITCH or CACHE_EVICT_LOADFREQ_INSWITCH to data plane
+		packet_type_t tmp_optype = packet_type_t(get_packet_type(buf, recvsize));
+		switch (tmp_optype) {
+			case CACHE_POP_INSWITCH:
+			case CACHE_EVICT_LOADFREQ_INSWITCH:
+			case CACHE_EVICT_LOADDATA_INSWITCH:
+			case SETVALID_INSWITCH:
+				{
+					if (!reflector_with_switchos_popworker_popclient_for_reflector_addr) {
+						memcpy(&reflector_switchos_popworker_popclient_for_reflector_addr, &tmp_addr, sizeof(struct sockaddr_in));
+						reflector_switchos_popworker_popclient_for_reflector_addr_len = tmp_addrlen;
+						reflector_with_switchos_popworker_popclient_for_reflector_addr = true;
+					}
+					break;
+				}
+			case LOADSNAPSHOTDATA_INSWITCH:
+				{
+					if (!reflector_with_switchos_snapshotserver_snapshotclient_for_reflector_addr) {
+						memcpy(&reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr, &tmp_addr, sizeof(struct sockaddr_in));
+						reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr_len = tmp_addrlen;
+						reflector_with_switchos_snapshotserver_snapshotclient_for_reflector_addr = true;
+					}
+					break;
+				}
+			default:
+				{
+					printf("[reflector.cp2dpserver] invalid optype %d\n", int(tmp_optype));
+					exit(-1);
+				}
+		}
+
 		udpsendto(reflector_cp2dpserver_udpsock, buf, recvsize, 0, &client_addr, client_addrlen, "reflector.cp2dpserver");
 	}
 
@@ -118,11 +146,17 @@ void *run_reflector_dp2cpserver(void *param) {
 			case packet_type_t::CACHE_POP_INSWITCH_ACK:
 			case packet_type_t::CACHE_EVICT_LOADFREQ_INSWITCH_ACK:
 			case packet_type_t::CACHE_EVICT_LOADDATA_INSWITCH_ACK:
+			case packet_type_t::SETVALID_INSWITCH_ACK:
 				{
-					INVARIANT(reflector_with_switchos_popworker_addr == true);
-					// send CACHE_POP_INSWITCH_ACK to switchos.popworker
+					INVARIANT(reflector_with_switchos_popworker_popclient_for_reflector_addr == true);
 					// NOTE: not use popserver.popclient due to duplicate packets for packet loss issued by switch
-					udpsendto(reflector_dp2cpserver_popclient_udpsock, buf, recvsize, 0, &reflector_switchos_popworker_addr, reflector_switchos_popworker_addr_len, "reflector.dp2cpserver.popclient");
+					udpsendto(reflector_dp2cpserver_popclient_udpsock, buf, recvsize, 0, &reflector_switchos_popworker_popclient_for_reflector_addr, reflector_switchos_popworker_popclient_for_reflector_addr_len, "reflector.dp2cpserver.popclient");
+					break;
+				}
+			case packet_type_t::LOADSNAPSHOTDATA_INSWITCH_ACK:
+				{
+					INVARIANT(reflector_with_switchos_snapshotserver_snapshotclient_for_reflector_addr == true);
+					udpsendto(reflector_dp2cpserver_popclient_udpsock, buf, recvsize, 0, &reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr, reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr_len, "reflector.dp2cpserver.popclient");
 					break;
 				}
 			case packet_type_t::GETRES_LATEST_SEQ_INSWITCH_CASE1:

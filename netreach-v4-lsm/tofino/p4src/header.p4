@@ -134,6 +134,12 @@ header_type frequency_t {
 	}
 }
 
+header_type validvalue_t {
+	fields {
+		validvalue: 8; // used by SETVALID_INSWITCH to set validvalue_reg
+	}
+}
+
 header_type metadata_t {
 	fields {
 		need_recirculate: 1;
@@ -201,6 +207,7 @@ header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
 header clone_t clone_hdr;
 header frequency_t frequency_hdr;
+header validvalue_t validvalue_hdr;
 metadata metadata_t meta;
 
 //header debug_t debug_hdr;

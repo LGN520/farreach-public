@@ -133,9 +133,10 @@ void process_specialcase(const uint16_t &tmpidx, const netreach_key_t &tmpkey, c
 void close_switchos();
 
 // switchos <-> ptf.popserver
-inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx, uint32_t pipeidx);
-inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx, uint32_t pipeidx);
-inline uint32_t serialize_setvalid3(char *buf, uint16_t evictidx, uint32_t pipeidx);
+//inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx, uint32_t pipeidx);
+//inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx, uint32_t pipeidx);
+inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t freeidx);
+//inline uint32_t serialize_setvalid3(char *buf, uint16_t evictidx, uint32_t pipeidx);
 // NOTE: now we load evicted data directly from data plane instead of via ptf channel
 //inline uint32_t serialize_get_evictdata_setvalid3(char *buf, uint32_t pipeidx);
 //inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
@@ -591,10 +592,27 @@ void *run_switchos_popworker(void *param) {
 					}
 
 					// set valid = 3 by ptf channel (cannot perform it in data plane due to stateful ALU API limitation)
-					ptf_sendsize = serialize_setvalid3(ptfbuf, switchos_evictidx, tmp_pipeidx);
-					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
-					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
-					INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID3_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
+					//ptf_sendsize = serialize_setvalid3(ptfbuf, switchos_evictidx, tmp_pipeidx);
+					//udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+					//udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
+					//INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID3_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
+					
+					// set valid = 3 through reflector
+					while (true) {
+						setvalid_inswitch_t tmp_setvalid_req(cur_evictkey, switchos_evictidx, 3);
+						pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
+						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
+
+						bool is_timeout = false;
+						is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
+						if (unlikely(is_timeout)) {
+							continue;
+						}
+
+						setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
+						INVARIANT(tmp_setvalid_rsp.key() == cur_evictkey);
+						break;
+					}
 					
 					// load evicted data of victim from data plane and set valid=3 at the same time for availability of latest value
 					while (true) {
@@ -715,11 +733,29 @@ void *run_switchos_popworker(void *param) {
 				//printf("[switchos.popworker] switchos_perpipeline_cached_empty_index[%d]: %d, switchos_freeidx: %d\n", tmp_pipeidx, int(switchos_perpipeline_cached_empty_index[tmp_pipeidx]), int(switchos_freeidx)); // TMPDEBUG
 
 				// set valid=0 for atomicity
-				//system("bash tofino/setvalid0.sh");
-				ptf_sendsize = serialize_setvalid0(ptfbuf, switchos_freeidx, tmp_pipeidx);
-				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
-				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
-				INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID0_ACK); // wait for SWITCHOS_SETVALID0_ACK
+				////system("bash tofino/setvalid0.sh");
+				//ptf_sendsize = serialize_setvalid0(ptfbuf, switchos_freeidx, tmp_pipeidx);
+				//udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
+				//udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
+				//INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID0_ACK); // wait for SWITCHOS_SETVALID0_ACK
+				
+				// set valid = 0 through reflector
+				// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
+				while (true) {
+					setvalid_inswitch_t tmp_setvalid_req(tmp_cache_pop_ptr->key(), switchos_freeidx, 0);
+					pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
+					udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
+
+					bool is_timeout = false;
+					is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
+					if (unlikely(is_timeout)) {
+						continue;
+					}
+
+					setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
+					INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
+					break;
+				}
 
 				// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
 				cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx);
@@ -752,12 +788,32 @@ void *run_switchos_popworker(void *param) {
 					}
 				}
 
-				// (1) add new <key, value> pair into cache_lookup_tbl; (2) and set valid=1 to enable the entry
-				//system("bash tofino/add_cache_lookup_setvalid1.sh");
-				ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx, tmp_pipeidx);
+				// (1) add new <key, value> pair into cache_lookup_tbl; DEPRECATED: (2) and set valid=1 to enable the entry
+				////system("bash tofino/add_cache_lookup_setvalid1.sh");
+				//ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx, tmp_pipeidx);
+				ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx);
 				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
-				INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
+				//INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
+				INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
+				
+				// set valid = 1 through reflector
+				// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
+				while (true) {
+					setvalid_inswitch_t tmp_setvalid_req(tmp_cache_pop_ptr->key(), switchos_freeidx, 1);
+					pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
+					udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
+
+					bool is_timeout = false;
+					is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
+					if (unlikely(is_timeout)) {
+						continue;
+					}
+
+					setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
+					INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
+					break;
+				}
 
 				switchos_cached_keyidx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), switchos_freeidx));
 				switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_freeidx] = tmp_cache_pop_ptr->key();
@@ -1246,6 +1302,7 @@ void *run_switchos_snapshotserver(void *param) {
 	}
 
 	close(switchos_snapshotserver_udpsock);
+	close(switchos_snapshotserver_snapshotclient_for_reflector_udpsock);
 	close(switchos_snapshotserver_snapshotclient_for_ptf_udpsock);
 	pthread_exit(nullptr);
 }
@@ -1427,27 +1484,29 @@ void close_switchos() {
 
 // switchos <-> ptf.popserver
 
-inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx, uint32_t pipeidx) {
+/*inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx, uint32_t pipeidx) {
 	memcpy(buf, &SWITCHOS_SETVALID0, sizeof(int));
 	memcpy(buf + sizeof(int), &freeidx, sizeof(uint16_t));
 	memcpy(buf + sizeof(int) + sizeof(uint16_t), &pipeidx, sizeof(uint32_t));
 	return sizeof(int) + sizeof(uint16_t) + sizeof(uint32_t);
-}
+}*/
 
-inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx, uint32_t pipeidx) {
-	memcpy(buf, &SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1, sizeof(int));
+//inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx, uint32_t pipeidx) {
+inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t freeidx) {
+	memcpy(buf, &SWITCHOS_ADD_CACHE_LOOKUP, sizeof(int));
 	uint32_t tmp_keysize = key.serialize(buf + sizeof(int), MAX_BUFSIZE - sizeof(int));
 	memcpy(buf + sizeof(int) + tmp_keysize, &freeidx, sizeof(uint16_t));
-	memcpy(buf + sizeof(int) + tmp_keysize + sizeof(uint16_t), &pipeidx, sizeof(uint32_t));
-	return sizeof(int) + tmp_keysize + sizeof(uint16_t) + sizeof(uint32_t);
+	return sizeof(int) + tmp_keysize + sizeof(uint16_t);
+	//memcpy(buf + sizeof(int) + tmp_keysize + sizeof(uint16_t), &pipeidx, sizeof(uint32_t));
+	//return sizeof(int) + tmp_keysize + sizeof(uint16_t) + sizeof(uint32_t);
 }
 
-inline uint32_t serialize_setvalid3(char *buf, uint16_t evictidx, uint32_t pipeidx) {
+/*inline uint32_t serialize_setvalid3(char *buf, uint16_t evictidx, uint32_t pipeidx) {
 	memcpy(buf, &SWITCHOS_SETVALID3, sizeof(int));
 	memcpy(buf + sizeof(int), &evictidx, sizeof(uint16_t));
 	memcpy(buf + sizeof(int) + sizeof(uint16_t), &pipeidx, sizeof(uint32_t));
 	return sizeof(int) + sizeof(uint16_t) + sizeof(uint32_t);
-}
+}*/
 
 /*inline uint32_t serialize_get_evictdata_setvalid3(char *buf, uin32_t pipeidx) {
 	memcpy(buf, &SWITCHOS_GET_EVICTDATA_SETVALID3, sizeof(int));

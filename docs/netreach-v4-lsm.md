@@ -122,6 +122,27 @@
 	+ More client threads does not mean better performance due to larger cliend-side overhead under limited client-side CPU cores
 	+ We should use two machines with similar performance for bottleneck/rotated partitions
 		* Machine for bottleneck partition should have slightly slower performance than that for rotated partition, otherwise rotated partition may become bottleneck due to hardware perf difference
+- NOTE: for asymmetric mode
+	+ Under our current Tofino environment, we cannot configure MAT or write stateful register in asymmetric mode for a specific pipeline
+	+ Now, we implement such operation by sending pkt to data plane to update register, especially for validvalue_reg
+	+ Due to data plane limitation on register ALU number (aka 3), we change design for future PUTREQ_LARGE
+		* NOTE: we can NOT reuse latest_reg
+			- valid=1 and is_latest=0 means server must have latest value -> GETRES_LATEST/DELETED_SEQ must overwrite inswitch value
+			- However, valid=1 and with_largevalue=1 means server may have latest large value
+				+ If with latest large value, we do NOT need to overwrite inswitch value
+				+ If without latest large value (e.g., pktloss of PUTREQ_LARGE), we also do NOT need to overwrite inswitch value
+					* In this case, reusing latest_reg will incur an out-of-date GETRES_LATEST/DELETED_SEQ, which requires switch to perform seq comparison before updating inswitch cache (i.e., valid/latest/... rely on latest)
+					* However, as latest_reg also relies on valid/latest/... registers, it breaks pipeline programming model
+		* Solution: valid_reg -> with_largevalue_reg (can be co-located with latest/deleted_reg)
+			- NOTE: if with_largevalue=1, we do not concern whether is_latest=0/1
+		* GETREQ: only if is_cached=1 and valid=1
+			- If with_largevalue=0
+				+ If is_latest=1, switchos sends back GETRES directly
+				+ If is_latest=0, switchos sends GETREQ_NLATEST to server
+			- If with_largevalue=1
+				+ switchos sends GETREQ to server
+		* PUTREQ/DELREQ: only if is_cached=1 and valid=1, switchos sets with_largevalue=0 and is_latest=1
+		* PUTREQ_LARGE: only if is_cached=1 and valid=1, switchos reset with_largevalue=1
 
 ## Overview
 
@@ -1587,6 +1608,11 @@
 
 ## Future work
 
+- IMPORTANT
+	+ We do not use valid_reg to invalidate inswitch value for PUTREQ_LARGE -> instead, we use with_largevalue_reg
+	+ With this design, we can avoid ALU number limitation of validvalue_reg, and hence change validvalue of a specific pipeline by control plane
+		* NOTE: ptf does not support asymmetric mode to write registers
+	+ Details are show in top NOTES of this document
 - For PUTREQ_LARGE
 	+ NOTE: PUTREQ_LARGE always reads savedseq, vallen1, and value1; while only evicts if valid=1 and latest=1
 	+ NOTE: In-switch cache snapshot should only store the records with valid=1 and latest=1
