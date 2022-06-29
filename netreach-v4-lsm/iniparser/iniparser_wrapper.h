@@ -97,8 +97,8 @@ class IniparserWrapper {
 		int get_switchos_setvalid0_ack();
 		//int get_switchos_add_cache_lookup_setvalid1();
 		//int get_switchos_add_cache_lookup_setvalid1_ack();
-		int get_switchos_add_cache_lookup_();
-		int get_switchos_add_cache_lookup__ack();
+		int get_switchos_add_cache_lookup();
+		int get_switchos_add_cache_lookup_ack();
 		//int get_switchos_get_evictdata_setvalid3();
 		//int get_switchos_get_evictdata_setvalid3_ack();
 		int get_switchos_setvalid3();

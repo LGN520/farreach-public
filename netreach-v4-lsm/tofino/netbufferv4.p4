@@ -9,7 +9,7 @@
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
-//#define DEBUG
+#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
 // 0b0001
@@ -286,10 +286,13 @@ control egress {
 
 	// Stage 9
 	apply(eg_port_forward_tbl); // including scan forwarding
+	// NOTE: Comment val11 and val12 in debug mode to save resources for eg_port_forward_counter -> you need to disable debug mode in evaluation
+#ifndef DEBUG
 	apply(update_vallo11_tbl);
 	apply(update_valhi11_tbl);
 	apply(update_vallo12_tbl);
 	apply(update_valhi12_tbl);
+#endif
 
 	// stage 10
 	// NOTE: resource in stage 11 is not enough for update_ipmac_src_port_tbl, so we place it into stage 10

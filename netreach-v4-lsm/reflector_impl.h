@@ -84,10 +84,10 @@ void *run_reflector_cp2dpserver(void *param) {
 
 		packet_type_t tmp_optype = packet_type_t(get_packet_type(buf, recvsize));
 		switch (tmp_optype) {
-			case CACHE_POP_INSWITCH:
-			case CACHE_EVICT_LOADFREQ_INSWITCH:
-			case CACHE_EVICT_LOADDATA_INSWITCH:
-			case SETVALID_INSWITCH:
+			case packet_type_t::CACHE_POP_INSWITCH:
+			case packet_type_t::CACHE_EVICT_LOADFREQ_INSWITCH:
+			case packet_type_t::CACHE_EVICT_LOADDATA_INSWITCH:
+			case packet_type_t::SETVALID_INSWITCH:
 				{
 					if (!reflector_with_switchos_popworker_popclient_for_reflector_addr) {
 						memcpy(&reflector_switchos_popworker_popclient_for_reflector_addr, &tmp_addr, sizeof(struct sockaddr_in));
@@ -96,7 +96,7 @@ void *run_reflector_cp2dpserver(void *param) {
 					}
 					break;
 				}
-			case LOADSNAPSHOTDATA_INSWITCH:
+			case packet_type_t::LOADSNAPSHOTDATA_INSWITCH:
 				{
 					if (!reflector_with_switchos_snapshotserver_snapshotclient_for_reflector_addr) {
 						memcpy(&reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr, &tmp_addr, sizeof(struct sockaddr_in));

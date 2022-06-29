@@ -82,7 +82,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         self.client.register_write_validvalue_reg(self.sess_hdl, tmp_devtgt, index, value)
 
     #def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, piptidx):
-    def add_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx)
+    def add_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx):
         #print "Add key into cache_lookup_tbl for all pipelines"
         matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),

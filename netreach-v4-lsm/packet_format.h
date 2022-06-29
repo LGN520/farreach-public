@@ -563,7 +563,9 @@ class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + val + sh
 template<class key_t>
 class LoadsnapshotdataInswitch : public CacheEvictLoadfreqInswitch<key_t> { // ophdr + shadowtype + inswitch_hdr
 	public: 
-		LoadsnapshotdataInswitch(key_t key, uint16_t evictidx);
+		LoadsnapshotdataInswitch(key_t key, uint16_t loadidx);
+
+		uint16_t loadidx() const;
 };
 
 template<class key_t, class val_t>
@@ -580,8 +582,8 @@ class SetvalidInswitch : public Packet<key_t> { // ophdr + shadowtype + inswitch
 	public: 
 		SetvalidInswitch(key_t key, uint16_t idx, uint8_t validvalue);
 
-		uint16_t idx(); // freeidx or evictidx
-		uint8_t validvalue();
+		uint16_t idx() const; // freeidx or evictidx
+		uint8_t validvalue() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	private:

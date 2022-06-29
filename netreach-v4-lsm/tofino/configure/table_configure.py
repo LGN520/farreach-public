@@ -120,7 +120,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 #                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
 #                            op_hdr_optype = GETREQ_INSWITCH,
 #                            inswitch_hdr_is_cached = is_cached,
-#                            validvalue_hdr = validvalue,
+#                            validvalue_hdr_validvalue = validvalue,
 #                            meta_is_latest = is_latest)
 #                    if is_cached == 1:
 #                        eval("self.client.update_val{}_tbl_table_add_with_get_val{}".format(valname, valname))(\
@@ -129,7 +129,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 #                        matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
 #                                op_hdr_optype = tmpoptype,
 #                                inswitch_hdr_is_cached = is_cached,
-#                                validvalue_hdr = validvalue,
+#                                validvalue_hdr_validvalue = validvalue,
 #                                meta_is_latest = is_latest)
 #                        if is_cached == 1 and validvalue == 1 and is_latest == 0:
 #                            eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
@@ -137,7 +137,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 #                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
 #                            op_hdr_optype = PUTREQ_INSWITCH,
 #                            inswitch_hdr_is_cached = is_cached,
-#                            validvalue_hdr = validvalue,
+#                            validvalue_hdr_validvalue = validvalue,
 #                            meta_is_latest = is_latest)
 #                    if is_cached == 1 and validvalue == 1:
 #                        eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
@@ -145,7 +145,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 #                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
 #                            op_hdr_optype = DELREQ_INSWITCH,
 #                            inswitch_hdr_is_cached = is_cached,
-#                            validvalue_hdr = validvalue,
+#                            validvalue_hdr_validvalue = validvalue,
 #                            meta_is_latest = is_latest)
 #                    if is_cached == 1 and validvalue == 1:
 #                        eval("self.client.update_val{}_tbl_table_add_with_reset_and_get_val{}".format(valname, valname))(\
@@ -153,7 +153,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 #                    matchspec0 = eval("netbufferv4_update_val{}_tbl_match_spec_t".format(valname))(
 #                            op_hdr_optype = CACHE_POP_INSWITCH,
 #                            inswitch_hdr_is_cached = is_cached,
-#                            validvalue_hdr = validvalue,
+#                            validvalue_hdr_validvalue = validvalue,
 #                            meta_is_latest = is_latest)
 #                    eval("self.client.update_val{}_tbl_table_add_with_set_and_get_val{}".format(valname, valname))(\
 #                            self.sess_hdl, self.dev_tgt, matchspec0)
@@ -747,7 +747,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     matchspec0 = netbufferv4_access_latest_tbl_match_spec_t(\
                             op_hdr_optype = GETREQ_INSWITCH,
                             inswitch_hdr_is_cached = is_cached,
-                            validvalue_hdr = validvalue)
+                            validvalue_hdr_validvalue = validvalue)
                     if is_cached == 1:
                         self.client.access_latest_tbl_table_add_with_get_latest(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
@@ -755,7 +755,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_access_latest_tbl_match_spec_t(\
                                 op_hdr_optype = tmpoptype,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue)
+                                validvalue_hdr_validvalue = validvalue)
                         if is_cached == 1 and validvalue == 1:
                             self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -763,7 +763,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_access_latest_tbl_match_spec_t(\
                                 op_hdr_optype = tmpoptype,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue)
+                                validvalue_hdr_validvalue = validvalue)
                         if is_cached == 1 and validvalue == 1:
                             self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -773,7 +773,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     matchspec0 = netbufferv4_access_latest_tbl_match_spec_t(\
                             op_hdr_optype = CACHE_POP_INSWITCH,
                             inswitch_hdr_is_cached = is_cached,
-                            validvalue_hdr = validvalue)
+                            validvalue_hdr_validvalue = validvalue)
                     self.client.access_latest_tbl_table_add_with_reset_and_get_latest(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -787,7 +787,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
                                 op_hdr_optype = GETREQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         if is_cached == 1:
                             self.client.access_deleted_tbl_table_add_with_get_deleted(\
@@ -795,7 +795,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
                                 op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         if is_cached == 1 and validvalue == 1 and is_latest == 0:
                             self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
@@ -803,7 +803,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
                                 op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH,
                                 inswitch_hdr_is_cached = 1,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         if is_cached == 1 and validvalue == 1 and is_latest == 0:
                             self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
@@ -811,7 +811,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
                                 op_hdr_optype = PUTREQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         if is_cached == 1 and validvalue == 1:
                             self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
@@ -819,7 +819,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
                                 op_hdr_optype = DELREQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         if is_cached == 1 and validvalue == 1:
                             self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
@@ -827,7 +827,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
                                 op_hdr_optype = CACHE_POP_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
@@ -835,7 +835,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
                                     op_hdr_optype = tmpoptype,
                                     inswitch_hdr_is_cached = is_cached,
-                                    validvalue_hdr = validvalue,
+                                    validvalue_hdr_validvalue = validvalue,
                                     meta_is_latest = is_latest)
                             self.client.access_deleted_tbl_table_add_with_get_deleted(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -848,7 +848,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
                                 op_hdr_optype = GETREQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         if is_cached == 1:
                             self.client.update_vallen_tbl_table_add_with_get_vallen(\
@@ -857,7 +857,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
                                     op_hdr_optype = tmpoptype,
                                     inswitch_hdr_is_cached = is_cached,
-                                    validvalue_hdr = validvalue,
+                                    validvalue_hdr_validvalue = validvalue,
                                     meta_is_latest = is_latest)
                             if is_cached == 1 and validvalue == 1 and is_latest == 0:
                                 self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
@@ -865,7 +865,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
                                 op_hdr_optype = PUTREQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         if is_cached == 1 and validvalue == 1:
                             self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
@@ -873,7 +873,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
                                 op_hdr_optype = DELREQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         if is_cached == 1 and validvalue == 1:
                             self.client.update_vallen_tbl_table_add_with_reset_and_get_vallen(\
@@ -881,7 +881,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
                                 op_hdr_optype = CACHE_POP_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
@@ -889,7 +889,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             matchspec0 = netbufferv4_update_vallen_tbl_match_spec_t(\
                                     op_hdr_optype = tmpoptype,
                                     inswitch_hdr_is_cached = is_cached,
-                                    validvalue_hdr = validvalue,
+                                    validvalue_hdr_validvalue = validvalue,
                                     meta_is_latest = is_latest)
                             self.client.update_vallen_tbl_table_add_with_get_vallen(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -903,7 +903,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             matchspec0 = netbufferv4_access_savedseq_tbl_match_spec_t(\
                                     op_hdr_optype = tmpoptype,
                                     inswitch_hdr_is_cached = is_cached,
-                                    validvalue_hdr = validvalue,
+                                    validvalue_hdr_validvalue = validvalue,
                                     meta_is_latest = is_latest)
                             if is_cached == 1 and validvalue == 1:
                                 self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
@@ -912,7 +912,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             matchspec0 = netbufferv4_access_savedseq_tbl_match_spec_t(\
                                     op_hdr_optype = tmpoptype,
                                     inswitch_hdr_is_cached = is_cached,
-                                    validvalue_hdr = validvalue,
+                                    validvalue_hdr_validvalue = validvalue,
                                     meta_is_latest = is_latest)
                             if is_cached == 1 and validvalue == 1 and is_latest == 0:
                                 self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
@@ -920,7 +920,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netbufferv4_access_savedseq_tbl_match_spec_t(\
                                 op_hdr_optype = CACHE_POP_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr = validvalue,
+                                validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
                         self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
@@ -928,7 +928,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             matchspec0 = netbufferv4_access_savedseq_tbl_match_spec_t(\
                                     op_hdr_optype = tmpoptype,
                                     inswitch_hdr_is_cached = is_cached,
-                                    validvalue_hdr = validvalue,
+                                    validvalue_hdr_validvalue = validvalue,
                                     meta_is_latest = is_latest)
                             self.client.access_savedseq_tbl_table_add_with_get_savedseq(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
@@ -940,7 +940,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     matchspec0 = netbufferv4_access_case1_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             inswitch_hdr_is_cached = 1,
-                            validvalue_hdr = 1,
+                            validvalue_hdr_validvalue = 1,
                             meta_is_latest = is_latest,
                             inswitch_hdr_snapshot_flag = 1)
                     if is_latest == 0:
@@ -950,7 +950,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     matchspec0 = netbufferv4_access_case1_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             inswitch_hdr_is_cached = 1,
-                            validvalue_hdr = 1,
+                            validvalue_hdr_validvalue = 1,
                             meta_is_latest = is_latest,
                             inswitch_hdr_snapshot_flag = 1)
                     self.client.access_case1_tbl_table_add_with_try_case1(\
@@ -1466,7 +1466,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = GETREQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1522,7 +1522,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = GETRES_LATEST_SEQ,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1542,7 +1542,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1572,7 +1572,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH_CASE1,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1599,7 +1599,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = GETRES_DELETED_SEQ,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1619,7 +1619,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1649,7 +1649,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH_CASE1,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1676,7 +1676,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = CACHE_POP_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1696,7 +1696,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = CACHE_POP_INSWITCH_ACK,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1726,7 +1726,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = PUTREQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1793,7 +1793,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = PUTREQ_SEQ_INSWITCH_CASE1,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1826,7 +1826,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = DELREQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1883,7 +1883,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = DELREQ_SEQ_INSWITCH_CASE1,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1917,7 +1917,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1937,7 +1937,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH_ACK,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1958,7 +1958,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = CACHE_EVICT_LOADDATA_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1977,7 +1977,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = CACHE_EVICT_LOADDATA_INSWITCH_ACK,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -1998,7 +1998,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = LOADSNAPSHOTDATA_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     inswitch_hdr_client_sid = tmp_client_sid,
@@ -2017,7 +2017,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = LOADSNAPSHOTDATA_INSWITCH_ACK,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2039,7 +2039,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = SETVALID_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     inswitch_hdr_client_sid = tmp_client_sid,
@@ -2059,7 +2059,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     op_hdr_optype = SETVALID_INSWITCH_ACK,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
-                                                    validvalue_hdr = validvalue,
+                                                    validvalue_hdr_validvalue = validvalue,
                                                     meta_is_latest = is_latest,
                                                     meta_is_deleted = is_deleted,
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2104,7 +2104,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = GETREQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2163,7 +2163,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = GETRES_LATEST_SEQ,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2186,7 +2186,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2219,7 +2219,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH_CASE1,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2249,7 +2249,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = GETRES_DELETED_SEQ,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2272,7 +2272,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2305,7 +2305,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH_CASE1,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2335,7 +2335,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = CACHE_POP_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2358,7 +2358,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = CACHE_POP_INSWITCH_ACK,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2391,7 +2391,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = PUTREQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2461,7 +2461,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = PUTREQ_SEQ_INSWITCH_CASE1,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2497,7 +2497,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = DELREQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2557,7 +2557,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = DELREQ_SEQ_INSWITCH_CASE1,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2592,7 +2592,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = SCANREQ_SPLIT,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2617,7 +2617,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2639,7 +2639,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = CACHE_EVICT_LOADFREQ_INSWITCH_ACK,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2662,7 +2662,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = CACHE_EVICT_LOADDATA_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2683,7 +2683,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = CACHE_EVICT_LOADDATA_INSWITCH_ACK,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2706,7 +2706,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = LOADSNAPSHOTDATA_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2728,7 +2728,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = LOADSNAPSHOTDATA_INSWITCH_ACK,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
@@ -2752,7 +2752,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = SETVALID_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             inswitch_hdr_client_sid = tmp_client_sid,
@@ -2774,7 +2774,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             op_hdr_optype = SETVALID_INSWITCH_ACK,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
-                                                            validvalue_hdr = validvalue,
+                                                            validvalue_hdr_validvalue = validvalue,
                                                             meta_is_latest = is_latest,
                                                             meta_is_deleted = is_deleted,
                                                             #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
