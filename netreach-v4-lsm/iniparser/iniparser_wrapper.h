@@ -33,6 +33,7 @@ class IniparserWrapper {
 		// client common configuration
 		short get_client_rotationdataserver_port();
 		short get_client_sendpktserver_port_start();
+		short get_client_rulemapserver_port_start();
 
 		// each physical client
 		uint32_t get_client_logical_num(uint32_t client_physical_idx);

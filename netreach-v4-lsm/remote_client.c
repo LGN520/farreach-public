@@ -81,7 +81,8 @@ netreach_key_t generate_endkey(netreach_key_t &startkey) {
 
 void run_benchmark();
 void * run_client_worker(void *param); // sender
-void * run_client_sendpktserver(void *param); // sendpktserver (enforce all physical clients start to send pkts at the same time)
+void * run_client_sendpktserver(void *param); // sendpktserver (all non-first physical clients wait for the first physical client to start to send packets)
+void * run_client_rulemapserver(void *param); // rulemapserver (all non-first physical clients switch rulemape to simulate key popularity change after receiving command from the first physical client under dynamic workload)
 
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
@@ -179,11 +180,23 @@ void run_benchmark() {
 		ret = pthread_create(&sendpktserver_thread, nullptr, run_client_sendpktserver, nullptr);
 		INVARIANT(ret == 0);
 	}
+	
+	// launch rulemapserver for non-first physical client under dynamic workload
+	pthread_t rulemapserver_thread;
+	if (client_physical_idx != 0 && workload_mode != 0) {
+		ret = pthread_create(&rulemapserver_thread, nullptr, run_client_rulemapserver, nullptr);
+		INVARIANT(ret == 0);
+	}
 
 	COUT_THIS("[client] prepare clients ...");
-	// NOTE: current_client_logical_num * client.worker + [client.sendpktserver]
+	// NOTE: current_client_logical_num * client.worker + [client.sendpktserver] + [client.rulemapserver]
 	if (client_physical_idx != 0) {
-		while (ready_threads < current_client_logical_num + 1) sleep(1);
+		if (workload_mode == 0) {
+			while (ready_threads < current_client_logical_num + 1) sleep(1);
+		}
+		else {
+			while (ready_threads < current_client_logical_num + 2) sleep(1);
+		}
 	}
 	else {
 		while (ready_threads < current_client_logical_num) sleep(1);
@@ -200,10 +213,10 @@ void run_benchmark() {
 		if (client_physical_num > 1) { // notify other physical clients if any to send packets
 			int client_sendpktclient_udpsock = -1;
 			create_udpsock(client_sendpktclient_udpsock, true, "client.sendpktclient");
-			char snapshotclientbuf[256];
+			char sendpktclientbuf[256];
 			int recvsize = -1;
 
-			// NOTE: the first entry will no be initialized and used
+			// NOTE: use client_physical_idx-1 to index for the client of client_physical_idx
 			struct sockaddr_in other_client_sendpktserver_addr[client_physical_num - 1];
 			socklen_t other_client_sendpktserver_addrlen[client_physical_num - 1];
 			for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
@@ -214,13 +227,13 @@ void run_benchmark() {
 			while (true) {
 				// NOTE: we launch other physical clients first; after they are waiting for can_sendpkt, we launch the first physical client to tell them send pkt at the same time
 				for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
-					*((int *)snapshotclientbuf) = client_sendpktserver_port_start + other_client_physical_idx - 1;
-					udpsendto(client_sendpktclient_udpsock, snapshotclientbuf, sizeof(int), 0, &other_client_sendpktserver_addr[other_client_physical_idx - 1], other_client_sendpktserver_addrlen[other_client_physical_idx - 1], "client.sendpktclient");
+					*((int *)sendpktclientbuf) = client_sendpktserver_port_start + other_client_physical_idx - 1;
+					udpsendto(client_sendpktclient_udpsock, sendpktclientbuf, sizeof(int), 0, &other_client_sendpktserver_addr[other_client_physical_idx - 1], other_client_sendpktserver_addrlen[other_client_physical_idx - 1], "client.sendpktclient");
 				}
 
 				bool is_timeout = false;
 				for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
-					is_timeout = udprecvfrom(client_sendpktclient_udpsock, snapshotclientbuf, 256, 0, NULL, NULL, recvsize, "client.sendpktclient");
+					is_timeout = udprecvfrom(client_sendpktclient_udpsock, sendpktclientbuf, 256, 0, NULL, NULL, recvsize, "client.sendpktclient");
 					if (is_timeout) {
 						break;
 					}
@@ -279,7 +292,22 @@ void run_benchmark() {
 			usleep(sleep_usecs);
 		}
 	}
-	else { // send enough periods in dynamic mode
+	else { // send enough periods in dynamic mode (workload_mode != 0)
+		// prepare for client0.rulemapclient
+		int client_rulemapclient_udpsock = -1;
+		char rulemapclientbuf[256];
+		int recvsize = -1;
+		// NOTE: use client_physical_idx-1 to index for the client of client_physical_idx
+		struct sockaddr_in other_client_rulemapserver_addr[client_physical_num - 1];
+		socklen_t other_client_rulemapserver_addrlen[client_physical_num - 1];
+		if (client_physical_idx == 0 && client_physical_num > 1) {
+			create_udpsock(client_rulemapclient_udpsock, false, "client.rulemapclient");
+			for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
+				set_sockaddr(other_client_rulemapserver_addr[other_client_physical_idx - 1], inet_addr(client_ip_for_client0_list[other_client_physical_idx]), client_rulemapserver_port_start + other_client_physical_idx - 1);
+				other_client_rulemapserver_addrlen[other_client_physical_idx - 1] = sizeof(struct sockaddr_in);
+			}
+		}
+
 		struct timespec dynamic_t1, dynamic_t2, dynamic_t3;
 		for (int periodidx = 0; periodidx < dynamic_periodnum; periodidx++) {
 			for (int secidx = 0; secidx < dynamic_periodinterval; secidx++) { // wait for every 10 secs
@@ -327,14 +355,29 @@ void run_benchmark() {
 				}*/
 			}
 
-			COUT_VAR(periodidx);
 			//INVARIANT(stop_for_dynamic_control == true);
 			if (periodidx != dynamic_periodnum - 1) { // not the last period
-				dynamic_rulemap_ptr->nextperiod(); // change key popularity
-				//stop_for_dynamic_control = false;
+				// the first physical client notifies other physical clients if any to switch dynamic rulemap
+				if (client_physical_idx == 0) {
+					if (client_physical_num > 1) {
+						for (int other_client_physical_idx = 1; other_client_physical_idx < client_physical_num; other_client_physical_idx++) {
+							*((int *)rulemapclientbuf) = periodidx; // from 0 to dynamic_periodnum-2
+							udpsendto(client_rulemapclient_udpsock, rulemapclientbuf, sizeof(int), 0, &other_client_rulemapserver_addr[other_client_physical_idx - 1], other_client_rulemapserver_addrlen[other_client_physical_idx - 1], "client.rulemapclient");
+						}
+					}
+
+					// switch dynamic rulemap to simulate key popularity change
+					printf("switch dynamic rulemap from period %d to %d\n", periodidx, periodidx+1);
+					dynamic_rulemap_ptr->nextperiod();
+					//stop_for_dynamic_control = false;
+				}
 			}
+		} // while loop for dynamic periods
+
+		if (client_physical_idx == 0 && client_physical_num > 1) {
+			close(client_rulemapclient_udpsock);
 		}
-	}
+	} // workload_mode != 0
 	CUR_TIME(total_t2);
 	DELTA_TIME(total_t2, total_t1, total_t3);
 	double total_secs = GET_MICROSECOND(total_t3) / 1000.0 / 1000.0;
@@ -373,7 +416,7 @@ void run_benchmark() {
 			}
 		}
 
-		printf("[sec %d]\n", i);
+		printf("[sec %d]\n\n", i);
 
 #ifdef DEBUG_PERSEC
 		// Dump pre-stopped threads
@@ -410,17 +453,18 @@ void run_benchmark() {
 		int cursec_total_cachehitcnt = 0;
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 			cursec_total_cachehitcnt += cursec_perclient_cachehitcnts[local_client_logical_idx];
-			printf("%f ", double(cursec_perclient_cachehitcnts[local_client_logical_idx])/double(cursec_perclient_pktcntslocal_client_logical_idx));
+			printf("%f ", double(cursec_perclient_cachehitcnts[local_client_logical_idx])/double(cursec_perclient_pktcnts[local_client_logical_idx]));
 		}
 		printf("\noverall cachehit cnt: %d, cachehit rate: %f\n", cursec_total_cachehitcnt, double(cursec_total_cachehitcnt)/double(cursec_total_pktcnt));
 
-		printf("per-client servers' load ratio: ");
+		// per-server load ratio seems not important
+		/*printf("per-client servers' load ratio: ");
 		int cursec_total_cachemisscnt = 0;
-		int cursec_perserver_cachemisscnts[server_num];
-		memset(cursec_perserver_cachemisscnts, 0, sizeof(int)*server_num);
+		int cursec_perserver_cachemisscnts[server_total_logical_num];
+		memset(cursec_perserver_cachemisscnts, 0, sizeof(int)*server_total_logical_num);
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 			int cursec_curclient_total_cachemisscnt = 0;
-			for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
+			for (size_t serveridx = 0; serveridx < server_total_logical_num; serveridx++) {
 				cursec_curclient_total_cachemisscnt += cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][serveridx];
 				cursec_perserver_cachemisscnts[serveridx] += cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][serveridx];
 			}
@@ -428,13 +472,13 @@ void run_benchmark() {
 
 			printf("%d-", cursec_curclient_total_cachemisscnt);
 			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
-				if (serveridx != server_num - 1) printf("%f-", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
+				if (global_server_logical_idx != server_total_logical_num - 1) printf("%f-", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
 				else printf("%f ", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
 			}
-		}
+		}*/
 		printf("\noverall load ratio: %d-", cursec_total_cachemisscnt);
-		for (size_t serveridx = 0; serveridx < server_num; serveridx++) {
-			if (serveridx != server_num - 1) printf("%f-", cursec_perserver_cachemisscnts[serveridx]/double(cursec_total_cachemisscnt));
+		for (size_t serveridx = 0; serveridx < server_total_logical_num; serveridx++) {
+			if (serveridx != server_total_logical_num - 1) printf("%f-", cursec_perserver_cachemisscnts[serveridx]/double(cursec_total_cachemisscnt));
 			else printf("%f\n", cursec_perserver_cachemisscnts[serveridx]/double(cursec_total_cachemisscnt));
 		}
 
@@ -443,11 +487,11 @@ void run_benchmark() {
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 			int startidx = 0;
 			if (i != 0) {
-				startidx = persec_perclient_aggpktcnts[i-1]local_client_logical_idx;
+				startidx = persec_perclient_aggpktcnts[i-1][local_client_logical_idx];
 			}
-			int endidx = persec_perclient_aggpktcnts[i]local_client_logical_idx;
-			std::vector<double> cursec_curclient_send_latency_list(client_worker_paramslocal_client_logical_idx.send_latency_list.begin() + startidx, client_worker_paramslocal_client_logical_idx.send_latency_list.begin() + endidx);
-			std::vector<double> cursec_curclient_wait_latency_list(client_worker_paramslocal_client_logical_idx.wait_latency_list.begin() + startidx, client_worker_paramslocal_client_logical_idx.wait_latency_list.begin() + endidx);
+			int endidx = persec_perclient_aggpktcnts[i][local_client_logical_idx];
+			std::vector<double> cursec_curclient_send_latency_list(client_worker_params[local_client_logical_idx].send_latency_list.begin() + startidx, client_worker_params[local_client_logical_idx].send_latency_list.begin() + endidx);
+			std::vector<double> cursec_curclient_wait_latency_list(client_worker_params[local_client_logical_idx].wait_latency_list.begin() + startidx, client_worker_params[local_client_logical_idx].wait_latency_list.begin() + endidx);
 			cursec_send_latency_list.insert(cursec_send_latency_list.end(), cursec_curclient_send_latency_list.begin(), cursec_curclient_send_latency_list.end());
 			cursec_wait_latency_list.insert(cursec_wait_latency_list.end(), cursec_curclient_wait_latency_list.begin(), cursec_curclient_wait_latency_list.end());
 
@@ -739,6 +783,12 @@ void run_benchmark() {
 		int rc = pthread_join(sendpktserver_thread, &status);
 		if (rc) {
 			COUT_N_EXIT("Error: unable to join sendpktserver " << rc);
+		}
+	}
+	if (client_physical_idx != 0 && workload_mode != 0) {
+		int rc = pthread_join(rulemapserver_thread, &status);
+		if (rc) {
+			COUT_N_EXIT("Error: unable to join rulemapserver " << rc);
 		}
 	}
 }
@@ -1214,5 +1264,46 @@ void *run_client_sendpktserver(void *param) {
 	udpsendto(client_sendpktserver_udpsock, sendpktserverbuf, recvsize, 0, &client0_addr, client0_addrlen, "client.sendpktserver");
 	can_sendpkt = true;
 	close(client_sendpktserver_udpsock);
+	pthread_exit(nullptr);
+}
+
+void *run_client_rulemapserver(void *param) {
+	INVARIANT(running == false && client_physical_idx != 0 && workload_mode != 0);
+
+	// prepare for client.rulemapserver
+	int client_rulemapserver_udpsock = -1;
+	prepare_udpserver(client_rulemapserver_udpsock, false, client_rulemapserver_port_start + client_physical_idx - 1, "client.rulemapserver");
+
+	printf("[client.rulemapserver] ready\n");
+	ready_threads++;
+
+	while (!running) {}
+
+	char rulemapserverbuf[256];
+	int recvsize = -1;
+	struct sockaddr_in client0_addr;
+	memset(&client0_addr, 0, sizeof(struct sockaddr_in));
+	socklen_t client0_addrlen = sizeof(struct sockaddr_in);
+
+	int dynamic_periodidx = 0; // expected dynamic period idx (from 0 to dynamic_periodnum - 2)
+	while (running) {
+		udprecvfrom(client_rulemapserver_udpsock, rulemapserverbuf, 256, 0, &client0_addr, &client0_addrlen, recvsize, "client.rulemapserver");
+		INVARIANT(recvsize == sizeof(int) && *((int *)rulemapserverbuf) == dynamic_periodidx);
+
+
+		// We do not sendback ACK for client0.rulemapclient, as we assume that the control message will not suffer from pktlos
+		// NOTE: if with pktloss (nearly impossible), physical clients do not change rulemap at similar time and we should re-test dynamic workload
+		//udpsendto(client_rulemapserver_udpsock, rulemapserverbuf, recvsize, 0, &client0_addr, client0_addrlen, "client.rulemapserver");
+		
+		// switch dynamic rulemap to simulate key popularity change
+		dynamic_rulemap_ptr->nextperiod();
+		printf("switch dynamic rulemap from period %d to %d\n", dynamic_periodidx, dynamic_periodidx+1);
+		
+		if (dynamic_periodidx == dynamic_periodnum - 2) { // NOTE: the last dynamic period does not need to switch rulemap -> rulemapserver can exit after dynamic_periodnum-1 indexes
+			break;
+		}
+		dynamic_periodidx += 1; // update expected dynamic period idx for next command if any
+	}
+	close(client_rulemapserver_udpsock);
 	pthread_exit(nullptr);
 }
