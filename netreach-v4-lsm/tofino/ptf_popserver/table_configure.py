@@ -183,18 +183,20 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 self.sess_hdl, self.dev_tgt, matchspec0)
 
     def runTest(self):
-        with_switchos_addr = False
+        #with_switchos_addr = False
         print "[ptf.popserver] ready"
 
         #ptf_cached_keyset = set()
 
         while True:
             # receive control packet
-            if with_switchos_addr == False:
-                recvbuf, switchos_addr = switchos_ptf_popserver_udpsock.recvfrom(1024)
-                with_switchos_addr = True
-            else:
-                recvbuf, _ = switchos_ptf_popserver_udpsock.recvfrom(1024)
+            #if with_switchos_addr == False:
+            #    recvbuf, switchos_addr = switchos_ptf_popserver_udpsock.recvfrom(1024)
+            #    with_switchos_addr = True
+            #else:
+            #    recvbuf, _ = switchos_ptf_popserver_udpsock.recvfrom(1024)
+            recvbuf, switchos_addr = switchos_ptf_popserver_udpsock.recvfrom(1024)
+
             control_type, recvbuf = struct.unpack("=i{}s".format(len(recvbuf) - 4), recvbuf)
 
 #            if control_type == SWITCHOS_SETVALID0:

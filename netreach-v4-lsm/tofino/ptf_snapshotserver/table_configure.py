@@ -228,17 +228,18 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             udpsock.sendto(fragbuf, dstaddr)
 
     def runTest(self):
-        with_switchos_addr = False
+        #with_switchos_addr = False
         print "[ptf.snapshotserver] ready"
 
         control_type = -1
         recvbuf = bytes()
         while True:
-            if with_switchos_addr == False:
-                recvbuf, switchos_addr = switchos_ptf_snapshotserver_udpsock.recvfrom(1024)
-                with_switchos_addr = True
-            else:
-                recvbuf, _ = switchos_ptf_snapshotserver_udpsock.recvfrom(1024)
+            #if with_switchos_addr == False:
+            #    recvbuf, switchos_addr = switchos_ptf_snapshotserver_udpsock.recvfrom(1024)
+            #    with_switchos_addr = True
+            #else:
+            #    recvbuf, _ = switchos_ptf_snapshotserver_udpsock.recvfrom(1024)
+            recvbuf, switchos_addr = switchos_ptf_snapshotserver_udpsock.recvfrom(1024)
 
             control_type, recvbuf = struct.unpack("=i{}s".format(len(recvbuf) - 4), recvbuf)
 

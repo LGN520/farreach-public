@@ -601,6 +601,11 @@ void RocksdbWrapper::init_snapshot() {
 
 // invoked by SNAPSHOT_CLEANUP
 void RocksdbWrapper::clean_snapshot(int tmpsnapshotid) {
+	if (snapshotid == -1) {
+		printf("[WARNING] you should run loadfinish_client after loading phase to create an initial server-side snapshot!\n");
+		init_snapshot();
+	}
+
 	// common case: tmpsnapshotid == snapshotid + 1; rare case tmpsnapshotid == snapshotid due to controller failure
 	INVARIANT(tmpsnapshotid == snapshotid || tmpsnapshotid == snapshotid + 1);
 

@@ -14,8 +14,12 @@
 #include "packet_format_impl.h"
 
 #define SOCKET_TIMEOUT 5 // 5s
-#define CLIENT_SOCKET_TIMEOUT_SECS 1 // 5s
-#define CLIENT_SCAN_SOCKET_TIMEOUT_SECS 5 // 10s
+// for limited effect on system thpt of normal request timeout
+#define CLIENT_SOCKET_TIMEOUT_SECS 1 // 1s
+#define CLIENT_SCAN_SOCKET_TIMEOUT_SECS 5 // 5s
+// for low snapshot latency
+#define SWITCHOS_SNAPSHOTCLIENT_FOR_REFLECTOR_TIMEOUT_USECS 500000 // 0.5s
+#define SWITCHOS_SPECIALCASESERVER_TIMEOUT_USECS 1000 // 1ms
 
 // payload only used by end-hosts -> linux kernel performs ip-level fragmentation
 // max payload size to avoid udp fragmentation (manual udp fragmentation): 65535(ipmax) - 20(iphdr) - 8(udphdr)
