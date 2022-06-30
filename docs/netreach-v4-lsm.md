@@ -143,6 +143,10 @@
 				+ switchos sends GETREQ to server
 		* PUTREQ/DELREQ: only if is_cached=1 and valid=1, switchos sets with_largevalue=0 and is_latest=1
 		* PUTREQ_LARGE: only if is_cached=1 and valid=1, switchos reset with_largevalue=1
+- NOTE: after adding new packet type
+	+ Double-check partition_tbl (hash_for_partition, hash_partition, range_partition)
+	+ Double-check eg_port_forward_tbl (forward, forward_with_range)
+	+ Double-check update_pktlen_tbl and update_ipmac_srcport_tbl
 
 ## Overview
 

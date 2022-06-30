@@ -1008,7 +1008,6 @@ void *run_client_worker(void *param) {
 					}
 				}
 				if (is_timeout) {
-					COUT_VAR(rotationload_idx);
 					printf("timeout key %x\n", tmpkey.keyhihi);
 					thread_param.timeout_cnt += 1;
 					continue; // continue to resend

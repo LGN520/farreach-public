@@ -1119,6 +1119,7 @@ void *run_switchos_snapshotserver(void *param) {
 					// switchos-driven timeout-and-retry mechanism
 					bool received_bitmap[switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]];
 					memset(received_bitmap, 0, sizeof(bool) * switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]);
+					int received_num = 0;
 					while (true) {
 						bool is_timeout = false;
 						is_timeout = udprecvfrom(switchos_snapshotserver_snapshotclient_for_reflector_udpsock, pktbuf, MAX_BUFSIZE, 0, NULL, NULL, pkt_recvsize, "switchos.snapshotserver.snapshotclient_for_reflector");
@@ -1135,10 +1136,16 @@ void *run_switchos_snapshotserver(void *param) {
 						else {
 							loadsnapshotdata_inswitch_ack_t tmp_loadsnapshotdata_inswitch_ack(pktbuf, pkt_recvsize);
 							INVARIANT(tmp_loadsnapshotdata_inswitch_ack.key() == switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()]);
-							switchos_perpipeline_snapshot_values[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.val();
-							switchos_perpipeline_snapshot_seqs[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.seq();
-							switchos_perpipeline_snapshot_stats[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.stat();
-							received_bitmap[tmp_loadsnapshotdata_inswitch_ack.idx()] = true;
+							if (received_bitmap[tmp_loadsnapshotdata_inswitch_ack.idx()] == false) {
+								switchos_perpipeline_snapshot_values[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.val();
+								switchos_perpipeline_snapshot_seqs[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.seq();
+								switchos_perpipeline_snapshot_stats[tmp_pipeidx][tmp_loadsnapshotdata_inswitch_ack.idx()] = tmp_loadsnapshotdata_inswitch_ack.stat();
+								received_num += 1;
+								received_bitmap[tmp_loadsnapshotdata_inswitch_ack.idx()] = true;
+							}
+							if (received_num >= switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]) {
+								break;
+							}
 						}
 					}
 				}
@@ -1210,7 +1217,7 @@ void *run_switchos_snapshotserver(void *param) {
 
 #ifdef DEBUG_SNAPSHOT
 				// TMPDEBUG
-				printf("[after rollback] snapshot size of pipeline %d: %d\n", tmp_pipeidx, switchos_perpipelien_cached_empty_index_backup[tmp_pipeidx]);
+				printf("[after rollback] snapshot size of pipeline %d: %d\n", tmp_pipeidx, switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]);
 				/*for (size_t debugi = 0; debugi < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; debugi++) {
 					char debugbuf[MAX_BUFSIZE];
 					uint32_t debugkeysize = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][debugi].serialize(debugbuf, MAX_BUFSIZE);

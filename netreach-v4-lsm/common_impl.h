@@ -383,6 +383,10 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(switchos_specialcaseserver_port);
 	COUT_VAR(switchos_ptf_popserver_port);
 	COUT_VAR(switchos_ptf_snapshotserver_port);
+	if (switchos_sample_cnt > switch_kv_bucket_num) {
+		switchos_sample_cnt = switch_kv_bucket_num;
+		printf("[WARNING] switchos_sample_cnt > switch_kv_bucket_num, set switchos_sample_cnt as switch_kv_bucket_num\n");
+	}
 	printf("\n");
 
 	// reflector

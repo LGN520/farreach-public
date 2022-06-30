@@ -275,7 +275,6 @@ parser parse_val_len16 {
 parser parse_shadowtype {
 	extract(shadowtype_hdr);
 	return select(shadowtype_hdr.shadowtype) {
-		SETVALID_INSWITCH: parse_validvalue;
 		2 mask 0x02: parse_seq;
 		4 mask 0x04: parse_inswitch;
 		8 mask 0x08: parse_stat;
@@ -309,6 +308,7 @@ parser parse_inswitch {
 	extract(inswitch_hdr);
 	//return select(op_hdr.optype) {
 	return select(shadowtype_hdr.shadowtype) {
+		SETVALID_INSWITCH: parse_validvalue;
 		8 mask 0x08: parse_stat;
 		default: ingress;
 		//default: parse_debug;
@@ -339,7 +339,8 @@ parser parse_stat {
 parser parse_clone {
 	extract(clone_hdr);
 	return ingress;
-	//return parse_debug; // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, CACHE_POP_INSWITCH_ACK, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
+	//return parse_debug; // GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1
+	// CACHE_POP_INSWITCH_ACK does not need clond_hdr now
 }
 
 parser parse_frequency {
