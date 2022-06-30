@@ -30,6 +30,9 @@ client_rotationdataserver_port=1025
 ; [client_sendpktserver_port_start, client_sendpktserver_port_start + client_physical_num - 1]
 ; NOTE: launch other physical clients first; after they are waiting for can_sendpkt, launch the first physical client (client 0) to tell them that they can send pkt at the same time
 client_sendpktserver_port_start=1026
+; [client_rulemapserver_port_start, client_rulemapserver_port_start + client_physical_num - 1]
+; non-first physical clients wait for commands from the first physical client to switch dynamic rulemap to simulate key popularity change
+client_rulemapserver_port_start=1036
 
 [client0]
 ; client thread num for transaction phase in remote client
