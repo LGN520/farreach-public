@@ -57,4 +57,5 @@ with open(resultpath, "r") as f:
                     max_server_thpt = tmp_server_thpt
             normalized_thpt = float(persec_pktsentcnt_list[j]) / max_server_thpt
 
-            print("sec[{}] cache_hit_rate: {} normalized_thpt: {}".format(j, cache_hit_rate, normalized_thpt))
+            print("sec[{}] cache_hit_rate: {}, runtime_thpt: {} MOPS, normalized_thpt: {}".format(\
+                    j, cache_hit_rate, persec_pktsentcnt_list[j] / 1024.0 / 1024.0, normalized_thpt))

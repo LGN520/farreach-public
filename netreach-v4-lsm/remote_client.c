@@ -475,14 +475,15 @@ void run_benchmark() {
 				if (global_server_logical_idx != server_total_logical_num - 1) printf("%f-", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
 				else printf("%f ", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
 			}
-		}*/
+		}
 		printf("\noverall load ratio: %d-", cursec_total_cachemisscnt);
 		for (size_t serveridx = 0; serveridx < server_total_logical_num; serveridx++) {
 			if (serveridx != server_total_logical_num - 1) printf("%f-", cursec_perserver_cachemisscnts[serveridx]/double(cursec_total_cachemisscnt));
 			else printf("%f\n", cursec_perserver_cachemisscnts[serveridx]/double(cursec_total_cachemisscnt));
-		}
+		}*/
 
 		std::vector<double> cursec_send_latency_list;
+		std::vector<double> cursec_process_latency_list;
 		std::vector<double> cursec_wait_latency_list;
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 			int startidx = 0;
@@ -491,8 +492,10 @@ void run_benchmark() {
 			}
 			int endidx = persec_perclient_aggpktcnts[i][local_client_logical_idx];
 			std::vector<double> cursec_curclient_send_latency_list(client_worker_params[local_client_logical_idx].send_latency_list.begin() + startidx, client_worker_params[local_client_logical_idx].send_latency_list.begin() + endidx);
+			std::vector<double> cursec_curclient_process_latency_list(client_worker_params[local_client_logical_idx].process_latency_list.begin() + startidx, client_worker_params[local_client_logical_idx].process_latency_list.begin() + endidx);
 			std::vector<double> cursec_curclient_wait_latency_list(client_worker_params[local_client_logical_idx].wait_latency_list.begin() + startidx, client_worker_params[local_client_logical_idx].wait_latency_list.begin() + endidx);
 			cursec_send_latency_list.insert(cursec_send_latency_list.end(), cursec_curclient_send_latency_list.begin(), cursec_curclient_send_latency_list.end());
+			cursec_process_latency_list.insert(cursec_process_latency_list.end(), cursec_curclient_process_latency_list.begin(), cursec_curclient_process_latency_list.end());
 			cursec_wait_latency_list.insert(cursec_wait_latency_list.end(), cursec_curclient_wait_latency_list.begin(), cursec_curclient_wait_latency_list.end());
 
 			/*std::string tmplabel;
@@ -502,6 +505,7 @@ void run_benchmark() {
 			dump_latency(cursec_curclient_wait_latency_list, tmplabel.c_str());*/
 		}
 		dump_latency(cursec_send_latency_list, "send_latency_list overall");
+		dump_latency(cursec_process_latency_list, "process_latency_list overall");
 		dump_latency(cursec_wait_latency_list, "wait_latency_list overall");
 #endif
 	}
@@ -819,7 +823,9 @@ void *run_client_worker(void *param) {
 	INVARIANT(iter != NULL);
 
 	netreach_key_t tmpkey;
-	val_t tmpval;
+	char tmpval_bytes[128];
+	memset(tmpval_bytes, 0x11, 128 * sizeof(char));
+	val_t tmpval(tmpval_bytes, 128);
 	optype_t tmptype;
 
 	// for network communication
@@ -843,16 +849,18 @@ void *run_client_worker(void *param) {
 	std::ofstream ofs(logname, std::ofstream::out);
 #endif
 
-	// pre-load key-value requests destinated to the one/two server partitions under server rotation in order to saturate servers
-#ifdef SERVER_ROTATION
-	std::vector<optype_t> rotationload_types;
-	std::vector<netreach_key_t> rotationload_keys;
-	std::vector<val_t> rotationload_vals;
-	int rotationload_idx = 0;
+	// NOTE: we pre-load key-value requests from disk into memory to alleviate effect of client-side overhead on system runtime throughput
+	// For server rotation, we only use the requests destinated to the one/two server partitions under in order to saturate servers
+	std::vector<optype_t> preload_types;
+	std::vector<netreach_key_t> preload_keys;
+	//std::vector<val_t> preload_vals; // comment preload_vals to save memory
+	int preload_idx = 0;
 	while (true) {
 		if (!iter->next()) {
 			break;
 		}
+
+#ifdef SERVER_ROTATION
 #ifdef USE_HASH
 		uint32_t expected_serveridx = iter->key().get_hashpartition_idx(switch_partition_count, server_total_logical_num_for_client);
 #elif defined(USE_RANGE)
@@ -862,11 +870,12 @@ void *run_client_worker(void *param) {
 			(valid_global_server_logical_idxes.size() == 2 && expected_serveridx != valid_global_server_logical_idxes[0] && expected_serveridx != valid_global_server_logical_idxes[1])) {
 			continue;
 		}
-		rotationload_types.push_back(iter->type());
-		rotationload_keys.push_back(iter->key());
-		rotationload_vals.push_back(iter->val());
-	}
 #endif
+
+		preload_types.push_back(iter->type());
+		preload_keys.push_back(iter->key());
+		//preload_vals.push_back(iter->val());
+	}
 
 
 	COUT_THIS("[client " << uint32_t(local_client_logical_idx) << "] Ready.");
@@ -882,7 +891,7 @@ void *run_client_worker(void *param) {
 	bool is_timeout = false;
 	bool isfirst_pkt = true;
 	while (running) {
-#ifndef SERVER_ROTATION
+/*#ifndef SERVER_ROTATION
 		if (!iter->next()) {
 			if (workload_mode != 0) { // dynamic mode
 				iter->reset();
@@ -898,15 +907,20 @@ void *run_client_worker(void *param) {
 		tmptype = iter->type();
 		tmpkey = iter->key();
 		tmpval = iter->val();
-#else
-		if (rotationload_idx >= rotationload_types.size()) {
-			break; // workload_mode must be 0 (aka static mode)
+#else*/
+		if (preload_idx >= preload_types.size()) {
+			if (workload_mode != 0) { // dynamic mode
+				preload_idx = 0;
+			}
+			else { // static mode
+				break;
+			}
 		}
-		tmptype = rotationload_types[rotationload_idx];
-		tmpkey = rotationload_keys[rotationload_idx];
-		tmpval = rotationload_vals[rotationload_idx];
-		rotationload_idx += 1;
-#endif
+		tmptype = preload_types[preload_idx];
+		tmpkey = preload_keys[preload_idx];
+		//tmpval = preload_vals[preload_idx];
+		preload_idx += 1;
+//#endif
 
 		struct timespec process_t1, process_t2, process_t3, send_t1, send_t2, send_t3, wait_t1, wait_t2, wait_t3;
 		uint16_t tmp_nodeidx_foreval = 0;

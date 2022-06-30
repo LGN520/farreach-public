@@ -13,7 +13,7 @@ zipf = 0.99
 
 # six 10-sec periods in 60 secs
 period_num = 7
-# change popularity of 200 keys in each period
-evict_num = 200
+# change popularity of 1000 keys in each period
+evict_num = 1000
 #evict_num = 10000
 path_hotin = "synthetic-hotin.out"

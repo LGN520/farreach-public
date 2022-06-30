@@ -1495,6 +1495,7 @@
 		+ gen_logical_idxes: generate server logical indexes from startidx to endidx
 	- Help to generate throughput result files
 		+ sum_tworows_for_bottleneckserver.py: sum over per-server pktcnts of two clients to find bottleneck partition
+		+ sum_twofiles.py: sum over per-server results to get aggregate statistics (NOTE: the two files must have the same content format)
 		+ Deprecated (covered by client0.rotationdataserver): gen_rotation_onerow_result.py: generate one row of rotation throughput result files by summing over per-client rotation result line 
 	- Analyze throughput result files: dynamic/static/rotation_calculate_thpt.py
 	- sync_file.sh: sync one file (filepath relateive to netreach-v4-lsm/) to all other machines
