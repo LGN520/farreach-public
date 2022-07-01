@@ -147,7 +147,22 @@
 	+ Double-check partition_tbl (hash_for_partition, hash_partition, range_partition)
 	+ Double-check eg_port_forward_tbl (forward, forward_with_range)
 	+ Double-check update_pktlen_tbl and update_ipmac_srcport_tbl
-
+- NOTE: for performance degradation
+ 	+ FarReach w/ inswitch cache w/ WAL
+		* When some server threads are performing disk operations (e.g., flush or WAL sync) and disk becomes bottleneck, if a request of a server thread incurs a disk operation (e.g., WAL sync, WAL pre-allocate, WAL create), it may suffer from a long latency (e.g., hundreds of ms or even >1s) -> the corresponding client has to wait for the response and cannot provide sufficient input traffic to saturate servers
+		* Even if only one server thread is processig a long latency request, the following requests from other clients will also be delayed as each server partition only have one thread to process normal requests -> more clients cannot provide input traffic
+		* If more than one server threads have long latency in near time (due to balanced load), performance degradation will be more serious
+	+ FarReach w/o inswitch- cache w/ WAL
+		* NoCache still has performance degradation but less serious
+		* (1) NoCache has lower system throughput, so disk operations (e.g, flush or WAL sync) are less frequent than w/ inswitch cache
+		* (2) NoCache has imbalanced load, so disk operations may not happen in near time and hence disk contention is less serious than w/ inswitch cache
+	+ FarReach w/ inswitch cache w/o WAL
+		* Still with performance degradation but less serious
+		* (1) Even if without WAL operation, rocksdb still has other disk operations (e.g., flush)
+		* (2) Even if without disk operation, requests of some server threads may still have slighly larger rocksdb latency (e.g., several ms), which can incur larger wait latency of other server threads and hence less-serious performance degradation
+	+ Core reasons:
+		* (1) server-side simulation overhead: if each server is an individual physical machine, we can have less serious disk contention
+		* (2) client-side simulation overhead: due to limited client-side CPU cores, we cannot launch infinite client threads -> if so, even if some clients may be blocked/delayed by long latency requests, others can still provide sufficient input to saturate servers
 ## Overview
 
 - Packet format
