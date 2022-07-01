@@ -1431,7 +1431,7 @@
 ## Run
 
 - Hardware configure
-	+ DPDK
+	+ Deprecated: DPDK
 		* Follow [tech_report](./tech_report.md) to confiure dpdk
 	+ Configure after each login
 		* `source configure_client.sh`: configure NIC ipv4 address, arp table, UDP rcvbuf size, and openfd limitation
@@ -1476,18 +1476,18 @@
 	- Launch controller in end host
 		+ `./controller`
 	- Launch servers in end host
-		+ `./server`
+		+ `./server server_physical_idx`
 		+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
 	- Launch clients in end host
 		- Warmup phase: `./warmup_client`
-		- Transaction phase: `./remote_client`
+		- Transaction phase: `./remote_client client_physical_idx`
 - Server rotation for static workload
-	- Use config.ini.farreach-rotation-switch-switchos-loading-warmupclient
+	- Use config.ini.rotation-switch-switchos-loading-warmupclient
 		+ Start switch and configure data plane
 		+ Start switchos and ptf.pop/snapshotserver
 		+ Start clients and servers for loading phase
 		+ Start clients and servers for warmup phase
-	- Use config.ini.farreach-rotation-transaction
+	- Use config.ini.rotation-transaction
 		+ Start clients and servers for transaction phase (repeat 127 times)
 		+ Example of 128 server threads
 			* 1 server physical num + 1 server total logical num
