@@ -25,6 +25,7 @@ struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   std::vector<double> process_latency_list;
   std::vector<double> wait_latency_list;
   std::vector<double> rocksdb_latency_list;
+  std::vector<double> udpsend_latency_list;
 };
 typedef ServerWorkerParam server_worker_param_t;
 
@@ -302,6 +303,8 @@ void *run_server_worker(void * param) {
   struct timespec process_t1, process_t2, process_t3;
   struct timespec wait_t1, wait_t2, wait_t3;
   struct timespec rocksdb_t1, rocksdb_t2, rocksdb_t3;
+  struct timespec udpsend_t1, udpsend_t2, udpsend_t3;
+  struct timespec statistic_t1, statistic_t2, statistic_t3;
   bool is_first_pkt = true;
   while (transaction_running) {
 
@@ -310,8 +313,6 @@ void *run_server_worker(void * param) {
 		continue; // continue to check transaction_running
 	}
 
-	CUR_TIME(process_t1);
-
 	packet_type_t pkt_type = get_packet_type(buf, recv_size);
 
 	if (!is_first_pkt && pkt_type != packet_type_t::WARMUPREQ && pkt_type != packet_type_t::LOADREQ) {
@@ -319,6 +320,8 @@ void *run_server_worker(void * param) {
 		DELTA_TIME(wait_t2, wait_t1, wait_t3);
 		thread_param.wait_latency_list.push_back(GET_MICROSECOND(wait_t3));
 	}
+
+	CUR_TIME(process_t1);
 
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
@@ -367,19 +370,22 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::PUTREQ_SEQ:
 			{
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
+				CUR_TIME(rocksdb_t1);
 				put_request_seq_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-				CUR_TIME(rocksdb_t1);
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				UNUSED(tmp_stat);
 				CUR_TIME(rocksdb_t2);
 				//COUT_THIS("[server] stat = " << tmp_stat)
+				
+				CUR_TIME(udpsend_t1);
 				put_response_t rsp(req.key(), true, global_server_logical_idx);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
+				CUR_TIME(udpsend_t2);
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -477,17 +483,18 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::PUTREQ_POP_SEQ: 
 			{
+#ifdef DUMP_BUF
+				dump_buf(buf, recv_size);
+#endif
+				CUR_TIME(rocksdb_t1);
 				put_request_pop_seq_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string())
-				CUR_TIME(rocksdb_t1);
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				CUR_TIME(rocksdb_t2);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				
+				CUR_TIME(udpsend_t1);
 				put_response_t rsp(req.key(), true, global_server_logical_idx);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -510,6 +517,7 @@ void *run_server_worker(void * param) {
 						INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
 					}
 				}
+				CUR_TIME(udpsend_t2);
 				break;
 			}
 		case packet_type_t::PUTREQ_SEQ_CASE3:
@@ -671,6 +679,9 @@ void *run_server_worker(void * param) {
 
 		DELTA_TIME(rocksdb_t2, rocksdb_t1, rocksdb_t3);
 		thread_param.rocksdb_latency_list.push_back(GET_MICROSECOND(rocksdb_t3));
+
+		DELTA_TIME(udpsend_t2, udpsend_t1, udpsend_t3);
+		thread_param.udpsend_latency_list.push_back(GET_MICROSECOND(udpsend_t3));
 	}
 
   } // end of while(transaction_running)
@@ -723,7 +734,13 @@ void *run_server_evictserver(void *param) {
 
 		uint16_t tmp_serveridx = tmp_cache_evict_ptr->serveridx();
 		INVARIANT(tmp_serveridx == global_server_logical_idx);
-		INVARIANT(server_cached_keyset_list[local_server_logical_idx].is_exist(tmp_cache_evict_ptr->key()));
+		//INVARIANT(server_cached_keyset_list[local_server_logical_idx].is_exist(tmp_cache_evict_ptr->key()));
+		if (!server_cached_keyset_list[local_server_logical_idx].is_exist(tmp_cache_evict_ptr->key())) {
+			printf("[ERROR] server %d-%d does not cache key %x whose expected server is %d\n",\
+					local_server_logical_idx, global_server_logical_idx, tmp_cache_evict_ptr->key().keyhihi,\
+					tmp_cache_evict_ptr->key().get_hashpartition_idx(switch_partition_count, server_total_logical_num));
+			exit(-1);
+		}
 
 		// make server-side snapshot for CACHE_EVICT_CASE2
 		if (packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2) {

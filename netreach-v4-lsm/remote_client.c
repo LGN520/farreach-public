@@ -205,6 +205,21 @@ void run_benchmark() {
 
 	/* (2) the first physical client is responsible for starting packet send of all physical clients */
 
+	// NOTE: by now we get aggregate pktcnts from the first sec until the ith sec
+	std::vector<std::vector<int>> persec_perclient_aggpktcnts;
+	std::vector<std::vector<int>> persec_perclient_aggcachehitcnts;
+	std::vector<std::vector<std::vector<int>>> persec_perclient_perserver_aggcachemisscnts;
+	const int sleep_usecs = 1000; // 1000us = 1ms
+	const int onesec_usecs = 1 * 1000 * 1000; // 1s
+	// used for dynamic workload (and static worklaod for debugging)
+	std::vector<std::vector<std::map<uint16_t, int>>> persec_perclient_nodeidx_aggpktcnt_map;
+	if (workload_mode != 0) {
+		persec_perclient_nodeidx_aggpktcnt_map.resize(dynamic_periodinterval * dynamic_periodnum);
+		for (size_t i = 0; i < dynamic_periodinterval * dynamic_periodnum; i++) {
+			persec_perclient_nodeidx_aggpktcnt_map[i].resize(current_client_logical_num);
+		}
+	}
+
 	if (client_physical_idx != 0) { // wait for the first physical client
 		printf("wait to be able to send pkt if necessary\n");
 		while (!can_sendpkt) {}
@@ -258,20 +273,19 @@ void run_benchmark() {
 
 	/* (3) collect persec statistics for static/dynamic workload */
 
-	// NOTE: by now we get aggregate pktcnts from the first sec until the ith sec
-	std::vector<std::vector<int>> persec_perclient_aggpktcnts;
-	std::vector<std::vector<int>> persec_perclient_aggcachehitcnts;
-	std::vector<std::vector<std::vector<int>>> persec_perclient_perserver_aggcachemisscnts;
-	const int sleep_usecs = 1000; // 1000us = 1ms
-	const int onesec_usecs = 1 * 1000 * 1000; // 1s
-	// used for dynamic workload
-	std::map<uint16_t, int> persec_perclient_nodeidx_aggpktcnt_map[dynamic_periodnum * dynamic_periodinterval][current_client_logical_num];
 	CUR_TIME(total_t1);
 	if (workload_mode == 0) { // send all workloads in static mode
 		while (finish_threads < current_client_logical_num) {
 			CUR_TIME(total_t2);
 			DELTA_TIME(total_t2, total_t1, total_t3);
 			if (GET_MICROSECOND(total_t3) >= (persec_perclient_aggpktcnts.size()+1) * onesec_usecs) { // per second
+				// collect for normalized throughput (TMPDEBUG)
+				std::vector<std::map<uint16_t, int>> cursec_perclient_nodeidx_aggpktcnt_map(current_client_logical_num);
+				for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
+					cursec_perclient_nodeidx_aggpktcnt_map[local_client_logical_idx] = client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map;
+				}
+				persec_perclient_nodeidx_aggpktcnt_map.push_back(cursec_perclient_nodeidx_aggpktcnt_map);
+
 				// collect for runtime throughput
 				std::vector<int> cursec_perclient_aggpktcnts(current_client_logical_num);
 				std::vector<int> cursec_perclient_aggcachehitcnts(current_client_logical_num);
@@ -416,7 +430,7 @@ void run_benchmark() {
 			}
 		}
 
-		printf("[sec %d]\n\n", i);
+		printf("\n[sec %d]\n", i);
 
 #ifdef DEBUG_PERSEC
 		// Dump pre-stopped threads
@@ -437,10 +451,10 @@ void run_benchmark() {
 		}
 		printf("\n");
 
-		printf("per-client throughput (MOPS): ");
+		/*printf("per-client throughput (MOPS): ");
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 			printf("%f ", double(cursec_perclient_pktcnts[local_client_logical_idx])/(onesec_usecs/1000/1000)/1024.0/1024.0);
-		}
+		}*/
 #endif
 		int cursec_total_pktcnt = 0;
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
@@ -449,11 +463,11 @@ void run_benchmark() {
 		printf("\noverall totalpktcnt: %d, throughput (MOPS): %f\n", cursec_total_pktcnt, double(cursec_total_pktcnt)/(onesec_usecs/1000/1000)/1024.0/1024.0);
 
 #ifdef DEBUG_PERSEC
-		printf("per-client cachehit rate: ");
 		int cursec_total_cachehitcnt = 0;
+		//printf("per-client cachehit rate: ");
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 			cursec_total_cachehitcnt += cursec_perclient_cachehitcnts[local_client_logical_idx];
-			printf("%f ", double(cursec_perclient_cachehitcnts[local_client_logical_idx])/double(cursec_perclient_pktcnts[local_client_logical_idx]));
+			//printf("%f ", double(cursec_perclient_cachehitcnts[local_client_logical_idx])/double(cursec_perclient_pktcnts[local_client_logical_idx]));
 		}
 		printf("\noverall cachehit cnt: %d, cachehit rate: %f\n", cursec_total_cachehitcnt, double(cursec_total_cachehitcnt)/double(cursec_total_pktcnt));
 
@@ -709,11 +723,12 @@ void run_benchmark() {
 
 	/* (6) process and dump dynamic workload statisics */
 
-	if (workload_mode != 0) {
+	//if (workload_mode != 0) {
 		// get persec nodeidx-pktcnt mapping data
-		std::map<uint16_t, int> persec_nodeidx_pktcnt_map[dynamic_periodnum*dynamic_periodinterval];
+		INVARIANT(seccnt == persec_perclient_nodeidx_aggpktcnt_map.size());
+		std::map<uint16_t, int> persec_nodeidx_pktcnt_map[seccnt];
 		// aggregate perclient pktcnt for each previous i seconds -> accumulative pktcnt for each previous i seconds
-		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+		for (int i = 0; i < seccnt; i++) {
 			for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 				for (std::map<uint16_t, int>::iterator iter = persec_perclient_nodeidx_aggpktcnt_map[i][local_client_logical_idx].begin(); \
 						iter != persec_perclient_nodeidx_aggpktcnt_map[i][local_client_logical_idx].end(); iter++) {
@@ -727,7 +742,7 @@ void run_benchmark() {
 			}
 		}
 		// accumulative pktcnt for previous i seconds - that for previous i-1 seconds -> pktcnt for the ith second
-		for (int i = dynamic_periodnum*dynamic_periodinterval-1; i > 0; i--) {
+		for (int i = seccnt - 1; i > 0; i--) {
 			int tmptotalpktcnt = 0;
 			for (std::map<uint16_t, int>::iterator iter = persec_nodeidx_pktcnt_map[i].begin(); \
 					iter != persec_nodeidx_pktcnt_map[i].end(); iter++) {
@@ -739,17 +754,17 @@ void run_benchmark() {
 			}
 		}
 		// get persec total pktcnt
-		int persec_totalpktcnt_list[dynamic_periodnum*dynamic_periodinterval];
-		memset(persec_totalpktcnt_list, 0, dynamic_periodnum*dynamic_periodinterval*sizeof(int));
-		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+		int persec_totalpktcnt_list[seccnt];
+		memset(persec_totalpktcnt_list, 0, seccnt*sizeof(int));
+		for (int i = 0; i < seccnt; i++) {
 			for (std::map<uint16_t, int>::iterator iter = persec_nodeidx_pktcnt_map[i].begin(); \
 					iter != persec_nodeidx_pktcnt_map[i].end(); iter++) {
 				persec_totalpktcnt_list[i] += iter->second;
 			}
 		}
 		printf("\nper-sec total throughput:\n");
-		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
-			if (i != dynamic_periodnum * dynamic_periodinterval - 1) {
+		for (int i = 0; i < seccnt; i++) {
+			if (i != seccnt - 1) {
 				printf("%d ", persec_totalpktcnt_list[i]);
 			}
 			else {
@@ -757,7 +772,7 @@ void run_benchmark() {
 			}
 		}
 		printf("\nper-sec per-server throughput:\n");
-		for (int i = 0; i < dynamic_periodnum*dynamic_periodinterval; i++) {
+		for (int i = 0; i < seccnt; i++) {
 			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
 				int tmppktcnt = 0;
 				if (persec_nodeidx_pktcnt_map[i].find(global_server_logical_idx) != persec_nodeidx_pktcnt_map[i].end()) {
@@ -771,7 +786,7 @@ void run_benchmark() {
 				}
 			}
 		}
-	}
+	//}
 
 	free_common();
 	COUT_THIS("Finish dumping statistics!")

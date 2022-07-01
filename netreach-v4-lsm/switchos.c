@@ -236,7 +236,7 @@ void prepare_switchos() {
 	//memset(switchos_evictvalbytes, 0, val_t::MAX_VALLEN);
 	
 	// popworker <-> reflector.cp2dpserver
-	create_udpsock(switchos_popworker_popclient_for_reflector_udpsock, true, "switchos.popworker.popclient_for_reflector");
+	create_udpsock(switchos_popworker_popclient_for_reflector_udpsock, true, "switchos.popworker.popclient_for_reflector", 0, SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS); // to reduce snapshot latency
 
 	// cached metadata
 	switchos_cached_keyidx_map.clear();
@@ -1383,8 +1383,8 @@ void process_specialcase(const uint16_t &tmpidx, const netreach_key_t &tmpkey, c
 	// NOTE: for each given key, it can only be stored into cached metadata of at most one pipeline
 	int tmp_pipeidx = -1;
 	for (int i = 0; i < switch_pipeline_num; i++) {
-		INVARIANT(switchos_perpipeline_specialcases_ptr[tmp_pipeidx] != NULL && switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] != NULL);
-		if (switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmpidx] == tmpkey) {
+		INVARIANT(switchos_perpipeline_specialcases_ptr[i] != NULL && switchos_perpipeline_cached_keyarray_backup[i] != NULL);
+		if (switchos_perpipeline_cached_keyarray_backup[i][tmpidx] == tmpkey) {
 			tmp_pipeidx = i;
 			break;
 		}

@@ -366,8 +366,15 @@ void *run_controller_evictserver(void *param) {
 		udprecvfrom(controller_evictserver_udpsock, buf, MAX_BUFSIZE, 0, &switchos_evictclient_addr, &switchos_evictclient_addrlen, recvsize, "controller.evictserver");
 
 		// set dstaddr for the corresponding server
-		cache_evict_t tmp_cache_evict(buf, recvsize);
-		uint16_t tmp_global_server_logical_idx = tmp_cache_evict.serveridx();
+		cache_evict_t *tmp_cache_evict_ptr;
+		packet_type_t optype = get_packet_type(buf, recvsize);
+		if (optype == packet_type_t::CACHE_EVICT) {
+			tmp_cache_evict_ptr = new cache_evict_t(buf, recvsize);
+		}
+		else if (optype == packet_type_t::CACHE_EVICT_CASE2) {
+			tmp_cache_evict_ptr = new cache_evict_case2_t(buf, recvsize);
+		}
+		uint16_t tmp_global_server_logical_idx = tmp_cache_evict_ptr->serveridx();
 		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < server_total_logical_num_for_controller);
 		int tmp_server_physical_idx = -1;
 		for (int i = 0; i < server_physical_num; i++) {
@@ -381,6 +388,8 @@ void *run_controller_evictserver(void *param) {
 		INVARIANT(tmp_server_physical_idx != -1);
 		memset(&server_evictserver_addr, 0, sizeof(server_evictserver_addr));
 		set_sockaddr(server_evictserver_addr, inet_addr(server_ip_for_controller_list[tmp_server_physical_idx]), server_evictserver_port_start + tmp_global_server_logical_idx);
+		delete tmp_cache_evict_ptr;
+		tmp_cache_evict_ptr = NULL;
 		
 		//printf("receive CACHE_EVICT from switchos and send to server\n");
 		//dump_buf(buf, recvsize);

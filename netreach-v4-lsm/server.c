@@ -179,6 +179,7 @@ void transaction_main() {
 		server_worker_params[worker_i].process_latency_list.clear();
 		server_worker_params[worker_i].wait_latency_list.clear();
 		server_worker_params[worker_i].rocksdb_latency_list.clear();
+		server_worker_params[worker_i].udpsend_latency_list.clear();
 		ret = pthread_create(&worker_threads[worker_i], nullptr, run_server_worker, (void *)&server_worker_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.worker:" << ret);
@@ -312,6 +313,7 @@ void transaction_main() {
 		std::vector<double> cursec_wait_latency_list;
 		std::vector<double> cursec_process_latency_list;
 		std::vector<double> cursec_rocksdb_latency_list;
+		std::vector<double> cursec_udpsend_latency_list;
 		for (size_t j = 0; j < current_server_logical_num; j++) {
 			int startidx = 0;
 			if (i != 0) startidx = persec_perserver_aggpktcnt[i-1][j];
@@ -322,6 +324,8 @@ void transaction_main() {
 			cursec_process_latency_list.insert(cursec_process_latency_list.end(), cursec_curserver_process_latency_list.begin(), cursec_curserver_process_latency_list.end());
 			std::vector<double> cursec_curserver_rocksdb_latency_list(server_worker_params[j].rocksdb_latency_list.begin() + startidx, server_worker_params[j].rocksdb_latency_list.begin() + endidx);
 			cursec_rocksdb_latency_list.insert(cursec_rocksdb_latency_list.end(), cursec_curserver_rocksdb_latency_list.begin(), cursec_curserver_rocksdb_latency_list.end());
+			std::vector<double> cursec_curserver_udpsend_latency_list(server_worker_params[j].udpsend_latency_list.begin() + startidx, server_worker_params[j].udpsend_latency_list.begin() + endidx);
+			cursec_udpsend_latency_list.insert(cursec_udpsend_latency_list.end(), cursec_curserver_udpsend_latency_list.begin(), cursec_curserver_udpsend_latency_list.end());
 
 			std::string tmplabel;
 			GET_STRING(tmplabel, "wait_latency_list server "<<j);
@@ -330,10 +334,13 @@ void transaction_main() {
 			dump_latency(cursec_curserver_process_latency_list, tmplabel);
 			GET_STRING(tmplabel, "rocksdb_latency_list server "<<j);
 			dump_latency(cursec_curserver_rocksdb_latency_list, tmplabel);
+			GET_STRING(tmplabel, "udpsend_latency_list server "<<j);
+			dump_latency(cursec_curserver_udpsend_latency_list, tmplabel);
 		}
 		dump_latency(cursec_wait_latency_list, "wait_latency_list overall");
 		dump_latency(cursec_process_latency_list, "process_latency_list overall");
 		dump_latency(cursec_rocksdb_latency_list, "rocksdb_latency_list overall");
+		dump_latency(cursec_udpsend_latency_list, "udpsend_latency_list overall");
 		printf("\n");
 	}
 #endif
@@ -425,6 +432,31 @@ void transaction_main() {
 		worker_avg_rocksdb_latency_list[i] = tmp_avg_rocksdb_latency;
 	}
 	dump_latency(worker_avg_rocksdb_latency_list, "worker_avg_rocksdb_latency_list");
+
+	// dump udpsend latency
+	printf("\nudpsend latency:\n");
+	std::vector<double> udpsend_latency_list;
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		printf("[server %d]\n", i);
+		std::string tmp_label;
+		GET_STRING(tmp_label, "udpsend_latency_list " << i);
+		dump_latency(server_worker_params[i].udpsend_latency_list, tmp_label);
+
+		udpsend_latency_list.insert(udpsend_latency_list.end(), server_worker_params[i].udpsend_latency_list.begin(), server_worker_params[i].udpsend_latency_list.end());
+	}
+	printf("[overall]\n");
+	dump_latency(udpsend_latency_list, "udpsend_latency_list overall");
+	printf("\n");
+	std::vector<double> worker_avg_udpsend_latency_list(current_server_logical_num);
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		double tmp_avg_udpsend_latency = 0.0;
+		for (size_t j = 0; j < server_worker_params[i].udpsend_latency_list.size(); j++) {
+			tmp_avg_udpsend_latency += server_worker_params[i].udpsend_latency_list[j];
+		}
+		tmp_avg_udpsend_latency /= server_worker_params[i].udpsend_latency_list.size();
+		worker_avg_udpsend_latency_list[i] = tmp_avg_udpsend_latency;
+	}
+	dump_latency(worker_avg_udpsend_latency_list, "worker_avg_udpsend_latency_list");
 
 	void *status;
 	printf("wait for server.workers\n");
