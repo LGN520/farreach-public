@@ -99,7 +99,7 @@ SWITCHOS_PTF_SNAPSHOTSERVER_END = int(control_config.get("switchos", "SWITCHOS_P
 SNAPSHOT_GETDATA_ACK = int(control_config.get("snapshot", "SNAPSHOT_GETDATA_ACK"))
 
 # Set it as True if support range, or False otherwise
-# NOTE: update RANGE_SUPPORT in netbufferv4 accordingly
+# NOTE: update RANGE_SUPPORT in nocache accordingly
 RANGE_SUPPORT = False
 #RANGE_SUPPORT = True
 

@@ -250,7 +250,7 @@ control egress {
 
 	// Stage 2
 	apply(access_latest_tbl);
-	apply(save_client_udpport_tbl); // save udp.dstport (client port) for case1 of putreq and delreq
+	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
 
 	// Stage 3
 	apply(access_deleted_tbl);

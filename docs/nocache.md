@@ -5,6 +5,9 @@
 
 ## Overview
 
+- Client
+	+ Keep the same as in netreach-v4-lsm
+
 ## Implementation log
 
 ## Run

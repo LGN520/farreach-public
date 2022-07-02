@@ -1,0 +1,319 @@
+netbufferv4/src/libpd_la-pd.lo: netbufferv4/src/pd.c \
+ /usr/include/stdc-predef.h netbufferv4/pd/pd.h \
+ /usr/lib/gcc/x86_64-linux-gnu/4.9/include/stdint.h /usr/include/stdint.h \
+ /usr/include/features.h /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+ /usr/include/x86_64-linux-gnu/bits/wordsize.h \
+ /usr/include/x86_64-linux-gnu/gnu/stubs.h \
+ /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
+ /usr/include/x86_64-linux-gnu/bits/wchar.h \
+ /root/bf-sde-8.9.1/install/include/tofino/pdfixed/pd_common.h \
+ /usr/lib/gcc/x86_64-linux-gnu/4.9/include/stdbool.h \
+ /root/bf-sde-8.9.1/install/include/pipe_mgr/pipe_mgr_intf.h \
+ /usr/lib/gcc/x86_64-linux-gnu/4.9/include/stddef.h \
+ /root/bf-sde-8.9.1/install/include/bf_types/bf_types.h \
+ /root/bf-sde-8.9.1/install/include/pipe_mgr/pipe_mgr_err.h \
+ /root/bf-sde-8.9.1/install/include/pipe_mgr/pipe_mgr_mirror_intf.h \
+ /root/bf-sde-8.9.1/install/include/traffic_mgr/traffic_mgr_types.h \
+ /root/bf-sde-8.9.1/install/include/dvm/bf_drv_intf.h \
+ /root/bf-sde-8.9.1/install/include/dvm/bf_drv_profile.h \
+ /root/bf-sde-8.9.1/install/include/dvm/bf_dma_types.h \
+ /root/bf-sde-8.9.1/install/include/port_mgr/port_mgr_port_evt.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_intf.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_mem.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_str.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_sem.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_thread.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_timer.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_log.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_assert.h \
+ /usr/include/assert.h /usr/include/execinfo.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_log.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_dma.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_config.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_config.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_porting.h \
+ /usr/include/stdio.h /usr/include/x86_64-linux-gnu/bits/types.h \
+ /usr/include/x86_64-linux-gnu/bits/typesizes.h /usr/include/libio.h \
+ /usr/include/_G_config.h /usr/include/wchar.h \
+ /usr/lib/gcc/x86_64-linux-gnu/4.9/include/stdarg.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+ /usr/include/x86_64-linux-gnu/bits/sys_errlist.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio.h /usr/include/stdlib.h \
+ /usr/include/x86_64-linux-gnu/bits/waitflags.h \
+ /usr/include/x86_64-linux-gnu/bits/waitstatus.h /usr/include/endian.h \
+ /usr/include/x86_64-linux-gnu/bits/endian.h \
+ /usr/include/x86_64-linux-gnu/bits/byteswap.h \
+ /usr/include/x86_64-linux-gnu/bits/byteswap-16.h \
+ /usr/include/x86_64-linux-gnu/sys/types.h /usr/include/time.h \
+ /usr/include/x86_64-linux-gnu/sys/select.h \
+ /usr/include/x86_64-linux-gnu/bits/select.h \
+ /usr/include/x86_64-linux-gnu/bits/sigset.h \
+ /usr/include/x86_64-linux-gnu/bits/time.h \
+ /usr/include/x86_64-linux-gnu/sys/sysmacros.h \
+ /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h /usr/include/alloca.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-float.h /usr/include/string.h \
+ /usr/include/xlocale.h /usr/include/x86_64-linux-gnu/bits/string.h \
+ /usr/include/x86_64-linux-gnu/bits/string2.h /usr/include/memory.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_mem.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_pvs.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_valist.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_object.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_pvs_file.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_pvs_buffer.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_utils.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_string.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_map.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_valgrind.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_datatypes.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_printf.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_sparse.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_error.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_bitmap.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_daemon.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_memory.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_porting.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_common.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/BigList/biglist.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_module.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_node.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_errors.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_argparse.h \
+ /root/bf-sde-8.9.1/install/include/bfutils/cJSON.h \
+ /root/bf-sde-8.9.1/install/include/tofino/pdfixed/pd_ms.h \
+ /usr/include/netinet/in.h /usr/include/x86_64-linux-gnu/sys/socket.h \
+ /usr/include/x86_64-linux-gnu/sys/uio.h \
+ /usr/include/x86_64-linux-gnu/bits/uio.h \
+ /usr/include/x86_64-linux-gnu/bits/socket.h \
+ /usr/include/x86_64-linux-gnu/bits/socket_type.h \
+ /usr/include/x86_64-linux-gnu/bits/sockaddr.h \
+ /usr/include/x86_64-linux-gnu/asm/socket.h \
+ /usr/include/asm-generic/socket.h \
+ /usr/include/x86_64-linux-gnu/asm/sockios.h \
+ /usr/include/asm-generic/sockios.h \
+ /usr/include/x86_64-linux-gnu/bits/in.h \
+ /root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_sem.h
+
+/usr/include/stdc-predef.h:
+
+netbufferv4/pd/pd.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/4.9/include/stdint.h:
+
+/usr/include/stdint.h:
+
+/usr/include/features.h:
+
+/usr/include/x86_64-linux-gnu/sys/cdefs.h:
+
+/usr/include/x86_64-linux-gnu/bits/wordsize.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
+
+/usr/include/x86_64-linux-gnu/bits/wchar.h:
+
+/root/bf-sde-8.9.1/install/include/tofino/pdfixed/pd_common.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/4.9/include/stdbool.h:
+
+/root/bf-sde-8.9.1/install/include/pipe_mgr/pipe_mgr_intf.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/4.9/include/stddef.h:
+
+/root/bf-sde-8.9.1/install/include/bf_types/bf_types.h:
+
+/root/bf-sde-8.9.1/install/include/pipe_mgr/pipe_mgr_err.h:
+
+/root/bf-sde-8.9.1/install/include/pipe_mgr/pipe_mgr_mirror_intf.h:
+
+/root/bf-sde-8.9.1/install/include/traffic_mgr/traffic_mgr_types.h:
+
+/root/bf-sde-8.9.1/install/include/dvm/bf_drv_intf.h:
+
+/root/bf-sde-8.9.1/install/include/dvm/bf_drv_profile.h:
+
+/root/bf-sde-8.9.1/install/include/dvm/bf_dma_types.h:
+
+/root/bf-sde-8.9.1/install/include/port_mgr/port_mgr_port_evt.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_intf.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_mem.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_str.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_sem.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_thread.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_timer.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_log.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_assert.h:
+
+/usr/include/assert.h:
+
+/usr/include/execinfo.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_log.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_dma.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_config.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_config.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_porting.h:
+
+/usr/include/stdio.h:
+
+/usr/include/x86_64-linux-gnu/bits/types.h:
+
+/usr/include/x86_64-linux-gnu/bits/typesizes.h:
+
+/usr/include/libio.h:
+
+/usr/include/_G_config.h:
+
+/usr/include/wchar.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/4.9/include/stdarg.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdio_lim.h:
+
+/usr/include/x86_64-linux-gnu/bits/sys_errlist.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdio.h:
+
+/usr/include/stdlib.h:
+
+/usr/include/x86_64-linux-gnu/bits/waitflags.h:
+
+/usr/include/x86_64-linux-gnu/bits/waitstatus.h:
+
+/usr/include/endian.h:
+
+/usr/include/x86_64-linux-gnu/bits/endian.h:
+
+/usr/include/x86_64-linux-gnu/bits/byteswap.h:
+
+/usr/include/x86_64-linux-gnu/bits/byteswap-16.h:
+
+/usr/include/x86_64-linux-gnu/sys/types.h:
+
+/usr/include/time.h:
+
+/usr/include/x86_64-linux-gnu/sys/select.h:
+
+/usr/include/x86_64-linux-gnu/bits/select.h:
+
+/usr/include/x86_64-linux-gnu/bits/sigset.h:
+
+/usr/include/x86_64-linux-gnu/bits/time.h:
+
+/usr/include/x86_64-linux-gnu/sys/sysmacros.h:
+
+/usr/include/x86_64-linux-gnu/bits/pthreadtypes.h:
+
+/usr/include/alloca.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdlib-float.h:
+
+/usr/include/string.h:
+
+/usr/include/xlocale.h:
+
+/usr/include/x86_64-linux-gnu/bits/string.h:
+
+/usr/include/x86_64-linux-gnu/bits/string2.h:
+
+/usr/include/memory.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_mem.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_pvs.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_valist.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_object.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_pvs_file.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_pvs_buffer.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_utils.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_string.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_map.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_valgrind.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_datatypes.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_printf.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_sparse.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_error.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_bitmap.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_daemon.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/AIM/aim_memory.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_porting.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_common.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/BigList/biglist.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_module.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_node.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_errors.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/uCli/ucli_argparse.h:
+
+/root/bf-sde-8.9.1/install/include/bfutils/cJSON.h:
+
+/root/bf-sde-8.9.1/install/include/tofino/pdfixed/pd_ms.h:
+
+/usr/include/netinet/in.h:
+
+/usr/include/x86_64-linux-gnu/sys/socket.h:
+
+/usr/include/x86_64-linux-gnu/sys/uio.h:
+
+/usr/include/x86_64-linux-gnu/bits/uio.h:
+
+/usr/include/x86_64-linux-gnu/bits/socket.h:
+
+/usr/include/x86_64-linux-gnu/bits/socket_type.h:
+
+/usr/include/x86_64-linux-gnu/bits/sockaddr.h:
+
+/usr/include/x86_64-linux-gnu/asm/socket.h:
+
+/usr/include/asm-generic/socket.h:
+
+/usr/include/x86_64-linux-gnu/asm/sockios.h:
+
+/usr/include/asm-generic/sockios.h:
+
+/usr/include/x86_64-linux-gnu/bits/in.h:
+
+/root/bf-sde-8.9.1/install/include/bfsys/bf_sal/bf_sys_sem.h:

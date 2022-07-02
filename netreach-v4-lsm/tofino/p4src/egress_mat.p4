@@ -979,12 +979,6 @@ action update_val_seq_stat_pktlen(aligned_vallen) {
 	add(udp_hdr.hdrlen, aligned_vallen, 37);
 	add(ipv4_hdr.totalLen, aligned_vallen, 57);
 }
-*/
-
-action update_pktlen(udplen, iplen) {
-	modify_field(udp_hdr.hdrlen, udplen);
-	modify_field(ipv4_hdr.totalLen, iplen);
-}
 
 // LOADSNAPSHOTDATA_INSWITCH_ACK
 action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
@@ -993,6 +987,12 @@ action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
 	//add(ipv4_hdr.totalLen, aligned_vallen, 74);
 	add(udp_hdr.hdrlen, aligned_vallen, 53);
 	add(ipv4_hdr.totalLen, aligned_vallen, 73);
+}
+*/
+
+action update_pktlen(udplen, iplen) {
+	modify_field(udp_hdr.hdrlen, udplen);
+	modify_field(ipv4_hdr.totalLen, iplen);
 }
 
 @pragma stage 11

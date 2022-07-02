@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 cd $SDE
-./run_switchd.sh -p netbufferv4
+./run_switchd.sh -p nocache
