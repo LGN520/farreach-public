@@ -1145,6 +1145,51 @@ void *run_client_worker(void *param) {
 					continue; // continue to resend
 				}
 			}
+			else if (tmptype == optype_t(packet_type_t::LOADREQ)) { // update or insert
+				FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] key = " << tmpkey.to_string() << " val = " << req.val().to_string());
+				INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
+				load_request_t req(tmpkey, tmpval);
+				req_size = req.serialize(buf, MAX_BUFSIZE);
+
+#ifdef DUMP_BUF
+				dump_buf(buf, req_size);
+#endif
+
+				udpsendto(client_udpsock_list[local_client_logical_idx], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
+
+				// filter unmatched responses to fix duplicate responses of previous request due to false positive timeout-and-retry
+				while (true) {
+					is_timeout = udprecvfrom(client_udpsock_list[local_client_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recv_size, "ycsb_remote_client");
+#ifdef DUMP_BUF
+					dump_buf(buf, recv_size);
+#endif
+					if (!is_timeout) {
+						INVARIANT(recv_size > 0);
+						if (get_packet_type(buf, recv_size) != packet_type_t::LOADACK) {
+							thread_param.unmatched_cnt++;
+							continue; // continue to receive next packet
+						}
+						else {
+							load_ack_t rsp(buf, recv_size);
+							if (rsp.key() != tmpkey) {
+								thread_param.unmatched_cnt++;
+								continue; // continue to receive next packet
+							}
+							else {
+								break; // break to update statistics and send next packet
+							}
+						}
+					}
+					else {
+						break; // break to resend
+					}
+				}
+				if (is_timeout) {
+					printf("timeout key %x\n", tmpkey.keyhihi);
+					thread_param.timeout_cnt += 1;
+					continue; // continue to resend
+				}
+			}
 			else if (tmptype == optype_t(packet_type_t::SCANREQ)) {
 				//netreach_key_t endkey = generate_endkey(tmpkey);
 				netreach_key_t endkey = netreach_key_t(tmpkey.keylolo, tmpkey.keylohi, tmpkey.keyhilo, (((tmpkey.keyhihi>>16)&0xFFFF)+513)<<16); // TMPDEBUG
@@ -1217,28 +1262,33 @@ void *run_client_worker(void *param) {
 			break;
 		} // end of while(true)
 		is_timeout = false;
-		isfirst_pkt = false;
 		CUR_TIME(process_t2);
 
 		if (unlikely(!running)) {
 			break;
 		}
 
-		INVARIANT(tmp_nodeidx_foreval == 0xFFFF || tmp_nodeidx_foreval < server_total_logical_num_for_client);
-		if (thread_param.nodeidx_pktcnt_map.find(tmp_nodeidx_foreval) == thread_param.nodeidx_pktcnt_map.end()) {
-			thread_param.nodeidx_pktcnt_map.insert(std::pair<uint16_t, int>(tmp_nodeidx_foreval, 1));
-		}
-		else {
-			thread_param.nodeidx_pktcnt_map[tmp_nodeidx_foreval] += 1;
-		}
+		if (tmptype != optype_t(packet_type_t::LOADREQ)) {
+			INVARIANT(tmp_nodeidx_foreval == 0xFFFF || tmp_nodeidx_foreval < server_total_logical_num_for_client);
+			if (thread_param.nodeidx_pktcnt_map.find(tmp_nodeidx_foreval) == thread_param.nodeidx_pktcnt_map.end()) {
+				thread_param.nodeidx_pktcnt_map.insert(std::pair<uint16_t, int>(tmp_nodeidx_foreval, 1));
+			}
+			else {
+				thread_param.nodeidx_pktcnt_map[tmp_nodeidx_foreval] += 1;
+			}
 
-		DELTA_TIME(process_t2, process_t1, process_t3);
-		DELTA_TIME(send_t2, send_t1, send_t3);
-		double process_time = GET_MICROSECOND(process_t3);
-		double send_time = GET_MICROSECOND(send_t3);
-		thread_param.process_latency_list.push_back(process_time);
-		thread_param.send_latency_list.push_back(send_time);
-		thread_param.wait_latency_list.push_back(wait_time);
+			DELTA_TIME(process_t2, process_t1, process_t3);
+			DELTA_TIME(send_t2, send_t1, send_t3);
+			double process_time = GET_MICROSECOND(process_t3);
+			double send_time = GET_MICROSECOND(send_t3);
+			thread_param.process_latency_list.push_back(process_time);
+			thread_param.send_latency_list.push_back(send_time);
+			if (!isfirst_pkt) {
+				thread_param.wait_latency_list.push_back(wait_time);
+			}
+
+			isfirst_pkt = false;
+		}
 
 		//SUM_TIME(req_t3, rsp_t3, final_t3); // time of sending req and receiving rsp
 		//double final_time = GET_MICROSECOND(final_t3);

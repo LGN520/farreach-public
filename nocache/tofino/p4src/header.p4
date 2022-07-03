@@ -86,6 +86,7 @@ header_type metadata_t {
 	fields {
 #ifndef RANGE_SUPPORT
 		hashval_for_partition: 16; // at most 32K
+#else
 		server_sid: 10; // clone to server for SCANREQ_SPLIT
 		remain_scannum: 16;
 		is_last_scansplit: 1;

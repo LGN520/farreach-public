@@ -95,15 +95,10 @@
 - NOTE: set switch_kv_bucket_num, KV_BUCKET_COUNT, CM_BUCKET_COUNT, HH_THRESHOLD, SEQ_BUCKET_COUNT as 1 before test
 - Test cases of normal operations: see directory of "testcases/normal"
 	+ Case 1: single read (GETREQ arrives at server)
-		* No key in cache_lookup_tbl, cm=1, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
 	+ Case 2: single write (PUTREQ arrives at server)
-		* No key in cache_lookup_tbl, cm=1, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
-	+ Case 3: read(k1,v1)-write(k1,v2)-read(k1,v2) (GETREQ-PUTREQ_SEQ_POP-GETREQ_POP arrive at server; ignore cache population here)
-		* No key in cache_lookup_tbl, cm=3, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
-	+ Case 4: single delete (DELREQ arrives at server)
-		* No key in cache_lookup_tbl, {cm, cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
-	+ Case 5: read(k1,v1)-delete(k1)-read(k1,none) (GETREQ-DELREQ_SEQ-GETREQ_POP arrive at server; ignore cache population here)
-		* No key in cache_lookup_tbl, cm=2, {cache_frequency, vallen, val, seq, savedseq, valid, latest, deleted, case1}=0
+	+ Case 3: single delete (DELREQ arrives at server)
+	+ Case 4: single load (LOADREQ arrives at server)
+	+ Case 5: single scan (SCANREQ_SPLIT arrives at server)
 - NOTE: no testcases for cache population/eviction/hit and crash-consistent snapshot
 
 ## Fixed issues

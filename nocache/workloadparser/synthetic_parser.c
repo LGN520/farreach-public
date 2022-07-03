@@ -182,6 +182,14 @@ bool SyntheticParserIterator::next_batch() {
 			}
 			_maxidx += 1;
 		}
+		else if (strncmp(line, "LOAD", 4) == 0) {
+			_types[_maxidx+1] = int8_t(packet_type_t::LOADREQ);
+			if (!parsekv(line, linelen)) {
+				printf("No KV after LOAD: %s\n", line);
+				exit(-1);
+			}
+			_maxidx += 1;
+		}
 
 		// switch to next line
 		_fileoffset += linelen;
