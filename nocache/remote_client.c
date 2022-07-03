@@ -549,6 +549,8 @@ void run_benchmark() {
 	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 		for (size_t j = 0; j < client_worker_params[local_client_logical_idx].send_latency_list.size(); j++) {
 			perclient_avgsend_latency_list[local_client_logical_idx] += client_worker_params[local_client_logical_idx].send_latency_list[j];
+		}
+		for (size_t j = 0; j < client_worker_params[local_client_logical_idx].wait_latency_list.size(); j++) {
 			perclient_avgwait_latency_list[local_client_logical_idx] += client_worker_params[local_client_logical_idx].wait_latency_list[j];
 		}
 	}

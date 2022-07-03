@@ -1,4 +1,4 @@
-DIRNAME="netreach-v4-lsm"
+DIRNAME="nocache"
 
 # NOTE: you need to finish loading phase [+ warmup phase (if w/ inswitch cache)] before running this script
 
@@ -107,4 +107,5 @@ do
 	#then
 	#	exit
 	#fi
+	exit
 done

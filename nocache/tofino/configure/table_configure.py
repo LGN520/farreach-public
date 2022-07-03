@@ -474,12 +474,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 scanreqsplit_udplen = 47
                 scanreqsplit_iplen = 67
                 matchspec0 = nocache_update_pktlen_tbl_match_spec_t(\
-                        op_hdr_optype=SCANREQ_SPLIT,
-                        vallen_hdr_vallen_start=0,
-                        vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+                        op_hdr_optype=SCANREQ_SPLIT)
                 actnspec0 = nocache_update_pktlen_action_spec_t(scanreqsplit_udplen, scanreqsplit_iplen)
                 self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: update_ipmac_srcport_tbl (default: nop; 5*client_physical_num+5*server_physical_num=20 < 10*8=80 < 128)
             # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
