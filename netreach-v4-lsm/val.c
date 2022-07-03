@@ -205,6 +205,32 @@ uint32_t Val::from_string_for_rocksdb(std::string valstr) {
 	return seq;
 }
 
+std::string Val::to_string_for_rocksdb_noseq() {
+	char tmpbuf[256];
+	if (val_length > 0) {
+		INVARIANT(val_data != NULL);
+		memcpy(tmpbuf, val_data, val_length);
+	}
+	return std::string(tmpbuf, val_length);
+}
+
+void Val::from_string_for_rocksdb_noseq(std::string valstr) {
+	val_length = valstr.size();
+	INVARIANT(val_length >= 0);
+	if (val_data != NULL) {
+		delete [] val_data;
+		val_data = NULL;
+	}
+
+	if (val_length > 0) {
+		val_data = new char[val_length];
+		INVARIANT(val_data != NULL);
+		memcpy(val_data, valstr.data(), val_length);
+	}
+
+	return;
+}
+
 /*void Val::from_string(std::string& str) {
 	INVARIANT(uint16_t(str.length()) <= MAX_VALLEN);
 	if (str.data() != nullptr && str.length() != 0) {

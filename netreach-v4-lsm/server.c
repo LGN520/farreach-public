@@ -250,6 +250,11 @@ void transaction_main() {
 	if (ret) {
 	  COUT_N_EXIT("Error of launching transaction.main.loadfinishserver: " << ret);
 	}
+	ret = pthread_setaffinity_np(loadfinishserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	if (ret) {
+		printf("Error of setaffinity for main.loadfinishserver; errno: %d\n", errno);
+		exit(-1);
+	}
 
 	while (transaction_ready_threads < transaction_expected_ready_threads) sleep(1);
 

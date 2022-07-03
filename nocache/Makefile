@@ -152,7 +152,7 @@ LDFLAGS += $(EXTRA_LDFLAGS)
 
 ##############################################################################
 
-TARGETS := prepare split_workload remote_client loader server switchos controller skewness_check recover/controller_get_snapshotid warmup_client loadfinish_client
+TARGETS := prepare split_workload remote_client loader server skewness_check
 #recover/server_recover localtest
 #dpdktest_client dpdktest_server socktest_client socktest_server
 
@@ -176,20 +176,10 @@ loader: loader.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 DEPS += loader.d
 CLEAN += loader.o loader
 
-warmup_client: warmup_client.o $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += warmup_client.d
-CLEAN += warmup_client.o warmup_client
-
 remote_client: remote_client.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += remote_client.d
 CLEAN += remote_client.o remote_client
-
-loadfinish_client: loadfinish_client.o $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += loadfinish_client.d
-CLEAN += loadfinish_client.o loadfinish_client
 
 #server: server.o $(UTILS_OBJECTS) $(ROCKSDB_OBJECTS) $(DPDK_OBJECTS)
 	#$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) $(DPDK_LDLIBS) -o $@
@@ -197,16 +187,6 @@ server: server.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
 DEPS += server.d
 CLEAN += server.o server
-
-switchos: switchos.o $(UTILS_OBJECTS)
-	$(CC) -pthread -g $(LDDIR) $^ -lpthread -o $@
-DEPS += switchos.d
-CLEAN += switchos.o switchos
-
-controller: controller.o $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += controller.d
-CLEAN += controller.o controller
 
 #dpdktest_client: dpdktest_client.o $(DPDK_OBJECTS) $(UTILS_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) $(DPDK_LDLIBS) -o $@
@@ -232,16 +212,6 @@ skewness_check: skewness_check.o $(UTILS_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
 DEPS += skewness_check.d
 CLEAN += skewness_check.o skewness_check
-
-recover/controller_get_snapshotid: recover/controller_get_snapshotid.o $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
-DEPS += recover/controller_get_snapshotid.d
-CLEAN += recover/controller_get_snapshotid.o recover/controller_get_snapshotid
-
-recover/server_recover: recover/server_recover.o $(ROCKSDB_OBJECTS) $(UTILS_OBJECTS)
-	$(LINK) $^ $(LDLIBS) $(ROCKSDB_LDLIBS) -o $@
-DEPS += recover/server_recover.d
-CLEAN += recover/server_recover.o recover/server_recover
 
 ##############################################################################
 # Top level targets

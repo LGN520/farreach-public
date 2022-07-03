@@ -32,6 +32,8 @@ class Val {
   void from_slice(rocksdb::Slice& slice);*/
   std::string to_string_for_rocksdb(uint32_t seq);
   uint32_t from_string_for_rocksdb(std::string valstr); // return seq
+  std::string to_string_for_rocksdb_noseq();
+  void from_string_for_rocksdb_noseq(std::string valstr);
 
   //void from_string(std::string& str);
 

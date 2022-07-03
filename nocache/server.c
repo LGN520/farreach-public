@@ -46,7 +46,6 @@ cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other
 /* functions */
 
 // transaction phase
-#include "reflector_impl.h"
 #include "server_impl.h"
 void transaction_main(); // transaction phase
 void *run_transaction_loadfinishserver(void *param);
@@ -84,7 +83,6 @@ int main(int argc, char **argv) {
   /* (2) transaction phase */
   printf("[main] transaction phase start\n");
 
-  prepare_reflector();
   prepare_server();
   transaction_main();
 
@@ -92,7 +90,6 @@ int main(int argc, char **argv) {
 
   free_common();
   // close_load_server();
-  close_reflector();
   close_server();
 
   COUT_THIS("[ycsb_server.main] Exit successfully")
@@ -107,63 +104,14 @@ void transaction_main() {
 	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
 
 	// update transaction_expected_ready_threads
-	// reflector: popserver + worker
-	// server: server_num * (worker + evictserver + snapshotserver + snapshotdataserver)
-	// transaction.main: loadfinishserver
-	if (server_physical_idx == 0) { // deploy reflector in the first physical server
-		transaction_expected_ready_threads = 2 + 4*current_server_logical_num + 1;
-	}
-	else {
-		transaction_expected_ready_threads = 4*current_server_logical_num + 1;
-	}
+	// server: server_num * worker
+	transaction_expected_ready_threads = current_server_logical_num;
 
 	int ret = 0;
 
 	transaction_running = false;
 
 	cpu_set_t serverworker_cpuset; // [0, server_cores-1] for each server.worker
-
-	pthread_t reflector_cp2dpserver_thread;
-	pthread_t reflector_dp2cpserver_thread;
-	if (server_physical_idx == 0) {
-		// launch reflector.cp2dpserver
-		ret = pthread_create(&reflector_cp2dpserver_thread, nullptr, run_reflector_cp2dpserver, nullptr);
-		if (ret) {
-			COUT_N_EXIT("Error of launching reflector.cp2dpserver: " << ret);
-		}
-		ret = pthread_setaffinity_np(reflector_cp2dpserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-		if (ret) {
-			printf("Error of setaffinity for reflector.cp2dpserver; errno: %d\n", errno);
-			exit(-1);
-		}
-
-		// launch reflector.dp2cpserver
-		ret = pthread_create(&reflector_dp2cpserver_thread, nullptr, run_reflector_dp2cpserver, nullptr);
-		if (ret) {
-			COUT_N_EXIT("Error of launching reflector.dp2cpserver: " << ret);
-		}
-		ret = pthread_setaffinity_np(reflector_dp2cpserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-		if (ret) {
-			printf("Error of setaffinity for reflector.dp2cpserver; errno: %d\n", errno);
-			exit(-1);
-		}
-	}
-
-	// launch popclients
-	/*pthread_t popclient_threads[server_num];
-	uint16_t popclient_params[server_num];
-	for (uint16_t popclient_i = 0; popclient_i < server_num; popclient_i++) {
-		popclient_params[popclient_i] = popclient_i;
-		ret = pthread_create(&popclient_threads[popclient_i], nullptr, run_server_popclient, &popclient_params[popclient_i]);
-		if (ret) {
-		  COUT_N_EXIT("Error of launching some server.popclient:" << ret);
-		}
-		ret = pthread_setaffinity_np(popclient_threads[popclient_i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-		if (ret) {
-			printf("Error of setaffinity for server.popclient; errno: %d\n", errno);
-			exit(-1);
-		}
-	}*/
 
 	// launch workers (processing normal packets)
 	pthread_t worker_threads[current_server_logical_num];
@@ -194,62 +142,6 @@ void transaction_main() {
 		}
 	}
 	//COUT_THIS("[tranasaction phase] prepare server worker threads...")
-
-	// launch evictserver
-	uint16_t evictserver_params[current_server_logical_num];
-	pthread_t evictserver_threads[current_server_logical_num];
-	for (uint16_t evictserver_i = 0; evictserver_i < current_server_logical_num; evictserver_i++) {
-		evictserver_params[evictserver_i] = evictserver_i;
-		ret = pthread_create(&evictserver_threads[evictserver_i], nullptr, run_server_evictserver, &evictserver_params[evictserver_i]);
-		if (ret) {
-			COUT_N_EXIT("Error of launching server.evictserver: " << ret);
-		}
-		ret = pthread_setaffinity_np(evictserver_threads[evictserver_i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-		if (ret) {
-			printf("Error of setaffinity for server.evictserver; errno: %d\n", errno);
-			exit(-1);
-		}
-	}
-
-	// launch snapshotservers
-	uint16_t snapshotserver_params[current_server_logical_num];
-	pthread_t snapshotserver_threads[current_server_logical_num];
-	for (uint16_t snapshotserver_i = 0; snapshotserver_i < current_server_logical_num; snapshotserver_i++) {
-		snapshotserver_params[snapshotserver_i] = snapshotserver_i;
-		ret = pthread_create(&snapshotserver_threads[snapshotserver_i], nullptr, run_server_snapshotserver, &snapshotserver_params[snapshotserver_i]);
-		if (ret) {
-		  COUT_N_EXIT("Error of launching some server.snapshotserver:" << ret);
-		}
-		ret = pthread_setaffinity_np(snapshotserver_threads[snapshotserver_i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-		if (ret) {
-			printf("Error of setaffinity for server.snapshotserver; errno: %d\n", errno);
-			exit(-1);
-		}
-	}
-
-	// launch snapshotdataservers
-	uint16_t snapshotdataserver_params[current_server_logical_num];
-	pthread_t snapshotdataserver_threads[current_server_logical_num];
-	for (uint16_t snapshotdataserver_i = 0; snapshotdataserver_i < current_server_logical_num; snapshotdataserver_i++) {
-		snapshotdataserver_params[snapshotdataserver_i] = snapshotdataserver_i;
-		ret = pthread_create(&snapshotdataserver_threads[snapshotdataserver_i], nullptr, run_server_snapshotdataserver, &snapshotdataserver_params[snapshotdataserver_i]);
-		if (ret) {
-		  COUT_N_EXIT("Error of launching some server.snapshotdataserver:" << ret);
-		}
-		ret = pthread_setaffinity_np(snapshotdataserver_threads[snapshotdataserver_i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-		if (ret) {
-			printf("Error of setaffinity for server.snapshotdataserver; errno: %d\n", errno);
-			exit(-1);
-		}
-	}
-
-	// launch loadfinishserver
-	prepare_udpserver(transaction_loadfinishserver_udpsock, true, transaction_loadfinishserver_port, "transaction.main.loadfinishserver");
-	pthread_t loadfinishserver_thread;
-	ret = pthread_create(&loadfinishserver_thread, nullptr, run_transaction_loadfinishserver, nullptr);
-	if (ret) {
-	  COUT_N_EXIT("Error of launching transaction.main.loadfinishserver: " << ret);
-	}
 
 	while (transaction_ready_threads < transaction_expected_ready_threads) sleep(1);
 
@@ -468,95 +360,7 @@ void transaction_main() {
 	}
 	printf("server.workers finish\n");
 
-	/*printf("wait for server.popclients\n");
-	for (size_t i = 0; i < server_num; i++) {
-		int rc = pthread_join(popclient_threads[i], &status);
-		if (rc) {
-		  COUT_N_EXIT("Error: unable to join server.popclient " << rc);
-		}
-	}
-	printf("server.popclients finish\n");*/
-
-	printf("wait for server.evictserver\n");
-	for (size_t i = 0; i < current_server_logical_num; i++) {
-		int rc = pthread_join(evictserver_threads[i], &status);
-		if (rc) {
-			COUT_N_EXIT("Error: unable to join server.evictserver " << rc);
-		}
-	}
-	printf("server.evictserver finish\n");
-
-	printf("wait for server.snapshotservers\n");
-	for (size_t i = 0; i < current_server_logical_num; i++) {
-		int rc = pthread_join(snapshotserver_threads[i], &status);
-		if (rc) {
-			COUT_N_EXIT("Error: unable to join server.snapshotserver " << rc);
-		}
-	}
-	printf("server.snapshotservers finish\n");
-
-	printf("wait for server.snapshotdataservers\n");
-	for (size_t i = 0; i < current_server_logical_num; i++) {
-		int rc = pthread_join(snapshotdataserver_threads[i], &status);
-		if (rc) {
-			COUT_N_EXIT("Error: unable to join server.snapshotdataserver " << rc);
-		}
-	}
-	printf("server.snapshotdataservers finish\n");
-
-	if (server_physical_idx == 0) {
-		printf("wait for reflector.cp2dpserver\n");
-		int rc = pthread_join(reflector_cp2dpserver_thread, &status);
-		if (rc) {
-			COUT_N_EXIT("Error: unable to join reflector.cp2dpserver " << rc);
-		}
-		printf("reflector.cp2dpserver finish\n");
-
-		printf("wait for reflector.dp2cpserver\n");
-		rc = pthread_join(reflector_dp2cpserver_thread, &status);
-		if (rc) {
-			COUT_N_EXIT("Error: unable to join reflector.dp2cpserver " << rc);
-		}
-		printf("reflector.dp2cpserver finish\n");
-	}
-
-	printf("wait for transaction.main.loadfinishserver\n");
-	int rc = pthread_join(loadfinishserver_thread, &status);
-	if (rc) {
-		COUT_N_EXIT("Error: unable to join transaction.main.loadfinishserver " << rc);
-	}
-	printf("transaction.main.loadfinishserver finish\n");
-
 	printf("[transaction.main] all threads end\n");
-}
-
-void *run_transaction_loadfinishserver(void *param) {
-	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
-
-	printf("[transaction.main.loadfinishserver] ready\n");
-	transaction_ready_threads++;
-
-	while(!transaction_running) {}
-
-	char buf[256];
-	int recvsize = 0;
-	while (transaction_running) {
-		bool is_timeout = udprecvfrom(transaction_loadfinishserver_udpsock, buf, 256, 0, NULL, NULL, recvsize, "transaction.main.loadfinishserver");
-		if (is_timeout) {
-			continue;
-		}
-
-		printf("Receive loadfinish notification!\n");
-		for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
-			// make server-side snapshot of snapshot id 0 if necessary
-			db_wrappers[tmp_local_server_logical_idx].init_snapshot();
-		}
-		break;
-	}
-
-	printf("[transaction.main.loadfinishserver] exit\n");
-	close(transaction_loadfinishserver_udpsock);
-	pthread_exit(nullptr);
 }
 
 void kill(int signum) {

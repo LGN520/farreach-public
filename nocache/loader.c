@@ -93,11 +93,12 @@ void run_server() {
 		}
 	}
 
-	COUT_THIS("[ycsb_loader] all loaders finish -> make snapshot...")
+	COUT_THIS("[ycsb_loader] all loaders finish")
+	/*COUT_THIS("[ycsb_loader] all loaders finish -> make snapshot...")
 	for (size_t i = 0; i < server_total_logical_num; i++) {
   		db_wrappers[i].make_snapshot();
 		db_wrappers[i].stop_snapshot();
-	}
+	}*/
 }
 
 void *run_loader(void * param) {
