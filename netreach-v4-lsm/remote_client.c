@@ -35,7 +35,7 @@
 
 #include "common_impl.h"
 
-#define DUMP_BUF
+//#define DUMP_BUF
 
 struct alignas(CACHELINE_SIZE) ClientWorkerParam {
 	uint16_t local_client_logical_idx;
@@ -725,7 +725,7 @@ void run_benchmark() {
 
 	/* (6) process and dump dynamic workload statisics */
 
-	//if (workload_mode != 0) {
+	if (workload_mode != 0) {
 		// get persec nodeidx-pktcnt mapping data
 		INVARIANT(seccnt == persec_perclient_nodeidx_aggpktcnt_map.size());
 		std::map<uint16_t, int> persec_nodeidx_pktcnt_map[seccnt];
@@ -788,7 +788,7 @@ void run_benchmark() {
 				}
 			}
 		}
-	//}
+	}
 
 	free_common();
 	COUT_THIS("Finish dumping statistics!")

@@ -79,6 +79,8 @@
 	- IMPORTANT: try different # of client threads to sature servers
 		+ NOTE: more client threads does not mean better throughput, as client threads have CPU contention overhead
 		+ We MUST try different # of client threads to get the best runtime thpt improvement
+- Dynamic workload
+	+ Use configs/config.ini.dl16dl13
 - Utils scripts
 	- Help to update config.ini
 		+ gen_logical_idxes: generate server logical indexes from startidx to endidx
