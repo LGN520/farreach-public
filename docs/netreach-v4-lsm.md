@@ -1540,6 +1540,123 @@
 	* Conlusion
 		- FarReach w/ inswitch cache: 12.2X runtime thpt improvement
 		- FarReach w/ inswitch cache has more balanced perserver thpt than that w/o inswitch cache
++ Use outband traffic to load snapshot data (from switch to switchos) to reduce snapshot latency
+	* Implement LOADSNAPSHOTDATA_INSWITCH/_ACK
+		- tofino: netbufferv4.p4, common.py, p4src/egress.p4, p4src/ingress.p4, configure/table_configure.py
+		- C/C++: packet_format*, common_impl.h, switchos.c
+	* NOTE: control-plane bandwidth cost includes per-switchoes BW cost (cache pop/evict + case1 + snapshot) and controller BW cost (cache pop/evict + snapshot)
+	* Issue: eg_port_forward_tbl cannot be placed into stage 9
+		- We have 3 main changes on P4 code
+			+ Change size of hash_partition_tbl from 1024 to 2048 -> NOT the reason
+			+ Change size of hash_for_partition_tbl from 8 to 16 -> NOT the reason
+			+ Add two actions in eg_port_forward_tbl -> REASON (due to action num not action data)
+				* If action data, compiler reports "no enough resources for action data"
+				* If action num, compiler reports "unable to place table according to pragma constraint"
+		- Solution
+			+ Pass stat as parameter to reduce actions of update_XXX_for_deleted
+				* Reduce update_getreq_inswitch_to_getres_for_deleted_by_mirroring
+				* Reduce update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_for_deleted_drop_and_clone
+				* Reduce update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_for_deleted_drop_and_clone
++ Support multiple pipelines
+	* Overview
+		- We deploy a single reflector in the first/some physical server of the first/some pipeline to simulate link between switchos and data plane
+		- For each packet sent by switchos, data plane can use key to perform partition_tbl in ingress pipeline
+		- Then ptf configures egress port based on calculated serveridx such that the pkt enters corresponding egress pipeline
+		- For each notification/response from switch to switchos, data plane clones the packet to the egress pipeline connected with the single reflector (clone to a single reflector can also reduce TCAM cost of eg_port_forward_tbl)
+	* Add switch_pipeline_num in config.ini
+	* Update cache population/eviction
+		- switchos maintains per-pipeline cached metadata (keyarray, serveridxarray, empty_index)
+		- switchos pass pipeidx to ptf.popserver to set register in corresponding pipeline
+	* Update in-switch snapshot
+		- switchos maintains per-pipeline cached metadata backup for snapshot (keyarray, serveridxarray, empty_index)
+		- switchos maintains per-pipeline speical cases and snapshot data (values, seq, stats)
++ Correctness test after snapshot loading optimization and multi-pipeline support
+	* Pass compilation in tofino and C/C++
+	* Redesign for future PUTREQ_LARGE to avoid stateful ALU number limitation on validvalue_reg, such that we can change validvalue of a specific pipeline from switchos via data plane
+	* Enable register change of a specific pipeline from switchos by data plane
+		- Implement SETVALID_INSWITCH and SETVALID_INSWITCH_ACK -> pass compilation
+			+ tofino: p4src/parser.p4, p4src.header.p4, netbufferv4.p4, common.py, p4src/reg/validvalue.p4, configure/table_configure.py, p4src/egress_mat.p4, ptf_popserver/table_configure.sh
+			+ C/C++: control_type.ini, iniparser/iniparser_wrapper.*, common_impl.h, switchos.c, reflector_impl.h
+		- Change meta.validvalue as validvalue_hdr.validvalue to reduce PHV cost -> pass compilation
+			+ p4src/header.p4, p4src/egress_mat.p4, p4src/regs/seq.p4, p4src/regs/case1.p4, p4src/regs/val.p4, p4src/regs/latest.p4, p4src/regs/validvalue.p4, p4src/regs/deleted.p4, configure/table_configure.py
+	* Test cache population, cache hit, and cache eviction
+		- Issue: no SETVALID_INSWITCH_ACK for SETVALID_INSWITCH request
+			+ Enable debug mode temporarily
+			+ Reason 1: parser issue (we should extract validvalue_hdr after extracting inswitch_hdr instead of shadowtype_hdr)
+			+ Reason 2: not perform partition for SETVALID_INSWITCH
+			+ Pass cache population, cache hit, cache eviction, and snapshot
+			+ Disable debug mode
+		- Pass cache population, cache hit, and cache eviction
+	* Test snapshot correctness and loading latency
+		- Issue: switchos cannot receive ack from ptf.popserver/snapshotserver after relaunch
+			- Reason: switchos popclient/snapshotclient_for_ptf_udpsock's port changes after relaunch
+			- Solultion: update ptf.popserver/snapshotserver to store srcaddr/srcaddrlen each time
+		- Issue: snapshot time of 10K records varies from 0.1s to 5.1s
+			- Reason: timeout of some LOADSNAPSHOTDATA_INSWITCHs
+			- Solution: use a small timeout threshold for switchos.snapshotserver.snapshotclient_for_reflector
+			- NOTE: timeout threshold of switchos.specialcaseserver has already been set as 1ms
+		- Result: snapshot latency from 3s -> 0.1~0.5s
+		- Test 1024/2 clients + 16/2 servers under static workload w/ hash partition
+			- w/o snapshot: 1.06 + 0.93 = 1.99 MOPS
+			- w/ snapshot: 1.05 + 0.92 = 1.97 MOPS -> limited effect of snapshot via reflector on normalized thpt
++ Implement client0-driven mechanism for key popularity change
++ Test runtime throughput by server simulation under small scale for dynamic workload (under hash partition)
+	- Issue: runtime throughput cannot reflect hotin key popularity change while normalized throughput does
+		+ NOTE: server does not have too large process latency, but avg wait latency is large (>10us instead of <2us)
+		+ Trials (each next trial follows the previous ones)
+			* Use 1 physical client instead of 2 physical clients -> FAIL
+			* Use 256/1 client threads instead 512/1 client threads -> FAIL
+			* Temporarily disable WAL -> FAIL
+			* Dump per-sec statistics -> critiacal observation
+				- NOTE: in client-side, runtime throughput of some second decreases as total pktcnt decreases, although cache hit rate increases
+				- NOTE: in server-side, for each physical server, runtime throughput of some second decreases as all server threads' wait latency increases (avg from 8us to 20/27us), yet avg process latency holds normally (NOTE: max process latency becomes larger)
+			* Use 8/1 server threads instead 16/2 server threads -> FAIL
+				- NOTE: the server has larger wait latency (send response <-> receive next request; from 5us to 13us) yet normal process latency; the client has large wait latency (receive response <-> send next request) -> client-side disk cost of loading workload???
+			* Use 4/1 server threads instead 8/1 server threads -> FAIL
+				- Still with performance degradation (server-side wait latency from 2us to 5us) -> insufficient client threads in some seconds due to client-side cost of loading workload from disk?
+			* Load all requests from disk into memory before transaction phase -> alleviate perf degradation caused by client-side issue
+			* Change 1000 keys' popularity to make throughput change more obvious
+			* Try 1024/2 client threads + 16/2 server threads + w/ WAL -> 1.6X~1.9X runtime (1.8~2.1 MOPS vs. 1.1 MOPS); 2.2X normalized -> we can resume cache hit rate within limited time
+		- Reason 1: client-side cost of loading workload from disk in some time -> larger client-side overhead and hence large server-side wait latency -> perf degradation
+			+ Solution: load all requests into memory in advance
+		- Reason 2: # of keys with changed popularity is too limited, especially after we have optimized cache eviction -> throughput change is not obvious, which may be hidden by performance fluctuation
+			+ Solution: use a larger # of changed keys under dynamic workload (from 200 to 1000)
++ Double-check perf degradation issue again
+	* Try fewer changed keys yet smaller hot threshold (200 keys + 100 hot threshold) -> FAIL
+		+ 1.9X ~ 2.2X runtime (2.1~2.4 MOPS vs. 1.1 MOPS); 2.4X normalized
+		+ NOTE: still with performance fluctuation
+	* Try more changed keys yet smaller hot threshold (1000 keys + 100 hot threshold) -> FAIL
+		+ 1.6X ~ 2.1X runtime (1.8~2.3 MOPS vs. 1.1 MOPS) in the first seconds; 2.4X normalized
+		+ NOTE: 100 hot threshold is stoo small for 1000 keys, which incurs low perf in the ending seconds due to too many evctions
+		+ NOTE: still with performance fluctuation and even with timeout/unmatch
+	* Try more changed keys yet slightly smaller hot threshold (1000 keys + 150 hot threshold) -> FAIL
+		+ Similar as previous trial
+		+ NOTE: still with performance fluctuation and even with timeout/unmatch
+	* NOTE: we will use 200 keys + 100 hot threshold or 1000 keys + 200 hot threshold
+	* Try static worklad
+		+ Expected: performance should keep relatively stable
+		+ 1024/2 clients + 16/2 servers w/ WAL -> still w/ perf degradation
+		+ 512/1 clients + 8/1 servers w/ WAL -> still w/ perf degradation
+		+ Reason: larger server-side rocksdb process latency (some latency is larger than 1 second due to disk contention)
+	- 1024/2 clients + 16/2 servers + 200 keys + 100 hot threshold
+		+ FarReach w/o snapshot
+			* Runtime throughput: 2.1/2.3 MOPS -> 2.3/2.6 MOPS, but with performance degradation in 10% time (most drop to 1.5~2.1 MOPS, one drops to 0.6/1.0 MOPS)
+			* Normalized throughput: 28 -> 30
+		+ FarReach w/ snapshot
+			* Similar results as FarReach w/o snapshot -> limited effect of snapshot on dynamic workload perf
+		+ FarReachNoCache w/o snapshot
+			* Runtime throughput: 0.85~0.95 MOPS in most time, but performance sometimes drops to 0.6~0.7 MOPS
+			* Normalized throughput: always ~10
+	- Methodology for dynamic workload
+		+ Launch 8 server threads in each physical server to reduce server-side disk contention (but still exists)
+		+ Provide simulated results for a small scale cluster due to lack of machines
+			* Although thpt improvement is limited, it is ok as we have confirmed thpt improvement under large scale in static workload by server rotation
+		+ Metric 1: runtime throughput
+			* We can resume system throughput quickly after key popularity change at the first second of each period
+			* For performance degradation, we can argue that it is due to simulation overhead: some requests suffer from long operation latency due to disk contention, so the clients have to wait for the responses and cannot provide sufficient input traffic to saturate servers 
+		+ Metric 2: normalized throughput
+			* We provide normalized throughput to confirm that system throughput can resume quickly and hold until next key popularity change ideally (if no simulate overhead)
++ Pass compilation under range partition and hash partition
 
 ## Run
 
