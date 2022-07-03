@@ -1427,6 +1427,119 @@
 		- w/o inswitch cache: 0.35 + 0.35 = 0.7 MOPS
 		- w/ inswitch cache: 0.96 + 0.99 = 1.95 MOPS
 	* NOTE: we can launch at most 8 server threads in each physical server such that we can match runtime thpt to normalized thpt
++ Implement cross-physical-clients communication to send packets at the same time
++ Implement scripts for automatic server rotation test
++ Implement server rotation for static workload (under hash partition)
+	* Find bottleneck partition: (1024 client threads in total + 128 server threads in total)
+		- w/o inswitch cache: 0.27 + 0.27 MOPS = 0.54 MOPS (disk and CPU bottleneck); bottleneck partition idx: 123 (pktratio: 5537453/100M)
+		- DEPRECATED: w/ inswitch cache: 0.94 + 0.76 MOPS = 1.7 MOPS (disk and CPU bottleneck); 
+			+ WRONG: bottleneck partition idx: 95 (pktratio: 399631/100M)
+			- NOTE: bottleneck partition w/ inswitch cache should still be server 123 instead of server 95
+			+ NOTE: for each partition, we should consider the load of both server and inswitch cache -> as each server has similar load under load balance, server 123 is still the bottleneck partition w/ inswitch cache due to the largest load on inswitch cache
+		- Normalized thpt improvement: 13.86X
+	* DEPRECATED: w/ inswitch cache (128 client threads in total + 2 server threads in total) (server 95 as bottleneck partition)
+		- NOTE: bottleneck partition w/ inswitch cache should still be server 123 instead of server 95
+		- Use 128 client threads is enough
+			+ client 128 + server 95/0: 0.9 MOPS
+			+ client 256 + server 95/0: 0.086 MOPS
+		- Final result under 128 client threads: 7.4 MOPS
+			+ Issue: we can only achieve 7.4 MOPS instead of >= 12.8 MOPS (NOTE: we can achieve ~1.6 MOPS runtime thpt under 16/2 server threads)
+			+ Reason: server has larger wait latency, as client has to calculate target serveridx and filter the request if the serveridx is invalid under server rotation -> extra client-side overhead and cannot send packet immediately
+			+ Solution: we should remove requests of invalid serveridx to reduce client-side overhead
+		- DEPRECATED: use fewer client threads (e.g., 64 client threads) may get better performance
+			+ Reason: fewer client threads means less time to filter requests -> not existing after pre-loading workload
+	* w/o inswitch cache (128 client threads in total + 2 server threads in total)
+		- single bottleneck server thread: 0.09 MOPS
+			+ Issue: single bottleneck server thread w/ inswitch cache only achieve 0.045 MOPS
+			+ Observation: server w/o inswitch cache has much lower wait latency than w/ inswitch cache
+			+ Reason: bottleneck server thread w/o inswitch cache has 5.5M packets, while that w/ inswitch cache only has 0.5M packets -> latter one has larger client-side overhead and hence longer wait latency, which undermines thpt
+			+ Solution: all clients should only generate requests destinated to the one/two partitions
+	* IMPORANT: try different # of client threads to get the best runtime thpt improvement
+		- Use the same # of client threads for FarReach and baselines for fair comparison
++ Pre-load key-value pair destinated to the two server partitions into memory to reduce client-side overhead, such that we can saturate the two server threads
++ IMPORTANT for bottleneck partition
+	* For each physical server, it has the same runtime throughput due to balanced load
+	* For each partition (from client-side perspective), bottleneck must proess the most requests including cache hits and misses
++ Test server rotation for static workload again after reducing client-side overhead (under hash partition)
+	* FarReach w/o inswitch cache (dl16dl15)
+		- Try different # of client threads
+			+ 128 client threads: 0.09 MOPS (1 server thread) -> 0.10 MOPS (2 server threads)
+			+ 256 client threads: 0.10 MOPS (1 server thread) -> 0.11 MOPS (2 server threads)
+				* Reason: load imbalance
+		- Final result under 128 client threads: 1.33 MOPS
+	* DEPRECATED: FarReach w/ inswitch cache (server 95 as bottleneck partition) (dl16dl15)
+		- NOTE: bottleneck partition w/ inswitch cache should still be server 123 instead of server 95
+		- Try different # of client threads
+			+ 128 client threads: 0.12 MOPS (1 server thread) -> 0.17 MOPS (2 server threads)
+				* Issue: only achieve 0.17 MOPS instead of 0.24 MOPS
+				* Reason: server-side wait latency is not as low as w/o inswitch cache
+					- client does not provide sufficient input traffic -> FAIL
+					- one server has a large process latency and others have large wait latency -> OK
+			+ 128 client threads w/o WAL: 0.19 MOPS (1 server thread) -> 0.255 MOPS (2 server threads)
+			+ 256 client threads: 0.12 MOPS (1 server thread) -> 0.17 MOPS (2 server threads)
+			+ 512 client threads w/o WAL: 0.18 MOPS (1 server thread) -> 0.25 MOPS (2 server threads)
+	* FarReach w/ inswitch cache (server 123 as bottleneck partition)
+		- Try different # of client threads
+			+ 512 client threads w/o WAL: 1.86 MOPS (1 server thread) -> 1.4 MOPS (2 server threads)
+				* Conclusion: not related with disk operation
+				* Issue: bottleneck partition has larger wait latency in 2 server threads than in 1 server thread
+				* Reason: rotated server thread has larger non-rocksdb process latency?
+				* Trial: (dl16dl15) change CPU core of dl15 for partition 0 -> FAIL
+				* Trial: (dl15dl16) use dl15 with partition 123 as bottleneck server, dl16 with partition 0 as rotated server -> FAIL
+					- 1.24 MOPS (1 server thread) -> 1.4 MOPS (2 server threads)
+					- NOTE: dl15 needs larger process latency even if with only a single bottleneck server thread
+					- NOTE: under two server threads, dl15 still has larger process latency than dl16
+					- Conclusion: not related with partition -> dl15 is much slower than dl16
+				* Trial: (dl15dl16) reset all threads on CPU cores for server.workers to non-worker cores -> FAIL
+					- NOTE: affinity set success, yet perf not change -> still from 1.2 MOPS (bottltneck) to 1.34 MOPS (bottleneck + rotate) due to large process latency in dl15
+					- NOTE: rocksdb latency is normal, while non-rocksdb latency is much larger -> larger socket overhead -> larger wait latency to receive and larger non-rocksdb process latency to send
+					- Conclusion: not related with CPU contention in dl15
+				* Trial: (dl15dl16) close kubelet by `sudo systemctl stop kubelet.service` -> FAIL
+					- still from 1.2 MOPS to 1.34 MOPS
+				* Trial: (dl13dl16) use dl13 and dl16 as two servers for bottleneck and rotate server respectively -> SUCCESS
+					- from 1.9 MOPS to 2.1 MOPS
+					- NOTE: both dl13 and dl16 always have low wait and process latency
+					- NOTE: 0.2 MOPS improvement is reasonable, as bottleneck partition has 10X workload than rotated partition
+			+ 128 client threads w/ WAL (dl13dl16): 1.3 MOPS (1 server thread) -> 1.33 MOPS (2 server threads)
+			+ 512 client threads w/ WAL (dl13dl16): 1.35 MOPS (1 server thread) -> 1.31 MOPS (2 server threads)
+				* Issue: dl16 has larger process latency and hence dl13 has larger wait latency -> dl16 is slower than dl13 if w/ WAL
+			+ 512 client threads w/ WAL (dl16dl13): 1.26 MOPS (1 server thread) -> 1.31 MOPS (2 server threads)
+				* smaller runtime thpt under 1 server thread -> confirm that dl16 is slower than dl13 if w/ WAL
+				* too many client threads -> client-side CPU contention
+			+ 128 client threads w/ WAL (dl16dl13): 1.22 MOPS (1 server thread) -> 1.32 MOPS (2 server threads)
+	* FarReach w/ inswitch cache under static workload (w/o server rotation)
+		+ 1024/2 client threads + 16/2 server threads under dl13dl16
+			* 0.92 + 1.05 = 1.97 MOPS (better than 1.54 MOPS under dl16dl15) -> OK
++ Code change
+	* switchos should choose reflector devport based on reflector IP
+	* calculate per-server throughput under server rotation
+		- NOTE: not per-partition -> we only focus on server-side throughput (aka cache misses)
++ Test server rotation result under latest setting (dl16-dl13 w/ client-side timeout = 1s)
+	* IMPORTANT NOTES
+		- hardware perf: dl15 << dl16 < dl13
+		- dl16 cannot be used as client, as it has only 24 CPU cores, which could incur significant client-side overhead
+		- dl15 cannot be used as server, as it is much slower than other servers (not disk/CPU issue; maybe socket/NIC issue)
+		- Conclusion
+			+ Using too slow machine for bottleneck partition will undermine absolute thpt
+			+ Using too slow machine for rotate partition will incur wrong result, as rotation partition will become real bottleneck due to hardware perf difference
+			+ We must use machines with similar perf as servers, and use slightly slower one for bottleneck partition to avoid wrong result
+			+ Too many client threads does not mean larger performance due to client-side overhead
+		- LATEST setting: we use dl11/dl15 as clients, and dl16/dl13 as servers; we use 128/2 client threads;
+	* FarReach w/ inswitch cache (128 partitions): 19.3 MOPS (w/ rare timeouts) / 20.73 MOPS (w/o timeout)
+		- Sometimes dl15 will not send packet immediately, which incurs low system throughput -> we should avoid such abnormal result
+			* Each server has one long wait latency, while with normal rocksdb and non-rocksdb process latency
+			* Each client has one long process latency, while with normal send and wait latency
+		- Test abnormal results (thpt of 2 server threads < that of 1 server thread) manually
+			* Reason: rare timeout due to udp unreliable nature -> performance degradation
+			* Solution
+				- (1) use a smaller timeout threshold (NOTE: as each physical server <= 8 server threads, we don't have a very slow disk operation, so a smaller timeout threshold will not incur many false postivies)
+				- (2) use large udp recv bufsize for client.worker.udpsocks if per-physical-client does not have many client threads
+		- Per-server thpt: min 0.074 MOPS, max 0.087 MOPS, avg 0.084 MOPS
+	* FarReach w/o inswitch cache (128 partitions): 1.7 MOPS
+		- Per-server thpt: min 0.0094 MOPS, max 0.98 MOPS, avg 0.14 MOPS
+	* Conlusion
+		- FarReach w/ inswitch cache: 12.2X runtime thpt improvement
+		- FarReach w/ inswitch cache has more balanced perserver thpt than that w/o inswitch cache
 
 ## Run
 
