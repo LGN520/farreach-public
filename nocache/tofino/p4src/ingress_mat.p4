@@ -36,7 +36,7 @@ table hash_for_partition_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 16;
+	size: 8;
 }
 #endif
 
@@ -115,7 +115,6 @@ table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 		ipv4_hdr.dstAddr: lpm;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		forward_normal_response;
@@ -132,13 +131,11 @@ action update_scanreq_to_scanreq_split() {
 	modify_field(op_hdr.optype, SCANREQ_SPLIT);
 	add_header(split_hdr);
 }
-#endif
 
 @pragma stage 4
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 #ifdef RANGE_SUPPORT
@@ -149,3 +146,4 @@ table ig_port_forward_tbl {
 	default_action: nop();
 	size: 8;
 }
+#endif

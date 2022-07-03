@@ -209,6 +209,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         self.client_sids = sids[0:len(self.client_devports)]
         self.server_sids = sids[len(self.client_devports):sidnum]
 
+        # NOTE: data plane communicate with switchos by software-based reflector, which is deployed in one server machine
+        isvalid = False
+        for i in range(server_physical_num):
+            if reflector_ip_for_switchos == server_ip_for_controller_list[i]:
+                isvalid = True
+                self.reflector_ip_for_switch = server_ips[i]
+                self.reflector_mac_for_switch = server_macs[i]
+                self.reflector_devport = self.server_devports[i]
+                self.refletor_sid = self.server_sids[i] # clone to switchos (i.e., reflector at [the first] physical server)
+        if isvalid == False:
+            print "[ERROR] invalid reflector configuration"
+            exit(-1)
+
     ### MAIN ###
 
     def runTest(self):
@@ -305,19 +318,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                       True)
                 self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
-            # NOTE: data plane communicate with switchos by software-based reflector, which is deployed in one server machine
-            isvalid = False
-            for i in range(server_physical_num):
-                if reflector_ip_for_switchos == server_ip_for_controller_list[i]:
-                    isvalid = True
-                    self.reflector_ip_for_switch = server_ips[i]
-                    self.reflector_mac_for_switch = server_macs[i]
-                    self.reflector_devport = self.server_devports[i]
-                    self.refletor_sid = self.server_sids[i] # clone to switchos (i.e., reflector at [the first] physical server)
-            if isvalid == False:
-                print "[ERROR] invalid reflector configuration"
-                exit(-1)
-
             ################################
             ### Normal MAT Configuration ###
             ################################
@@ -371,7 +371,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            if RANGE_SUPPORT:
+            if RANGE_SUPPORT == False:
+                # Table: hash_for_partition_tbl (default: nop; size: 10)
+                print "Configuring hash_for_partition_tbl"
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH]:
+                    matchspec0 = netbufferv4_hash_for_partition_tbl_match_spec_t(\
+                            op_hdr_optype = convert_u16_to_i16(tmpoptype),
+                            meta_need_recirculate = 0)
+                    self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+
+            # Stage 2
+
+            if RANGE_SUPPORT == True:
                 # Table: range_partition_tbl (default: nop; size <= 11 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_server = pow(2, 16) / server_total_logical_num
@@ -404,41 +416,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
             else:
-                # Table: hash_for_partition_tbl (default: nop; size: 10)
-                print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH]:
-                    matchspec0 = netbufferv4_hash_for_partition_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype),
-                            meta_need_recirculate = 0)
-                    self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Stage 2
-
-            if RANGE_SUPPORT:
-                # Table: range_partition_for_scan_endkey_tbl (default: nop; size <= 1 * 128)
-                # TODO: limit max_scannum <= constant (e.g., 32)
-                print "Configuring range_partition_for_scan_endkey_tbl"
-                key_range_per_server = pow(2, 16) / server_total_logical_num
-                endkey_start = 0 # [0, 2^16-1]
-                for global_server_logical_idx in range(server_total_logical_num):
-                    if global_server_logical_idx == server_total_logical_num - 1:
-                        endkey_end = pow(2, 16) - 1
-                    else:
-                        endkey_end = endkey_start + key_range_per_server - 1
-                    # NOTE: both start and end are included
-                    matchspec0 = netbufferv4_range_partition_for_scan_endkey_tbl_match_spec_t(\
-                            op_hdr_optype = SCANREQ,
-                            scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
-                            scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end),
-                            meta_need_recirculate = 0)
-                    last_udpport_plus_one = server_worker_port_start + global_server_logical_idx + 1 # used to calculate max_scannum in data plane
-                    actnspec0 = netbufferv4_range_partition_for_scan_endkey_action_spec_t(last_udpport_plus_one)
-                    # set cur_scanidx = 0; set max_scannum = last_udpport_plus_one - udp_hdr.dstPort (first_udpport)
-                    self.client.range_partition_for_scan_endkey_tbl_table_add_with_range_partition_for_scan_endkey(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                    endkey_start = endkey_end + 1
-            else:
                 # Table: hash_partition_tbl (default: nop; size <= 10 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_server = switch_partition_count / server_total_logical_num
@@ -470,6 +447,32 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.client.hash_partition_tbl_table_add_with_hash_partition(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         hash_start = hash_end + 1
+
+            # Stage 3
+
+            if RANGE_SUPPORT == True:
+                # Table: range_partition_for_scan_endkey_tbl (default: nop; size <= 1 * 128)
+                # TODO: limit max_scannum <= constant (e.g., 32)
+                print "Configuring range_partition_for_scan_endkey_tbl"
+                key_range_per_server = pow(2, 16) / server_total_logical_num
+                endkey_start = 0 # [0, 2^16-1]
+                for global_server_logical_idx in range(server_total_logical_num):
+                    if global_server_logical_idx == server_total_logical_num - 1:
+                        endkey_end = pow(2, 16) - 1
+                    else:
+                        endkey_end = endkey_start + key_range_per_server - 1
+                    # NOTE: both start and end are included
+                    matchspec0 = netbufferv4_range_partition_for_scan_endkey_tbl_match_spec_t(\
+                            op_hdr_optype = SCANREQ,
+                            scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
+                            scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end),
+                            meta_need_recirculate = 0)
+                    last_udpport_plus_one = server_worker_port_start + global_server_logical_idx + 1 # used to calculate max_scannum in data plane
+                    actnspec0 = netbufferv4_range_partition_for_scan_endkey_action_spec_t(last_udpport_plus_one)
+                    # set cur_scanidx = 0; set max_scannum = last_udpport_plus_one - udp_hdr.dstPort (first_udpport)
+                    self.client.range_partition_for_scan_endkey_tbl_table_add_with_range_partition_for_scan_endkey(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                    endkey_start = endkey_end + 1
 
             # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
             print "Leave cache_lookup_tbl managed by controller in runtime"

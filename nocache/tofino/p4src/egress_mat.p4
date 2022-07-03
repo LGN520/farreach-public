@@ -104,7 +104,7 @@ table eg_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 8192;
+	size: 32;
 }
 #endif
 
@@ -144,7 +144,7 @@ table update_ipmac_srcport_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 256;
+	size: 128;
 }
 
 // stage 4
@@ -168,12 +168,11 @@ action update_pktlen(udplen, iplen) {
 table update_pktlen_tbl {
 	reads {
 		op_hdr.optype: exact;
-		vallen_hdr.vallen: range;
 	}
 	actions {
 		update_pktlen;
 		nop;
 	}
 	default_action: nop(); // not change udp_hdr.hdrlen (GETREQ/GETREQ_POP/GETREQ_NLATEST)
-	size: 256;
+	size: 4;
 }
