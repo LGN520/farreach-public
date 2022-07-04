@@ -119,6 +119,7 @@ header_type stat_t {
 	fields {
 		stat: 8;
 		nodeidx_foreval: 16; // cache hit: 0xFFFF; cache miss: [0, servernum-1]
+		padding: 8;
 	}
 }
 

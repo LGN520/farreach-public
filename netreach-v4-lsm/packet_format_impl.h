@@ -302,7 +302,7 @@ uint16_t GetResponse<key_t, val_t>::nodeidx_foreval() const {
 template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() { // unused
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t);
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -322,8 +322,9 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	begin += sizeof(bool);
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
-	return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(bool) + sizeof(uint16_t);
-	//begin += sizeof(uint16_t);
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
+	return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 	//memset(begin, 0, DEBUG_BYTES);
 	//return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(bool) + DEBUG_BYTES;
 }
@@ -344,6 +345,8 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	begin += sizeof(bool);
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
 }
 
 // PutResponse (value must be any size)
@@ -373,7 +376,7 @@ uint16_t PutResponse<key_t>::nodeidx_foreval() const {
 template<class key_t>
 uint32_t PutResponse<key_t>::size() {
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(bool) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t);
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t>
@@ -391,8 +394,9 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	begin += sizeof(bool);
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
-	return tmp_typesize + tmp_keysize + tmp_shadowtypesize + sizeof(bool) + sizeof(uint16_t);
-	//begin += sizeof(uint16_t);
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
+	return tmp_typesize + tmp_keysize + tmp_shadowtypesize + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 	//memset(begin, 0, DEBUG_BYTES);
 	//return tmp_typesize + tmp_keysize + tmp_shadowtypesize + sizeof(bool) + DEBUG_BYTES;
 }
@@ -411,6 +415,8 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	begin += sizeof(bool);
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
 }
 
 // DelResponse
@@ -440,7 +446,7 @@ uint16_t DelResponse<key_t>::nodeidx_foreval() const {
 template<class key_t>
 uint32_t DelResponse<key_t>::size() {
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(bool) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t);
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t>
@@ -458,8 +464,9 @@ uint32_t DelResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	begin += sizeof(bool);
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
-	return tmp_typesize + tmp_keysize + tmp_shadowtypesize + sizeof(bool) + sizeof(uint16_t);
-	//begin += sizeof(uint16_t);
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
+	return tmp_typesize + tmp_keysize + tmp_shadowtypesize + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 	//memset(begin, 0, DEBUG_BYTES);
 	//return tmp_typesize + tmp_keysize + tmp_shadowtypesize + sizeof(bool) + DEBUG_BYTES;
 }
@@ -478,6 +485,8 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	begin += sizeof(bool);
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
 }
 
 // ScanResponseSplit
@@ -760,8 +769,9 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::serialize(char * const data, uint32
 	begin += sizeof(bool);
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
-	return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
-	//begin += sizeof(uint16_t);
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
+	return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 	//memset(begin, 0, DEBUG_BYTES);
 	//return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + DEBUG_BYTES;
 }
@@ -779,7 +789,7 @@ uint16_t GetResponseLatestSeq<key_t, val_t>::nodeidx_foreval() const {
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeq<key_t, val_t>::size() { // unused
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -829,7 +839,7 @@ bool GetResponseLatestSeqInswitchCase1<key_t, val_t>::stat() const {
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::size() { // unused
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(bool) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + CLONE_BYTES;
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES + CLONE_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -857,8 +867,9 @@ uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::serialize(char * const
 	begin += sizeof(bool); // stat_hdr.stat
 	memset(begin, 0, sizeof(uint16_t)); // stat_hdr.nodeidx_foreval
 	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
 	memset(begin, 0, CLONE_BYTES); // clone_hdr
-	return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + CLONE_BYTES;
+	return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES + CLONE_BYTES;
 	//begin += CLONE_BYTES;
 	//memset(begin, 0, DEBUG_BYTES);
 	//return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + CLONE_BYTES + DEBUG_BYTES;
@@ -886,6 +897,7 @@ void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * d
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 	begin += sizeof(bool); // stat_hdr.stat
 	//begin += sizeof(uint16_t); // stat_hdr.nodeidx_foreval
+	//begin += STAT_PADDING_BYTES; // stat_hdr.padding
 	//begin += CLONE_BYTES; // clone_hdr
 }
 
@@ -1651,7 +1663,7 @@ bool CacheEvictLoaddataInswitchAck<key_t, val_t>::stat() const {
 
 template<class key_t, class val_t>
 uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -1672,6 +1684,7 @@ void CacheEvictLoaddataInswitchAck<key_t, val_t>::deserialize(const char * data,
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 	begin += sizeof(bool); // stat_hdr.stat
 	//begin += sizeof(uint16_t); // stat_hdr.nodeidx_foreval
+	//begin += STAT_PADDING_BYTES; // stat_hdr.padding
 }
 
 template<class key_t, class val_t>
@@ -1706,7 +1719,7 @@ LoadsnapshotdataInswitchAck<key_t, val_t>::LoadsnapshotdataInswitchAck(const cha
 
 template<class key_t, class val_t>
 uint32_t LoadsnapshotdataInswitchAck<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t);
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -1731,6 +1744,7 @@ void LoadsnapshotdataInswitchAck<key_t, val_t>::deserialize(const char * data, u
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
 	begin += sizeof(bool); // stat_hdr.stat
 	//begin += sizeof(uint16_t); // stat_hdr.nodeidx_foreval
+	//begin += STAT_PADDING_BYTES; // stat_hdr.padding
 }
 
 // SetvalidInswitch

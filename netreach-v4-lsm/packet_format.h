@@ -10,7 +10,7 @@
 #include "dynamic_array.h"
 
 // mask for other_hdr
-#define VALID_MASK 0x01
+//#define VALID_MASK 0x01
 
 // # of bytes before idx in inswitch_hdr
 #define INSWITCH_PREV_BYTES 14
@@ -20,6 +20,9 @@
 
 // # of bytes before cur_scanidx&max_scannum in split_hdr
 #define SPLIT_PREV_BYTES 3
+
+// # of padding bytes in stat_hdr
+#define STAT_PADDING_BYTES 1
 
 // # of bytes in debug_hdr
 //#define DEBUG_BYTES 1
