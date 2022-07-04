@@ -519,8 +519,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: update_pktlen_tbl (default: nop; 1)
             if RANGE_SUPPORT == True:
                 print "Configuring update_pktlen_tbl"
-                scanreqsplit_udplen = 47
-                scanreqsplit_iplen = 67
+                scanreqsplit_udplen = 49
+                scanreqsplit_iplen = 69
                 matchspec0 = nocache_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=SCANREQ_SPLIT)
                 actnspec0 = nocache_update_pktlen_action_spec_t(scanreqsplit_udplen, scanreqsplit_iplen)

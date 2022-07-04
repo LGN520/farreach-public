@@ -743,7 +743,7 @@ action update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_an
 	modify_field(op_hdr.optype, LOADSNAPSHOTDATA_INSWITCH_ACK);
 	modify_field(udp_hdr.dstPort, reflector_port);
 	modify_field(shadowtype_hdr.shadowtype, LOADSNAPSHOTDATA_INSWITCH_ACK);
-	modify_field(stat_hdr.stat, 1);
+	modify_field(stat_hdr.stat, stat);
 
 	// NOTE: we add/remove vallen and value headers in add_remove_value_header_tbl
 	add_header(seq_hdr);
@@ -965,9 +965,9 @@ action update_seq_pktlen() {
  
 // SCANREQ_SPLIT
 action update_scanreqsplit_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 16(endkey) + 5(split_hdr)
-	modify_field(udp_hdr.hdrlen, 47);
-	modify_field(ipv4_hdr.totalLen, 67);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 16(endkey) + 7(split_hdr)
+	modify_field(udp_hdr.hdrlen, 49);
+	modify_field(ipv4_hdr.totalLen, 69);
 }
  
 // CACHE_EVICT_LOADFREQ_INSWITCH_ACK

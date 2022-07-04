@@ -1239,8 +1239,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             stat_iplen = 51
             seq_udplen = 32
             seq_iplen = 52
-            scanreqsplit_udplen = 47
-            scanreqsplit_iplen = 67
+            scanreqsplit_udplen = 49
+            scanreqsplit_iplen = 69
             frequency_udplen = 30
             frequency_iplen = 50
             matchspec0 = netbufferv4_update_pktlen_tbl_match_spec_t(\

@@ -230,12 +230,12 @@ inline void parse_ini(const char* config_file) {
 	server_total_logical_num = ini.get_server_total_logical_num();
 	server_total_logical_num_for_rotation = ini.get_server_total_logical_num_for_rotation();
 
-	if (workload_mode == 0) { // static workload
+	/*if (workload_mode == 0) { // static workload
 #ifndef SERVER_ROTATION
 		printf("[ERROR] you should enable SERVER_ROTATION in helper.h for static workload mode\n");
 		exit(-1);
 #endif
-	}
+	}*/
 
 	printf("workload_name: %s\n", workload_name);
 	COUT_VAR(workload_mode);
