@@ -107,5 +107,4 @@ do
 	#then
 	#	exit
 	#fi
-	exit
 done
