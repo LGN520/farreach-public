@@ -326,18 +326,24 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 0
 
-            # Table: l2_forward_tbl (default: nop; size: 2)
-            #print "Configuring l2_forward_tbl"
-            #matchspec0 = netbufferv4_l2_forward_tbl_match_spec_t(\
-            #        ig_intr_md_ingress_port = self.devPorts[0])
-            #actnspec0 = netbufferv4_l2_forward_action_spec_t(self.devPorts[1])
-            #self.client.l2_forward_tbl_table_add_with_l2_forward(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            #matchspec0 = netbufferv4_l2_forward_tbl_match_spec_t(\
-            #        ig_intr_md_ingress_port = self.devPorts[1])
-            #actnspec0 = netbufferv4_l2_forward_action_spec_t(self.devPorts[0])
-            #self.client.l2_forward_tbl_table_add_with_l2_forward(\
-            #        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            # Table: l2l3_forward_tbl (default: nop; size: client_physical_num+server_physical_num = 4 < 16)
+            print "Configuring l2l3_forward_tbl"
+            for i in range(client_physical_num):
+                matchspec0 = netbufferv4_l2l3_forward_tbl_match_spec_t(\
+                        ethernet_hdr_dstAddr = macAddr_to_string(client_macs[i]),
+                        ipv4_hdr_dstAddr = ipv4Addr_to_i32(client_ips[i]),
+                        ipv4_hdr_dstAddr_prefix_length = 32)
+                actnspec0 = netbufferv4_l2l3_forward_action_spec_t(self.client_devports[i])
+                self.client.l2l3_forward_tbl_table_add_with_l2l3_forward(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for i in range(server_physical_num):
+                matchspec0 = netbufferv4_l2l3_forward_tbl_match_spec_t(\
+                        ethernet_hdr_dstAddr = macAddr_to_string(server_macs[i]),
+                        ipv4_hdr_dstAddr = ipv4Addr_to_i32(server_ips[i]),
+                        ipv4_hdr_dstAddr_prefix_length = 32)
+                actnspec0 = netbufferv4_l2l3_forward_action_spec_t(self.server_devports[i])
+                self.client.l2l3_forward_tbl_table_add_with_l2l3_forward(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             
             # Table: need_recirculate_tbl (default: reset_need_recirculate; size: <=8)
             #print "Configuring need_recirculate_tbl"
@@ -402,18 +408,27 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_need_recirculate = 0)
                         # Forward to the egress pipeline of server
                         server_physical_idx = -1
+                        local_server_logical_idx = -1
                         for tmp_server_physical_idx in range(server_physical_num):
-                            if global_server_logical_idx in server_logical_idxes_list[tmp_server_physical_idx]:
-                                server_physical_idx = tmp_server_physical_idx
-                                break
+                            for tmp_local_server_logical_idx in range(len(server_logical_idxes_list[tmp_server_physical_idx])):
+                                if global_server_logical_idx == server_logical_idxes_list[tmp_server_physical_idx][tmp_local_server_logical_idx]:
+                                    server_physical_idx = tmp_server_physical_idx
+                                    local_server_logical_idx = tmp_local_server_logical_idx
+                                    break
                         if server_physical_idx == -1:
                             print "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in range_partition_tbl".format(global_server_logical_idx)
                         else:
-                            udp_dstport = server_worker_port_start + global_server_logical_idx
+                            #udp_dstport = server_worker_port_start + global_server_logical_idx
+                            udp_dstport = server_worker_port_start + local_server_logical_idx
                             eport = self.server_devports[server_physical_idx]
-                            actnspec0 = netbufferv4_range_partition_action_spec_t(udp_dstport, eport)
-                            self.client.range_partition_tbl_table_add_with_range_partition(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                            if tmpoptype != SCANREQ:
+                                actnspec0 = netbufferv4_range_partition_action_spec_t(udp_dstport, eport)
+                                self.client.range_partition_tbl_table_add_with_range_partition(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                            else:
+                                actnspec0 = netbufferv4_range_partition_for_scan_action_spec_t(udp_dstport, eport, global_server_logical_idx)
+                                self.client.range_partition_tbl_table_add_with_range_partition_for_scan(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
             else:
                 # Table: hash_partition_tbl (default: nop; size <= 10 * 128)
@@ -467,8 +482,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
                             scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end),
                             meta_need_recirculate = 0)
-                    last_udpport_plus_one = server_worker_port_start + global_server_logical_idx + 1 # used to calculate max_scannum in data plane
-                    actnspec0 = netbufferv4_range_partition_for_scan_endkey_action_spec_t(last_udpport_plus_one)
+                    #last_udpport_plus_one = server_worker_port_start + global_server_logical_idx + 1 # used to calculate max_scannum in data plane
+                    #actnspec0 = netbufferv4_range_partition_for_scan_endkey_action_spec_t(last_udpport_plus_one)
+                    end_globalserveridx_plus_one = global_server_logical_idx + 1 # used to calculate max_scannum in data plane
+                    actnspec0 = netbufferv4_range_partition_for_scan_endkey_action_spec_t(end_globalserveridx_plus_one)
                     # set cur_scanidx = 0; set max_scannum = last_udpport_plus_one - udp_hdr.dstPort (first_udpport)
                     self.client.range_partition_for_scan_endkey_tbl_table_add_with_range_partition_for_scan_endkey(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
@@ -625,17 +642,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 #for clone_src in [NOT_CLONED, CLONED_FROM_EGRESS]:
                 for is_clone in [0, 1]:
                     for global_server_logical_idx in range(server_total_logical_num):
-                        dstport = server_worker_port_start + global_server_logical_idx
+                        #dstport = server_worker_port_start + global_server_logical_idx
                         matchspec0 = netbufferv4_process_scanreq_split_tbl_match_spec_t(\
                                 op_hdr_optype = SCANREQ_SPLIT,
-                                udp_hdr_dstPort = dstport,
+                                #udp_hdr_dstPort = dstport,
+                                split_hdr_globalserveridx = global_server_logical_idx,
                                 split_hdr_is_clone = is_clone)
                                 #eg_intr_md_from_parser_aux_clone_src = clone_src)
                         #if clone_src == NOT_CLONED:
                         if is_clone == 0:
-                            # get server logical idx for dstport + 1 (aka global_server_logical_idx + 1)
+                            ## get server logical idx for dstport + 1 (aka global_server_logical_idx + 1)
+                            # get server logical idx for split_hdr.globalserveridx + 1 (next SCANREQ_SPLIT)
                             tmpidx = global_server_logical_idx + 1
-                            if global_server_logical_idx >= server_total_logical_num - 1:
+                            if global_server_logical_idx >= server_total_logical_num - 1: # NOTE: we do not check tmpidx here
                                 # max_scannum must be 1 -> is_last_scansplit must be 1 -> direct forward SCANREQ_SPLIT without cloning (meta.server_sid is not used in eg_port_forward_tbl)
                                 tmpidx = server_total_logical_num - 1
                             # get server sid for dstport + 1 (aka global_server_logical_idx + 1)
@@ -653,23 +672,39 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                         #elif clone_src == CLONED_FROM_EGRESS:
                         elif is_clone == 1:
-                            # get server logical idx for dstport + 2 (aka global_server_logical_idx + 2)
-                            tmpidx = global_server_logical_idx + 2
-                            if global_server_logical_idx >= server_total_logical_num - 2:
-                                # dstport == the last second logical server -> current pkt must be cloned to the last logical server -> is_last_scansplit must be 1 -> direct forward SCANREQ_SPLIT without cloning (meta.server_sid is not used in eg_port_forward_tbl)
-                                # actually dstport cannot be the last logical server, as the pkt to the last logical server will not clone any packet
+                            ## get server logical idx for dstport + 2 (aka global_server_logical_idx + 2)
+                            #tmpidx = global_server_logical_idx + 2
+                            #if global_server_logical_idx >= server_total_logical_num - 2: # NOTE: we do not check tmpidx here
+                                ## dstport == the last second logical server -> current pkt must be cloned to the last logical server -> is_last_scansplit must be 1 -> direct forward SCANREQ_SPLIT without cloning (meta.server_sid is not used in eg_port_forward_tbl)
+                                ## actually dstport cannot be the last logical server, as the pkt to the last logical server will not clone any packet
+                                #tmpidx = server_total_logical_num - 1
+
+                            # get server logical idx for split_hdr.globalserveridx + 1 (NOTE: we increase split_hdr.globalserveridx in eg_port_forward_tbl as split_hdr.cur_scanidx)
+                            tmpidx = global_server_logical_idx + 1
+                            if global_server_logical_idx >= server_total_logical_num - 1: # NOTE: we do not check tmpidx here
+                                # split_hdr.globalserveridx == the last logical server -> current pkt must be cloned to the last logical server -> is_last_scansplit must be 1 -> direct forward SCANREQ_SPLIT without cloning (meta.server_sid is not used in eg_port_forward_tbl)
                                 tmpidx = server_total_logical_num - 1
-                            # get server sid for dstport + 2 (aka global_server_logical_idx + 2)
-                            server_physical_idx = -1
+
+                            # get udp.dstport for global_server_logical_idx (serveridx of current SCANREQ_SPLIT)
+                            current_local_server_logical_idx = -1
+                            for tmp_server_physical_idx in range(server_physical_num):
+                                for tmp_local_server_logical_idx in range(len(server_logical_idxes_list[tmp_server_physical_idx])):
+                                    if global_server_logical_idx == server_logical_idxes_list[tmp_server_physical_idx][tmp_local_server_logical_idx]:
+                                        current_local_server_logical_idx = tmp_local_server_logical_idx
+                                        break
+                            ## get server sid for dstport + 2 (aka global_server_logical_idx + 2)
+                            # get server sid for global_server_logical_idx + 1 (next SCANREQ_SPLIT)
+                            next_server_physical_idx = -1
                             for tmp_server_physical_idx in range(server_physical_num):
                                 if tmpidx in server_logical_idxes_list[tmp_server_physical_idx]:
-                                    server_physical_idx = tmp_server_physical_idx
+                                    next_server_physical_idx = tmp_server_physical_idx
                                     break
-                            if server_physical_idx == -1:
+                            if current_local_server_logical_idx == -1 or next_server_physical_idx == -1:
                                 print "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in process_scanreq_split_tbl".format(global_server_logical_idx)
                             else:
-                                tmp_server_sid = self.server_sids[server_physical_idx]
-                                actnspec0 = netbufferv4_process_cloned_scanreq_split_action_spec_t(tmp_server_sid)
+                                tmp_udpport = server_worker_port_start + current_local_server_logical_idx
+                                tmp_server_sid = self.server_sids[next_server_physical_idx]
+                                actnspec0 = netbufferv4_process_cloned_scanreq_split_action_spec_t(tmp_udpport, tmp_server_sid)
                                 self.client.process_scanreq_split_tbl_table_add_with_process_cloned_scanreq_split(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 

@@ -130,6 +130,10 @@ int main(int argc, char **argv) {
 		else {
 			create_udpsock(client_udpsock_list[local_client_logical_idx], true, "remote_client", CLIENT_SOCKET_TIMEOUT_SECS, 0, UDP_DEFAULT_RCVBUFSIZE); // enable timeout for client-side retry if pktloss
 		}
+		// bind client.worker udp socket into a specific port to avoid from overlapping with reserved ports for server.workers
+		sockaddr_in tmp_client_worker_addr;
+		set_sockaddr(tmp_client_worker_addr, htonl(INADDR_ANY), client_worker_port_start + local_client_logical_idx);
+		bind(client_udpsock_list[local_client_logical_idx], (struct sockaddr*)&tmp_client_worker_addr, sizeof(tmp_client_worker_addr));
 	}
 
 	run_benchmark();

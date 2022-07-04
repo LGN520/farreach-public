@@ -5,7 +5,7 @@
 
 // Uncomment it if support range query, or comment it otherwise
 // Change netbufferv4.p4, common.py, and helper.h accordingly
-//#define RANGE_SUPPORT
+#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
@@ -178,9 +178,9 @@
 control ingress {
 
 	// Stage 0
-	/*if (!valid(op_hdr)) {
-		apply(l2_forward_tbl); // forward non-udp packet
-	}*/
+	if (not valid(op_hdr)) {
+		apply(l2l3_forward_tbl); // forward traditional packet
+	}
 	apply(need_recirculate_tbl); // set meta.need_recirculate
 	apply(set_hot_threshold_tbl); // set inswitch_hdr.hot_threshold
 

@@ -62,6 +62,7 @@ header_type scan_t {
 header_type split_t {
 	fields {
 		is_clone: 8;
+		globalserveridx: 16;
 		cur_scanidx: 16;
 		max_scannum: 16;
 	}

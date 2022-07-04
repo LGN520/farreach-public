@@ -91,6 +91,7 @@ uint32_t server_total_logical_num_for_rotation = 0;
 short client_rotationdataserver_port = 0;
 short client_sendpktserver_port_start = 0;
 short client_rulemapserver_port_start = 0;
+short client_worker_port_start = 0;
 
 // each physical client
 std::vector<uint32_t> client_logical_nums;
@@ -229,6 +230,13 @@ inline void parse_ini(const char* config_file) {
 	server_total_logical_num = ini.get_server_total_logical_num();
 	server_total_logical_num_for_rotation = ini.get_server_total_logical_num_for_rotation();
 
+	if (workload_mode == 0) { // static workload
+#ifndef SERVER_ROTATION
+		printf("[ERROR] you should enable SERVER_ROTATION in helper.h for static workload mode\n");
+		exit(-1);
+#endif
+	}
+
 	printf("workload_name: %s\n", workload_name);
 	COUT_VAR(workload_mode);
 	COUT_VAR(dynamic_periodnum);
@@ -247,9 +255,11 @@ inline void parse_ini(const char* config_file) {
 	client_rotationdataserver_port = ini.get_client_rotationdataserver_port();
 	client_sendpktserver_port_start = ini.get_client_sendpktserver_port_start();
 	client_rulemapserver_port_start = ini.get_client_rulemapserver_port_start();
+	client_worker_port_start = ini.get_client_worker_port_start();
 	COUT_VAR(client_rotationdataserver_port);
 	COUT_VAR(client_sendpktserver_port_start);
 	COUT_VAR(client_rulemapserver_port_start);
+	COUT_VAR(client_worker_port_start);
 	printf("\n");
 
 	// each physical client
@@ -265,7 +275,7 @@ inline void parse_ini(const char* config_file) {
 		client_pipeidxes.push_back(ini.get_client_pipeidx(client_physical_idx));
 		client_ip_for_client0_list.push_back(ini.get_client_ip_for_client0(client_physical_idx));
 
-		printf("client_logical_nums[%d]: %d", client_physical_idx, client_logical_nums[client_physical_idx]);
+		printf("client_logical_nums[%d]: %d\n", client_physical_idx, client_logical_nums[client_physical_idx]);
 		printf("client_ips[%d]: %s\n", client_physical_idx, client_ips[client_physical_idx]);
 		printf("client_macs[%d]: ", client_physical_idx);
 		dump_macaddr(client_macs[client_physical_idx]);

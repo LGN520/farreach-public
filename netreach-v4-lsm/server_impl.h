@@ -71,9 +71,11 @@ void prepare_server() {
 	INVARIANT(db_wrappers != NULL);
 
 	server_worker_udpsock_list = new int[current_server_logical_num];
-	for (size_t i = 0; i < current_server_logical_num; i++) {
-		uint16_t tmp_global_server_logical_idx = server_logical_idxes_list[server_physical_idx][i];
-		prepare_udpserver(server_worker_udpsock_list[i], true, server_worker_port_start + tmp_global_server_logical_idx, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
+	for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
+		uint16_t tmp_global_server_logical_idx = server_logical_idxes_list[server_physical_idx][tmp_local_server_logical_idx];
+		//prepare_udpserver(server_worker_udpsock_list[tmp_local_server_logical_idx], true, server_worker_port_start + tmp_global_server_logical_idx, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
+		prepare_udpserver(server_worker_udpsock_list[tmp_local_server_logical_idx], true, server_worker_port_start + tmp_local_server_logical_idx, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
+		printf("prepare udp socket for server.worker %d-%d on port %d\n", tmp_local_server_logical_idx, tmp_global_server_logical_idx, server_worker_port_start + tmp_local_server_logical_idx);
 	}
 	server_worker_lwpid_list = new int[current_server_logical_num];
 	memset(server_worker_lwpid_list, 0, current_server_logical_num);

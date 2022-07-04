@@ -41,14 +41,26 @@ parser parse_ethernet {
 parser parse_ipv4 {
 	extract(ipv4_hdr);
 	return select(ipv4_hdr.protocol) {
-		PROTOTYPE_UDP: parse_udp;
+		PROTOTYPE_UDP: parse_udp_dstport;
 		default: ingress;
 	}
 }
 
-parser parse_udp {
+parser parse_udp_dstport {
 	extract(udp_hdr);
-	return parse_op;
+	return select(udp_hdr.dstPort) {
+		0x0480 mask 0xFF80: parse_op; // reserve multiple udp port due to server simulation
+		5008: parse_op; // reserve reflector.dp2cpserver_port due to hardware link simulation between switch and switchos
+		default: parse_udp_srcport;
+	}
+}
+
+parser parse_udp_srcport {
+	return select(udp_hdr.srcPort) {
+		0x0480 mask 0xFF80: parse_op; // reserve multiple udp port due to server simulation
+		5009: parse_op; // reserve reflector.cp2dpserver_port due to hardware link simulation between switch and switchos
+		default: ingress; // traditional packet
+	}
 }
 
 // op_hdr -> scan_hdr -> split_hdr -> vallen_hdr -> val_hdr -> shadowtype_hdr -> seq_hdr -> inswitch_hdr -> stat_hdr -> clone_hdr/frequency_hdr/validvalue_hdr

@@ -102,6 +102,9 @@
 control ingress {
 
 	// Stage 0
+	if (not valid(op_hdr)) {
+		apply(l2l3_forward_tbl); // forward traditional packet
+	}
 #ifndef RANGE_SUPPORT
 	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif

@@ -49,22 +49,23 @@ action nop() {}
 
 // Stage 0
 
-/*action l2_forward(eport) {
-	modify_field(eg_intr_md_for_tm.ucast_egress_port, eport);
+action l2l3_forward(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
 @pragma stage 0
-table l2_forward_tbl {
+table l2l3_forward_tbl {
 	reads {
-		ig_intr_md.ingress_port: exact;
+		ethernet_hdr.dstAddr: exact;
+		ipv4_hdr.dstAddr: lpm;
 	}
-	action {
-		l2_forward;
+	actions {
+		l2l3_forward;
 		nop;
 	}
 	default_action: nop();
-	size: 4;
-}*/
+	size: 16;
+}
 
 action set_need_recirculate() {
 	modify_field(meta.need_recirculate, 1);
@@ -148,14 +149,14 @@ table hash_for_partition_tbl {
 // Stage 2
 
 #ifdef RANGE_SUPPORT
-/*action range_partition(udpport, eport, is_wrong_pipeline) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
-}*/
 action range_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+action range_partition_for_scan(udpport, eport, start_globalserveridx) {
+	modify_field(udp_hdr.dstPort, udpport);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	modify_field(split_hdr.globalserveridx, start_globalserveridx);
 }
 @pragma stage 2
 table range_partition_tbl {
@@ -169,6 +170,7 @@ table range_partition_tbl {
 	actions {
 		range_partition;
 		//reset_is_wrong_pipeline;
+		range_partition_for_scan;
 		nop;
 	}
 	//default_action: reset_is_wrong_pipeline();
@@ -253,10 +255,12 @@ table hash_for_cm1_tbl {
 // Stage 3
 
 #ifdef RANGE_SUPPORT
-action range_partition_for_scan_endkey(last_udpport_plus_one) {
+//action range_partition_for_scan_endkey(last_udpport_plus_one) {
+action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
 	modify_field(split_hdr.is_clone, 0);
 	modify_field(split_hdr.cur_scanidx, 0);
-	subtract(split_hdr.max_scannum, last_udpport_plus_one, udp_hdr.dstPort);
+	//subtract(split_hdr.max_scannum, last_udpport_plus_one, udp_hdr.dstPort);
+	subtract(split_hdr.max_scannum, end_globalserveridx_plus_one, split_hdr.globalserveridx);
 }
 
 @pragma stage 3

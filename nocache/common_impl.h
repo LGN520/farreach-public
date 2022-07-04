@@ -91,6 +91,7 @@ uint32_t server_total_logical_num_for_rotation = 0;
 short client_rotationdataserver_port = 0;
 short client_sendpktserver_port_start = 0;
 short client_rulemapserver_port_start = 0;
+short client_worker_port_start = 0;
 
 // each physical client
 std::vector<uint32_t> client_logical_nums;
@@ -254,9 +255,11 @@ inline void parse_ini(const char* config_file) {
 	client_rotationdataserver_port = ini.get_client_rotationdataserver_port();
 	client_sendpktserver_port_start = ini.get_client_sendpktserver_port_start();
 	client_rulemapserver_port_start = ini.get_client_rulemapserver_port_start();
+	client_worker_port_start = ini.get_client_worker_port_start();
 	COUT_VAR(client_rotationdataserver_port);
 	COUT_VAR(client_sendpktserver_port_start);
 	COUT_VAR(client_rulemapserver_port_start);
+	COUT_VAR(client_worker_port_start);
 	printf("\n");
 
 	// each physical client
@@ -274,7 +277,7 @@ inline void parse_ini(const char* config_file) {
 
 		printf("client_logical_nums[%d]: %d\n", client_physical_idx, client_logical_nums[client_physical_idx]);
 		printf("client_ips[%d]: %s\n", client_physical_idx, client_ips[client_physical_idx]);
-		printf("client_macs[%d]: \n", client_physical_idx);
+		printf("client_macs[%d]: ", client_physical_idx);
 		dump_macaddr(client_macs[client_physical_idx]);
 		printf("client_fpports[%d]: %s\n", client_physical_idx, client_fpports[client_physical_idx]);
 		printf("client_pipeidxes[%d]: %d\n", client_physical_idx, client_pipeidxes[client_physical_idx]);

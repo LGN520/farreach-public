@@ -30,13 +30,14 @@ table is_hot_tbl {
 
 #ifdef RANGE_SUPPORT
 action process_scanreq_split(server_sid) {
-	modify_field(meta.server_sid, server_sid); // clone to server for SCANREQ_SPLIT
+	modify_field(meta.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
 	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
 	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
-action process_cloned_scanreq_split(server_sid) {
-	add_to_field(udp_hdr.dstPort, 1);
-	modify_field(meta.server_sid, server_sid);
+action process_cloned_scanreq_split(udpport, server_sid) {
+	//add_to_field(udp_hdr.dstPort, 1);
+	modify_field(udp_hdr.dstPort, udpport); // set udpport for current SCANREQ_SPLIT
+	modify_field(meta.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
 	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
 	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
@@ -48,7 +49,8 @@ action reset_meta_serversid_remainscannum() {
 table process_scanreq_split_tbl {
 	reads {
 		op_hdr.optype: exact;
-		udp_hdr.dstPort: exact;
+		//udp_hdr.dstPort: exact;
+		split_hdr.globalserveridx: exact;
 		//eg_intr_md_from_parser_aux.clone_src: exact; // NOTE: access intrinsic metadata
 		split_hdr.is_clone: exact;
 	}
@@ -692,12 +694,14 @@ action update_delreq_inswitch_to_delreq_seq_case3() {
 action forward_scanreq_split_and_clone(server_sid) {
 	modify_field(split_hdr.is_clone, 1);
 	add_to_field(split_hdr.cur_scanidx, 1);
+	add_to_field(split_hdr.globalserveridx, 1);
 	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
 	clone_egress_pkt_to_egress(server_sid); // clone to server (meta.server_sid)
 }
 action forward_scanreq_split() {
 	modify_field(split_hdr.is_clone, 1);
 	add_to_field(split_hdr.cur_scanidx, 1);
+	add_to_field(split_hdr.globalserveridx, 1);
 	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
 }
 #endif
