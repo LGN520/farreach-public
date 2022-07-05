@@ -18,7 +18,7 @@ void RocksdbWrapper::prepare_rocksdb() {
   // (2) general options
   // NOTE: all rocksdb instances of the process share the same block cache
   rocksdb::BlockBasedTableOptions table_options;
-  table_options.filter_policy = rocksdb::NewBloomFilterPolicy(BLOOMFILTER_BITS_PER_KEY);  
+  table_options.filter_policy = std::shared_ptr<const rocksdb::FilterPolicy>(rocksdb::NewBloomFilterPolicy(BLOOMFILTER_BITS_PER_KEY));
   table_options.block_cache = rocksdb::NewLRUCache(BLOCKCACHE_SIZE, BLOCKCACHE_SHARDBITS); // Block cache with uncompressed blocks: 1GB with 2^4 shards
   table_options.block_size = BLOCK_SIZE;
   rocksdb_options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
@@ -37,7 +37,7 @@ void RocksdbWrapper::prepare_rocksdb() {
   // NOTE: read amplification = number_of_level0_files + number_of_non_empty_levels
   rocksdb_options.level0_file_num_compaction_trigger = LEVEL0_SST_NUM;
   rocksdb_options.target_file_size_base = LEVEL1_SST_SIZE; // single sst size
-  rocksdb_options.max_bytes_for_level_base = LEVEL1_SST_NUM * SST_SIZE;
+  rocksdb_options.max_bytes_for_level_base = LEVEL1_SST_NUM * LEVEL1_SST_SIZE;
   rocksdb_options.max_bytes_for_level_multiplier = LEVEL_TOTALSIZE_MULTIPLIER;
   rocksdb_options.target_file_size_multiplier = LEVEL_SSTSIZE_MULTIPLIER;
   // NOTE: we keep default rocksdb_options.compression_per_level

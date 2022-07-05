@@ -10,6 +10,7 @@
 #include "rocksdb/db.h"
 #include "rocksdb/cache.h"
 #include "rocksdb/table.h"
+#include "rocksdb/filter_policy.h"
 //#include "rocksdb/utilities/transaction.h"
 //#include "rocksdb/utilities/transaction_db.h"
 #include "rocksdb/utilities/checkpoint.h"
