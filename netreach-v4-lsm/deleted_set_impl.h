@@ -166,7 +166,10 @@ void DeletedSet<key_t, seq_t>::load(std::string &path) {
 
 template<class key_t, class seq_t>
 void DeletedSet<key_t, seq_t>::store(std::string &path) {
-	INVARIANT(access(path.c_str(), F_OK) != 0);
+	if (access(path.c_str(), F_OK) != 0) {
+		printf("[ERROR] deletedset snapshot already exist: %s\n", path.c_str());
+		exit(-1);
+	}
 	int fd = open(path.c_str(), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 	INVARIANT(fd != -1);
 

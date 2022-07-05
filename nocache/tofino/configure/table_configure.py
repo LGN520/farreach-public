@@ -354,14 +354,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_hashval_for_partition_end = convert_u16_to_i16(hash_end))
                         # Forward to the egress pipeline of server
                         server_physical_idx = -1
+                        local_server_logical_idx = -1
                         for tmp_server_physical_idx in range(server_physical_num):
-                            if global_server_logical_idx in server_logical_idxes_list[tmp_server_physical_idx]:
-                                server_physical_idx = tmp_server_physical_idx
-                                break
+                            for tmp_local_server_logical_idx in range(len(server_logical_idxes_list[tmp_server_physical_idx])):
+                                if global_server_logical_idx == server_logical_idxes_list[tmp_server_physical_idx][tmp_local_server_logical_idx]:
+                                    server_physical_idx = tmp_server_physical_idx
+                                    local_server_logical_idx = tmp_local_server_logical_idx
+                                    break
                         if server_physical_idx == -1:
                             print "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in hash_partition_tbl".format(global_server_logical_idx)
                         else:
-                            udp_dstport = server_worker_port_start + global_server_logical_idx
+                            #udp_dstport = server_worker_port_start + global_server_logical_idx
+                            udp_dstport = server_worker_port_start + local_server_logical_idx
                             eport = self.server_devports[server_physical_idx]
                             actnspec0 = nocache_hash_partition_action_spec_t(udp_dstport, eport)
                             self.client.hash_partition_tbl_table_add_with_hash_partition(\

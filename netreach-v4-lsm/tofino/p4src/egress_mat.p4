@@ -852,7 +852,7 @@ table eg_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 8192;
+	size: 4096;
 }
 
 // stage 10
