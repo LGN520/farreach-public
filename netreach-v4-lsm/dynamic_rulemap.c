@@ -7,7 +7,7 @@ DynamicRulemap::DynamicRulemap(int periodnum, const char * ruleprefix) {
 	for (int i = 0; i < periodnum; i++) { // 0, 1, ..., 5
 		char tmp_rulefile[256];
 		memset(tmp_rulefile, 0, 256);
-		sprintf(tmp_rulefile, "%s%d", ruleprefix, i+1); // 1, 2, ..., 6
+		sprintf(tmp_rulefile, "%s%d", ruleprefix, i); // 0, 1, 2, ..., 5
 
 		FILE *tmp_rulefd = fopen(tmp_rulefile, "r");
 		INVARIANT(tmp_rulefd != NULL);

@@ -26,25 +26,33 @@
 #include "rocksdb/perf_context.h"
 #endif
 
-// Default configuration of rocksdb
-#define MEMTABLE_SIZE 16 * 1024 * 1024
-#define MIN_IMMUTABLE_FLUSH_NUM 64
-#define MAX_MEMTABLE_IMMUTABLE_NUM 128
+// Default configuration as in rocksdb tuning guide
+// (1) parallism options
 //#define WRITE_PARALLISM 16
-#define SST_SIZE 512 * 1024 * 1024 // 2X
-#define GLOBAL_MAX_FLUSH_THREAD_NUM 12
-#define GLOBAL_MAX_COMPACTION_THREAD_NUM 4
-//#define GLOBAL_LOW_THREADPOOL_SIZE 16
-//#define GLOBAL_HIGH_THREADPOOL_SIZE 16
-#define LEVEL0_SST_NUM 16
+#define GLOBAL_MAX_FLUSH_THREAD_NUM 8
+#define GLOBAL_MAX_COMPACTION_THREAD_NUM 8
+// (2) general options
+#define BLOOMFILTER_BITS_PER_KEY 10 // larger bits per key -> fewer false positives to lookup key yet larger space cost
+#define BLOCKCACHE_SIZE 1 * 1024 * 1024 * 1024 // larger blockcache size -> better read performance yet larger space cost
+#define BLOCKCACHE_SHARDBITS 4 // increase if bottlenecked at blockcache's mutex
+#define TABLECACHE_SHARDBITS 6 // increase if bottlenecked at tablecache's mutex
+#define BLOCK_SIZE 4 * 1024 // larger block size -> smaller memory cost for block metadata, yet worse read performance
+// (3) flushing options
+#define MEMTABLE_SIZE 64 * 1024 * 1024
+#define MAX_MEMTABLE_IMMUTABLE_NUM 5
+#define MIN_IMMUTABLE_FLUSH_NUM 2
+// (4) level-style compaction (NOTE: level1 size should be similar as level0 size)
+#define LEVEL0_SST_NUM 10 // level0 size: MEMTABLE_SIZE * MIN_IMMUTABLE_FLUSH_NUM * LEVEL0_SST_NUM
+#define LEVEL1_SST_SIZE 128 * 1024 * 1024 // sst file size in level1
+#define LEVEL1_SST_NUM 10 // level1 size: SST_SIZE * LEVEL1_SST_NUM
+#define LEVEL_TOTALSIZE_MULTIPLIER 10
+#define LEVEL_SSTSIZE_MULTIPLIER 1
 #define LEVEL_NUM 7
-#define LEVEL1_SST_NUM 16
-#define LEVEL_MULTIPLIER 10
-#define BLOCKCACHE_SIZE 256 * 1024 * 1024 // X
-#define BLOCKCACHE_SHARDBITS 4
+// (5) other options
+#define WAL_BYTES_PER_SYNC 2 * 1024 * 1024 // used to alleviate write slowdown due to OS flushing WAL cache
+// (6) write options
 #define SYNC_WRITE false // flush WAL instead of memtable for each operation
 #define DISABLE_WAL false // disable WAL flush
-#define WAL_BYTES_PER_SYNC 16 * 1024 * 1024 // used to alleviate write slowdown due to OS flushing WAL cache
 
 class RocksdbWrapper {
 
