@@ -183,12 +183,12 @@ void run_benchmark() {
 	//cpu_set_t clientworker_cpuset; // TMPPERFDEBUG
 	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 		client_worker_params[local_client_logical_idx].local_client_logical_idx = local_client_logical_idx;
-		client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map.reserver(10 * 1024 * 1024);
-		client_worker_params[local_client_logical_idx].process_latency_list.reserver(10 * 1024 * 1024);
-		client_worker_params[local_client_logical_idx].send_latency_list.reserver(10 * 1024 * 1024);
+		client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map.clear();
+		client_worker_params[local_client_logical_idx].process_latency_list.reserve(10 * 1024 * 1024);
+		client_worker_params[local_client_logical_idx].send_latency_list.reserve(10 * 1024 * 1024);
 		client_worker_params[local_client_logical_idx].unmatched_cnt = 0;
 		client_worker_params[local_client_logical_idx].timeout_cnt = 0;
-		client_worker_params[local_client_logical_idx].wait_latency_list.reserver(10 * 1024 * 1024);
+		client_worker_params[local_client_logical_idx].wait_latency_list.reserve(10 * 1024 * 1024);
 		ret = pthread_create(&threads[local_client_logical_idx], nullptr, run_client_worker, (void *)&client_worker_params[local_client_logical_idx]);
 		UNUSED(ret);
 		//COUT_THIS("[client] Lanuch client " << local_client_logical_idx)
