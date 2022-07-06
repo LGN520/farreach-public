@@ -24,6 +24,8 @@ struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   uint16_t local_server_logical_idx;
   std::vector<double> process_latency_list;
   std::vector<double> wait_latency_list;
+  std::vector<double> wait_beforerecv_latency_list;
+  std::vector<double> udprecv_latency_list;
   std::vector<double> rocksdb_latency_list;
   std::vector<double> udpsend_latency_list;
 };
@@ -303,28 +305,43 @@ void *run_server_worker(void * param) {
   }
 
   struct timespec process_t1, process_t2, process_t3;
-  struct timespec wait_t1, wait_t2, wait_t3;
+  struct timespec wait_t1, wait_t2, wait_t3, wait_beforerecv_t2, wait_beforerecv_t3;
+  struct timespec udprecv_t1, udprecv_t2, udprecv_t3;
   struct timespec rocksdb_t1, rocksdb_t2, rocksdb_t3;
   struct timespec udpsend_t1, udpsend_t2, udpsend_t3;
   struct timespec statistic_t1, statistic_t2, statistic_t3;
   bool is_first_pkt = true;
   while (transaction_running) {
 
+	if (!is_first_pkt) {
+		CUR_TIME(udprecv_t1);
+
+		CUR_TIME(wait_beforerecv_t2);
+		DELTA_TIME(wait_beforerecv_t2, wait_t1, wait_beforerecv_t3);
+		thread_param.wait_beforerecv_latency_list.push_back(GET_MICROSECOND(wait_beforerecv_t3));
+	}
+
 	bool is_timeout = udprecvfrom(server_worker_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, &client_addr, &client_addrlen, recv_size, "server.worker");
 	if (is_timeout) {
+		if (!is_first_pkt) {
+			printf("timeout\n");
+		}
 		continue; // continue to check transaction_running
 	}
 
-	packet_type_t pkt_type = get_packet_type(buf, recv_size);
-
-	if (!is_first_pkt && pkt_type != packet_type_t::WARMUPREQ && pkt_type != packet_type_t::LOADREQ) {
+	if (!is_first_pkt) {
 		CUR_TIME(wait_t2);
 		DELTA_TIME(wait_t2, wait_t1, wait_t3);
 		thread_param.wait_latency_list.push_back(GET_MICROSECOND(wait_t3));
+
+		CUR_TIME(udprecv_t2);
+		DELTA_TIME(udprecv_t2, udprecv_t1, udprecv_t3);
+		thread_param.udprecv_latency_list.push_back(GET_MICROSECOND(udprecv_t3));
 	}
 
 	CUR_TIME(process_t1);
 
+	packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
 			{
@@ -672,9 +689,6 @@ void *run_server_worker(void * param) {
 	}
 
 	if (likely(pkt_type != packet_type_t::WARMUPREQ && pkt_type != packet_type_t::LOADREQ)) {
-		CUR_TIME(wait_t1);
-		is_first_pkt = false;
-
 		CUR_TIME(process_t2);
 		DELTA_TIME(process_t2, process_t1, process_t3);
 		thread_param.process_latency_list.push_back(GET_MICROSECOND(process_t3));
@@ -684,6 +698,9 @@ void *run_server_worker(void * param) {
 
 		DELTA_TIME(udpsend_t2, udpsend_t1, udpsend_t3);
 		thread_param.udpsend_latency_list.push_back(GET_MICROSECOND(udpsend_t3));
+
+		CUR_TIME(wait_t1);
+		is_first_pkt = false;
 	}
 
   } // end of while(transaction_running)

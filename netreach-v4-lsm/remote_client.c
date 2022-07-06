@@ -84,8 +84,23 @@ void * run_client_worker(void *param); // sender
 void * run_client_sendpktserver(void *param); // sendpktserver (all non-first physical clients wait for the first physical client to start to send packets)
 void * run_client_rulemapserver(void *param); // rulemapserver (all non-first physical clients switch rulemape to simulate key popularity change after receiving command from the first physical client under dynamic workload)
 
+//cpu_set_t nonclientworker_cpuset; // TMPPERFDEBUG
+
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
+
+	// TMPPERFDEBUG
+	/*CPU_ZERO(&nonclientworker_cpuset);
+	for (int i = 32; i < 48; i++) {
+		CPU_SET(i, &nonclientworker_cpuset);
+	}
+	//int ret = sched_setaffinity(0, sizeof(nonclientworker_cpuset), &nonclientworker_cpuset);
+	pthread_t main_thread = pthread_self();
+	int ret = pthread_setaffinity_np(main_thread, sizeof(nonclientworker_cpuset), &nonclientworker_cpuset);
+	if (ret) {
+		printf("[Error] fail to set affinity of client.main; errno: %d\n", errno);
+		exit(-1);
+	}*/
 
 #ifdef SERVER_ROTATION
 	server_total_logical_num_for_client = server_total_logical_num_for_rotation;
@@ -165,17 +180,27 @@ void run_benchmark() {
 	}
 
 	// Launch workers
+	//cpu_set_t clientworker_cpuset; // TMPPERFDEBUG
 	for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 		client_worker_params[local_client_logical_idx].local_client_logical_idx = local_client_logical_idx;
-		client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map.clear();
-		client_worker_params[local_client_logical_idx].process_latency_list.clear();
-		client_worker_params[local_client_logical_idx].send_latency_list.clear();
+		client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map.reserver(10 * 1024 * 1024);
+		client_worker_params[local_client_logical_idx].process_latency_list.reserver(10 * 1024 * 1024);
+		client_worker_params[local_client_logical_idx].send_latency_list.reserver(10 * 1024 * 1024);
 		client_worker_params[local_client_logical_idx].unmatched_cnt = 0;
 		client_worker_params[local_client_logical_idx].timeout_cnt = 0;
-		client_worker_params[local_client_logical_idx].wait_latency_list.clear();
+		client_worker_params[local_client_logical_idx].wait_latency_list.reserver(10 * 1024 * 1024);
 		ret = pthread_create(&threads[local_client_logical_idx], nullptr, run_client_worker, (void *)&client_worker_params[local_client_logical_idx]);
 		UNUSED(ret);
 		//COUT_THIS("[client] Lanuch client " << local_client_logical_idx)
+		
+		// TMPPERFDEBUG
+		/*CPU_ZERO(&clientworker_cpuset);
+		CPU_SET(local_client_logical_idx % 32, &clientworker_cpuset);
+		int ret = pthread_setaffinity_np(threads[local_client_logical_idx], sizeof(clientworker_cpuset), &clientworker_cpuset);
+		if (ret) {
+			printf("[Error] fail to set affinity of client.worker; errno: %d\n", errno);
+			exit(-1);
+		}*/
 	}
 
 	// launch sendpktserver for non-first physical client
@@ -183,6 +208,13 @@ void run_benchmark() {
 	if (client_physical_idx != 0) {
 		ret = pthread_create(&sendpktserver_thread, nullptr, run_client_sendpktserver, nullptr);
 		INVARIANT(ret == 0);
+
+		// TMPPERFDEBUG
+		/*int ret = pthread_setaffinity_np(sendpktserver_thread, sizeof(nonclientworker_cpuset), &nonclientworker_cpuset);
+		if (ret) {
+			printf("[Error] fail to set affinity of client.sendpktserver; errno: %d\n", errno);
+			exit(-1);
+		}*/
 	}
 	
 	// launch rulemapserver for non-first physical client under dynamic workload
@@ -190,6 +222,13 @@ void run_benchmark() {
 	if (client_physical_idx != 0 && workload_mode != 0) {
 		ret = pthread_create(&rulemapserver_thread, nullptr, run_client_rulemapserver, nullptr);
 		INVARIANT(ret == 0);
+
+		// TMPPERFDEBUG
+		/*int ret = pthread_setaffinity_np(rulemapserver_thread, sizeof(nonclientworker_cpuset), &nonclientworker_cpuset);
+		if (ret) {
+			printf("[Error] fail to set affinity of client.rulemapserver; errno: %d\n", errno);
+			exit(-1);
+		}*/
 	}
 
 	COUT_THIS("[client] prepare clients ...");
@@ -307,6 +346,11 @@ void run_benchmark() {
 				persec_perclient_aggcachehitcnts.push_back(cursec_perclient_aggcachehitcnts);
 				persec_perclient_perserver_aggcachemisscnts.push_back(cursec_perclient_perserver_aggcachemisscnts);
 			}
+			// time limitation for debugging
+			if (persec_perclient_aggpktcnts.size() >= dynamic_periodnum * dynamic_periodinterval) {
+				break;
+			}
+
 			usleep(sleep_usecs);
 		}
 	}
@@ -729,7 +773,7 @@ void run_benchmark() {
 
 	/* (6) process and dump dynamic workload statisics */
 
-	if (workload_mode != 0) {
+	//if (workload_mode != 0) {
 		// get persec nodeidx-pktcnt mapping data
 		INVARIANT(seccnt == persec_perclient_nodeidx_aggpktcnt_map.size());
 		std::map<uint16_t, int> persec_nodeidx_pktcnt_map[seccnt];
@@ -792,7 +836,7 @@ void run_benchmark() {
 				}
 			}
 		}
-	}
+	//}
 
 	free_common();
 	COUT_THIS("Finish dumping statistics!")
