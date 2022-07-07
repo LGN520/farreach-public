@@ -3,41 +3,57 @@
 rocksdb::Options RocksdbWrapper::rocksdb_options = rocksdb::Options();
 
 void RocksdbWrapper::prepare_rocksdb() {
-  std::shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache(BLOCKCACHE_SIZE, BLOCKCACHE_SHARDBITS); // 4 MB with 2^4 shards
-  rocksdb::BlockBasedTableOptions table_options;
-  table_options.block_cache = cache;
 
   rocksdb_options.create_if_missing = true; // create database if not exist
   rocksdb_options.enable_blob_files = false; // disable key-value separation
-  //rocksdb_options.allow_os_buffer = false; // Disable OS-cache (Not provided in current version of rocksdb now)
-  rocksdb_options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options)); // Block cache with uncompressed blocks
-  rocksdb_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
-  rocksdb_options.write_buffer_size = MEMTABLE_SIZE; // single memtable size
-  // min # of immutable to flush into disk: if # < min, no flush; if # >= min, flush
-  rocksdb_options.min_write_buffer_number_to_merge = MIN_IMMUTABLE_FLUSH_NUM;
-  // max # of memtable and immutable: if # = max-1, limit write speed; if # = max, forbid write operations
-  rocksdb_options.max_write_buffer_number = MAX_MEMTABLE_IMMUTABLE_NUM;
-  rocksdb_options.target_file_size_base = SST_SIZE; // single sst size
+  
+  // (1) parallism options
+  // NOTE: all rocksdb instances of the process share the same thread pool
   //rocksdb_options.IncreaseParallelism(WRITE_PARALLISM);
   rocksdb_options.max_background_flushes = GLOBAL_MAX_FLUSH_THREAD_NUM; // flush thread number 
-  //rocksdb_options.env->SetBackgroundThreads(GLOBAL_LOW_THREADPOOL_SIZE, rocksdb::Env::Priority::LOW);
+  rocksdb_options.env->SetBackgroundThreads(GLOBAL_MAX_FLUSH_THREAD_NUM, rocksdb::Env::Priority::HIGH);
   rocksdb_options.max_background_compactions = GLOBAL_MAX_COMPACTION_THREAD_NUM; // compaction thread number 
-  //rocksdb_options.env->SetBackgroundThreads(GLOBAL_HIGH_THREADPOOL_SIZE, rocksdb::Env::Priority::HIGH);
-  rocksdb_options.level0_file_num_compaction_trigger = LEVEL0_SST_NUM; // sst number in level0
+  rocksdb_options.env->SetBackgroundThreads(GLOBAL_MAX_COMPACTION_THREAD_NUM, rocksdb::Env::Priority::LOW);
+  
+  // (2) general options
+  // NOTE: all rocksdb instances of the process share the same block cache
+  rocksdb::BlockBasedTableOptions table_options;
+  table_options.filter_policy = std::shared_ptr<const rocksdb::FilterPolicy>(rocksdb::NewBloomFilterPolicy(BLOOMFILTER_BITS_PER_KEY));
+  table_options.block_cache = rocksdb::NewLRUCache(BLOCKCACHE_SIZE, BLOCKCACHE_SHARDBITS); // Block cache with uncompressed blocks: 1GB with 2^4 shards
+  table_options.block_size = BLOCK_SIZE;
+  rocksdb_options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
+  //rocksdb_options.allow_os_buffer = false; // Disable OS-cache (Not provided in current version of rocksdb now)
+  rocksdb_options.max_open_files = -1; // always keep all files open
+  rocksdb_options.table_cache_numshardbits = TABLECACHE_SHARDBITS;
+
+  // (3) flushing options
+  rocksdb_options.write_buffer_size = MEMTABLE_SIZE; // single memtable size
+  // max # of memtable and immutable: if # = max-1, limit write speed; if # = max, forbid write operations
+  rocksdb_options.max_write_buffer_number = MAX_MEMTABLE_IMMUTABLE_NUM;
+  // min # of immutable to flush into disk: if # < min, no flush; if # >= min, flush
+  rocksdb_options.min_write_buffer_number_to_merge = MIN_IMMUTABLE_FLUSH_NUM;
+
+  // (4) level-style compaction
+  // NOTE: read amplification = number_of_level0_files + number_of_non_empty_levels
+  rocksdb_options.level0_file_num_compaction_trigger = LEVEL0_SST_NUM;
+  rocksdb_options.target_file_size_base = LEVEL1_SST_SIZE; // single sst size
+  rocksdb_options.max_bytes_for_level_base = LEVEL1_SST_NUM * LEVEL1_SST_SIZE;
+  rocksdb_options.max_bytes_for_level_multiplier = LEVEL_TOTALSIZE_MULTIPLIER;
+  rocksdb_options.target_file_size_multiplier = LEVEL_SSTSIZE_MULTIPLIER;
+  // NOTE: we keep default rocksdb_options.compression_per_level
   rocksdb_options.num_levels = LEVEL_NUM; // level number
-  rocksdb_options.max_bytes_for_level_base = LEVEL1_SST_NUM * SST_SIZE; // byte number in level1
-  rocksdb_options.max_bytes_for_level_multiplier = LEVEL_MULTIPLIER;
+
+  // (5) other options
+  rocksdb_options.compaction_style = rocksdb::kCompactionStyleLevel; // leveled compaction
   rocksdb_options.wal_bytes_per_sync = WAL_BYTES_PER_SYNC;
+  ////rocksdb_options.max_successive_merges = 1000;
+  //rocksdb_options.enable_write_thread_adaptive_yield = true;
+  //rocksdb_options.allow_concurrent_memtable_write = true;
 
 #ifdef DEBUG_ROCKSDB
   //rocksdb_options.statistics = rocksdb::CreateDBStatistics();
   rocksdb_options.stats_dump_period_sec = 1;
 #endif
-
-  //rocksdb_options.max_successive_merges = 1000;
-  
-  rocksdb_options.enable_write_thread_adaptive_yield = true;
-  rocksdb_options.allow_concurrent_memtable_write = true;
 }
 
 RocksdbWrapper::RocksdbWrapper() {

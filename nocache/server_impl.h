@@ -19,10 +19,13 @@
 
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   uint16_t local_server_logical_idx;
+#ifdef DEBUG_SERVER
   std::vector<double> process_latency_list;
   std::vector<double> wait_latency_list;
+  std::vector<double> wait_beforerecv_latency_list;
+  std::vector<double> udprecv_latency_list;
   std::vector<double> rocksdb_latency_list;
-  std::vector<double> udpsend_latency_list;
+#endif
 };
 typedef ServerWorkerParam server_worker_param_t;
 
@@ -134,29 +137,48 @@ void *run_server_worker(void * param) {
   while (!transaction_running) {
   }
 
+#ifdef DEBUG_SERVER
   struct timespec process_t1, process_t2, process_t3;
-  struct timespec wait_t1, wait_t2, wait_t3;
+  struct timespec wait_t1, wait_t2, wait_t3, wait_beforerecv_t2, wait_beforerecv_t3;
+  struct timespec udprecv_t1, udprecv_t2, udprecv_t3;
   struct timespec rocksdb_t1, rocksdb_t2, rocksdb_t3;
-  struct timespec udpsend_t1, udpsend_t2, udpsend_t3;
   struct timespec statistic_t1, statistic_t2, statistic_t3;
+#endif
   bool is_first_pkt = true;
   while (transaction_running) {
 
+#ifdef DEBUG_SERVER
+	if (!is_first_pkt) {
+		CUR_TIME(udprecv_t1);
+
+		CUR_TIME(wait_beforerecv_t2);
+		DELTA_TIME(wait_beforerecv_t2, wait_t1, wait_beforerecv_t3);
+		thread_param.wait_beforerecv_latency_list.push_back(GET_MICROSECOND(wait_beforerecv_t3));
+	}
+#endif
+
 	bool is_timeout = udprecvfrom(server_worker_udpsock_list[local_server_logical_idx], buf, MAX_BUFSIZE, 0, &client_addr, &client_addrlen, recv_size, "server.worker");
 	if (is_timeout) {
+		/*if (!is_first_pkt) {
+			printf("timeout\n");
+		}*/
 		continue; // continue to check transaction_running
 	}
 
-	packet_type_t pkt_type = get_packet_type(buf, recv_size);
-
-	if (!is_first_pkt && pkt_type != packet_type_t::LOADREQ) {
+#ifdef DEBUG_SERVER
+	if (!is_first_pkt) {
 		CUR_TIME(wait_t2);
 		DELTA_TIME(wait_t2, wait_t1, wait_t3);
 		thread_param.wait_latency_list.push_back(GET_MICROSECOND(wait_t3));
+
+		CUR_TIME(udprecv_t2);
+		DELTA_TIME(udprecv_t2, udprecv_t1, udprecv_t3);
+		thread_param.udprecv_latency_list.push_back(GET_MICROSECOND(udprecv_t3));
 	}
-
 	CUR_TIME(process_t1);
+#endif
 
+	packet_type_t pkt_type = get_packet_type(buf, recv_size);
 	switch (pkt_type) {
 		case packet_type_t::GETREQ: 
 			{
@@ -181,19 +203,24 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+
+#ifdef DEBUG_SERVER
 				CUR_TIME(rocksdb_t1);
+#endif
+
 				put_request_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val());
 				UNUSED(tmp_stat);
-				CUR_TIME(rocksdb_t2);
 				//COUT_THIS("[server] stat = " << tmp_stat)
+
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t2);
+#endif
 				
-				CUR_TIME(udpsend_t1);
 				put_response_t rsp(req.key(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-				CUR_TIME(udpsend_t2);
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
@@ -282,9 +309,7 @@ void *run_server_worker(void * param) {
 	}
 
 	if (likely(pkt_type != packet_type_t::LOADREQ)) {
-		CUR_TIME(wait_t1);
-		is_first_pkt = false;
-
+#ifdef DEBUG_SERVER
 		CUR_TIME(process_t2);
 		DELTA_TIME(process_t2, process_t1, process_t3);
 		thread_param.process_latency_list.push_back(GET_MICROSECOND(process_t3));
@@ -292,8 +317,9 @@ void *run_server_worker(void * param) {
 		DELTA_TIME(rocksdb_t2, rocksdb_t1, rocksdb_t3);
 		thread_param.rocksdb_latency_list.push_back(GET_MICROSECOND(rocksdb_t3));
 
-		DELTA_TIME(udpsend_t2, udpsend_t1, udpsend_t3);
-		thread_param.udpsend_latency_list.push_back(GET_MICROSECOND(udpsend_t3));
+		CUR_TIME(wait_t1);
+#endif
+		is_first_pkt = false;
 	}
 
   } // end of while(transaction_running)

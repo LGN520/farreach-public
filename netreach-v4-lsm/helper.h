@@ -113,9 +113,9 @@ static inline void dump_macaddr(uint8_t *macaddr) {
 /***** Debuging *****/
 
 //#define DEBUG_SNAPSHOT
-#define DEBUG_PERSEC
-#define DEBUG_ROCKSDB
-#define DEBUG_SERVER
+//#define DEBUG_PERSEC
+//#define DEBUG_ROCKSDB
+//#define DEBUG_SERVER
 
 // 1: assert
 // 0: ignore assert

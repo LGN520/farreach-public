@@ -33,7 +33,7 @@ recover/controller_get_snapshotid
 recover/server_recover
 *.txt
 warmup_client
-loadfinish_client
+preparefinish_client
 !results/*
 !results/*/*
 !results/*/*/*

@@ -127,6 +127,7 @@ const char *controller_ip_for_switchos = nullptr;
 short controller_popserver_port_start = -1;
 short controller_evictserver_port = -1;
 uint32_t controller_snapshot_period = 0; // ms
+short controller_warmupfinishserver_port = -1;
 
 // switch
 uint32_t switch_partition_count;
@@ -356,12 +357,14 @@ inline void parse_ini(const char* config_file) {
 	controller_popserver_port_start = ini.get_controller_popserver_port_start();
 	controller_evictserver_port = ini.get_controller_evictserver_port();
 	controller_snapshot_period = ini.get_controller_snapshot_period();
+	controller_warmupfinishserver_port = ini.get_controller_warmupfinishserver_port();
 
 	printf("controller ip for server: %s\n", controller_ip_for_server);
 	printf("controller ip for switchos: %s\n", controller_ip_for_switchos);
 	COUT_VAR(controller_popserver_port_start);
 	COUT_VAR(controller_evictserver_port);
 	COUT_VAR(controller_snapshot_period);
+	COUT_VAR(controller_warmupfinishserver_port);
 	printf("\n");
 	
 	// switch

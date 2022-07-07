@@ -112,6 +112,8 @@ controller_popserver_port_start=5555
 controller_evictserver_port=5002
 ; unit: ms
 controller_snapshot_period=10000
+; a single port
+controller_warmupfinishserver_port=5010
 
 [switch]
 ; hash partition range / virtual partition num

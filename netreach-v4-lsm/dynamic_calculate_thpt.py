@@ -51,13 +51,19 @@ with open(resultpath, "r") as f:
             #print(switch_thpt, persec_pktsentcnt_list[j])
             if switch_thpt < 0:
                 switch_thpt = 0
-            cache_hit_rate = float(switch_thpt) / persec_pktsentcnt_list[j]
+            if persec_pktsentcnt_list[j] == 0:
+                cache_hit_rate = 0
+            else:
+                cache_hit_rate = float(switch_thpt) / persec_pktsentcnt_list[j]
 
             max_server_thpt = -1
             for tmp_server_thpt in server_thpt_list:
                 if max_server_thpt == -1 or max_server_thpt < tmp_server_thpt:
                     max_server_thpt = tmp_server_thpt
-            normalized_thpt = float(persec_pktsentcnt_list[j]) / max_server_thpt
+            if max_server_thpt == 0:
+                normalized_thpt = 0
+            else:
+                normalized_thpt = float(persec_pktsentcnt_list[j]) / max_server_thpt
 
             persec_runtimethpt_list.append(persec_pktsentcnt_list[j] / 1024.0 / 1024.0)
             persec_normalizedthpt_list.append(normalized_thpt)

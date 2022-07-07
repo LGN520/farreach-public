@@ -503,6 +503,15 @@ void *run_controller_snapshotclient(void *param) {
 
 	while (!controller_running) {}
 
+	printf("Wait for notification of preparefinishclient...\n");
+	int warmupfinishserver_udpsock = -1;
+	prepare_udpserver(warmupfinishserver_udpsock, false, controller_warmupfinishserver_port, "controller.warmupfinishserver");
+	char warmupfinishbuf[256];
+	int warmupfinish_recvsize = 0;
+	udprecvfrom(warmupfinishserver_udpsock, warmupfinishbuf, 256, 0, NULL, NULL, warmupfinish_recvsize, "controller.warmupfinishserver");
+	close(warmupfinishserver_udpsock);
+	printf("Start periodic snapshot...\n");
+
 	char sendbuf[MAX_BUFSIZE];
 	char recvbuf[MAX_BUFSIZE];
 	int recvsize = 0;
@@ -512,8 +521,8 @@ void *run_controller_snapshotclient(void *param) {
 		usleep(controller_snapshot_period * 1000); // ms -> us
 
 		// TMPDEBUG
-		printf("Type to send SNAPSHOT_START...\n");
-		getchar();
+		//printf("Type to send SNAPSHOT_START...\n");
+		//getchar();
 
 		CUR_TIME(snapshot_t1);
 

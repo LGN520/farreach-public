@@ -444,6 +444,15 @@ uint32_t IniparserWrapper::get_controller_snapshot_period() {
 	return uint32_t(tmp);
 }
 
+short IniparserWrapper::get_controller_warmupfinishserver_port() {
+	int tmp = iniparser_getint(ini, "controller:controller_warmupfinishserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [controller:controller_warmupfinishserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 // Switch
 
 uint32_t IniparserWrapper::get_switch_partition_count() {

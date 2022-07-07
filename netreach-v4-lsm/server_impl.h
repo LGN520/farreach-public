@@ -310,7 +310,6 @@ void *run_server_worker(void * param) {
   struct timespec wait_t1, wait_t2, wait_t3, wait_beforerecv_t2, wait_beforerecv_t3;
   struct timespec udprecv_t1, udprecv_t2, udprecv_t3;
   struct timespec rocksdb_t1, rocksdb_t2, rocksdb_t3;
-  struct timespec udpsend_t1, udpsend_t2, udpsend_t3;
   struct timespec statistic_t1, statistic_t2, statistic_t3;
 #endif
   bool is_first_pkt = true;

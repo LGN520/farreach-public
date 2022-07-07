@@ -68,6 +68,7 @@ class IniparserWrapper {
 		short get_controller_popserver_port_start();
 		short get_controller_evictserver_port();
 		uint32_t get_controller_snapshot_period();
+		short get_controller_warmupfinishserver_port();
 
 		// switch
 		uint32_t get_switch_partition_count();

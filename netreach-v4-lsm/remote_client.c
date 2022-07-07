@@ -347,9 +347,9 @@ void run_benchmark() {
 				persec_perclient_perserver_aggcachemisscnts.push_back(cursec_perclient_perserver_aggcachemisscnts);
 			}
 			// time limitation for debugging
-			if (persec_perclient_aggpktcnts.size() >= dynamic_periodnum * dynamic_periodinterval) {
+			/*if (persec_perclient_aggpktcnts.size() >= dynamic_periodnum * dynamic_periodinterval) {
 				break;
-			}
+			}*/
 
 			usleep(sleep_usecs);
 		}
@@ -773,7 +773,7 @@ void run_benchmark() {
 
 	/* (6) process and dump dynamic workload statisics */
 
-	//if (workload_mode != 0) {
+	if (workload_mode != 0) {
 		// get persec nodeidx-pktcnt mapping data
 		INVARIANT(seccnt == persec_perclient_nodeidx_aggpktcnt_map.size());
 		std::map<uint16_t, int> persec_nodeidx_pktcnt_map[seccnt];
@@ -836,7 +836,7 @@ void run_benchmark() {
 				}
 			}
 		}
-	//}
+	}
 
 	free_common();
 	COUT_THIS("Finish dumping statistics!")

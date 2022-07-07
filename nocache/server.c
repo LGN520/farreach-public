@@ -124,10 +124,13 @@ void transaction_main() {
 	}
 	for (uint16_t worker_i = 0; worker_i < current_server_logical_num; worker_i++) {
 		server_worker_params[worker_i].local_server_logical_idx = worker_i;
-		server_worker_params[worker_i].process_latency_list.clear();
-		server_worker_params[worker_i].wait_latency_list.clear();
-		server_worker_params[worker_i].rocksdb_latency_list.clear();
-		server_worker_params[worker_i].udpsend_latency_list.clear();
+#ifdef DEBUG_SERVER
+		server_worker_params[worker_i].process_latency_list.reserve(100 * 1024 * 1024);
+		server_worker_params[worker_i].wait_latency_list.reserve(100 * 1024 * 1024);
+		server_worker_params[worker_i].wait_beforerecv_latency_list.reserve(100 * 1024 * 1024);
+		server_worker_params[worker_i].udprecv_latency_list.reserve(100 * 1024 * 1024);
+		server_worker_params[worker_i].rocksdb_latency_list.reserve(100 * 1024 * 1024);
+#endif
 		ret = pthread_create(&worker_threads[worker_i], nullptr, run_server_worker, (void *)&server_worker_params[worker_i]);
 		if (ret) {
 		  COUT_N_EXIT("Error of launching some server.worker:" << ret);
@@ -169,15 +172,22 @@ void transaction_main() {
 	std::vector<std::vector<int>> persec_perserver_aggpktcnt;
 	while (!killed) {
 		sleep(1);
+#ifdef DEBUG_SERVER
+#ifdef DEBUG_PERSEC
 		std::vector<int> cursec_perserver_aggpktcnt(current_server_logical_num);
 		for (size_t i = 0; i < current_server_logical_num; i++) {
 			cursec_perserver_aggpktcnt[i] = server_worker_params[i].process_latency_list.size();
 		}
 		persec_perserver_aggpktcnt.push_back(cursec_perserver_aggpktcnt);
+#endif
+#endif
 	}
+
 	transaction_running = false;
 
 	/* Processing Statistics */
+
+#ifdef DEBUG_SERVER
 
 #ifdef DEBUG_PERSEC
 	// dump per-sec statistics
@@ -203,6 +213,8 @@ void transaction_main() {
 		printf("\n");
 
 		std::vector<double> cursec_wait_latency_list;
+		std::vector<double> cursec_wait_beforerecv_latency_list;
+		std::vector<double> cursec_udprecv_latency_list;
 		std::vector<double> cursec_process_latency_list;
 		std::vector<double> cursec_rocksdb_latency_list;
 		std::vector<double> cursec_udpsend_latency_list;
@@ -212,27 +224,32 @@ void transaction_main() {
 			int endidx = persec_perserver_aggpktcnt[i][j];
 			std::vector<double> cursec_curserver_wait_latency_list(server_worker_params[j].wait_latency_list.begin() + startidx, server_worker_params[j].wait_latency_list.begin() + endidx);
 			cursec_wait_latency_list.insert(cursec_wait_latency_list.end(), cursec_curserver_wait_latency_list.begin(), cursec_curserver_wait_latency_list.end());
+			std::vector<double> cursec_curserver_wait_beforerecv_latency_list(server_worker_params[j].wait_beforerecv_latency_list.begin() + startidx, server_worker_params[j].wait_beforerecv_latency_list.begin() + endidx);
+			cursec_wait_beforerecv_latency_list.insert(cursec_wait_beforerecv_latency_list.end(), cursec_curserver_wait_beforerecv_latency_list.begin(), cursec_curserver_wait_beforerecv_latency_list.end());
+			std::vector<double> cursec_curserver_udprecv_latency_list(server_worker_params[j].udprecv_latency_list.begin() + startidx, server_worker_params[j].udprecv_latency_list.begin() + endidx);
+			cursec_udprecv_latency_list.insert(cursec_udprecv_latency_list.end(), cursec_curserver_udprecv_latency_list.begin(), cursec_curserver_udprecv_latency_list.end());
 			std::vector<double> cursec_curserver_process_latency_list(server_worker_params[j].process_latency_list.begin() + startidx, server_worker_params[j].process_latency_list.begin() + endidx);
 			cursec_process_latency_list.insert(cursec_process_latency_list.end(), cursec_curserver_process_latency_list.begin(), cursec_curserver_process_latency_list.end());
 			std::vector<double> cursec_curserver_rocksdb_latency_list(server_worker_params[j].rocksdb_latency_list.begin() + startidx, server_worker_params[j].rocksdb_latency_list.begin() + endidx);
 			cursec_rocksdb_latency_list.insert(cursec_rocksdb_latency_list.end(), cursec_curserver_rocksdb_latency_list.begin(), cursec_curserver_rocksdb_latency_list.end());
-			std::vector<double> cursec_curserver_udpsend_latency_list(server_worker_params[j].udpsend_latency_list.begin() + startidx, server_worker_params[j].udpsend_latency_list.begin() + endidx);
-			cursec_udpsend_latency_list.insert(cursec_udpsend_latency_list.end(), cursec_curserver_udpsend_latency_list.begin(), cursec_curserver_udpsend_latency_list.end());
 
 			std::string tmplabel;
 			GET_STRING(tmplabel, "wait_latency_list server "<<j);
 			dump_latency(cursec_curserver_wait_latency_list, tmplabel);
+			GET_STRING(tmplabel, "wait_beforerecv_latency_list server "<<j);
+			dump_latency(cursec_curserver_wait_beforerecv_latency_list, tmplabel);
+			GET_STRING(tmplabel, "udprecv_latency_list server "<<j);
+			dump_latency(cursec_curserver_udprecv_latency_list, tmplabel);
 			GET_STRING(tmplabel, "process_latency_list server "<<j);
 			dump_latency(cursec_curserver_process_latency_list, tmplabel);
 			GET_STRING(tmplabel, "rocksdb_latency_list server "<<j);
 			dump_latency(cursec_curserver_rocksdb_latency_list, tmplabel);
-			GET_STRING(tmplabel, "udpsend_latency_list server "<<j);
-			dump_latency(cursec_curserver_udpsend_latency_list, tmplabel);
 		}
 		dump_latency(cursec_wait_latency_list, "wait_latency_list overall");
+		dump_latency(cursec_wait_beforerecv_latency_list, "wait_beforerecv_latency_list overall");
+		dump_latency(cursec_udprecv_latency_list, "udprecv_latency_list overall");
 		dump_latency(cursec_process_latency_list, "process_latency_list overall");
 		dump_latency(cursec_rocksdb_latency_list, "rocksdb_latency_list overall");
-		dump_latency(cursec_udpsend_latency_list, "udpsend_latency_list overall");
 		printf("\n");
 	}
 #endif
@@ -274,6 +291,31 @@ void transaction_main() {
 		worker_avg_wait_latency_list[i] = tmp_avg_wait_latency;
 	}
 	dump_latency(worker_avg_wait_latency_list, "worker_avg_wait_latency_list");
+
+	// dump wait_beforerecv latency
+	printf("\nwait_beforerecv latency:\n");
+	std::vector<double> worker_wait_beforerecv_latency_list;
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		printf("[server %d]\n", i);
+		std::string tmp_label;
+		GET_STRING(tmp_label, "worker_wait_beforerecv_latency_list " << i);
+		dump_latency(server_worker_params[i].wait_beforerecv_latency_list, tmp_label);
+
+		worker_wait_beforerecv_latency_list.insert(worker_wait_beforerecv_latency_list.end(), server_worker_params[i].wait_beforerecv_latency_list.begin(), server_worker_params[i].wait_beforerecv_latency_list.end());
+	}
+	printf("[overall]\n");
+	dump_latency(worker_wait_beforerecv_latency_list, "worker_wait_beforerecv_latency_list overall");
+	printf("\n");
+	std::vector<double> worker_avg_wait_beforerecv_latency_list(current_server_logical_num);
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		double tmp_avg_wait_beforerecv_latency = 0.0;
+		for (size_t j = 0; j < server_worker_params[i].wait_beforerecv_latency_list.size(); j++) {
+			tmp_avg_wait_beforerecv_latency += server_worker_params[i].wait_beforerecv_latency_list[j];
+		}
+		tmp_avg_wait_beforerecv_latency /= server_worker_params[i].wait_beforerecv_latency_list.size();
+		worker_avg_wait_beforerecv_latency_list[i] = tmp_avg_wait_beforerecv_latency;
+	}
+	dump_latency(worker_avg_wait_beforerecv_latency_list, "worker_avg_wait_beforerecv_latency_list");
 
 	// dump process latency
 	printf("\nprocess latency:\n");
@@ -324,31 +366,7 @@ void transaction_main() {
 		worker_avg_rocksdb_latency_list[i] = tmp_avg_rocksdb_latency;
 	}
 	dump_latency(worker_avg_rocksdb_latency_list, "worker_avg_rocksdb_latency_list");
-
-	// dump udpsend latency
-	printf("\nudpsend latency:\n");
-	std::vector<double> udpsend_latency_list;
-	for (size_t i = 0; i < current_server_logical_num; i++) {
-		printf("[server %d]\n", i);
-		std::string tmp_label;
-		GET_STRING(tmp_label, "udpsend_latency_list " << i);
-		dump_latency(server_worker_params[i].udpsend_latency_list, tmp_label);
-
-		udpsend_latency_list.insert(udpsend_latency_list.end(), server_worker_params[i].udpsend_latency_list.begin(), server_worker_params[i].udpsend_latency_list.end());
-	}
-	printf("[overall]\n");
-	dump_latency(udpsend_latency_list, "udpsend_latency_list overall");
-	printf("\n");
-	std::vector<double> worker_avg_udpsend_latency_list(current_server_logical_num);
-	for (size_t i = 0; i < current_server_logical_num; i++) {
-		double tmp_avg_udpsend_latency = 0.0;
-		for (size_t j = 0; j < server_worker_params[i].udpsend_latency_list.size(); j++) {
-			tmp_avg_udpsend_latency += server_worker_params[i].udpsend_latency_list[j];
-		}
-		tmp_avg_udpsend_latency /= server_worker_params[i].udpsend_latency_list.size();
-		worker_avg_udpsend_latency_list[i] = tmp_avg_udpsend_latency;
-	}
-	dump_latency(worker_avg_udpsend_latency_list, "worker_avg_udpsend_latency_list");
+#endif
 
 	void *status;
 	printf("wait for server.workers\n");
