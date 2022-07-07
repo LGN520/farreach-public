@@ -1657,6 +1657,9 @@
 		+ Metric 2: normalized throughput
 			* We provide normalized throughput to confirm that system throughput can resume quickly and hold until next key popularity change ideally (if no simulate overhead)
 + Pass compilation under range partition and hash partition
++ Add compatibility (see details in [nocache.md](./nocache.md))
+	* Add L2/L3 routing (if op_hdr.valid == false) at the beginning of ingress pipeline to be compatible with traditional network protocols (files: l2l3_forward_tbl in netbufferv4.p4, p4src/ingress_mat.md, configure/table_configure.py) -> sync to NoCache
+	* Make FarReach compatible with traditional network protocols
 
 ## Run
 

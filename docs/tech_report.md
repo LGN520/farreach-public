@@ -70,6 +70,8 @@
 	+ NetReach with UDP-based communication + LSM-based KVS (rocksdb) + YCSB + control-plane-based cache population/eviction
 - [nocache](./nocache.md) (baseline of single switch; copy from netreach-v4-lsm)
 	+ NoCache with UDP-based communication + LSM-based KVS (rocksdb) + YCSB + NO in-switch cache
+- [netcache](./netcache.md) (baseline of single switch; copy from netreach-v4-lsm)
+	+ NetCache with UDP-based communication + LSM-based KVS (rocksdb) + YCSB + write-through in-switch cache
 
 ## Global Configuration
 
