@@ -777,7 +777,7 @@ void *run_server_evictserver(void *param) {
 
 		// make server-side snapshot for CACHE_EVICT_CASE2
 		if (packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2) {
-			printf("CACHE_EVICT_CASE2!\n");
+			//printf("CACHE_EVICT_CASE2!\n");
 			if (!server_issnapshot_list[local_server_logical_idx]) {
 				db_wrappers[local_server_logical_idx].make_snapshot();
 			}

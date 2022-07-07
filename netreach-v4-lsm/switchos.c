@@ -753,7 +753,11 @@ void *run_switchos_popworker(void *param) {
 					}
 
 					setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
-					INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
+					//INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
+					if (unlikely(tmp_setvalid_rsp.key() != tmp_cache_pop_ptr->key())) {
+						printf("invalid key of SETVALID_INSWITCH_ACK %x which should be %x\n", tmp_setvalid_rsp.key().keyhihi, tmp_cache_pop_ptr->key().keyhihi);
+						continue;
+					}
 					break;
 				}
 
@@ -949,18 +953,24 @@ void *run_switchos_snapshotserver(void *param) {
 				}
 
 				// notify to end stale snapshot
+				memory_fence();
 				is_snapshot_end = true;
 				is_snapshot = false;
+				memory_fence();
 				popworker_know_snapshot_end = false;
 				specialcaseserver_know_snapshot_end = false;
+				memory_fence();
 
 				// wait for case2 from popworker and case1 from specialcaseserver (finish using switchos_perpipeline_specialcases_ptr)
 				while (!popworker_know_snapshot_end || !specialcaseserver_know_snapshot_end) {}
 
 				// end stale snapshot (by now popworker/specialcaseserver will not access switchos_perpipeline_specialcases_ptr and backuped metadata)
+				memory_fence();
 				is_snapshot_end = false;
+				memory_fence();
 				popworker_know_snapshot_end = false;
 				specialcaseserver_know_snapshot_end = false;
+				memory_fence();
 
 				INVARIANT(switchos_perpipeline_snapshot_values != NULL && switchos_perpipeline_snapshot_seqs != NULL && switchos_perpipeline_snapshot_stats != NULL);
 				for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
@@ -977,7 +987,6 @@ void *run_switchos_snapshotserver(void *param) {
 					switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] = NULL;
 					switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx] = 0;
 
-
 					// free snapshot data
 					if (switchos_perpipeline_snapshot_values[tmp_pipeidx] != NULL) {
 						delete [] switchos_perpipeline_snapshot_values[tmp_pipeidx];
@@ -993,15 +1002,16 @@ void *run_switchos_snapshotserver(void *param) {
 					}
 				}
 			}
-			else { // the first snapshot
-				INVARIANT(switchos_perpipeline_snapshot_values != NULL && switchos_perpipeline_snapshot_seqs != NULL && switchos_perpipeline_snapshot_stats != NULL);
-				for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
-					INVARIANT(switchos_perpipeline_specialcases_ptr[tmp_pipeidx] == NULL);
-					INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] == NULL && switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] == NULL);
-					INVARIANT(switchos_perpipeline_snapshot_values[tmp_pipeidx] == NULL && switchos_perpipeline_snapshot_seqs[tmp_pipeidx] == NULL && switchos_perpipeline_snapshot_stats[tmp_pipeidx] == NULL);
-				}
-				INVARIANT(is_snapshot == false && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false);
+
+			// verification
+			INVARIANT(switchos_perpipeline_snapshot_values != NULL && switchos_perpipeline_snapshot_seqs != NULL && switchos_perpipeline_snapshot_stats != NULL);
+			for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
+				INVARIANT(switchos_perpipeline_specialcases_ptr[tmp_pipeidx] == NULL);
+				INVARIANT(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx] == NULL && switchos_perpipeline_cached_serveridxarray_backup[tmp_pipeidx] == NULL);
+				INVARIANT(switchos_perpipeline_snapshot_values[tmp_pipeidx] == NULL && switchos_perpipeline_snapshot_seqs[tmp_pipeidx] == NULL && switchos_perpipeline_snapshot_stats[tmp_pipeidx] == NULL);
 			}
+			INVARIANT(is_stop_cachepop == false && popworker_know_stop_cachepop == false);
+			INVARIANT(is_snapshot == false && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false);
 
 			// (2) init for new snapshot
 			
@@ -1015,6 +1025,7 @@ void *run_switchos_snapshotserver(void *param) {
 			CUR_TIME(stop_cachepop_t1);
 			// stop cache population/eviction (stop until we can ensure that snapshot has started aka SNAPSHOT_START)
 			is_stop_cachepop = true;
+			memory_fence();
 
 			// wait until popworker_know_stop_cachepop = true
 			while (!popworker_know_stop_cachepop) {}
@@ -1071,9 +1082,16 @@ void *run_switchos_snapshotserver(void *param) {
 			CUR_TIME(enable_singlepath_t2);
 
 			// enable special case processing and resume cache population/eviction
-			INVARIANT(is_snapshot == false && is_stop_cachepop == true && popworker_know_stop_cachepop == true);
+			//INVARIANT(is_snapshot == false && is_stop_cachepop == true && popworker_know_stop_cachepop == true);
+			if (unlikely(!(is_snapshot == false && is_stop_cachepop == true && popworker_know_stop_cachepop == true))) {
+				COUT_VAR(is_snapshot);
+				COUT_VAR(is_stop_cachepop);
+				COUT_VAR(popworker_know_stop_cachepop);
+				exit(-1);
+			}
 			is_snapshot = true; // notify popworker and specialcaseserver to collect special cases
 			is_stop_cachepop = false; // resume cache population/eviction
+			memory_fence();
 			popworker_know_stop_cachepop = false;
 			CUR_TIME(stop_cachepop_t2);
 
@@ -1167,15 +1185,24 @@ void *run_switchos_snapshotserver(void *param) {
 			INVARIANT(ptf_recvsize == sizeof(int) && *((int *)ptfbuf) == SWITCHOS_RESET_SNAPSHOT_FLAG_AND_REG_ACK);
 
 			// finish snapshot
-			INVARIANT(is_snapshot == true && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false);
+			//INVARIANT(is_snapshot == true && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false);
+			if (unlikely(!(is_snapshot == true && is_snapshot_end == false && popworker_know_snapshot_end == false && specialcaseserver_know_snapshot_end == false))) {
+				COUT_VAR(is_snapshot);
+				COUT_VAR(is_snapshot_end);
+				COUT_VAR(popworker_know_snapshot_end);
+				COUT_VAR(specialcaseserver_know_snapshot_end);
+				exit(-1);
+			}
 			is_snapshot_end = true;
 			is_snapshot = false;
+			memory_fence();
 
 			// wait for case2 from popworker and case1 from specialcaseserver
 			while (!popworker_know_snapshot_end || !specialcaseserver_know_snapshot_end) {}
 
 			// end snapshot (by now popworker/specialcaseserver will not access switchos_perpipeline_specialcases_ptr and backuped metadata)
 			is_snapshot_end = false;
+			memory_fence();
 			popworker_know_snapshot_end = false;
 			specialcaseserver_know_snapshot_end = false;
 

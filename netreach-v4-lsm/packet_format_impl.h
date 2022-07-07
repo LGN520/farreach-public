@@ -1348,7 +1348,11 @@ template<class key_t>
 CachePopInswitchAck<key_t>::CachePopInswitchAck(const char *data, uint32_t recv_size)
 {
 	this->deserialize(data, recv_size);
-	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_POP_INSWITCH_ACK);
+	//INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::CACHE_POP_INSWITCH_ACK);
+	if (unlikely(static_cast<packet_type_t>(this->_type) != PacketType::CACHE_POP_INSWITCH_ACK)) {
+		printf("[CachePopInswitchAck] invalid packet type: %x\n", this->_type);
+		exit(-1);
+	}
 }
 
 template<class key_t>
