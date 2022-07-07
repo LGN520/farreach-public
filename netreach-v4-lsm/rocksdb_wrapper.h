@@ -40,8 +40,10 @@
 #define BLOCK_SIZE 4 * 1024 // larger block size -> smaller memory cost for block metadata, yet worse read performance
 // (3) flushing options
 #define MEMTABLE_SIZE 128 * 1024 * 1024
-#define MAX_MEMTABLE_IMMUTABLE_NUM 5
-#define MIN_IMMUTABLE_FLUSH_NUM 2
+//#define MAX_MEMTABLE_IMMUTABLE_NUM 5
+//#define MIN_IMMUTABLE_FLUSH_NUM 2
+#define MAX_MEMTABLE_IMMUTABLE_NUM 10
+#define MIN_IMMUTABLE_FLUSH_NUM 4
 //#define MAX_MEMTABLE_IMMUTABLE_NUM 40
 //#define MIN_IMMUTABLE_FLUSH_NUM 16
 // (4) level-style compaction (NOTE: level1 size should be similar as level0 size)
