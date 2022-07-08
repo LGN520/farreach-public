@@ -67,28 +67,6 @@ table l2l3_forward_tbl {
 	size: 16;
 }
 
-action set_need_recirculate() {
-	modify_field(meta.need_recirculate, 1);
-}
-
-action reset_need_recirculate() {
-	modify_field(meta.need_recirculate, 0);
-}
-
-@pragma stage 0
-table need_recirculate_tbl {
-	reads {
-		op_hdr.optype: exact;
-		ig_intr_md.ingress_port: exact;
-	}
-	actions {
-		set_need_recirculate;
-		reset_need_recirculate;
-	}
-	default_action: reset_need_recirculate();
-	size: 8;
-}
-
 action set_hot_threshold(hot_threshold) {
 	modify_field(inswitch_hdr.hot_threshold, hot_threshold);
 }
@@ -102,27 +80,7 @@ table set_hot_threshold_tbl {
 	size: 1;
 }
 
-// Stage 1 (need_recirculate = 1)
-
-action recirculate_pkt(port) {
-	recirculate(port);
-}
-
-@pragma stage 1
-table recirculate_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		recirculate_pkt;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
-// Stage 1 (need_recirculate = 0)
+// Stage 1
 
 /*action reset_is_wrong_pipeline() {
 	modify_field(inswitch_hdr.is_wrong_pipeline, 0);
@@ -135,7 +93,6 @@ action hash_for_partition() {
 table hash_for_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		hash_for_partition;
@@ -165,7 +122,6 @@ table range_partition_tbl {
 		//op_hdr.keyhihi: range;
 		op_hdr.keyhihihi: range;
 		//ig_intr_md.ingress_port: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		range_partition;
@@ -193,7 +149,6 @@ table hash_partition_tbl {
 		op_hdr.optype: exact;
 		meta.hashval_for_partition: range;
 		//ig_intr_md.ingress_port: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		hash_partition;
@@ -224,7 +179,6 @@ table cache_lookup_tbl {
 		//op_hdr.keyhihi: exact;
 		op_hdr.keyhihilo: exact;
 		op_hdr.keyhihihi: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		cached_action;
@@ -242,7 +196,6 @@ action hash_for_cm1() {
 table hash_for_cm1_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		hash_for_cm1;
@@ -269,7 +222,6 @@ table range_partition_for_scan_endkey_tbl {
 		op_hdr.optype: exact;
 		//scan_hdr.keyhihi: range;
 		scan_hdr.keyhihihi: range;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		range_partition_for_scan_endkey;
@@ -288,7 +240,6 @@ action hash_for_cm2() {
 table hash_for_cm2_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		hash_for_cm2;
@@ -306,7 +257,6 @@ action hash_for_seq() {
 table hash_for_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		hash_for_seq;
@@ -326,7 +276,6 @@ action hash_for_cm3() {
 table hash_for_cm3_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		hash_for_cm3;
@@ -334,28 +283,6 @@ table hash_for_cm3_tbl {
 	}
 	default_action: nop();
 	size: 2;
-}
-
-action set_snapshot_flag() {
-	modify_field(inswitch_hdr.snapshot_flag, 1);
-}
-
-action reset_snapshot_flag() {
-	modify_field(inswitch_hdr.snapshot_flag, 0);
-}
-
-@pragma stage 4
-table snapshot_flag_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		set_snapshot_flag;
-		reset_snapshot_flag;
-	}
-	default_action: reset_snapshot_flag();
-	size: 8;
 }
 
 // Stage 5
@@ -368,7 +295,6 @@ action hash_for_cm4() {
 table hash_for_cm4_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		hash_for_cm4;
@@ -396,7 +322,6 @@ table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
 		ig_intr_md.ingress_port: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		set_client_sid;
@@ -410,21 +335,14 @@ action forward_normal_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
-action forward_special_get_response(client_sid) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
-	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding client
-}
-
 @pragma stage 5
 table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 		ipv4_hdr.dstAddr: lpm;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		forward_normal_response;
-		forward_special_get_response;
 		nop;
 	}
 	default_action: nop();
@@ -442,7 +360,6 @@ action sample() {
 table sample_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		sample;
@@ -496,7 +413,6 @@ action update_scanreq_to_scanreq_split() {
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
 	}
 	actions {
 		update_getreq_to_getreq_inswitch;

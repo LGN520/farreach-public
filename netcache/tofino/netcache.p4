@@ -5,7 +5,7 @@
 
 // Uncomment it if support range query, or comment it otherwise
 // Change netcache.p4, common.py, and helper.h accordingly
-//#define RANGE_SUPPORT
+#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
@@ -71,43 +71,6 @@
 #define CACHE_EVICT_LOADFREQ_INSWITCH_ACK 0x0100
 #define SETVALID_INSWITCH_ACK 0x0110
 
-/*
-#define GETREQ 0x00
-#define PUTREQ 0x01
-#define DELREQ 0x02
-#define SCANREQ 0x03
-#define GETRES 0x04
-#define PUTRES 0x05
-#define DELRES 0x06
-#define SCANRES_SPLIT 0x07
-#define GETREQ_INSWITCH 0x08
-#define GETREQ_POP 0x09
-#define GETREQ_NLATEST 0x0a
-#define GETRES_LATEST_SEQ 0x0b
-#define GETRES_LATEST_SEQ_INSWITCH 0x0c
-#define GETRES_LATEST_SEQ_INSWITCH_CASE1 0x0d
-#define GETRES_DELETED_SEQ 0x0e
-#define GETRES_DELETED_SEQ_INSWITCH 0x0f
-#define GETRES_DELETED_SEQ_INSWITCH_CASE1 0x10
-#define PUTREQ_INSWITCH 0x11
-#define PUTREQ_SEQ 0x12
-#define PUTREQ_POP_SEQ 0x13
-#define PUTREQ_SEQ_INSWITCH_CASE1 0x14
-#define PUTREQ_SEQ_CASE3 0x15
-#define PUTREQ_POP_SEQ_CASE3 0x16
-#define DELREQ_INSWITCH 0x17
-#define DELREQ_SEQ 0x18
-#define DELREQ_SEQ_INSWITCH_CASE1 0x19
-#define DELREQ_SEQ_CASE3 0x1a
-#define SCANREQ_SPLIT 0x1b
-#define CACHE_POP 0x1c
-#define CACHE_POP_INSWITCH 0x1d
-#define CACHE_POP_INSWITCH_ACK 0x1e
-#define CACHE_EVICT 0x1f
-#define CACHE_EVICT_ACK 0x20
-#define CACHE_EVICT_CASE2 0x21
-*/
-
 #ifndef DEBUG
 
 // NOTE: limited by 12 stages and 64*4B PHV (not T-PHV) (fields in the same ALU must be in the same PHV group)
@@ -115,7 +78,6 @@
 #define KV_BUCKET_COUNT 32768
 // 64K * 2B counter
 #define CM_BUCKET_COUNT 65536
-//#define HH_THRESHOLD 10
 // 32K * 4B counter
 #define SEQ_BUCKET_COUNT 32768
 
@@ -123,7 +85,6 @@
 
 #define KV_BUCKET_COUNT 1
 #define CM_BUCKET_COUNT 1
-//#define HH_THRESHOLD 1
 #define SEQ_BUCKET_COUNT 1
 
 #endif
@@ -181,15 +142,7 @@ control ingress {
 	if (not valid(op_hdr)) {
 		apply(l2l3_forward_tbl); // forward traditional packet
 	}
-	apply(need_recirculate_tbl); // set meta.need_recirculate
 	apply(set_hot_threshold_tbl); // set inswitch_hdr.hot_threshold
-
-	/* if meta.need_recirculate == 1 */
-
-	// Stage 1
-	apply(recirculate_tbl); // recirculate for atomic snapshot (NOTE: recirculate will collide with modifying egress port)
-
-	/* else if meta.need_recirculate == 0 */
 
 	// Stage 1
 #ifndef RANGE_SUPPORT
@@ -217,7 +170,6 @@ control ingress {
 
 	// Stage 4
 	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
-	apply(snapshot_flag_tbl); // for snapshot (access inswitch_hdr.snapshot_flag)
 
 	// Stage 5
 	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
@@ -251,12 +203,12 @@ control egress {
 	// Stage 2
 	apply(access_latest_tbl);
 	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
+	// TODO: place bloom filter here (rely on is_hot_tbl)
 
 	// Stage 3
 	apply(access_deleted_tbl);
 	apply(update_vallen_tbl);
 	apply(access_savedseq_tbl);
-	apply(access_case1_tbl);
 
 	// Stage 4-7
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3

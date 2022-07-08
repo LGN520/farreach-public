@@ -99,11 +99,10 @@ header_type seq_t {
 header_type inswitch_t {
 	fields {
 		// 32-bit container
-		snapshot_flag: 1;
 		is_cached: 1;
 		is_sampled: 1;
 		client_sid: 10; // clone to client for cache hit; NOTE: clone_e2e sets eg_intr_md_for_mb.mirror_id w/ 10 bits
-		padding: 3;
+		padding: 4;
 		hot_threshold: 16;
 		// 32-bit containers
 		hashval_for_cm1: 16; // at most 64K
@@ -144,7 +143,6 @@ header_type validvalue_t {
 
 header_type metadata_t {
 	fields {
-		need_recirculate: 1;
 #ifndef RANGE_SUPPORT
 		hashval_for_partition: 16; // at most 32K
 #endif
@@ -156,7 +154,6 @@ header_type metadata_t {
 		//validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
-		is_case1: 1;
 		is_lastclone_for_pktloss: 1;
 		access_val_mode: 4; // 0: not access val_reg; 1: get; 2: set_and_get; 3: reset_and_get
 #ifdef RANGE_SUPPORT

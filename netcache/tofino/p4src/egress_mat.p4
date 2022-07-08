@@ -793,8 +793,6 @@ table eg_port_forward_tbl {
 		inswitch_hdr.client_sid: exact;
 		meta.is_lastclone_for_pktloss: exact;
 		//debug_hdr.is_lastclone_for_pktloss: exact;
-		inswitch_hdr.snapshot_flag: exact;
-		meta.is_case1: exact;
 #ifdef RANGE_SUPPORT
 		meta.is_last_scansplit: exact;
 		meta.server_sid: exact;
