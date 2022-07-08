@@ -1660,6 +1660,7 @@
 + Add compatibility (see details in [nocache.md](./nocache.md))
 	* Add L2/L3 routing (if op_hdr.valid == false) at the beginning of ingress pipeline to be compatible with traditional network protocols (files: l2l3_forward_tbl in netbufferv4.p4, p4src/ingress_mat.md, configure/table_configure.py) -> sync to NoCache
 	* Make FarReach compatible with traditional network protocols
++ NOTE: we add judgement of tmp_client_side != 0 for PUTREQ/DELREQ_INSWITCH in eg_port_forward_tbl to reduce TCAM cost
 
 ## Run
 

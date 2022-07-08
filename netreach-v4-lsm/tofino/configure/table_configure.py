@@ -1763,7 +1763,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 pass
                                             # is_lastclone_for_pktloss should be 0 for PUTREQ_INSWITCH
                                             # size: 512*client_physical_num=1024 < 512*8 = 4096
-                                            if is_lastclone_for_pktloss == 0:
+                                            if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0:
                                                 matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = PUTREQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
@@ -1863,7 +1863,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_hot (cm_predicate=1), is_lastclone_for_pktloss should be 0 for DELREQ_INSWITCH
                                             # size: 256*client_physical_num=512 < 256*8=2048
-                                            if is_hot == 0 and is_lastclone_for_pktloss == 0:
+                                            if is_hot == 0 and is_lastclone_for_pktloss == 0 and tmp_client_sid != 0:
                                                 matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = DELREQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
@@ -2428,7 +2428,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     # is_lastclone_for_pktloss should be 0 for PUTREQ_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0
                                                     # size: 512*client_physical_num=1024 < 512*8 = 4096
-                                                    if is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                    if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                             op_hdr_optype = PUTREQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
@@ -2534,7 +2534,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     # is_hot (cm_predicate=1), is_lastclone_for_pktloss should be 0 for DELREQ_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0
                                                     # size: 256*client_physical_num=512 < 256*8=2048
-                                                    if is_hot == 0 and is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                    if is_hot == 0 and is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = netbufferv4_eg_port_forward_tbl_match_spec_t(\
                                                             op_hdr_optype = DELREQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
