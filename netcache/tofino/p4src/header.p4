@@ -135,12 +135,6 @@ header_type frequency_t {
 	}
 }
 
-header_type validvalue_t {
-	fields {
-		validvalue: 8; // used by SETVALID_INSWITCH to set validvalue_reg
-	}
-}
-
 header_type metadata_t {
 	fields {
 #ifndef RANGE_SUPPORT
@@ -151,7 +145,6 @@ header_type metadata_t {
 		cm3_predicate: 4;
 		cm4_predicate: 4;
 		is_hot: 1;
-		//validvalue: 8; // validvalue of the entry
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		is_lastclone_for_pktloss: 1;
@@ -206,7 +199,6 @@ header inswitch_t inswitch_hdr;
 header stat_t stat_hdr;
 header clone_t clone_hdr;
 header frequency_t frequency_hdr;
-header validvalue_t validvalue_hdr;
 metadata metadata_t meta;
 
 //header debug_t debug_hdr;

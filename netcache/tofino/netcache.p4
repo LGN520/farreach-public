@@ -99,14 +99,14 @@
 
 // MAX_SERVER_NUM <= 128
 #define MAX_SERVER_NUM 128
-// RANGE_PARTITION_ENTRY_NUM = 11 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
+// RANGE_PARTITION_ENTRY_NUM = 9 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
 #define RANGE_PARTITION_ENTRY_NUM 2048
 // RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM = 1 * MAX_SERVER_NUM
 #define RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM 128
 // PROCESS_SCANREQ_SPLIT_ENTRY_NUM = 2 * MAX_SERVER_NUM
 #define PROCESS_SCANREQ_SPLIT_ENTRY_NUM 256
-// HASH_PARTITION_ENTRY_NUM = 10 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
-#define HASH_PARTITION_ENTRY_NUM 2048
+// HASH_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
+#define HASH_PARTITION_ENTRY_NUM 1024
 
 // hash partition range
 #define PARTITION_COUNT 32768
@@ -129,7 +129,6 @@
 #include "p4src/regs/deleted.p4"
 #include "p4src/regs/seq.p4"
 #include "p4src/regs/val.p4"
-#include "p4src/regs/case1.p4"
 
 #include "p4src/ingress_mat.p4"
 #include "p4src/egress_mat.p4"
@@ -186,29 +185,28 @@ control ingress {
 control egress {
 
 	// Stage 0
+	apply(access_latest_tbl); // NOTE: latest_reg corresponds to stats.validity in NetCache paper, which will be used to *invalidate* the value by PUT/DELREQ
+	apply(access_seq_tbl);
+	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
+#ifdef RANGE_SUPPORT
+	apply(process_scanreq_split_tbl);
+#endif
+
+	// Stage 1
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);
 	apply(access_cm4_tbl);
 
-	// Stage 1
+	// Stage 2
 	apply(is_hot_tbl);
 	apply(access_cache_frequency_tbl);
-	apply(access_validvalue_tbl);
-	apply(access_seq_tbl);
-#ifdef RANGE_SUPPORT
-	apply(process_scanreq_split_tbl);
-#endif
-
-	// Stage 2
-	apply(access_latest_tbl);
-	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
-	// TODO: place bloom filter here (rely on is_hot_tbl)
+	apply(access_deleted_tbl);
+	apply(access_savedseq_tbl);
 
 	// Stage 3
-	apply(access_deleted_tbl);
 	apply(update_vallen_tbl);
-	apply(access_savedseq_tbl);
+	// TODO: place bloom filter 1-3 here (rely on is_hot_tbl)
 
 	// Stage 4-7
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
@@ -257,7 +255,6 @@ control egress {
 	// Stage 11
 	apply(update_pktlen_tbl); // Update udl_hdr.hdrLen for pkt with variable-length value
 	apply(add_and_remove_value_header_tbl); // Add or remove vallen and val according to optype and vallen
-	apply(drop_tbl); // drop GETRES_LATEST_SEQ_INSWITCH and GETRES_DELETED_SEQ_INSWITCH
 	apply(update_vallo15_tbl);
 	apply(update_valhi15_tbl);
 	apply(update_vallo16_tbl);

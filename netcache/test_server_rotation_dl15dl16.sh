@@ -1,4 +1,4 @@
-DIRNAME="netreach-v4-lsm"
+DIRNAME="netcache"
 
 # NOTE: you need to finish loading phase [+ warmup phase (if w/ inswitch cache)] before running this script
 
@@ -29,8 +29,8 @@ sleep 1s
 
 # TODO: retrieve dl15.bottleneckserver to the state just after loading phase
 echo "retrieve bottleneck partition back to the state after loading phase"
-ssh ssy@dl15 "rm -r /tmp/netreach-v4-lsm/*"
-ssh ssy@dl16 "rm -r /tmp/netreach-v4-lsm/*"
+ssh ssy@dl15 "rm -r /tmp/${DIRNAME}/*"
+ssh ssy@dl16 "rm -r /tmp/${DIRNAME}/*"
 
 echo "prepare and sync config.ini"
 cp configs/config.ini.rotation-transaction1p.dl15dl16 config.tmp
@@ -78,8 +78,8 @@ do
 
 	# TODO: retrieve dl15.bottleneckserver to the state just after loading phase
 	echo "retrieve bottleneck partition back to the state after loading phase"
-	ssh ssy@dl15 "rm -r /tmp/netreach-v4-lsm/*"
-	ssh ssy@dl16 "rm -r /tmp/netreach-v4-lsm/*"
+	ssh ssy@dl15 "rm -r /tmp/${DIRNAME}/*"
+	ssh ssy@dl16 "rm -r /tmp/${DIRNAME}/*"
 
 	echo "prepare and sync config.ini"
 	cp configs/config.ini.rotation-transaction2p.dl15dl16 config.tmp

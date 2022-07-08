@@ -23,19 +23,20 @@ action initialize_cm1_predicate() {
 	modify_field(meta.cm1_predicate, 1); // default: false (1)
 }
 
-@pragma stage 0
+@pragma stage 1
 table access_cm1_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_sampled: exact;
 		inswitch_hdr.is_cached: exact;
+		meta.is_latest: exact;
 	}
 	actions {
 		update_cm1;
 		initialize_cm1_predicate;
 	}
 	default_action: initialize_cm1_predicate();
-	size: 2;
+	size: 4;
 }
 
 register cm2_reg {
@@ -63,19 +64,20 @@ action initialize_cm2_predicate() {
 	modify_field(meta.cm2_predicate, 1); // default: false (1)
 }
 
-@pragma stage 0
+@pragma stage 1
 table access_cm2_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_sampled: exact;
 		inswitch_hdr.is_cached: exact;
+		meta.is_latest: exact;
 	}
 	actions {
 		update_cm2;
 		initialize_cm2_predicate;
 	}
 	default_action: initialize_cm2_predicate();
-	size: 2;
+	size: 4;
 }
 
 register cm3_reg {
@@ -103,19 +105,20 @@ action initialize_cm3_predicate() {
 	modify_field(meta.cm3_predicate, 1); // default: false (1)
 }
 
-@pragma stage 0
+@pragma stage 1
 table access_cm3_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_sampled: exact;
 		inswitch_hdr.is_cached: exact;
+		meta.is_latest: exact;
 	}
 	actions {
 		update_cm3;
 		initialize_cm3_predicate;
 	}
 	default_action: initialize_cm3_predicate();
-	size: 2;
+	size: 4;
 }
 
 register cm4_reg {
@@ -143,17 +146,18 @@ action initialize_cm4_predicate() {
 	modify_field(meta.cm4_predicate, 1); // default: false (1)
 }
 
-@pragma stage 0
+@pragma stage 1
 table access_cm4_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_sampled: exact;
 		inswitch_hdr.is_cached: exact;
+		meta.is_latest: exact;
 	}
 	actions {
 		update_cm4;
 		initialize_cm4_predicate;
 	}
 	default_action: initialize_cm4_predicate();
-	size: 2;
+	size: 4;
 }

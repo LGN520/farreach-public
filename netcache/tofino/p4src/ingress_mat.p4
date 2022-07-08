@@ -376,18 +376,6 @@ action update_getreq_to_getreq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
-action update_getres_latest_seq_to_getres_latest_seq_inswitch() {
-	modify_field(op_hdr.optype, GETRES_LATEST_SEQ_INSWITCH);
-	modify_field(shadowtype_hdr.shadowtype, GETRES_LATEST_SEQ_INSWITCH);
-	add_header(inswitch_hdr);
-}
-
-action update_getres_deleted_seq_to_getres_deleted_seq_inswitch() {
-	modify_field(op_hdr.optype, GETRES_DELETED_SEQ_INSWITCH);
-	modify_field(shadowtype_hdr.shadowtype, GETRES_DELETED_SEQ_INSWITCH);
-	add_header(inswitch_hdr);
-}
-
 action update_putreq_to_putreq_inswitch() {
 	modify_field(op_hdr.optype, PUTREQ_INSWITCH);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_INSWITCH);
@@ -416,8 +404,6 @@ table ig_port_forward_tbl {
 	}
 	actions {
 		update_getreq_to_getreq_inswitch;
-		update_getres_latest_seq_to_getres_latest_seq_inswitch;
-		update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
 		update_putreq_to_putreq_inswitch;
 		update_delreq_to_delreq_inswitch;
 #ifdef RANGE_SUPPORT

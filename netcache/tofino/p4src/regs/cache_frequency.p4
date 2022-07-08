@@ -36,12 +36,13 @@ action reset_cache_frequency() {
 	reset_cache_frequency_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
-@pragma stage 1
+@pragma stage 2
 table access_cache_frequency_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_sampled: exact;
 		inswitch_hdr.is_cached: exact;
+		meta.is_latest: exact;
 	}
 	actions {
 		get_cache_frequency;
@@ -50,5 +51,5 @@ table access_cache_frequency_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 16;
+	size: 32;
 }

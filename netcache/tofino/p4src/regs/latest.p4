@@ -47,12 +47,11 @@ action reset_is_latest() {
 	modify_field(meta.is_latest, 0);
 }
 
-@pragma stage 2
+@pragma stage 0
 table access_latest_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		validvalue_hdr.validvalue: exact;
 	}
 	actions {
 		get_latest;

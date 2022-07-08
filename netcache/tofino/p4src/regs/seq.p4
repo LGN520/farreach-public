@@ -22,7 +22,7 @@ action assign_seq() {
 	assign_seq_alu.execute_stateful_alu(inswitch_hdr.hashval_for_seq);
 }
 
-@pragma stage 1
+@pragma stage 0
 table access_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -70,12 +70,11 @@ action set_and_get_savedseq() {
 	set_and_get_savedseq_alu.execute_stateful_alu(inswitch_hdr.idx);
 }
 
-@pragma stage 3
+@pragma stage 2
 table access_savedseq_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		validvalue_hdr.validvalue: exact;
 		meta.is_latest: exact;
 	}
 	actions {
@@ -84,5 +83,5 @@ table access_savedseq_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 64;
+	size: 8;
 }

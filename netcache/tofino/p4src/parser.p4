@@ -318,7 +318,6 @@ parser parse_inswitch {
 	extract(inswitch_hdr);
 	//return select(op_hdr.optype) {
 	return select(shadowtype_hdr.shadowtype) {
-		SETVALID_INSWITCH: parse_validvalue;
 		8 mask 0x08: parse_stat;
 		default: ingress;
 		//default: parse_debug;
@@ -356,11 +355,6 @@ parser parse_clone {
 parser parse_frequency {
 	extract(frequency_hdr);
 	return ingress; // CACHE_EVICT_LOADFREQ_INSWITCH_ACK
-}
-
-parser parse_validvalue {
-	extract(validvalue_hdr);
-	return ingress; // SETVALID_INSWITCH
 }
 
 /*parser parse_debug {

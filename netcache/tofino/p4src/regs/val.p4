@@ -57,7 +57,6 @@ table update_vallen_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		validvalue_hdr.validvalue: exact;
 		meta.is_latest: exact;
 	}
 	actions {
@@ -120,7 +119,6 @@ table update_vallo1_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -183,7 +181,6 @@ table update_valhi1_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -246,7 +243,6 @@ table update_vallo2_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -309,7 +305,6 @@ table update_valhi2_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -372,7 +367,6 @@ table update_vallo3_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -435,7 +429,6 @@ table update_valhi3_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -498,7 +491,6 @@ table update_vallo4_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -561,7 +553,6 @@ table update_valhi4_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -624,7 +615,6 @@ table update_vallo5_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -687,7 +677,6 @@ table update_valhi5_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -750,7 +739,6 @@ table update_vallo6_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -813,7 +801,6 @@ table update_valhi6_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -876,7 +863,6 @@ table update_vallo7_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -939,7 +925,6 @@ table update_valhi7_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1002,7 +987,6 @@ table update_vallo8_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1065,7 +1049,6 @@ table update_valhi8_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1128,7 +1111,6 @@ table update_vallo9_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1191,7 +1173,6 @@ table update_valhi9_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1254,7 +1235,6 @@ table update_vallo10_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1317,7 +1297,6 @@ table update_valhi10_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1380,7 +1359,6 @@ table update_vallo11_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1443,7 +1421,6 @@ table update_valhi11_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1506,7 +1483,6 @@ table update_vallo12_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1569,7 +1545,6 @@ table update_valhi12_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1632,7 +1607,6 @@ table update_vallo13_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1695,7 +1669,6 @@ table update_valhi13_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1758,7 +1731,6 @@ table update_vallo14_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1821,7 +1793,6 @@ table update_valhi14_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1884,7 +1855,6 @@ table update_vallo15_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -1947,7 +1917,6 @@ table update_valhi15_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -2010,7 +1979,6 @@ table update_vallo16_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}
@@ -2073,7 +2041,6 @@ table update_valhi16_tbl {
 	reads {
 		//op_hdr.optype: exact;
 		//inswitch_hdr.is_cached: exact;
-		//validvalue_hdr.validvalue: exact;
 		//meta.is_latest: exact;
 		meta.access_val_mode: exact;
 	}

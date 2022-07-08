@@ -1,31 +1,22 @@
 /* Ingress Processing (Normal Operation) */
 
-// Stage 1
+// Stage 0
 
-action set_is_hot() {
-	modify_field(meta.is_hot, 1);
-	//modify_field(debug_hdr.is_hot, 1);
+action save_client_udpport() {
+	modify_field(clone_hdr.client_udpport, udp_hdr.srcPort);
 }
 
-action reset_is_hot() {
-	modify_field(meta.is_hot, 0);
-	//modify_field(debug_hdr.is_hot, 0);
-}
-
-@pragma stage 1
-table is_hot_tbl {
+@pragma stage 0
+table save_client_udpport_tbl {
 	reads {
-		meta.cm1_predicate: exact;
-		meta.cm2_predicate: exact;
-		meta.cm3_predicate: exact;
-		meta.cm4_predicate: exact;
+		op_hdr.optype: exact;
 	}
 	actions {
-		set_is_hot;
-		reset_is_hot;
+		save_client_udpport;
+		nop;
 	}
-	default_action: reset_is_hot();
-	size: 1;
+	default_action: nop();
+	size: 4;
 }
 
 #ifdef RANGE_SUPPORT
@@ -45,7 +36,7 @@ action reset_meta_serversid_remainscannum() {
 	modify_field(meta.server_sid, 0);
 	modify_field(meta.remain_scannum, 0);
 }
-@pragma stage 1
+@pragma stage 0
 table process_scanreq_split_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -66,21 +57,30 @@ table process_scanreq_split_tbl {
 
 // Stage 2
 
-action save_client_udpport() {
-	modify_field(clone_hdr.client_udpport, udp_hdr.srcPort);
+action set_is_hot() {
+	modify_field(meta.is_hot, 1);
+	//modify_field(debug_hdr.is_hot, 1);
+}
+
+action reset_is_hot() {
+	modify_field(meta.is_hot, 0);
+	//modify_field(debug_hdr.is_hot, 0);
 }
 
 @pragma stage 2
-table save_client_udpport_tbl {
+table is_hot_tbl {
 	reads {
-		op_hdr.optype: exact;
+		meta.cm1_predicate: exact;
+		meta.cm2_predicate: exact;
+		meta.cm3_predicate: exact;
+		meta.cm4_predicate: exact;
 	}
 	actions {
-		save_client_udpport;
-		nop;
+		set_is_hot;
+		reset_is_hot;
 	}
-	default_action: nop();
-	size: 4;
+	default_action: reset_is_hot();
+	size: 1;
 }
 
 // Stage 8
@@ -786,7 +786,6 @@ table eg_port_forward_tbl {
 		inswitch_hdr.is_cached: exact;
 		meta.is_hot: exact;
 		//debug_hdr.is_hot: exact;
-		validvalue_hdr.validvalue: exact;
 		meta.is_latest: exact;
 		meta.is_deleted: exact;
 		//inswitch_hdr.is_wrong_pipeline: exact;
@@ -1405,27 +1404,4 @@ table add_and_remove_value_header_tbl {
 	}
 	default_action: remove_all();
 	size: 256;
-}
-
-action drop_getres_latest_seq_inswitch() {
-	// NOTE: MATs after drop will not be accessed
-	drop();
-}
-
-action drop_getres_deleted_seq_inswitch() {
-	drop();
-}
-
-@pragma stage 11
-table drop_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		drop_getres_latest_seq_inswitch;
-		drop_getres_deleted_seq_inswitch;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
 }

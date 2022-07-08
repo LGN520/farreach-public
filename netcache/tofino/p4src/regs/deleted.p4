@@ -46,12 +46,11 @@ action reset_is_deleted() {
 	modify_field(meta.is_deleted, 0);
 }
 
-@pragma stage 3
+@pragma stage 2
 table access_deleted_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		validvalue_hdr.validvalue: exact;
 		meta.is_latest: exact;
 	}
 	actions {
@@ -61,5 +60,5 @@ table access_deleted_tbl {
 		reset_is_deleted;
 	}
 	default_action: reset_is_deleted();
-	size: 64;
+	size: 8;
 }
