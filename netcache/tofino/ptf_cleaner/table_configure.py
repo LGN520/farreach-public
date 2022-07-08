@@ -28,7 +28,7 @@ import sys
 import time
 import unittest
 
-from netbufferv4.p4_pd_rpc.ttypes import *
+from netcache.p4_pd_rpc.ttypes import *
 from pltfm_pm_rpc.ttypes import *
 from pal_rpc.ttypes import *
 from ptf import config
@@ -43,12 +43,12 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(this_dir))
 from common import *
 
-flags = netbufferv4_register_flags_t(read_hw_sync=True)
+flags = netcache_register_flags_t(read_hw_sync=True)
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
-        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv4"])
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netcache"])
 
     def setUp(self):
         print '\nSetup'

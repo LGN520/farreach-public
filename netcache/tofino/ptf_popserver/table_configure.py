@@ -28,7 +28,7 @@ import sys
 import time
 import unittest
 
-from netbufferv4.p4_pd_rpc.ttypes import *
+from netcache.p4_pd_rpc.ttypes import *
 from pltfm_pm_rpc.ttypes import *
 from pal_rpc.ttypes import *
 from ptf import config
@@ -46,12 +46,12 @@ from common import *
 switchos_ptf_popserver_udpsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 switchos_ptf_popserver_udpsock.bind(("127.0.0.1", switchos_ptf_popserver_port))
 
-flags = netbufferv4_register_flags_t(read_hw_sync=True)
+flags = netcache_register_flags_t(read_hw_sync=True)
 
 class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         # initialize the thrift data plane
-        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netbufferv4"])
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["netcache"])
 
     def setUp(self):
         print '\nSetup'
@@ -84,7 +84,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     #def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, piptidx):
     def add_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx):
         #print "Add key into cache_lookup_tbl for all pipelines"
-        matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
+        matchspec0 = netcache_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
                 op_hdr_keylohi = convert_u32_to_i32(keylohi),
                 op_hdr_keyhilo = convert_u32_to_i32(keyhilo),
@@ -92,7 +92,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 op_hdr_keyhihilo = convert_u16_to_i16(keyhihilo),
                 op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi),
                 meta_need_recirculate = 0)
-        actnspec0 = netbufferv4_cached_action_action_spec_t(freeidx)
+        actnspec0 = netcache_cached_action_action_spec_t(freeidx)
         self.client.cache_lookup_tbl_table_add_with_cached_action(\
                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
@@ -170,7 +170,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def remove_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi):
         #print "Remove key from cache_lookup_tbl for all pipelines"
-        matchspec0 = netbufferv4_cache_lookup_tbl_match_spec_t(\
+        matchspec0 = netcache_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
                 op_hdr_keylohi = convert_u32_to_i32(keylohi),
                 op_hdr_keyhilo = convert_u32_to_i32(keyhilo),
@@ -178,7 +178,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 op_hdr_keyhihilo = convert_u16_to_i16(keyhihilo),
                 op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi),
                 meta_need_recirculate = 0)
-        #actnspec0 = netbufferv4_cached_action_action_spec_t(evictidx)
+        #actnspec0 = netcache_cached_action_action_spec_t(evictidx)
         self.client.cache_lookup_tbl_table_delete_by_match_spec(\
                 self.sess_hdl, self.dev_tgt, matchspec0)
 
