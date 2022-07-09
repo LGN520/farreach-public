@@ -83,6 +83,31 @@ table is_hot_tbl {
 	size: 1;
 }
 
+// Stage 4
+
+action set_is_report() {
+	modify_field(meta.is_report, 1);
+}
+
+action reset_is_report() {
+	modify_field(meta.is_report, 0);
+}
+
+@pragma stage 4
+table is_report_tbl {
+	reads {
+		meta.is_report1: exact;
+		meta.is_report2: exact;
+		meta.is_report3: exact;
+	}
+	actions {
+		set_is_report;
+		reset_is_report;
+	}
+	default_action: reset_is_report();
+	size: 1;
+}
+
 // Stage 8
 
 #ifdef DEBUG
@@ -331,6 +356,7 @@ table eg_port_forward_tbl {
 		inswitch_hdr.is_cached: exact;
 		meta.is_hot: exact;
 		//debug_hdr.is_hot: exact;
+		meta.is_report: exact; // only work for GETREQ_INSWITCH
 		meta.is_latest: exact;
 		meta.is_deleted: exact;
 		//inswitch_hdr.is_wrong_pipeline: exact;

@@ -102,13 +102,17 @@ header_type inswitch_t {
 		is_cached: 1;
 		is_sampled: 1;
 		client_sid: 10; // clone to client for cache hit; NOTE: clone_e2e sets eg_intr_md_for_mb.mirror_id w/ 10 bits
-		padding: 4;
+		padding1: 4;
 		hot_threshold: 16;
 		// 32-bit containers
 		hashval_for_cm1: 16; // at most 64K
 		hashval_for_cm2: 16; // at most 64K
 		hashval_for_cm3: 16; // at most 64K
 		hashval_for_cm4: 16; // at most 64K
+		hashval_for_bf1: 18; // at most 256K
+		hashval_for_bf2: 18; // at most 256K
+		hashval_for_bf3: 18; // at most 256K
+		padding2: 10;
 		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
 	}
@@ -145,6 +149,10 @@ header_type metadata_t {
 		cm3_predicate: 4;
 		cm4_predicate: 4;
 		is_hot: 1;
+		is_report1: 1;
+		is_report2: 1;
+		is_report3: 1;
+		is_report: 1;
 		is_latest: 1; // if the entry is latest
 		is_deleted: 1; // if the entry is deleted
 		is_lastclone_for_pktloss: 1;

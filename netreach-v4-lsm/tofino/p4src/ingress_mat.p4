@@ -319,7 +319,7 @@ table hash_for_seq_tbl {
 // Stage 4
 
 action hash_for_cm3() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc, CM_BUCKET_COUNT);
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc3, CM_BUCKET_COUNT);
 }
 
 @pragma stage 4
@@ -361,7 +361,7 @@ table snapshot_flag_tbl {
 // Stage 5
 
 action hash_for_cm4() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc, CM_BUCKET_COUNT);
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
 }
 
 @pragma stage 5

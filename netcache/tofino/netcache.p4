@@ -80,12 +80,15 @@
 #define CM_BUCKET_COUNT 65536
 // 32K * 4B counter
 #define SEQ_BUCKET_COUNT 32768
+// 256K * 1b counter
+#define BF_BUCKET_COUNT 262144
 
 #else
 
 #define KV_BUCKET_COUNT 1
 #define CM_BUCKET_COUNT 1
 #define SEQ_BUCKET_COUNT 1
+#define BF_BUCKET_COUNT 1
 
 #endif
 
@@ -123,6 +126,7 @@
 
 // registers and MATs
 #include "p4src/regs/cm.p4"
+#include "p4src/regs/bf.p4"
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/validvalue.p4"
 #include "p4src/regs/latest.p4"
@@ -166,14 +170,17 @@ control ingress {
 #endif
 	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
+	apply(hash_for_bf1_tbl);
 
 	// Stage 4
 	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
+	apply(hash_for_bf2_tbl);
 
 	// Stage 5
 	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
 	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
+	apply(hash_for_bf3_tbl);
 
 	// Stage 6
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
@@ -206,14 +213,19 @@ control egress {
 
 	// Stage 3
 	apply(update_vallen_tbl);
-	// TODO: place bloom filter 1-3 here (rely on is_hot_tbl)
+	apply(access_bf1_tbl);
+	apply(access_bf2_tbl);
+	apply(access_bf3_tbl);
 
-	// Stage 4-7
+	// Stage 4
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
+	apply(is_report_tbl);
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
 	apply(update_vallo2_tbl);
 	apply(update_valhi2_tbl);
+
+	// Stage 5-7
 	apply(update_vallo3_tbl);
 	apply(update_valhi3_tbl);
 	apply(update_vallo4_tbl);
