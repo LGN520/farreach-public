@@ -34,6 +34,7 @@ with open(resultpath, "r") as f:
 
         persec_runtimethpt_list = []
         persec_normalizedthpt_list = []
+        persec_cachehitrate_list = []
         for j in range(secnum):
             tmpline = f.readline()
             tmpline_elements = tmpline.split(" ")
@@ -55,6 +56,7 @@ with open(resultpath, "r") as f:
                 cache_hit_rate = 0
             else:
                 cache_hit_rate = float(switch_thpt) / persec_pktsentcnt_list[j]
+            persec_cachehitrate_list.append(cache_hit_rate)
 
             max_server_thpt = -1
             for tmp_server_thpt in server_thpt_list:
@@ -70,5 +72,6 @@ with open(resultpath, "r") as f:
             print("sec[{}] cache_hit_rate: {}, runtime_thpt: {} MOPS, normalized_thpt: {}".format(\
                     j, cache_hit_rate, persec_pktsentcnt_list[j] / 1024.0 / 1024.0, normalized_thpt))
 
-        print("per-sec runtime thpts: {}".format(persec_runtimethpt_list))
+        print("per-sec cache hit rates: {}".format(persec_cachehitrate_list))
         print("per-sec normalized thpts: {}".format(persec_normalizedthpt_list))
+        print("per-sec runtime thpts: {}".format(persec_runtimethpt_list))

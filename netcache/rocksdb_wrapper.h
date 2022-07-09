@@ -39,16 +39,16 @@
 #define TABLECACHE_SHARDBITS 6 // increase if bottlenecked at tablecache's mutex
 #define BLOCK_SIZE 4 * 1024 // larger block size -> smaller memory cost for block metadata, yet worse read performance
 // (3) flushing options
-#define MEMTABLE_SIZE 128 * 1024 * 1024
+#define MEMTABLE_SIZE 64 * 1024 * 1024
 // heavy flush
-//#define MAX_MEMTABLE_IMMUTABLE_NUM 5
-//#define MIN_IMMUTABLE_FLUSH_NUM 2
-// less flush
 //#define MAX_MEMTABLE_IMMUTABLE_NUM 10
 //#define MIN_IMMUTABLE_FLUSH_NUM 4
+// less flush
+//#define MAX_MEMTABLE_IMMUTABLE_NUM 20
+//#define MIN_IMMUTABLE_FLUSH_NUM 8
 // no flush
-#define MAX_MEMTABLE_IMMUTABLE_NUM 20
-#define MIN_IMMUTABLE_FLUSH_NUM 8
+#define MAX_MEMTABLE_IMMUTABLE_NUM 40
+#define MIN_IMMUTABLE_FLUSH_NUM 16
 // (4) level-style compaction (NOTE: level1 size should be similar as level0 size)
 #define LEVEL0_SST_NUM 10 // level0 size: MEMTABLE_SIZE * MIN_IMMUTABLE_FLUSH_NUM * LEVEL0_SST_NUM
 #define LEVEL1_SST_SIZE 512 * 1024 * 1024 // sst file size in level1
