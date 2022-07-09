@@ -1816,6 +1816,36 @@ uint32_t SetvalidInswitchAck<key_t>::serialize(char * const data, uint32_t max_s
 	COUT_N_EXIT("Invalid invoke of serialize for SetvalidInswitchAck");
 }
 
+// NetcacheGetRequestPop
+
+template<class key_t>
+NetcacheGetRequestPop<key_t>::NetcacheGetRequestPop(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::NETCACHE_GETREQ_POP);
+}
+
+template<class key_t>
+uint32_t NetcacheGetRequestPop<key_t>::size() {
+	return sizeof(optype_t) + sizeof(key_t) + CLONE_BYTES;
+}
+
+template<class key_t>
+uint32_t NetcacheGetRequestPop<key_t>::serialize(char * const data, uint32_t max_size) {
+	COUT_N_EXIT("Invalid invoke of serialize for NetcacheGetRequestPop");
+}
+
+template<class key_t>
+void NetcacheGetRequestPop<key_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(my_size <= recv_size);
+	const char *begin = data;
+	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
+	//begin += tmp_keysize;
+	//begin += CLONE_BYTES;
+}
+
 
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {

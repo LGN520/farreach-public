@@ -371,6 +371,12 @@ struct netbufferv4_is_hot_tbl_match_spec_t {
   4: required byte meta_cm4_predicate;
 }
 
+struct netbufferv4_l2l3_forward_tbl_match_spec_t {
+  1: required MacAddr_t ethernet_hdr_dstAddr;
+  2: required i32 ipv4_hdr_dstAddr;
+  3: required i16 ipv4_hdr_dstAddr_prefix_length;
+}
+
 struct netbufferv4_lastclone_lastscansplit_tbl_match_spec_t {
   1: required i16 op_hdr_optype;
   2: required byte clone_hdr_clonenum_for_pktloss;
@@ -647,7 +653,7 @@ struct netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_
 struct netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone_action_spec_t {
   1: required i32 action_switchos_sid;
   2: required i16 action_reflector_port;
-  3: required i32 action_stat;
+  3: required byte action_stat;
 }
 
 struct netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone_action_spec_t {
@@ -666,6 +672,10 @@ struct netbufferv4_forward_normal_response_action_spec_t {
 
 struct netbufferv4_forward_special_get_response_action_spec_t {
   1: required i32 action_client_sid;
+}
+
+struct netbufferv4_l2l3_forward_action_spec_t {
+  1: required i16 action_eport;
 }
 
 struct netbufferv4_set_client_sid_action_spec_t {
@@ -729,13 +739,14 @@ union netbufferv4_action_specs_t {
   20: netbufferv4_hash_partition_action_spec_t netbufferv4_hash_partition;
   21: netbufferv4_forward_normal_response_action_spec_t netbufferv4_forward_normal_response;
   22: netbufferv4_forward_special_get_response_action_spec_t netbufferv4_forward_special_get_response;
-  23: netbufferv4_set_client_sid_action_spec_t netbufferv4_set_client_sid;
-  24: netbufferv4_recirculate_pkt_action_spec_t netbufferv4_recirculate_pkt;
-  25: netbufferv4_set_hot_threshold_action_spec_t netbufferv4_set_hot_threshold;
-  26: netbufferv4_update_ipmac_srcport_server2client_action_spec_t netbufferv4_update_ipmac_srcport_server2client;
-  27: netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t netbufferv4_update_ipmac_srcport_switch2switchos;
-  28: netbufferv4_update_dstipmac_client2server_action_spec_t netbufferv4_update_dstipmac_client2server;
-  29: netbufferv4_update_pktlen_action_spec_t netbufferv4_update_pktlen;
+  23: netbufferv4_l2l3_forward_action_spec_t netbufferv4_l2l3_forward;
+  24: netbufferv4_set_client_sid_action_spec_t netbufferv4_set_client_sid;
+  25: netbufferv4_recirculate_pkt_action_spec_t netbufferv4_recirculate_pkt;
+  26: netbufferv4_set_hot_threshold_action_spec_t netbufferv4_set_hot_threshold;
+  27: netbufferv4_update_ipmac_srcport_server2client_action_spec_t netbufferv4_update_ipmac_srcport_server2client;
+  28: netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t netbufferv4_update_ipmac_srcport_switch2switchos;
+  29: netbufferv4_update_dstipmac_client2server_action_spec_t netbufferv4_update_dstipmac_client2server;
+  30: netbufferv4_update_pktlen_action_spec_t netbufferv4_update_pktlen;
 }
 
 struct netbufferv4_action_desc_t {
@@ -969,6 +980,15 @@ struct netbufferv4_ipv4_forward_tbl_entry_desc_t {
 
 struct netbufferv4_is_hot_tbl_entry_desc_t {
   1: required netbufferv4_is_hot_tbl_match_spec_t match_spec;
+  2: required bool has_mbr_hdl;
+  3: required bool has_grp_hdl;
+  4: required MemberHandle_t selector_grp_hdl;
+  5: required MemberHandle_t action_mbr_hdl;
+  6: required netbufferv4_action_desc_t action_desc;
+}
+
+struct netbufferv4_l2l3_forward_tbl_entry_desc_t {
+  1: required netbufferv4_l2l3_forward_tbl_match_spec_t match_spec;
   2: required bool has_mbr_hdl;
   3: required bool has_grp_hdl;
   4: required MemberHandle_t selector_grp_hdl;
@@ -1434,6 +1454,7 @@ service netbufferv4 {
     EntryHandle_t ig_port_forward_tbl_match_spec_to_entry_hdl(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_ig_port_forward_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t ipv4_forward_tbl_match_spec_to_entry_hdl(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_ipv4_forward_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t is_hot_tbl_match_spec_to_entry_hdl(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_is_hot_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
+    EntryHandle_t l2l3_forward_tbl_match_spec_to_entry_hdl(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_l2l3_forward_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t lastclone_lastscansplit_tbl_match_spec_to_entry_hdl(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_lastclone_lastscansplit_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t need_recirculate_tbl_match_spec_to_entry_hdl(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_need_recirculate_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t prepare_for_cachehit_tbl_match_spec_to_entry_hdl(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_prepare_for_cachehit_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
@@ -1592,6 +1613,8 @@ service netbufferv4 {
     EntryHandle_t ipv4_forward_tbl_table_add_with_nop(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_ipv4_forward_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t is_hot_tbl_table_add_with_set_is_hot(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_is_hot_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t is_hot_tbl_table_add_with_reset_is_hot(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_is_hot_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
+    EntryHandle_t l2l3_forward_tbl_table_add_with_l2l3_forward(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_l2l3_forward_tbl_match_spec_t match_spec, 4:netbufferv4_l2l3_forward_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
+    EntryHandle_t l2l3_forward_tbl_table_add_with_nop(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_l2l3_forward_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_lastclone_lastscansplit_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t lastclone_lastscansplit_tbl_table_add_with_reset_is_lastclone_lastscansplit(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_lastclone_lastscansplit_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t need_recirculate_tbl_table_add_with_set_need_recirculate(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_need_recirculate_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
@@ -1965,6 +1988,10 @@ service netbufferv4 {
     void is_hot_tbl_table_modify_with_set_is_hot_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_is_hot_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     void is_hot_tbl_table_modify_with_reset_is_hot(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry) throws (1:InvalidTableOperation ouch),
     void is_hot_tbl_table_modify_with_reset_is_hot_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_is_hot_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
+    void l2l3_forward_tbl_table_modify_with_l2l3_forward(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry, 4:netbufferv4_l2l3_forward_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
+    void l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_l2l3_forward_tbl_match_spec_t match_spec, 4:netbufferv4_l2l3_forward_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
+    void l2l3_forward_tbl_table_modify_with_nop(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry) throws (1:InvalidTableOperation ouch),
+    void l2l3_forward_tbl_table_modify_with_nop_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_l2l3_forward_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     void lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry) throws (1:InvalidTableOperation ouch),
     void lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_lastclone_lastscansplit_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     void lastclone_lastscansplit_tbl_table_modify_with_reset_is_lastclone_lastscansplit(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry) throws (1:InvalidTableOperation ouch),
@@ -2349,6 +2376,9 @@ service netbufferv4 {
     void is_hot_tbl_table_delete(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry) throws (1:InvalidTableOperation ouch),
     void is_hot_tbl_table_delete_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_is_hot_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
 # //::   if action_table_hdl: continue
+    void l2l3_forward_tbl_table_delete(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry) throws (1:InvalidTableOperation ouch),
+    void l2l3_forward_tbl_table_delete_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_l2l3_forward_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
+# //::   if action_table_hdl: continue
     void lastclone_lastscansplit_tbl_table_delete(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry) throws (1:InvalidTableOperation ouch),
     void lastclone_lastscansplit_tbl_table_delete_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_lastclone_lastscansplit_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
 # //::   if action_table_hdl: continue
@@ -2527,6 +2557,8 @@ service netbufferv4 {
     netbufferv4_ipv4_forward_tbl_entry_desc_t ipv4_forward_tbl_table_get_default_entry(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:bool read_from_hw) throws (1:InvalidTableOperation ouch),
     EntryHandle_t is_hot_tbl_table_get_default_entry_handle(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     netbufferv4_is_hot_tbl_entry_desc_t is_hot_tbl_table_get_default_entry(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:bool read_from_hw) throws (1:InvalidTableOperation ouch),
+    EntryHandle_t l2l3_forward_tbl_table_get_default_entry_handle(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
+    netbufferv4_l2l3_forward_tbl_entry_desc_t l2l3_forward_tbl_table_get_default_entry(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:bool read_from_hw) throws (1:InvalidTableOperation ouch),
     EntryHandle_t lastclone_lastscansplit_tbl_table_get_default_entry_handle(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t lastclone_lastscansplit_tbl_table_get_default_entry(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:bool read_from_hw) throws (1:InvalidTableOperation ouch),
     EntryHandle_t need_recirculate_tbl_table_get_default_entry_handle(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
@@ -2666,6 +2698,8 @@ service netbufferv4 {
 # //::   if action_table_hdl: continue
     void is_hot_tbl_table_reset_default_entry(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
 # //::   if action_table_hdl: continue
+    void l2l3_forward_tbl_table_reset_default_entry(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
+# //::   if action_table_hdl: continue
     void lastclone_lastscansplit_tbl_table_reset_default_entry(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
 # //::   if action_table_hdl: continue
     void need_recirculate_tbl_table_reset_default_entry(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
@@ -2777,6 +2811,7 @@ service netbufferv4 {
     i32 ig_port_forward_tbl_get_entry_count(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     i32 ipv4_forward_tbl_get_entry_count(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     i32 is_hot_tbl_get_entry_count(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
+    i32 l2l3_forward_tbl_get_entry_count(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     i32 lastclone_lastscansplit_tbl_get_entry_count(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     i32 need_recirculate_tbl_get_entry_count(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     i32 prepare_for_cachehit_tbl_get_entry_count(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
@@ -2972,6 +3007,12 @@ service netbufferv4 {
     list<i32> is_hot_tbl_get_next_entry_handles(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:EntryHandle_t entry_hdl, 4:i32 n) throws (1:InvalidTableOperation ouch),
 
     netbufferv4_is_hot_tbl_entry_desc_t is_hot_tbl_get_entry(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry_hdl, 4:bool read_from_hw) throws (1:InvalidTableOperation ouch),
+
+    i32 l2l3_forward_tbl_get_first_entry_handle(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
+
+    list<i32> l2l3_forward_tbl_get_next_entry_handles(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:EntryHandle_t entry_hdl, 4:i32 n) throws (1:InvalidTableOperation ouch),
+
+    netbufferv4_l2l3_forward_tbl_entry_desc_t l2l3_forward_tbl_get_entry(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry_hdl, 4:bool read_from_hw) throws (1:InvalidTableOperation ouch),
 
     i32 lastclone_lastscansplit_tbl_get_first_entry_handle(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
 
@@ -3260,6 +3301,7 @@ service netbufferv4 {
     EntryHandle_t ig_port_forward_tbl_set_default_action_nop(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     EntryHandle_t ipv4_forward_tbl_set_default_action_nop(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     EntryHandle_t is_hot_tbl_set_default_action_reset_is_hot(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
+    EntryHandle_t l2l3_forward_tbl_set_default_action_nop(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     EntryHandle_t lastclone_lastscansplit_tbl_set_default_action_reset_is_lastclone_lastscansplit(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     EntryHandle_t need_recirculate_tbl_set_default_action_reset_need_recirculate(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt) throws (1:InvalidTableOperation ouch),
     EntryHandle_t prepare_for_cachehit_tbl_set_default_action_set_client_sid(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_set_client_sid_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
@@ -3406,6 +3448,10 @@ service netbufferv4 {
     void is_hot_tbl_set_property(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:tbl_property_t property, 4:tbl_property_value_t value, 5:i32 prop_args) throws (1:InvalidTableOperation ouch),
 
     tbl_property_value_args_t is_hot_tbl_get_property(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:tbl_property_t property) throws (1:InvalidTableOperation ouch),
+# //::   if action_table_hdl: continue
+    void l2l3_forward_tbl_set_property(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:tbl_property_t property, 4:tbl_property_value_t value, 5:i32 prop_args) throws (1:InvalidTableOperation ouch),
+
+    tbl_property_value_args_t l2l3_forward_tbl_get_property(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:tbl_property_t property) throws (1:InvalidTableOperation ouch),
 # //::   if action_table_hdl: continue
     void lastclone_lastscansplit_tbl_set_property(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:tbl_property_t property, 4:tbl_property_value_t value, 5:i32 prop_args) throws (1:InvalidTableOperation ouch),
 

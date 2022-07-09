@@ -147,6 +147,11 @@ class netbufferv4Handler : virtual public netbufferv4If {
     printf("is_hot_tbl_match_spec_to_entry_hdl\n");
   }
 
+  EntryHandle_t l2l3_forward_tbl_match_spec_to_entry_hdl(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_l2l3_forward_tbl_match_spec_t& match_spec) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_match_spec_to_entry_hdl\n");
+  }
+
   EntryHandle_t lastclone_lastscansplit_tbl_match_spec_to_entry_hdl(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_lastclone_lastscansplit_tbl_match_spec_t& match_spec) {
     // Your implementation goes here
     printf("lastclone_lastscansplit_tbl_match_spec_to_entry_hdl\n");
@@ -900,6 +905,16 @@ class netbufferv4Handler : virtual public netbufferv4If {
   EntryHandle_t is_hot_tbl_table_add_with_reset_is_hot(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_is_hot_tbl_match_spec_t& match_spec) {
     // Your implementation goes here
     printf("is_hot_tbl_table_add_with_reset_is_hot\n");
+  }
+
+  EntryHandle_t l2l3_forward_tbl_table_add_with_l2l3_forward(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_l2l3_forward_tbl_match_spec_t& match_spec, const netbufferv4_l2l3_forward_action_spec_t& action_spec) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_add_with_l2l3_forward\n");
+  }
+
+  EntryHandle_t l2l3_forward_tbl_table_add_with_nop(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_l2l3_forward_tbl_match_spec_t& match_spec) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_add_with_nop\n");
   }
 
   EntryHandle_t lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_lastclone_lastscansplit_tbl_match_spec_t& match_spec) {
@@ -2757,6 +2772,26 @@ class netbufferv4Handler : virtual public netbufferv4If {
     printf("is_hot_tbl_table_modify_with_reset_is_hot_by_match_spec\n");
   }
 
+  void l2l3_forward_tbl_table_modify_with_l2l3_forward(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry, const netbufferv4_l2l3_forward_action_spec_t& action_spec) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_modify_with_l2l3_forward\n");
+  }
+
+  void l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_l2l3_forward_tbl_match_spec_t& match_spec, const netbufferv4_l2l3_forward_action_spec_t& action_spec) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec\n");
+  }
+
+  void l2l3_forward_tbl_table_modify_with_nop(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_modify_with_nop\n");
+  }
+
+  void l2l3_forward_tbl_table_modify_with_nop_by_match_spec(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_l2l3_forward_tbl_match_spec_t& match_spec) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_modify_with_nop_by_match_spec\n");
+  }
+
   void lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry) {
     // Your implementation goes here
     printf("lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone\n");
@@ -4537,6 +4572,16 @@ class netbufferv4Handler : virtual public netbufferv4If {
     printf("is_hot_tbl_table_delete_by_match_spec\n");
   }
 
+  void l2l3_forward_tbl_table_delete(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_delete\n");
+  }
+
+  void l2l3_forward_tbl_table_delete_by_match_spec(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_l2l3_forward_tbl_match_spec_t& match_spec) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_delete_by_match_spec\n");
+  }
+
   void lastclone_lastscansplit_tbl_table_delete(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry) {
     // Your implementation goes here
     printf("lastclone_lastscansplit_tbl_table_delete\n");
@@ -5207,6 +5252,16 @@ class netbufferv4Handler : virtual public netbufferv4If {
     printf("is_hot_tbl_table_get_default_entry\n");
   }
 
+  EntryHandle_t l2l3_forward_tbl_table_get_default_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_get_default_entry_handle\n");
+  }
+
+  void l2l3_forward_tbl_table_get_default_entry(netbufferv4_l2l3_forward_tbl_entry_desc_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const bool read_from_hw) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_get_default_entry\n");
+  }
+
   EntryHandle_t lastclone_lastscansplit_tbl_table_get_default_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
     // Your implementation goes here
     printf("lastclone_lastscansplit_tbl_table_get_default_entry_handle\n");
@@ -5762,6 +5817,11 @@ class netbufferv4Handler : virtual public netbufferv4If {
     printf("is_hot_tbl_table_reset_default_entry\n");
   }
 
+  void l2l3_forward_tbl_table_reset_default_entry(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_table_reset_default_entry\n");
+  }
+
   void lastclone_lastscansplit_tbl_table_reset_default_entry(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
     // Your implementation goes here
     printf("lastclone_lastscansplit_tbl_table_reset_default_entry\n");
@@ -6100,6 +6160,11 @@ class netbufferv4Handler : virtual public netbufferv4If {
   int32_t is_hot_tbl_get_entry_count(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
     // Your implementation goes here
     printf("is_hot_tbl_get_entry_count\n");
+  }
+
+  int32_t l2l3_forward_tbl_get_entry_count(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_get_entry_count\n");
   }
 
   int32_t lastclone_lastscansplit_tbl_get_entry_count(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
@@ -6690,6 +6755,21 @@ class netbufferv4Handler : virtual public netbufferv4If {
   void is_hot_tbl_get_entry(netbufferv4_is_hot_tbl_entry_desc_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry_hdl, const bool read_from_hw) {
     // Your implementation goes here
     printf("is_hot_tbl_get_entry\n");
+  }
+
+  int32_t l2l3_forward_tbl_get_first_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_get_first_entry_handle\n");
+  }
+
+  void l2l3_forward_tbl_get_next_entry_handles(std::vector<int32_t> & _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const EntryHandle_t entry_hdl, const int32_t n) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_get_next_entry_handles\n");
+  }
+
+  void l2l3_forward_tbl_get_entry(netbufferv4_l2l3_forward_tbl_entry_desc_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry_hdl, const bool read_from_hw) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_get_entry\n");
   }
 
   int32_t lastclone_lastscansplit_tbl_get_first_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
@@ -7462,6 +7542,11 @@ class netbufferv4Handler : virtual public netbufferv4If {
     printf("is_hot_tbl_set_default_action_reset_is_hot\n");
   }
 
+  EntryHandle_t l2l3_forward_tbl_set_default_action_nop(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_set_default_action_nop\n");
+  }
+
   EntryHandle_t lastclone_lastscansplit_tbl_set_default_action_reset_is_lastclone_lastscansplit(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt) {
     // Your implementation goes here
     printf("lastclone_lastscansplit_tbl_set_default_action_reset_is_lastclone_lastscansplit\n");
@@ -7925,6 +8010,16 @@ class netbufferv4Handler : virtual public netbufferv4If {
   void is_hot_tbl_get_property(tbl_property_value_args_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const tbl_property_t::type property) {
     // Your implementation goes here
     printf("is_hot_tbl_get_property\n");
+  }
+
+  void l2l3_forward_tbl_set_property(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const tbl_property_t::type property, const tbl_property_value_t::type value, const int32_t prop_args) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_set_property\n");
+  }
+
+  void l2l3_forward_tbl_get_property(tbl_property_value_args_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const tbl_property_t::type property) {
+    // Your implementation goes here
+    printf("l2l3_forward_tbl_get_property\n");
   }
 
   void lastclone_lastscansplit_tbl_set_property(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const tbl_property_t::type property, const tbl_property_value_t::type value, const int32_t prop_args) {

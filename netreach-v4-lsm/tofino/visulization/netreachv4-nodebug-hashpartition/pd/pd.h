@@ -168,6 +168,12 @@ typedef struct p4_pd_netbufferv4_is_hot_tbl_match_spec {
   uint8_t meta_cm4_predicate;
 } p4_pd_netbufferv4_is_hot_tbl_match_spec_t;
 
+typedef struct p4_pd_netbufferv4_l2l3_forward_tbl_match_spec {
+  uint8_t ethernet_hdr_dstAddr[6];
+  uint32_t ipv4_hdr_dstAddr;
+  uint16_t ipv4_hdr_dstAddr_prefix_length;
+} p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t;
+
 typedef struct p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec {
   uint16_t op_hdr_optype;
   uint8_t clone_hdr_clonenum_for_pktloss;
@@ -405,6 +411,8 @@ typedef struct p4_pd_netbufferv4_update_vallo9_tbl_match_spec {
 
 /* is_hot_tbl has no dynamic key masks */
 
+/* l2l3_forward_tbl has no dynamic key masks */
+
 /* lastclone_lastscansplit_tbl has no dynamic key masks */
 
 /* need_recirculate_tbl has no dynamic key masks */
@@ -593,6 +601,7 @@ typedef enum p4_pd_netbufferv4_action_names {
   p4_pd_netbufferv4_forward_special_get_response,
   p4_pd_netbufferv4_set_is_hot,
   p4_pd_netbufferv4_reset_is_hot,
+  p4_pd_netbufferv4_l2l3_forward,
   p4_pd_netbufferv4_set_is_lastclone,
   p4_pd_netbufferv4_reset_is_lastclone_lastscansplit,
   p4_pd_netbufferv4_set_need_recirculate,
@@ -926,7 +935,7 @@ typedef struct p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_e
 typedef struct p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone_action_spec {
   uint32_t action_switchos_sid;
   uint16_t action_reflector_port;
-  uint32_t action_stat;
+  uint8_t action_stat;
 } p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone_action_spec_t;
 
 typedef struct p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone_action_spec {
@@ -972,6 +981,10 @@ typedef struct p4_pd_netbufferv4_forward_special_get_response_action_spec {
   /* set_is_hot has no parameters */
 
   /* reset_is_hot has no parameters */
+
+typedef struct p4_pd_netbufferv4_l2l3_forward_action_spec {
+  uint16_t action_eport;
+} p4_pd_netbufferv4_l2l3_forward_action_spec_t;
 
   /* set_is_lastclone has no parameters */
 
@@ -1327,6 +1340,7 @@ typedef struct p4_pd_netbufferv4_action_specs_t {
     struct p4_pd_netbufferv4_forward_special_get_response_action_spec p4_pd_netbufferv4_forward_special_get_response;
   /* set_is_hot has no parameters */
   /* reset_is_hot has no parameters */
+    struct p4_pd_netbufferv4_l2l3_forward_action_spec p4_pd_netbufferv4_l2l3_forward;
   /* set_is_lastclone has no parameters */
   /* reset_is_lastclone_lastscansplit has no parameters */
   /* set_need_recirculate has no parameters */
@@ -1679,6 +1693,15 @@ p4_pd_netbufferv4_is_hot_tbl_match_spec_to_entry_hdl
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
  p4_pd_netbufferv4_is_hot_tbl_match_spec_t *match_spec,
+ p4_pd_entry_hdl_t *entry_hdl
+);
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec,
  p4_pd_entry_hdl_t *entry_hdl
 );
 
@@ -3893,6 +3916,40 @@ p4_pd_netbufferv4_is_hot_tbl_table_add_with_reset_is_hot
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
  p4_pd_netbufferv4_is_hot_tbl_match_spec_t *match_spec,
+ p4_pd_entry_hdl_t *entry_hdl
+);
+
+/**
+ * @brief p4_pd_netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward
+ * @param sess_hdl
+ * @param dev_tgt
+ * @param match_spec
+ * @param action_spec
+ * @param entry_hdl
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_l2l3_forward_action_spec_t *action_spec,
+ p4_pd_entry_hdl_t *entry_hdl
+);
+
+/**
+ * @brief p4_pd_netbufferv4_l2l3_forward_tbl_table_add_with_nop
+ * @param sess_hdl
+ * @param dev_tgt
+ * @param match_spec
+ * @param entry_hdl
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_add_with_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec,
  p4_pd_entry_hdl_t *entry_hdl
 );
 
@@ -7068,6 +7125,34 @@ p4_pd_netbufferv4_is_hot_tbl_table_delete_by_match_spec
 );
 
 /**
+ * @brief p4_pd_netbufferv4_l2l3_forward_tbl_table_delete
+ * @param sess_hdl
+ * @param dev_id
+ * @param entry_hdl
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_delete
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl
+);
+
+/**
+ * @brief p4_pd_netbufferv4_l2l3_forward_tbl_table_delete_by_match_spec
+ * @param sess_hdl
+ * @param dev_tgt
+ * @param match_spec
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_delete_by_match_spec
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec
+);
+
+/**
  * @brief p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_delete
  * @param sess_hdl
  * @param dev_id
@@ -8674,6 +8759,23 @@ p4_pd_netbufferv4_is_hot_tbl_table_get_default_entry
 );
 
 p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+);
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+);
+
+p4_pd_status_t
 p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_get_default_entry_handle
 (
  p4_pd_sess_hdl_t sess_hdl,
@@ -9583,6 +9685,13 @@ p4_pd_netbufferv4_is_hot_tbl_table_reset_default_entry
 );
 
 p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_reset_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt
+);
+
+p4_pd_status_t
 p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_reset_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
@@ -10378,6 +10487,26 @@ p4_pd_netbufferv4_is_hot_tbl_set_property
 
 p4_pd_status_t
 p4_pd_netbufferv4_is_hot_tbl_get_property
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_tbl_prop_type_t property,
+ p4_pd_tbl_prop_value_t *value,
+ p4_pd_tbl_prop_args_t *args
+);
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_set_property
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_tbl_prop_type_t property,
+ p4_pd_tbl_prop_value_t value,
+ p4_pd_tbl_prop_args_t args
+);
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_get_property
 (
  p4_pd_sess_hdl_t sess_hdl,
  uint8_t dev_id,
@@ -14427,6 +14556,66 @@ p4_pd_netbufferv4_is_hot_tbl_table_modify_with_reset_is_hot_by_match_spec
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
  p4_pd_netbufferv4_is_hot_tbl_match_spec_t *match_spec
+);
+
+/**
+ * @brief p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_l2l3_forward
+ * @param sess_hdl
+ * @param dev_id
+ * @param entry_hdl
+ * @param action_spec
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_l2l3_forward
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t ent_hdl,
+ p4_pd_netbufferv4_l2l3_forward_action_spec_t *action_spec
+);
+
+/**
+ * @brief p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec
+ * @param sess_hdl
+ * @param dev_tgt
+ * @param match_spec
+ * @param action_spec
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_l2l3_forward_action_spec_t *action_spec
+);
+
+/**
+ * @brief p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_nop
+ * @param sess_hdl
+ * @param dev_id
+ * @param entry_hdl
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t ent_hdl
+);
+
+/**
+ * @brief p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_nop_by_match_spec
+ * @param sess_hdl
+ * @param dev_tgt
+ * @param match_spec
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_nop_by_match_spec
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec
 );
 
 /**
@@ -19096,6 +19285,20 @@ p4_pd_netbufferv4_is_hot_tbl_set_default_action_reset_is_hot
 );
 
 /**
+ * @brief p4_pd_netbufferv4_l2l3_forward_tbl_set_default_action_nop
+ * @param sess_hdl
+ * @param dev_tgt
+ * @param entry_hdl
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_set_default_action_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_entry_hdl_t *entry_hdl
+);
+
+/**
  * @brief p4_pd_netbufferv4_lastclone_lastscansplit_tbl_set_default_action_reset_is_lastclone_lastscansplit
  * @param sess_hdl
  * @param dev_tgt
@@ -19904,6 +20107,14 @@ p4_pd_netbufferv4_ipv4_forward_tbl_get_entry_count
 
 p4_pd_status_t
 p4_pd_netbufferv4_is_hot_tbl_get_entry_count
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ uint32_t *count
+);
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_get_entry_count
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
@@ -20980,6 +21191,35 @@ p4_pd_netbufferv4_is_hot_tbl_get_entry
  p4_pd_entry_hdl_t entry_hdl,
  bool read_from_hw,
  p4_pd_netbufferv4_is_hot_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+);
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_get_first_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ int *index
+);
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_get_next_entry_handles
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_entry_hdl_t entry_handle,
+ int n,
+ int *next_entry_handles
+);
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec,
  p4_pd_netbufferv4_action_specs_t *action_spec
 );
 
@@ -25245,6 +25485,7 @@ typedef struct __attribute__((__packed__)) p4_pd_netbufferv4_ig_snapshot_trig_sp
   uint16_t inswitch_hdr_idx;
   uint8_t stat_hdr_stat;
   uint16_t stat_hdr_nodeidx_foreval;
+  uint8_t stat_hdr_padding;
   uint8_t clone_hdr_clonenum_for_pktloss;
   uint16_t clone_hdr_client_udpport;
   uint32_t frequency_hdr_frequency;
@@ -25360,6 +25601,7 @@ typedef struct __attribute__((__packed__)) p4_pd_netbufferv4_eg_snapshot_trig_sp
   uint16_t inswitch_hdr_idx;
   uint8_t stat_hdr_stat;
   uint16_t stat_hdr_nodeidx_foreval;
+  uint8_t stat_hdr_padding;
   uint8_t clone_hdr_clonenum_for_pktloss;
   uint16_t clone_hdr_client_udpport;
   uint32_t frequency_hdr_frequency;

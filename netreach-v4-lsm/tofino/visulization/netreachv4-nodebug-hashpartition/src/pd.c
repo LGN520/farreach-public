@@ -1166,6 +1166,40 @@ static inline void build_key_is_hot_tbl
 
 }
 
+static inline void build_key_l2l3_forward_tbl
+(
+ pipe_tbl_match_spec_t *pipe_match_spec,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec
+)
+{
+  uint8_t *match_bits = pipe_match_spec->match_value_bits;
+  (void) match_bits;
+#ifdef LITTLE_ENDIAN_CALLER
+  uint16_t tmp16;
+  uint32_t tmp32;
+  (void) tmp16;
+  (void) tmp32;
+#endif
+
+
+#ifdef LITTLE_ENDIAN_CALLER
+  memcpy(match_bits, &match_spec->ethernet_hdr_dstAddr, 6);
+#else
+  memcpy(match_bits, ((char *) &match_spec->ethernet_hdr_dstAddr) + 0, 6);
+#endif
+  match_bits += 6;
+
+
+#ifdef LITTLE_ENDIAN_CALLER
+  tmp32 = htonl(match_spec->ipv4_hdr_dstAddr);
+  memcpy(match_bits, ((char *) &tmp32) + 0, 4);
+#else
+  memcpy(match_bits, ((char *) &match_spec->ipv4_hdr_dstAddr) + 0, 4);
+#endif
+  match_bits += 4;
+
+}
+
 static inline void build_key_lastclone_lastscansplit_tbl
 (
  pipe_tbl_match_spec_t *pipe_match_spec,
@@ -2446,6 +2480,44 @@ static inline void build_mask_ipv4_forward_tbl
 
 }
 
+static inline void build_mask_l2l3_forward_tbl
+(
+ pipe_tbl_match_spec_t *pipe_match_spec,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec
+)
+{
+  uint8_t *value_bits = pipe_match_spec->match_value_bits;
+  uint8_t *mask_bits = pipe_match_spec->match_mask_bits;
+#ifdef LITTLE_ENDIAN_CALLER
+  uint16_t tmp16;
+  uint32_t tmp32;
+  (void) tmp16;
+  (void) tmp32;
+#endif
+  uint32_t i; /* for value masking */
+  int bits_to_reset; /* for lpm mask */
+  (void) bits_to_reset; /* compiler */
+
+
+  mask_bits += 6;
+  value_bits += 6;
+
+
+  bits_to_reset = 32 - match_spec->ipv4_hdr_dstAddr_prefix_length;
+  if (bits_to_reset >= 8) {
+    memset(mask_bits + 4 - bits_to_reset / 8, 0, bits_to_reset / 8);
+  }
+  if (bits_to_reset % 8 != 0) {
+    mask_bits[4 - 1 - bits_to_reset / 8] = (unsigned char) 0xFF << (bits_to_reset % 8);
+  }
+  for (i = 0; i < 4; i++) {
+    value_bits[i] &= mask_bits[i];
+  }
+  mask_bits += 4;
+  value_bits += 4;
+
+}
+
 static inline void build_mask_update_pktlen_tbl
 (
  pipe_tbl_match_spec_t *pipe_match_spec,
@@ -3040,6 +3112,36 @@ static inline void build_match_spec_is_hot_tbl
 
   pipe_match_spec->priority = 0;
   /* exact match: nothing to do with the mask */
+}
+
+static inline void build_match_spec_l2l3_forward_tbl
+(
+ pipe_tbl_match_spec_t *pipe_match_spec,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec
+)
+{
+  pipe_match_spec->partition_index = 0;
+  pipe_match_spec->match_field_validity = 0;
+  pipe_match_spec->match_field_validity_mask = 0;
+  pipe_match_spec->num_match_validity_fields = 0;
+
+  build_key_l2l3_forward_tbl(pipe_match_spec, match_spec);
+
+  if (pipe_match_spec->num_match_bytes > 0) {
+  /* we start by setting the mask entirely to 1s */
+    memset(pipe_match_spec->match_mask_bits, 0xFF, pipe_match_spec->num_match_bytes);
+  }
+
+  /* 0 is highest priority, max possible length is lowest */
+  if (match_spec->ipv4_hdr_dstAddr_prefix_length > 32) {
+    /* Given prefix length for this field is out of bounds */
+    pipe_match_spec->priority = pipe_match_spec->num_valid_match_bits + 1;
+    return;
+  } else {
+    pipe_match_spec->priority = 32;
+    pipe_match_spec->priority -= match_spec->ipv4_hdr_dstAddr_prefix_length;
+  }
+  build_mask_l2l3_forward_tbl(pipe_match_spec, match_spec);
 }
 
 static inline void build_match_spec_lastclone_lastscansplit_tbl
@@ -4733,12 +4835,12 @@ static inline void build_action_spec_update_loadsnapshotdata_inswitch_to_loadsna
 
   data_bits += 2;
 #ifdef LITTLE_ENDIAN_CALLER
-  memcpy(data_bits, &action_spec->action_stat, 0);
+  memcpy(data_bits, &action_spec->action_stat, 1);
 #else
-  memcpy(data_bits, ((char *) &action_spec->action_stat) + 0, 0);
+  memcpy(data_bits, ((char *) &action_spec->action_stat) + 0, 1);
 #endif
 
-  data_bits += 0;
+  data_bits += 1;
 
 }
 
@@ -4902,6 +5004,41 @@ static inline void build_indirect_resources_forward_special_get_response
 (
  pipe_action_spec_t *pipe_action_spec,
  p4_pd_netbufferv4_forward_special_get_response_action_spec_t *action_spec
+)
+{
+
+}
+
+static inline void build_action_spec_l2l3_forward
+(
+ pipe_action_data_spec_t *pipe_action_spec,
+ p4_pd_netbufferv4_l2l3_forward_action_spec_t *action_spec
+)
+{
+  uint8_t *data_bits = pipe_action_spec->action_data_bits;
+  (void) data_bits;
+
+#ifdef LITTLE_ENDIAN_CALLER
+  uint16_t tmp16;
+  uint32_t tmp32;
+  (void) tmp16;
+  (void) tmp32;
+#endif
+#ifdef LITTLE_ENDIAN_CALLER
+  tmp16 = htons(action_spec->action_eport);
+  memcpy(data_bits, &tmp16, 2);
+#else
+  memcpy(data_bits, ((char *) &action_spec->action_eport) + 0, 2);
+#endif
+
+  data_bits += 2;
+
+}
+
+static inline void build_indirect_resources_l2l3_forward
+(
+ pipe_action_spec_t *pipe_action_spec,
+ p4_pd_netbufferv4_l2l3_forward_action_spec_t *action_spec
 )
 {
 
@@ -6305,6 +6442,41 @@ static inline void unbuild_key_is_hot_tbl
 
 }
 
+static inline void unbuild_key_l2l3_forward_tbl
+(
+ pipe_tbl_match_spec_t *pipe_match_spec,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec
+)
+{
+  uint8_t *match_bits = pipe_match_spec->match_value_bits;
+  (void) match_bits;
+#ifdef LITTLE_ENDIAN_CALLER
+  uint16_t tmp16;
+  uint32_t tmp32;
+  (void) tmp16;
+  (void) tmp32;
+#endif
+
+
+#ifdef LITTLE_ENDIAN_CALLER
+  memcpy(&match_spec->ethernet_hdr_dstAddr, match_bits, 6);
+#else
+  memcpy(((char *) &match_spec->ethernet_hdr_dstAddr) + 0, match_bits, 6);
+#endif
+  match_bits += 6;
+
+
+#ifdef LITTLE_ENDIAN_CALLER
+  tmp32 = 0;
+  memcpy(((char *) &tmp32) + 0, match_bits, 4);
+  match_spec->ipv4_hdr_dstAddr = ntohl(tmp32);
+#else
+  memcpy(((char *) &match_spec->ipv4_hdr_dstAddr) + 0, match_bits, 4);
+#endif
+  match_bits += 4;
+
+}
+
 static inline void unbuild_key_lastclone_lastscansplit_tbl
 (
  pipe_tbl_match_spec_t *pipe_match_spec,
@@ -7569,6 +7741,40 @@ static inline void unbuild_mask_ipv4_forward_tbl
 
 }
 
+static inline void unbuild_mask_l2l3_forward_tbl
+(
+ pipe_tbl_match_spec_t *pipe_match_spec,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec
+)
+{
+  uint8_t *mask_bits = pipe_match_spec->match_mask_bits;
+#ifdef LITTLE_ENDIAN_CALLER
+  uint16_t tmp16;
+  uint32_t tmp32;
+  (void) tmp16;
+  (void) tmp32;
+#endif
+  int pref_len;
+  int i;
+  (void) pref_len;
+  (void) i;
+
+
+  mask_bits += 6;
+
+
+  pref_len = 32;
+  for (i = 0; i < 32; i++) {
+    if (mask_bits[4 - 1 - (i / 8)] & (1 << (i % 8))) {
+      break;
+    }
+    pref_len--;
+  }
+  match_spec->ipv4_hdr_dstAddr_prefix_length = pref_len;
+  mask_bits += 4;
+
+}
+
 static inline void unbuild_mask_update_pktlen_tbl
 (
  pipe_tbl_match_spec_t *pipe_match_spec,
@@ -8282,11 +8488,11 @@ static inline void unbuild_action_spec_update_loadsnapshotdata_inswitch_to_loads
   data_bits += 2;
 
 #ifdef LITTLE_ENDIAN_CALLER
-  memcpy(&action_spec->action_stat, data_bits, 0);
+  memcpy(&action_spec->action_stat, data_bits, 1);
 #else
-  memcpy(((char *) &action_spec->action_stat) + 0, data_bits, 0);
+  memcpy(((char *) &action_spec->action_stat) + 0, data_bits, 1);
 #endif
-  data_bits += 0;
+  data_bits += 1;
 }
 
 static inline void unbuild_action_spec_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone
@@ -8419,6 +8625,34 @@ static inline void unbuild_action_spec_forward_special_get_response
   memcpy(((char *) &action_spec->action_client_sid) + 0, data_bits, 4);
 #endif
   data_bits += 4;
+}
+
+static inline void unbuild_action_spec_l2l3_forward
+(
+ pipe_action_data_spec_t *pipe_action_spec,
+ pd_res_spec_t *res_spec,
+ int num_res,
+ p4_pd_netbufferv4_l2l3_forward_action_spec_t *action_spec
+)
+{
+  uint8_t *data_bits = pipe_action_spec->action_data_bits;
+  unsigned i = 0;
+  (void)i;
+#ifdef LITTLE_ENDIAN_CALLER
+  uint16_t tmp16;
+  uint32_t tmp32;
+  (void) tmp16;
+  (void) tmp32;
+#endif
+
+#ifdef LITTLE_ENDIAN_CALLER
+  memcpy(&tmp16, data_bits, 2);
+  action_spec->action_eport = ntohs(tmp16);
+
+#else
+  memcpy(((char *) &action_spec->action_eport) + 0, data_bits, 2);
+#endif
+  data_bits += 2;
 }
 
 static inline void unbuild_action_spec_set_client_sid
@@ -9855,7 +10089,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777283,
+            16777284,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -9888,7 +10122,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777266,
+            16777267,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -9921,7 +10155,7 @@ p4_pd_netbufferv4_drop_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777284,
+            16777285,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -9954,7 +10188,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777280,
+            16777281,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -9987,7 +10221,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777267,
+            16777268,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10020,7 +10254,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777268,
+            16777269,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10053,7 +10287,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777270,
+            16777271,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10086,7 +10320,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777272,
+            16777273,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10119,7 +10353,7 @@ p4_pd_netbufferv4_hash_for_partition_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777264,
+            16777265,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10152,7 +10386,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777269,
+            16777270,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10187,7 +10421,7 @@ p4_pd_netbufferv4_hash_partition_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777265,
+            16777266,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10220,7 +10454,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777276,
+            16777277,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10253,7 +10487,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777274,
+            16777275,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10286,7 +10520,40 @@ p4_pd_netbufferv4_is_hot_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777277,
+            16777278,
+            &pipe_match_spec,
+            entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[10];
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  uint8_t pipe_match_mask_bits[10];
+  if (10) {
+    memset(pipe_match_value_bits, 0, 10);
+    memset(pipe_match_mask_bits, 0, 10);
+  }
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.num_valid_match_bits = 80;
+  pipe_match_spec.num_match_bytes = 10;
+  build_match_spec_l2l3_forward_tbl(&pipe_match_spec, match_spec);
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
+            pipe_mgr_dev_tgt,
+            16777261,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10319,7 +10586,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777279,
+            16777280,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10352,7 +10619,7 @@ p4_pd_netbufferv4_need_recirculate_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777261,
+            16777262,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10385,7 +10652,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777273,
+            16777274,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10418,7 +10685,7 @@ p4_pd_netbufferv4_recirculate_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777263,
+            16777264,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10451,7 +10718,7 @@ p4_pd_netbufferv4_sample_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777275,
+            16777276,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10484,7 +10751,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777278,
+            16777279,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10517,7 +10784,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777271,
+            16777272,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10550,7 +10817,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777281,
+            16777282,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -10585,7 +10852,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_match_spec_to_entry_hdl
 
   return pipe_mgr_match_spec_to_ent_hdl(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777282,
+            16777283,
             &pipe_match_spec,
             entry_hdl);
 }
@@ -13279,8 +13546,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_only_vallen
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871560, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871563, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13331,8 +13598,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val1
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871578, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871581, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13383,8 +13650,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val2
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871596, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871599, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13435,8 +13702,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val3
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871614, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871617, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13487,8 +13754,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val4
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871632, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871635, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13539,8 +13806,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val5
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871650, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871653, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13591,8 +13858,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val6
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871668, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871671, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13643,8 +13910,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val7
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871686, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871689, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13695,8 +13962,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val8
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871704, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871707, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13747,8 +14014,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val9
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871722, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871725, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13799,8 +14066,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val10
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871740, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871743, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13851,8 +14118,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val11
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871758, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871761, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13903,8 +14170,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val12
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871776, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871779, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -13955,8 +14222,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val13
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871794, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871797, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14007,8 +14274,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val14
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871812, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871815, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14059,8 +14326,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val15
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871830, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871833, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14111,8 +14378,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val16
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871848, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871851, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14163,8 +14430,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_remove_all
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777283, &pipe_match_spec,
-					       536871866, &pipe_action_spec,
+					       16777284, &pipe_match_spec,
+					       536871869, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14215,8 +14482,8 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_add_with_cached_action
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777266, &pipe_match_spec,
-					       536871226, &pipe_action_spec,
+					       16777267, &pipe_match_spec,
+					       536871229, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14265,8 +14532,8 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_add_with_uncached_action
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777266, &pipe_match_spec,
-					       536871228, &pipe_action_spec,
+					       16777267, &pipe_match_spec,
+					       536871231, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14315,8 +14582,8 @@ p4_pd_netbufferv4_drop_tbl_table_add_with_drop_getres_latest_seq_inswitch
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777284, &pipe_match_spec,
-					       536871868, &pipe_action_spec,
+					       16777285, &pipe_match_spec,
+					       536871871, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14365,8 +14632,8 @@ p4_pd_netbufferv4_drop_tbl_table_add_with_drop_getres_deleted_seq_inswitch
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777284, &pipe_match_spec,
-					       536871870, &pipe_action_spec,
+					       16777285, &pipe_match_spec,
+					       536871873, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14415,8 +14682,8 @@ p4_pd_netbufferv4_drop_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777284, &pipe_match_spec,
-					       536871871, &pipe_action_spec,
+					       16777285, &pipe_match_spec,
+					       536871874, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14465,8 +14732,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_g
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871299, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871302, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14515,8 +14782,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_g
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871303, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871306, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14565,8 +14832,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_g
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871307, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871310, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14617,8 +14884,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_g
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871319, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871322, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14667,8 +14934,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getres_latest_seq_to
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871325, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871328, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14719,8 +14986,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getres_latest_seq_in
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871336, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871339, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14771,8 +15038,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_i
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871340, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871343, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14821,8 +15088,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_t
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871346, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871349, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14873,8 +15140,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_i
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871357, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871360, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14925,8 +15192,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_forward_getres_deleted_seq_
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871361, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871364, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14977,8 +15244,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_cache_pop_inswitch_t
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871370, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871373, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15027,8 +15294,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871375, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871378, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15077,8 +15344,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871380, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871383, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15129,8 +15396,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871392, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871395, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15181,8 +15448,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871404, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871407, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15233,8 +15500,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_forward_putreq_seq_inswitch
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871408, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871411, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15285,8 +15552,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871421, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871424, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15335,8 +15602,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871426, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871429, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15385,8 +15652,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871431, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871434, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15435,8 +15702,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_d
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871436, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871439, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15487,8 +15754,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_d
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871448, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871451, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15539,8 +15806,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_d
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871460, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871463, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15591,8 +15858,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_forward_delreq_seq_inswitch
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871464, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871467, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15643,8 +15910,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871477, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871480, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15693,8 +15960,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_d
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871482, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871485, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15745,8 +16012,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_cache_evict_loadfreq
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871491, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871494, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15797,8 +16064,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_cache_evict_loaddata
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871502, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871505, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15828,14 +16095,14 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_loadsnapshotdata_ins
   pipe_match_spec.num_match_bytes = 12;
   build_match_spec_eg_port_forward_tbl(&pipe_match_spec, match_spec);
 
-  uint8_t pipe_action_data_bits[6];
-  memset(pipe_action_data_bits, 0, 6);
+  uint8_t pipe_action_data_bits[7];
+  memset(pipe_action_data_bits, 0, 7);
   pipe_action_spec_t pipe_action_spec = {0};
   pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
   pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
   pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-  pipe_action_data_spec->num_valid_action_data_bits = 48;
-  pipe_action_data_spec->num_action_data_bytes = 6;
+  pipe_action_data_spec->num_valid_action_data_bits = 56;
+  pipe_action_data_spec->num_action_data_bytes = 7;
   pipe_action_spec.resource_count = 0;
 
   build_action_spec_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(pipe_action_data_spec, action_spec);
@@ -15849,8 +16116,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_loadsnapshotdata_ins
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871512, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871515, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15901,8 +16168,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_setvalid_inswitch_to
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871521, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871524, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15951,8 +16218,8 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777280, &pipe_match_spec,
-					       536871522, &pipe_action_spec,
+					       16777281, &pipe_match_spec,
+					       536871525, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16001,8 +16268,8 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_add_with_hash_for_cm1
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777267, &pipe_match_spec,
-					       536871230, &pipe_action_spec,
+					       16777268, &pipe_match_spec,
+					       536871233, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16051,8 +16318,8 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777267, &pipe_match_spec,
-					       536871231, &pipe_action_spec,
+					       16777268, &pipe_match_spec,
+					       536871234, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16101,8 +16368,8 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_add_with_hash_for_cm2
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777268, &pipe_match_spec,
-					       536871233, &pipe_action_spec,
+					       16777269, &pipe_match_spec,
+					       536871236, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16151,8 +16418,8 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777268, &pipe_match_spec,
-					       536871234, &pipe_action_spec,
+					       16777269, &pipe_match_spec,
+					       536871237, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16201,8 +16468,8 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_add_with_hash_for_cm3
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777270, &pipe_match_spec,
-					       536871239, &pipe_action_spec,
+					       16777271, &pipe_match_spec,
+					       536871242, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16251,8 +16518,8 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777270, &pipe_match_spec,
-					       536871240, &pipe_action_spec,
+					       16777271, &pipe_match_spec,
+					       536871243, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16301,8 +16568,8 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_add_with_hash_for_cm4
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777272, &pipe_match_spec,
-					       536871246, &pipe_action_spec,
+					       16777273, &pipe_match_spec,
+					       536871249, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16351,8 +16618,8 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777272, &pipe_match_spec,
-					       536871247, &pipe_action_spec,
+					       16777273, &pipe_match_spec,
+					       536871250, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16401,8 +16668,8 @@ p4_pd_netbufferv4_hash_for_partition_tbl_table_add_with_hash_for_partition
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777264, &pipe_match_spec,
-					       536871218, &pipe_action_spec,
+					       16777265, &pipe_match_spec,
+					       536871221, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16451,8 +16718,8 @@ p4_pd_netbufferv4_hash_for_partition_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777264, &pipe_match_spec,
-					       536871219, &pipe_action_spec,
+					       16777265, &pipe_match_spec,
+					       536871222, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16501,8 +16768,8 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_add_with_hash_for_seq
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777269, &pipe_match_spec,
-					       536871236, &pipe_action_spec,
+					       16777270, &pipe_match_spec,
+					       536871239, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16551,8 +16818,8 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777269, &pipe_match_spec,
-					       536871237, &pipe_action_spec,
+					       16777270, &pipe_match_spec,
+					       536871240, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16605,8 +16872,8 @@ p4_pd_netbufferv4_hash_partition_tbl_table_add_with_hash_partition
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777265, &pipe_match_spec,
-					       536871222, &pipe_action_spec,
+					       16777266, &pipe_match_spec,
+					       536871225, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16657,8 +16924,8 @@ p4_pd_netbufferv4_hash_partition_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777265, &pipe_match_spec,
-					       536871223, &pipe_action_spec,
+					       16777266, &pipe_match_spec,
+					       536871226, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16707,8 +16974,8 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_getreq_to_getreq_ins
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777276, &pipe_match_spec,
-					       536871265, &pipe_action_spec,
+					       16777277, &pipe_match_spec,
+					       536871268, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16757,8 +17024,8 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_getres_latest_seq_to
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777276, &pipe_match_spec,
-					       536871269, &pipe_action_spec,
+					       16777277, &pipe_match_spec,
+					       536871272, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16807,8 +17074,8 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_t
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777276, &pipe_match_spec,
-					       536871273, &pipe_action_spec,
+					       16777277, &pipe_match_spec,
+					       536871276, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16857,8 +17124,8 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_putreq_to_putreq_ins
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777276, &pipe_match_spec,
-					       536871278, &pipe_action_spec,
+					       16777277, &pipe_match_spec,
+					       536871281, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16907,8 +17174,8 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_delreq_to_delreq_ins
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777276, &pipe_match_spec,
-					       536871283, &pipe_action_spec,
+					       16777277, &pipe_match_spec,
+					       536871286, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16957,8 +17224,8 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777276, &pipe_match_spec,
-					       536871284, &pipe_action_spec,
+					       16777277, &pipe_match_spec,
+					       536871287, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17009,8 +17276,8 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_add_with_forward_normal_response
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777274, &pipe_match_spec,
-					       536871252, &pipe_action_spec,
+					       16777275, &pipe_match_spec,
+					       536871255, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17061,8 +17328,8 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_add_with_forward_special_get_response
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777274, &pipe_match_spec,
-					       536871256, &pipe_action_spec,
+					       16777275, &pipe_match_spec,
+					       536871259, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17111,8 +17378,8 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777274, &pipe_match_spec,
-					       536871257, &pipe_action_spec,
+					       16777275, &pipe_match_spec,
+					       536871260, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17161,8 +17428,8 @@ p4_pd_netbufferv4_is_hot_tbl_table_add_with_set_is_hot
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777277, &pipe_match_spec,
-					       536871286, &pipe_action_spec,
+					       16777278, &pipe_match_spec,
+					       536871289, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17211,8 +17478,110 @@ p4_pd_netbufferv4_is_hot_tbl_table_add_with_reset_is_hot
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777277, &pipe_match_spec,
-					       536871288, &pipe_action_spec,
+					       16777278, &pipe_match_spec,
+					       536871291, &pipe_action_spec,
+					       ttl,
+					       0 /* TODO */,
+					       entry_hdl);
+  return status;
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_l2l3_forward_action_spec_t *action_spec,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[10];
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  uint8_t pipe_match_mask_bits[10];
+  if (10) {
+    memset(pipe_match_value_bits, 0, 10);
+    memset(pipe_match_mask_bits, 0, 10);
+  }
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.num_valid_match_bits = 80;
+  pipe_match_spec.num_match_bytes = 10;
+  build_match_spec_l2l3_forward_tbl(&pipe_match_spec, match_spec);
+
+  uint8_t pipe_action_data_bits[2];
+  memset(pipe_action_data_bits, 0, 2);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 9;
+  pipe_action_data_spec->num_action_data_bytes = 2;
+  pipe_action_spec.resource_count = 0;
+
+  build_action_spec_l2l3_forward(pipe_action_data_spec, action_spec);
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  uint32_t ttl = 0;
+
+
+
+  p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
+					       16777261, &pipe_match_spec,
+					       536871209, &pipe_action_spec,
+					       ttl,
+					       0 /* TODO */,
+					       entry_hdl);
+  return status;
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_add_with_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[10];
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  uint8_t pipe_match_mask_bits[10];
+  if (10) {
+    memset(pipe_match_value_bits, 0, 10);
+    memset(pipe_match_mask_bits, 0, 10);
+  }
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.num_valid_match_bits = 80;
+  pipe_match_spec.num_match_bytes = 10;
+  build_match_spec_l2l3_forward_tbl(&pipe_match_spec, match_spec);
+
+  uint8_t pipe_action_data_bits[0];
+  memset(pipe_action_data_bits, 0, 0);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 0;
+  pipe_action_data_spec->num_action_data_bytes = 0;
+  pipe_action_spec.resource_count = 0;
+
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  uint32_t ttl = 0;
+
+
+
+  p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
+					       16777261, &pipe_match_spec,
+					       536871210, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17261,8 +17630,8 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777279, &pipe_match_spec,
-					       536871293, &pipe_action_spec,
+					       16777280, &pipe_match_spec,
+					       536871296, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17311,8 +17680,8 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_add_with_reset_is_lastclone_
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777279, &pipe_match_spec,
-					       536871295, &pipe_action_spec,
+					       16777280, &pipe_match_spec,
+					       536871298, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17361,8 +17730,8 @@ p4_pd_netbufferv4_need_recirculate_tbl_table_add_with_set_need_recirculate
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777261, &pipe_match_spec,
-					       536871209, &pipe_action_spec,
+					       16777262, &pipe_match_spec,
+					       536871212, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17411,8 +17780,8 @@ p4_pd_netbufferv4_need_recirculate_tbl_table_add_with_reset_need_recirculate
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777261, &pipe_match_spec,
-					       536871211, &pipe_action_spec,
+					       16777262, &pipe_match_spec,
+					       536871214, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17463,8 +17832,8 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_add_with_set_client_sid
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777273, &pipe_match_spec,
-					       536871249, &pipe_action_spec,
+					       16777274, &pipe_match_spec,
+					       536871252, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17513,8 +17882,8 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777273, &pipe_match_spec,
-					       536871250, &pipe_action_spec,
+					       16777274, &pipe_match_spec,
+					       536871253, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17565,8 +17934,8 @@ p4_pd_netbufferv4_recirculate_tbl_table_add_with_recirculate_pkt
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777263, &pipe_match_spec,
-					       536871215, &pipe_action_spec,
+					       16777264, &pipe_match_spec,
+					       536871218, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17615,8 +17984,8 @@ p4_pd_netbufferv4_recirculate_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777263, &pipe_match_spec,
-					       536871216, &pipe_action_spec,
+					       16777264, &pipe_match_spec,
+					       536871219, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17665,8 +18034,8 @@ p4_pd_netbufferv4_sample_tbl_table_add_with_sample
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777275, &pipe_match_spec,
-					       536871259, &pipe_action_spec,
+					       16777276, &pipe_match_spec,
+					       536871262, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17715,8 +18084,8 @@ p4_pd_netbufferv4_sample_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777275, &pipe_match_spec,
-					       536871260, &pipe_action_spec,
+					       16777276, &pipe_match_spec,
+					       536871263, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17765,8 +18134,8 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_add_with_save_client_udpport
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777278, &pipe_match_spec,
-					       536871290, &pipe_action_spec,
+					       16777279, &pipe_match_spec,
+					       536871293, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17815,8 +18184,8 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777278, &pipe_match_spec,
-					       536871291, &pipe_action_spec,
+					       16777279, &pipe_match_spec,
+					       536871294, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17865,8 +18234,8 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_add_with_set_snapshot_flag
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777271, &pipe_match_spec,
-					       536871242, &pipe_action_spec,
+					       16777272, &pipe_match_spec,
+					       536871245, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17915,8 +18284,8 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_add_with_reset_snapshot_flag
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777271, &pipe_match_spec,
-					       536871244, &pipe_action_spec,
+					       16777272, &pipe_match_spec,
+					       536871247, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17967,8 +18336,8 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_s
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777281, &pipe_match_spec,
-					       536871528, &pipe_action_spec,
+					       16777282, &pipe_match_spec,
+					       536871531, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18019,8 +18388,8 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_s
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777281, &pipe_match_spec,
-					       536871534, &pipe_action_spec,
+					       16777282, &pipe_match_spec,
+					       536871537, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18071,8 +18440,8 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_add_with_update_dstipmac_client
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777281, &pipe_match_spec,
-					       536871537, &pipe_action_spec,
+					       16777282, &pipe_match_spec,
+					       536871540, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18121,8 +18490,8 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777281, &pipe_match_spec,
-					       536871538, &pipe_action_spec,
+					       16777282, &pipe_match_spec,
+					       536871541, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18175,8 +18544,8 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_add_with_update_pktlen
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777282, &pipe_match_spec,
-					       536871541, &pipe_action_spec,
+					       16777283, &pipe_match_spec,
+					       536871544, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18227,8 +18596,8 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_add_with_nop
 
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
-					       16777282, &pipe_match_spec,
-					       536871542, &pipe_action_spec,
+					       16777283, &pipe_match_spec,
+					       536871545, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -25415,7 +25784,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777283,
+            16777284,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25449,7 +25818,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777283,
+            16777284,
             &pipe_match_spec,
             0);
 }
@@ -25464,7 +25833,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777266,
+            16777267,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25496,7 +25865,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777266,
+            16777267,
             &pipe_match_spec,
             0);
 }
@@ -25511,7 +25880,7 @@ p4_pd_netbufferv4_drop_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777284,
+            16777285,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25543,7 +25912,7 @@ p4_pd_netbufferv4_drop_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777284,
+            16777285,
             &pipe_match_spec,
             0);
 }
@@ -25558,7 +25927,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777280,
+            16777281,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25590,7 +25959,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777280,
+            16777281,
             &pipe_match_spec,
             0);
 }
@@ -25605,7 +25974,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777267,
+            16777268,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25637,7 +26006,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777267,
+            16777268,
             &pipe_match_spec,
             0);
 }
@@ -25652,7 +26021,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777268,
+            16777269,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25684,7 +26053,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777268,
+            16777269,
             &pipe_match_spec,
             0);
 }
@@ -25699,7 +26068,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777270,
+            16777271,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25731,7 +26100,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777270,
+            16777271,
             &pipe_match_spec,
             0);
 }
@@ -25746,7 +26115,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777272,
+            16777273,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25778,7 +26147,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777272,
+            16777273,
             &pipe_match_spec,
             0);
 }
@@ -25793,7 +26162,7 @@ p4_pd_netbufferv4_hash_for_partition_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777264,
+            16777265,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25825,7 +26194,7 @@ p4_pd_netbufferv4_hash_for_partition_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777264,
+            16777265,
             &pipe_match_spec,
             0);
 }
@@ -25840,7 +26209,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777269,
+            16777270,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25872,7 +26241,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777269,
+            16777270,
             &pipe_match_spec,
             0);
 }
@@ -25887,7 +26256,7 @@ p4_pd_netbufferv4_hash_partition_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777265,
+            16777266,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25921,7 +26290,7 @@ p4_pd_netbufferv4_hash_partition_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777265,
+            16777266,
             &pipe_match_spec,
             0);
 }
@@ -25936,7 +26305,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777276,
+            16777277,
             entry_hdl,
             0 /* TODO */);
 }
@@ -25968,7 +26337,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777276,
+            16777277,
             &pipe_match_spec,
             0);
 }
@@ -25983,7 +26352,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777274,
+            16777275,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26015,7 +26384,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777274,
+            16777275,
             &pipe_match_spec,
             0);
 }
@@ -26030,7 +26399,7 @@ p4_pd_netbufferv4_is_hot_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777277,
+            16777278,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26062,7 +26431,54 @@ p4_pd_netbufferv4_is_hot_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777277,
+            16777278,
+            &pipe_match_spec,
+            0);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_delete
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl
+)
+{
+  return pipe_mgr_mat_ent_del(sess_hdl,
+            dev_id,
+            16777261,
+            entry_hdl,
+            0 /* TODO */);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_delete_by_match_spec
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec
+)
+{
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[10];
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  uint8_t pipe_match_mask_bits[10];
+  if (10) {
+    memset(pipe_match_value_bits, 0, 10);
+    memset(pipe_match_mask_bits, 0, 10);
+  }
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.num_valid_match_bits = 80;
+  pipe_match_spec.num_match_bytes = 10;
+  build_match_spec_l2l3_forward_tbl(&pipe_match_spec, match_spec);
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
+            pipe_mgr_dev_tgt,
+            16777261,
             &pipe_match_spec,
             0);
 }
@@ -26077,7 +26493,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777279,
+            16777280,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26109,7 +26525,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777279,
+            16777280,
             &pipe_match_spec,
             0);
 }
@@ -26124,7 +26540,7 @@ p4_pd_netbufferv4_need_recirculate_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777261,
+            16777262,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26156,7 +26572,7 @@ p4_pd_netbufferv4_need_recirculate_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777261,
+            16777262,
             &pipe_match_spec,
             0);
 }
@@ -26171,7 +26587,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777273,
+            16777274,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26203,7 +26619,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777273,
+            16777274,
             &pipe_match_spec,
             0);
 }
@@ -26218,7 +26634,7 @@ p4_pd_netbufferv4_recirculate_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777263,
+            16777264,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26250,7 +26666,7 @@ p4_pd_netbufferv4_recirculate_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777263,
+            16777264,
             &pipe_match_spec,
             0);
 }
@@ -26265,7 +26681,7 @@ p4_pd_netbufferv4_sample_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777275,
+            16777276,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26297,7 +26713,7 @@ p4_pd_netbufferv4_sample_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777275,
+            16777276,
             &pipe_match_spec,
             0);
 }
@@ -26312,7 +26728,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777278,
+            16777279,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26344,7 +26760,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777278,
+            16777279,
             &pipe_match_spec,
             0);
 }
@@ -26359,7 +26775,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777271,
+            16777272,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26391,7 +26807,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777271,
+            16777272,
             &pipe_match_spec,
             0);
 }
@@ -26406,7 +26822,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777281,
+            16777282,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26438,7 +26854,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777281,
+            16777282,
             &pipe_match_spec,
             0);
 }
@@ -26453,7 +26869,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_delete
 {
   return pipe_mgr_mat_ent_del(sess_hdl,
             dev_id,
-            16777282,
+            16777283,
             entry_hdl,
             0 /* TODO */);
 }
@@ -26487,7 +26903,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_delete_by_match_spec
 
   return pipe_mgr_mat_ent_del_by_match_spec(sess_hdl,
             pipe_mgr_dev_tgt,
-            16777282,
+            16777283,
             &pipe_match_spec,
             0);
 }
@@ -28866,205 +29282,11 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_get_default_entry_handle
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777283, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777283, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871560:
-      action_spec->name = p4_pd_netbufferv4_add_only_vallen;
-      break;
-    case 536871578:
-      action_spec->name = p4_pd_netbufferv4_add_to_val1;
-      break;
-    case 536871596:
-      action_spec->name = p4_pd_netbufferv4_add_to_val2;
-      break;
-    case 536871614:
-      action_spec->name = p4_pd_netbufferv4_add_to_val3;
-      break;
-    case 536871632:
-      action_spec->name = p4_pd_netbufferv4_add_to_val4;
-      break;
-    case 536871650:
-      action_spec->name = p4_pd_netbufferv4_add_to_val5;
-      break;
-    case 536871668:
-      action_spec->name = p4_pd_netbufferv4_add_to_val6;
-      break;
-    case 536871686:
-      action_spec->name = p4_pd_netbufferv4_add_to_val7;
-      break;
-    case 536871704:
-      action_spec->name = p4_pd_netbufferv4_add_to_val8;
-      break;
-    case 536871722:
-      action_spec->name = p4_pd_netbufferv4_add_to_val9;
-      break;
-    case 536871740:
-      action_spec->name = p4_pd_netbufferv4_add_to_val10;
-      break;
-    case 536871758:
-      action_spec->name = p4_pd_netbufferv4_add_to_val11;
-      break;
-    case 536871776:
-      action_spec->name = p4_pd_netbufferv4_add_to_val12;
-      break;
-    case 536871794:
-      action_spec->name = p4_pd_netbufferv4_add_to_val13;
-      break;
-    case 536871812:
-      action_spec->name = p4_pd_netbufferv4_add_to_val14;
-      break;
-    case 536871830:
-      action_spec->name = p4_pd_netbufferv4_add_to_val15;
-      break;
-    case 536871848:
-      action_spec->name = p4_pd_netbufferv4_add_to_val16;
-      break;
-    case 536871866:
-      action_spec->name = p4_pd_netbufferv4_remove_all;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_cache_lookup_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777266, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_cache_lookup_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777266, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871226:
-      action_spec->name = p4_pd_netbufferv4_cached_action;
-      unbuild_action_spec_cached_action(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_cached_action);
-      break;
-    case 536871228:
-      action_spec->name = p4_pd_netbufferv4_uncached_action;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_drop_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
 			                              16777284, entry_hdl);
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_drop_tbl_table_get_default_entry
+p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_get_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt,
@@ -29101,241 +29323,59 @@ p4_pd_netbufferv4_drop_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871868:
-      action_spec->name = p4_pd_netbufferv4_drop_getres_latest_seq_inswitch;
+    case 536871563:
+      action_spec->name = p4_pd_netbufferv4_add_only_vallen;
       break;
-    case 536871870:
-      action_spec->name = p4_pd_netbufferv4_drop_getres_deleted_seq_inswitch;
+    case 536871581:
+      action_spec->name = p4_pd_netbufferv4_add_to_val1;
       break;
-    case 536871871:
-      action_spec->name = p4_pd_netbufferv4_nop;
+    case 536871599:
+      action_spec->name = p4_pd_netbufferv4_add_to_val2;
       break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_eg_port_forward_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777280, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_eg_port_forward_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777280, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871299:
-      action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq;
+    case 536871617:
+      action_spec->name = p4_pd_netbufferv4_add_to_val3;
       break;
-    case 536871303:
-      action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq_pop;
+    case 536871635:
+      action_spec->name = p4_pd_netbufferv4_add_to_val4;
       break;
-    case 536871307:
-      action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq_nlatest;
+    case 536871653:
+      action_spec->name = p4_pd_netbufferv4_add_to_val5;
       break;
-    case 536871319:
-      action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getres_by_mirroring;
-      unbuild_action_spec_update_getreq_inswitch_to_getres_by_mirroring(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_getreq_inswitch_to_getres_by_mirroring);
+    case 536871671:
+      action_spec->name = p4_pd_netbufferv4_add_to_val6;
       break;
-    case 536871325:
-      action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres;
+    case 536871689:
+      action_spec->name = p4_pd_netbufferv4_add_to_val7;
       break;
-    case 536871336:
-      action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss;
-      unbuild_action_spec_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss);
+    case 536871707:
+      action_spec->name = p4_pd_netbufferv4_add_to_val8;
       break;
-    case 536871340:
-      action_spec->name = p4_pd_netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss;
-      unbuild_action_spec_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss);
+    case 536871725:
+      action_spec->name = p4_pd_netbufferv4_add_to_val9;
       break;
-    case 536871346:
-      action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres;
+    case 536871743:
+      action_spec->name = p4_pd_netbufferv4_add_to_val10;
       break;
-    case 536871357:
-      action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
-      unbuild_action_spec_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss);
+    case 536871761:
+      action_spec->name = p4_pd_netbufferv4_add_to_val11;
       break;
-    case 536871361:
-      action_spec->name = p4_pd_netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
-      unbuild_action_spec_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss);
+    case 536871779:
+      action_spec->name = p4_pd_netbufferv4_add_to_val12;
       break;
-    case 536871370:
-      action_spec->name = p4_pd_netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone;
-      unbuild_action_spec_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone);
+    case 536871797:
+      action_spec->name = p4_pd_netbufferv4_add_to_val13;
       break;
-    case 536871375:
-      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq;
+    case 536871815:
+      action_spec->name = p4_pd_netbufferv4_add_to_val14;
       break;
-    case 536871380:
-      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_pop_seq;
+    case 536871833:
+      action_spec->name = p4_pd_netbufferv4_add_to_val15;
       break;
-    case 536871392:
-      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putres_by_mirroring;
-      unbuild_action_spec_update_putreq_inswitch_to_putres_by_mirroring(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_putreq_inswitch_to_putres_by_mirroring);
+    case 536871851:
+      action_spec->name = p4_pd_netbufferv4_add_to_val16;
       break;
-    case 536871404:
-      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
-      unbuild_action_spec_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres);
-      break;
-    case 536871408:
-      action_spec->name = p4_pd_netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
-      unbuild_action_spec_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres);
-      break;
-    case 536871421:
-      action_spec->name = p4_pd_netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
-      unbuild_action_spec_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring);
-      break;
-    case 536871426:
-      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_case3;
-      break;
-    case 536871431:
-      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_pop_seq_case3;
-      break;
-    case 536871436:
-      action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq;
-      break;
-    case 536871448:
-      action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delres_by_mirroring;
-      unbuild_action_spec_update_delreq_inswitch_to_delres_by_mirroring(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_delreq_inswitch_to_delres_by_mirroring);
-      break;
-    case 536871460:
-      action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
-      unbuild_action_spec_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres);
-      break;
-    case 536871464:
-      action_spec->name = p4_pd_netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
-      unbuild_action_spec_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres);
-      break;
-    case 536871477:
-      action_spec->name = p4_pd_netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
-      unbuild_action_spec_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring);
-      break;
-    case 536871482:
-      action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_case3;
-      break;
-    case 536871491:
-      action_spec->name = p4_pd_netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone;
-      unbuild_action_spec_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone);
-      break;
-    case 536871502:
-      action_spec->name = p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone;
-      unbuild_action_spec_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone);
-      break;
-    case 536871512:
-      action_spec->name = p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
-      unbuild_action_spec_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone);
-      break;
-    case 536871521:
-      action_spec->name = p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
-      unbuild_action_spec_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone);
-      break;
-    case 536871522:
-      action_spec->name = p4_pd_netbufferv4_nop;
+    case 536871869:
+      action_spec->name = p4_pd_netbufferv4_remove_all;
       break;
   default:
     return BF_UNEXPECTED;
@@ -29350,7 +29390,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_get_default_entry
 
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm1_tbl_table_get_default_entry_handle
+p4_pd_netbufferv4_cache_lookup_tbl_table_get_default_entry_handle
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt,
@@ -29365,7 +29405,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_get_default_entry_handle
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm1_tbl_table_get_default_entry
+p4_pd_netbufferv4_cache_lookup_tbl_table_get_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt,
@@ -29402,10 +29442,88 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871230:
-      action_spec->name = p4_pd_netbufferv4_hash_for_cm1;
+    case 536871229:
+      action_spec->name = p4_pd_netbufferv4_cached_action;
+      unbuild_action_spec_cached_action(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_cached_action);
       break;
     case 536871231:
+      action_spec->name = p4_pd_netbufferv4_uncached_action;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_drop_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777285, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_drop_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777285, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871871:
+      action_spec->name = p4_pd_netbufferv4_drop_getres_latest_seq_inswitch;
+      break;
+    case 536871873:
+      action_spec->name = p4_pd_netbufferv4_drop_getres_deleted_seq_inswitch;
+      break;
+    case 536871874:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -29421,7 +29539,234 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_get_default_entry
 
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm2_tbl_table_get_default_entry_handle
+p4_pd_netbufferv4_eg_port_forward_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777281, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_eg_port_forward_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777281, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871302:
+      action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq;
+      break;
+    case 536871306:
+      action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq_pop;
+      break;
+    case 536871310:
+      action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq_nlatest;
+      break;
+    case 536871322:
+      action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getres_by_mirroring;
+      unbuild_action_spec_update_getreq_inswitch_to_getres_by_mirroring(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_getreq_inswitch_to_getres_by_mirroring);
+      break;
+    case 536871328:
+      action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres;
+      break;
+    case 536871339:
+      action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss;
+      unbuild_action_spec_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss);
+      break;
+    case 536871343:
+      action_spec->name = p4_pd_netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss;
+      unbuild_action_spec_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss);
+      break;
+    case 536871349:
+      action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres;
+      break;
+    case 536871360:
+      action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
+      unbuild_action_spec_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss);
+      break;
+    case 536871364:
+      action_spec->name = p4_pd_netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
+      unbuild_action_spec_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss);
+      break;
+    case 536871373:
+      action_spec->name = p4_pd_netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone;
+      unbuild_action_spec_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone);
+      break;
+    case 536871378:
+      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq;
+      break;
+    case 536871383:
+      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_pop_seq;
+      break;
+    case 536871395:
+      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putres_by_mirroring;
+      unbuild_action_spec_update_putreq_inswitch_to_putres_by_mirroring(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_putreq_inswitch_to_putres_by_mirroring);
+      break;
+    case 536871407:
+      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
+      unbuild_action_spec_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres);
+      break;
+    case 536871411:
+      action_spec->name = p4_pd_netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
+      unbuild_action_spec_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres);
+      break;
+    case 536871424:
+      action_spec->name = p4_pd_netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
+      unbuild_action_spec_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring);
+      break;
+    case 536871429:
+      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_case3;
+      break;
+    case 536871434:
+      action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_pop_seq_case3;
+      break;
+    case 536871439:
+      action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq;
+      break;
+    case 536871451:
+      action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delres_by_mirroring;
+      unbuild_action_spec_update_delreq_inswitch_to_delres_by_mirroring(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_delreq_inswitch_to_delres_by_mirroring);
+      break;
+    case 536871463:
+      action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
+      unbuild_action_spec_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres);
+      break;
+    case 536871467:
+      action_spec->name = p4_pd_netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
+      unbuild_action_spec_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres);
+      break;
+    case 536871480:
+      action_spec->name = p4_pd_netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
+      unbuild_action_spec_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring);
+      break;
+    case 536871485:
+      action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_case3;
+      break;
+    case 536871494:
+      action_spec->name = p4_pd_netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone;
+      unbuild_action_spec_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone);
+      break;
+    case 536871505:
+      action_spec->name = p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone;
+      unbuild_action_spec_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone);
+      break;
+    case 536871515:
+      action_spec->name = p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
+      unbuild_action_spec_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone);
+      break;
+    case 536871524:
+      action_spec->name = p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
+      unbuild_action_spec_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone);
+      break;
+    case 536871525:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_cm1_tbl_table_get_default_entry_handle
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt,
@@ -29436,7 +29781,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_get_default_entry_handle
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm2_tbl_table_get_default_entry
+p4_pd_netbufferv4_hash_for_cm1_tbl_table_get_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt,
@@ -29474,7 +29819,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_get_default_entry
 
   switch(act_fn_hdl) {
     case 536871233:
-      action_spec->name = p4_pd_netbufferv4_hash_for_cm2;
+      action_spec->name = p4_pd_netbufferv4_hash_for_cm1;
       break;
     case 536871234:
       action_spec->name = p4_pd_netbufferv4_nop;
@@ -29492,220 +29837,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_get_default_entry
 
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm3_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777270, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm3_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777270, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871239:
-      action_spec->name = p4_pd_netbufferv4_hash_for_cm3;
-      break;
-    case 536871240:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm4_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777272, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm4_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777272, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871246:
-      action_spec->name = p4_pd_netbufferv4_hash_for_cm4;
-      break;
-    case 536871247:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_partition_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777264, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_partition_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777264, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871218:
-      action_spec->name = p4_pd_netbufferv4_hash_for_partition;
-      break;
-    case 536871219:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_seq_tbl_table_get_default_entry_handle
+p4_pd_netbufferv4_hash_for_cm2_tbl_table_get_default_entry_handle
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt,
@@ -29720,7 +29852,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_get_default_entry_handle
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_seq_tbl_table_get_default_entry
+p4_pd_netbufferv4_hash_for_cm2_tbl_table_get_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt,
@@ -29758,7 +29890,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_get_default_entry
 
   switch(act_fn_hdl) {
     case 536871236:
-      action_spec->name = p4_pd_netbufferv4_hash_for_seq;
+      action_spec->name = p4_pd_netbufferv4_hash_for_cm2;
       break;
     case 536871237:
       action_spec->name = p4_pd_netbufferv4_nop;
@@ -29776,824 +29908,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_get_default_entry
 
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_partition_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777265, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_partition_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777265, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871222:
-      action_spec->name = p4_pd_netbufferv4_hash_partition;
-      unbuild_action_spec_hash_partition(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_hash_partition);
-      break;
-    case 536871223:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_ig_port_forward_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777276, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_ig_port_forward_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777276, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871265:
-      action_spec->name = p4_pd_netbufferv4_update_getreq_to_getreq_inswitch;
-      break;
-    case 536871269:
-      action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres_latest_seq_inswitch;
-      break;
-    case 536871273:
-      action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
-      break;
-    case 536871278:
-      action_spec->name = p4_pd_netbufferv4_update_putreq_to_putreq_inswitch;
-      break;
-    case 536871283:
-      action_spec->name = p4_pd_netbufferv4_update_delreq_to_delreq_inswitch;
-      break;
-    case 536871284:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_ipv4_forward_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777274, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_ipv4_forward_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777274, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871252:
-      action_spec->name = p4_pd_netbufferv4_forward_normal_response;
-      unbuild_action_spec_forward_normal_response(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_forward_normal_response);
-      break;
-    case 536871256:
-      action_spec->name = p4_pd_netbufferv4_forward_special_get_response;
-      unbuild_action_spec_forward_special_get_response(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_forward_special_get_response);
-      break;
-    case 536871257:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_is_hot_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777277, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_is_hot_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777277, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871286:
-      action_spec->name = p4_pd_netbufferv4_set_is_hot;
-      break;
-    case 536871288:
-      action_spec->name = p4_pd_netbufferv4_reset_is_hot;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777279, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777279, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871293:
-      action_spec->name = p4_pd_netbufferv4_set_is_lastclone;
-      break;
-    case 536871295:
-      action_spec->name = p4_pd_netbufferv4_reset_is_lastclone_lastscansplit;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_need_recirculate_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777261, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_need_recirculate_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777261, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871209:
-      action_spec->name = p4_pd_netbufferv4_set_need_recirculate;
-      break;
-    case 536871211:
-      action_spec->name = p4_pd_netbufferv4_reset_need_recirculate;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777273, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777273, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871249:
-      action_spec->name = p4_pd_netbufferv4_set_client_sid;
-      unbuild_action_spec_set_client_sid(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_set_client_sid);
-      break;
-    case 536871250:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_recirculate_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777263, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_recirculate_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777263, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871215:
-      action_spec->name = p4_pd_netbufferv4_recirculate_pkt;
-      unbuild_action_spec_recirculate_pkt(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_recirculate_pkt);
-      break;
-    case 536871216:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_sample_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777275, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_sample_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777275, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871259:
-      action_spec->name = p4_pd_netbufferv4_sample;
-      break;
-    case 536871260:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_save_client_udpport_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777278, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_save_client_udpport_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777278, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871290:
-      action_spec->name = p4_pd_netbufferv4_save_client_udpport;
-      break;
-    case 536871291:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_set_hot_threshold_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777262, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_set_hot_threshold_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777262, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871213:
-      action_spec->name = p4_pd_netbufferv4_set_hot_threshold;
-      unbuild_action_spec_set_hot_threshold(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_set_hot_threshold);
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_snapshot_flag_tbl_table_get_default_entry_handle
+p4_pd_netbufferv4_hash_for_cm3_tbl_table_get_default_entry_handle
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt,
@@ -30608,7 +29923,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_get_default_entry_handle
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_snapshot_flag_tbl_table_get_default_entry
+p4_pd_netbufferv4_hash_for_cm3_tbl_table_get_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt,
@@ -30646,9 +29961,1185 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_get_default_entry
 
   switch(act_fn_hdl) {
     case 536871242:
+      action_spec->name = p4_pd_netbufferv4_hash_for_cm3;
+      break;
+    case 536871243:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_cm4_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777273, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_cm4_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777273, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871249:
+      action_spec->name = p4_pd_netbufferv4_hash_for_cm4;
+      break;
+    case 536871250:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_partition_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777265, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_partition_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777265, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871221:
+      action_spec->name = p4_pd_netbufferv4_hash_for_partition;
+      break;
+    case 536871222:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_seq_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777270, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_seq_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777270, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871239:
+      action_spec->name = p4_pd_netbufferv4_hash_for_seq;
+      break;
+    case 536871240:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_partition_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777266, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_partition_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777266, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871225:
+      action_spec->name = p4_pd_netbufferv4_hash_partition;
+      unbuild_action_spec_hash_partition(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_hash_partition);
+      break;
+    case 536871226:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_ig_port_forward_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777277, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_ig_port_forward_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777277, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871268:
+      action_spec->name = p4_pd_netbufferv4_update_getreq_to_getreq_inswitch;
+      break;
+    case 536871272:
+      action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres_latest_seq_inswitch;
+      break;
+    case 536871276:
+      action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
+      break;
+    case 536871281:
+      action_spec->name = p4_pd_netbufferv4_update_putreq_to_putreq_inswitch;
+      break;
+    case 536871286:
+      action_spec->name = p4_pd_netbufferv4_update_delreq_to_delreq_inswitch;
+      break;
+    case 536871287:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_ipv4_forward_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777275, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_ipv4_forward_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777275, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871255:
+      action_spec->name = p4_pd_netbufferv4_forward_normal_response;
+      unbuild_action_spec_forward_normal_response(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_forward_normal_response);
+      break;
+    case 536871259:
+      action_spec->name = p4_pd_netbufferv4_forward_special_get_response;
+      unbuild_action_spec_forward_special_get_response(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_forward_special_get_response);
+      break;
+    case 536871260:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_is_hot_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777278, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_is_hot_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777278, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871289:
+      action_spec->name = p4_pd_netbufferv4_set_is_hot;
+      break;
+    case 536871291:
+      action_spec->name = p4_pd_netbufferv4_reset_is_hot;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777261, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777261, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871209:
+      action_spec->name = p4_pd_netbufferv4_l2l3_forward;
+      unbuild_action_spec_l2l3_forward(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_l2l3_forward);
+      break;
+    case 536871210:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777280, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777280, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871296:
+      action_spec->name = p4_pd_netbufferv4_set_is_lastclone;
+      break;
+    case 536871298:
+      action_spec->name = p4_pd_netbufferv4_reset_is_lastclone_lastscansplit;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_need_recirculate_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777262, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_need_recirculate_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777262, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871212:
+      action_spec->name = p4_pd_netbufferv4_set_need_recirculate;
+      break;
+    case 536871214:
+      action_spec->name = p4_pd_netbufferv4_reset_need_recirculate;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777274, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777274, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871252:
+      action_spec->name = p4_pd_netbufferv4_set_client_sid;
+      unbuild_action_spec_set_client_sid(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_set_client_sid);
+      break;
+    case 536871253:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_recirculate_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777264, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_recirculate_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777264, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871218:
+      action_spec->name = p4_pd_netbufferv4_recirculate_pkt;
+      unbuild_action_spec_recirculate_pkt(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_recirculate_pkt);
+      break;
+    case 536871219:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_sample_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777276, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_sample_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777276, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871262:
+      action_spec->name = p4_pd_netbufferv4_sample;
+      break;
+    case 536871263:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_save_client_udpport_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777279, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_save_client_udpport_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777279, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871293:
+      action_spec->name = p4_pd_netbufferv4_save_client_udpport;
+      break;
+    case 536871294:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_set_hot_threshold_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777263, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_set_hot_threshold_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777263, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871216:
+      action_spec->name = p4_pd_netbufferv4_set_hot_threshold;
+      unbuild_action_spec_set_hot_threshold(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_set_hot_threshold);
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_snapshot_flag_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777272, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_snapshot_flag_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777272, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871245:
       action_spec->name = p4_pd_netbufferv4_set_snapshot_flag;
       break;
-    case 536871244:
+    case 536871247:
       action_spec->name = p4_pd_netbufferv4_reset_snapshot_flag;
       break;
   default:
@@ -30675,100 +31166,11 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_get_default_entry_handle
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
-			                              16777281, entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_get_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  p4_pd_status_t status = BF_SUCCESS;
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  pipe_action_spec_t pipe_action_spec = {0};
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  (void)action_spec;
-
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  status = pipe_mgr_table_get_default_entry(
-      sess_hdl, pipe_mgr_dev_tgt, 16777281, &pipe_action_spec, &act_fn_hdl, read_from_hw);
-  if (status) return status;
-
-  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
-    return BF_UNEXPECTED;
-  }
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-    case 536871528:
-      action_spec->name = p4_pd_netbufferv4_update_ipmac_srcport_server2client;
-      unbuild_action_spec_update_ipmac_srcport_server2client(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_ipmac_srcport_server2client);
-      break;
-    case 536871534:
-      action_spec->name = p4_pd_netbufferv4_update_ipmac_srcport_switch2switchos;
-      unbuild_action_spec_update_ipmac_srcport_switch2switchos(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_ipmac_srcport_switch2switchos);
-      break;
-    case 536871537:
-      action_spec->name = p4_pd_netbufferv4_update_dstipmac_client2server;
-      unbuild_action_spec_update_dstipmac_client2server(pipe_action_data_spec,
-                                    res_spec,
-                                    resource_cnt,
-                                    &action_spec->u.p4_pd_netbufferv4_update_dstipmac_client2server);
-      break;
-    case 536871538:
-      action_spec->name = p4_pd_netbufferv4_nop;
-      break;
-  default:
-    return BF_UNEXPECTED;
-  }
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-
-
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_update_pktlen_tbl_table_get_default_entry_handle
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt,
- p4_pd_entry_hdl_t* entry_hdl
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
 			                              16777282, entry_hdl);
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_update_pktlen_tbl_table_get_default_entry
+p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_get_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt,
@@ -30805,14 +31207,103 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
+    case 536871531:
+      action_spec->name = p4_pd_netbufferv4_update_ipmac_srcport_server2client;
+      unbuild_action_spec_update_ipmac_srcport_server2client(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_ipmac_srcport_server2client);
+      break;
+    case 536871537:
+      action_spec->name = p4_pd_netbufferv4_update_ipmac_srcport_switch2switchos;
+      unbuild_action_spec_update_ipmac_srcport_switch2switchos(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_ipmac_srcport_switch2switchos);
+      break;
+    case 536871540:
+      action_spec->name = p4_pd_netbufferv4_update_dstipmac_client2server;
+      unbuild_action_spec_update_dstipmac_client2server(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_update_dstipmac_client2server);
+      break;
     case 536871541:
+      action_spec->name = p4_pd_netbufferv4_nop;
+      break;
+  default:
+    return BF_UNEXPECTED;
+  }
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+
+
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_update_pktlen_tbl_table_get_default_entry_handle
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ p4_pd_entry_hdl_t* entry_hdl
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_table_get_default_entry_handle(sess_hdl, pipe_mgr_dev_tgt,
+			                              16777283, entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_update_pktlen_tbl_table_get_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  p4_pd_status_t status = BF_SUCCESS;
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  pipe_action_spec_t pipe_action_spec = {0};
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  (void)action_spec;
+
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  status = pipe_mgr_table_get_default_entry(
+      sess_hdl, pipe_mgr_dev_tgt, 16777283, &pipe_action_spec, &act_fn_hdl, read_from_hw);
+  if (status) return status;
+
+  if (pipe_action_spec.pipe_action_datatype_bmap != PIPE_ACTION_DATA_TYPE) {
+    return BF_UNEXPECTED;
+  }
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+    case 536871544:
       action_spec->name = p4_pd_netbufferv4_update_pktlen;
       unbuild_action_spec_update_pktlen(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_pktlen);
       break;
-    case 536871542:
+    case 536871545:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -33551,7 +34042,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777283, 0);
+			                                  16777284, 0);
 }
 
 
@@ -33566,7 +34057,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777266, 0);
+			                                  16777267, 0);
 }
 
 
@@ -33581,7 +34072,7 @@ p4_pd_netbufferv4_drop_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777284, 0);
+			                                  16777285, 0);
 }
 
 
@@ -33596,7 +34087,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777280, 0);
+			                                  16777281, 0);
 }
 
 
@@ -33611,7 +34102,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777267, 0);
+			                                  16777268, 0);
 }
 
 
@@ -33626,7 +34117,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777268, 0);
+			                                  16777269, 0);
 }
 
 
@@ -33641,7 +34132,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777270, 0);
+			                                  16777271, 0);
 }
 
 
@@ -33656,7 +34147,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777272, 0);
+			                                  16777273, 0);
 }
 
 
@@ -33671,7 +34162,7 @@ p4_pd_netbufferv4_hash_for_partition_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777264, 0);
+			                                  16777265, 0);
 }
 
 
@@ -33686,7 +34177,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777269, 0);
+			                                  16777270, 0);
 }
 
 
@@ -33701,7 +34192,7 @@ p4_pd_netbufferv4_hash_partition_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777265, 0);
+			                                  16777266, 0);
 }
 
 
@@ -33716,7 +34207,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777276, 0);
+			                                  16777277, 0);
 }
 
 
@@ -33731,7 +34222,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777274, 0);
+			                                  16777275, 0);
 }
 
 
@@ -33746,27 +34237,12 @@ p4_pd_netbufferv4_is_hot_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777277, 0);
+			                                  16777278, 0);
 }
 
 
 p4_pd_status_t
-p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_reset_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777279, 0);
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_need_recirculate_tbl_table_reset_default_entry
+p4_pd_netbufferv4_l2l3_forward_tbl_table_reset_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt
@@ -33781,7 +34257,7 @@ p4_pd_netbufferv4_need_recirculate_tbl_table_reset_default_entry
 
 
 p4_pd_status_t
-p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_reset_default_entry
+p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_reset_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt
@@ -33791,57 +34267,12 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777273, 0);
+			                                  16777280, 0);
 }
 
 
 p4_pd_status_t
-p4_pd_netbufferv4_recirculate_tbl_table_reset_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777263, 0);
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_sample_tbl_table_reset_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777275, 0);
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_save_client_udpport_tbl_table_reset_default_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t pd_dev_tgt
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
-  return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777278, 0);
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_set_hot_threshold_tbl_table_reset_default_entry
+p4_pd_netbufferv4_need_recirculate_tbl_table_reset_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t pd_dev_tgt
@@ -33856,6 +34287,81 @@ p4_pd_netbufferv4_set_hot_threshold_tbl_table_reset_default_entry
 
 
 p4_pd_status_t
+p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_reset_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
+			                                  16777274, 0);
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_recirculate_tbl_table_reset_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
+			                                  16777264, 0);
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_sample_tbl_table_reset_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
+			                                  16777276, 0);
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_save_client_udpport_tbl_table_reset_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
+			                                  16777279, 0);
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_set_hot_threshold_tbl_table_reset_default_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t pd_dev_tgt
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
+  return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
+			                                  16777263, 0);
+}
+
+
+p4_pd_status_t
 p4_pd_netbufferv4_snapshot_flag_tbl_table_reset_default_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
@@ -33866,7 +34372,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777271, 0);
+			                                  16777272, 0);
 }
 
 
@@ -33881,7 +34387,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777281, 0);
+			                                  16777282, 0);
 }
 
 
@@ -33896,7 +34402,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_reset_default_entry
   pipe_mgr_dev_tgt.device_id = pd_dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = pd_dev_tgt.dev_pipe_id;
   return pipe_mgr_mat_tbl_default_entry_reset(sess_hdl, pipe_mgr_dev_tgt,
-			                                  16777282, 0);
+			                                  16777283, 0);
 }
 
 
@@ -34931,7 +35437,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777283, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777284, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -34949,7 +35455,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777283, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777284, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -34978,7 +35484,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777266, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777267, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -34996,7 +35502,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777266, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777267, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35025,7 +35531,7 @@ p4_pd_netbufferv4_drop_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777284, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777285, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35043,7 +35549,7 @@ p4_pd_netbufferv4_drop_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777284, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777285, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35072,7 +35578,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777280, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777281, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35090,7 +35596,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777280, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777281, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35119,7 +35625,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777267, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777268, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35137,7 +35643,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777267, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777268, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35166,7 +35672,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777268, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777269, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35184,7 +35690,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777268, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777269, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35213,7 +35719,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777270, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777271, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35231,7 +35737,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777270, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777271, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35260,7 +35766,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777272, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777273, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35278,7 +35784,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777272, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777273, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35307,7 +35813,7 @@ p4_pd_netbufferv4_hash_for_partition_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777264, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777265, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35325,7 +35831,7 @@ p4_pd_netbufferv4_hash_for_partition_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777264, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777265, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35354,7 +35860,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777269, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777270, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35372,7 +35878,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777269, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777270, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35401,7 +35907,7 @@ p4_pd_netbufferv4_hash_partition_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777265, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777266, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35419,7 +35925,7 @@ p4_pd_netbufferv4_hash_partition_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777265, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777266, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35448,7 +35954,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777276, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777277, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35466,7 +35972,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777276, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777277, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35495,7 +36001,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777274, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777275, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35513,7 +36019,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777274, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777275, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35542,7 +36048,7 @@ p4_pd_netbufferv4_is_hot_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777277, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777278, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35560,7 +36066,54 @@ p4_pd_netbufferv4_is_hot_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777277, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777278, prop_type, &prop_val, &args_val);
+
+  if (status != PIPE_MGR_SUCCESS) {
+    value->value = -1;
+    args->value = -1;
+  } else {
+    value->value = prop_val.value;
+    args->value = args_val.value;
+  }
+
+  return status;
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_set_property
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_tbl_prop_type_t property,
+ p4_pd_tbl_prop_value_t value,
+ p4_pd_tbl_prop_args_t args
+)
+{
+  pipe_mgr_tbl_prop_type_t prop_type = property;
+  pipe_mgr_tbl_prop_value_t prop_val;
+  pipe_mgr_tbl_prop_args_t args_val;
+  prop_val.value = value.value;
+  args_val.value = args.value;
+  return pipe_mgr_tbl_set_property(
+      sess_hdl, dev_id, 16777261, prop_type, prop_val, args_val);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_get_property
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_tbl_prop_type_t property,
+ p4_pd_tbl_prop_value_t *value,
+ p4_pd_tbl_prop_args_t *args
+)
+{
+  pipe_mgr_tbl_prop_type_t prop_type = property;
+  pipe_mgr_tbl_prop_value_t prop_val;
+  pipe_mgr_tbl_prop_args_t args_val;
+
+  p4_pd_status_t status = pipe_mgr_tbl_get_property(
+      sess_hdl, dev_id, 16777261, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35589,7 +36142,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777279, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777280, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35607,7 +36160,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777279, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777280, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35636,7 +36189,7 @@ p4_pd_netbufferv4_need_recirculate_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777261, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777262, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35654,7 +36207,7 @@ p4_pd_netbufferv4_need_recirculate_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777261, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777262, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35683,7 +36236,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777273, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777274, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35701,7 +36254,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777273, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777274, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35730,7 +36283,7 @@ p4_pd_netbufferv4_recirculate_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777263, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777264, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35748,7 +36301,7 @@ p4_pd_netbufferv4_recirculate_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777263, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777264, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35777,7 +36330,7 @@ p4_pd_netbufferv4_sample_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777275, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777276, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35795,7 +36348,7 @@ p4_pd_netbufferv4_sample_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777275, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777276, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35824,7 +36377,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777278, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777279, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35842,7 +36395,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777278, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777279, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35871,7 +36424,7 @@ p4_pd_netbufferv4_set_hot_threshold_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777262, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777263, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35889,7 +36442,7 @@ p4_pd_netbufferv4_set_hot_threshold_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777262, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777263, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35918,7 +36471,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777271, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777272, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35936,7 +36489,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777271, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777272, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -35965,7 +36518,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777281, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777282, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -35983,7 +36536,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777281, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777282, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -36012,7 +36565,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_set_property
   prop_val.value = value.value;
   args_val.value = args.value;
   return pipe_mgr_tbl_set_property(
-      sess_hdl, dev_id, 16777282, prop_type, prop_val, args_val);
+      sess_hdl, dev_id, 16777283, prop_type, prop_val, args_val);
 }
 
 p4_pd_status_t
@@ -36030,7 +36583,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_get_property
   pipe_mgr_tbl_prop_args_t args_val;
 
   p4_pd_status_t status = pipe_mgr_tbl_get_property(
-      sess_hdl, dev_id, 16777282, prop_type, &prop_val, &args_val);
+      sess_hdl, dev_id, 16777283, prop_type, &prop_val, &args_val);
 
   if (status != PIPE_MGR_SUCCESS) {
     value->value = -1;
@@ -39850,9 +40403,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_only_val
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871560,
+             536871563,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -39896,9 +40449,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_only_val
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871560,
+             536871563,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -39924,9 +40477,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val1
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871578,
+             536871581,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -39970,9 +40523,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val1_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871578,
+             536871581,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -39998,9 +40551,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val2
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871596,
+             536871599,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40044,9 +40597,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val2_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871596,
+             536871599,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40072,9 +40625,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val3
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871614,
+             536871617,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40118,9 +40671,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val3_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871614,
+             536871617,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40146,9 +40699,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val4
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871632,
+             536871635,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40192,9 +40745,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val4_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871632,
+             536871635,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40220,9 +40773,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val5
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871650,
+             536871653,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40266,9 +40819,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val5_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871650,
+             536871653,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40294,9 +40847,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val6
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871668,
+             536871671,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40340,9 +40893,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val6_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871668,
+             536871671,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40368,9 +40921,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val7
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871686,
+             536871689,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40414,9 +40967,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val7_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871686,
+             536871689,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40442,9 +40995,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val8
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871704,
+             536871707,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40488,9 +41041,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val8_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871704,
+             536871707,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40516,9 +41069,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val9
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871722,
+             536871725,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40562,9 +41115,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val9_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871722,
+             536871725,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40590,9 +41143,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val10
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871740,
+             536871743,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40636,9 +41189,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val10
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871740,
+             536871743,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40664,9 +41217,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val11
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871758,
+             536871761,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40710,9 +41263,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val11
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871758,
+             536871761,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40738,9 +41291,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val12
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871776,
+             536871779,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40784,9 +41337,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val12
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871776,
+             536871779,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40812,9 +41365,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val13
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871794,
+             536871797,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40858,9 +41411,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val13
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871794,
+             536871797,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40886,9 +41439,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val14
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871812,
+             536871815,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40932,9 +41485,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val14
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871812,
+             536871815,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -40960,9 +41513,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val15
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871830,
+             536871833,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41006,9 +41559,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val15
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871830,
+             536871833,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41034,9 +41587,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val16
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871848,
+             536871851,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41080,9 +41633,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val16
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871848,
+             536871851,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41108,9 +41661,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_remove_all
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777283,
+             16777284,
              entry_hdl,
-             536871866,
+             536871869,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41154,9 +41707,9 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_remove_all_b
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777283,
+             16777284,
              &pipe_match_spec,
-             536871866,
+             536871869,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41184,9 +41737,9 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_modify_with_cached_action
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777266,
+             16777267,
              entry_hdl,
-             536871226,
+             536871229,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41230,9 +41783,9 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_modify_with_cached_action_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777266,
+             16777267,
              &pipe_match_spec,
-             536871226,
+             536871229,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41258,9 +41811,9 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_modify_with_uncached_action
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777266,
+             16777267,
              entry_hdl,
-             536871228,
+             536871231,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41302,9 +41855,9 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_modify_with_uncached_action_by_match_sp
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777266,
+             16777267,
              &pipe_match_spec,
-             536871228,
+             536871231,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41330,9 +41883,9 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_drop_getres_latest_seq_inswitch
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777284,
+             16777285,
              entry_hdl,
-             536871868,
+             536871871,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41374,9 +41927,9 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_drop_getres_latest_seq_inswitch_by_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777284,
+             16777285,
              &pipe_match_spec,
-             536871868,
+             536871871,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41402,9 +41955,9 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_drop_getres_deleted_seq_inswitch
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777284,
+             16777285,
              entry_hdl,
-             536871870,
+             536871873,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41446,9 +41999,9 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_drop_getres_deleted_seq_inswitch_by
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777284,
+             16777285,
              &pipe_match_spec,
-             536871870,
+             536871873,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41474,9 +42027,9 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777284,
+             16777285,
              entry_hdl,
-             536871871,
+             536871874,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41518,9 +42071,9 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777284,
+             16777285,
              &pipe_match_spec,
-             536871871,
+             536871874,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41546,9 +42099,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871299,
+             536871302,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41590,9 +42143,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871299,
+             536871302,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41618,9 +42171,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871303,
+             536871306,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41662,9 +42215,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871303,
+             536871306,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41690,9 +42243,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871307,
+             536871310,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41734,9 +42287,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871307,
+             536871310,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41764,9 +42317,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871319,
+             536871322,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41810,9 +42363,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871319,
+             536871322,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41838,9 +42391,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_latest_seq
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871325,
+             536871328,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41882,9 +42435,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_latest_seq
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871325,
+             536871328,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41912,9 +42465,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_latest_seq
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871336,
+             536871339,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41958,9 +42511,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_latest_seq
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871336,
+             536871339,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41988,9 +42541,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_latest_se
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871340,
+             536871343,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42034,9 +42587,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_latest_se
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871340,
+             536871343,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42062,9 +42615,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_se
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871346,
+             536871349,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42106,9 +42659,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_se
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871346,
+             536871349,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42136,9 +42689,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_se
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871357,
+             536871360,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42182,9 +42735,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_se
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871357,
+             536871360,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42212,9 +42765,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_s
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871361,
+             536871364,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42258,9 +42811,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_s
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871361,
+             536871364,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42288,9 +42841,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_pop_inswitc
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871370,
+             536871373,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42334,9 +42887,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_pop_inswitc
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871370,
+             536871373,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42362,9 +42915,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871375,
+             536871378,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42406,9 +42959,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871375,
+             536871378,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42434,9 +42987,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871380,
+             536871383,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42478,9 +43031,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871380,
+             536871383,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42508,9 +43061,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871392,
+             536871395,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42554,9 +43107,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871392,
+             536871395,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42584,9 +43137,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871404,
+             536871407,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42630,9 +43183,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871404,
+             536871407,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42660,9 +43213,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_putreq_seq_inswi
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871408,
+             536871411,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42706,9 +43259,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_putreq_seq_inswi
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871408,
+             536871411,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42736,9 +43289,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_seq_inswit
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871421,
+             536871424,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42782,9 +43335,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_seq_inswit
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871421,
+             536871424,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42810,9 +43363,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871426,
+             536871429,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42854,9 +43407,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871426,
+             536871429,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42882,9 +43435,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871431,
+             536871434,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42926,9 +43479,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871431,
+             536871434,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42954,9 +43507,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871436,
+             536871439,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42998,9 +43551,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871436,
+             536871439,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43028,9 +43581,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871448,
+             536871451,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43074,9 +43627,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871448,
+             536871451,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43104,9 +43657,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871460,
+             536871463,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43150,9 +43703,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871460,
+             536871463,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43180,9 +43733,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_delreq_seq_inswi
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871464,
+             536871467,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43226,9 +43779,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_delreq_seq_inswi
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871464,
+             536871467,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43256,9 +43809,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_seq_inswit
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871477,
+             536871480,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43302,9 +43855,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_seq_inswit
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871477,
+             536871480,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43330,9 +43883,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871482,
+             536871485,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43374,9 +43927,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871482,
+             536871485,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43404,9 +43957,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_evict_loadf
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871491,
+             536871494,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43450,9 +44003,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_evict_loadf
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871491,
+             536871494,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43480,9 +44033,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_evict_loadd
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871502,
+             536871505,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43526,9 +44079,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_evict_loadd
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871502,
+             536871505,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43543,22 +44096,22 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_loadsnapshotdata_
 )
 {
 
-  uint8_t pipe_action_data_bits[6];
-  memset(pipe_action_data_bits, 0, 6);
+  uint8_t pipe_action_data_bits[7];
+  memset(pipe_action_data_bits, 0, 7);
   pipe_action_spec_t pipe_action_spec = {0};
   pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
   pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
   pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-  pipe_action_data_spec->num_valid_action_data_bits = 48;
-  pipe_action_data_spec->num_action_data_bytes = 6;
+  pipe_action_data_spec->num_valid_action_data_bits = 56;
+  pipe_action_data_spec->num_action_data_bytes = 7;
   pipe_action_spec.resource_count = 0;
   build_action_spec_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(pipe_action_data_spec, action_spec);
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871512,
+             536871515,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43589,22 +44142,22 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_loadsnapshotdata_
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
 
-  uint8_t pipe_action_data_bits[6];
-  memset(pipe_action_data_bits, 0, 6);
+  uint8_t pipe_action_data_bits[7];
+  memset(pipe_action_data_bits, 0, 7);
   pipe_action_spec_t pipe_action_spec = {0};
   pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
   pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
   pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-  pipe_action_data_spec->num_valid_action_data_bits = 48;
-  pipe_action_data_spec->num_action_data_bytes = 6;
+  pipe_action_data_spec->num_valid_action_data_bits = 56;
+  pipe_action_data_spec->num_action_data_bytes = 7;
   pipe_action_spec.resource_count = 0;
   build_action_spec_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(pipe_action_data_spec, action_spec);
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871512,
+             536871515,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43632,9 +44185,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_setvalid_inswitch
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871521,
+             536871524,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43678,9 +44231,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_setvalid_inswitch
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871521,
+             536871524,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43706,9 +44259,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777280,
+             16777281,
              entry_hdl,
-             536871522,
+             536871525,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43750,9 +44303,9 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777280,
+             16777281,
              &pipe_match_spec,
-             536871522,
+             536871525,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43778,9 +44331,9 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_modify_with_hash_for_cm1
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777267,
+             16777268,
              entry_hdl,
-             536871230,
+             536871233,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43822,9 +44375,9 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_modify_with_hash_for_cm1_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777267,
+             16777268,
              &pipe_match_spec,
-             536871230,
+             536871233,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43850,9 +44403,9 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777267,
+             16777268,
              entry_hdl,
-             536871231,
+             536871234,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43894,9 +44447,9 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777267,
+             16777268,
              &pipe_match_spec,
-             536871231,
+             536871234,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43922,9 +44475,9 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_modify_with_hash_for_cm2
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777268,
+             16777269,
              entry_hdl,
-             536871233,
+             536871236,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43966,9 +44519,9 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_modify_with_hash_for_cm2_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777268,
+             16777269,
              &pipe_match_spec,
-             536871233,
+             536871236,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43994,9 +44547,9 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777268,
+             16777269,
              entry_hdl,
-             536871234,
+             536871237,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44038,9 +44591,9 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777268,
+             16777269,
              &pipe_match_spec,
-             536871234,
+             536871237,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44066,9 +44619,9 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_modify_with_hash_for_cm3
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777270,
+             16777271,
              entry_hdl,
-             536871239,
+             536871242,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44110,9 +44663,9 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_modify_with_hash_for_cm3_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777270,
+             16777271,
              &pipe_match_spec,
-             536871239,
+             536871242,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44138,9 +44691,9 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777270,
+             16777271,
              entry_hdl,
-             536871240,
+             536871243,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44182,9 +44735,9 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777270,
+             16777271,
              &pipe_match_spec,
-             536871240,
+             536871243,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44210,9 +44763,9 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_modify_with_hash_for_cm4
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777272,
+             16777273,
              entry_hdl,
-             536871246,
+             536871249,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44254,9 +44807,9 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_modify_with_hash_for_cm4_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777272,
+             16777273,
              &pipe_match_spec,
-             536871246,
+             536871249,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44282,9 +44835,9 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777272,
+             16777273,
              entry_hdl,
-             536871247,
+             536871250,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44326,9 +44879,9 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777272,
+             16777273,
              &pipe_match_spec,
-             536871247,
+             536871250,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44354,9 +44907,9 @@ p4_pd_netbufferv4_hash_for_partition_tbl_table_modify_with_hash_for_partition
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777264,
+             16777265,
              entry_hdl,
-             536871218,
+             536871221,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44398,9 +44951,9 @@ p4_pd_netbufferv4_hash_for_partition_tbl_table_modify_with_hash_for_partition_by
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777264,
+             16777265,
              &pipe_match_spec,
-             536871218,
+             536871221,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44426,9 +44979,9 @@ p4_pd_netbufferv4_hash_for_partition_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777264,
+             16777265,
              entry_hdl,
-             536871219,
+             536871222,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44470,9 +45023,9 @@ p4_pd_netbufferv4_hash_for_partition_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777264,
+             16777265,
              &pipe_match_spec,
-             536871219,
+             536871222,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44498,9 +45051,9 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_modify_with_hash_for_seq
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777269,
+             16777270,
              entry_hdl,
-             536871236,
+             536871239,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44542,9 +45095,9 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_modify_with_hash_for_seq_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777269,
+             16777270,
              &pipe_match_spec,
-             536871236,
+             536871239,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44570,9 +45123,9 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777269,
+             16777270,
              entry_hdl,
-             536871237,
+             536871240,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44614,9 +45167,9 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777269,
+             16777270,
              &pipe_match_spec,
-             536871237,
+             536871240,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44644,9 +45197,9 @@ p4_pd_netbufferv4_hash_partition_tbl_table_modify_with_hash_partition
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777265,
+             16777266,
              entry_hdl,
-             536871222,
+             536871225,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44692,9 +45245,9 @@ p4_pd_netbufferv4_hash_partition_tbl_table_modify_with_hash_partition_by_match_s
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777265,
+             16777266,
              &pipe_match_spec,
-             536871222,
+             536871225,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44720,9 +45273,9 @@ p4_pd_netbufferv4_hash_partition_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777265,
+             16777266,
              entry_hdl,
-             536871223,
+             536871226,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44766,9 +45319,9 @@ p4_pd_netbufferv4_hash_partition_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777265,
+             16777266,
              &pipe_match_spec,
-             536871223,
+             536871226,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44794,9 +45347,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getreq_to_getreq_
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777276,
+             16777277,
              entry_hdl,
-             536871265,
+             536871268,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44838,9 +45391,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getreq_to_getreq_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777276,
+             16777277,
              &pipe_match_spec,
-             536871265,
+             536871268,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44866,9 +45419,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getres_latest_seq
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777276,
+             16777277,
              entry_hdl,
-             536871269,
+             536871272,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44910,9 +45463,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getres_latest_seq
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777276,
+             16777277,
              &pipe_match_spec,
-             536871269,
+             536871272,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44938,9 +45491,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getres_deleted_se
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777276,
+             16777277,
              entry_hdl,
-             536871273,
+             536871276,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44982,9 +45535,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getres_deleted_se
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777276,
+             16777277,
              &pipe_match_spec,
-             536871273,
+             536871276,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45010,9 +45563,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_putreq_to_putreq_
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777276,
+             16777277,
              entry_hdl,
-             536871278,
+             536871281,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45054,9 +45607,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_putreq_to_putreq_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777276,
+             16777277,
              &pipe_match_spec,
-             536871278,
+             536871281,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45082,9 +45635,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_delreq_to_delreq_
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777276,
+             16777277,
              entry_hdl,
-             536871283,
+             536871286,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45126,9 +45679,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_delreq_to_delreq_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777276,
+             16777277,
              &pipe_match_spec,
-             536871283,
+             536871286,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45154,9 +45707,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777276,
+             16777277,
              entry_hdl,
-             536871284,
+             536871287,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45198,9 +45751,9 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777276,
+             16777277,
              &pipe_match_spec,
-             536871284,
+             536871287,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45228,9 +45781,9 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_forward_normal_response
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777274,
+             16777275,
              entry_hdl,
-             536871252,
+             536871255,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45274,9 +45827,9 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_forward_normal_response_by_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777274,
+             16777275,
              &pipe_match_spec,
-             536871252,
+             536871255,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45304,9 +45857,9 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_forward_special_get_respons
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777274,
+             16777275,
              entry_hdl,
-             536871256,
+             536871259,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45350,9 +45903,9 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_forward_special_get_respons
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777274,
+             16777275,
              &pipe_match_spec,
-             536871256,
+             536871259,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45378,9 +45931,9 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777274,
+             16777275,
              entry_hdl,
-             536871257,
+             536871260,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45422,9 +45975,9 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777274,
+             16777275,
              &pipe_match_spec,
-             536871257,
+             536871260,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45450,9 +46003,9 @@ p4_pd_netbufferv4_is_hot_tbl_table_modify_with_set_is_hot
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777277,
+             16777278,
              entry_hdl,
-             536871286,
+             536871289,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45494,9 +46047,9 @@ p4_pd_netbufferv4_is_hot_tbl_table_modify_with_set_is_hot_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777277,
+             16777278,
              &pipe_match_spec,
-             536871286,
+             536871289,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45522,9 +46075,9 @@ p4_pd_netbufferv4_is_hot_tbl_table_modify_with_reset_is_hot
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777277,
+             16777278,
              entry_hdl,
-             536871288,
+             536871291,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45566,9 +46119,157 @@ p4_pd_netbufferv4_is_hot_tbl_table_modify_with_reset_is_hot_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777277,
+             16777278,
              &pipe_match_spec,
-             536871288,
+             536871291,
+             &pipe_action_spec,
+             0 /* flags, TODO */);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_l2l3_forward
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ p4_pd_netbufferv4_l2l3_forward_action_spec_t *action_spec
+)
+{
+
+  uint8_t pipe_action_data_bits[2];
+  memset(pipe_action_data_bits, 0, 2);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 9;
+  pipe_action_data_spec->num_action_data_bytes = 2;
+  pipe_action_spec.resource_count = 0;
+  build_action_spec_l2l3_forward(pipe_action_data_spec, action_spec);
+
+  return pipe_mgr_mat_ent_set_action(sess_hdl,
+             dev_id,
+             16777261,
+             entry_hdl,
+             536871209,
+             &pipe_action_spec,
+             0 /* flags, TODO */);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_l2l3_forward_action_spec_t *action_spec
+)
+{
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[10];
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  uint8_t pipe_match_mask_bits[10];
+  if (10) {
+    memset(pipe_match_value_bits, 0, 10);
+    memset(pipe_match_mask_bits, 0, 10);
+  }
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.num_valid_match_bits = 80;
+  pipe_match_spec.num_match_bytes = 10;
+  build_match_spec_l2l3_forward_tbl(&pipe_match_spec, match_spec);
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  uint8_t pipe_action_data_bits[2];
+  memset(pipe_action_data_bits, 0, 2);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 9;
+  pipe_action_data_spec->num_action_data_bytes = 2;
+  pipe_action_spec.resource_count = 0;
+  build_action_spec_l2l3_forward(pipe_action_data_spec, action_spec);
+
+  return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
+             pipe_mgr_dev_tgt,
+             16777261,
+             &pipe_match_spec,
+             536871209,
+             &pipe_action_spec,
+             0 /* flags, TODO */);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl
+)
+{
+
+  uint8_t pipe_action_data_bits[0];
+  memset(pipe_action_data_bits, 0, 0);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 0;
+  pipe_action_data_spec->num_action_data_bytes = 0;
+  pipe_action_spec.resource_count = 0;
+
+  return pipe_mgr_mat_ent_set_action(sess_hdl,
+             dev_id,
+             16777261,
+             entry_hdl,
+             536871210,
+             &pipe_action_spec,
+             0 /* flags, TODO */);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_table_modify_with_nop_by_match_spec
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec
+)
+{
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[10];
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  uint8_t pipe_match_mask_bits[10];
+  if (10) {
+    memset(pipe_match_value_bits, 0, 10);
+    memset(pipe_match_mask_bits, 0, 10);
+  }
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.num_valid_match_bits = 80;
+  pipe_match_spec.num_match_bytes = 10;
+  build_match_spec_l2l3_forward_tbl(&pipe_match_spec, match_spec);
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  uint8_t pipe_action_data_bits[0];
+  memset(pipe_action_data_bits, 0, 0);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 0;
+  pipe_action_data_spec->num_action_data_bytes = 0;
+  pipe_action_spec.resource_count = 0;
+
+  return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
+             pipe_mgr_dev_tgt,
+             16777261,
+             &pipe_match_spec,
+             536871210,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45594,9 +46295,9 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777279,
+             16777280,
              entry_hdl,
-             536871293,
+             536871296,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45638,9 +46339,9 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777279,
+             16777280,
              &pipe_match_spec,
-             536871293,
+             536871296,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45666,9 +46367,9 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_reset_is_lastclo
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777279,
+             16777280,
              entry_hdl,
-             536871295,
+             536871298,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45710,9 +46411,9 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_reset_is_lastclo
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777279,
+             16777280,
              &pipe_match_spec,
-             536871295,
+             536871298,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45738,9 +46439,9 @@ p4_pd_netbufferv4_need_recirculate_tbl_table_modify_with_set_need_recirculate
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777261,
+             16777262,
              entry_hdl,
-             536871209,
+             536871212,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45782,9 +46483,9 @@ p4_pd_netbufferv4_need_recirculate_tbl_table_modify_with_set_need_recirculate_by
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777261,
+             16777262,
              &pipe_match_spec,
-             536871209,
+             536871212,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45810,9 +46511,9 @@ p4_pd_netbufferv4_need_recirculate_tbl_table_modify_with_reset_need_recirculate
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777261,
+             16777262,
              entry_hdl,
-             536871211,
+             536871214,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45854,9 +46555,9 @@ p4_pd_netbufferv4_need_recirculate_tbl_table_modify_with_reset_need_recirculate_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777261,
+             16777262,
              &pipe_match_spec,
-             536871211,
+             536871214,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45884,9 +46585,9 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_modify_with_set_client_sid
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777273,
+             16777274,
              entry_hdl,
-             536871249,
+             536871252,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45930,9 +46631,9 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_modify_with_set_client_sid_by_m
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777273,
+             16777274,
              &pipe_match_spec,
-             536871249,
+             536871252,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45958,9 +46659,9 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777273,
+             16777274,
              entry_hdl,
-             536871250,
+             536871253,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46002,9 +46703,9 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777273,
+             16777274,
              &pipe_match_spec,
-             536871250,
+             536871253,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46032,9 +46733,9 @@ p4_pd_netbufferv4_recirculate_tbl_table_modify_with_recirculate_pkt
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777263,
+             16777264,
              entry_hdl,
-             536871215,
+             536871218,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46078,9 +46779,9 @@ p4_pd_netbufferv4_recirculate_tbl_table_modify_with_recirculate_pkt_by_match_spe
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777263,
+             16777264,
              &pipe_match_spec,
-             536871215,
+             536871218,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46106,9 +46807,9 @@ p4_pd_netbufferv4_recirculate_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777263,
+             16777264,
              entry_hdl,
-             536871216,
+             536871219,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46150,9 +46851,9 @@ p4_pd_netbufferv4_recirculate_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777263,
+             16777264,
              &pipe_match_spec,
-             536871216,
+             536871219,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46178,9 +46879,9 @@ p4_pd_netbufferv4_sample_tbl_table_modify_with_sample
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777275,
+             16777276,
              entry_hdl,
-             536871259,
+             536871262,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46222,9 +46923,9 @@ p4_pd_netbufferv4_sample_tbl_table_modify_with_sample_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777275,
+             16777276,
              &pipe_match_spec,
-             536871259,
+             536871262,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46250,9 +46951,9 @@ p4_pd_netbufferv4_sample_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777275,
+             16777276,
              entry_hdl,
-             536871260,
+             536871263,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46294,9 +46995,9 @@ p4_pd_netbufferv4_sample_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777275,
+             16777276,
              &pipe_match_spec,
-             536871260,
+             536871263,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46322,9 +47023,9 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_modify_with_save_client_udpport
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777278,
+             16777279,
              entry_hdl,
-             536871290,
+             536871293,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46366,9 +47067,9 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_modify_with_save_client_udpport_
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777278,
+             16777279,
              &pipe_match_spec,
-             536871290,
+             536871293,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46394,9 +47095,9 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777278,
+             16777279,
              entry_hdl,
-             536871291,
+             536871294,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46438,9 +47139,9 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777278,
+             16777279,
              &pipe_match_spec,
-             536871291,
+             536871294,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46466,9 +47167,9 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_modify_with_set_snapshot_flag
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777271,
+             16777272,
              entry_hdl,
-             536871242,
+             536871245,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46510,9 +47211,9 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_modify_with_set_snapshot_flag_by_match
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777271,
+             16777272,
              &pipe_match_spec,
-             536871242,
+             536871245,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46538,9 +47239,9 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_modify_with_reset_snapshot_flag
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777271,
+             16777272,
              entry_hdl,
-             536871244,
+             536871247,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46582,9 +47283,9 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_modify_with_reset_snapshot_flag_by_mat
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777271,
+             16777272,
              &pipe_match_spec,
-             536871244,
+             536871247,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46612,9 +47313,9 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_ipmac_srcpor
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777281,
+             16777282,
              entry_hdl,
-             536871528,
+             536871531,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46658,9 +47359,9 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_ipmac_srcpor
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777281,
+             16777282,
              &pipe_match_spec,
-             536871528,
+             536871531,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46688,9 +47389,9 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_ipmac_srcpor
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777281,
+             16777282,
              entry_hdl,
-             536871534,
+             536871537,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46734,9 +47435,9 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_ipmac_srcpor
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777281,
+             16777282,
              &pipe_match_spec,
-             536871534,
+             536871537,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46764,9 +47465,9 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_dstipmac_cli
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777281,
+             16777282,
              entry_hdl,
-             536871537,
+             536871540,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46810,9 +47511,9 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_dstipmac_cli
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777281,
+             16777282,
              &pipe_match_spec,
-             536871537,
+             536871540,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46838,9 +47539,9 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777281,
+             16777282,
              entry_hdl,
-             536871538,
+             536871541,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46882,9 +47583,9 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777281,
+             16777282,
              &pipe_match_spec,
-             536871538,
+             536871541,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46912,9 +47613,9 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_modify_with_update_pktlen
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777282,
+             16777283,
              entry_hdl,
-             536871541,
+             536871544,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46960,9 +47661,9 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_modify_with_update_pktlen_by_match_spe
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777282,
+             16777283,
              &pipe_match_spec,
-             536871541,
+             536871544,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46988,9 +47689,9 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_modify_with_nop
 
   return pipe_mgr_mat_ent_set_action(sess_hdl,
              dev_id,
-             16777282,
+             16777283,
              entry_hdl,
-             536871542,
+             536871545,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47034,9 +47735,9 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_modify_with_nop_by_match_spec
 
   return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
              pipe_mgr_dev_tgt,
-             16777282,
+             16777283,
              &pipe_match_spec,
-             536871542,
+             536871545,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -57010,8 +57711,8 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_set_default_action_remove_all
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777283,
-				      536871866,
+				      16777284,
+				      536871869,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57019,105 +57720,6 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_set_default_action_remove_all
 
 p4_pd_status_t
 p4_pd_netbufferv4_cache_lookup_tbl_set_default_action_uncached_action
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t dev_tgt,
- p4_pd_entry_hdl_t *entry_hdl
-)
-{
-  uint8_t pipe_action_data_bits[0];
-  memset(pipe_action_data_bits, 0, 0);
-  pipe_action_spec_t pipe_action_spec = {0};
-  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-  pipe_action_data_spec->num_valid_action_data_bits = 0;
-  pipe_action_data_spec->num_action_data_bytes = 0;
-  pipe_action_spec.resource_count = 0;
-
-
-
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-
-  return pipe_mgr_mat_default_entry_set(sess_hdl,
-				      pipe_mgr_dev_tgt,
-				      16777266,
-				      536871228,
-				      &pipe_action_spec,
-				      0 /* flags TODO */,
-				      entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_drop_tbl_set_default_action_nop
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t dev_tgt,
- p4_pd_entry_hdl_t *entry_hdl
-)
-{
-  uint8_t pipe_action_data_bits[0];
-  memset(pipe_action_data_bits, 0, 0);
-  pipe_action_spec_t pipe_action_spec = {0};
-  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-  pipe_action_data_spec->num_valid_action_data_bits = 0;
-  pipe_action_data_spec->num_action_data_bytes = 0;
-  pipe_action_spec.resource_count = 0;
-
-
-
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-
-  return pipe_mgr_mat_default_entry_set(sess_hdl,
-				      pipe_mgr_dev_tgt,
-				      16777284,
-				      536871871,
-				      &pipe_action_spec,
-				      0 /* flags TODO */,
-				      entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_eg_port_forward_tbl_set_default_action_nop
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t dev_tgt,
- p4_pd_entry_hdl_t *entry_hdl
-)
-{
-  uint8_t pipe_action_data_bits[0];
-  memset(pipe_action_data_bits, 0, 0);
-  pipe_action_spec_t pipe_action_spec = {0};
-  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-  pipe_action_data_spec->num_valid_action_data_bits = 0;
-  pipe_action_data_spec->num_action_data_bytes = 0;
-  pipe_action_spec.resource_count = 0;
-
-
-
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-
-  return pipe_mgr_mat_default_entry_set(sess_hdl,
-				      pipe_mgr_dev_tgt,
-				      16777280,
-				      536871522,
-				      &pipe_action_spec,
-				      0 /* flags TODO */,
-				      entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm1_tbl_set_default_action_nop
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
@@ -57150,7 +57752,73 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_set_default_action_nop
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm2_tbl_set_default_action_nop
+p4_pd_netbufferv4_drop_tbl_set_default_action_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  uint8_t pipe_action_data_bits[0];
+  memset(pipe_action_data_bits, 0, 0);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 0;
+  pipe_action_data_spec->num_action_data_bytes = 0;
+  pipe_action_spec.resource_count = 0;
+
+
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  return pipe_mgr_mat_default_entry_set(sess_hdl,
+				      pipe_mgr_dev_tgt,
+				      16777285,
+				      536871874,
+				      &pipe_action_spec,
+				      0 /* flags TODO */,
+				      entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_eg_port_forward_tbl_set_default_action_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  uint8_t pipe_action_data_bits[0];
+  memset(pipe_action_data_bits, 0, 0);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 0;
+  pipe_action_data_spec->num_action_data_bytes = 0;
+  pipe_action_spec.resource_count = 0;
+
+
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  return pipe_mgr_mat_default_entry_set(sess_hdl,
+				      pipe_mgr_dev_tgt,
+				      16777281,
+				      536871525,
+				      &pipe_action_spec,
+				      0 /* flags TODO */,
+				      entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_cm1_tbl_set_default_action_nop
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
@@ -57183,106 +57851,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_set_default_action_nop
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm3_tbl_set_default_action_nop
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t dev_tgt,
- p4_pd_entry_hdl_t *entry_hdl
-)
-{
-  uint8_t pipe_action_data_bits[0];
-  memset(pipe_action_data_bits, 0, 0);
-  pipe_action_spec_t pipe_action_spec = {0};
-  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-  pipe_action_data_spec->num_valid_action_data_bits = 0;
-  pipe_action_data_spec->num_action_data_bytes = 0;
-  pipe_action_spec.resource_count = 0;
-
-
-
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-
-  return pipe_mgr_mat_default_entry_set(sess_hdl,
-				      pipe_mgr_dev_tgt,
-				      16777270,
-				      536871240,
-				      &pipe_action_spec,
-				      0 /* flags TODO */,
-				      entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm4_tbl_set_default_action_nop
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t dev_tgt,
- p4_pd_entry_hdl_t *entry_hdl
-)
-{
-  uint8_t pipe_action_data_bits[0];
-  memset(pipe_action_data_bits, 0, 0);
-  pipe_action_spec_t pipe_action_spec = {0};
-  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-  pipe_action_data_spec->num_valid_action_data_bits = 0;
-  pipe_action_data_spec->num_action_data_bytes = 0;
-  pipe_action_spec.resource_count = 0;
-
-
-
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-
-  return pipe_mgr_mat_default_entry_set(sess_hdl,
-				      pipe_mgr_dev_tgt,
-				      16777272,
-				      536871247,
-				      &pipe_action_spec,
-				      0 /* flags TODO */,
-				      entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_partition_tbl_set_default_action_nop
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t dev_tgt,
- p4_pd_entry_hdl_t *entry_hdl
-)
-{
-  uint8_t pipe_action_data_bits[0];
-  memset(pipe_action_data_bits, 0, 0);
-  pipe_action_spec_t pipe_action_spec = {0};
-  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-  pipe_action_data_spec->num_valid_action_data_bits = 0;
-  pipe_action_data_spec->num_action_data_bytes = 0;
-  pipe_action_spec.resource_count = 0;
-
-
-
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-
-  return pipe_mgr_mat_default_entry_set(sess_hdl,
-				      pipe_mgr_dev_tgt,
-				      16777264,
-				      536871219,
-				      &pipe_action_spec,
-				      0 /* flags TODO */,
-				      entry_hdl);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_seq_tbl_set_default_action_nop
+p4_pd_netbufferv4_hash_for_cm2_tbl_set_default_action_nop
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
@@ -57315,7 +57884,73 @@ p4_pd_netbufferv4_hash_for_seq_tbl_set_default_action_nop
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_partition_tbl_set_default_action_nop
+p4_pd_netbufferv4_hash_for_cm3_tbl_set_default_action_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  uint8_t pipe_action_data_bits[0];
+  memset(pipe_action_data_bits, 0, 0);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 0;
+  pipe_action_data_spec->num_action_data_bytes = 0;
+  pipe_action_spec.resource_count = 0;
+
+
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  return pipe_mgr_mat_default_entry_set(sess_hdl,
+				      pipe_mgr_dev_tgt,
+				      16777271,
+				      536871243,
+				      &pipe_action_spec,
+				      0 /* flags TODO */,
+				      entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_cm4_tbl_set_default_action_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  uint8_t pipe_action_data_bits[0];
+  memset(pipe_action_data_bits, 0, 0);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 0;
+  pipe_action_data_spec->num_action_data_bytes = 0;
+  pipe_action_spec.resource_count = 0;
+
+
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  return pipe_mgr_mat_default_entry_set(sess_hdl,
+				      pipe_mgr_dev_tgt,
+				      16777273,
+				      536871250,
+				      &pipe_action_spec,
+				      0 /* flags TODO */,
+				      entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_partition_tbl_set_default_action_nop
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
@@ -57341,7 +57976,73 @@ p4_pd_netbufferv4_hash_partition_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777265,
-				      536871223,
+				      536871222,
+				      &pipe_action_spec,
+				      0 /* flags TODO */,
+				      entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_seq_tbl_set_default_action_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  uint8_t pipe_action_data_bits[0];
+  memset(pipe_action_data_bits, 0, 0);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 0;
+  pipe_action_data_spec->num_action_data_bytes = 0;
+  pipe_action_spec.resource_count = 0;
+
+
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  return pipe_mgr_mat_default_entry_set(sess_hdl,
+				      pipe_mgr_dev_tgt,
+				      16777270,
+				      536871240,
+				      &pipe_action_spec,
+				      0 /* flags TODO */,
+				      entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_partition_tbl_set_default_action_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  uint8_t pipe_action_data_bits[0];
+  memset(pipe_action_data_bits, 0, 0);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 0;
+  pipe_action_data_spec->num_action_data_bytes = 0;
+  pipe_action_spec.resource_count = 0;
+
+
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  return pipe_mgr_mat_default_entry_set(sess_hdl,
+				      pipe_mgr_dev_tgt,
+				      16777266,
+				      536871226,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57373,8 +58074,8 @@ p4_pd_netbufferv4_ig_port_forward_tbl_set_default_action_nop
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777276,
-				      536871284,
+				      16777277,
+				      536871287,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57406,8 +58107,8 @@ p4_pd_netbufferv4_ipv4_forward_tbl_set_default_action_nop
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777274,
-				      536871257,
+				      16777275,
+				      536871260,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57439,8 +58140,41 @@ p4_pd_netbufferv4_is_hot_tbl_set_default_action_reset_is_hot
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777277,
-				      536871288,
+				      16777278,
+				      536871291,
+				      &pipe_action_spec,
+				      0 /* flags TODO */,
+				      entry_hdl);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_set_default_action_nop
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  uint8_t pipe_action_data_bits[0];
+  memset(pipe_action_data_bits, 0, 0);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 0;
+  pipe_action_data_spec->num_action_data_bytes = 0;
+  pipe_action_spec.resource_count = 0;
+
+
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  return pipe_mgr_mat_default_entry_set(sess_hdl,
+				      pipe_mgr_dev_tgt,
+				      16777261,
+				      536871210,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57472,8 +58206,8 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_set_default_action_reset_is_lastcl
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777279,
-				      536871295,
+				      16777280,
+				      536871298,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57505,8 +58239,8 @@ p4_pd_netbufferv4_need_recirculate_tbl_set_default_action_reset_need_recirculate
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777261,
-				      536871211,
+				      16777262,
+				      536871214,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57540,8 +58274,8 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_set_default_action_set_client_sid
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777273,
-				      536871249,
+				      16777274,
+				      536871252,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57573,8 +58307,8 @@ p4_pd_netbufferv4_recirculate_tbl_set_default_action_nop
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777263,
-				      536871216,
+				      16777264,
+				      536871219,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57606,8 +58340,8 @@ p4_pd_netbufferv4_sample_tbl_set_default_action_nop
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777275,
-				      536871260,
+				      16777276,
+				      536871263,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57639,8 +58373,8 @@ p4_pd_netbufferv4_save_client_udpport_tbl_set_default_action_nop
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777278,
-				      536871291,
+				      16777279,
+				      536871294,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57674,8 +58408,8 @@ p4_pd_netbufferv4_set_hot_threshold_tbl_set_default_action_set_hot_threshold
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777262,
-				      536871213,
+				      16777263,
+				      536871216,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57707,8 +58441,8 @@ p4_pd_netbufferv4_snapshot_flag_tbl_set_default_action_reset_snapshot_flag
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777271,
-				      536871244,
+				      16777272,
+				      536871247,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57740,8 +58474,8 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_set_default_action_nop
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777281,
-				      536871538,
+				      16777282,
+				      536871541,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -57773,8 +58507,8 @@ p4_pd_netbufferv4_update_pktlen_tbl_set_default_action_nop
 
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
-				      16777282,
-				      536871542,
+				      16777283,
+				      536871545,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59055,7 +59789,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777283, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777284, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59070,7 +59804,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777266, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777267, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59085,7 +59819,7 @@ p4_pd_netbufferv4_drop_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777284, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777285, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59100,7 +59834,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777280, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777281, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59115,7 +59849,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777267, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777268, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59130,7 +59864,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777268, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777269, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59145,7 +59879,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777270, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777271, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59160,7 +59894,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777272, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777273, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59175,7 +59909,7 @@ p4_pd_netbufferv4_hash_for_partition_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777264, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777265, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59190,7 +59924,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777269, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777270, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59205,7 +59939,7 @@ p4_pd_netbufferv4_hash_partition_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777265, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777266, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59220,7 +59954,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777276, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777277, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59235,7 +59969,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777274, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777275, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59250,26 +59984,11 @@ p4_pd_netbufferv4_is_hot_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777277, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777278, read_from_hw, count);
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry_count
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t dev_tgt,
- uint32_t *count
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  bool read_from_hw = false;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777279, read_from_hw, count);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_need_recirculate_tbl_get_entry_count
+p4_pd_netbufferv4_l2l3_forward_tbl_get_entry_count
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
@@ -59284,7 +60003,7 @@ p4_pd_netbufferv4_need_recirculate_tbl_get_entry_count
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_entry_count
+p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry_count
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
@@ -59295,56 +60014,11 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777273, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777280, read_from_hw, count);
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_recirculate_tbl_get_entry_count
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t dev_tgt,
- uint32_t *count
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  bool read_from_hw = false;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777263, read_from_hw, count);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_sample_tbl_get_entry_count
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t dev_tgt,
- uint32_t *count
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  bool read_from_hw = false;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777275, read_from_hw, count);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_save_client_udpport_tbl_get_entry_count
-(
- p4_pd_sess_hdl_t sess_hdl,
- p4_pd_dev_target_t dev_tgt,
- uint32_t *count
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  bool read_from_hw = false;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777278, read_from_hw, count);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_set_hot_threshold_tbl_get_entry_count
+p4_pd_netbufferv4_need_recirculate_tbl_get_entry_count
 (
  p4_pd_sess_hdl_t sess_hdl,
  p4_pd_dev_target_t dev_tgt,
@@ -59359,6 +60033,81 @@ p4_pd_netbufferv4_set_hot_threshold_tbl_get_entry_count
 }
 
 p4_pd_status_t
+p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_entry_count
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ uint32_t *count
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  bool read_from_hw = false;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777274, read_from_hw, count);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_recirculate_tbl_get_entry_count
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ uint32_t *count
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  bool read_from_hw = false;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777264, read_from_hw, count);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_sample_tbl_get_entry_count
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ uint32_t *count
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  bool read_from_hw = false;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777276, read_from_hw, count);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_save_client_udpport_tbl_get_entry_count
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ uint32_t *count
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  bool read_from_hw = false;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777279, read_from_hw, count);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_set_hot_threshold_tbl_get_entry_count
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ uint32_t *count
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  bool read_from_hw = false;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777263, read_from_hw, count);
+}
+
+p4_pd_status_t
 p4_pd_netbufferv4_snapshot_flag_tbl_get_entry_count
 (
  p4_pd_sess_hdl_t sess_hdl,
@@ -59370,7 +60119,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777271, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777272, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59385,7 +60134,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777281, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777282, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -59400,7 +60149,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_get_entry_count
   bool read_from_hw = false;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777282, read_from_hw, count);
+  return pipe_mgr_get_entry_count(sess_hdl, pipe_mgr_dev_tgt, 16777283, read_from_hw, count);
 }
 
 p4_pd_status_t
@@ -61069,7 +61818,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_get_first_entry_handle
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777283, pipe_mgr_dev_tgt,
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777284, pipe_mgr_dev_tgt,
 					 entry_handle);  
 }
 
@@ -61083,7 +61832,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_get_next_entry_handles
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777283, pipe_mgr_dev_tgt, entry_handle,
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777284, pipe_mgr_dev_tgt, entry_handle,
 					 n, next_entry_handles);
 }
 
@@ -61123,7 +61872,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_get_entry
   pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
   pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
 
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777283, dev_id, entry_hdl,
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777284, dev_id, entry_hdl,
                                              &pipe_match_spec,
                                              &pipe_action_spec, &act_fn_hdl,
                                              read_from_hw);
@@ -61140,58 +61889,58 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871560:
+  case 536871563:
     action_spec->name = p4_pd_netbufferv4_add_only_vallen;
     break;
-  case 536871578:
+  case 536871581:
     action_spec->name = p4_pd_netbufferv4_add_to_val1;
     break;
-  case 536871596:
+  case 536871599:
     action_spec->name = p4_pd_netbufferv4_add_to_val2;
     break;
-  case 536871614:
+  case 536871617:
     action_spec->name = p4_pd_netbufferv4_add_to_val3;
     break;
-  case 536871632:
+  case 536871635:
     action_spec->name = p4_pd_netbufferv4_add_to_val4;
     break;
-  case 536871650:
+  case 536871653:
     action_spec->name = p4_pd_netbufferv4_add_to_val5;
     break;
-  case 536871668:
+  case 536871671:
     action_spec->name = p4_pd_netbufferv4_add_to_val6;
     break;
-  case 536871686:
+  case 536871689:
     action_spec->name = p4_pd_netbufferv4_add_to_val7;
     break;
-  case 536871704:
+  case 536871707:
     action_spec->name = p4_pd_netbufferv4_add_to_val8;
     break;
-  case 536871722:
+  case 536871725:
     action_spec->name = p4_pd_netbufferv4_add_to_val9;
     break;
-  case 536871740:
+  case 536871743:
     action_spec->name = p4_pd_netbufferv4_add_to_val10;
     break;
-  case 536871758:
+  case 536871761:
     action_spec->name = p4_pd_netbufferv4_add_to_val11;
     break;
-  case 536871776:
+  case 536871779:
     action_spec->name = p4_pd_netbufferv4_add_to_val12;
     break;
-  case 536871794:
+  case 536871797:
     action_spec->name = p4_pd_netbufferv4_add_to_val13;
     break;
-  case 536871812:
+  case 536871815:
     action_spec->name = p4_pd_netbufferv4_add_to_val14;
     break;
-  case 536871830:
+  case 536871833:
     action_spec->name = p4_pd_netbufferv4_add_to_val15;
     break;
-  case 536871848:
+  case 536871851:
     action_spec->name = p4_pd_netbufferv4_add_to_val16;
     break;
-  case 536871866:
+  case 536871869:
     action_spec->name = p4_pd_netbufferv4_remove_all;
     break;
   default:
@@ -61224,7 +61973,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_get_first_entry_handle
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777266, pipe_mgr_dev_tgt,
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777267, pipe_mgr_dev_tgt,
 					 entry_handle);  
 }
 
@@ -61238,7 +61987,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_get_next_entry_handles
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777266, pipe_mgr_dev_tgt, entry_handle,
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777267, pipe_mgr_dev_tgt, entry_handle,
 					 n, next_entry_handles);
 }
 
@@ -61277,7 +62026,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_get_entry
   pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
   pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
 
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777266, dev_id, entry_hdl,
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777267, dev_id, entry_hdl,
                                              &pipe_match_spec,
                                              &pipe_action_spec, &act_fn_hdl,
                                              read_from_hw);
@@ -61294,14 +62043,14 @@ p4_pd_netbufferv4_cache_lookup_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871226:
+  case 536871229:
     action_spec->name = p4_pd_netbufferv4_cached_action;
     unbuild_action_spec_cached_action(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_cached_action);
     break;
-  case 536871228:
+  case 536871231:
     action_spec->name = p4_pd_netbufferv4_uncached_action;
     break;
   default:
@@ -61331,7 +62080,7 @@ p4_pd_netbufferv4_drop_tbl_get_first_entry_handle
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777284, pipe_mgr_dev_tgt,
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777285, pipe_mgr_dev_tgt,
 					 entry_handle);  
 }
 
@@ -61345,7 +62094,7 @@ p4_pd_netbufferv4_drop_tbl_get_next_entry_handles
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777284, pipe_mgr_dev_tgt, entry_handle,
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777285, pipe_mgr_dev_tgt, entry_handle,
 					 n, next_entry_handles);
 }
 
@@ -61384,7 +62133,7 @@ p4_pd_netbufferv4_drop_tbl_get_entry
   pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
   pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
 
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777284, dev_id, entry_hdl,
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777285, dev_id, entry_hdl,
                                              &pipe_match_spec,
                                              &pipe_action_spec, &act_fn_hdl,
                                              read_from_hw);
@@ -61401,13 +62150,13 @@ p4_pd_netbufferv4_drop_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871868:
+  case 536871871:
     action_spec->name = p4_pd_netbufferv4_drop_getres_latest_seq_inswitch;
     break;
-  case 536871870:
+  case 536871873:
     action_spec->name = p4_pd_netbufferv4_drop_getres_deleted_seq_inswitch;
     break;
-  case 536871871:
+  case 536871874:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -61437,7 +62186,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_get_first_entry_handle
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777280, pipe_mgr_dev_tgt,
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777281, pipe_mgr_dev_tgt,
 					 entry_handle);  
 }
 
@@ -61451,7 +62200,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_get_next_entry_handles
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777280, pipe_mgr_dev_tgt, entry_handle,
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777281, pipe_mgr_dev_tgt, entry_handle,
 					 n, next_entry_handles);
 }
 
@@ -61490,7 +62239,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_get_entry
   pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
   pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
 
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777280, dev_id, entry_hdl,
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777281, dev_id, entry_hdl,
                                              &pipe_match_spec,
                                              &pipe_action_spec, &act_fn_hdl,
                                              read_from_hw);
@@ -61507,166 +62256,166 @@ p4_pd_netbufferv4_eg_port_forward_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871299:
+  case 536871302:
     action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq;
     break;
-  case 536871303:
+  case 536871306:
     action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq_pop;
     break;
-  case 536871307:
+  case 536871310:
     action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq_nlatest;
     break;
-  case 536871319:
+  case 536871322:
     action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getres_by_mirroring;
     unbuild_action_spec_update_getreq_inswitch_to_getres_by_mirroring(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_getreq_inswitch_to_getres_by_mirroring);
     break;
-  case 536871325:
+  case 536871328:
     action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres;
     break;
-  case 536871336:
+  case 536871339:
     action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss;
     unbuild_action_spec_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss);
     break;
-  case 536871340:
+  case 536871343:
     action_spec->name = p4_pd_netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss;
     unbuild_action_spec_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss);
     break;
-  case 536871346:
+  case 536871349:
     action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres;
     break;
-  case 536871357:
+  case 536871360:
     action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
     unbuild_action_spec_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss);
     break;
-  case 536871361:
+  case 536871364:
     action_spec->name = p4_pd_netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
     unbuild_action_spec_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss);
     break;
-  case 536871370:
+  case 536871373:
     action_spec->name = p4_pd_netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone;
     unbuild_action_spec_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone);
     break;
-  case 536871375:
+  case 536871378:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq;
     break;
-  case 536871380:
+  case 536871383:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_pop_seq;
     break;
-  case 536871392:
+  case 536871395:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putres_by_mirroring;
     unbuild_action_spec_update_putreq_inswitch_to_putres_by_mirroring(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_putreq_inswitch_to_putres_by_mirroring);
     break;
-  case 536871404:
+  case 536871407:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
     unbuild_action_spec_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres);
     break;
-  case 536871408:
+  case 536871411:
     action_spec->name = p4_pd_netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
     unbuild_action_spec_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres);
     break;
-  case 536871421:
+  case 536871424:
     action_spec->name = p4_pd_netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
     unbuild_action_spec_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring);
     break;
-  case 536871426:
+  case 536871429:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_case3;
     break;
-  case 536871431:
+  case 536871434:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_pop_seq_case3;
     break;
-  case 536871436:
+  case 536871439:
     action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq;
     break;
-  case 536871448:
+  case 536871451:
     action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delres_by_mirroring;
     unbuild_action_spec_update_delreq_inswitch_to_delres_by_mirroring(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_delreq_inswitch_to_delres_by_mirroring);
     break;
-  case 536871460:
+  case 536871463:
     action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
     unbuild_action_spec_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres);
     break;
-  case 536871464:
+  case 536871467:
     action_spec->name = p4_pd_netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
     unbuild_action_spec_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres);
     break;
-  case 536871477:
+  case 536871480:
     action_spec->name = p4_pd_netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
     unbuild_action_spec_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring);
     break;
-  case 536871482:
+  case 536871485:
     action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_case3;
     break;
-  case 536871491:
+  case 536871494:
     action_spec->name = p4_pd_netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone;
     unbuild_action_spec_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone);
     break;
-  case 536871502:
+  case 536871505:
     action_spec->name = p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone;
     unbuild_action_spec_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone);
     break;
-  case 536871512:
+  case 536871515:
     action_spec->name = p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
     unbuild_action_spec_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone);
     break;
-  case 536871521:
+  case 536871524:
     action_spec->name = p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
     unbuild_action_spec_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone);
     break;
-  case 536871522:
+  case 536871525:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -61696,7 +62445,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_get_first_entry_handle
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777267, pipe_mgr_dev_tgt,
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777268, pipe_mgr_dev_tgt,
 					 entry_handle);  
 }
 
@@ -61710,7 +62459,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_get_next_entry_handles
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777267, pipe_mgr_dev_tgt, entry_handle,
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777268, pipe_mgr_dev_tgt, entry_handle,
 					 n, next_entry_handles);
 }
 
@@ -61722,109 +62471,6 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_get_entry
  p4_pd_entry_hdl_t entry_hdl,
  bool read_from_hw,
  p4_pd_netbufferv4_hash_for_cm1_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3] = {0};
-  uint8_t pipe_match_mask_bits[3] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 3;
-  pipe_match_spec.num_valid_match_bits = 17;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777267, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 17);
-  // assert(pipe_match_spec.num_match_bytes == 3);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871230:
-    action_spec->name = p4_pd_netbufferv4_hash_for_cm1;
-    break;
-  case 536871231:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
-  if(!is_default_entry)
-    unbuild_key_hash_for_cm1_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm2_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777268, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm2_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777268, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm2_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_hash_for_cm2_tbl_match_spec_t *match_spec,
  p4_pd_netbufferv4_action_specs_t *action_spec
 )
 {
@@ -61870,7 +62516,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_get_entry
 
   switch(act_fn_hdl) {
   case 536871233:
-    action_spec->name = p4_pd_netbufferv4_hash_for_cm2;
+    action_spec->name = p4_pd_netbufferv4_hash_for_cm1;
     break;
   case 536871234:
     action_spec->name = p4_pd_netbufferv4_nop;
@@ -61882,7 +62528,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_get_entry
 
   bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
   if(!is_default_entry)
-    unbuild_key_hash_for_cm2_tbl(&pipe_match_spec, match_spec);
+    unbuild_key_hash_for_cm1_tbl(&pipe_match_spec, match_spec);
 
 
   (void)action_spec;
@@ -61894,316 +62540,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_get_entry
 
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm3_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777270, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm3_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777270, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm3_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_hash_for_cm3_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3] = {0};
-  uint8_t pipe_match_mask_bits[3] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 3;
-  pipe_match_spec.num_valid_match_bits = 17;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777270, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 17);
-  // assert(pipe_match_spec.num_match_bytes == 3);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871239:
-    action_spec->name = p4_pd_netbufferv4_hash_for_cm3;
-    break;
-  case 536871240:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
-  if(!is_default_entry)
-    unbuild_key_hash_for_cm3_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm4_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777272, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm4_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777272, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_cm4_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_hash_for_cm4_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3] = {0};
-  uint8_t pipe_match_mask_bits[3] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 3;
-  pipe_match_spec.num_valid_match_bits = 17;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777272, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 17);
-  // assert(pipe_match_spec.num_match_bytes == 3);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871246:
-    action_spec->name = p4_pd_netbufferv4_hash_for_cm4;
-    break;
-  case 536871247:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
-  if(!is_default_entry)
-    unbuild_key_hash_for_cm4_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_partition_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777264, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_partition_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777264, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_partition_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_hash_for_partition_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3] = {0};
-  uint8_t pipe_match_mask_bits[3] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 3;
-  pipe_match_spec.num_valid_match_bits = 17;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777264, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 17);
-  // assert(pipe_match_spec.num_match_bytes == 3);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871218:
-    action_spec->name = p4_pd_netbufferv4_hash_for_partition;
-    break;
-  case 536871219:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
-  if(!is_default_entry)
-    unbuild_key_hash_for_partition_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_for_seq_tbl_get_first_entry_handle
+p4_pd_netbufferv4_hash_for_cm2_tbl_get_first_entry_handle
 (
   p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
 )
@@ -62216,7 +62553,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_get_first_entry_handle
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_seq_tbl_get_next_entry_handles
+p4_pd_netbufferv4_hash_for_cm2_tbl_get_next_entry_handles
 (
   p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
   int n, int *next_entry_handles
@@ -62230,13 +62567,13 @@ p4_pd_netbufferv4_hash_for_seq_tbl_get_next_entry_handles
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_for_seq_tbl_get_entry
+p4_pd_netbufferv4_hash_for_cm2_tbl_get_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  uint8_t dev_id,
  p4_pd_entry_hdl_t entry_hdl,
  bool read_from_hw,
- p4_pd_netbufferv4_hash_for_seq_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_hash_for_cm2_tbl_match_spec_t *match_spec,
  p4_pd_netbufferv4_action_specs_t *action_spec
 )
 {
@@ -62282,7 +62619,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_get_entry
 
   switch(act_fn_hdl) {
   case 536871236:
-    action_spec->name = p4_pd_netbufferv4_hash_for_seq;
+    action_spec->name = p4_pd_netbufferv4_hash_for_cm2;
     break;
   case 536871237:
     action_spec->name = p4_pd_netbufferv4_nop;
@@ -62294,7 +62631,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_get_entry
 
   bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
   if(!is_default_entry)
-    unbuild_key_hash_for_seq_tbl(&pipe_match_spec, match_spec);
+    unbuild_key_hash_for_cm2_tbl(&pipe_match_spec, match_spec);
 
 
   (void)action_spec;
@@ -62306,1178 +62643,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_get_entry
 
 
 p4_pd_status_t
-p4_pd_netbufferv4_hash_partition_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777265, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_partition_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777265, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_hash_partition_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_hash_partition_tbl_match_spec_t *match_spec,
- int *priority,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5] = {0};
-  uint8_t pipe_match_mask_bits[5] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 5;
-  pipe_match_spec.num_valid_match_bits = 33;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777265, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 33);
-  // assert(pipe_match_spec.num_match_bytes == 5);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871222:
-    action_spec->name = p4_pd_netbufferv4_hash_partition;
-    unbuild_action_spec_hash_partition(pipe_action_data_spec,
-                                  res_spec,
-                                  resource_cnt,
-                                  &action_spec->u.p4_pd_netbufferv4_hash_partition);
-    break;
-  case 536871223:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 5 > 0);
-  if(!is_default_entry)
-    unbuild_key_hash_partition_tbl(&pipe_match_spec, match_spec);
-
-  *priority = pipe_match_spec.priority;
-  if(!is_default_entry)
-    unbuild_mask_hash_partition_tbl(&pipe_match_spec, match_spec);
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_ig_port_forward_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777276, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_ig_port_forward_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777276, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_ig_port_forward_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_ig_port_forward_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3] = {0};
-  uint8_t pipe_match_mask_bits[3] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 3;
-  pipe_match_spec.num_valid_match_bits = 17;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777276, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 17);
-  // assert(pipe_match_spec.num_match_bytes == 3);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871265:
-    action_spec->name = p4_pd_netbufferv4_update_getreq_to_getreq_inswitch;
-    break;
-  case 536871269:
-    action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres_latest_seq_inswitch;
-    break;
-  case 536871273:
-    action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
-    break;
-  case 536871278:
-    action_spec->name = p4_pd_netbufferv4_update_putreq_to_putreq_inswitch;
-    break;
-  case 536871283:
-    action_spec->name = p4_pd_netbufferv4_update_delreq_to_delreq_inswitch;
-    break;
-  case 536871284:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
-  if(!is_default_entry)
-    unbuild_key_ig_port_forward_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_ipv4_forward_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777274, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_ipv4_forward_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777274, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_ipv4_forward_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_ipv4_forward_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[7] = {0};
-  uint8_t pipe_match_mask_bits[7] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 7;
-  pipe_match_spec.num_valid_match_bits = 49;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777274, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 49);
-  // assert(pipe_match_spec.num_match_bytes == 7);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871252:
-    action_spec->name = p4_pd_netbufferv4_forward_normal_response;
-    unbuild_action_spec_forward_normal_response(pipe_action_data_spec,
-                                  res_spec,
-                                  resource_cnt,
-                                  &action_spec->u.p4_pd_netbufferv4_forward_normal_response);
-    break;
-  case 536871256:
-    action_spec->name = p4_pd_netbufferv4_forward_special_get_response;
-    unbuild_action_spec_forward_special_get_response(pipe_action_data_spec,
-                                  res_spec,
-                                  resource_cnt,
-                                  &action_spec->u.p4_pd_netbufferv4_forward_special_get_response);
-    break;
-  case 536871257:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 7 > 0);
-  if(!is_default_entry)
-    unbuild_key_ipv4_forward_tbl(&pipe_match_spec, match_spec);
-
-  if(!is_default_entry)
-    unbuild_mask_ipv4_forward_tbl(&pipe_match_spec, match_spec);
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_is_hot_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777277, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_is_hot_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777277, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_is_hot_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_is_hot_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[4] = {0};
-  uint8_t pipe_match_mask_bits[4] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 4;
-  pipe_match_spec.num_valid_match_bits = 16;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777277, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 16);
-  // assert(pipe_match_spec.num_match_bytes == 4);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871286:
-    action_spec->name = p4_pd_netbufferv4_set_is_hot;
-    break;
-  case 536871288:
-    action_spec->name = p4_pd_netbufferv4_reset_is_hot;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 4 > 0);
-  if(!is_default_entry)
-    unbuild_key_is_hot_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777279, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777279, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3] = {0};
-  uint8_t pipe_match_mask_bits[3] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 3;
-  pipe_match_spec.num_valid_match_bits = 24;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777279, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 24);
-  // assert(pipe_match_spec.num_match_bytes == 3);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871293:
-    action_spec->name = p4_pd_netbufferv4_set_is_lastclone;
-    break;
-  case 536871295:
-    action_spec->name = p4_pd_netbufferv4_reset_is_lastclone_lastscansplit;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
-  if(!is_default_entry)
-    unbuild_key_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_need_recirculate_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777261, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_need_recirculate_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777261, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_need_recirculate_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_need_recirculate_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[4] = {0};
-  uint8_t pipe_match_mask_bits[4] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 4;
-  pipe_match_spec.num_valid_match_bits = 25;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777261, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 25);
-  // assert(pipe_match_spec.num_match_bytes == 4);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871209:
-    action_spec->name = p4_pd_netbufferv4_set_need_recirculate;
-    break;
-  case 536871211:
-    action_spec->name = p4_pd_netbufferv4_reset_need_recirculate;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 4 > 0);
-  if(!is_default_entry)
-    unbuild_key_need_recirculate_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777273, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777273, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_prepare_for_cachehit_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5] = {0};
-  uint8_t pipe_match_mask_bits[5] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 5;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777273, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 26);
-  // assert(pipe_match_spec.num_match_bytes == 5);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871249:
-    action_spec->name = p4_pd_netbufferv4_set_client_sid;
-    unbuild_action_spec_set_client_sid(pipe_action_data_spec,
-                                  res_spec,
-                                  resource_cnt,
-                                  &action_spec->u.p4_pd_netbufferv4_set_client_sid);
-    break;
-  case 536871250:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 5 > 0);
-  if(!is_default_entry)
-    unbuild_key_prepare_for_cachehit_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_recirculate_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777263, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_recirculate_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777263, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_recirculate_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_recirculate_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3] = {0};
-  uint8_t pipe_match_mask_bits[3] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 3;
-  pipe_match_spec.num_valid_match_bits = 17;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777263, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 17);
-  // assert(pipe_match_spec.num_match_bytes == 3);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871215:
-    action_spec->name = p4_pd_netbufferv4_recirculate_pkt;
-    unbuild_action_spec_recirculate_pkt(pipe_action_data_spec,
-                                  res_spec,
-                                  resource_cnt,
-                                  &action_spec->u.p4_pd_netbufferv4_recirculate_pkt);
-    break;
-  case 536871216:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
-  if(!is_default_entry)
-    unbuild_key_recirculate_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_sample_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777275, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_sample_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777275, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_sample_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_sample_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3] = {0};
-  uint8_t pipe_match_mask_bits[3] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 3;
-  pipe_match_spec.num_valid_match_bits = 17;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777275, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 17);
-  // assert(pipe_match_spec.num_match_bytes == 3);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871259:
-    action_spec->name = p4_pd_netbufferv4_sample;
-    break;
-  case 536871260:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
-  if(!is_default_entry)
-    unbuild_key_sample_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_save_client_udpport_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777278, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_save_client_udpport_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777278, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_save_client_udpport_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_save_client_udpport_tbl_match_spec_t *match_spec,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[2] = {0};
-  uint8_t pipe_match_mask_bits[2] = {0};
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 2;
-  pipe_match_spec.num_valid_match_bits = 16;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777278, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 16);
-  // assert(pipe_match_spec.num_match_bytes == 2);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871290:
-    action_spec->name = p4_pd_netbufferv4_save_client_udpport;
-    break;
-  case 536871291:
-    action_spec->name = p4_pd_netbufferv4_nop;
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 2 > 0);
-  if(!is_default_entry)
-    unbuild_key_save_client_udpport_tbl(&pipe_match_spec, match_spec);
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_set_hot_threshold_tbl_get_first_entry_handle
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777262, pipe_mgr_dev_tgt,
-					 entry_handle);  
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_set_hot_threshold_tbl_get_next_entry_handles
-(
-  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
-  int n, int *next_entry_handles
-)
-{
-  dev_target_t pipe_mgr_dev_tgt;
-  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
-  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777262, pipe_mgr_dev_tgt, entry_handle,
-					 n, next_entry_handles);
-}
-
-p4_pd_status_t
-p4_pd_netbufferv4_set_hot_threshold_tbl_get_entry
-(
- p4_pd_sess_hdl_t sess_hdl,
- uint8_t dev_id,
- p4_pd_entry_hdl_t entry_hdl,
- bool read_from_hw,
- p4_pd_netbufferv4_action_specs_t *action_spec
-)
-{
-  (void)sess_hdl;
-
-  p4_pd_act_hdl_t act_fn_hdl;
-
-  pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t *pipe_match_value_bits = NULL;
-  uint8_t *pipe_match_mask_bits = NULL;
-  pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 0;
-  pipe_match_spec.num_valid_match_bits = 0;
-  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.match_field_validity = 0;
-  pipe_match_spec.match_field_validity_mask = 0;
-  pipe_match_spec.num_match_validity_fields = 0;
-
-  pipe_action_spec_t pipe_action_spec = {0};
-  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
-  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
-      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
-  }
-  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
-  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
-  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
-
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777262, dev_id, entry_hdl,
-                                             &pipe_match_spec,
-                                             &pipe_action_spec, &act_fn_hdl,
-                                             read_from_hw);
-  if (status) return status;
-
-  // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 0);
-  // assert(pipe_match_spec.num_match_bytes == 0);
-  // assert(pipe_match_spec.num_match_validity_fields == 0);
-
-  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
-  pd_res_spec_t *res_spec = NULL;
-  int resource_cnt = 0;
-  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
-
-  switch(act_fn_hdl) {
-  case 536871213:
-    action_spec->name = p4_pd_netbufferv4_set_hot_threshold;
-    unbuild_action_spec_set_hot_threshold(pipe_action_data_spec,
-                                  res_spec,
-                                  resource_cnt,
-                                  &action_spec->u.p4_pd_netbufferv4_set_hot_threshold);
-    break;
-  default:
-    assert(NULL);
-    break;
-  }
-
-
-
-  (void)action_spec;
-  if (res_spec) {
-    bf_sys_free(res_spec);
-  }
-  return status;
-}
-
-
-p4_pd_status_t
-p4_pd_netbufferv4_snapshot_flag_tbl_get_first_entry_handle
+p4_pd_netbufferv4_hash_for_cm3_tbl_get_first_entry_handle
 (
   p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
 )
@@ -63490,7 +62656,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_get_first_entry_handle
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_snapshot_flag_tbl_get_next_entry_handles
+p4_pd_netbufferv4_hash_for_cm3_tbl_get_next_entry_handles
 (
   p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
   int n, int *next_entry_handles
@@ -63504,13 +62670,13 @@ p4_pd_netbufferv4_snapshot_flag_tbl_get_next_entry_handles
 }
 
 p4_pd_status_t
-p4_pd_netbufferv4_snapshot_flag_tbl_get_entry
+p4_pd_netbufferv4_hash_for_cm3_tbl_get_entry
 (
  p4_pd_sess_hdl_t sess_hdl,
  uint8_t dev_id,
  p4_pd_entry_hdl_t entry_hdl,
  bool read_from_hw,
- p4_pd_netbufferv4_snapshot_flag_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_hash_for_cm3_tbl_match_spec_t *match_spec,
  p4_pd_netbufferv4_action_specs_t *action_spec
 )
 {
@@ -63556,9 +62722,1701 @@ p4_pd_netbufferv4_snapshot_flag_tbl_get_entry
 
   switch(act_fn_hdl) {
   case 536871242:
+    action_spec->name = p4_pd_netbufferv4_hash_for_cm3;
+    break;
+  case 536871243:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
+  if(!is_default_entry)
+    unbuild_key_hash_for_cm3_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_cm4_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777273, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_cm4_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777273, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_cm4_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_hash_for_cm4_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[3] = {0};
+  uint8_t pipe_match_mask_bits[3] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 17;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777273, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 17);
+  // assert(pipe_match_spec.num_match_bytes == 3);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871249:
+    action_spec->name = p4_pd_netbufferv4_hash_for_cm4;
+    break;
+  case 536871250:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
+  if(!is_default_entry)
+    unbuild_key_hash_for_cm4_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_partition_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777265, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_partition_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777265, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_partition_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_hash_for_partition_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[3] = {0};
+  uint8_t pipe_match_mask_bits[3] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 17;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777265, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 17);
+  // assert(pipe_match_spec.num_match_bytes == 3);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871221:
+    action_spec->name = p4_pd_netbufferv4_hash_for_partition;
+    break;
+  case 536871222:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
+  if(!is_default_entry)
+    unbuild_key_hash_for_partition_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_seq_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777270, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_seq_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777270, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_for_seq_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_hash_for_seq_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[3] = {0};
+  uint8_t pipe_match_mask_bits[3] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 17;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777270, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 17);
+  // assert(pipe_match_spec.num_match_bytes == 3);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871239:
+    action_spec->name = p4_pd_netbufferv4_hash_for_seq;
+    break;
+  case 536871240:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
+  if(!is_default_entry)
+    unbuild_key_hash_for_seq_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_partition_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777266, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_partition_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777266, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_hash_partition_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_hash_partition_tbl_match_spec_t *match_spec,
+ int *priority,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[5] = {0};
+  uint8_t pipe_match_mask_bits[5] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 33;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777266, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 33);
+  // assert(pipe_match_spec.num_match_bytes == 5);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871225:
+    action_spec->name = p4_pd_netbufferv4_hash_partition;
+    unbuild_action_spec_hash_partition(pipe_action_data_spec,
+                                  res_spec,
+                                  resource_cnt,
+                                  &action_spec->u.p4_pd_netbufferv4_hash_partition);
+    break;
+  case 536871226:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 5 > 0);
+  if(!is_default_entry)
+    unbuild_key_hash_partition_tbl(&pipe_match_spec, match_spec);
+
+  *priority = pipe_match_spec.priority;
+  if(!is_default_entry)
+    unbuild_mask_hash_partition_tbl(&pipe_match_spec, match_spec);
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_ig_port_forward_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777277, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_ig_port_forward_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777277, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_ig_port_forward_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_ig_port_forward_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[3] = {0};
+  uint8_t pipe_match_mask_bits[3] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 17;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777277, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 17);
+  // assert(pipe_match_spec.num_match_bytes == 3);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871268:
+    action_spec->name = p4_pd_netbufferv4_update_getreq_to_getreq_inswitch;
+    break;
+  case 536871272:
+    action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres_latest_seq_inswitch;
+    break;
+  case 536871276:
+    action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
+    break;
+  case 536871281:
+    action_spec->name = p4_pd_netbufferv4_update_putreq_to_putreq_inswitch;
+    break;
+  case 536871286:
+    action_spec->name = p4_pd_netbufferv4_update_delreq_to_delreq_inswitch;
+    break;
+  case 536871287:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
+  if(!is_default_entry)
+    unbuild_key_ig_port_forward_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_ipv4_forward_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777275, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_ipv4_forward_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777275, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_ipv4_forward_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_ipv4_forward_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[7] = {0};
+  uint8_t pipe_match_mask_bits[7] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 7;
+  pipe_match_spec.num_valid_match_bits = 49;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777275, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 49);
+  // assert(pipe_match_spec.num_match_bytes == 7);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871255:
+    action_spec->name = p4_pd_netbufferv4_forward_normal_response;
+    unbuild_action_spec_forward_normal_response(pipe_action_data_spec,
+                                  res_spec,
+                                  resource_cnt,
+                                  &action_spec->u.p4_pd_netbufferv4_forward_normal_response);
+    break;
+  case 536871259:
+    action_spec->name = p4_pd_netbufferv4_forward_special_get_response;
+    unbuild_action_spec_forward_special_get_response(pipe_action_data_spec,
+                                  res_spec,
+                                  resource_cnt,
+                                  &action_spec->u.p4_pd_netbufferv4_forward_special_get_response);
+    break;
+  case 536871260:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 7 > 0);
+  if(!is_default_entry)
+    unbuild_key_ipv4_forward_tbl(&pipe_match_spec, match_spec);
+
+  if(!is_default_entry)
+    unbuild_mask_ipv4_forward_tbl(&pipe_match_spec, match_spec);
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_is_hot_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777278, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_is_hot_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777278, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_is_hot_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_is_hot_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[4] = {0};
+  uint8_t pipe_match_mask_bits[4] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 4;
+  pipe_match_spec.num_valid_match_bits = 16;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777278, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 16);
+  // assert(pipe_match_spec.num_match_bytes == 4);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871289:
+    action_spec->name = p4_pd_netbufferv4_set_is_hot;
+    break;
+  case 536871291:
+    action_spec->name = p4_pd_netbufferv4_reset_is_hot;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 4 > 0);
+  if(!is_default_entry)
+    unbuild_key_is_hot_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777261, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777261, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_l2l3_forward_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[10] = {0};
+  uint8_t pipe_match_mask_bits[10] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 10;
+  pipe_match_spec.num_valid_match_bits = 80;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777261, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 80);
+  // assert(pipe_match_spec.num_match_bytes == 10);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871209:
+    action_spec->name = p4_pd_netbufferv4_l2l3_forward;
+    unbuild_action_spec_l2l3_forward(pipe_action_data_spec,
+                                  res_spec,
+                                  resource_cnt,
+                                  &action_spec->u.p4_pd_netbufferv4_l2l3_forward);
+    break;
+  case 536871210:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 10 > 0);
+  if(!is_default_entry)
+    unbuild_key_l2l3_forward_tbl(&pipe_match_spec, match_spec);
+
+  if(!is_default_entry)
+    unbuild_mask_l2l3_forward_tbl(&pipe_match_spec, match_spec);
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777280, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777280, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[3] = {0};
+  uint8_t pipe_match_mask_bits[3] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 24;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777280, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 24);
+  // assert(pipe_match_spec.num_match_bytes == 3);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871296:
+    action_spec->name = p4_pd_netbufferv4_set_is_lastclone;
+    break;
+  case 536871298:
+    action_spec->name = p4_pd_netbufferv4_reset_is_lastclone_lastscansplit;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
+  if(!is_default_entry)
+    unbuild_key_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_need_recirculate_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777262, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_need_recirculate_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777262, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_need_recirculate_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_need_recirculate_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[4] = {0};
+  uint8_t pipe_match_mask_bits[4] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 4;
+  pipe_match_spec.num_valid_match_bits = 25;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777262, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 25);
+  // assert(pipe_match_spec.num_match_bytes == 4);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871212:
+    action_spec->name = p4_pd_netbufferv4_set_need_recirculate;
+    break;
+  case 536871214:
+    action_spec->name = p4_pd_netbufferv4_reset_need_recirculate;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 4 > 0);
+  if(!is_default_entry)
+    unbuild_key_need_recirculate_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777274, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777274, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_prepare_for_cachehit_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[5] = {0};
+  uint8_t pipe_match_mask_bits[5] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 26;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777274, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 26);
+  // assert(pipe_match_spec.num_match_bytes == 5);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871252:
+    action_spec->name = p4_pd_netbufferv4_set_client_sid;
+    unbuild_action_spec_set_client_sid(pipe_action_data_spec,
+                                  res_spec,
+                                  resource_cnt,
+                                  &action_spec->u.p4_pd_netbufferv4_set_client_sid);
+    break;
+  case 536871253:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 5 > 0);
+  if(!is_default_entry)
+    unbuild_key_prepare_for_cachehit_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_recirculate_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777264, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_recirculate_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777264, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_recirculate_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_recirculate_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[3] = {0};
+  uint8_t pipe_match_mask_bits[3] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 17;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777264, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 17);
+  // assert(pipe_match_spec.num_match_bytes == 3);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871218:
+    action_spec->name = p4_pd_netbufferv4_recirculate_pkt;
+    unbuild_action_spec_recirculate_pkt(pipe_action_data_spec,
+                                  res_spec,
+                                  resource_cnt,
+                                  &action_spec->u.p4_pd_netbufferv4_recirculate_pkt);
+    break;
+  case 536871219:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
+  if(!is_default_entry)
+    unbuild_key_recirculate_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_sample_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777276, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_sample_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777276, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_sample_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_sample_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[3] = {0};
+  uint8_t pipe_match_mask_bits[3] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 17;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777276, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 17);
+  // assert(pipe_match_spec.num_match_bytes == 3);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871262:
+    action_spec->name = p4_pd_netbufferv4_sample;
+    break;
+  case 536871263:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
+  if(!is_default_entry)
+    unbuild_key_sample_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_save_client_udpport_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777279, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_save_client_udpport_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777279, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_save_client_udpport_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_save_client_udpport_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[2] = {0};
+  uint8_t pipe_match_mask_bits[2] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 2;
+  pipe_match_spec.num_valid_match_bits = 16;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777279, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 16);
+  // assert(pipe_match_spec.num_match_bytes == 2);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871293:
+    action_spec->name = p4_pd_netbufferv4_save_client_udpport;
+    break;
+  case 536871294:
+    action_spec->name = p4_pd_netbufferv4_nop;
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 2 > 0);
+  if(!is_default_entry)
+    unbuild_key_save_client_udpport_tbl(&pipe_match_spec, match_spec);
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_set_hot_threshold_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777263, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_set_hot_threshold_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777263, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_set_hot_threshold_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t *pipe_match_value_bits = NULL;
+  uint8_t *pipe_match_mask_bits = NULL;
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 0;
+  pipe_match_spec.num_valid_match_bits = 0;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777263, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 0);
+  // assert(pipe_match_spec.num_match_bytes == 0);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871216:
+    action_spec->name = p4_pd_netbufferv4_set_hot_threshold;
+    unbuild_action_spec_set_hot_threshold(pipe_action_data_spec,
+                                  res_spec,
+                                  resource_cnt,
+                                  &action_spec->u.p4_pd_netbufferv4_set_hot_threshold);
+    break;
+  default:
+    assert(NULL);
+    break;
+  }
+
+
+
+  (void)action_spec;
+  if (res_spec) {
+    bf_sys_free(res_spec);
+  }
+  return status;
+}
+
+
+p4_pd_status_t
+p4_pd_netbufferv4_snapshot_flag_tbl_get_first_entry_handle
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, int *entry_handle
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777272, pipe_mgr_dev_tgt,
+					 entry_handle);  
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_snapshot_flag_tbl_get_next_entry_handles
+(
+  p4_pd_sess_hdl_t sess_hdl, p4_pd_dev_target_t dev_tgt, p4_pd_entry_hdl_t entry_handle,
+  int n, int *next_entry_handles
+)
+{
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777272, pipe_mgr_dev_tgt, entry_handle,
+					 n, next_entry_handles);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_snapshot_flag_tbl_get_entry
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ bool read_from_hw,
+ p4_pd_netbufferv4_snapshot_flag_tbl_match_spec_t *match_spec,
+ p4_pd_netbufferv4_action_specs_t *action_spec
+)
+{
+  (void)sess_hdl;
+
+  p4_pd_act_hdl_t act_fn_hdl;
+
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[3] = {0};
+  uint8_t pipe_match_mask_bits[3] = {0};
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 17;
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.match_field_validity = 0;
+  pipe_match_spec.match_field_validity_mask = 0;
+  pipe_match_spec.num_match_validity_fields = 0;
+
+  pipe_action_spec_t pipe_action_spec = {0};
+  uint8_t pipe_action_data_bits[sizeof(p4_pd_netbufferv4_action_specs_t)];
+  if (sizeof(p4_pd_netbufferv4_action_specs_t)) {
+      memset(pipe_action_data_bits, 0, sizeof(p4_pd_netbufferv4_action_specs_t));
+  }
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777272, dev_id, entry_hdl,
+                                             &pipe_match_spec,
+                                             &pipe_action_spec, &act_fn_hdl,
+                                             read_from_hw);
+  if (status) return status;
+
+  // some sanity checking on the returned spec
+  // assert(pipe_match_spec.num_valid_match_bits == 17);
+  // assert(pipe_match_spec.num_match_bytes == 3);
+  // assert(pipe_match_spec.num_match_validity_fields == 0);
+
+  assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
+  pd_res_spec_t *res_spec = NULL;
+  int resource_cnt = 0;
+  build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
+
+  switch(act_fn_hdl) {
+  case 536871245:
     action_spec->name = p4_pd_netbufferv4_set_snapshot_flag;
     break;
-  case 536871244:
+  case 536871247:
     action_spec->name = p4_pd_netbufferv4_reset_snapshot_flag;
     break;
   default:
@@ -63588,7 +64446,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_get_first_entry_handle
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777281, pipe_mgr_dev_tgt,
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777282, pipe_mgr_dev_tgt,
 					 entry_handle);  
 }
 
@@ -63602,7 +64460,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_get_next_entry_handles
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777281, pipe_mgr_dev_tgt, entry_handle,
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777282, pipe_mgr_dev_tgt, entry_handle,
 					 n, next_entry_handles);
 }
 
@@ -63641,7 +64499,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_get_entry
   pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
   pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
 
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777281, dev_id, entry_hdl,
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777282, dev_id, entry_hdl,
                                              &pipe_match_spec,
                                              &pipe_action_spec, &act_fn_hdl,
                                              read_from_hw);
@@ -63658,28 +64516,28 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871528:
+  case 536871531:
     action_spec->name = p4_pd_netbufferv4_update_ipmac_srcport_server2client;
     unbuild_action_spec_update_ipmac_srcport_server2client(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_ipmac_srcport_server2client);
     break;
-  case 536871534:
+  case 536871537:
     action_spec->name = p4_pd_netbufferv4_update_ipmac_srcport_switch2switchos;
     unbuild_action_spec_update_ipmac_srcport_switch2switchos(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_ipmac_srcport_switch2switchos);
     break;
-  case 536871537:
+  case 536871540:
     action_spec->name = p4_pd_netbufferv4_update_dstipmac_client2server;
     unbuild_action_spec_update_dstipmac_client2server(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_dstipmac_client2server);
     break;
-  case 536871538:
+  case 536871541:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -63709,7 +64567,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_get_first_entry_handle
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777282, pipe_mgr_dev_tgt,
+  return pipe_mgr_get_first_entry_handle(sess_hdl, 16777283, pipe_mgr_dev_tgt,
 					 entry_handle);  
 }
 
@@ -63723,7 +64581,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_get_next_entry_handles
   dev_target_t pipe_mgr_dev_tgt;
   pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
   pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
-  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777282, pipe_mgr_dev_tgt, entry_handle,
+  return pipe_mgr_get_next_entry_handles(sess_hdl, 16777283, pipe_mgr_dev_tgt, entry_handle,
 					 n, next_entry_handles);
 }
 
@@ -63763,7 +64621,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_get_entry
   pipe_action_data_spec->num_action_data_bytes = sizeof(p4_pd_netbufferv4_action_specs_t);
   pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
 
-  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777282, dev_id, entry_hdl,
+  p4_pd_status_t status = pipe_mgr_get_entry(sess_hdl, 16777283, dev_id, entry_hdl,
                                              &pipe_match_spec,
                                              &pipe_action_spec, &act_fn_hdl,
                                              read_from_hw);
@@ -63780,14 +64638,14 @@ p4_pd_netbufferv4_update_pktlen_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871541:
+  case 536871544:
     action_spec->name = p4_pd_netbufferv4_update_pktlen;
     unbuild_action_spec_update_pktlen(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_pktlen);
     break;
-  case 536871542:
+  case 536871545:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -67510,6 +68368,7 @@ const char * p4_pd_netbufferv4_action_name_strings[] = {
   "p4_pd_netbufferv4_forward_special_get_response",
   "p4_pd_netbufferv4_set_is_hot",
   "p4_pd_netbufferv4_reset_is_hot",
+  "p4_pd_netbufferv4_l2l3_forward",
   "p4_pd_netbufferv4_set_is_lastclone",
   "p4_pd_netbufferv4_reset_is_lastclone_lastscansplit",
   "p4_pd_netbufferv4_set_need_recirculate",
@@ -67728,6 +68587,7 @@ p4_pd_netbufferv4_action_names_t p4_pd_netbufferv4_action_string_to_enum(const c
   if (0 == strcmp(s, "p4_pd_netbufferv4_forward_special_get_response")) return p4_pd_netbufferv4_forward_special_get_response;
   if (0 == strcmp(s, "p4_pd_netbufferv4_set_is_hot")) return p4_pd_netbufferv4_set_is_hot;
   if (0 == strcmp(s, "p4_pd_netbufferv4_reset_is_hot")) return p4_pd_netbufferv4_reset_is_hot;
+  if (0 == strcmp(s, "p4_pd_netbufferv4_l2l3_forward")) return p4_pd_netbufferv4_l2l3_forward;
   if (0 == strcmp(s, "p4_pd_netbufferv4_set_is_lastclone")) return p4_pd_netbufferv4_set_is_lastclone;
   if (0 == strcmp(s, "p4_pd_netbufferv4_reset_is_lastclone_lastscansplit")) return p4_pd_netbufferv4_reset_is_lastclone_lastscansplit;
   if (0 == strcmp(s, "p4_pd_netbufferv4_set_need_recirculate")) return p4_pd_netbufferv4_set_need_recirculate;

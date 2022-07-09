@@ -70,6 +70,7 @@
 #define CACHE_POP_ACK 0x00f0
 #define CACHE_EVICT_LOADFREQ_INSWITCH_ACK 0x0100
 #define SETVALID_INSWITCH_ACK 0x0110
+#define NETCACHE_GETREQ_POP 0x0120
 
 #ifndef DEBUG
 
@@ -200,6 +201,7 @@ control egress {
 #endif
 
 	// Stage 1
+	apply(prepare_for_cachepop_tbl);
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);

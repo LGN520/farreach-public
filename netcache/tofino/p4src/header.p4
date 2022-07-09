@@ -130,6 +130,9 @@ header_type clone_t {
 	fields {
 		clonenum_for_pktloss: 8;
 		client_udpport: 16;
+		server_sid: 10; // clone to server for SCANREQ_SPLIT or last cloned NETCACHE_GETREQ_POP
+		padding: 6;
+		server_udpport: 16;
 	}
 }
 
@@ -158,7 +161,6 @@ header_type metadata_t {
 		is_lastclone_for_pktloss: 1;
 		access_val_mode: 4; // 0: not access val_reg; 1: get; 2: set_and_get; 3: reset_and_get
 #ifdef RANGE_SUPPORT
-		server_sid: 10; // clone to server for SCANREQ_SPLIT
 		remain_scannum: 16;
 		is_last_scansplit: 1;
 #endif

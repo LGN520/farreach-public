@@ -742,6 +742,34 @@
         }
       ]
     },
+    { "name" : "p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t",
+      "fields" : [
+        { "name" : "ethernet_hdr_dstAddr",
+          "type" : "stream<6>",
+          "required" : true,
+          "pointer" : false,
+          "custom" : false,
+          "width" : null,
+          "default" : 0
+        },
+        { "name" : "ipv4_hdr_dstAddr",
+          "type" : "i32",
+          "required" : true,
+          "pointer" : false,
+          "custom" : false,
+          "width" : null,
+          "default" : 0
+        },
+        { "name" : "ipv4_hdr_dstAddr_prefix_length",
+          "type" : "i16",
+          "required" : true,
+          "pointer" : false,
+          "custom" : false,
+          "width" : null,
+          "default" : 0
+        }
+      ]
+    },
     { "name" : "p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec_t",
       "fields" : [
         { "name" : "op_hdr_optype",
@@ -1755,7 +1783,7 @@
         },
         {
           "name" : "action_stat",
-          "type" : "i32",
+          "type" : "byte",
           "required" : true,
           "pointer" : false,
           "custom" : false,
@@ -1826,6 +1854,19 @@
         {
           "name" : "action_client_sid",
           "type" : "i32",
+          "required" : true,
+          "pointer" : false,
+          "custom" : false,
+          "width" : null,
+          "default" : 0
+        }
+      ]
+    },
+    { "name" : "p4_pd_netbufferv4_l2l3_forward_action_spec_t",
+      "fields" : [
+        {
+          "name" : "action_eport",
+          "type" : "i16",
           "required" : true,
           "pointer" : false,
           "custom" : false,
@@ -2134,6 +2175,7 @@
                 "p4_pd_netbufferv4_forward_special_get_response_action_spec_t",
                 null,
                 null,
+                "p4_pd_netbufferv4_l2l3_forward_action_spec_t",
                 null,
                 null,
                 null,
@@ -2347,6 +2389,7 @@
                 "p4_pd_netbufferv4_forward_special_get_response",
                 null,
                 null,
+                "p4_pd_netbufferv4_l2l3_forward",
                 null,
                 null,
                 null,
@@ -2878,6 +2921,7 @@
     "ig_port_forward_tbl",
     "ipv4_forward_tbl",
     "is_hot_tbl",
+    "l2l3_forward_tbl",
     "lastclone_lastscansplit_tbl",
     "need_recirculate_tbl",
     "prepare_for_cachehit_tbl",
@@ -3176,6 +3220,16 @@
             ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
             ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
             ["match_spec", "p4_pd_netbufferv4_is_hot_tbl_match_spec_t", true, true, false, null, null, false],
+            ["entry_hdl", "p4_pd_entry_hdl_t", false, true, false, null, 0, true]
+          ],
+          "p4_pd_status_t"
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-match_spec_to_entry_hdl",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["match_spec", "p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t", true, true, false, null, null, false],
             ["entry_hdl", "p4_pd_entry_hdl_t", false, true, false, null, 0, true]
           ],
           "p4_pd_status_t"
@@ -4841,6 +4895,29 @@
           ],
           "p4_pd_status_t",
           ["p4_pd_netbufferv4-is_hot_tbl-add_entry-reset_is_hot"]
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_add_with-l2l3_forward",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["match_spec", "p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t", true, true, false, null, null, false],
+            ["action_spec", "p4_pd_netbufferv4_l2l3_forward_action_spec_t", true, true, false, null, null, false],
+            ["entry_hdl", "p4_pd_entry_hdl_t", false, true, false, null, 0, true]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-l2l3_forward_tbl-add_entry-l2l3_forward"]
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_add_with-nop",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["match_spec", "p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t", true, true, false, null, null, false],
+            ["entry_hdl", "p4_pd_entry_hdl_t", false, true, false, null, 0, true]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-l2l3_forward_tbl-add_entry-nop"]
         ],
         [
           "p4_pd_netbufferv4-lastclone_lastscansplit_tbl-table_add_with-set_is_lastclone",
@@ -7036,6 +7113,26 @@
           ["p4_pd_netbufferv4-is_hot_tbl-del_entry-by_match_spec"]
         ],
         [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_delete",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_id", "byte", false, false, false, null, 0, false],
+            ["entry_hdl", "p4_pd_entry_hdl_t", true, false, false, null, null, false]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-l2l3_forward_tbl-del_entry"]
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_delete-by_match_spec",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["match_spec", "p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t", true, true, false, null, null, false]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-l2l3_forward_tbl-del_entry-by_match_spec"]
+        ],
+        [
           "p4_pd_netbufferv4-lastclone_lastscansplit_tbl-table_delete",
           [
             ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
@@ -8352,6 +8449,25 @@
           "p4_pd_status_t"
         ],
         [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_get_default_entry_handle",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["pd_dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["entry_handle", "p4_pd_entry_hdl_t", false, true, false, null, 0, true]
+          ],
+          "p4_pd_status_t"
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_get_default_entry",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["pd_dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["read_from_hw", "bool", false, false, false, null, false, false],
+            ["action_spec", "p4_pd_netbufferv4_action_specs_t", false, true, false, null, 0, true]
+          ],
+          "p4_pd_status_t"
+        ],
+        [
           "p4_pd_netbufferv4-lastclone_lastscansplit_tbl-table_get_default_entry_handle",
           [
             ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
@@ -9362,6 +9478,14 @@
         ],
         [
           "p4_pd_netbufferv4-is_hot_tbl-table_reset_default_entry",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["pd_dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false]
+          ],
+          "p4_pd_status_t"
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_reset_default_entry",
           [
             ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
             ["pd_dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false]
@@ -11955,6 +12079,48 @@
           ],
           "p4_pd_status_t",
           ["p4_pd_netbufferv4-is_hot_tbl-mod_entry-reset_is_hot-by_match_spec"]
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_modify_with-l2l3_forward",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_id", "byte", false, false, false, null, 0, false],
+            ["entry_hdl", "p4_pd_entry_hdl_t", true, false, false, null, null, false],
+            ["action_spec", "p4_pd_netbufferv4_l2l3_forward_action_spec_t", true, true, false, null, null, false]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-l2l3_forward_tbl-mod_entry-l2l3_forward"]
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_modify_with-l2l3_forward-by_match_spec",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["match_spec", "p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t", true, true, false, null, null, false],
+            ["action_spec", "p4_pd_netbufferv4_l2l3_forward_action_spec_t", true, true, false, null, null, false]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-l2l3_forward_tbl-mod_entry-l2l3_forward-by_match_spec"]
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_modify_with-nop",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_id", "byte", false, false, false, null, 0, false],
+            ["entry_hdl", "p4_pd_entry_hdl_t", true, false, false, null, null, false]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-l2l3_forward_tbl-mod_entry-nop"]
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-table_modify_with-nop-by_match_spec",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["match_spec", "p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t", true, true, false, null, null, false]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-l2l3_forward_tbl-mod_entry-nop-by_match_spec"]
         ],
         [
           "p4_pd_netbufferv4-lastclone_lastscansplit_tbl-table_modify_with-set_is_lastclone",
@@ -15256,6 +15422,15 @@
           "p4_pd_status_t"
         ],
         [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-set_default_action-nop",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["entry_hdl", "p4_pd_entry_hdl_t", false, true, false, null, 0, true]
+          ],
+          "p4_pd_status_t"
+        ],
+        [
           "p4_pd_netbufferv4-lastclone_lastscansplit_tbl-set_default_action-reset_is_lastclone_lastscansplit",
           [
             ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
@@ -18026,6 +18201,15 @@
           "p4_pd_status_t"
         ],
         [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-get_entry_count",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["count", "i32", false, true, false, null, 0, true]
+          ],
+          "p4_pd_status_t"
+        ],
+        [
           "p4_pd_netbufferv4-lastclone_lastscansplit_tbl-get_entry_count",
           [
             ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
@@ -19210,6 +19394,38 @@
             ["entry_hdl", "p4_pd_entry_hdl_t", true, false, false, null, null, false],
             ["read_from_hw", "bool", false, false, false, null, false, false],
             ["match_spec", "p4_pd_netbufferv4_is_hot_tbl_match_spec_t", false, true, false, null, 0, true],
+            ["action_spec", "p4_pd_netbufferv4_action_specs_t", false, true, false, null, 0, true]
+          ],
+          "p4_pd_status_t"
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-get_first_entry_handle",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["index", "int", false, true, false, null, 0, true]
+          ],
+          "p4_pd_status_t"
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-get_next_entry_handles",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["entry_handle", "p4_pd_entry_hdl_t", true, false, false, null, null, false],
+            ["n", "int", false, false, false, null, 1, false],
+            ["next_entry_handles", "int", false, true, false, null, 0, true, {"arr_sz" : [ 3, "n" ]}]
+          ],
+          "p4_pd_status_t"
+        ],
+        [
+          "p4_pd_netbufferv4-l2l3_forward_tbl-get_entry",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_id", "byte", false, false, false, null, 0, false],
+            ["entry_hdl", "p4_pd_entry_hdl_t", true, false, false, null, null, false],
+            ["read_from_hw", "bool", false, false, false, null, false, false],
+            ["match_spec", "p4_pd_netbufferv4_l2l3_forward_tbl_match_spec_t", false, true, false, null, 0, true],
             ["action_spec", "p4_pd_netbufferv4_action_specs_t", false, true, false, null, 0, true]
           ],
           "p4_pd_status_t"

@@ -5984,6 +5984,244 @@ uint32_t netbufferv4_is_hot_tbl_match_spec_to_entry_hdl_presult::read(::apache::
 }
 
 
+netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_args::~netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_args() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_args::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->sess_hdl);
+          this->__isset.sess_hdl = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->dev_tgt.read(iprot);
+          this->__isset.dev_tgt = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->match_spec.read(iprot);
+          this->__isset.match_spec = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_args::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  oprot->incrementRecursionDepth();
+  xfer += oprot->writeStructBegin("netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_args");
+
+  xfer += oprot->writeFieldBegin("sess_hdl", ::apache::thrift::protocol::T_I32, 1);
+  xfer += oprot->writeI32(this->sess_hdl);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("dev_tgt", ::apache::thrift::protocol::T_STRUCT, 2);
+  xfer += this->dev_tgt.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("match_spec", ::apache::thrift::protocol::T_STRUCT, 3);
+  xfer += this->match_spec.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  oprot->decrementRecursionDepth();
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_pargs::~netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_pargs() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_pargs::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  oprot->incrementRecursionDepth();
+  xfer += oprot->writeStructBegin("netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_pargs");
+
+  xfer += oprot->writeFieldBegin("sess_hdl", ::apache::thrift::protocol::T_I32, 1);
+  xfer += oprot->writeI32((*(this->sess_hdl)));
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("dev_tgt", ::apache::thrift::protocol::T_STRUCT, 2);
+  xfer += (*(this->dev_tgt)).write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("match_spec", ::apache::thrift::protocol::T_STRUCT, 3);
+  xfer += (*(this->match_spec)).write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  oprot->decrementRecursionDepth();
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_result::~netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_result() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_result::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->success);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->ouch.read(iprot);
+          this->__isset.ouch = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_result::write(::apache::thrift::protocol::TProtocol* oprot) const {
+
+  uint32_t xfer = 0;
+
+  xfer += oprot->writeStructBegin("netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_result");
+
+  if (this->__isset.success) {
+    xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_I32, 0);
+    xfer += oprot->writeI32(this->success);
+    xfer += oprot->writeFieldEnd();
+  } else if (this->__isset.ouch) {
+    xfer += oprot->writeFieldBegin("ouch", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->ouch.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  }
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_presult::~netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_presult() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32((*(this->success)));
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->ouch.read(iprot);
+          this->__isset.ouch = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+
 netbufferv4_lastclone_lastscansplit_tbl_match_spec_to_entry_hdl_args::~netbufferv4_lastclone_lastscansplit_tbl_match_spec_to_entry_hdl_args() throw() {
 }
 
@@ -42562,6 +42800,498 @@ netbufferv4_is_hot_tbl_table_add_with_reset_is_hot_presult::~netbufferv4_is_hot_
 
 
 uint32_t netbufferv4_is_hot_tbl_table_add_with_reset_is_hot_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32((*(this->success)));
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->ouch.read(iprot);
+          this->__isset.ouch = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_args::~netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_args() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_args::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->sess_hdl);
+          this->__isset.sess_hdl = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->dev_tgt.read(iprot);
+          this->__isset.dev_tgt = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->match_spec.read(iprot);
+          this->__isset.match_spec = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 4:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->action_spec.read(iprot);
+          this->__isset.action_spec = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_args::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  oprot->incrementRecursionDepth();
+  xfer += oprot->writeStructBegin("netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_args");
+
+  xfer += oprot->writeFieldBegin("sess_hdl", ::apache::thrift::protocol::T_I32, 1);
+  xfer += oprot->writeI32(this->sess_hdl);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("dev_tgt", ::apache::thrift::protocol::T_STRUCT, 2);
+  xfer += this->dev_tgt.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("match_spec", ::apache::thrift::protocol::T_STRUCT, 3);
+  xfer += this->match_spec.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("action_spec", ::apache::thrift::protocol::T_STRUCT, 4);
+  xfer += this->action_spec.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  oprot->decrementRecursionDepth();
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_pargs::~netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_pargs() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_pargs::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  oprot->incrementRecursionDepth();
+  xfer += oprot->writeStructBegin("netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_pargs");
+
+  xfer += oprot->writeFieldBegin("sess_hdl", ::apache::thrift::protocol::T_I32, 1);
+  xfer += oprot->writeI32((*(this->sess_hdl)));
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("dev_tgt", ::apache::thrift::protocol::T_STRUCT, 2);
+  xfer += (*(this->dev_tgt)).write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("match_spec", ::apache::thrift::protocol::T_STRUCT, 3);
+  xfer += (*(this->match_spec)).write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("action_spec", ::apache::thrift::protocol::T_STRUCT, 4);
+  xfer += (*(this->action_spec)).write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  oprot->decrementRecursionDepth();
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_result::~netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_result() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_result::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->success);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->ouch.read(iprot);
+          this->__isset.ouch = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_result::write(::apache::thrift::protocol::TProtocol* oprot) const {
+
+  uint32_t xfer = 0;
+
+  xfer += oprot->writeStructBegin("netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_result");
+
+  if (this->__isset.success) {
+    xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_I32, 0);
+    xfer += oprot->writeI32(this->success);
+    xfer += oprot->writeFieldEnd();
+  } else if (this->__isset.ouch) {
+    xfer += oprot->writeFieldBegin("ouch", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->ouch.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  }
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_presult::~netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_presult() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32((*(this->success)));
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->ouch.read(iprot);
+          this->__isset.ouch = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_table_add_with_nop_args::~netbufferv4_l2l3_forward_tbl_table_add_with_nop_args() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_nop_args::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->sess_hdl);
+          this->__isset.sess_hdl = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->dev_tgt.read(iprot);
+          this->__isset.dev_tgt = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->match_spec.read(iprot);
+          this->__isset.match_spec = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_nop_args::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  oprot->incrementRecursionDepth();
+  xfer += oprot->writeStructBegin("netbufferv4_l2l3_forward_tbl_table_add_with_nop_args");
+
+  xfer += oprot->writeFieldBegin("sess_hdl", ::apache::thrift::protocol::T_I32, 1);
+  xfer += oprot->writeI32(this->sess_hdl);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("dev_tgt", ::apache::thrift::protocol::T_STRUCT, 2);
+  xfer += this->dev_tgt.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("match_spec", ::apache::thrift::protocol::T_STRUCT, 3);
+  xfer += this->match_spec.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  oprot->decrementRecursionDepth();
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_table_add_with_nop_pargs::~netbufferv4_l2l3_forward_tbl_table_add_with_nop_pargs() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_nop_pargs::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  oprot->incrementRecursionDepth();
+  xfer += oprot->writeStructBegin("netbufferv4_l2l3_forward_tbl_table_add_with_nop_pargs");
+
+  xfer += oprot->writeFieldBegin("sess_hdl", ::apache::thrift::protocol::T_I32, 1);
+  xfer += oprot->writeI32((*(this->sess_hdl)));
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("dev_tgt", ::apache::thrift::protocol::T_STRUCT, 2);
+  xfer += (*(this->dev_tgt)).write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("match_spec", ::apache::thrift::protocol::T_STRUCT, 3);
+  xfer += (*(this->match_spec)).write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  oprot->decrementRecursionDepth();
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_table_add_with_nop_result::~netbufferv4_l2l3_forward_tbl_table_add_with_nop_result() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_nop_result::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->success);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->ouch.read(iprot);
+          this->__isset.ouch = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_nop_result::write(::apache::thrift::protocol::TProtocol* oprot) const {
+
+  uint32_t xfer = 0;
+
+  xfer += oprot->writeStructBegin("netbufferv4_l2l3_forward_tbl_table_add_with_nop_result");
+
+  if (this->__isset.success) {
+    xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_I32, 0);
+    xfer += oprot->writeI32(this->success);
+    xfer += oprot->writeFieldEnd();
+  } else if (this->__isset.ouch) {
+    xfer += oprot->writeFieldBegin("ouch", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->ouch.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  }
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+
+netbufferv4_l2l3_forward_tbl_table_add_with_nop_presult::~netbufferv4_l2l3_forward_tbl_table_add_with_nop_presult() throw() {
+}
+
+
+uint32_t netbufferv4_l2l3_forward_tbl_table_add_with_nop_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   uint32_t xfer = 0;
   std::string fname;
@@ -86922,6 +87652,128 @@ uint32_t netbufferv4_access_deleted_tbl_table_modify_with_reset_and_get_deleted_
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->ouch.read(iprot);
           this->__isset.ouch = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t netbufferv4_access_deleted_tbl_table_modify_with_reset_and_get_deleted_by_match_spec_result::write(::apache::thrift::protocol::TProtocol* oprot) const {
+
+  uint32_t xfer = 0;
+
+  xfer += oprot->writeStructBegin("netbufferv4_access_deleted_tbl_table_modify_with_reset_and_get_deleted_by_match_spec_result");
+
+  if (this->__isset.ouch) {
+    xfer += oprot->writeFieldBegin("ouch", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->ouch.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  }
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+
+netbufferv4_access_deleted_tbl_table_modify_with_reset_and_get_deleted_by_match_spec_presult::~netbufferv4_access_deleted_tbl_table_modify_with_reset_and_get_deleted_by_match_spec_presult() throw() {
+}
+
+
+uint32_t netbufferv4_access_deleted_tbl_table_modify_with_reset_and_get_deleted_by_match_spec_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->ouch.read(iprot);
+          this->__isset.ouch = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+
+netbufferv4_access_deleted_tbl_table_modify_with_reset_is_deleted_args::~netbufferv4_access_deleted_tbl_table_modify_with_reset_is_deleted_args() throw() {
+}
+
+
+uint32_t netbufferv4_access_deleted_tbl_table_modify_with_reset_is_deleted_args::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->sess_hdl);
+          this->__isset.sess_hdl = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_BYTE) {
+          xfer += iprot->readByte(this->dev_id);
+          this->__isset.dev_id = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->entry);
+          this->__isset.entry = true;
         } else {
           xfer += iprot->skip(ftype);
         }

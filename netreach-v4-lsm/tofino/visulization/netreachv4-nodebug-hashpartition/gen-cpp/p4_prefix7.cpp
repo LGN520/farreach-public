@@ -1,118 +1,6 @@
 #include "p4_prefix.h"
 namespace p4_pd_rpc {
 
-void netbufferv4Processor::process_eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
-{
-  void* ctx = NULL;
-  if (this->eventHandler_.get() != NULL) {
-    ctx = this->eventHandler_->getContext("netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", callContext);
-  }
-  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
-  }
-
-  netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec_args args;
-  args.read(iprot);
-  iprot->readMessageEnd();
-  uint32_t bytes = iprot->getTransport()->readEnd();
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", bytes);
-  }
-
-  netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec_result result;
-  try {
-    iface_->eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec(args.sess_hdl, args.dev_tgt, args.match_spec, args.action_spec);
-  } catch (InvalidTableOperation &ouch) {
-    result.ouch = ouch;
-    result.__isset.ouch = true;
-  } catch (const std::exception& e) {
-    if (this->eventHandler_.get() != NULL) {
-      this->eventHandler_->handlerError(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
-    }
-
-    ::apache::thrift::TApplicationException x(e.what());
-    oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", ::apache::thrift::protocol::T_EXCEPTION, seqid);
-    x.write(oprot);
-    oprot->writeMessageEnd();
-    oprot->getTransport()->writeEnd();
-    oprot->getTransport()->flush();
-    return;
-  }
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
-  }
-
-  oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", ::apache::thrift::protocol::T_REPLY, seqid);
-  result.write(oprot);
-  oprot->writeMessageEnd();
-  bytes = oprot->getTransport()->writeEnd();
-  oprot->getTransport()->flush();
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", bytes);
-  }
-}
-
-void netbufferv4Processor::process_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
-{
-  void* ctx = NULL;
-  if (this->eventHandler_.get() != NULL) {
-    ctx = this->eventHandler_->getContext("netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", callContext);
-  }
-  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
-  }
-
-  netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss_args args;
-  args.read(iprot);
-  iprot->readMessageEnd();
-  uint32_t bytes = iprot->getTransport()->readEnd();
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", bytes);
-  }
-
-  netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss_result result;
-  try {
-    iface_->eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(args.sess_hdl, args.dev_id, args.entry, args.action_spec);
-  } catch (InvalidTableOperation &ouch) {
-    result.ouch = ouch;
-    result.__isset.ouch = true;
-  } catch (const std::exception& e) {
-    if (this->eventHandler_.get() != NULL) {
-      this->eventHandler_->handlerError(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
-    }
-
-    ::apache::thrift::TApplicationException x(e.what());
-    oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", ::apache::thrift::protocol::T_EXCEPTION, seqid);
-    x.write(oprot);
-    oprot->writeMessageEnd();
-    oprot->getTransport()->writeEnd();
-    oprot->getTransport()->flush();
-    return;
-  }
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
-  }
-
-  oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", ::apache::thrift::protocol::T_REPLY, seqid);
-  result.write(oprot);
-  oprot->writeMessageEnd();
-  bytes = oprot->getTransport()->writeEnd();
-  oprot->getTransport()->flush();
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", bytes);
-  }
-}
-
 void netbufferv4Processor::process_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
 {
   void* ctx = NULL;
@@ -5206,6 +5094,230 @@ void netbufferv4Processor::process_is_hot_tbl_table_modify_with_reset_is_hot_by_
 
   if (this->eventHandler_.get() != NULL) {
     this->eventHandler_->postWrite(ctx, "netbufferv4.is_hot_tbl_table_modify_with_reset_is_hot_by_match_spec", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_table_modify_with_l2l3_forward(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_modify_with_l2l3_forward_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_modify_with_l2l3_forward_result result;
+  try {
+    iface_->l2l3_forward_tbl_table_modify_with_l2l3_forward(args.sess_hdl, args.dev_id, args.entry, args.action_spec);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_modify_with_l2l3_forward", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_modify_with_l2l3_forward", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec_result result;
+  try {
+    iface_->l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec(args.sess_hdl, args.dev_tgt, args.match_spec, args.action_spec);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_table_modify_with_nop(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_modify_with_nop", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_modify_with_nop_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_modify_with_nop_result result;
+  try {
+    iface_->l2l3_forward_tbl_table_modify_with_nop(args.sess_hdl, args.dev_id, args.entry);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_modify_with_nop", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_modify_with_nop", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_table_modify_with_nop_by_match_spec(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_modify_with_nop_by_match_spec", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop_by_match_spec");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop_by_match_spec");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_modify_with_nop_by_match_spec_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop_by_match_spec", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_modify_with_nop_by_match_spec_result result;
+  try {
+    iface_->l2l3_forward_tbl_table_modify_with_nop_by_match_spec(args.sess_hdl, args.dev_tgt, args.match_spec);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop_by_match_spec");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_modify_with_nop_by_match_spec", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop_by_match_spec");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_modify_with_nop_by_match_spec", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_modify_with_nop_by_match_spec", bytes);
   }
 }
 
@@ -25145,6 +25257,118 @@ void netbufferv4Processor::process_is_hot_tbl_table_delete_by_match_spec(int32_t
   }
 }
 
+void netbufferv4Processor::process_l2l3_forward_tbl_table_delete(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_delete", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_delete");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_delete");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_delete_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_delete", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_delete_result result;
+  try {
+    iface_->l2l3_forward_tbl_table_delete(args.sess_hdl, args.dev_id, args.entry);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_delete");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_delete", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_delete");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_delete", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_delete", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_table_delete_by_match_spec(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_delete_by_match_spec", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_delete_by_match_spec");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_delete_by_match_spec");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_delete_by_match_spec_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_delete_by_match_spec", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_delete_by_match_spec_result result;
+  try {
+    iface_->l2l3_forward_tbl_table_delete_by_match_spec(args.sess_hdl, args.dev_tgt, args.match_spec);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_delete_by_match_spec");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_delete_by_match_spec", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_delete_by_match_spec");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_delete_by_match_spec", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_delete_by_match_spec", bytes);
+  }
+}
+
 void netbufferv4Processor::process_lastclone_lastscansplit_tbl_table_delete(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
 {
   void* ctx = NULL;
@@ -32699,6 +32923,120 @@ void netbufferv4Processor::process_is_hot_tbl_table_get_default_entry(int32_t se
   }
 }
 
+void netbufferv4Processor::process_l2l3_forward_tbl_table_get_default_entry_handle(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_get_default_entry_handle", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry_handle");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry_handle");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_get_default_entry_handle_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry_handle", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_get_default_entry_handle_result result;
+  try {
+    result.success = iface_->l2l3_forward_tbl_table_get_default_entry_handle(args.sess_hdl, args.dev_tgt);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry_handle");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_get_default_entry_handle", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry_handle");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_get_default_entry_handle", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry_handle", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_table_get_default_entry(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_get_default_entry", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_get_default_entry_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_get_default_entry_result result;
+  try {
+    iface_->l2l3_forward_tbl_table_get_default_entry(result.success, args.sess_hdl, args.dev_tgt, args.read_from_hw);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_get_default_entry", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_get_default_entry", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_get_default_entry", bytes);
+  }
+}
+
 void netbufferv4Processor::process_lastclone_lastscansplit_tbl_table_get_default_entry_handle(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
 {
   void* ctx = NULL;
@@ -39001,6 +39339,62 @@ void netbufferv4Processor::process_is_hot_tbl_table_reset_default_entry(int32_t 
   }
 }
 
+void netbufferv4Processor::process_l2l3_forward_tbl_table_reset_default_entry(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_reset_default_entry", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_reset_default_entry");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_reset_default_entry");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_reset_default_entry_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_reset_default_entry", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_reset_default_entry_result result;
+  try {
+    iface_->l2l3_forward_tbl_table_reset_default_entry(args.sess_hdl, args.dev_tgt);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_reset_default_entry");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_reset_default_entry", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_reset_default_entry");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_reset_default_entry", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_reset_default_entry", bytes);
+  }
+}
+
 void netbufferv4Processor::process_lastclone_lastscansplit_tbl_table_reset_default_entry(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
 {
   void* ctx = NULL;
@@ -42831,6 +43225,63 @@ void netbufferv4Processor::process_is_hot_tbl_get_entry_count(int32_t seqid, ::a
 
   if (this->eventHandler_.get() != NULL) {
     this->eventHandler_->postWrite(ctx, "netbufferv4.is_hot_tbl_get_entry_count", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_get_entry_count(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_get_entry_count", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_get_entry_count");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_get_entry_count");
+  }
+
+  netbufferv4_l2l3_forward_tbl_get_entry_count_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_get_entry_count", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_get_entry_count_result result;
+  try {
+    result.success = iface_->l2l3_forward_tbl_get_entry_count(args.sess_hdl, args.dev_tgt);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_get_entry_count");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_get_entry_count", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_get_entry_count");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_get_entry_count", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_get_entry_count", bytes);
   }
 }
 
@@ -49557,6 +50008,177 @@ void netbufferv4Processor::process_is_hot_tbl_get_entry(int32_t seqid, ::apache:
 
   if (this->eventHandler_.get() != NULL) {
     this->eventHandler_->postWrite(ctx, "netbufferv4.is_hot_tbl_get_entry", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_get_first_entry_handle(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_get_first_entry_handle", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_get_first_entry_handle");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_get_first_entry_handle");
+  }
+
+  netbufferv4_l2l3_forward_tbl_get_first_entry_handle_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_get_first_entry_handle", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_get_first_entry_handle_result result;
+  try {
+    result.success = iface_->l2l3_forward_tbl_get_first_entry_handle(args.sess_hdl, args.dev_tgt);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_get_first_entry_handle");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_get_first_entry_handle", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_get_first_entry_handle");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_get_first_entry_handle", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_get_first_entry_handle", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_get_next_entry_handles(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_get_next_entry_handles", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_get_next_entry_handles");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_get_next_entry_handles");
+  }
+
+  netbufferv4_l2l3_forward_tbl_get_next_entry_handles_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_get_next_entry_handles", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_get_next_entry_handles_result result;
+  try {
+    iface_->l2l3_forward_tbl_get_next_entry_handles(result.success, args.sess_hdl, args.dev_tgt, args.entry_hdl, args.n);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_get_next_entry_handles");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_get_next_entry_handles", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_get_next_entry_handles");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_get_next_entry_handles", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_get_next_entry_handles", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_get_entry(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_get_entry", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_get_entry");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_get_entry");
+  }
+
+  netbufferv4_l2l3_forward_tbl_get_entry_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_get_entry", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_get_entry_result result;
+  try {
+    iface_->l2l3_forward_tbl_get_entry(result.success, args.sess_hdl, args.dev_id, args.entry_hdl, args.read_from_hw);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_get_entry");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_get_entry", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_get_entry");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_get_entry", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_get_entry", bytes);
   }
 }
 
@@ -58338,6 +58960,63 @@ void netbufferv4Processor::process_is_hot_tbl_set_default_action_reset_is_hot(in
   }
 }
 
+void netbufferv4Processor::process_l2l3_forward_tbl_set_default_action_nop(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_set_default_action_nop", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_set_default_action_nop");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_set_default_action_nop");
+  }
+
+  netbufferv4_l2l3_forward_tbl_set_default_action_nop_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_set_default_action_nop", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_set_default_action_nop_result result;
+  try {
+    result.success = iface_->l2l3_forward_tbl_set_default_action_nop(args.sess_hdl, args.dev_tgt);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_set_default_action_nop");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_set_default_action_nop", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_set_default_action_nop");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_set_default_action_nop", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_set_default_action_nop", bytes);
+  }
+}
+
 void netbufferv4Processor::process_lastclone_lastscansplit_tbl_set_default_action_reset_is_lastclone_lastscansplit(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
 {
   void* ctx = NULL;
@@ -63611,6 +64290,119 @@ void netbufferv4Processor::process_is_hot_tbl_get_property(int32_t seqid, ::apac
 
   if (this->eventHandler_.get() != NULL) {
     this->eventHandler_->postWrite(ctx, "netbufferv4.is_hot_tbl_get_property", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_set_property(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_set_property", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_set_property");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_set_property");
+  }
+
+  netbufferv4_l2l3_forward_tbl_set_property_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_set_property", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_set_property_result result;
+  try {
+    iface_->l2l3_forward_tbl_set_property(args.sess_hdl, args.dev_id, args.property, args.value, args.prop_args);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_set_property");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_set_property", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_set_property");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_set_property", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_set_property", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_get_property(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_get_property", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_get_property");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_get_property");
+  }
+
+  netbufferv4_l2l3_forward_tbl_get_property_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_get_property", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_get_property_result result;
+  try {
+    iface_->l2l3_forward_tbl_get_property(result.success, args.sess_hdl, args.dev_id, args.property);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_get_property");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_get_property", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_get_property");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_get_property", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_get_property", bytes);
   }
 }
 

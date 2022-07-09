@@ -21,19 +21,19 @@ table save_client_udpport_tbl {
 
 #ifdef RANGE_SUPPORT
 action process_scanreq_split(server_sid) {
-	modify_field(meta.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
+	modify_field(clone_hdr.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
 	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
 	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
 action process_cloned_scanreq_split(udpport, server_sid) {
 	//add_to_field(udp_hdr.dstPort, 1);
 	modify_field(udp_hdr.dstPort, udpport); // set udpport for current SCANREQ_SPLIT
-	modify_field(meta.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
+	modify_field(clone_hdr.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
 	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
 	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
 action reset_meta_serversid_remainscannum() {
-	modify_field(meta.server_sid, 0);
+	modify_field(clone_hdr.server_sid, 0);
 	modify_field(meta.remain_scannum, 0);
 }
 @pragma stage 0
@@ -54,6 +54,27 @@ table process_scanreq_split_tbl {
 	size: PROCESS_SCANREQ_SPLIT_ENTRY_NUM;
 }
 #endif
+
+// Stage 1
+
+action set_server_sid_and_port(server_sid) {
+	modify_field(clone_hdr.server_sid, server_sid);
+	modify_field(clone_hdr.server_port, udp_hdr.dstPort); // dstport is serverport for GETREQ_INSWITCH
+}
+
+@pragma stage 1
+table prepare_for_cachepop_tbl {
+	reads {
+		op_hdr.optype: exact;
+		eg_intr_md.egress_port: exact;
+	}
+	actions {
+		set_server_sid_and_port;
+		nop;
+	}
+	default_action: set_server_sid_and_port(0);
+	size: 8;
+}
 
 // Stage 2
 
@@ -172,13 +193,35 @@ action update_getreq_inswitch_to_getreq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_getreq_inswitch_to_getreq_pop() {
-	modify_field(op_hdr.optype, GETREQ_POP);
+action update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(switchos_sid, reflector_port) {
+	modify_field(op_hdr.optype, NETCACHE_GETREQ_POP);
+	modify_field(udp_hdr.dstPort, reflector_port);
+	modify_field(clone_hdr.clonenum_for_pktloss, 3); // 3 ACKs (drop w/ 3 -> clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> drop and clone for GETREQ to server)
 
 	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
+	add_header(clone_hdr); // NOTE: clone_hdr.server_sid has been set in prepare_for_cachepop_tbl
 
-	//modify_field(eg_intr_md.egress_port, eport);
+	//modify_field(eg_intr_md.egress_port, port); // set eport to switchos
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
+}
+
+action forward_netcache_getreq_pop_clone_for_pktloss_and_getreq(switchos_sid) {
+	subtract_from_field(clone_hdr.clonenum_for_pktloss, 1);
+
+	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
+}
+
+action update_netcache_getreq_pop_to_getreq_by_mirroring(server_sid) {
+	modify_field(op_hdr.optype, GETREQ);
+	// Keep original udp.srcport (aka client udp port)
+	modify_field(udp_hdr.dstPort, clone_hdr.server_udpport);
+
+	remove_header(clone_hdr);
+
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(server_sid); // clone to client (inswitch_hdr.client_sid)
 }
 
 action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
@@ -316,7 +359,7 @@ action forward_scanreq_split_and_clone(server_sid) {
 	add_to_field(split_hdr.cur_scanidx, 1);
 	add_to_field(split_hdr.globalserveridx, 1);
 	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
-	clone_egress_pkt_to_egress(server_sid); // clone to server (meta.server_sid)
+	clone_egress_pkt_to_egress(server_sid); // clone to server (clone_hdr.server_sid)
 }
 action forward_scanreq_split() {
 	modify_field(split_hdr.is_clone, 1);
@@ -365,12 +408,14 @@ table eg_port_forward_tbl {
 		//debug_hdr.is_lastclone_for_pktloss: exact;
 #ifdef RANGE_SUPPORT
 		meta.is_last_scansplit: exact;
-		meta.server_sid: exact;
 #endif
+		clone_hdr.server_sid: exact;
 	}
 	actions {
 		update_getreq_inswitch_to_getreq;
-		update_getreq_inswitch_to_getreq_pop;
+		update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq;
+		forward_netcache_getreq_pop_clone_for_pktloss_and_getreq;
+		update_netcache_getreq_pop_to_getreq_by_mirroring;
 		update_getreq_inswitch_to_getres_by_mirroring;
 		//update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss; // clone for first CACHE_POP_INSWITCH_ACK
 		//forward_cache_pop_inswitch_ack_clone_for_pktloss; // not last clone of CACHE_POP_INSWITCH_ACK
@@ -412,12 +457,17 @@ action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, ser
 
 // NOTE: as we use software link, switch_mac/ip = reflector_mac/ip
 // NOTE: although we use client_port to update srcport here, reflector does not care about the specific value of srcport
-action update_ipmac_srcport_switch2switchos(client_mac, switch_mac, client_ip, switch_ip, client_port) {
+/*action update_ipmac_srcport_switch2switchos(client_mac, switch_mac, client_ip, switch_ip, client_port) {
 	modify_field(ethernet_hdr.srcAddr, client_mac);
 	modify_field(ethernet_hdr.dstAddr, switch_mac);
 	modify_field(ipv4_hdr.srcAddr, client_ip);
 	modify_field(ipv4_hdr.dstAddr, switch_ip);
 	modify_field(udp_hdr.srcPort, client_port);
+}*/
+// NOTE:  we do not care about srcip, srcmac and srcport for pkt to switchos
+action update_dstipmac_switch2switchos(switch_mac, switch_ip) {
+	modify_field(ethernet_hdr.dstAddr, switch_mac);
+	modify_field(ipv4_hdr.dstAddr, switch_ip);
 }
 
 action update_dstipmac_client2server(server_mac, server_ip) {
@@ -434,7 +484,8 @@ table update_ipmac_srcport_tbl {
 	}
 	actions {
 		update_ipmac_srcport_server2client; // focus on dstip and dstmac to corresponding client; use server[0] as srcip and srcmac; use server_worker_port_start as srcport
-		update_ipmac_srcport_switch2switchos; // focus on dstip and dstmac to reflector; use client[0] as srcip and srcmac; use constant (123) as srcport
+		//update_ipmac_srcport_switch2switchos; // focus on dstip and dstmac to reflector; use client[0] as srcip and srcmac; use constant (123) as srcport
+		update_dstipmac_switch2switchos; // focus on dstip and dstmac to reflector; NOT change srcip, srcmac, and srcport
 		update_dstipmac_client2server; // focus on dstip and dstmac to corresponding server; NOT change srcip, srcmac, and srcport
 		nop;
 	}
@@ -446,7 +497,7 @@ table update_ipmac_srcport_tbl {
 
 // NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
 /*
-// CACHE_POP_INSWITCH_ACK
+// CACHE_POP_INSWITCH_ACK, GETREQ (cloned by NETCACHE_GETREQ_POP)
 action update_onlyop_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 1(debug_hdr)
 	//modify_field(udp_hdr.hdrlen, 27);
@@ -482,7 +533,7 @@ action update_stat_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 52);
 }
 
-// DELREQ_SEQ, DELREQ_SEQ_CASE3
+// DELREQ_SEQ
 action update_seq_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 4(seq) + 1(debug_hdr)
 	//modify_field(udp_hdr.hdrlen, 33);
@@ -498,13 +549,11 @@ action update_scanreqsplit_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 69);
 }
 
-// LOADSNAPSHOTDATA_INSWITCH_ACK
-action update_val_seq_inswitch_stat_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 16(inswitch) + 4(stat) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 55);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 75);
-	add(udp_hdr.hdrlen, aligned_vallen, 54);
-	add(ipv4_hdr.totalLen, aligned_vallen, 74);
+// NETCACHE_GETREQ_POP
+action update_ophdr_clonehdr_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 7(clonehdr)
+	modify_field(udp_hdr.hdrlen, 33);
+	modify_field(ipv4_hdr.totalLen, 53);
 }
 */
 

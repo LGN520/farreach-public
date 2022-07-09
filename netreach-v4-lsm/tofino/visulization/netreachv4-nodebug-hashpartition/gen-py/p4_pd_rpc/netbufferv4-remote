@@ -49,6 +49,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  EntryHandle_t ig_port_forward_tbl_match_spec_to_entry_hdl(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_ig_port_forward_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t ipv4_forward_tbl_match_spec_to_entry_hdl(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_ipv4_forward_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t is_hot_tbl_match_spec_to_entry_hdl(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_is_hot_tbl_match_spec_t match_spec)')
+  print('  EntryHandle_t l2l3_forward_tbl_match_spec_to_entry_hdl(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_l2l3_forward_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t lastclone_lastscansplit_tbl_match_spec_to_entry_hdl(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_lastclone_lastscansplit_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t need_recirculate_tbl_match_spec_to_entry_hdl(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_need_recirculate_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t prepare_for_cachehit_tbl_match_spec_to_entry_hdl(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_prepare_for_cachehit_tbl_match_spec_t match_spec)')
@@ -200,6 +201,8 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  EntryHandle_t ipv4_forward_tbl_table_add_with_nop(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_ipv4_forward_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t is_hot_tbl_table_add_with_set_is_hot(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_is_hot_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t is_hot_tbl_table_add_with_reset_is_hot(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_is_hot_tbl_match_spec_t match_spec)')
+  print('  EntryHandle_t l2l3_forward_tbl_table_add_with_l2l3_forward(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_l2l3_forward_tbl_match_spec_t match_spec, netbufferv4_l2l3_forward_action_spec_t action_spec)')
+  print('  EntryHandle_t l2l3_forward_tbl_table_add_with_nop(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_l2l3_forward_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_lastclone_lastscansplit_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t lastclone_lastscansplit_tbl_table_add_with_reset_is_lastclone_lastscansplit(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_lastclone_lastscansplit_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t need_recirculate_tbl_table_add_with_set_need_recirculate(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_need_recirculate_tbl_match_spec_t match_spec)')
@@ -571,6 +574,10 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  void is_hot_tbl_table_modify_with_set_is_hot_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_is_hot_tbl_match_spec_t match_spec)')
   print('  void is_hot_tbl_table_modify_with_reset_is_hot(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry)')
   print('  void is_hot_tbl_table_modify_with_reset_is_hot_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_is_hot_tbl_match_spec_t match_spec)')
+  print('  void l2l3_forward_tbl_table_modify_with_l2l3_forward(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry, netbufferv4_l2l3_forward_action_spec_t action_spec)')
+  print('  void l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_l2l3_forward_tbl_match_spec_t match_spec, netbufferv4_l2l3_forward_action_spec_t action_spec)')
+  print('  void l2l3_forward_tbl_table_modify_with_nop(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry)')
+  print('  void l2l3_forward_tbl_table_modify_with_nop_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_l2l3_forward_tbl_match_spec_t match_spec)')
   print('  void lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry)')
   print('  void lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_lastclone_lastscansplit_tbl_match_spec_t match_spec)')
   print('  void lastclone_lastscansplit_tbl_table_modify_with_reset_is_lastclone_lastscansplit(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry)')
@@ -927,6 +934,8 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  void ipv4_forward_tbl_table_delete_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_ipv4_forward_tbl_match_spec_t match_spec)')
   print('  void is_hot_tbl_table_delete(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry)')
   print('  void is_hot_tbl_table_delete_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_is_hot_tbl_match_spec_t match_spec)')
+  print('  void l2l3_forward_tbl_table_delete(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry)')
+  print('  void l2l3_forward_tbl_table_delete_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_l2l3_forward_tbl_match_spec_t match_spec)')
   print('  void lastclone_lastscansplit_tbl_table_delete(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry)')
   print('  void lastclone_lastscansplit_tbl_table_delete_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_lastclone_lastscansplit_tbl_match_spec_t match_spec)')
   print('  void need_recirculate_tbl_table_delete(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry)')
@@ -1061,6 +1070,8 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  netbufferv4_ipv4_forward_tbl_entry_desc_t ipv4_forward_tbl_table_get_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, bool read_from_hw)')
   print('  EntryHandle_t is_hot_tbl_table_get_default_entry_handle(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  netbufferv4_is_hot_tbl_entry_desc_t is_hot_tbl_table_get_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, bool read_from_hw)')
+  print('  EntryHandle_t l2l3_forward_tbl_table_get_default_entry_handle(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
+  print('  netbufferv4_l2l3_forward_tbl_entry_desc_t l2l3_forward_tbl_table_get_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, bool read_from_hw)')
   print('  EntryHandle_t lastclone_lastscansplit_tbl_table_get_default_entry_handle(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t lastclone_lastscansplit_tbl_table_get_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, bool read_from_hw)')
   print('  EntryHandle_t need_recirculate_tbl_table_get_default_entry_handle(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
@@ -1172,6 +1183,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  void ig_port_forward_tbl_table_reset_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  void ipv4_forward_tbl_table_reset_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  void is_hot_tbl_table_reset_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
+  print('  void l2l3_forward_tbl_table_reset_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  void lastclone_lastscansplit_tbl_table_reset_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  void need_recirculate_tbl_table_reset_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  void prepare_for_cachehit_tbl_table_reset_default_entry(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
@@ -1240,6 +1252,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  i32 ig_port_forward_tbl_get_entry_count(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  i32 ipv4_forward_tbl_get_entry_count(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  i32 is_hot_tbl_get_entry_count(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
+  print('  i32 l2l3_forward_tbl_get_entry_count(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  i32 lastclone_lastscansplit_tbl_get_entry_count(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  i32 need_recirculate_tbl_get_entry_count(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  i32 prepare_for_cachehit_tbl_get_entry_count(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
@@ -1358,6 +1371,9 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  i32 is_hot_tbl_get_first_entry_handle(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('   is_hot_tbl_get_next_entry_handles(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, EntryHandle_t entry_hdl, i32 n)')
   print('  netbufferv4_is_hot_tbl_entry_desc_t is_hot_tbl_get_entry(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry_hdl, bool read_from_hw)')
+  print('  i32 l2l3_forward_tbl_get_first_entry_handle(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
+  print('   l2l3_forward_tbl_get_next_entry_handles(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, EntryHandle_t entry_hdl, i32 n)')
+  print('  netbufferv4_l2l3_forward_tbl_entry_desc_t l2l3_forward_tbl_get_entry(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry_hdl, bool read_from_hw)')
   print('  i32 lastclone_lastscansplit_tbl_get_first_entry_handle(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('   lastclone_lastscansplit_tbl_get_next_entry_handles(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, EntryHandle_t entry_hdl, i32 n)')
   print('  netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t lastclone_lastscansplit_tbl_get_entry(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry_hdl, bool read_from_hw)')
@@ -1512,6 +1528,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  EntryHandle_t ig_port_forward_tbl_set_default_action_nop(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  EntryHandle_t ipv4_forward_tbl_set_default_action_nop(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  EntryHandle_t is_hot_tbl_set_default_action_reset_is_hot(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
+  print('  EntryHandle_t l2l3_forward_tbl_set_default_action_nop(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  EntryHandle_t lastclone_lastscansplit_tbl_set_default_action_reset_is_lastclone_lastscansplit(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  EntryHandle_t need_recirculate_tbl_set_default_action_reset_need_recirculate(SessionHandle_t sess_hdl, DevTarget_t dev_tgt)')
   print('  EntryHandle_t prepare_for_cachehit_tbl_set_default_action_set_client_sid(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_set_client_sid_action_spec_t action_spec)')
@@ -1605,6 +1622,8 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  tbl_property_value_args_t ipv4_forward_tbl_get_property(SessionHandle_t sess_hdl, byte dev_id, tbl_property_t property)')
   print('  void is_hot_tbl_set_property(SessionHandle_t sess_hdl, byte dev_id, tbl_property_t property, tbl_property_value_t value, i32 prop_args)')
   print('  tbl_property_value_args_t is_hot_tbl_get_property(SessionHandle_t sess_hdl, byte dev_id, tbl_property_t property)')
+  print('  void l2l3_forward_tbl_set_property(SessionHandle_t sess_hdl, byte dev_id, tbl_property_t property, tbl_property_value_t value, i32 prop_args)')
+  print('  tbl_property_value_args_t l2l3_forward_tbl_get_property(SessionHandle_t sess_hdl, byte dev_id, tbl_property_t property)')
   print('  void lastclone_lastscansplit_tbl_set_property(SessionHandle_t sess_hdl, byte dev_id, tbl_property_t property, tbl_property_value_t value, i32 prop_args)')
   print('  tbl_property_value_args_t lastclone_lastscansplit_tbl_get_property(SessionHandle_t sess_hdl, byte dev_id, tbl_property_t property)')
   print('  void need_recirculate_tbl_set_property(SessionHandle_t sess_hdl, byte dev_id, tbl_property_t property, tbl_property_value_t value, i32 prop_args)')
@@ -2221,6 +2240,12 @@ elif cmd == 'is_hot_tbl_match_spec_to_entry_hdl':
     print('is_hot_tbl_match_spec_to_entry_hdl requires 3 args')
     sys.exit(1)
   pp.pprint(client.is_hot_tbl_match_spec_to_entry_hdl(eval(args[0]),eval(args[1]),eval(args[2]),))
+
+elif cmd == 'l2l3_forward_tbl_match_spec_to_entry_hdl':
+  if len(args) != 3:
+    print('l2l3_forward_tbl_match_spec_to_entry_hdl requires 3 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_match_spec_to_entry_hdl(eval(args[0]),eval(args[1]),eval(args[2]),))
 
 elif cmd == 'lastclone_lastscansplit_tbl_match_spec_to_entry_hdl':
   if len(args) != 3:
@@ -3127,6 +3152,18 @@ elif cmd == 'is_hot_tbl_table_add_with_reset_is_hot':
     print('is_hot_tbl_table_add_with_reset_is_hot requires 3 args')
     sys.exit(1)
   pp.pprint(client.is_hot_tbl_table_add_with_reset_is_hot(eval(args[0]),eval(args[1]),eval(args[2]),))
+
+elif cmd == 'l2l3_forward_tbl_table_add_with_l2l3_forward':
+  if len(args) != 4:
+    print('l2l3_forward_tbl_table_add_with_l2l3_forward requires 4 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_add_with_l2l3_forward(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),))
+
+elif cmd == 'l2l3_forward_tbl_table_add_with_nop':
+  if len(args) != 3:
+    print('l2l3_forward_tbl_table_add_with_nop requires 3 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_add_with_nop(eval(args[0]),eval(args[1]),eval(args[2]),))
 
 elif cmd == 'lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone':
   if len(args) != 3:
@@ -5354,6 +5391,30 @@ elif cmd == 'is_hot_tbl_table_modify_with_reset_is_hot_by_match_spec':
     sys.exit(1)
   pp.pprint(client.is_hot_tbl_table_modify_with_reset_is_hot_by_match_spec(eval(args[0]),eval(args[1]),eval(args[2]),))
 
+elif cmd == 'l2l3_forward_tbl_table_modify_with_l2l3_forward':
+  if len(args) != 4:
+    print('l2l3_forward_tbl_table_modify_with_l2l3_forward requires 4 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_modify_with_l2l3_forward(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),))
+
+elif cmd == 'l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec':
+  if len(args) != 4:
+    print('l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec requires 4 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_modify_with_l2l3_forward_by_match_spec(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),))
+
+elif cmd == 'l2l3_forward_tbl_table_modify_with_nop':
+  if len(args) != 3:
+    print('l2l3_forward_tbl_table_modify_with_nop requires 3 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_modify_with_nop(eval(args[0]),eval(args[1]),eval(args[2]),))
+
+elif cmd == 'l2l3_forward_tbl_table_modify_with_nop_by_match_spec':
+  if len(args) != 3:
+    print('l2l3_forward_tbl_table_modify_with_nop_by_match_spec requires 3 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_modify_with_nop_by_match_spec(eval(args[0]),eval(args[1]),eval(args[2]),))
+
 elif cmd == 'lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone':
   if len(args) != 3:
     print('lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone requires 3 args')
@@ -7490,6 +7551,18 @@ elif cmd == 'is_hot_tbl_table_delete_by_match_spec':
     sys.exit(1)
   pp.pprint(client.is_hot_tbl_table_delete_by_match_spec(eval(args[0]),eval(args[1]),eval(args[2]),))
 
+elif cmd == 'l2l3_forward_tbl_table_delete':
+  if len(args) != 3:
+    print('l2l3_forward_tbl_table_delete requires 3 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_delete(eval(args[0]),eval(args[1]),eval(args[2]),))
+
+elif cmd == 'l2l3_forward_tbl_table_delete_by_match_spec':
+  if len(args) != 3:
+    print('l2l3_forward_tbl_table_delete_by_match_spec requires 3 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_delete_by_match_spec(eval(args[0]),eval(args[1]),eval(args[2]),))
+
 elif cmd == 'lastclone_lastscansplit_tbl_table_delete':
   if len(args) != 3:
     print('lastclone_lastscansplit_tbl_table_delete requires 3 args')
@@ -8294,6 +8367,18 @@ elif cmd == 'is_hot_tbl_table_get_default_entry':
     sys.exit(1)
   pp.pprint(client.is_hot_tbl_table_get_default_entry(eval(args[0]),eval(args[1]),eval(args[2]),))
 
+elif cmd == 'l2l3_forward_tbl_table_get_default_entry_handle':
+  if len(args) != 2:
+    print('l2l3_forward_tbl_table_get_default_entry_handle requires 2 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_get_default_entry_handle(eval(args[0]),eval(args[1]),))
+
+elif cmd == 'l2l3_forward_tbl_table_get_default_entry':
+  if len(args) != 3:
+    print('l2l3_forward_tbl_table_get_default_entry requires 3 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_get_default_entry(eval(args[0]),eval(args[1]),eval(args[2]),))
+
 elif cmd == 'lastclone_lastscansplit_tbl_table_get_default_entry_handle':
   if len(args) != 2:
     print('lastclone_lastscansplit_tbl_table_get_default_entry_handle requires 2 args')
@@ -8960,6 +9045,12 @@ elif cmd == 'is_hot_tbl_table_reset_default_entry':
     sys.exit(1)
   pp.pprint(client.is_hot_tbl_table_reset_default_entry(eval(args[0]),eval(args[1]),))
 
+elif cmd == 'l2l3_forward_tbl_table_reset_default_entry':
+  if len(args) != 2:
+    print('l2l3_forward_tbl_table_reset_default_entry requires 2 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_table_reset_default_entry(eval(args[0]),eval(args[1]),))
+
 elif cmd == 'lastclone_lastscansplit_tbl_table_reset_default_entry':
   if len(args) != 2:
     print('lastclone_lastscansplit_tbl_table_reset_default_entry requires 2 args')
@@ -9367,6 +9458,12 @@ elif cmd == 'is_hot_tbl_get_entry_count':
     print('is_hot_tbl_get_entry_count requires 2 args')
     sys.exit(1)
   pp.pprint(client.is_hot_tbl_get_entry_count(eval(args[0]),eval(args[1]),))
+
+elif cmd == 'l2l3_forward_tbl_get_entry_count':
+  if len(args) != 2:
+    print('l2l3_forward_tbl_get_entry_count requires 2 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_get_entry_count(eval(args[0]),eval(args[1]),))
 
 elif cmd == 'lastclone_lastscansplit_tbl_get_entry_count':
   if len(args) != 2:
@@ -10075,6 +10172,24 @@ elif cmd == 'is_hot_tbl_get_entry':
     print('is_hot_tbl_get_entry requires 4 args')
     sys.exit(1)
   pp.pprint(client.is_hot_tbl_get_entry(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),))
+
+elif cmd == 'l2l3_forward_tbl_get_first_entry_handle':
+  if len(args) != 2:
+    print('l2l3_forward_tbl_get_first_entry_handle requires 2 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_get_first_entry_handle(eval(args[0]),eval(args[1]),))
+
+elif cmd == 'l2l3_forward_tbl_get_next_entry_handles':
+  if len(args) != 4:
+    print('l2l3_forward_tbl_get_next_entry_handles requires 4 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_get_next_entry_handles(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),))
+
+elif cmd == 'l2l3_forward_tbl_get_entry':
+  if len(args) != 4:
+    print('l2l3_forward_tbl_get_entry requires 4 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_get_entry(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),))
 
 elif cmd == 'lastclone_lastscansplit_tbl_get_first_entry_handle':
   if len(args) != 2:
@@ -11000,6 +11115,12 @@ elif cmd == 'is_hot_tbl_set_default_action_reset_is_hot':
     sys.exit(1)
   pp.pprint(client.is_hot_tbl_set_default_action_reset_is_hot(eval(args[0]),eval(args[1]),))
 
+elif cmd == 'l2l3_forward_tbl_set_default_action_nop':
+  if len(args) != 2:
+    print('l2l3_forward_tbl_set_default_action_nop requires 2 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_set_default_action_nop(eval(args[0]),eval(args[1]),))
+
 elif cmd == 'lastclone_lastscansplit_tbl_set_default_action_reset_is_lastclone_lastscansplit':
   if len(args) != 2:
     print('lastclone_lastscansplit_tbl_set_default_action_reset_is_lastclone_lastscansplit requires 2 args')
@@ -11557,6 +11678,18 @@ elif cmd == 'is_hot_tbl_get_property':
     print('is_hot_tbl_get_property requires 3 args')
     sys.exit(1)
   pp.pprint(client.is_hot_tbl_get_property(eval(args[0]),eval(args[1]),eval(args[2]),))
+
+elif cmd == 'l2l3_forward_tbl_set_property':
+  if len(args) != 5:
+    print('l2l3_forward_tbl_set_property requires 5 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_set_property(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),eval(args[4]),))
+
+elif cmd == 'l2l3_forward_tbl_get_property':
+  if len(args) != 3:
+    print('l2l3_forward_tbl_get_property requires 3 args')
+    sys.exit(1)
+  pp.pprint(client.l2l3_forward_tbl_get_property(eval(args[0]),eval(args[1]),eval(args[2]),))
 
 elif cmd == 'lastclone_lastscansplit_tbl_set_property':
   if len(args) != 5:

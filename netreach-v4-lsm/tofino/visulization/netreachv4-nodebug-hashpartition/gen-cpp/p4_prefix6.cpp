@@ -1,68 +1,6 @@
 #include "p4_prefix.h"
 namespace p4_pd_rpc {
 
-EntryHandle_t netbufferv4Client::access_cm2_tbl_table_get_default_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
-{
-  send_access_cm2_tbl_table_get_default_entry_handle(sess_hdl, dev_tgt);
-  return recv_access_cm2_tbl_table_get_default_entry_handle();
-}
-
-void netbufferv4Client::send_access_cm2_tbl_table_get_default_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("access_cm2_tbl_table_get_default_entry_handle", ::apache::thrift::protocol::T_CALL, cseqid);
-
-  netbufferv4_access_cm2_tbl_table_get_default_entry_handle_pargs args;
-  args.sess_hdl = &sess_hdl;
-  args.dev_tgt = &dev_tgt;
-  args.write(oprot_);
-
-  oprot_->writeMessageEnd();
-  oprot_->getTransport()->writeEnd();
-  oprot_->getTransport()->flush();
-}
-
-EntryHandle_t netbufferv4Client::recv_access_cm2_tbl_table_get_default_entry_handle()
-{
-
-  int32_t rseqid = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TMessageType mtype;
-
-  iprot_->readMessageBegin(fname, mtype, rseqid);
-  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
-    ::apache::thrift::TApplicationException x;
-    x.read(iprot_);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw x;
-  }
-  if (mtype != ::apache::thrift::protocol::T_REPLY) {
-    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-  }
-  if (fname.compare("access_cm2_tbl_table_get_default_entry_handle") != 0) {
-    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-  }
-  EntryHandle_t _return;
-  netbufferv4_access_cm2_tbl_table_get_default_entry_handle_presult result;
-  result.success = &_return;
-  result.read(iprot_);
-  iprot_->readMessageEnd();
-  iprot_->getTransport()->readEnd();
-
-  if (result.__isset.success) {
-    return _return;
-  }
-  if (result.__isset.ouch) {
-    throw result.ouch;
-  }
-  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "access_cm2_tbl_table_get_default_entry_handle failed: unknown result");
-}
-
 void netbufferv4Client::access_cm2_tbl_table_get_default_entry(netbufferv4_access_cm2_tbl_entry_desc_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const bool read_from_hw)
 {
   send_access_cm2_tbl_table_get_default_entry(sess_hdl, dev_tgt, read_from_hw);
@@ -2749,6 +2687,131 @@ void netbufferv4Client::recv_is_hot_tbl_table_get_default_entry(netbufferv4_is_h
     throw result.ouch;
   }
   throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "is_hot_tbl_table_get_default_entry failed: unknown result");
+}
+
+EntryHandle_t netbufferv4Client::l2l3_forward_tbl_table_get_default_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  send_l2l3_forward_tbl_table_get_default_entry_handle(sess_hdl, dev_tgt);
+  return recv_l2l3_forward_tbl_table_get_default_entry_handle();
+}
+
+void netbufferv4Client::send_l2l3_forward_tbl_table_get_default_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("l2l3_forward_tbl_table_get_default_entry_handle", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_l2l3_forward_tbl_table_get_default_entry_handle_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_tgt = &dev_tgt;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+EntryHandle_t netbufferv4Client::recv_l2l3_forward_tbl_table_get_default_entry_handle()
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("l2l3_forward_tbl_table_get_default_entry_handle") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  EntryHandle_t _return;
+  netbufferv4_l2l3_forward_tbl_table_get_default_entry_handle_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    return _return;
+  }
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "l2l3_forward_tbl_table_get_default_entry_handle failed: unknown result");
+}
+
+void netbufferv4Client::l2l3_forward_tbl_table_get_default_entry(netbufferv4_l2l3_forward_tbl_entry_desc_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const bool read_from_hw)
+{
+  send_l2l3_forward_tbl_table_get_default_entry(sess_hdl, dev_tgt, read_from_hw);
+  recv_l2l3_forward_tbl_table_get_default_entry(_return);
+}
+
+void netbufferv4Client::send_l2l3_forward_tbl_table_get_default_entry(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const bool read_from_hw)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("l2l3_forward_tbl_table_get_default_entry", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_l2l3_forward_tbl_table_get_default_entry_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_tgt = &dev_tgt;
+  args.read_from_hw = &read_from_hw;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+void netbufferv4Client::recv_l2l3_forward_tbl_table_get_default_entry(netbufferv4_l2l3_forward_tbl_entry_desc_t& _return)
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("l2l3_forward_tbl_table_get_default_entry") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  netbufferv4_l2l3_forward_tbl_table_get_default_entry_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    // _return pointer has now been filled
+    return;
+  }
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "l2l3_forward_tbl_table_get_default_entry failed: unknown result");
 }
 
 EntryHandle_t netbufferv4Client::lastclone_lastscansplit_tbl_table_get_default_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
@@ -9551,6 +9614,63 @@ void netbufferv4Client::recv_is_hot_tbl_table_reset_default_entry()
   return;
 }
 
+void netbufferv4Client::l2l3_forward_tbl_table_reset_default_entry(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  send_l2l3_forward_tbl_table_reset_default_entry(sess_hdl, dev_tgt);
+  recv_l2l3_forward_tbl_table_reset_default_entry();
+}
+
+void netbufferv4Client::send_l2l3_forward_tbl_table_reset_default_entry(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("l2l3_forward_tbl_table_reset_default_entry", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_l2l3_forward_tbl_table_reset_default_entry_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_tgt = &dev_tgt;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+void netbufferv4Client::recv_l2l3_forward_tbl_table_reset_default_entry()
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("l2l3_forward_tbl_table_reset_default_entry") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  netbufferv4_l2l3_forward_tbl_table_reset_default_entry_presult result;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  return;
+}
+
 void netbufferv4Client::lastclone_lastscansplit_tbl_table_reset_default_entry(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
 {
   send_lastclone_lastscansplit_tbl_table_reset_default_entry(sess_hdl, dev_tgt);
@@ -13550,6 +13670,68 @@ int32_t netbufferv4Client::recv_is_hot_tbl_get_entry_count()
     throw result.ouch;
   }
   throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "is_hot_tbl_get_entry_count failed: unknown result");
+}
+
+int32_t netbufferv4Client::l2l3_forward_tbl_get_entry_count(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  send_l2l3_forward_tbl_get_entry_count(sess_hdl, dev_tgt);
+  return recv_l2l3_forward_tbl_get_entry_count();
+}
+
+void netbufferv4Client::send_l2l3_forward_tbl_get_entry_count(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("l2l3_forward_tbl_get_entry_count", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_l2l3_forward_tbl_get_entry_count_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_tgt = &dev_tgt;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+int32_t netbufferv4Client::recv_l2l3_forward_tbl_get_entry_count()
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("l2l3_forward_tbl_get_entry_count") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  int32_t _return;
+  netbufferv4_l2l3_forward_tbl_get_entry_count_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    return _return;
+  }
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "l2l3_forward_tbl_get_entry_count failed: unknown result");
 }
 
 int32_t netbufferv4Client::lastclone_lastscansplit_tbl_get_entry_count(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
@@ -20966,6 +21148,196 @@ void netbufferv4Client::recv_is_hot_tbl_get_entry(netbufferv4_is_hot_tbl_entry_d
     throw result.ouch;
   }
   throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "is_hot_tbl_get_entry failed: unknown result");
+}
+
+int32_t netbufferv4Client::l2l3_forward_tbl_get_first_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  send_l2l3_forward_tbl_get_first_entry_handle(sess_hdl, dev_tgt);
+  return recv_l2l3_forward_tbl_get_first_entry_handle();
+}
+
+void netbufferv4Client::send_l2l3_forward_tbl_get_first_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("l2l3_forward_tbl_get_first_entry_handle", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_l2l3_forward_tbl_get_first_entry_handle_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_tgt = &dev_tgt;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+int32_t netbufferv4Client::recv_l2l3_forward_tbl_get_first_entry_handle()
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("l2l3_forward_tbl_get_first_entry_handle") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  int32_t _return;
+  netbufferv4_l2l3_forward_tbl_get_first_entry_handle_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    return _return;
+  }
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "l2l3_forward_tbl_get_first_entry_handle failed: unknown result");
+}
+
+void netbufferv4Client::l2l3_forward_tbl_get_next_entry_handles(std::vector<int32_t> & _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const EntryHandle_t entry_hdl, const int32_t n)
+{
+  send_l2l3_forward_tbl_get_next_entry_handles(sess_hdl, dev_tgt, entry_hdl, n);
+  recv_l2l3_forward_tbl_get_next_entry_handles(_return);
+}
+
+void netbufferv4Client::send_l2l3_forward_tbl_get_next_entry_handles(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const EntryHandle_t entry_hdl, const int32_t n)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("l2l3_forward_tbl_get_next_entry_handles", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_l2l3_forward_tbl_get_next_entry_handles_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_tgt = &dev_tgt;
+  args.entry_hdl = &entry_hdl;
+  args.n = &n;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+void netbufferv4Client::recv_l2l3_forward_tbl_get_next_entry_handles(std::vector<int32_t> & _return)
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("l2l3_forward_tbl_get_next_entry_handles") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  netbufferv4_l2l3_forward_tbl_get_next_entry_handles_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    // _return pointer has now been filled
+    return;
+  }
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "l2l3_forward_tbl_get_next_entry_handles failed: unknown result");
+}
+
+void netbufferv4Client::l2l3_forward_tbl_get_entry(netbufferv4_l2l3_forward_tbl_entry_desc_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry_hdl, const bool read_from_hw)
+{
+  send_l2l3_forward_tbl_get_entry(sess_hdl, dev_id, entry_hdl, read_from_hw);
+  recv_l2l3_forward_tbl_get_entry(_return);
+}
+
+void netbufferv4Client::send_l2l3_forward_tbl_get_entry(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry_hdl, const bool read_from_hw)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("l2l3_forward_tbl_get_entry", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_l2l3_forward_tbl_get_entry_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_id = &dev_id;
+  args.entry_hdl = &entry_hdl;
+  args.read_from_hw = &read_from_hw;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+void netbufferv4Client::recv_l2l3_forward_tbl_get_entry(netbufferv4_l2l3_forward_tbl_entry_desc_t& _return)
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("l2l3_forward_tbl_get_entry") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  netbufferv4_l2l3_forward_tbl_get_entry_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    // _return pointer has now been filled
+    return;
+  }
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "l2l3_forward_tbl_get_entry failed: unknown result");
 }
 
 int32_t netbufferv4Client::lastclone_lastscansplit_tbl_get_first_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
@@ -30688,6 +31060,68 @@ EntryHandle_t netbufferv4Client::recv_is_hot_tbl_set_default_action_reset_is_hot
   throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "is_hot_tbl_set_default_action_reset_is_hot failed: unknown result");
 }
 
+EntryHandle_t netbufferv4Client::l2l3_forward_tbl_set_default_action_nop(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  send_l2l3_forward_tbl_set_default_action_nop(sess_hdl, dev_tgt);
+  return recv_l2l3_forward_tbl_set_default_action_nop();
+}
+
+void netbufferv4Client::send_l2l3_forward_tbl_set_default_action_nop(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("l2l3_forward_tbl_set_default_action_nop", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_l2l3_forward_tbl_set_default_action_nop_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_tgt = &dev_tgt;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+EntryHandle_t netbufferv4Client::recv_l2l3_forward_tbl_set_default_action_nop()
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("l2l3_forward_tbl_set_default_action_nop") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  EntryHandle_t _return;
+  netbufferv4_l2l3_forward_tbl_set_default_action_nop_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    return _return;
+  }
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "l2l3_forward_tbl_set_default_action_nop failed: unknown result");
+}
+
 EntryHandle_t netbufferv4Client::lastclone_lastscansplit_tbl_set_default_action_reset_is_lastclone_lastscansplit(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
 {
   send_lastclone_lastscansplit_tbl_set_default_action_reset_is_lastclone_lastscansplit(sess_hdl, dev_tgt);
@@ -36429,6 +36863,129 @@ void netbufferv4Client::recv_is_hot_tbl_get_property(tbl_property_value_args_t& 
     throw result.ouch;
   }
   throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "is_hot_tbl_get_property failed: unknown result");
+}
+
+void netbufferv4Client::l2l3_forward_tbl_set_property(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const tbl_property_t::type property, const tbl_property_value_t::type value, const int32_t prop_args)
+{
+  send_l2l3_forward_tbl_set_property(sess_hdl, dev_id, property, value, prop_args);
+  recv_l2l3_forward_tbl_set_property();
+}
+
+void netbufferv4Client::send_l2l3_forward_tbl_set_property(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const tbl_property_t::type property, const tbl_property_value_t::type value, const int32_t prop_args)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("l2l3_forward_tbl_set_property", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_l2l3_forward_tbl_set_property_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_id = &dev_id;
+  args.property = &property;
+  args.value = &value;
+  args.prop_args = &prop_args;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+void netbufferv4Client::recv_l2l3_forward_tbl_set_property()
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("l2l3_forward_tbl_set_property") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  netbufferv4_l2l3_forward_tbl_set_property_presult result;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  return;
+}
+
+void netbufferv4Client::l2l3_forward_tbl_get_property(tbl_property_value_args_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const tbl_property_t::type property)
+{
+  send_l2l3_forward_tbl_get_property(sess_hdl, dev_id, property);
+  recv_l2l3_forward_tbl_get_property(_return);
+}
+
+void netbufferv4Client::send_l2l3_forward_tbl_get_property(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const tbl_property_t::type property)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("l2l3_forward_tbl_get_property", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_l2l3_forward_tbl_get_property_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_id = &dev_id;
+  args.property = &property;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+void netbufferv4Client::recv_l2l3_forward_tbl_get_property(tbl_property_value_args_t& _return)
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("l2l3_forward_tbl_get_property") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  netbufferv4_l2l3_forward_tbl_get_property_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    // _return pointer has now been filled
+    return;
+  }
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "l2l3_forward_tbl_get_property failed: unknown result");
 }
 
 void netbufferv4Client::lastclone_lastscansplit_tbl_set_property(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const tbl_property_t::type property, const tbl_property_value_t::type value, const int32_t prop_args)
@@ -62614,6 +63171,63 @@ void netbufferv4Processor::process_is_hot_tbl_match_spec_to_entry_hdl(int32_t se
   }
 }
 
+void netbufferv4Processor::process_l2l3_forward_tbl_match_spec_to_entry_hdl(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_match_spec_to_entry_hdl", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_match_spec_to_entry_hdl");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_match_spec_to_entry_hdl");
+  }
+
+  netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_match_spec_to_entry_hdl", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_match_spec_to_entry_hdl_result result;
+  try {
+    result.success = iface_->l2l3_forward_tbl_match_spec_to_entry_hdl(args.sess_hdl, args.dev_tgt, args.match_spec);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_match_spec_to_entry_hdl");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_match_spec_to_entry_hdl", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_match_spec_to_entry_hdl");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_match_spec_to_entry_hdl", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_match_spec_to_entry_hdl", bytes);
+  }
+}
+
 void netbufferv4Processor::process_lastclone_lastscansplit_tbl_match_spec_to_entry_hdl(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
 {
   void* ctx = NULL;
@@ -71218,6 +71832,120 @@ void netbufferv4Processor::process_is_hot_tbl_table_add_with_reset_is_hot(int32_
 
   if (this->eventHandler_.get() != NULL) {
     this->eventHandler_->postWrite(ctx, "netbufferv4.is_hot_tbl_table_add_with_reset_is_hot", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_table_add_with_l2l3_forward(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_add_with_l2l3_forward", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_l2l3_forward");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_l2l3_forward");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_l2l3_forward", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_add_with_l2l3_forward_result result;
+  try {
+    result.success = iface_->l2l3_forward_tbl_table_add_with_l2l3_forward(args.sess_hdl, args.dev_tgt, args.match_spec, args.action_spec);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_l2l3_forward");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_add_with_l2l3_forward", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_l2l3_forward");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_add_with_l2l3_forward", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_l2l3_forward", bytes);
+  }
+}
+
+void netbufferv4Processor::process_l2l3_forward_tbl_table_add_with_nop(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.l2l3_forward_tbl_table_add_with_nop", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_nop");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_nop");
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_add_with_nop_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_nop", bytes);
+  }
+
+  netbufferv4_l2l3_forward_tbl_table_add_with_nop_result result;
+  try {
+    result.success = iface_->l2l3_forward_tbl_table_add_with_nop(args.sess_hdl, args.dev_tgt, args.match_spec);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_nop");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("l2l3_forward_tbl_table_add_with_nop", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_nop");
+  }
+
+  oprot->writeMessageBegin("l2l3_forward_tbl_table_add_with_nop", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.l2l3_forward_tbl_table_add_with_nop", bytes);
   }
 }
 
@@ -86939,6 +87667,118 @@ void netbufferv4Processor::process_eg_port_forward_tbl_table_modify_with_update_
 
   if (this->eventHandler_.get() != NULL) {
     this->eventHandler_->postWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss", bytes);
+  }
+}
+
+void netbufferv4Processor::process_eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
+  }
+
+  netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", bytes);
+  }
+
+  netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec_result result;
+  try {
+    iface_->eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec(args.sess_hdl, args.dev_tgt, args.match_spec, args.action_spec);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
+  }
+
+  oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", bytes);
+  }
+}
+
+void netbufferv4Processor::process_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
+  }
+
+  netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", bytes);
+  }
+
+  netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss_result result;
+  try {
+    iface_->eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(args.sess_hdl, args.dev_id, args.entry, args.action_spec);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
+  }
+
+  oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", bytes);
   }
 }
 } // namespace
