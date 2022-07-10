@@ -42,7 +42,7 @@ enum class PacketType {
 	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034, LOADSNAPSHOTDATA_INSWITCH=0x0044, SETVALID_INSWITCH=0x0054,
 	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012,
 	PUTRES=0x0008, DELRES=0x0018,
-	SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100, SETVALID_INSWITCH_ACK=0x0110, NETCACHE_GETREQ_POP=0x0120
+	SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100, SETVALID_INSWITCH_ACK=0x0110, NETCACHE_GETREQ_POP=0x0120, NETCACHE_CACHE_POP=0x0130, NETCACHE_CACHE_POP_ACK=0x0140
 };
 /*enum class PacketType {
 	GETREQ, PUTREQ, DELREQ, SCANREQ, GETRES, PUTRES, DELRES, SCANRES_SPLIT, GETREQ_INSWITCH, GETREQ_POP, GETREQ_NLATEST, 
@@ -614,6 +614,31 @@ class NetcacheGetRequestPop : public GetRequest<key_t> { // ophdr + clonehdr
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 }
+
+// NOTE: only used in end-hosts
+template<class key_t>
+class NetcacheCachePop : public GetRequest<key_t> { // ophdr + serveridx
+	public: 
+		CachePop(key_t key, uint16_t serveridx);
+		CachePop(const char * data, uint32_t recv_size);
+
+		virtual uint32_t serialize(char * const data, uint32_t max_size);
+
+		uint16_t serveridx() const;
+
+	protected:
+		virtual uint32_t size();
+		virtual void deserialize(const char * data, uint32_t recv_size);
+		uint16_t _serveridx;
+};
+
+// NOTE: only used in end-hosts
+template<class key_t, class val_t>
+class NetcacheCachePopAck : public CachePop<key_t, val_t> { // ophdr + val + seq + serveridx
+	public: 
+		NetcacheCachePopAck(key_t key, val_t val, uint32_t seq, uint16_t serveridx);
+		NetcacheCachePopAck(const char * data, uint32_t recv_size);
+};
 
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize);

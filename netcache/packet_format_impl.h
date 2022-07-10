@@ -1846,6 +1846,81 @@ void NetcacheGetRequestPop<key_t>::deserialize(const char * data, uint32_t recv_
 	//begin += CLONE_BYTES;
 }
 
+// NetcacheCachePop (only used in end-hosts)
+
+template<class key_t>
+NetcacheCachePop<key_t>::NetcacheCachePop(key_t key, uint16_t serveridx)
+	: GetRequest<key_t>(key), _serveridx(serveridx)
+{
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t>
+NetcacheCachePop<key_t>::NetcacheCachePop(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_POP);
+	INVARIANT(this->_serveridx >= 0);
+}
+
+template<class key_t>
+uint32_t NetcacheCachePop<key_t>::serialize(char * const data, uint32_t max_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_typesize = serialize_packet_type(this->_type, begin, max_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize);
+	begin += tmp_keysize;
+	uint16_t bigendian_serveridx = htons(uint16_t(this->_serveridx));
+	memcpy(begin, (void *)&bigendian_serveridx, sizeof(uint16_t)); // little-endian to big-endian
+	return tmp_typesize + tmp_keysize + sizeof(uint16_t);
+}
+
+template<class key_t>
+uint16_t NetcacheCachePop<key_t>::serveridx() const {
+	return _serveridx;
+}
+
+template<class key_t>
+uint32_t NetcacheCachePop<key_t>::size() { // unused
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t);
+}
+
+template<class key_t>
+void NetcacheCachePop<key_t>::deserialize(const char * data, uint32_t recv_size)
+{
+	uint32_t my_size = this->size();
+	INVARIANT(my_size == recv_size);
+	const char *begin = data;
+	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
+	begin += tmp_keysize;
+	memcpy((void *)&this->_serveridx, begin, sizeof(uint16_t));
+	this->_serveridx = ntohs(this->_serveridx); // Big-endian to little-endian
+}
+
+// NetcacheCachePopAck (value must <= 128B; only used in end-hosts)
+
+template<class key_t, class val_t>
+NetcacheCachePopAck<key_t, val_t>::NetcacheCachePopAck(key_t key, val_t val, uint32_t seq, uint16_t serveridx)
+	: CachePop<key_t, val_t>(key, val, seq, serveridx)
+{
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP_ACK);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(seq >= 0);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t, class val_t>
+NetcacheCachePopAck<key_t, val_t>::NetcacheCachePopAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_POP_ACK);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN)
+	INVARIANT(this->_seq >= 0);
+	INVARIANT(this->_serveridx >= 0);
+}
 
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
