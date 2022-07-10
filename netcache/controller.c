@@ -41,9 +41,9 @@ uint32_t server_total_logical_num_for_controller;
 // cache population/eviction
 
 // switchos.popworker.popclient_for_controller <-> controller.popserver
-int *controller_popserver_udpsock = NULL;
+int controller_popserver_udpsock = -1;
 // controller.popclient <-> server.popserver
-int *controller_popserver_popclient_udpsock = NULL;
+int controller_popserver_popclient_udpsock = -1;
 // TODO: replace with SIGTERM
 bool volatile is_controlelr_popserver_finish = false;
 
@@ -91,19 +91,15 @@ int main(int argc, char **argv) {
 
 	prepare_controller();
 
-	pthread_t popserver_threads[server_total_logical_num_for_controller];
-	uint16_t popserver_params[server_total_logical_num_for_controller];
-	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num_for_controller; tmp_global_server_logical_idx++) {
-		popserver_params[tmp_global_server_logical_idx] = tmp_global_server_logical_idx;
-		ret = pthread_create(&popserver_threads[tmp_global_server_logical_idx], nullptr, run_controller_popserver, &popserver_params[tmp_global_server_logical_idx]);
-		if (ret) {
-			COUT_N_EXIT("Error: " << ret);
-		}
-		ret = pthread_setaffinity_np(popserver_threads[tmp_global_server_logical_idx], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-		if (ret) {
-			printf("Error of setaffinity for controller.popserver; errno: %d\n", errno);
-			exit(-1);
-		}
+	pthread_t popserver_thread;
+	ret = pthread_create(&popserver_thread, nullptr, run_controller_popserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+	ret = pthread_setaffinity_np(popserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	if (ret) {
+		printf("Error of setaffinity for controller.popserver; errno: %d\n", errno);
+		exit(-1);
 	}
 
 	pthread_t evictserver_thread;
@@ -123,19 +119,17 @@ int main(int argc, char **argv) {
 	controller_running = true;
 
 	// connections from servers
-	while (!is_controlelr_popserver_finish) sleep(1);
+	while (!is_controller_popserver_finish) sleep(1);
 	printf("[controller] controller.popserver finishes\n");
 
 	controller_running = false;
 
 	void * status;
-	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num_for_controller; tmp_global_server_logical_idx++) {
-		int rc = pthread_join(popserver_threads[tmp_global_server_logical_idx], &status);
-		if (rc) {
-			COUT_N_EXIT("Error:unable to join popserver " << rc);
-		}
+	int rc = pthread_join(popserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join popserver " << rc);
 	}
-	int rc = pthread_join(evictserver_thread, &status);
+	rc = pthread_join(evictserver_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
 	}
@@ -150,24 +144,11 @@ void prepare_controller() {
 
 	controller_running =false;
 
-	controller_expected_ready_threads = server_total_logical_num_for_controller + 2;
+	controller_expected_ready_threads = 2;
 
 	// prepare popserver sockets
-	controller_popserver_udpsock_list = new int[server_total_logical_num_for_controller];
-	controller_popserver_popclient_udpsock_list = new int[server_total_logical_num_for_controller];
-	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num_for_controller; tmp_global_server_logical_idx++) {
-		prepare_udpserver(controller_popserver_udpsock_list[tmp_global_server_logical_idx], false, controller_popserver_port_start + tmp_global_server_logical_idx, "controller.popserver");
-		create_udpsock(controller_popserver_popclient_udpsock_list[tmp_global_server_logical_idx], true, "controller.popserver.popclient");
-	}
-
-	//controller_cachedkey_serveridx_map.clear();
-	/*controller_cache_pop_ptrs = new cache_pop_t*[MQ_SIZE];
-	for (size_t i = 0; i < MQ_SIZE; i++) {
-		controller_cache_pop_ptrs[i] = NULL;
-	}
-	controller_head_for_pop = 0;
-	controller_tail_for_pop = 0;*/
-
+	prepare_udpserver(controller_popserver_udpsock, false, controller_popserver_port_start, "controller.popserver");
+	create_udpsock(controller_popserver_popclient_udpsock, true, "controller.popserver.popclient");
 
 	// prepare evictserver
 	prepare_udpserver(controller_evictserver_udpsock, false, controller_evictserver_port, "controller.evictserver");
@@ -190,63 +171,58 @@ void *run_controller_popserver(void *param) {
 	// controlelr.popserver i <-> server.popclient i
 	uint16_t global_server_logical_idx = *((uint16_t *)param);
 
-	struct sockaddr_in server_popclient_addr;
-	socklen_t server_popclient_addrlen = sizeof(struct sockaddr);
-	//bool with_server_popclient_addr = false;
-
-	// controller.popserver.popclient i <-> switchos.popserver
-	struct sockaddr_in switchos_popserver_addr;
-	set_sockaddr(switchos_popserver_addr, inet_addr(switchos_ip), switchos_popserver_port);
-	socklen_t switchos_popserver_addrlen = sizeof(struct sockaddr);
+	struct sockaddr_in switchos_popworker_addr;
+	socklen_t switchos_popworker_addrlen = sizeof(struct sockaddr);
 
 	printf("[controller.popserver %d] ready\n", global_server_logical_idx);
 	controller_ready_threads++;
 
 	while (!controller_running) {}
 
-	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
+	// Process NETCACHE_CACHE_POP packet <optype, key, serveridx>
 	char buf[MAX_BUFSIZE];
 	int recvsize = 0;
 	bool is_timeout = false;
 	while (controller_running) {
-		/*if (!with_server_popclient_addr) {
-			udprecvfrom(controller_popserver_udpsock_list[idx], buf, MAX_BUFSIZE, 0, &server_popclient_addr, &server_popclient_addrlen, recvsize, "controller.popserver");
-			with_server_popclient_addr = true;
-		}
-		else {
-			udprecvfrom(controller_popserver_udpsock_list[idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver");
-		}*/
-		udprecvfrom(controller_popserver_udpsock_list[global_server_logical_idx], buf, MAX_BUFSIZE, 0, &server_popclient_addr, &server_popclient_addrlen, recvsize, "controller.popserver");
+		udprecvfrom(controller_popserver_udpsock, buf, MAX_BUFSIZE, 0, &switchos_popworker_addr, &switchos_popworker_addrlen, recvsize, "controller.popserver");
 
-		//printf("receive CACHE_POP from server and send it to switchos\n");
+		//printf("receive NETCACHE_CACHE_POP from switchos and send it to server\n");
 		//dump_buf(buf, recvsize);
-		cache_pop_t tmp_cache_pop(buf, recvsize);
+		netcache_cache_pop_t tmp_netcache_cache_pop(buf, recvsize);
 
-		// send CACHE_POP to switch os
-		udpsendto(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &switchos_popserver_addr, switchos_popserver_addrlen, "controller.popserver.popclient");
+		// find corresponding server X
+		int tmp_server_physical_idx = -1;
+		for (int i = 0; i < server_physical_num; i++) {
+			for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
+				if (tmp_netcache_cache_pop.serveridx() == server_logical_idxes_list[i][j]) {
+					tmp_server_physical_idx = i;
+					break;
+				}
+			}
+		}
+		INVARIANT(tmp_server_physical_idx != -1);
+
+		// controller.popserver.popclient <-> server.popserver X
+		struct sockaddr_in tmp_server_popserver_addr;
+		set_sockaddr(tmp_server_popserver_addr, inet_addr(server_ip_for_controller_list[tmp_server_physical_idx]), server_popserver_port_start + tmp_netcache_cache_pop.serveridx());
+		socklen_t tmp_server_popserver_addrlen = sizeof(struct sockaddr);
+
+		// send NETCACHE_CACHE_POP to corresponding server
+		udpsendto(controller_popserver_popclient_udpsock, buf, recvsize, 0, &tmp_server_popserver_addr, tmp_server_popserver_addrlen, "controller.popserver.popclient");
 		
-		// receive CACHE_POP_ACK from switch os
-		bool is_timeout = udprecvfrom(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient");
-		if (!is_timeout) {
-			// send CACHE_POP_ACK to server.popclient immediately to avoid timeout
-			cache_pop_ack_t tmp_cache_pop_ack(buf, recvsize);
-			INVARIANT(tmp_cache_pop_ack.key() == tmp_cache_pop.key());
-			udpsendto(controller_popserver_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &server_popclient_addr, server_popclient_addrlen, "controller.popserver");
+		// receive NETCACHE_CACHE_POP_ACK from corresponding server
+		bool is_timeout = udprecvfrom(controller_popserver_popclient_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient");
+		if (!is_timeout) { // NOTE: if timeout, it will be covered by switcho.popworker
+			// send NETCACHE_CACHE_POP_ACK to switchos.popworker immediately to avoid timeout
+			netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(buf, recvsize);
+			INVARIANT(tmp_netcache_cache_pop_ack.key() == tmp_netcache_cache_pop.key());
+			udpsendto(controller_popserver_udpsock, buf, recvsize, 0, &switchos_popworker_addr, switchos_popworker_addrlen, "controller.popserver");
 		}
-
-		/*if (controller_cachedkey_serveridx_map.find(tmp_cache_pop->key()) == controller_cachedkey_serveridx_map.end()) {
-			controller_cachedkey_serveridx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->serveridx()));
-		}
-		else {
-			printf("[controller] Receive duplicate key from server %ld!", tmp_cache_pop_ptr->serveridx());
-			exit(-1);
-		}*/
-
 	}
 
 	is_controlelr_popserver_finish = true;
-	close(controller_popserver_udpsock_list[global_server_logical_idx]);
-	close(controller_popserver_popclient_udpsock_list[global_server_logical_idx]);
+	close(controller_popserver_udpsock;
+	close(controller_popserver_popclient_udpsock;
 	pthread_exit(nullptr);
 }
 

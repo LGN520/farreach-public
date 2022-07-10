@@ -107,7 +107,7 @@ void transaction_main() {
 	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
 
 	// update transaction_expected_ready_threads
-	// reflector: popserver + worker
+	// reflector: cp2dpserver + dp2cpserver
 	// server: server_num * (worker + evictserver + snapshotserver + snapshotdataserver)
 	// transaction.main: loadfinishserver
 	if (server_physical_idx == 0) { // deploy reflector in the first physical server

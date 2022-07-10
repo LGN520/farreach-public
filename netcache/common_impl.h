@@ -64,6 +64,8 @@ typedef LoadsnapshotdataInswitchAck<netreach_key_t, val_t> loadsnapshotdata_insw
 typedef SetvalidInswitch<netreach_key_t> setvalid_inswitch_t;
 typedef SetvalidInswitchAck<netreach_key_t> setvalid_inswitch_ack_t;
 typedef NetcacheGetRequestPop<netreach_key_t> netcache_getreq_pop_t;
+typedef NetcacheCachePop<netreach_key_t> netcache_cache_pop_t;
+typedef NetcacheCachePopAck<netreach_key_t, val_t> netcache_cache_pop_ack_t;
 
 /*
  * Constants
@@ -108,7 +110,7 @@ uint32_t server_load_factor = 1;
 // server: transaction phase
 short server_worker_port_start = -1;
 short server_evictserver_port_start = -1;
-short server_snapshotserver_port_start = -1;
+short server_popserver_port_start = -1;
 short server_snapshotdataserver_port_start = -1;
 short transaction_loadfinishserver_port = -1;
 
@@ -293,14 +295,14 @@ inline void parse_ini(const char* config_file) {
 	// server: transaction phase
 	server_worker_port_start = ini.get_server_worker_port_start();
 	server_evictserver_port_start = ini.get_server_evictserver_port_start();
-	server_snapshotserver_port_start = ini.get_server_snapshotserver_port_start();
+	server_popserver_port_start = ini.get_server_popserver_port_start();
 	server_snapshotdataserver_port_start = ini.get_server_snapshotdataserver_port_start();
 	transaction_loadfinishserver_port = ini.get_transaction_loadfinishserver_port();
 
 	COUT_VAR(server_load_factor);
 	COUT_VAR(server_worker_port_start);
 	COUT_VAR(server_evictserver_port_start);
-	COUT_VAR(server_snapshotserver_port_start);
+	COUT_VAR(server_popserver_port_start);
 	COUT_VAR(server_snapshotdataserver_port_start);
 	COUT_VAR(transaction_loadfinishserver_port);
 	printf("\n");

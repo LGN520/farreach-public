@@ -48,7 +48,7 @@ class IniparserWrapper {
 		uint32_t get_server_load_factor();
 		short get_server_worker_port_start();
 		short get_server_evictserver_port_start();
-		short get_server_snapshotserver_port_start();
+		short get_server_popserver_port_start();
 		short get_server_snapshotdataserver_port_start();
 		short get_transaction_loadfinishserver_port();
 		

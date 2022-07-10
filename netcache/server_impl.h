@@ -36,31 +36,24 @@ RocksdbWrapper *db_wrappers = NULL;
 int * server_worker_udpsock_list = NULL;
 int * server_worker_lwpid_list = NULL;
 
-// Per-server popclient <-> one popserver in controller
-int * server_popclient_udpsock_list = NULL;
-concurrent_set_t * server_cached_keyset_list = NULL;
-
-// per-server worker <-> per-server popclient
-//MessagePtrQueue<cache_pop_t> *server_cache_pop_ptr_queue_list;
+// Per-server popserver <-> controller.popserver.popclient
+int * server_popserver_udpsock_list = NULL;
+// access all of beingcached/cached/beingupdated keysets should be atomic
+std::mutex *server_mutex_for_keyset_list = NULL;
+std::set<netreach_key_t> *server_beingcached_keyset_list = NULL;
+std::set<netreach_key_t> *server_cached_keyset_list = NULL;
+std::set<netreach_key_t> *server_beingupdated_keyset_list = NULL;
 
 // server.evictservers <-> controller.evictserver.evictclients
 //int * server_evictserver_tcpsock_list = NULL;
 // server.evictserver <-> controller.evictserver.evictclient
 int *server_evictserver_udpsock_list = NULL;
 
-// snapshot
-int *server_snapshotserver_udpsock_list = NULL;
-int *server_snapshotdataserver_udpsock_list = NULL;
-std::atomic<bool> *server_issnapshot_list = NULL; // TODO: be atomic
-
 void prepare_server();
 // server.workers for processing pkts
 void *run_server_worker(void *param);
-//void *run_server_popclient(void *param);
-void send_cachepop(const int &sockfd, const char *buf, const int &buflen, const struct sockaddr_in &dstaddr, const socklen_t &dstaddrlen, char *recvbuf, const int& maxrecvbuflen, int &recvsize);
+void *run_server_popserver(void *param);
 void *run_server_evictserver(void *param);
-void *run_server_snapshotserver(void *param);
-void *run_server_snapshotdataserver(void *param);
 void close_server();
 
 void prepare_server() {
@@ -84,17 +77,17 @@ void prepare_server() {
 	memset(server_worker_lwpid_list, 0, current_server_logical_num);
 
 	// Prepare for cache population
-	server_popclient_udpsock_list = new int[current_server_logical_num];
-	server_cached_keyset_list = new concurrent_set_t[current_server_logical_num];
+	server_popserver_udpsock_list = new int[current_server_logical_num];
+	server_mutex_for_keyset_list = new std::mutex[current_server_logical_num];
+	server_beingcached_keyset_list = new std::set<netreach_key_t>[current_server_logical_num];
+	server_cached_keyset_list = new std::set<netreach_key_t>[current_server_logical_num];
+	server_beingupdated_keyset_list = new std::set<netreach_key_t>[current_server_logical_num];
 	for (size_t i = 0; i < current_server_logical_num; i++) {
-		create_udpsock(server_popclient_udpsock_list[i], true, "server.popclient");
+		prepare_udpserver(server_popserver_udpsock_list[i], true, server_popserver_port_start + server_logical_idxes_list[server_physical_idx][i], "server.popserver");
+		server_beingcached_keyset_list[i].clear();
+		server_cached_keyset_list[i].clear();
+		server_beingupdated_keyset_list[i].clear();
 	}
-
-	// Prepare message queue between per-server worker and per-server popclient
-	/*server_cache_pop_ptr_queue_list = new MessagePtrQueue<cache_pop_t>[server_num];
-	for (size_t i = 0; i < server_num; i++) {
-		server_cache_pop_ptr_queue_list[i].init(MQ_SIZE);
-	}*/
 
 	// prepare for cache eviction
 	/*server_evictserver_tcpksock_list = new int[server_num];
@@ -106,17 +99,6 @@ void prepare_server() {
 		uint16_t tmp_global_server_logical_idx = server_logical_idxes_list[server_physical_idx][i];
 		prepare_udpserver(server_evictserver_udpsock_list[i], true, server_evictserver_port_start + tmp_global_server_logical_idx, "server.evictserver");
 	}
-
-	// prepare for snapshotserver
-	server_snapshotserver_udpsock_list = new int[current_server_logical_num];
-	server_snapshotdataserver_udpsock_list = new int[current_server_logical_num];
-	for (size_t i = 0; i < current_server_logical_num; i++) {
-		uint16_t tmp_global_server_logical_idx = server_logical_idxes_list[server_physical_idx][i];
-		prepare_udpserver(server_snapshotserver_udpsock_list[i], true, server_snapshotserver_port_start + tmp_global_server_logical_idx, "server.snapshotserver");
-		prepare_udpserver(server_snapshotdataserver_udpsock_list[i], true, server_snapshotdataserver_port_start + tmp_global_server_logical_idx, "server.snapshotdataserver", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
-	}
-
-	server_issnapshot_list = new std::atomic<bool>[current_server_logical_num];
 
 	memory_fence();
 
@@ -139,33 +121,29 @@ void close_server() {
 		delete [] server_worker_lwpid_list;
 		server_worker_lwpid_list = NULL;
 	}
-	if (server_popclient_udpsock_list != NULL) {
-		delete [] server_popclient_udpsock_list;
-		server_popclient_udpsock_list = NULL;
+	if (server_popserver_udpsock_list != NULL) {
+		delete [] server_popserver_udpsock_list;
+		server_popserver_udpsock_list = NULL;
 	}
-	/*if (server_cache_pop_ptr_queue_list != NULL) {
-		delete [] server_cache_pop_ptr_queue_list;
-		server_cache_pop_ptr_queue_list = NULL;
-	}*/
+	if (server_mutex_for_keyset_list != NULL) {
+		delete [] server_mutex_for_keyset_list;
+		server_mutex_for_keyset_list = NULL;
+	}
+	if (server_beingcached_keyset_list != NULL) {
+		delete [] server_beingcached_keyset_list;
+		server_beingcached_keyset_list = NULL;
+	}
 	if (server_cached_keyset_list != NULL) {
 		delete [] server_cached_keyset_list;
 		server_cached_keyset_list = NULL;
 	}
+	if (server_beingupdated_keyset_list != NULL) {
+		delete [] server_beingupdated_keyset_list;
+		server_beingupdated_keyset_list = NULL;
+	}
 	if (server_evictserver_udpsock_list != NULL) {
 		delete [] server_evictserver_udpsock_list;
 		server_evictserver_udpsock_list = NULL;
-	}
-	if (server_snapshotserver_udpsock_list != NULL) {
-		delete [] server_snapshotserver_udpsock_list;
-		server_snapshotserver_udpsock_list = NULL;
-	}
-	if (server_snapshotdataserver_udpsock_list != NULL) {
-		delete [] server_snapshotdataserver_udpsock_list;
-		server_snapshotdataserver_udpsock_list = NULL;
-	}
-	if (server_issnapshot_list != NULL) {
-		delete [] server_issnapshot_list;
-		server_issnapshot_list = NULL;
 	}
 	/*if (server_evictserver_tcpsock_list != NULL) {
 		delete [] server_evictserver_tcpsock_list;
@@ -173,22 +151,16 @@ void close_server() {
 	}*/
 }
 
-/*void *run_server_popclient(void *param) {
+void *run_server_popserver(void *param) {
   // Parse param
-  uint16_t serveridx = *((uint16_t *)param); // [0, server_num-1]
+  uint16_t local_server_logical_idx = *((uint16_t *)param);
+  uint16_t global_server_logical_idx = server_logical_idxes_list[server_physical_idx][local_server_logical_idx];
 
   // NOTE: controller and switchos should have been launched before servers
-  struct sockaddr_in controller_popserver_addr;
-//  if (strcmp(controller_ip_for_server, server_ip_for_controller_list[server_physical_idx]) == 0) {
-//	  set_sockaddr(controller_popserver_addr, inet_addr("127.0.0.1"), controller_popserver_port_start + global_server_logical_idx);
-//  }
-//  else {
-//	  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + global_server_logical_idx);
-//  }
-  set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_server), controller_popserver_port_start + global_server_logical_idx);
-  socklen_t controller_popserver_addrlen = sizeof(struct sockaddr_in);
+  struct sockaddr_in controller_popserver_popclient_addr;
+  socklen_t controller_popserver_popclient_addrlen = sizeof(struct sockaddr_in);
   
-  printf("[server.popclient%d] ready\n", int(serveridx));
+  printf("[server.popserver%d] ready\n", int(local_server_logical_idx));
 
   transaction_ready_threads++;
 
@@ -198,43 +170,38 @@ void close_server() {
   char recvbuf[MAX_BUFSIZE];
   int recvsize = 0;
   while (transaction_running) {
-  	cache_pop_t *tmp_cache_pop_ptr = server_cache_pop_ptr_queue_list[serveridx].read();
-  	if (tmp_cache_pop_ptr != NULL) {
-		uint32_t popsize = tmp_cache_pop_ptr->serialize(buf, MAX_BUFSIZE);
-		while (true) {
-			send_cachepop(server_popclient_udpsock_list[serveridx], buf, popsize, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recvsize);
-			cache_pop_ack_t rsp(recvbuf, recvsize);
-			INVARIANT(rsp.key() == tmp_cache_pop_ptr->key());
-		}
-
-		delete tmp_cache_pop_ptr;
-		tmp_cache_pop_ptr = NULL;
+	bool is_timeout = udprecvfrom(server_popserver_udpsock_list[local_server_logical_idx], recvbuf, MAX_BUFSIZE, 0, &controller_popserver_popclient_addr, &controller_popserver_popclient_addrlen, recvsize, "server.popserver");
+	if (is_timeout) {
+		controller_popserver_popclient_addrlen = sizeof(struct sockaddr_in);
 	}
+
+	// receive NETCACHE_CACHE_POP from controller
+	netcache_cache_pop_t tmp_netcache_cache_pop(recvbuf, recvsize);
+	INVARIANT(tmp_netcache_cache_pop.serveridx() == global_server_logical_idx);
+
+	// keep atomicity
+	server_mutex_for_keyset_list[local_server_logical_idx].lock();
+	// NETCACHE_CACHE_POP's key must NOT in beingcached/cached/beingupdated keyset
+	INVARIANT((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_beingcached_keyset_list[local_server_logical_idx].end()) && \
+			(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_cached_keyset_list[local_server_logical_idx].end()) && \
+			(server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_beingupdated_keyset_list[local_server_logical_idx].end()));
+	// add key into beingcached keyset
+	server_beingcached_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop.key());
+	// get latest value
+	val_t tmp_val;
+	uint32_t tmp_seq = 0;
+	db_wrappers[local_server_logical_idx].get(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq);
+	server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+
+	// send NETCACHE_CACHE_POP_ACK to controller
+	netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq, global_server_logical_idx);
+	uint32_t pktsize = tmp_netcache_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
+	udpsendto(server_popserver_udpsock_list[local_server_logical_idx], buf, pktsize, 0, &controller_popserver_popclient_addr, controller_popserver_popclient_addrlen, "server.popserver");
   }
 
-  close(server_popclient_udpsock_list[serveridx]);
+  close(server_popserver_udpsock_list[local_server_logical_idx]);
   pthread_exit(nullptr);
   return 0;
-}*/
-
-void send_cachepop(const int &sockfd, const char *buf, const int &buflen, const struct sockaddr_in &dstaddr, const socklen_t &dstaddrlen, char *recvbuf, const int& maxrecvbuflen, int &recvsize) {
-	INVARIANT(buf != recvbuf && &buflen != &recvsize);
-	while (true) {
-		//printf("send CACHE_POP to controller\n");
-		//dump_buf(buf, popsize);
-		udpsendto(sockfd, buf, buflen, 0, &dstaddr, dstaddrlen, "server.popclient");
-
-		// wait for CACHE_POP_ACK
-		// NOTE: we do not wait for CACHE_POP_INSWITCH_ACK, as it needs to wait for finishing entire cache population workflow, and cannot utilize max thpt of switchos<->ptf
-		bool is_timeout = udprecvfrom(sockfd, recvbuf, maxrecvbuflen, 0, NULL, NULL, recvsize, "server.popclient");
-		if (unlikely(is_timeout)) {
-			printf("Cache population timeout!\n");
-			continue;
-		}
-		else {
-			return;
-		}
-	}
 }
 
 /*
@@ -554,92 +521,6 @@ void *run_server_worker(void * param) {
 				}
 				break;
 			}
-		case packet_type_t::PUTREQ_SEQ_CASE3:
-			{
-				//COUT_THIS("PUTREQ_SEQ_CASE3")
-				put_request_seq_case3_t req(buf, recv_size);
-
-				if (!server_issnapshot_list[local_server_logical_idx]) {
-					db_wrappers[local_server_logical_idx].make_snapshot();
-				}
-
-				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
-				UNUSED(tmp_stat);
-				//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				put_response_t rsp(req.key(), true, global_server_logical_idx);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-#ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
-#endif
-				break;
-			}
-		case packet_type_t::PUTREQ_POP_SEQ_CASE3: 
-			{
-				//COUT_THIS("PUTREQ_POP_SEQ_CASE3")
-				put_request_pop_seq_case3_t req(buf, recv_size);
-
-				if (!server_issnapshot_list[local_server_logical_idx]) {
-					db_wrappers[local_server_logical_idx].make_snapshot();
-				}
-
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
-				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				put_response_t rsp(req.key(), true, global_server_logical_idx);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-#ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
-#endif
-
-				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat && workload_mode != 0) { // successful put
-					bool is_cached_before = server_cached_keyset_list[local_server_logical_idx].is_exist(req.key());
-					if (!is_cached_before) {
-						server_cached_keyset_list[local_server_logical_idx].insert(req.key());
-						// Send CACHE_POP to server.popclient
-						//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), global_server_logical_idx); // freed by server.popclient
-						//server_cache_pop_ptr_queue_list[local_server_logical_idx].write(cache_pop_req_ptr);
-						
-						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), global_server_logical_idx);
-						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-						send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
-						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
-						INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
-					}
-				}
-				break;
-			}
-		case packet_type_t::DELREQ_SEQ_CASE3:
-			{
-				//COUT_THIS("DELREQ_SEQ_CASE3")
-				del_request_seq_case3_t req(buf, recv_size);
-
-				if (!server_issnapshot_list[local_server_logical_idx]) {
-					db_wrappers[local_server_logical_idx].make_snapshot();
-				}
-
-				bool tmp_stat = db_wrappers[local_server_logical_idx].remove(req.key(), req.seq());
-				UNUSED(tmp_stat);
-				//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				del_response_t rsp(req.key(), true, global_server_logical_idx);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-#ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
-#endif
-				break;
-			}
 		case packet_type_t::WARMUPREQ:
 			{
 				warmup_request_t req(buf, recv_size);
@@ -737,7 +618,7 @@ void *run_server_evictserver(void *param) {
 
 	while (!transaction_running) {}
 
-	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
+	// process CACHE_EVICT packet <optype, key, vallen, value, result, seq, serveridx>
 	char recvbuf[MAX_BUFSIZE];
 	int recvsize = 0;
 	bool is_timeout = false;
@@ -754,16 +635,7 @@ void *run_server_evictserver(void *param) {
 		//dump_buf(recvbuf, recvsize);
 		cache_evict_t *tmp_cache_evict_ptr;
 		packet_type_t optype = get_packet_type(recvbuf, recvsize);
-		if (optype == packet_type_t::CACHE_EVICT) {
-			tmp_cache_evict_ptr = new cache_evict_t(recvbuf, recvsize);
-		}
-		else if (optype == packet_type_t::CACHE_EVICT_CASE2) {
-			tmp_cache_evict_ptr = new cache_evict_case2_t(recvbuf, recvsize);
-		}
-		else {
-			printf("[server.evictserver] error: invalid optype: %d\n", int(optype));
-			exit(-1);
-		}
+		tmp_cache_evict_ptr = new cache_evict_t(recvbuf, recvsize);
 
 		uint16_t tmp_serveridx = tmp_cache_evict_ptr->serveridx();
 		INVARIANT(tmp_serveridx == global_server_logical_idx);
@@ -773,14 +645,6 @@ void *run_server_evictserver(void *param) {
 					local_server_logical_idx, global_server_logical_idx, tmp_cache_evict_ptr->key().keyhihi,\
 					tmp_cache_evict_ptr->key().get_hashpartition_idx(switch_partition_count, server_total_logical_num));
 			exit(-1);
-		}
-
-		// make server-side snapshot for CACHE_EVICT_CASE2
-		if (packet_type_t(optype) == packet_type_t::CACHE_EVICT_CASE2) {
-			//printf("CACHE_EVICT_CASE2!\n");
-			if (!server_issnapshot_list[local_server_logical_idx]) {
-				db_wrappers[local_server_logical_idx].make_snapshot();
-			}
 		}
 
 		// remove from cached keyset
@@ -807,191 +671,6 @@ void *run_server_evictserver(void *param) {
 		tmp_cache_evict_ptr = NULL;
 	}
 	close(server_evictserver_udpsock_list[local_server_logical_idx]);
-	pthread_exit(nullptr);
-}
-
-void *run_server_snapshotserver(void *param) {
-	uint16_t local_server_logical_idx = *((uint16_t *)param);
-	uint16_t global_server_logical_idx = server_logical_idxes_list[server_physical_idx][local_server_logical_idx];
-
-	struct sockaddr_in controller_snapshotclient_addr;
-	socklen_t controller_snapshotclient_addrlen = sizeof(struct sockaddr_in);
-	//bool with_controller_snapshotclient_addr = false;
-
-	printf("[server.snapshotserver %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
-	transaction_ready_threads += 1;
-
-	while (!transaction_running) {}
-
-	char recvbuf[MAX_BUFSIZE];
-	int recvsize = 0;
-	bool is_timeout = false;
-	int control_type = -1;
-	int snapshotid = -1;
-	while (transaction_running) {
-		/*if (!with_controller_snapshotclient_addr) {
-			is_timeout = udprecvfrom(server_snapshotserver_udpsock_list[serveridx], recvbuf, MAX_BUFSIZE, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "server.snapshotserver");
-			if (!is_timeout) {
-				with_controller_snapshotclient_addr = true;
-			}
-		}
-		else {
-			is_timeout = udprecvfrom(server_snapshotserver_udpsock_list[serveridx], recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "server.snapshotserver");
-		}*/
-		is_timeout = udprecvfrom(server_snapshotserver_udpsock_list[local_server_logical_idx], recvbuf, MAX_BUFSIZE, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, recvsize, "server.snapshotserver");
-
-		if (is_timeout) {
-			memset(&controller_snapshotclient_addr, 0, sizeof(struct sockaddr_in));
-			controller_snapshotclient_addrlen = sizeof(struct sockaddr_in);
-			continue;
-		}
-
-		// Fix duplicate packet
-		if (control_type == *((int *)recvbuf) && snapshotid == *((int *)(recvbuf + sizeof(int)))) {
-			printf("[server.snapshotserver] receive duplicate control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
-			continue;
-		}
-		else {
-			control_type = *((int *)recvbuf);
-			snapshotid = *((int *)(recvbuf + sizeof(int)));
-		}
-
-		if (control_type == SNAPSHOT_CLEANUP) {
-			// cleanup stale snapshot states
-			db_wrappers[local_server_logical_idx].clean_snapshot(snapshotid);
-
-			// enable making server-side snapshot for new snapshot period
-			server_issnapshot_list[local_server_logical_idx] = false;
-			db_wrappers[local_server_logical_idx].stop_snapshot();
-			
-			// sendback SNAPSHOT_CLEANUP_ACK to controller
-			udpsendto(server_snapshotserver_udpsock_list[local_server_logical_idx], &SNAPSHOT_CLEANUP_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
-		}
-		else if (control_type == SNAPSHOT_START) {
-			INVARIANT(!server_issnapshot_list[local_server_logical_idx]);
-			db_wrappers[local_server_logical_idx].make_snapshot(snapshotid);
-			
-			// sendback SNAPSHOT_START_ACK to controller
-			udpsendto(server_snapshotserver_udpsock_list[local_server_logical_idx], &SNAPSHOT_START_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotserver");
-		}
-		else {
-			printf("[server.snapshotserver] invalid control type: %d\n", control_type);
-			exit(-1);
-		}
-	}
-
-	close(server_snapshotserver_udpsock_list[local_server_logical_idx]);
-	pthread_exit(nullptr);
-}
-
-void *run_server_snapshotdataserver(void *param) {
-	uint16_t local_server_logical_idx = *((uint16_t *)param);
-	uint16_t global_server_logical_idx = server_logical_idxes_list[server_physical_idx][local_server_logical_idx];
-
-	struct sockaddr_in controller_snapshotclient_addr;
-	socklen_t controller_snapshotclient_addrlen;
-	//bool with_controller_snapshotclient_addr = false;
-
-	// receive per-server snapshot data from controller
-	dynamic_array_t recvbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
-
-	printf("[server.snapshotdataserver %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
-	transaction_ready_threads += 1;
-
-	while (!transaction_running) {}
-
-	bool is_timeout = false;
-	int control_type = -1;
-	int snapshotid = -1;
-	while (transaction_running) {
-		/*if (!with_controller_snapshotclient_addr) {
-			is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[serveridx], recvbuf, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, "server.snapshotdataserver");
-			if (!is_timeout) {
-				with_controller_snapshotclient_addr = true;
-			}
-		}
-		else {
-			is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[serveridx], recvbuf, 0, NULL, NULL, "server.snapshotdataserver");
-		}*/
-
-		recvbuf.clear();
-		is_timeout = udprecvlarge_udpfrag(server_snapshotdataserver_udpsock_list[local_server_logical_idx], recvbuf, 0, &controller_snapshotclient_addr, &controller_snapshotclient_addrlen, "server.snapshotdataserver");
-		if (is_timeout) {
-			memset(&controller_snapshotclient_addr, 0, sizeof(struct sockaddr_in));
-			controller_snapshotclient_addrlen = sizeof(struct sockaddr_in);
-			continue;
-		}
-
-		// Fix duplicate packet
-		if (control_type == *((int *)recvbuf.array()) && snapshotid == *((int *)(recvbuf.array() + sizeof(int)))) {
-			printf("[server.snapshotdataserver] receive duplicate control type %d for snapshot id %d\n", control_type, snapshotid); // TMPDEBUG
-			continue;
-		}
-		else {
-			control_type = *((int *)recvbuf.array());
-			snapshotid = *((int *)(recvbuf.array() + sizeof(int)));
-		}
-
-		if (control_type == SNAPSHOT_SENDDATA) {
-			// sendback SNAPSHOT_SENDDATA_ACK to controller
-			udpsendto(server_snapshotdataserver_udpsock_list[local_server_logical_idx], &SNAPSHOT_SENDDATA_ACK, sizeof(int), 0, &controller_snapshotclient_addr, controller_snapshotclient_addrlen, "server.snapshotdataserver");
-
-			// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes, uint16_t serveridx, int32_t record_cnt, per-record data>
-			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
-			server_issnapshot_list[local_server_logical_idx] = true;
-
-			// parse in-switch snapshot data
-			int32_t tmp_serverbytes = *((int32_t *)(recvbuf.array() + sizeof(int) + sizeof(int)));
-			INVARIANT(recvbuf.size() == tmp_serverbytes);
-			uint16_t tmp_serveridx = *((uint16_t *)(recvbuf.array() + sizeof(int) + sizeof(int) + sizeof(int32_t)));
-			INVARIANT(tmp_serveridx == global_server_logical_idx);
-			int32_t tmp_recordcnt = *((int32_t *)(recvbuf.array() + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
-
-			std::map<netreach_key_t, snapshot_record_t> tmp_inswitch_snapshot;
-			int tmp_offset = sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t);
-			for (int32_t tmp_recordidx = 0; tmp_recordidx < tmp_recordcnt; tmp_recordidx++) {
-				netreach_key_t tmp_key;
-				snapshot_record_t tmp_record;
-				uint32_t tmp_keysize = tmp_key.deserialize(recvbuf.array() + tmp_offset, recvbuf.size() - tmp_offset);
-				tmp_offset += tmp_keysize;
-				uint32_t tmp_valsize = tmp_record.val.deserialize(recvbuf.array() + tmp_offset, recvbuf.size() - tmp_offset);
-				tmp_offset += tmp_valsize;
-				tmp_record.seq = *((uint32_t *)(recvbuf.array() + tmp_offset));
-				tmp_offset += sizeof(uint32_t);
-				tmp_record.stat = *((bool *)(recvbuf.array() + tmp_offset));
-				tmp_offset += sizeof(bool);
-				tmp_inswitch_snapshot.insert(std::pair<netreach_key_t, snapshot_record_t>(tmp_key, tmp_record));
-			}
-
-#ifdef DEBUG_SNAPSHOT
-			// TMPDEBUG
-			printf("[server.snapshotdataserver %d-%d] receive snapshot data of size %d from controller\n", local_server_logical_idx, global_server_logical_idx, tmp_inswitch_snapshot.size());
-			/*int debugi = 0;
-			for (std::map<netreach_key_t, snapshot_record_t>::iterator iter = tmp_inswitch_snapshot.begin();
-					iter != tmp_inswitch_snapshot.end(); iter++) {
-				char debugbuf[MAX_BUFSIZE];
-				uint32_t debugkeysize = iter->first.serialize(debugbuf, MAX_BUFSIZE);
-				uint32_t debugvalsize = iter->second.val.serialize(debugbuf + debugkeysize, MAX_BUFSIZE - debugkeysize);
-				printf("serialized key-value %d:\n", debugi);
-				dump_buf(debugbuf, debugkeysize+debugvalsize);
-				printf("seq: %d, stat %d\n", iter->second.seq, iter->second.stat?1:0);
-			}*/
-#endif
-
-			// update in-switch and server-side snapshot
-			db_wrappers[local_server_logical_idx].update_snapshot(tmp_inswitch_snapshot, snapshotid);
-			
-			// stop current snapshot to enable making next server-side snapshot
-			db_wrappers[local_server_logical_idx].stop_snapshot();
-			server_issnapshot_list[local_server_logical_idx] = false;
-		}
-		else {
-			printf("[server.snapshotdataserver] invalid control type: %d\n", control_type);
-			exit(-1);
-		}
-	}
-
-	close(server_snapshotdataserver_udpsock_list[local_server_logical_idx]);
 	pthread_exit(nullptr);
 }
 

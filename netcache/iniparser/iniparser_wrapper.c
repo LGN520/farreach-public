@@ -261,10 +261,10 @@ short IniparserWrapper::get_server_evictserver_port_start() {
 	return short(tmp);
 }
 
-short IniparserWrapper::get_server_snapshotserver_port_start() {
-	int tmp = iniparser_getint(ini, "server:server_snapshotserver_port_start", -1);
+short IniparserWrapper::get_server_popserver_port_start() {
+	int tmp = iniparser_getint(ini, "server:server_popserver_port_start", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [server:server_snapshotserver_port_start]: %d\n", tmp);
+		printf("Invalid entry of [server:server_popserver_port_start]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);
