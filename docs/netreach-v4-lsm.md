@@ -1661,10 +1661,150 @@
 	* Add L2/L3 routing (if op_hdr.valid == false) at the beginning of ingress pipeline to be compatible with traditional network protocols (files: l2l3_forward_tbl in netbufferv4.p4, p4src/ingress_mat.md, configure/table_configure.py) -> sync to NoCache
 	* Make FarReach compatible with traditional network protocols
 + NOTE: we add judgement of tmp_client_side != 0 for PUTREQ/DELREQ_INSWITCH in eg_port_forward_tbl to reduce TCAM cost
-	* TODO: Pass correctness test
+	* Pass correctness test
 + NOTE: we use hash_calc/2/3/4 for hash_for_cm1/2/3/4
 	* Pass compilation for range partition
-	* TODO: Pass compilation for hash partition
+	* Pass compilation for hash partition
+
+## Implementation log after NoCache before NetCache
+
++ Follow rocksdb tuning guide to double-check the reason of performance degradation in dynamic workload
+	* Not change dynamic rulemap in the first second (begin to change from the 2nd second) (files: synthetic-generator/gen_dynamic_rules.py) -> sync to nocache
+	* Follow rocksdb tuning guide to configure rocksdb parameters (files: rocksdb_wrapper.*) -> sync to nocache
+	* Try different server threads -> expected: more server threads -> more disk contention -> more perf degradation
+		- FarReach + dynamic workload
+			- 512/1 clients + 1/1 servers
+				+ One perf degradation: 35ms max wait latency yet normal rocksdb process latency
+				+ One perf degradation: 80ms max wait latency + 15ms max rocksdb process latency when creating memtable
+					* NOTE: other thpts are normal when creating memtables and even w/ flushing
+			- 32/1 clients + 1/1 servers
+				+ One perf degradation: 80ms max wait latency + 30ms max rocksdb process latency when creating memtable
+			- 32/1 clients + 1/1 servers w/o WAL
+				+ One perf degradation: 80ms max wait latency yet normal rocksdb process latency
+			- 32/1 clients + 1/1 servers + bind CPU cores w/o WAL
+				+ 1st run: Two perf degradations: 36/87ms max wait latency yet normal rocksdb process latency
+					* NOT: at sec 18 and sec 36
+				+ 2nd run: Two perf degradations: 38/100ms max wait latency yet normal rocksdb process latency
+					* NOTE: at sec 17 and sec 35
+			- 512/1 clients + 1/1 servers w/o WAL
+				+ Two perf degradations: 27/80ms max wait latency yet normal rocksdb process latency
+					* NOTE: at sec 17 and sec 35
+			- 512/1 clients + 2/1 servers w/o WAL
+				+ Two perf degradations: 30/108ms max wait latency yet normal rocksdb process latency
+					* NOTE: at sec 18 (w/o creating memtable) and sec 37 (w/ creating memtable)
+		- FarReach + static workload
+			- 512/1 clients + 2/1 servers w/o WAL
+				+ 1st run: for two servers at sec 37, 98ms and 100ms max wait latency yet normal rocksdb process latency
+					* NOTE: both two servers create new memtable at sec 37
+				+ 2nd run (w/ wait_beforerecv_latency): degrade at sec 9, 18, and 37
+					* Sec 9: 16ms max wait latency (16ms max udprecv latency) yet normal process latency (w/o creating memtable)
+					* Sec 18: 15ms max wait latency (15ms max udprecv latency) yet normal process latency (w/o creating memtable)
+					* Sec 37: 150ms max wait latency (150ms max udprecv latency) yet normal process latency (w/ creating memtable)
+				+ 3rd run (w/ wait_beforerecv_latency and udprecv_latency; not relaunch switch): still at sec 9, 18, and 37
+					* Similar as 2nd trial
+					* Strange: sec 18 has large max wait latency yet normal max udprecv_latency -> timeout? statistics overhead?
+						- Sec 9 nad sec 37 have both large max wait latency and max udprecv_latency
+				+ 4th run (same as 3rd run; pose warning if timeout): still at sec 9, 18, 37
+					* Similar as 3rd run with strange event
+					* NOTE: NO timeout issue at sec 18 during transaction phase (other timeout issues are reported between sending all packets and stopping servers, which is reasonable)
+				+ 5th run (same as 4th; reserve large capacity for statistics) -> statistics overhead!!!
+					* Perf is always larger than 0.4 MOPS (previous trials can drop to 0.3 MOPS) without large wait latency!!!
+		- Code change to fix server-side statistics overhead
+			+ Report warning if with server-side timeout during transaction phase (files: server_impl.h) -> sync to nocache
+			+ Reserve 100M capacity for per-server-thread statistics and support to disable server-side statistics (files: helper.h, server_impl.h, server.c) -> sync to nocache
+			+ Reserve 10M capactiy for per-client-thread statistics (files: remote_client.c) -> sync to nocache
+		- FarReach + dynamic workload
+			- 512/1 clients + 2/1 servers w/o WAL -> reasonable performance fluctuation
+			- 512/1 clients + 1/1 servers w/ WAL -> reasonable performance fluctuation
+				+ NOTE: NO large wait latency due to NO server-side statistics overhead
+				+ NOTE: EXIST 18ms and even 47ms rocksdb process latency, but LIMITED effect on runtime throughput
+			- 512/1 clients + 2/1 servers w/ WAL -> reasonable performance fluctuation
+				+ NOTE: NO large wait latency due to NO server-side statistics overhead
+				+ NOTE: EXIST 30ms and even 100ms rocksdb process latency, but LIMITED effect on runtime throughput
+			- 512/1 clients + 4/1 servers w/ WAL -> reasonable perf fluctuation + one random perf degradation
+				+ 160ms max rocksdb process latency, with events of table_file_creation + table flush + WAL deletions (but not all such events can trigger performance degradation)
+			- 512/1 clients + 8/1 servers w/ WAL -> some random perf degradations
+				+ 1st run
+					* Perf degradation at sec 36 from 1 MOPS to 0.89 MOPS: one server thread has large max rocksdb process latency (45ms), which causes other server threads with large max wait latency (30ms); with events of table_file_creation + table flush + WAL deletions + interval compaction
+					* Perf degradation at sec 56 from 1 MOPS to 0.93 MOPS: ALL of rocksdb process latency and wait latency are NORMAL; with events of memtable creation and flush
+				+ 2nd run
+					* Perf degradation at sec 59 from 1 MOPS to 0.84 MOPS: one server thread has large max rocksdb process latency (60ms), which causes other server threads with large max wait latency (75ms); with events of flushing + interval compaction
+				+ 3rd run (disable server-side statistics)
+					* Degradation at seconds 15, 25, 36, 46, and 57
+			- 1024/2 clients + 16/2 servers w/ WAL -> serious random perf degradations
+				+ Two server threads have max 250ms process latency, while others have max 230ms wait latency
+			- 1024/2 clients + 16/2 servers w/o WAL -> some random perf degradations yet with normal max process and max wait latency
+				+ NOTE: avg wait latency becomes twice 
+			- NOTE: previous random perf degradations are due to flushing-caused disk contention
+			- 1024/2 clients + 8/2 servers w/ WAL -> some random perf degradations
+				+ 267ms max process latency -> 251ms max wait latency w/ flushing + WAL sync
+			- 1024/2 clients + 8/2 servers w/o WAL -> still with random perf degradations (w/ normal max process latency and max wait latency; yet w/ larger avg process latency)
+			- 1024/2 clients + 4/2 servers w/o WAL -> still with random perf degradations
+			- 1024/2 clients + 4/2 servers w/o rocksdb wrapper -> from 0.9 MOPS to 0.1 MOPS without any perf fluctuation/degradation
+			- 1024/2 clients + 4/2 servers w/o rocksdb put -> from 0.9 MOPS to 0.1 MOPS without any perf fluctuation/degradation
+			- 1024/2 clients + 4/2 servers w/o WAL w/ less flush -> fewer perf degradations (still exist due to flushing)
+			- 1024/2 clients + 4/2 servers w/o WAL w/o flush -> reasonable perf fluctuation but no degradation
+			- 1024/2 clients + 4/2 servers w/ WAL w/o flush -> reasonable perf fluctuation but no degradation
+			- 1024/2 clients + 8/2 servers w/o flush -> reasonable perf fluctuation but no degradation
+			- 1024/2 clients + 16/2 servers w/o flush -> reasonable perf fluctuation but no periodic degradation
+			- 1024/2 clients + 32/2 servers w/o flush -> result NOT match normalized thpt due to simulation overhead
+			- 1024/2 clients + 2/2 servers w/o flush -> reasonable perf fluctuation but no degradation
+			- 1024/2 clients + 2/2 servers -> reasonable perf fluctuation but no degradation due to no disk contention
+			- 1024/2 clients + 4/2 servers -> reasonable perf fluctuation but no degradation due to no disk contention
+				+ In each physical server, flushing 128MB*2=256MB data -> limited effect on normal request latency
+			- 1024/2 clients + 8/2 servers -> some perf degradations
+				+ Each physical server fluhes 128MB*4=512MB data -> more effect on normal request latency
+			- 1024/2 clients + 16/2 servers -> serious perf degradations
+				+ Each physical server fluhes 128MB*8=1GB data -> more serious effect on normal request latency
+				+ Some request latency exceeds 0.5s due to large disk operation latency under flushing
+			- 1024/2 clients + 16/2 servers + 16MB memtable -> more serious perf degradation and even write stall
+			- 1024/2 clients + 16/2 servers + 128MB memtable -> still with perf degradations
+	* Summary
+		- 2/2 or 4/2 servers: no disk contention -> no perf degradation
+		- 8/2 servers: periodic perf degradation due to flushing
+			+ Reason
+				* More threads -> longer flushing time -> memtable creation during flush -> long disk operation latency
+				* NOTE: flush is not sensitive on thpt change due to large size of flushed data -> periodic
+			+ Avoid flush overhead -> no periodic degradation
+		- 16/2 servers: besides periodic perf degradation, with random perf degradation due to WAL sync 
+			+ Reason
+				* More threads -> longer sync time -> memtable creation during sync -> long disk operation latency
+				* NOTE: sync is sensitive on thpt change due to small size of synced data -> random
+			+ Avoid flush overhead -> no periodic degradation yet still with random degradation
+			+ Disable WAL -> no random degradation
+	* Conclusion
+		- Server-side statistics overhead -> reserve enough space for statistics vectors; diable server-side statistics in final evaluation
+			+ NOTE: more server threads -> larger disk contention due to simluation overhead
+		- WAL sync overhead -> follow rocksdb tuning guide to set a proper wal_bytes_per_sync
+			+ NOTE: still with random perf degradation
+		- Flushing overhead, i.e., large disk operation latency of normal request under flushing
+			+ NOTE: cause periodic perf degradation
+		- Possible solutions
+			+ Solution 1: simulate 4 logical servers by 2 physical servers to avoid simulation overhead on disk contention
+			+ Solution 2: (8/2 servers) set larger memtable size and flush threshold to avoid flushing overhead during dynamic workload evaluation -> reasonable perf fluctuation but no serious perf degradation -> no confusion
+				* TODO: too large flush threshold may undermine READ performance
+			+ Solution 3: (8/2 servers) explain perf degradations, i.e., as data aggregates with several seconds, multiple immutables will be merged and flushed into disk -> due to load balance, multiple server threads will flush at near time, which incurs disk contention -> if normal request requires a disk operation (e.g., creating a WAL log for new memtable), it may incur large process latency and hence undermine system throughput
+				* NOTE: as performance degradation is caused by simulation overhead (note that we do not have serious perf degradation if one server thread per physical server), we can use normalized throughput to demonstrate the ideal results if w/o simulation overhead
+			+ Solution 4: we can run each experiment multiple times, and give avg and deviation for per-sec throughput
++ Change loadfinishclient.c as preparefinishclient.c to notify all physical servers for initial server-side snapshot and controller for periodic switch-side snapshot (files: preparefinishclient.c, controller.c, config.ini. configs/\*, iniparser/iniparser_wrapper.\*, common_impl.h) -> sync configuration to nocache
++ Periodically clear cache frequency counter as well as CM sketch in FarReach
+	* Test 1024/2 clients + 16/2 servers -> serious periodic performance degradation
+	* Test 1024/2 clients + 16/2 servers w/ less flush -> less but still with periodic performance degradation
+	* Test 1024/2 clients + 16/2 servers w/o flush -> only some random performance degradation
+	* Test 1024/2 clients + 16/2 servers w/ 500key-100thresh w/ 128MBtable w/ less flush -> with serious periodic perf degradation
+	* Test 1024/2 clients + 16/2 servers w/ 500key-100thresh w/ 128MBtable w/o flush -> with one random perf degradation
+	* Test 1024/2 clients + 16/2 servers w/ 500key-100thresh w/ 128MBtable w/o wal w/ one flush -> with one perf degradation due to flushing
+		- NOTE: if without WAL, per-server thpt increases, so we need larger # of memtables to ensure no flush
+	* Test 1024/2 clients + 16/2 servers w/ 500key-100thresh w/ 128MBtable w/o wal w/o flush -> no perf degradation
+	* Test 1024/2 clients + 8/2 servers w/ 500key-100thresh w/ 128MBtable w/o flush -> no perf degradation
+	* Test 1024/2 clients + 8/2 servers w/ 500key-100thresh w/ 128MBtable w/ less flush -> with periodic perf degradation yet less
+	* IMPORTANT: NEW setting for dynamic workload
+		- Fewer server threads: 8/2 servers -> less simulation overhead (files: config.ini, configs/*) -> sync to nocache
+		- Deprecated: More dynamic keys: 500 keys + 100 hot threshold -> larger difference between the first second and others (files: synthetic-generator/common.py) -> sync to nocache
+			+ NOTE: As 500-key result is not much better than 200-key result, we still use 200 keys + 100 hot threshold (files: synthetic-generator/common.py) -> sync to nocache and netcache
+			+ Reason: to ensure that cache eviction finishes within one second, we can only evict limited keys into switch -> throughput improvement is still limited even if with more keys being changed
+		- Deprecated: Proper rocksdb setting: 128MB memtable + 20 maxnum + 8 flushnum -> avoid flushing overhead (files: rocksdb_wrapper.h) -> sync to nocache
+			+ NOTE: now we use 64MB memtable + 40 maxnum + 16 flushnum -> TODO: tune parameters in final evaluation
 
 ## Run
 

@@ -68,13 +68,13 @@ bool volatile switchos_popserver_finish = false;
 
 // Cache population
 
-// controller.popclient <-> switchos.popserver
+// reflector.dp2cpserver -> switchos.popserver
 int switchos_popserver_udpsock = -1;
+// used by switchos.popsever and switchos.popworker
+std::mutex mutex_for_cached_keyset;
+std::set<netreach_key_t> switchos_popserver_cached_keyset;
 // message queue between switchos.popserver and switchos.popworker
-MessagePtrQueue<cache_pop_t> switchos_cache_pop_ptr_queue(MQ_SIZE);
-/*cache_pop_t * volatile * switchos_cache_pop_ptrs = NULL;
-uint32_t volatile switchos_head_for_pop;
-uint32_t volatile switchos_tail_for_pop;*/
+MessagePtrQueue<netcache_getreq_pop_t> switchos_netcache_getreq_pop_ptr_queue(MQ_SIZE);
 
 // switchos.popworker
 
@@ -367,41 +367,38 @@ void recover() {
 }
 
 void *run_switchos_popserver(void *param) {
-	// NOTE: controller.popclient address continues to change
-	struct sockaddr_in controller_popclient_addr;
-	socklen_t controller_popclient_addrlen = sizeof(struct sockaddr_in);
-	
 	printf("[switchos.popserver] ready\n");
 	switchos_ready_threads++;
 
 	while (!switchos_running) {}
 
-	// Process CACHE_POP packet <optype, key, vallen, value, seq, serveridx>
+	// Process NETCACHE_GETREQ_POP packet <optype, key, clone_hdr>
 	char buf[MAX_BUFSIZE];
 	int recvsize = 0;
 	while (switchos_running) {
-		udprecvfrom(switchos_popserver_udpsock, buf, MAX_BUFSIZE, 0, &controller_popclient_addr, &controller_popclient_addrlen, recvsize, "switchos.popserver");
+		udprecvfrom(switchos_popserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "switchos.popserver");
 
-		//printf("receive CACHE_POP from controller\n");
+		//printf("receive NETCACHE_GETREQ_POP from reflector\n");
 		//dump_buf(buf, recvsize);
-		cache_pop_t *tmp_cache_pop_ptr = new cache_pop_t(buf, recvsize); // freed by switchos.popworker
+		netcache_getreq_pop_t *tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(buf, recvsize); // freed by switchos.popworker if the key is not cached
 
-		// send CACHE_POP_ACK to controller.popclient immediately to avoid timeout
-		cache_pop_ack_t tmp_cache_pop_ack(tmp_cache_pop_ptr->key());
-		uint32_t acksize = tmp_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
-		udpsendto(switchos_popserver_udpsock, buf, acksize, 0, &controller_popclient_addr, controller_popclient_addrlen, "switchos.popserver");
-
-		bool res = switchos_cache_pop_ptr_queue.write(tmp_cache_pop_ptr);
-		if (!res) {
-			printf("[switch os] message queue overflow of switchos.switchos_cache_pop_ptr_queue!");
-		}
-		/*if ((switchos_head_for_pop+1)%MQ_SIZE != switchos_tail_for_pop) {
-			switchos_cache_pop_ptrs[switchos_head_for_pop] = tmp_cache_pop_ptr;
-			switchos_head_for_pop = (switchos_head_for_pop + 1) % MQ_SIZE;
+		bool is_cached = false;
+		mutex_for_cached_keyset.lock();
+		if (switchos_popserver_cached_keyset.find(tmp_netcache_getreq_pop_ptr->key()) == switchos_popserver_cached_keyset.end()) {
+			switchos_popserver_cached_keyset.insert(tmp_netcache_getreq_pop_ptr->key());
 		}
 		else {
-			printf("[switch os] message queue overflow of switchos.switchos_cache_pop_ptrs!");
-		}*/
+			is_cached = true;
+		}
+		mutex_for_cached_keyset.unlock();
+
+		if (!is_cached) {
+			// notify switchos.popworker for cache population/eviction
+			bool res = switchos_netcache_getreq_pop_ptr_queue.write(tmp_netcache_getreq_pop_ptr);
+			if (!res) {
+				printf("[switch os] message queue overflow of switchos.switchos_netcache_getreq_pop_ptr_queue!");
+			}
+		}
 	}
 
 	switchos_popserver_finish = true;

@@ -9,9 +9,10 @@ bool volatile reflector_with_switchos_snapshotserver_snapshotclient_for_reflecto
 struct sockaddr_in reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr;
 unsigned int reflector_switchos_snapshotserver_snapshotclient_for_reflector_addr_len = sizeof(struct sockaddr);
 
-// switchos.popworker -> (udp channel) -> one reflector.cp2dpserver -> data plane
+// switchos.popworker/snapshotserver.snapshotclient -> (udp channel) -> one reflector.cp2dpserver -> data plane
 int reflector_cp2dpserver_udpsock = -1;
 
+// data plane -> reflector.dp2cpserver
 int reflector_dp2cpserver_udpsock = -1;
 
 // data plane -> receiver -> (message) -> reflector.dp2cpserver -> switchos.popworker
@@ -19,6 +20,8 @@ int reflector_dp2cpserver_udpsock = -1;
 /*struct rte_mbuf* volatile * reflector_pkts_for_popack_snapshot; // pkts from receiver to reflector.dp2cpserver
 uint32_t volatile reflector_head_for_popack_snapshot;
 uint32_t volatile reflector_tail_for_popack_snapshot;*/
+
+// reflector.dp2cpserver -> switchos.popworker/snapshotserver.snapshotclient
 int reflector_dp2cpserver_popclient_udpsock = -1;
 
 // reflector.dp2cpserver -> switchos.specialcaseserver
