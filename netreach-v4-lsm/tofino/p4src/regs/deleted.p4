@@ -53,6 +53,7 @@ table access_deleted_tbl {
 		inswitch_hdr.is_cached: exact;
 		validvalue_hdr.validvalue: exact;
 		meta.is_latest: exact;
+		stat_hdr.stat: exact;
 	}
 	actions {
 		get_deleted;
@@ -61,5 +62,5 @@ table access_deleted_tbl {
 		reset_is_deleted;
 	}
 	default_action: reset_is_deleted();
-	size: 64;
+	size: 256;
 }

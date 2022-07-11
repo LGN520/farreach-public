@@ -50,6 +50,7 @@ hot_list = [0, 1]
 validvalue_list = [0, 1, 3]
 #validvalue_list = [0, 1, 2, 3] # If with PUTREQ_LARGE
 latest_list = [0, 1]
+stat_list = [0, 1]
 deleted_list = [0, 1]
 sampled_list = [0, 1]
 lastclone_list = [0, 1]
@@ -821,66 +822,78 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: access_deleted_tbl (default: reset_is_deleted; size: 62)
+            # Table: access_deleted_tbl (default: reset_is_deleted; size: 122)
             print "Configuring access_deleted_tbl"
             for is_cached in cached_list:
                 for validvalue in validvalue_list:
                     for is_latest in latest_list:
-                        matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
-                                op_hdr_optype = GETREQ_INSWITCH,
-                                inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr_validvalue = validvalue,
-                                meta_is_latest = is_latest)
-                        if is_cached == 1:
-                            self.client.access_deleted_tbl_table_add_with_get_deleted(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                        matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
-                                op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
-                                inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr_validvalue = validvalue,
-                                meta_is_latest = is_latest)
-                        if is_cached == 1 and validvalue == 1 and is_latest == 0:
-                            self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                        matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
-                                op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH,
-                                inswitch_hdr_is_cached = 1,
-                                validvalue_hdr_validvalue = validvalue,
-                                meta_is_latest = is_latest)
-                        if is_cached == 1 and validvalue == 1 and is_latest == 0:
-                            self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                        matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
-                                op_hdr_optype = PUTREQ_INSWITCH,
-                                inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr_validvalue = validvalue,
-                                meta_is_latest = is_latest)
-                        if is_cached == 1 and validvalue == 1:
-                            self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                        matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
-                                op_hdr_optype = DELREQ_INSWITCH,
-                                inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr_validvalue = validvalue,
-                                meta_is_latest = is_latest)
-                        if is_cached == 1 and validvalue == 1:
-                            self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
-                        matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
-                                op_hdr_optype = CACHE_POP_INSWITCH,
-                                inswitch_hdr_is_cached = is_cached,
-                                validvalue_hdr_validvalue = validvalue,
-                                meta_is_latest = is_latest)
-                        self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
-                        for tmpoptype in [CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH]:
+                        for is_stat in stat_list:
                             matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
-                                    op_hdr_optype = tmpoptype,
+                                    op_hdr_optype = GETREQ_INSWITCH,
                                     inswitch_hdr_is_cached = is_cached,
                                     validvalue_hdr_validvalue = validvalue,
-                                    meta_is_latest = is_latest)
-                            self.client.access_deleted_tbl_table_add_with_get_deleted(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                                    meta_is_latest = is_latest,
+                                    stat_hdr_stat = is_stat)
+                            if is_cached == 1:
+                                self.client.access_deleted_tbl_table_add_with_get_deleted(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
+                                    op_hdr_optype = GETRES_LATEST_SEQ_INSWITCH,
+                                    inswitch_hdr_is_cached = is_cached,
+                                    validvalue_hdr_validvalue = validvalue,
+                                    meta_is_latest = is_latest,
+                                    stat_hdr_stat = is_stat)
+                            if is_cached == 1 and validvalue == 1 and is_latest == 0 and is_stat == 1:
+                                self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
+                                    op_hdr_optype = GETRES_DELETED_SEQ_INSWITCH,
+                                    inswitch_hdr_is_cached = 1,
+                                    validvalue_hdr_validvalue = validvalue,
+                                    meta_is_latest = is_latest,
+                                    stat_hdr_stat = is_stat)
+                            if is_cached == 1 and validvalue == 1 and is_latest == 0 and is_stat == 0:
+                                self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
+                                    op_hdr_optype = PUTREQ_INSWITCH,
+                                    inswitch_hdr_is_cached = is_cached,
+                                    validvalue_hdr_validvalue = validvalue,
+                                    meta_is_latest = is_latest,
+                                    stat_hdr_stat = is_stat)
+                            if is_cached == 1 and validvalue == 1:
+                                self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
+                                    op_hdr_optype = DELREQ_INSWITCH,
+                                    inswitch_hdr_is_cached = is_cached,
+                                    validvalue_hdr_validvalue = validvalue,
+                                    meta_is_latest = is_latest,
+                                    stat_hdr_stat = is_stat)
+                            if is_cached == 1 and validvalue == 1:
+                                self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
+                                    op_hdr_optype = CACHE_POP_INSWITCH,
+                                    inswitch_hdr_is_cached = is_cached,
+                                    validvalue_hdr_validvalue = validvalue,
+                                    meta_is_latest = is_latest,
+                                    stat_hdr_stat = is_stat)
+                            if is_stat == 1:
+                                self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            elif is_stat == 0:
+                                self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            for tmpoptype in [CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH]:
+                                matchspec0 = netbufferv4_access_deleted_tbl_match_spec_t(\
+                                        op_hdr_optype = tmpoptype,
+                                        inswitch_hdr_is_cached = is_cached,
+                                        validvalue_hdr_validvalue = validvalue,
+                                        meta_is_latest = is_latest,
+                                        stat_hdr_stat = is_stat)
+                                self.client.access_deleted_tbl_table_add_with_get_deleted(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: update_vallen_tbl (default: reset_access_val_mode; 62)
             print "Configuring update_vallen_tbl"

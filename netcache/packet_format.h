@@ -34,8 +34,8 @@
 enum class PacketType {
 	PUTREQ=0x0001, WARMUPREQ=0x0011, LOADREQ=0x0021,
 	PUTREQ_SEQ=0x0003, PUTREQ_POP_SEQ=0x0013, PUTREQ_SEQ_CASE3=0x0023, PUTREQ_POP_SEQ_CASE3=0x0033,
-	CACHE_POP_INSWITCH=0x0007,
-	GETRES_LATEST_SEQ_INSWITCH=0x000f, GETRES_DELETED_SEQ_INSWITCH=0x001f, GETRES_LATEST_SEQ_INSWITCH_CASE1=0x002f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x003f, PUTREQ_SEQ_INSWITCH_CASE1=0x004f, DELREQ_SEQ_INSWITCH_CASE1=0x005f, LOADSNAPSHOTDATA_INSWITCH_ACK=0x006f,
+	//CACHE_POP_INSWITCH=0x0007,
+	GETRES_LATEST_SEQ_INSWITCH=0x000f, GETRES_DELETED_SEQ_INSWITCH=0x001f, GETRES_LATEST_SEQ_INSWITCH_CASE1=0x002f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x003f, PUTREQ_SEQ_INSWITCH_CASE1=0x004f, DELREQ_SEQ_INSWITCH_CASE1=0x005f, LOADSNAPSHOTDATA_INSWITCH_ACK=0x006f, CACHE_POP_INSWITCH=0x007f,
 	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b,
 	GETRES=0x0009,
 	PUTREQ_INSWITCH=0x0005,
@@ -401,34 +401,38 @@ class ScanRequestSplit : public ScanRequest<key_t> { // ophdr + scanhdr + splith
 
 // NOTE: only used in end-hosts
 template<class key_t, class val_t>
-class CachePop : public PutRequestSeq<key_t, val_t> { // ophdr + val + seq + serveridx
+class CachePop : public PutRequestSeq<key_t, val_t> { // ophdr + val + seq + stat (not stat_hdr) + serveridx
 	public: 
-		CachePop(key_t key, val_t val, uint32_t seq, uint16_t serveridx);
+		CachePop(key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx);
 		CachePop(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
+		bool stat() const;
 		uint16_t serveridx() const;
 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
+		bool _stat;
 		uint16_t _serveridx;
 };
 
 template<class key_t, class val_t>
-class CachePopInswitch : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr
+class CachePopInswitch : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr + stat_hdr
 	public: 
-		CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx);
+		CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
 		uint16_t freeidx() const;
+		bool stat() const;
 
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint16_t _freeidx;
+		bool _stat;
 };
 
 template<class key_t>
@@ -634,9 +638,9 @@ class NetcacheCachePop : public GetRequest<key_t> { // ophdr + serveridx
 
 // NOTE: only used in end-hosts
 template<class key_t, class val_t>
-class NetcacheCachePopAck : public CachePop<key_t, val_t> { // ophdr + val + seq + serveridx
+class NetcacheCachePopAck : public CachePop<key_t, val_t> { // ophdr + val + seq + stat (not stat_hdr) + serveridx
 	public: 
-		NetcacheCachePopAck(key_t key, val_t val, uint32_t seq, uint16_t serveridx);
+		NetcacheCachePopAck(key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx);
 		NetcacheCachePopAck(const char * data, uint32_t recv_size);
 };
 

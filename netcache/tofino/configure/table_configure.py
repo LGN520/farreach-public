@@ -49,6 +49,7 @@ cached_list = [0, 1]
 hot_list = [0, 1]
 report_list = [0, 1]
 latest_list = [0, 1]
+stat_list = [0, 1]
 deleted_list = [0, 1]
 sampled_list = [0, 1]
 lastclone_list = [0, 1]
@@ -734,23 +735,28 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.access_cache_frequency_tbl_table_add_with_get_cache_frequency(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_deleted_tbl (default: reset_is_deleted; size: 6)
+            # Table: access_deleted_tbl (default: reset_is_deleted; size: 12)
             print "Configuring access_deleted_tbl"
             for is_cached in cached_list:
                 for is_latest in latest_list:
-                    matchspec0 = netcache_access_deleted_tbl_match_spec_t(\
-                            op_hdr_optype = GETREQ_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            meta_is_latest = is_latest)
-                    if is_cached == 1:
-                        self.client.access_deleted_tbl_table_add_with_get_deleted(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
-                    matchspec0 = netcache_access_deleted_tbl_match_spec_t(\
-                            op_hdr_optype = CACHE_POP_INSWITCH,
-                            inswitch_hdr_is_cached = is_cached,
-                            meta_is_latest = is_latest)
-                    self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+                    for is_stat in stat_list:
+                        matchspec0 = netcache_access_deleted_tbl_match_spec_t(\
+                                op_hdr_optype = GETREQ_INSWITCH,
+                                inswitch_hdr_is_cached = is_cached,
+                                meta_is_latest = is_latest)
+                        if is_cached == 1:
+                            self.client.access_deleted_tbl_table_add_with_get_deleted(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                        matchspec0 = netcache_access_deleted_tbl_match_spec_t(\
+                                op_hdr_optype = CACHE_POP_INSWITCH,
+                                inswitch_hdr_is_cached = is_cached,
+                                meta_is_latest = is_latest)
+                        if is_stat == 1:
+                            self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                        elif is_stat == 0:
+                            self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_savedseq_tbl (default: nop; size: 4)
             print "Configuring access_savedseq_tbl"

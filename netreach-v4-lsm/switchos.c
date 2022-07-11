@@ -762,7 +762,7 @@ void *run_switchos_popworker(void *param) {
 				}
 
 				// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
-				cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx);
+				cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
 				pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 
 				while (true) {

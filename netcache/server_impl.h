@@ -193,11 +193,11 @@ void *run_server_popserver(void *param) {
 		// get latest value
 		val_t tmp_val;
 		uint32_t tmp_seq = 0;
-		db_wrappers[local_server_logical_idx].get(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq);
+		bool tmp_stat = db_wrappers[local_server_logical_idx].get(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq);
 		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 
 		// send NETCACHE_CACHE_POP_ACK to controller
-		netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq, global_server_logical_idx);
+		netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 		uint32_t pktsize = tmp_netcache_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
 		udpsendto(server_popserver_udpsock_list[local_server_logical_idx], buf, pktsize, 0, &controller_popserver_popclient_addr, controller_popserver_popclient_addrlen, "server.popserver");
 	}
@@ -470,87 +470,6 @@ void *run_server_worker(void * param) {
 #ifdef DUMP_BUF
 				dump_buf(buf, rsp_size);
 #endif
-				break;
-			}
-		case packet_type_t::GETREQ_POP: 
-			{
-				get_request_pop_t req(buf, recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				val_t tmp_val;
-				uint32_t tmp_seq = 0;
-				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
-				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				
-				get_response_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-#ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
-#endif
-
-				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat && workload_mode != 0) {
-					bool is_cached_before = server_cached_keyset_list[local_server_logical_idx].is_exist(req.key());
-					if (!is_cached_before) {
-						server_cached_keyset_list[local_server_logical_idx].insert(req.key());
-						// Send CACHE_POP to server.popclient
-						//cache_pop_t cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, global_server_logical_idx); // freed by server.popclient
-						//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
-						
-						cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, global_server_logical_idx);
-						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-						send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
-						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
-						INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
-					}
-				}
-				break;
-			}
-		case packet_type_t::PUTREQ_POP_SEQ: 
-			{
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
-
-#ifdef DEBUG_SERVER
-				CUR_TIME(rocksdb_t1);
-#endif
-
-				put_request_pop_seq_t req(buf, recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
-				//COUT_THIS("[server] val = " << req.val().to_string())
-			
-#ifdef DEBUG_SERVER
-				CUR_TIME(rocksdb_t2);
-#endif
-				
-				put_response_t rsp(req.key(), true, global_server_logical_idx);
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-#ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
-#endif
-
-				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat && workload_mode != 0) { // successful put
-					bool is_cached_before = server_cached_keyset_list[local_server_logical_idx].is_exist(req.key());
-					if (!is_cached_before) {
-						server_cached_keyset_list[local_server_logical_idx].insert(req.key());
-						// Send CACHE_POP to server.popclient
-						//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), global_server_logical_idx); // freed by server.popclient
-						//server_cache_pop_ptr_queue_list[local_server_logical_idx].write(cache_pop_req_ptr);
-						
-						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), global_server_logical_idx);
-						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-						send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
-						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
-						INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
-					}
-				}
 				break;
 			}
 		case packet_type_t::WARMUPREQ:

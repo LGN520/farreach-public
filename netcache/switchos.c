@@ -307,6 +307,7 @@ void *run_switchos_popworker(void *param) {
 			pktsize = tmp_netcache_cache_pop.serialize(pktbuf, MAX_BUFSIZE);
 			val_t tmp_val;
 			uint32_t tmp_seq = 0;
+			bool tmp_stat = false;
 			while (true) {
 				udpsendto(switchos_popworker_popclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "switchos.popworker.popclient_for_controller");
 
@@ -323,6 +324,7 @@ void *run_switchos_popworker(void *param) {
 					else {
 						tmp_val = tmp_netcache_cache_pop_ack.val();
 						tmp_seq = tmp_netcache_cache_pop_ack.seq();
+						tmp_stat = tmp_netcache_cache_pop_ack.stat();
 						break;
 					}
 				}
@@ -554,7 +556,7 @@ void *run_switchos_popworker(void *param) {
 			//printf("[switchos.popworker] switchos_perpipeline_cached_empty_index[%d]: %d, switchos_freeidx: %d\n", tmp_pipeidx, int(switchos_perpipeline_cached_empty_index[tmp_pipeidx]), int(switchos_freeidx)); // TMPDEBUG
 
 			// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
-			cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_netcache_getreq_pop_ptr->key(), tmp_val, tmp_seq, switchos_freeidx);
+			cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_netcache_getreq_pop_ptr->key(), tmp_val, tmp_seq, switchos_freeidx, tmp_stat);
 			pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 
 			while (true) {

@@ -1221,8 +1221,8 @@ void ScanRequestSplit<key_t>::deserialize(const char * data, uint32_t recv_size)
 // CachePop (value must <= 128B; only used in end-hosts)
 
 template<class key_t, class val_t>
-CachePop<key_t, val_t>::CachePop(key_t key, val_t val, uint32_t seq, uint16_t serveridx)
-	: PutRequestSeq<key_t, val_t>(key, val, seq), _serveridx(serveridx)
+CachePop<key_t, val_t>::CachePop(key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx)
+	: PutRequestSeq<key_t, val_t>(key, val, seq), _stat(stat), _serveridx(serveridx)
 {
 	this->_type = static_cast<optype_t>(PacketType::CACHE_POP);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -1253,9 +1253,16 @@ uint32_t CachePop<key_t, val_t>::serialize(char * const data, uint32_t max_size)
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
 	begin += sizeof(uint32_t);
+	memcpy(begin, (void *)&this->_stat, sizeof(bool));
+	begin += sizeof(bool);
 	uint16_t bigendian_serveridx = htons(uint16_t(this->_serveridx));
 	memcpy(begin, (void *)&bigendian_serveridx, sizeof(uint16_t)); // little-endian to big-endian
-	return tmp_typesize + tmp_keysize + tmp_valsize + sizeof(uint32_t) + sizeof(uint16_t);
+	return tmp_typesize + tmp_keysize + tmp_valsize + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+}
+
+template<class key_t, class val_t>
+bool CachePop<key_t, val_t>::stat() const {
+	return _stat;
 }
 
 template<class key_t, class val_t>
@@ -1265,7 +1272,7 @@ uint16_t CachePop<key_t, val_t>::serveridx() const {
 
 template<class key_t, class val_t>
 uint32_t CachePop<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(uint32_t) + sizeof(uint16_t);
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
 }
 
 template<class key_t, class val_t>
@@ -1283,15 +1290,17 @@ void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq); // Big-endian to little-endian
 	begin += sizeof(uint32_t);
+	memcpy((void *)&this->_stat, begin, sizeof(bool));
+	begin += sizeof(bool);
 	memcpy((void *)&this->_serveridx, begin, sizeof(uint16_t));
 	this->_serveridx = ntohs(this->_serveridx); // Big-endian to little-endian
 }
 
-// CachePopInswitch (valud must <= 128B)
+// CachePopInswitch (value must <= 128B)
 
 template<class key_t, class val_t>
-CachePopInswitch<key_t, val_t>::CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx)
-	: PutRequestSeq<key_t, val_t>(key, val, seq), _freeidx(freeidx)
+CachePopInswitch<key_t, val_t>::CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat)
+	: PutRequestSeq<key_t, val_t>(key, val, seq), _freeidx(freeidx), _stat(stat)
 {
 	this->_type = static_cast<optype_t>(PacketType::CACHE_POP_INSWITCH);
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
@@ -1319,8 +1328,13 @@ uint32_t CachePopInswitch<key_t, val_t>::serialize(char * const data, uint32_t m
 	begin += INSWITCH_PREV_BYTES;
 	uint16_t bigendian_freeidx = htons(uint16_t(this->_freeidx));
 	memcpy(begin, (void *)&bigendian_freeidx, sizeof(uint16_t)); // little-endian to big-endian
-	return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t);
-	//begin += sizeof(uint16_t);
+	begin += sizeof(uint16_t);
+	memcpy(begin, (void *)&this->_stat, sizeof(bool));
+	begin += sizeof(bool); // stat_hdr.stat
+	memset(begin, 0, sizeof(uint16_t)); // stat_hdr.nodeidx_foreval
+	begin += sizeof(uint16_t);
+	begin += STAT_PADDING_BYTES;
+	return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 	//memset(begin, 0, DEBUG_BYTES);
 	//return tmp_typesize + tmp_keysize + tmp_valsize + tmp_shadowtypesize + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES;
 }
@@ -1331,9 +1345,14 @@ uint16_t CachePopInswitch<key_t, val_t>::freeidx() const {
 }
 
 template<class key_t, class val_t>
+bool CachePopInswitch<key_t, val_t>::stat() const {
+	return _stat;
+}
+
+template<class key_t, class val_t>
 uint32_t CachePopInswitch<key_t, val_t>::size() { // unused
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t);
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>

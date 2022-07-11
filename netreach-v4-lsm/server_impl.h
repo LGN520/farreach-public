@@ -493,15 +493,15 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat && workload_mode != 0) {
+				if (workload_mode != 0) {
 					bool is_cached_before = server_cached_keyset_list[local_server_logical_idx].is_exist(req.key());
 					if (!is_cached_before) {
 						server_cached_keyset_list[local_server_logical_idx].insert(req.key());
 						// Send CACHE_POP to server.popclient
-						//cache_pop_t cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, global_server_logical_idx); // freed by server.popclient
+						//cache_pop_t cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx); // freed by server.popclient
 						//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
 						
-						cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, global_server_logical_idx);
+						cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 						send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
 						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
@@ -537,15 +537,15 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat && workload_mode != 0) { // successful put
+				if (workload_mode != 0) { // successful put
 					bool is_cached_before = server_cached_keyset_list[local_server_logical_idx].is_exist(req.key());
 					if (!is_cached_before) {
 						server_cached_keyset_list[local_server_logical_idx].insert(req.key());
 						// Send CACHE_POP to server.popclient
-						//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), global_server_logical_idx); // freed by server.popclient
+						//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), tmp_stat, global_server_logical_idx); // freed by server.popclient
 						//server_cache_pop_ptr_queue_list[local_server_logical_idx].write(cache_pop_req_ptr);
 						
-						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), global_server_logical_idx);
+						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), tmp_stat, global_server_logical_idx);
 						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 						send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
 						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
@@ -600,15 +600,15 @@ void *run_server_worker(void * param) {
 #endif
 
 				// Trigger cache population if necessary (key exist and not being cached)
-				if (tmp_stat && workload_mode != 0) { // successful put
+				if (workload_mode != 0) { // successful put
 					bool is_cached_before = server_cached_keyset_list[local_server_logical_idx].is_exist(req.key());
 					if (!is_cached_before) {
 						server_cached_keyset_list[local_server_logical_idx].insert(req.key());
 						// Send CACHE_POP to server.popclient
-						//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), global_server_logical_idx); // freed by server.popclient
+						//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), req.seq(), tmp_stat, global_server_logical_idx); // freed by server.popclient
 						//server_cache_pop_ptr_queue_list[local_server_logical_idx].write(cache_pop_req_ptr);
 						
-						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), global_server_logical_idx);
+						cache_pop_t cache_pop_req(req.key(), req.val(), req.seq(), tmp_stat, global_server_logical_idx);
 						rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 						send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
 						cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
