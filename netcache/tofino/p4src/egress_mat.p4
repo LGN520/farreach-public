@@ -355,9 +355,9 @@ action update_putreq_inswitch_to_putreq_seq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_putreq_inswitch_to_putreq_seq_cached() {
-	modify_field(op_hdr.optype, PUTREQ_SEQ_CACHED);
-	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_CACHED);
+action update_putreq_inswitch_to_netcache_putreq_seq_cached() {
+	modify_field(op_hdr.optype, NETCACHE_PUTREQ_SEQ_CACHED);
+	modify_field(shadowtype_hdr.shadowtype, NETCACHE_PUTREQ_SEQ_CACHED);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -375,9 +375,9 @@ action update_delreq_inswitch_to_delreq_seq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_delreq_inswitch_to_delreq_seq_cached() {
-	modify_field(op_hdr.optype, DELREQ_SEQ_CACHED);
-	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_CACHED);
+action update_delreq_inswitch_to_netcache_delreq_seq_cached() {
+	modify_field(op_hdr.optype, NETCACHE_DELREQ_SEQ_CACHED);
+	modify_field(shadowtype_hdr.shadowtype, NETCACHE_DELREQ_SEQ_CACHED);
 
 	remove_header(inswitch_hdr);
 	add_header(seq_hdr);
@@ -457,9 +457,9 @@ table eg_port_forward_tbl {
 		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone; // clone for first CACHE_POP_INSWITCH_ACK (not need to clone for duplication due to switchos-side timeout-and-retry)
 		//forward_cache_pop_inswitch_ack; // last clone of CACHE_POP_INSWITCH_ACK
 		update_putreq_inswitch_to_putreq_seq;
-		update_putreq_inswitch_to_putreq_seq_cached;
+		update_putreq_inswitch_to_netcache_putreq_seq_cached;
 		update_delreq_inswitch_to_delreq_seq;
-		update_delreq_inswitch_to_delreq_seq_cached;
+		update_delreq_inswitch_to_netcache_delreq_seq_cached;
 #ifdef RANGE_SUPPORT
 		forward_scanreq_split_and_clone;
 		forward_scanreq_split;
@@ -550,7 +550,7 @@ action update_val_stat_pktlen(aligned_vallen) {
 	add(ipv4_hdr.totalLen, aligned_vallen, 54);
 }
 
-// PUTREQ_SEQ, PUTREQ_SEQ_CACHED
+// PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED
 action update_val_seq_pktlen(aligned_vallen) {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 1(debug_hdr)
 	//add(udp_hdr.hdrlen, aligned_vallen, 35);
@@ -568,7 +568,7 @@ action update_stat_pktlen() {
 	modify_field(ipv4_hdr.totalLen, 52);
 }
 
-// DELREQ_SEQ
+// DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED
 action update_seq_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 4(seq) + 1(debug_hdr)
 	//modify_field(udp_hdr.hdrlen, 33);

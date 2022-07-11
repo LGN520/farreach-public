@@ -366,31 +366,6 @@ void *run_server_worker(void * param) {
 #endif
 				break;
 			}
-		case packet_type_t::GETREQ_NLATEST:
-			{
-				get_request_nlatest_t req(buf, recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				val_t tmp_val;
-				uint32_t tmp_seq = 0;
-				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
-				//COUT_THIS("[server] val = " << tmp_val.to_string())
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
-				if (tmp_stat) { // key exists
-					get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_seq, global_server_logical_idx);
-					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				}
-				else { // key not exist
-					get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq, global_server_logical_idx);
-					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				}
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-#ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
-#endif
-				break;
-			}
 		case packet_type_t::PUTREQ_SEQ:
 			{
 #ifdef DUMP_BUF
@@ -403,7 +378,49 @@ void *run_server_worker(void * param) {
 
 				put_request_seq_t req(buf, recv_size);
 				//COUT_THIS("[server] key = " << req.key().to_string() << " val = " << req.val().to_string())
-				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
+				
+				bool tmp_stat = false;
+				server_mutex_for_keyset_list[local_server_logical_idx].lock();
+				bool is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(req.key()) != server_beingcached_keyset_list[local_server_logical_idx].end());
+				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(req.key()) != server_cached_keyset_list[local_server_logical_idx].end());
+				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(req.key()) != server_beingupdated_keyset_list[local_server_logical_idx].end());
+				if (likely(!is_being_cached && !is_cached)) { // uncached
+					tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq()); // perform PUT operation
+				}
+				else if (is_being_cached) { // being cached
+					INVARIANT(!is_cached);
+					while (is_being_cached) {
+						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+						usleep(1); // wait for cache population finish
+						server_mutex_for_keyset_list[local_server_logical_idx].lock();
+						is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(req.key()) != server_beingcached_keyset_list[local_server_logical_idx].end());
+					}
+
+					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(req.key()) != server_cached_keyset_list[local_server_logical_idx].end());
+					INVARIANT(is_cached);
+				}
+				if (unlikely(is_cached)) { // already cached
+					while (is_being_updated) { // being updated
+						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+						usleep(1); // wait for inswitch value update finish
+						server_mutex_for_keyset_list[local_server_logical_idx].lock();
+						is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(req.key()) != server_beingupdated_keyset_list[local_server_logical_idx].end());
+					}
+					INVARIANT(!is_being_updated);
+
+					// Double-check due to potential cache eviction
+					is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(req.key()) != server_beingcached_keyset_list[local_server_logical_idx].end());
+					INVARIANT(!is_being_cached); // key must NOT in beingcached keyset
+					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(req.key()) != server_cached_keyset_list[local_server_logical_idx].end());
+					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateclient
+						server_beingupdated_keyset_list[local_server_logical_idx].insert(req.key()); // mark it as being updated
+						// TODO: notify server.valueupdateclient to update inswitch value in background
+					}
+					// else: do nothing as key is removed from beingupdated keyset by server.evictserver
+
+					tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq()); // perform PUT operation
+				}
+				server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 				UNUSED(tmp_stat);
 				//COUT_THIS("[server] stat = " << tmp_stat)
 				
@@ -421,15 +438,67 @@ void *run_server_worker(void * param) {
 			}
 		case packet_type_t::DELREQ_SEQ:
 			{
-				del_request_seq_t req(buf, recv_size);
-				//COUT_THIS("[server] key = " << req.key().to_string())
-				bool tmp_stat = db_wrappers[local_server_logical_idx].remove(req.key(), req.seq());
-				UNUSED(tmp_stat);
-				//COUT_THIS("[server] stat = " << tmp_stat)
-				del_response_t rsp(req.key(), true, global_server_logical_idx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
+
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t1);
+#endif
+
+				del_request_seq_t req(buf, recv_size);
+				//COUT_THIS("[server] key = " << req.key().to_string())
+				
+				bool tmp_stat = false;
+				server_mutex_for_keyset_list[local_server_logical_idx].lock();
+				bool is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(req.key()) != server_beingcached_keyset_list[local_server_logical_idx].end());
+				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(req.key()) != server_cached_keyset_list[local_server_logical_idx].end());
+				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(req.key()) != server_beingupdated_keyset_list[local_server_logical_idx].end());
+				if (likely(!is_being_cached && !is_cached)) { // uncached
+					tmp_stat = db_wrappers[local_server_logical_idx].remove(req.key(), req.seq()); // perform DEL operation
+				}
+				else if (is_being_cached) { // being cached
+					INVARIANT(!is_cached);
+					while (is_being_cached) {
+						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+						usleep(1); // wait for cache population finish
+						server_mutex_for_keyset_list[local_server_logical_idx].lock();
+						is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(req.key()) != server_beingcached_keyset_list[local_server_logical_idx].end());
+					}
+
+					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(req.key()) != server_cached_keyset_list[local_server_logical_idx].end());
+					INVARIANT(is_cached);
+				}
+				if (unlikely(is_cached)) { // already cached
+					while (is_being_updated) { // being updated
+						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+						usleep(1); // wait for inswitch value update finish
+						server_mutex_for_keyset_list[local_server_logical_idx].lock();
+						is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(req.key()) != server_beingupdated_keyset_list[local_server_logical_idx].end());
+					}
+					INVARIANT(!is_being_updated);
+
+					// Double-check due to potential cache eviction
+					is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(req.key()) != server_beingcached_keyset_list[local_server_logical_idx].end());
+					INVARIANT(!is_being_cached); // key must NOT in beingcached keyset
+					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(req.key()) != server_cached_keyset_list[local_server_logical_idx].end());
+					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateclient
+						server_beingupdated_keyset_list[local_server_logical_idx].insert(req.key()); // mark it as being updated
+						// TODO: notify server.valueupdateclient to update inswitch value in background
+					}
+					// else: do nothing as key is removed from beingupdated keyset by server.evictserver
+
+					tmp_stat = db_wrappers[local_server_logical_idx].remove(req.key(), req.seq()); // perform DEL operation
+				}
+				server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+				UNUSED(tmp_stat);
+				//COUT_THIS("[server] stat = " << tmp_stat)
+				
+#ifdef DEBUG_SERVER
+				CUR_TIME(rocksdb_t2);
+#endif
+				
+				del_response_t rsp(req.key(), true, global_server_logical_idx);
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF

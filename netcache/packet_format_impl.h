@@ -2084,6 +2084,22 @@ NetcacheCacheEvictAck<key_t>::NetcacheCacheEvictAck(const char * data, uint32_t 
 	INVARIANT(this->_serveridx >= 0);
 }
 
+// NetcachePutRequestSeqCached
+
+template<class key_t, class val_t>
+NetcachePutRequestSeqCached<key_t, val_t>::NetcachePutRequestSeqCached(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_PUTREQ_SEQ_CACHED);
+}
+
+// NetcacheDelRequestSeqCached
+
+template<class key_t, class val_t>
+NetcacheDelRequestSeqCached<key_t, val_t>::NetcacheDelRequestSeqCached(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_DELREQ_SEQ_CACHED);
+}
+
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
 	INVARIANT(maxsize >= sizeof(optype_t));
