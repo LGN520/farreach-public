@@ -472,40 +472,6 @@ void *run_server_worker(void * param) {
 #endif
 				break;
 			}
-		case packet_type_t::WARMUPREQ:
-			{
-				warmup_request_t req(buf, recv_size);
-#ifdef DUMP_BUF
-				dump_buf(buf, recv_size);
-#endif
-
-				uint32_t tmp_seq = 0;
-				// NOTE: we do not need to write the key-value pair for WARMUPREQ except cache population
-				//bool tmp_stat = db_wrappers[serveridx].force_put(req.key(), req.val());
-				//INVARIANT(tmp_stat == true);
-				
-				warmup_ack_t rsp(req.key());
-				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
-				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
-#ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
-#endif
-
-				// Trigger cache population if necessary (key exist and not being cached)
-				bool is_cached_before = server_cached_keyset_list[local_server_logical_idx].is_exist(req.key());
-				INVARIANT(!is_cached_before);
-				server_cached_keyset_list[local_server_logical_idx].insert(req.key());
-				// Send CACHE_POP to server.popclient
-				//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), tmp_seq, serveridx); // freed by server.popclient
-				//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
-						
-				cache_pop_t cache_pop_req(req.key(), req.val(), tmp_seq, global_server_logical_idx);
-				rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
-				send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
-				cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);
-				INVARIANT(cache_pop_rsp.key() == cache_pop_req.key());
-				break;
-			}
 		case packet_type_t::LOADREQ:
 			{
 				load_request_t req(buf, recv_size);
@@ -535,7 +501,7 @@ void *run_server_worker(void * param) {
 			}
 	}
 
-	if (likely(pkt_type != packet_type_t::WARMUPREQ && pkt_type != packet_type_t::LOADREQ)) {
+	if (likely(pkt_type != packet_type_t::LOADREQ)) {
 #ifdef DEBUG_SERVER
 		CUR_TIME(process_t2);
 		DELTA_TIME(process_t2, process_t1, process_t3);

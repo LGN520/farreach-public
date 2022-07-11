@@ -448,6 +448,13 @@ action update_scanreq_to_scanreq_split() {
 }
 #endif
 
+action update_warmupreq_to_netcache_warmupreq_inswitch() {
+	modify_field(op_hdr.optype, NETCACHE_WARMUPREQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, NETCACHE_WARMUPREQ_INSWITCH);
+	add_header(shadowtype_hdr);
+	add_header(inswitch_hdr);
+}
+
 @pragma stage 6
 table ig_port_forward_tbl {
 	reads {
@@ -460,6 +467,7 @@ table ig_port_forward_tbl {
 #ifdef RANGE_SUPPORT
 		update_scanreq_to_scanreq_split;
 #endif
+		update_warmupreq_to_netcache_warmupreq_inswitch;
 		nop;
 	}
 	default_action: nop();

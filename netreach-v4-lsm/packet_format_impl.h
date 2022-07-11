@@ -1495,7 +1495,7 @@ CacheEvictCase2<key_t, val_t>::CacheEvictCase2(const char * data, uint32_t recv_
 
 // WarmupRequest
 
-template<class key_t, class val_t>
+/*template<class key_t, class val_t>
 WarmupRequest<key_t, val_t>::WarmupRequest(key_t key, val_t val) 
 	: PutRequest<key_t, val_t>(key, val)
 {
@@ -1504,6 +1504,19 @@ WarmupRequest<key_t, val_t>::WarmupRequest(key_t key, val_t val)
 
 template<class key_t, class val_t>
 WarmupRequest<key_t, val_t>::WarmupRequest(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::WARMUPREQ);
+}*/
+
+template<class key_t>
+WarmupRequest<key_t>::WarmupRequest(key_t key) 
+	: GetRequest<key_t>(key)
+{
+	this->_type = static_cast<optype_t>(PacketType::WARMUPREQ);
+}
+
+template<class key_t>
+WarmupRequest<key_t>::WarmupRequest(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::WARMUPREQ);
 }

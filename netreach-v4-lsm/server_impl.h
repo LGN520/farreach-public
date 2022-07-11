@@ -647,10 +647,14 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 
-				uint32_t tmp_seq = 0;
+				//uint32_t tmp_seq = 0;
 				// NOTE: we do not need to write the key-value pair for WARMUPREQ except cache population
 				//bool tmp_stat = db_wrappers[serveridx].force_put(req.key(), req.val());
 				//INVARIANT(tmp_stat == true);
+				
+				val_t tmp_val;
+				uint32_t tmp_seq = 0;
+				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				
 				warmup_ack_t rsp(req.key());
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
@@ -664,10 +668,10 @@ void *run_server_worker(void * param) {
 				INVARIANT(!is_cached_before);
 				server_cached_keyset_list[local_server_logical_idx].insert(req.key());
 				// Send CACHE_POP to server.popclient
-				//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), req.val(), tmp_seq, serveridx); // freed by server.popclient
+				//cache_pop_t *cache_pop_req_ptr = new cache_pop_t(req.key(), tmp_val, tmp_seq, tmp_stat, serveridx); // freed by server.popclient
 				//server_cache_pop_ptr_queue_list[serveridx].write(cache_pop_req_ptr);
 						
-				cache_pop_t cache_pop_req(req.key(), req.val(), tmp_seq, global_server_logical_idx);
+				cache_pop_t cache_pop_req(req.key(), tmp_val, tmp_seq, tmp_stat, global_server_logical_idx);
 				rsp_size = cache_pop_req.serialize(buf, MAX_BUFSIZE);
 				send_cachepop(server_popclient_udpsock_list[local_server_logical_idx], buf, rsp_size, controller_popserver_addr, controller_popserver_addrlen, recvbuf, MAX_BUFSIZE, recv_size);
 				cache_pop_ack_t cache_pop_rsp(recvbuf, recv_size);

@@ -301,8 +301,8 @@ uint16_t GetResponse<key_t, val_t>::nodeidx_foreval() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponse<key_t, val_t>::size() { // unused
-	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + DEBUG_BYTES;
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -788,8 +788,8 @@ uint16_t GetResponseLatestSeq<key_t, val_t>::nodeidx_foreval() const {
 
 template<class key_t, class val_t>
 uint32_t GetResponseLatestSeq<key_t, val_t>::size() { // unused
-	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + DEBUG_BYTES;
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
+	//return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + DEBUG_BYTES;
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(optype_t) + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t) + STAT_PADDING_BYTES;
 }
 
 template<class key_t, class val_t>
@@ -1296,7 +1296,7 @@ void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 	this->_serveridx = ntohs(this->_serveridx); // Big-endian to little-endian
 }
 
-// CachePopInswitch (valud must <= 128B)
+// CachePopInswitch (value must <= 128B)
 
 template<class key_t, class val_t>
 CachePopInswitch<key_t, val_t>::CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat)
@@ -1414,7 +1414,7 @@ uint16_t CacheEvict<key_t, val_t>::serveridx() const {
 
 template<class key_t, class val_t>
 uint32_t CacheEvict<key_t, val_t>::size() { // unused
-	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint32_t) + val_t::MAX_VALLEN + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(uint16_t) + val_t::MAX_VALLEN + sizeof(uint32_t) + sizeof(bool) + sizeof(uint16_t);
 }
 
 template<class key_t, class val_t>
@@ -1495,7 +1495,7 @@ CacheEvictCase2<key_t, val_t>::CacheEvictCase2(const char * data, uint32_t recv_
 
 // WarmupRequest
 
-template<class key_t, class val_t>
+/*template<class key_t, class val_t>
 WarmupRequest<key_t, val_t>::WarmupRequest(key_t key, val_t val) 
 	: PutRequest<key_t, val_t>(key, val)
 {
@@ -1504,6 +1504,19 @@ WarmupRequest<key_t, val_t>::WarmupRequest(key_t key, val_t val)
 
 template<class key_t, class val_t>
 WarmupRequest<key_t, val_t>::WarmupRequest(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::WARMUPREQ);
+}*/
+
+template<class key_t>
+WarmupRequest<key_t>::WarmupRequest(key_t key) 
+	: GetRequest<key_t>(key)
+{
+	this->_type = static_cast<optype_t>(PacketType::WARMUPREQ);
+}
+
+template<class key_t>
+WarmupRequest<key_t>::WarmupRequest(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::WARMUPREQ);
 }
@@ -1973,6 +1986,61 @@ NetcacheCachePopFinishAck<key_t>::NetcacheCachePopFinishAck(const char * data, u
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_POP_FINISH_ACK);
 	INVARIANT(this->_serveridx >= 0);
+}
+
+// NetcacheWarmupRequestInswitchPop
+
+template<class key_t>
+NetcacheWarmupRequestInswitchPop<key_t>::NetcacheWarmupRequestInswitchPop(key_t key)
+	: CacheEvictLoadfreqInswitch<key_t>(key, 0)
+{
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_WARMUPREQ_INSWITCH_POP);
+}
+
+template<class key_t>
+NetcacheWarmupRequestInswitchPop<key_t>::NetcacheWarmupRequestInswitchPop(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_WARMUPREQ_INSWITCH_POP);
+}
+
+template<class key_t>
+uint32_t NetcacheWarmupRequestInswitchPop<key_t>::serialize(char * const data, uint32_t max_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(max_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_typesize = serialize_packet_type(this->_type, begin, max_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize);
+	begin += tmp_keysize;
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
+	begin += tmp_shadowtypesize;
+	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
+	begin += INSWITCH_PREV_BYTES;
+	memset(begin, 0, sizeof(uint16_t)); // inswitch_hdr.idx
+	begin += sizeof(uint16_t);
+	begin += CLONE_BYTES; // clone_hdr
+	return tmp_typesize + tmp_keysize + tmp_shadowtypesize + INSWITCH_PREV_BYTES + sizeof(uint16_t);
+}
+
+template<class key_t>
+uint32_t NetcacheWarmupRequestInswitchPop<key_t>::size() { // unused
+	return sizeof(optype_t) + sizeof(key_t) + sizeof(optype_t) + INSWITCH_PREV_BYTES + sizeof(uint16_t) + CLONE_BYTES;
+}
+
+template<class key_t>
+void NetcacheWarmupRequestInswitchPop<key_t>::deserialize(const char * data, uint32_t recv_size) {
+	uint32_t my_size = this->size();
+	INVARIANT(recv_size >= my_size);
+	char *begin = data;
+	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, max_size);
+	begin += tmp_typesize;
+	uint32_t tmp_keysize = this->_key.deserialize(begin, max_size - tmp_typesize);
+	begin += tmp_keysize;
+	uint32_t tmp_shadowtypesize = deserialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
+	begin += tmp_shadowtypesize;
+	begin += INSWITCH_PREV_BYTES; // the first bytes of inswitch_hdr
+	begin += sizeof(uint16_t); // inswitch_hdr.idx
+	begin += CLONE_BYTES; // clone_hdr
 }
 
 // APIs

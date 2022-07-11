@@ -77,10 +77,12 @@ void run_warmuper() {
 
 		tmpkey = iter->key();
 		if (iter->type() == uint8_t(packet_type_t::PUTREQ)) { // update or insert
-			tmpval = iter->val();
-			INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
+			//tmpval = iter->val();
+			//INVARIANT(tmpval.val_length <= val_t::SWITCH_MAX_VALLEN);
+			//warmup_request_t req(tmpkey, tmpval);
 
-			warmup_request_t req(tmpkey, tmpval);
+			warmup_request_t req(tmpkey);
+
 			req_size = req.serialize(buf, MAX_BUFSIZE);
 #ifdef DUMP_BUF
 			dump_buf(buf, req_size);

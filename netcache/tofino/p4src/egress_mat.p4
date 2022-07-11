@@ -184,6 +184,38 @@ table lastclone_lastscansplit_tbl {
 
 // Stage 9
 
+action update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(switchos_sid, reflector_port) {
+	modify_field(op_hdr.optype, NETCACHE_WARMUPREQ_INSWITCH_POP);
+	modify_field(shadowtype_hdr.shadowtype, NETCACHE_WARMUPREQ_INSWITCH_POP);
+	modify_field(udp_hdr.dstPort, reflector_port);
+	modify_field(clone_hdr.clonenum_for_pktloss, 3); // 3 ACKs (drop w/ 3 -> clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> drop and clone for WARMUPACK to client)
+
+	add_header(clone_hdr); // NOTE: clone_hdr.server_sid has been set in prepare_for_cachepop_tbl
+
+	//modify_field(eg_intr_md.egress_port, port); // set eport to switchos
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
+}
+
+action forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(switchos_sid) {
+	subtract_from_field(clone_hdr.clonenum_for_pktloss, 1);
+
+	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
+}
+
+action update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(client_sid) {
+	modify_field(op_hdr.optype, WARMUPACK);
+	// udp.srcport will be set as server_worker_port_start in update_ipmac_srcport_tbl
+	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
+
+	remove_header(shadowtype_hdr);
+	remove_header(inswitch_hdr);
+	remove_header(clone_hdr);
+
+	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
+	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
+}
+
 action update_getreq_inswitch_to_getreq() {
 	modify_field(op_hdr.optype, GETREQ);
 
@@ -412,6 +444,9 @@ table eg_port_forward_tbl {
 		clone_hdr.server_sid: exact;
 	}
 	actions {
+		update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack;
+		forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack;
+		update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring;
 		update_getreq_inswitch_to_getreq;
 		update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq;
 		forward_netcache_getreq_pop_clone_for_pktloss_and_getreq;
@@ -497,7 +532,7 @@ table update_ipmac_srcport_tbl {
 
 // NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
 /*
-// CACHE_POP_INSWITCH_ACK, GETREQ (cloned by NETCACHE_GETREQ_POP)
+// CACHE_POP_INSWITCH_ACK, GETREQ (cloned by NETCACHE_GETREQ_POP), WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP)
 action update_onlyop_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 1(debug_hdr)
 	//modify_field(udp_hdr.hdrlen, 27);
@@ -554,6 +589,13 @@ action update_ophdr_clonehdr_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 7(clonehdr)
 	modify_field(udp_hdr.hdrlen, 33);
 	modify_field(ipv4_hdr.totalLen, 53);
+}
+
+// NETCACHE_WARMUPREQ_INSWITCH_POP
+action update_ophdr_inswitchhdr_clonehdr_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 24(inswitchhdr) + 7(clonehdr)
+	modify_field(udp_hdr.hdrlen, 59);
+	modify_field(ipv4_hdr.totalLen, 79);
 }
 */
 

@@ -481,9 +481,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 1*client_physical_num=2 < 1*8=8 < 32)
+            # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 2*client_physical_num=4 < 2*8=16 < 32)
             print "Configuring prepare_for_cachehit_tbl"
-            for tmpoptype in [GETREQ]:
+            for tmpoptype in [GETREQ, WARMUPREQ]:
                 for tmp_client_physical_idx in range(client_physical_num):
                     matchspec0 = netcache_prepare_for_cachehit_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
@@ -530,7 +530,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
 
-            # Table: ig_port_forward_tbl (default: nop; size: 6)
+            # Table: ig_port_forward_tbl (default: nop; size: 7)
             print "Configuring ig_port_forward_tbl"
             matchspec0 = netcache_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ)
@@ -549,6 +549,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         op_hdr_optype = SCANREQ)
                 self.client.ig_port_forward_tbl_table_add_with_update_scanreq_to_scanreq_split(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netcache_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = WARMUPREQ)
+            self.client.ig_port_forward_tbl_table_add_with_update_warmupreq_to_netcache_warmupreq_inswitch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline
 
@@ -587,7 +591,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: save_client_udpport_tbl (default: nop; size: 4)
             print "Configuring save_client_udpport_tbl"
-            for tmpoptype in[GETREQ_INSWITCH]:
+            for tmpoptype in[GETREQ_INSWITCH, NETCACHE_WARMUPREQ_INSWITCH]:
                 matchspec0 = netcache_save_client_udpport_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype)
                 self.client.save_client_udpport_tbl_table_add_with_save_client_udpport(\
@@ -943,17 +947,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 9
 
-            # Table: lastclone_lastscansplit_tbl (default: reset_is_lastclone_lastscansplit; size: 1/2)
+            # Table: lastclone_lastscansplit_tbl (default: reset_is_lastclone_lastscansplit; size: 2/3)
             print "Configuring lastclone_lastscansplit_tbl"
             if RANGE_SUPPORT == False:
-                for tmpoptype in [NETCACHE_GETREQ_POP]:
+                for tmpoptype in [NETCACHE_GETREQ_POP, NETCACHE_WARMUPREQ_INSWITCH_POP]:
                     matchspec0 = netcache_lastclone_lastscansplit_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             clone_hdr_clonenum_for_pktloss = 0)
                     self.client.lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
             else:
-                for tmpoptype in [NETCACHE_GETREQ_POP]:
+                for tmpoptype in [NETCACHE_GETREQ_POP, NETCACHE_WARMUPREQ_INSWITCH_POP]:
                     matchspec0 = netcache_lastclone_lastscansplit_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             clone_hdr_clonenum_for_pktloss = 0,
@@ -976,7 +980,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             else:
                 self.configure_eg_port_forward_tbl_with_range()
 
-            # Table: update_pktlen_tbl (default: nop; 3*17+5 = 56)
+            # Table: update_pktlen_tbl (default: nop; 3*17+7 = 58)
             print "Configuring update_pktlen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
@@ -1024,6 +1028,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             frequency_iplen = 50
             op_clone_udplen = 33
             op_clone_iplen = 53
+            op_inswitch_clone_udplen = 59
+            op_inswitch_clone_iplen = 79
             matchspec0 = netcache_update_pktlen_tbl_match_spec_t(\
                     op_hdr_optype=CACHE_POP_INSWITCH_ACK,
                     vallen_hdr_vallen_start=0,
@@ -1067,8 +1073,22 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             actnspec0 = netcache_update_pktlen_action_spec_t(onlyop_udplen, onlyop_iplen)
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            matchspec0 = netcache_update_pktlen_tbl_match_spec_t(\
+                    op_hdr_optype=NETCACHE_WARMUPREQ_INSWITCH_POP,
+                    vallen_hdr_vallen_start=0,
+                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+            actnspec0 = netcache_update_pktlen_action_spec_t(op_inswitch_clone_udplen, op_inswitch_clone_iplen)
+            self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            matchspec0 = netcache_update_pktlen_tbl_match_spec_t(\
+                    op_hdr_optype=WARMUPACK,
+                    vallen_hdr_vallen_start=0,
+                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+            actnspec0 = netcache_update_pktlen_action_spec_t(onlyop_udplen, onlyop_iplen)
+            self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
+                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
-            # Table: update_ipmac_srcport_tbl (default: nop; 6*client_physical_num+12*server_physical_num+8=44 < 18*8+8=152 < 256)
+            # Table: update_ipmac_srcport_tbl (default: nop; 7*client_physical_num+12*server_physical_num+9=47 < 19*8+9=161 < 256)
             # NOTE: udp.dstport is updated by eg_port_forward_tbl (only required by switch2switchos)
             # NOTE: update_ipmac_srcport_tbl focues on src/dst ip/mac and udp.srcport
             print "Configuring update_ipmac_srcport_tbl"
@@ -1104,6 +1124,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 matchspec5 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
                         op_hdr_optype=convert_u16_to_i16(LOADACK),
                         eg_intr_md_egress_port = tmp_devport)
+                matchspec6 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
+                        op_hdr_optype=convert_u16_to_i16(WARMUPACK),
+                        eg_intr_md_egress_port = tmp_devport)
                 self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
@@ -1116,6 +1139,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec4, actnspec0)
                 self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
                         self.sess_hdl, self.dev_tgt, matchspec5, actnspec0)
+                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
+                        self.sess_hdl, self.dev_tgt, matchspec6, actnspec0)
             # for request from client to server, egress port has been set by partition_tbl in ingress pipeline
             for tmp_server_physical_idx in range(server_physical_num):
                 tmp_devport = self.server_devports[tmp_server_physical_idx]
@@ -1124,7 +1149,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = netcache_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, PUTREQ_SEQ, PUTREQ_SEQ_CACHED, DELREQ_SEQ, DELREQ_SEQ_CACHED, SCANREQ_SPLIT, WARMUPREQ, LOADREQ]:
+                for tmpoptype in [GETREQ, PUTREQ_SEQ, PUTREQ_SEQ_CACHED, DELREQ_SEQ, DELREQ_SEQ_CACHED, SCANREQ_SPLIT, LOADREQ]:
                     matchspec0 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)
@@ -1157,18 +1182,23 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec10 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
                     op_hdr_optype=convert_u16_to_i16(NETCACHE_GETREQ_POP),
                     eg_intr_md_egress_port=tmp_devport)
+            matchspec11 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
+                    op_hdr_optype=convert_u16_to_i16(NETCACHE_WARMUPREQ_INSWITCH_POP),
+                    eg_intr_md_egress_port=tmp_devport)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_switch2switchos(\
                     self.sess_hdl, self.dev_tgt, matchspec8, actnspec2)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_switch2switchos(\
                     self.sess_hdl, self.dev_tgt, matchspec9, actnspec2)
             self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_switch2switchos(\
                     self.sess_hdl, self.dev_tgt, matchspec10, actnspec2)
+            self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_switch2switchos(\
+                    self.sess_hdl, self.dev_tgt, matchspec11, actnspec2)
 
-            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*5=85)
+            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*4=68)
             print "Configuring add_and_remove_value_header_tbl"
             # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
-            for tmpoptype in [PUTREQ_SEQ, PUTREQ_SEQ_CACHED, GETRES, WARMUPREQ, LOADREQ]:
+            for tmpoptype in [PUTREQ_SEQ, PUTREQ_SEQ_CACHED, GETRES, LOADREQ]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                     if i == 0:
                         vallen_start = 0
@@ -1249,6 +1279,49 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             for tmp_client_sid in tmp_client_sids:
                                 for is_lastclone_for_pktloss in lastclone_list:
                                     for tmp_server_sid in tmp_server_sids: # Only work for NETCACHE_GETREQ_POP
+                                        # is_hot=0, is_report=0, is_latest=0, is_deleted=0, is_lastclone_for_pktloss=0, tmp_server_sid=0 for NETCACHE_WARMUPREQ_INSWITCH
+                                        if is_hot == 0 and is_report == 0 and is_latest == 0 and is_deleted == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
+                                            # size: 2*client_physical_num=4 < 2*8=16
+                                            matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = NETCACHE_WARMUPREQ_INSWITCH,
+                                                inswitch_hdr_is_cached = is_cached,
+                                                meta_is_hot = is_hot,
+                                                meta_is_report = is_report,
+                                                meta_is_latest = is_latest,
+                                                meta_is_deleted = is_deleted,
+                                                #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                inswitch_hdr_client_sid = tmp_client_sid,
+                                                meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                clone_hdr_server_sid = tmp_server_sid)
+                                            # Update NETCACHE_WARMUP_INSWITCH as NETCACHE_WARMUP_INSWITCH_POP to switchos by cloning
+                                            actnspec0 = netcache_update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack_action_spec_t(self.reflector_sid, reflector_dp2cpserver_port)
+                                            self.client.eg_port_forward_tbl_table_add_with_update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                        # is_hot=0, is_report=0, is_latest=0, is_deleted=0, tmp_server_sid=0 for NETCACHE_WARMUPREQ_INSWITCH_POP
+                                        if is_hot == 0 and is_report == 0 and is_latest == 0 and is_deleted == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
+                                            # size: 4*client_physical_num=8 < 4*8=32
+                                            matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = NETCACHE_WARMUPREQ_INSWITCH_POP,
+                                                inswitch_hdr_is_cached = is_cached,
+                                                meta_is_hot = is_hot,
+                                                meta_is_report = is_report,
+                                                meta_is_latest = is_latest,
+                                                meta_is_deleted = is_deleted,
+                                                #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                inswitch_hdr_client_sid = tmp_client_sid,
+                                                meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                clone_hdr_server_sid = tmp_server_sid)
+                                            if is_lastclone_for_pktloss == 0:
+                                                # Forward NETCACHE_WARMUP_INSWITCH_POP to switchos and clone
+                                                actnspec0 = netcache_forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack_action_spec_t(self.reflector_sid)
+                                                self.client.eg_port_forward_tbl_table_add_with_forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            elif is_lastclone_for_pktloss == 1:
+                                                # Update NETCACHE_WARMUP_INSWITCH_POP as WARMUPACK to client by mirroring
+                                                # NOTE: WARMUPACK performs default action nop() to be forwarded to client
+                                                actnspec0 = netcache_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid)
+                                                self.client.eg_port_forward_tbl_table_add_with_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         # is_lastclone_for_pktloss should be 0 for GETREQ_INSWITCH
                                         if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and tmp_server_sid == 0:
                                             # size: 16*client_physical_num=64 < 16*8=128
@@ -1461,6 +1534,51 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for is_lastclone_for_pktloss in lastclone_list:
                                     for is_last_scansplit in [0, 1]:
                                         for tmp_server_sid in tmp_server_sids: # Only work for NETCACHE_GETREQ_POP and SCANREQ_SPLIT
+                                            # is_hot=0, is_report=0, is_latest=0, is_deleted=0, is_lastclone_for_pktloss=0, is_last_scansplit=0, tmp_server_sid=0 for NETCACHE_WARMUPREQ_INSWITCH
+                                            if is_hot == 0 and is_report == 0 and is_latest == 0 and is_deleted == 0 and is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
+                                                # size: 2*client_physical_num=4 < 2*8=16
+                                                matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = NETCACHE_WARMUPREQ_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_is_report = is_report,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    inswitch_hdr_client_sid = tmp_client_sid,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    meta_is_last_scansplit = is_last_scansplit,
+                                                    clone_hdr_server_sid = tmp_server_sid)
+                                                # Update NETCACHE_WARMUP_INSWITCH as NETCACHE_WARMUP_INSWITCH_POP to switchos by cloning
+                                                actnspec0 = netcache_update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack_action_spec_t(self.reflector_sid, reflector_dp2cpserver_port)
+                                                self.client.eg_port_forward_tbl_table_add_with_update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                            # is_hot=0, is_report=0, is_latest=0, is_deleted=0, is_last_scansplit=0, tmp_server_sid=0 for NETCACHE_WARMUPREQ_INSWITCH_POP
+                                            if is_hot == 0 and is_report == 0 and is_latest == 0 and is_deleted == 0 and is_last_scansplit == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
+                                                # size: 4*client_physical_num=8 < 4*8=32
+                                                matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = NETCACHE_WARMUPREQ_INSWITCH_POP,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_is_report = is_report,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    inswitch_hdr_client_sid = tmp_client_sid,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    meta_is_last_scansplit = is_last_scansplit,
+                                                    clone_hdr_server_sid = tmp_server_sid)
+                                                if is_lastclone_for_pktloss == 0:
+                                                    # Forward NETCACHE_WARMUP_INSWITCH_POP to switchos and clone
+                                                    actnspec0 = netcache_forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack_action_spec_t(self.reflector_sid)
+                                                    self.client.eg_port_forward_tbl_table_add_with_forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                elif is_lastclone_for_pktloss == 1:
+                                                    # Update NETCACHE_WARMUP_INSWITCH_POP as WARMUPACK to client by mirroring
+                                                    # NOTE: WARMUPACK performs default action nop() to be forwarded to client
+                                                    actnspec0 = netcache_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid)
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_lastclone_for_pktloss should be 0 for GETREQ_INSWITCH
                                             # is_last_scansplit and tmp_server_sid must be 0
                                             if is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
