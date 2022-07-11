@@ -535,7 +535,7 @@ void *run_server_evictserver(void *param) {
 
 	while (!transaction_running) {}
 
-	// process CACHE_EVICT packet <optype, key, vallen, value, result, seq, serveridx>
+	// process NETCACHE_CACHE_EVICT packet <optype, key, serveridx>
 	char recvbuf[MAX_BUFSIZE];
 	int recvsize = 0;
 	bool is_timeout = false;
@@ -548,45 +548,33 @@ void *run_server_evictserver(void *param) {
 			continue; // continue to check transaction_running
 		}
 
-		//printf("receive CACHE_EVICT from controller\n");
+		//printf("receive NETCACHE_CACHE_EVICT from controller\n");
 		//dump_buf(recvbuf, recvsize);
-		cache_evict_t *tmp_cache_evict_ptr;
-		packet_type_t optype = get_packet_type(recvbuf, recvsize);
-		tmp_cache_evict_ptr = new cache_evict_t(recvbuf, recvsize);
+		
+		netcache_cache_evict_t tmp_netcache_cache_evict(recvbuf, recvsize);
 
-		uint16_t tmp_serveridx = tmp_cache_evict_ptr->serveridx();
+		uint16_t tmp_serveridx = tmp_netcache_cache_evict.serveridx();
 		INVARIANT(tmp_serveridx == global_server_logical_idx);
-		//INVARIANT(server_cached_keyset_list[local_server_logical_idx].is_exist(tmp_cache_evict_ptr->key()));
-		if (!server_cached_keyset_list[local_server_logical_idx].is_exist(tmp_cache_evict_ptr->key())) {
-			printf("[ERROR] server %d-%d does not cache key %x whose expected server is %d\n",\
-					local_server_logical_idx, global_server_logical_idx, tmp_cache_evict_ptr->key().keyhihi,\
-					tmp_cache_evict_ptr->key().get_hashpartition_idx(switch_partition_count, server_total_logical_num));
-			exit(-1);
-		}
 
-		// remove from cached keyset
-		server_cached_keyset_list[local_server_logical_idx].erase(tmp_cache_evict_ptr->key()); // NOTE: no contention
+		// keep atomicity
+		server_mutex_for_keyset_list[local_server_logical_idx].lock();
+		// NETCACHE_CACHE_EVICT's key must in beingcached keyset or cached keyset
+		INVARIANT((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) || \
+				(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyset_list[local_server_logical_idx].end()));
+		// remove key from beingcached/cached/beingupdated keyset
+		server_beingcached_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
+		server_cached_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
+		server_beingupdated_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
+		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 
-		// update in-memory KVS if necessary
-		// NOTE: we need to check seq to avoid from overwriting normal data
-		if (tmp_cache_evict_ptr->stat()) { // put
-			db_wrappers[local_server_logical_idx].put(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->val(), tmp_cache_evict_ptr->seq(), true);
-		}
-		else { // del
-			db_wrappers[local_server_logical_idx].remove(tmp_cache_evict_ptr->key(), tmp_cache_evict_ptr->seq(), true);
-		}
-
-		// send CACHE_EVICT_ACK to controller.evictserver.evictclient
-		cache_evict_ack_t tmp_cache_evict_ack(tmp_cache_evict_ptr->key());
-		int sendsize = tmp_cache_evict_ack.serialize(sendbuf, MAX_BUFSIZE);
-		//printf("send CACHE_EVICT_ACK to controller\n");
+		// send NETCACHE_CACHE_EVICT_ACK to controller.evictserver.evictclient
+		netcache_cache_evict_ack_t tmp_netcache_cache_evict_ack(tmp_netcache_cache_evict.key(), global_server_logical_idx);
+		int sendsize = tmp_netcache_cache_evict_ack.serialize(sendbuf, MAX_BUFSIZE);
+		//printf("send NETCACHE_CACHE_EVICT_ACK to controller\n");
 		//dump_buf(sendbuf, sendsize);
 		udpsendto(server_evictserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &controller_evictclient_addr, controller_evictclient_addrlen, "server.evictserver");
-
-		// free CACHE_EVIT
-		delete tmp_cache_evict_ptr;
-		tmp_cache_evict_ptr = NULL;
 	}
+
 	close(server_evictserver_udpsock_list[local_server_logical_idx]);
 	pthread_exit(nullptr);
 }

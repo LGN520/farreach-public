@@ -69,6 +69,8 @@ typedef NetcacheCachePopAck<netreach_key_t, val_t> netcache_cache_pop_ack_t;
 typedef NetcacheCachePopFinish<netreach_key_t> netcache_cache_pop_finish_t;
 typedef NetcacheCachePopFinishAck<netreach_key_t> netcache_cache_pop_finish_ack_t;
 typedef NetcacheWarmupRequestInswitchPop<netreach_key_t> netcache_warmupreq_inswitch_pop_t;
+typedef NetcacheCacheEvict<netreach_key_t> netcache_cache_evict_t;
+typedef NetcacheCacheEvictAck<netreach_key_t> netcache_cache_evict_ack_t;
 
 /*
  * Constants

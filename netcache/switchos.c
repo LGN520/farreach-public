@@ -316,34 +316,6 @@ void *run_switchos_popworker(void *param) {
 				exit(-1);
 			}
 
-			// fetch value from correpsonding server by controller
-			netcache_cache_pop_t tmp_netcache_cache_pop(tmp_netcache_getreq_pop_ptr->key(), uint16_t(tmp_global_server_logical_idx));
-			pktsize = tmp_netcache_cache_pop.serialize(pktbuf, MAX_BUFSIZE);
-			val_t tmp_val;
-			uint32_t tmp_seq = 0;
-			bool tmp_stat = false;
-			while (true) {
-				udpsendto(switchos_popworker_popclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "switchos.popworker.popclient_for_controller");
-
-				bool is_timeout = udprecvfrom(switchos_popworker_popclient_for_controller_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.popclient_for_controller");
-				if (unlikely(is_timeout)) {
-					continue;
-				}
-				else {
-					netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(ackbuf, ack_recvsize);
-					if (unlikely(tmp_netcache_cache_pop_ack.key() != tmp_netcache_cache_pop.key())) {
-						printf("unmatched key of NETCACHE_CACHE_POP_ACK!\n");
-						continue;
-					}
-					else {
-						tmp_val = tmp_netcache_cache_pop_ack.val();
-						tmp_seq = tmp_netcache_cache_pop_ack.seq();
-						tmp_stat = tmp_netcache_cache_pop_ack.stat();
-						break;
-					}
-				}
-			}
-
 			// find corresponding pipeline idx
 			int tmp_server_physical_idx = -1;
 			for (int i = 0; i < server_physical_num; i++) {
@@ -446,80 +418,7 @@ void *run_switchos_popworker(void *param) {
 					exit(-1);
 				}
 
-				// set valid = 3 by ptf channel (cannot perform it in data plane due to stateful ALU API limitation)
-				//ptf_sendsize = serialize_setvalid3(ptfbuf, switchos_evictidx, tmp_pipeidx);
-				//udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
-				//udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
-				//INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID3_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
-				
-				// set valid = 3 through reflector
-				while (true) {
-					setvalid_inswitch_t tmp_setvalid_req(cur_evictkey, switchos_evictidx, 3);
-					pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
-					udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
-
-					bool is_timeout = false;
-					is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
-					if (unlikely(is_timeout)) {
-						continue;
-					}
-
-					setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
-					INVARIANT(tmp_setvalid_rsp.key() == cur_evictkey);
-					break;
-				}
-				
-				// load evicted data of victim from data plane and set valid=3 at the same time for availability of latest value
-				while (true) {
-					//printf("send CACHE_EVICT_LOADDATA_INSWITCH to reflector\n");
-					cache_evict_loaddata_inswitch_t tmp_cache_evict_loaddata_inswitch_req(cur_evictkey, switchos_evictidx);
-					pktsize = tmp_cache_evict_loaddata_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
-					udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
-
-					bool is_timeout = false;
-					is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
-					if (unlikely(is_timeout)) {
-						continue;
-					}
-
-					cache_evict_loaddata_inswitch_ack_t tmp_cache_evict_loaddata_inswitch_ack(ackbuf, ack_recvsize);
-					INVARIANT(tmp_cache_evict_loaddata_inswitch_ack.key() == cur_evictkey);
-					switchos_evictvalue = tmp_cache_evict_loaddata_inswitch_ack.val();
-					switchos_evictseq = tmp_cache_evict_loaddata_inswitch_ack.seq();
-					switchos_evictstat = tmp_cache_evict_loaddata_inswitch_ack.stat();
-					break;
-				}
-
 				//CUR_TIME(evict_load_t2);
-
-				// switchos.popworker.evictclient sends CACHE_EVICT to controller.evictserver
-				
-				//CUR_TIME(evict_sendrecv_t1);
-				cache_evict_t tmp_cache_evict(cur_evictkey, \
-						//val_t(switchos_evictvalbytes, switchos_evictvallen),
-						switchos_evictvalue, \
-						switchos_evictseq, switchos_evictstat, \
-						switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_evictidx]);
-				pktsize = tmp_cache_evict.serialize(pktbuf, MAX_BUFSIZE);
-
-				while (true) {
-					//printf("send CACHE_EVICT to controller\n");
-					//dump_buf(pktbuf, pktsize);
-					udpsendto(switchos_popworker_evictclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_evictserver_addr, controller_evictserver_addrlen, "switchos.popworker.evictclient_for_controller");
-
-					// wait for CACHE_EVICT_ACK from controller.evictserver
-					// NOTE: no concurrent CACHE_EVICTs -> use request-and-reply manner to wait for entire eviction workflow
-					bool is_timeout = udprecvfrom(switchos_popworker_evictclient_for_controller_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient_for_controller");
-					if (unlikely(is_timeout)) {
-						continue;
-					}
-					else {
-						cache_evict_ack_t tmp_cache_evict_ack(ackbuf, ack_recvsize);
-						INVARIANT(tmp_cache_evict_ack.key() == cur_evictkey);
-						break;
-					}
-				}
-				//CUR_TIME(evict_sendrecv_t2);
 
 				//CUR_TIME(evict_remove_t1);
 				// remove evicted data from cache_lookup_tbl
@@ -530,6 +429,30 @@ void *run_switchos_popworker(void *param) {
 				INVARIANT(*((int *)ptfbuf) == SWITCHOS_REMOVE_CACHE_LOOKUP_ACK); // wait for SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
 				//CUR_TIME(evict_remove_t2);
 
+				// switchos.popworker.evictclient sends CACHE_EVICT to controller.evictserver
+				
+				//CUR_TIME(evict_sendrecv_t1);
+				netcache_cache_evict_t tmp_netcache_cache_evict(cur_evictkey, tmp_global_server_logical_idx);
+				pktsize = tmp_netcache_cache_evict.serialize(pktbuf, MAX_BUFSIZE);
+				while (true) {
+					//printf("send NETCACHE_CACHE_EVICT to controller.evictserver\n");
+					//dump_buf(pktbuf, pktsize);
+					udpsendto(switchos_popworker_evictclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_evictserver_addr, controller_evictserver_addrlen, "switchos.popworker.evictclient_for_controller");
+
+					// wait for NETCACHE_CACHE_EVICT_ACK from controller.evictserver
+					// NOTE: no concurrent CACHE_EVICTs -> use request-and-reply manner to wait for entire eviction workflow
+					bool is_timeout = udprecvfrom(switchos_popworker_evictclient_for_controller_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient_for_controller");
+					if (unlikely(is_timeout)) {
+						continue;
+					}
+					else {
+						netcache_cache_evict_ack_t tmp_cache_evict_ack(ackbuf, ack_recvsize);
+						INVARIANT(tmp_cache_evict_ack.key() == cur_evictkey);
+						break;
+					}
+				}
+				//CUR_TIME(evict_sendrecv_t2);
+
 				//printf("Evict %x to %x\n", cur_evictkey.keyhihi, tmp_cache_pop_ptr->key().keyhihi);
 
 				// set freeidx as evictidx for cache popluation later
@@ -539,6 +462,12 @@ void *run_switchos_popworker(void *param) {
 				switchos_cached_keyidx_map.erase(cur_evictkey);
 				switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_evictidx] = netreach_key_t();
 				switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_evictidx] = -1;
+
+				// update popserver.cachedkeyset atomically
+				mutex_for_cached_keyset.lock();
+				INVARIANT(switchos_popserver_cached_keyset.find(cur_evictkey) != switchos_popserver_cached_keyset.end());
+				switchos_popserver_cached_keyset.erase(cur_evictkey);
+				mutex_for_cached_keyset.unlock();
 
 				//CUR_TIME(evict_total_t2);
 
@@ -568,6 +497,34 @@ void *run_switchos_popworker(void *param) {
 
 			INVARIANT(switchos_freeidx >= 0 && switchos_freeidx < switch_kv_bucket_num);
 			//printf("[switchos.popworker] switchos_perpipeline_cached_empty_index[%d]: %d, switchos_freeidx: %d\n", tmp_pipeidx, int(switchos_perpipeline_cached_empty_index[tmp_pipeidx]), int(switchos_freeidx)); // TMPDEBUG
+
+			// fetch value from correpsonding server by controller
+			netcache_cache_pop_t tmp_netcache_cache_pop(tmp_netcache_getreq_pop_ptr->key(), uint16_t(tmp_global_server_logical_idx));
+			pktsize = tmp_netcache_cache_pop.serialize(pktbuf, MAX_BUFSIZE);
+			val_t tmp_val;
+			uint32_t tmp_seq = 0;
+			bool tmp_stat = false;
+			while (true) {
+				udpsendto(switchos_popworker_popclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "switchos.popworker.popclient_for_controller");
+
+				bool is_timeout = udprecvfrom(switchos_popworker_popclient_for_controller_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.popclient_for_controller");
+				if (unlikely(is_timeout)) {
+					continue;
+				}
+				else {
+					netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(ackbuf, ack_recvsize);
+					if (unlikely(tmp_netcache_cache_pop_ack.key() != tmp_netcache_cache_pop.key())) {
+						printf("unmatched key of NETCACHE_CACHE_POP_ACK!\n");
+						continue;
+					}
+					else {
+						tmp_val = tmp_netcache_cache_pop_ack.val();
+						tmp_seq = tmp_netcache_cache_pop_ack.seq();
+						tmp_stat = tmp_netcache_cache_pop_ack.stat();
+						break;
+					}
+				}
+			}
 
 			// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
 			cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_netcache_getreq_pop_ptr->key(), tmp_val, tmp_seq, switchos_freeidx, tmp_stat);

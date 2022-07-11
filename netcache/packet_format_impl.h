@@ -2050,6 +2050,40 @@ void NetcacheWarmupRequestInswitchPop<key_t>::deserialize(const char * data, uin
 	begin += CLONE_BYTES; // clone_hdr
 }
 
+// NetcacheCacheEvict (only used in end-hosts)
+
+template<class key_t>
+NetcacheCacheEvict<key_t>::NetcacheCacheEvict(key_t key, uint16_t serveridx)
+	: NetcacheCachePop<key_t>(key, serveridx)
+{
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_EVICT);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t>
+NetcacheCacheEvict<key_t>::NetcacheCacheEvict(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_EVICT);
+	INVARIANT(this->_serveridx >= 0);
+}
+
+// NetcacheCacheEvictAck (only used in end-hosts)
+
+template<class key_t>
+NetcacheCacheEvictAck<key_t>::NetcacheCacheEvictAck(key_t key, uint16_t serveridx)
+	: NetcacheCachePop<key_t>(key, serveridx)
+{
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_EVICT_ACK);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t>
+NetcacheCacheEvictAck<key_t>::NetcacheCacheEvictAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_EVICT_ACK);
+	INVARIANT(this->_serveridx >= 0);
+}
+
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
 	INVARIANT(maxsize >= sizeof(optype_t));

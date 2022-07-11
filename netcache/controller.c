@@ -205,6 +205,7 @@ void *run_controller_popserver(void *param) {
 			printf("[controller.popserver] invalid packet type: %x\n", optype_t(tmp_optype));
 			exit(-1);
 		}
+		INVARIANT(tmp_serveridx >= 0 && tmp_serveridx < server_total_logical_num_for_controller);
 
 		// find corresponding server X
 		int tmp_server_physical_idx = -1;
@@ -268,7 +269,7 @@ void *run_controller_evictserver(void *param) {
 
 	while (!controller_running) {}
 
-	// process CACHE_EVICT/_CASE2 packet <optype, key, vallen, value, result, seq, serveridx>
+	// process NETCACHE_CACHE_EVICT packet <optype, key, serveridx>
 	char buf[MAX_BUFSIZE];
 	int recvsize = 0;
 	while (controller_running) {
@@ -282,15 +283,8 @@ void *run_controller_evictserver(void *param) {
 		udprecvfrom(controller_evictserver_udpsock, buf, MAX_BUFSIZE, 0, &switchos_evictclient_addr, &switchos_evictclient_addrlen, recvsize, "controller.evictserver");
 
 		// set dstaddr for the corresponding server
-		cache_evict_t *tmp_cache_evict_ptr;
-		packet_type_t optype = get_packet_type(buf, recvsize);
-		if (optype == packet_type_t::CACHE_EVICT) {
-			tmp_cache_evict_ptr = new cache_evict_t(buf, recvsize);
-		}
-		else if (optype == packet_type_t::CACHE_EVICT_CASE2) {
-			tmp_cache_evict_ptr = new cache_evict_case2_t(buf, recvsize);
-		}
-		uint16_t tmp_global_server_logical_idx = tmp_cache_evict_ptr->serveridx();
+		netcache_cache_evict_t tmp_netcache_cache_evict(buf, recvsize);
+		uint16_t tmp_global_server_logical_idx = tmp_netcache_cache_evict.serveridx();
 		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < server_total_logical_num_for_controller);
 		int tmp_server_physical_idx = -1;
 		for (int i = 0; i < server_physical_num; i++) {
@@ -302,21 +296,22 @@ void *run_controller_evictserver(void *param) {
 			}
 		}
 		INVARIANT(tmp_server_physical_idx != -1);
+
 		memset(&server_evictserver_addr, 0, sizeof(server_evictserver_addr));
 		set_sockaddr(server_evictserver_addr, inet_addr(server_ip_for_controller_list[tmp_server_physical_idx]), server_evictserver_port_start + tmp_global_server_logical_idx);
-		delete tmp_cache_evict_ptr;
-		tmp_cache_evict_ptr = NULL;
 		
-		//printf("receive CACHE_EVICT from switchos and send to server\n");
+		//printf("receive NETCACHE_CACHE_EVICT from switchos and send to server\n");
 		//dump_buf(buf, recvsize);
 		udpsendto(controller_evictserver_evictclient_udpsock, buf, recvsize, 0, &server_evictserver_addr, server_evictserver_addrlen, "controller.evictserver.evictclient");
 
-		// NOTE: timeout-and-retry of CACHE_EVICT is handled by switchos.popworker.evictclient (cover entire eviction workflow)
+		// NOTE: timeout-and-retry of NETCACHE_CACHE_EVICT is handled by switchos.popworker.evictclient (cover entire eviction workflow)
 		bool is_timeout = udprecvfrom(controller_evictserver_evictclient_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.evictserver.evictclient");
 		if (!is_timeout) {
-			// send CACHE_EVICT_ACK to switchos.popworker.evictclient
-			//printf("receive CACHE_EVICT_ACK from server and send to switchos\n");
+			// send NETCACHE_CACHE_EVICT_ACK to switchos.popworker.evictclient
+			//printf("receive NETCACHE_CACHE_EVICT_ACK from server and send to switchos\n");
 			//dump_buf(buf, recvsize);
+			netcache_cache_evict_ack_t tmp_netcache_cache_evict_ack(buf, recvsize);
+			INVARIANT(tmp_netcache_cache_evict_ack.key() == tmp_netcache_cache_evict.key());
 			udpsendto(controller_evictserver_udpsock, buf, recvsize, 0, &switchos_evictclient_addr, switchos_evictclient_addrlen, "controller.evictserver");
 		}
 	}
