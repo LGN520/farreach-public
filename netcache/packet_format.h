@@ -619,6 +619,7 @@ class SetvalidInswitchAck : public GetRequest<key_t> { // ophdr
 template<class key_t>
 class NetcacheGetRequestPop : public GetRequest<key_t> { // ophdr + clonehdr
 	public:
+		NetcacheGetRequestPop(key_t key);
 		NetcacheGetRequestPop(const char * data, uint32_t recvsize);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);

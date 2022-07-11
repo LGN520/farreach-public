@@ -123,6 +123,7 @@ void *run_reflector_dp2cpserver(void *param) {
 					break;
 				}
 			case packet_type::NETCACHE_GETREQ_POP:
+			case packet_type::NETCACHE_WARMUPREQ_INSWITCH_POP:
 				{
 					udpsendto(reflector_dp2cpserver_popclient_udpsock, buf, recvsize, 0, &switchos_popserver_addr, switchos_popserver_addrlen, "reflector.dp2cpserver.popclient");
 					break;

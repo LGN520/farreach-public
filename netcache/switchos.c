@@ -181,9 +181,23 @@ void *run_switchos_popserver(void *param) {
 	while (switchos_running) {
 		udprecvfrom(switchos_popserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "switchos.popserver");
 
-		//printf("receive NETCACHE_GETREQ_POP from reflector\n");
+		//printf("receive NETCACHE_GETREQ_POP/NETCACHE_WARMUPREQ_INSWITCH_POP from reflector\n");
 		//dump_buf(buf, recvsize);
-		netcache_getreq_pop_t *tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(buf, recvsize); // freed by switchos.popworker if the key is not cached
+		
+		netcache_getreq_pop_t *tmp_netcache_getreq_pop_ptr = NULL; // freed by switchos.popworker if the key is not cached
+		packet_type_t tmp_optype = get_packet_type(buf, recvsize);
+		if (tmp_optype == packet_type_t::NETCACHE_WARMUPREQ_INSWITCH_POP) {
+			netcache_warmupreq_inswitch_pop_t tmp_netcache_warmupreq_inswitch_pop(buf, recvsize);
+			tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(tmp_netcache_warmupreq_inswitch_pop.key());
+		}
+		else if (tmp_optype == packet_type_t::NETCACHE_GETREQ_POP) {
+			tmp_netcache_getreq_pop_ptr = new netcache_getreq_pop_t(buf, recvsize); // freed by switchos.popworker if the key is not cached
+		}
+		else {
+			printf("[switchos.popserver] invalid pkttype: %x\n", optype_t(tmp_optype));
+			exit(-1);
+		}
+		INVARIANT(tmp_netcache_getreq_pop_ptr != NULL);
 
 		bool is_cached = false;
 		mutex_for_cached_keyset.lock();

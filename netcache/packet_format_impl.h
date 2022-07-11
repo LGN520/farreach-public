@@ -1851,6 +1851,13 @@ uint32_t SetvalidInswitchAck<key_t>::serialize(char * const data, uint32_t max_s
 // NetcacheGetRequestPop
 
 template<class key_t>
+NetcacheGetRequestPop<key_t>::NetcacheGetRequestPop(key_t key)
+	: GetRequest<key_t>(key)
+{
+	this->_type = packet_type_t::NETCACHE_GETREQ_POP;
+}
+
+template<class key_t>
 NetcacheGetRequestPop<key_t>::NetcacheGetRequestPop(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == packet_type_t::NETCACHE_GETREQ_POP);
