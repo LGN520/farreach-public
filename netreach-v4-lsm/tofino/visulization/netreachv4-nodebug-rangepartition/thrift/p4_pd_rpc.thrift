@@ -259,6 +259,7 @@ struct netbufferv4_access_deleted_tbl_match_spec_t {
   2: required byte inswitch_hdr_is_cached;
   3: required byte validvalue_hdr_validvalue;
   4: required byte meta_is_latest;
+  5: required byte stat_hdr_stat;
 }
 
 struct netbufferv4_access_latest_tbl_match_spec_t {

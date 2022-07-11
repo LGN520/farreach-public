@@ -3587,8 +3587,12 @@ void netbufferv4_access_deleted_tbl_match_spec_t::__set_meta_is_latest(const int
   this->meta_is_latest = val;
 }
 
-const char* netbufferv4_access_deleted_tbl_match_spec_t::ascii_fingerprint = "FA15C7D77CA497D65C649057DED15F08";
-const uint8_t netbufferv4_access_deleted_tbl_match_spec_t::binary_fingerprint[16] = {0xFA,0x15,0xC7,0xD7,0x7C,0xA4,0x97,0xD6,0x5C,0x64,0x90,0x57,0xDE,0xD1,0x5F,0x08};
+void netbufferv4_access_deleted_tbl_match_spec_t::__set_stat_hdr_stat(const int8_t val) {
+  this->stat_hdr_stat = val;
+}
+
+const char* netbufferv4_access_deleted_tbl_match_spec_t::ascii_fingerprint = "1A64E2C212329F011BFE09BD9335DFDC";
+const uint8_t netbufferv4_access_deleted_tbl_match_spec_t::binary_fingerprint[16] = {0x1A,0x64,0xE2,0xC2,0x12,0x32,0x9F,0x01,0x1B,0xFE,0x09,0xBD,0x93,0x35,0xDF,0xDC};
 
 uint32_t netbufferv4_access_deleted_tbl_match_spec_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -3605,6 +3609,7 @@ uint32_t netbufferv4_access_deleted_tbl_match_spec_t::read(::apache::thrift::pro
   bool isset_inswitch_hdr_is_cached = false;
   bool isset_validvalue_hdr_validvalue = false;
   bool isset_meta_is_latest = false;
+  bool isset_stat_hdr_stat = false;
 
   while (true)
   {
@@ -3646,6 +3651,14 @@ uint32_t netbufferv4_access_deleted_tbl_match_spec_t::read(::apache::thrift::pro
           xfer += iprot->skip(ftype);
         }
         break;
+      case 5:
+        if (ftype == ::apache::thrift::protocol::T_BYTE) {
+          xfer += iprot->readByte(this->stat_hdr_stat);
+          isset_stat_hdr_stat = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -3662,6 +3675,8 @@ uint32_t netbufferv4_access_deleted_tbl_match_spec_t::read(::apache::thrift::pro
   if (!isset_validvalue_hdr_validvalue)
     throw TProtocolException(TProtocolException::INVALID_DATA);
   if (!isset_meta_is_latest)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
+  if (!isset_stat_hdr_stat)
     throw TProtocolException(TProtocolException::INVALID_DATA);
   return xfer;
 }
@@ -3687,6 +3702,10 @@ uint32_t netbufferv4_access_deleted_tbl_match_spec_t::write(::apache::thrift::pr
   xfer += oprot->writeByte(this->meta_is_latest);
   xfer += oprot->writeFieldEnd();
 
+  xfer += oprot->writeFieldBegin("stat_hdr_stat", ::apache::thrift::protocol::T_BYTE, 5);
+  xfer += oprot->writeByte(this->stat_hdr_stat);
+  xfer += oprot->writeFieldEnd();
+
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   oprot->decrementRecursionDepth();
@@ -3699,6 +3718,7 @@ void swap(netbufferv4_access_deleted_tbl_match_spec_t &a, netbufferv4_access_del
   swap(a.inswitch_hdr_is_cached, b.inswitch_hdr_is_cached);
   swap(a.validvalue_hdr_validvalue, b.validvalue_hdr_validvalue);
   swap(a.meta_is_latest, b.meta_is_latest);
+  swap(a.stat_hdr_stat, b.stat_hdr_stat);
 }
 
 netbufferv4_access_deleted_tbl_match_spec_t::netbufferv4_access_deleted_tbl_match_spec_t(const netbufferv4_access_deleted_tbl_match_spec_t& other67) {
@@ -3706,12 +3726,14 @@ netbufferv4_access_deleted_tbl_match_spec_t::netbufferv4_access_deleted_tbl_matc
   inswitch_hdr_is_cached = other67.inswitch_hdr_is_cached;
   validvalue_hdr_validvalue = other67.validvalue_hdr_validvalue;
   meta_is_latest = other67.meta_is_latest;
+  stat_hdr_stat = other67.stat_hdr_stat;
 }
 netbufferv4_access_deleted_tbl_match_spec_t& netbufferv4_access_deleted_tbl_match_spec_t::operator=(const netbufferv4_access_deleted_tbl_match_spec_t& other68) {
   op_hdr_optype = other68.op_hdr_optype;
   inswitch_hdr_is_cached = other68.inswitch_hdr_is_cached;
   validvalue_hdr_validvalue = other68.validvalue_hdr_validvalue;
   meta_is_latest = other68.meta_is_latest;
+  stat_hdr_stat = other68.stat_hdr_stat;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_deleted_tbl_match_spec_t& obj) {
@@ -3721,6 +3743,7 @@ std::ostream& operator<<(std::ostream& out, const netbufferv4_access_deleted_tbl
   out << ", " << "inswitch_hdr_is_cached=" << to_string(obj.inswitch_hdr_is_cached);
   out << ", " << "validvalue_hdr_validvalue=" << to_string(obj.validvalue_hdr_validvalue);
   out << ", " << "meta_is_latest=" << to_string(obj.meta_is_latest);
+  out << ", " << "stat_hdr_stat=" << to_string(obj.stat_hdr_stat);
   out << ")";
   return out;
 }
@@ -16782,8 +16805,8 @@ void netbufferv4_access_deleted_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_deleted_tbl_entry_desc_t::ascii_fingerprint = "6D50264926377C0338B361FCE2733965";
-const uint8_t netbufferv4_access_deleted_tbl_entry_desc_t::binary_fingerprint[16] = {0x6D,0x50,0x26,0x49,0x26,0x37,0x7C,0x03,0x38,0xB3,0x61,0xFC,0xE2,0x73,0x39,0x65};
+const char* netbufferv4_access_deleted_tbl_entry_desc_t::ascii_fingerprint = "1DFE3CAE747E2214305356681CE0229E";
+const uint8_t netbufferv4_access_deleted_tbl_entry_desc_t::binary_fingerprint[16] = {0x1D,0xFE,0x3C,0xAE,0x74,0x7E,0x22,0x14,0x30,0x53,0x56,0x68,0x1C,0xE0,0x22,0x9E};
 
 uint32_t netbufferv4_access_deleted_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 

@@ -56,6 +56,7 @@ typedef struct p4_pd_netbufferv4_access_deleted_tbl_match_spec {
   uint8_t inswitch_hdr_is_cached;
   uint8_t validvalue_hdr_validvalue;
   uint8_t meta_is_latest;
+  uint8_t stat_hdr_stat;
 } p4_pd_netbufferv4_access_deleted_tbl_match_spec_t;
 
 typedef struct p4_pd_netbufferv4_access_latest_tbl_match_spec {

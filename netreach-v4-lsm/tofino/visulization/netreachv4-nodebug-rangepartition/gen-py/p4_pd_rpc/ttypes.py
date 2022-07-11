@@ -2610,6 +2610,7 @@ class netbufferv4_access_deleted_tbl_match_spec_t:
    - inswitch_hdr_is_cached
    - validvalue_hdr_validvalue
    - meta_is_latest
+   - stat_hdr_stat
   """
 
   thrift_spec = (
@@ -2618,13 +2619,15 @@ class netbufferv4_access_deleted_tbl_match_spec_t:
     (2, TType.BYTE, 'inswitch_hdr_is_cached', None, None, ), # 2
     (3, TType.BYTE, 'validvalue_hdr_validvalue', None, None, ), # 3
     (4, TType.BYTE, 'meta_is_latest', None, None, ), # 4
+    (5, TType.BYTE, 'stat_hdr_stat', None, None, ), # 5
   )
 
-  def __init__(self, op_hdr_optype=None, inswitch_hdr_is_cached=None, validvalue_hdr_validvalue=None, meta_is_latest=None,):
+  def __init__(self, op_hdr_optype=None, inswitch_hdr_is_cached=None, validvalue_hdr_validvalue=None, meta_is_latest=None, stat_hdr_stat=None,):
     self.op_hdr_optype = op_hdr_optype
     self.inswitch_hdr_is_cached = inswitch_hdr_is_cached
     self.validvalue_hdr_validvalue = validvalue_hdr_validvalue
     self.meta_is_latest = meta_is_latest
+    self.stat_hdr_stat = stat_hdr_stat
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -2655,6 +2658,11 @@ class netbufferv4_access_deleted_tbl_match_spec_t:
           self.meta_is_latest = iprot.readByte();
         else:
           iprot.skip(ftype)
+      elif fid == 5:
+        if ftype == TType.BYTE:
+          self.stat_hdr_stat = iprot.readByte();
+        else:
+          iprot.skip(ftype)
       else:
         iprot.skip(ftype)
       iprot.readFieldEnd()
@@ -2681,6 +2689,10 @@ class netbufferv4_access_deleted_tbl_match_spec_t:
       oprot.writeFieldBegin('meta_is_latest', TType.BYTE, 4)
       oprot.writeByte(self.meta_is_latest)
       oprot.writeFieldEnd()
+    if self.stat_hdr_stat is not None:
+      oprot.writeFieldBegin('stat_hdr_stat', TType.BYTE, 5)
+      oprot.writeByte(self.stat_hdr_stat)
+      oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()
 
@@ -2693,6 +2705,8 @@ class netbufferv4_access_deleted_tbl_match_spec_t:
       raise TProtocol.TProtocolException(message='Required field validvalue_hdr_validvalue is unset!')
     if self.meta_is_latest is None:
       raise TProtocol.TProtocolException(message='Required field meta_is_latest is unset!')
+    if self.stat_hdr_stat is None:
+      raise TProtocol.TProtocolException(message='Required field stat_hdr_stat is unset!')
     return
 
 
@@ -2702,6 +2716,7 @@ class netbufferv4_access_deleted_tbl_match_spec_t:
     value = (value * 31) ^ hash(self.inswitch_hdr_is_cached)
     value = (value * 31) ^ hash(self.validvalue_hdr_validvalue)
     value = (value * 31) ^ hash(self.meta_is_latest)
+    value = (value * 31) ^ hash(self.stat_hdr_stat)
     return value
 
   def __repr__(self):
