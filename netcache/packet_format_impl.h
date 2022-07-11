@@ -1922,6 +1922,40 @@ NetcacheCachePopAck<key_t, val_t>::NetcacheCachePopAck(const char * data, uint32
 	INVARIANT(this->_serveridx >= 0);
 }
 
+// NetcacheCachePopFinish (only used in end-hosts)
+
+template<class key_t>
+NetcacheCachePopFinish<key_t>::NetcacheCachePopFinish(key_t key, uint16_t serveridx)
+	: NetcacheCachePop<key_t>(key, serveridx)
+{
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP_FINISH);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t>
+NetcacheCachePopFinish<key_t>::NetcacheCachePopFinish(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_POP_FINISH);
+	INVARIANT(this->_serveridx >= 0);
+}
+
+// NetcacheCachePopFinishAck (only used in end-hosts)
+
+template<class key_t>
+NetcacheCachePopFinishAck<key_t>::NetcacheCachePopFinishAck(key_t key, uint16_t serveridx)
+	: NetcacheCachePop<key_t>(key, serveridx)
+{
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP_FINISH_ACK);
+	INVARIANT(serveridx >= 0);
+}
+
+template<class key_t>
+NetcacheCachePopFinishAck<key_t>::NetcacheCachePopFinishAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_CACHE_POP_FINISH_ACK);
+	INVARIANT(this->_serveridx >= 0);
+}
+
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
 	INVARIANT(maxsize >= sizeof(optype_t));

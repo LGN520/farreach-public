@@ -175,28 +175,60 @@ void *run_server_popserver(void *param) {
 		controller_popserver_popclient_addrlen = sizeof(struct sockaddr_in);
 	}
 
-	// receive NETCACHE_CACHE_POP from controller
-	netcache_cache_pop_t tmp_netcache_cache_pop(recvbuf, recvsize);
-	INVARIANT(tmp_netcache_cache_pop.serveridx() == global_server_logical_idx);
+	packet_type_t tmp_optype = get_packet_type(recvbuf, recvsize);
 
-	// keep atomicity
-	server_mutex_for_keyset_list[local_server_logical_idx].lock();
-	// NETCACHE_CACHE_POP's key must NOT in beingcached/cached/beingupdated keyset
-	INVARIANT((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_beingcached_keyset_list[local_server_logical_idx].end()) && \
-			(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_cached_keyset_list[local_server_logical_idx].end()) && \
-			(server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_beingupdated_keyset_list[local_server_logical_idx].end()));
-	// add key into beingcached keyset
-	server_beingcached_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop.key());
-	// get latest value
-	val_t tmp_val;
-	uint32_t tmp_seq = 0;
-	db_wrappers[local_server_logical_idx].get(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq);
-	server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+	if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP) {
+		// receive NETCACHE_CACHE_POP from controller
+		netcache_cache_pop_t tmp_netcache_cache_pop(recvbuf, recvsize);
+		INVARIANT(tmp_netcache_cache_pop.serveridx() == global_server_logical_idx);
 
-	// send NETCACHE_CACHE_POP_ACK to controller
-	netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq, global_server_logical_idx);
-	uint32_t pktsize = tmp_netcache_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
-	udpsendto(server_popserver_udpsock_list[local_server_logical_idx], buf, pktsize, 0, &controller_popserver_popclient_addr, controller_popserver_popclient_addrlen, "server.popserver");
+		// keep atomicity
+		server_mutex_for_keyset_list[local_server_logical_idx].lock();
+		// NETCACHE_CACHE_POP's key must NOT in beingcached/cached/beingupdated keyset
+		INVARIANT((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_beingcached_keyset_list[local_server_logical_idx].end()) && \
+				(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_cached_keyset_list[local_server_logical_idx].end()) && \
+				(server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_beingupdated_keyset_list[local_server_logical_idx].end()));
+		// add key into beingcached keyset
+		server_beingcached_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop.key());
+		// get latest value
+		val_t tmp_val;
+		uint32_t tmp_seq = 0;
+		db_wrappers[local_server_logical_idx].get(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq);
+		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+
+		// send NETCACHE_CACHE_POP_ACK to controller
+		netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(tmp_netcache_cache_pop.key(), tmp_val, tmp_seq, global_server_logical_idx);
+		uint32_t pktsize = tmp_netcache_cache_pop_ack.serialize(buf, MAX_BUFSIZE);
+		udpsendto(server_popserver_udpsock_list[local_server_logical_idx], buf, pktsize, 0, &controller_popserver_popclient_addr, controller_popserver_popclient_addrlen, "server.popserver");
+	}
+	else if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {
+		// receive NETCACHE_CACHE_POP_FINISH from controller
+		netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(recvbuf, recvsize);
+		INVARIANT(tmp_netcache_cache_pop_finish.serveridx() == global_server_logical_idx);
+
+		// keep atomicity
+		server_mutex_for_keyset_list[local_server_logical_idx].lock();
+		// NETCACHE_CACHE_POP's key must in beingcached or cached keyset
+		if (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) { // in beingcached keyset
+			INVARIANT(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) == server_cached_keyset_list[local_server_logical_idx].end()); // must no in cached keyset
+			// move key from beingcached keyset into cached keyset
+			server_beingcached_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_pop_finish.key());
+			server_cached_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop_finish.key());
+		}
+		else { // not in beingcached keyset
+			INVARIANT(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_cached_keyset_list[local_server_logical_idx].end()); // must in cached keyset
+		}
+		server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+
+		// send NETCACHE_CACHE_POP_FINISH_ACK to controller
+		netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(tmp_netcache_cache_pop_finish.key(), global_server_logical_idx);
+		uint32_t pktsize = tmp_netcache_cache_pop_finish_ack.serialize(buf, MAX_BUFSIZE);
+		udpsendto(server_popserver_udpsock_list[local_server_logical_idx], buf, pktsize, 0, &controller_popserver_popclient_addr, controller_popserver_popclient_addrlen, "server.popserver");
+	}
+	else {
+		printf("[server.popserver] invalid optype: %x\n", optype_t(tmp_optype));
+		exit(-1);
+	}
   }
 
   close(server_popserver_udpsock_list[local_server_logical_idx]);

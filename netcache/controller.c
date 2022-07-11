@@ -186,15 +186,31 @@ void *run_controller_popserver(void *param) {
 	while (controller_running) {
 		udprecvfrom(controller_popserver_udpsock, buf, MAX_BUFSIZE, 0, &switchos_popworker_addr, &switchos_popworker_addrlen, recvsize, "controller.popserver");
 
-		//printf("receive NETCACHE_CACHE_POP from switchos and send it to server\n");
+		//printf("receive NETCACHE_CACHE_POP or NETCACHE_CACHE_POP_FINISH from switchos and send it to server\n");
 		//dump_buf(buf, recvsize);
-		netcache_cache_pop_t tmp_netcache_cache_pop(buf, recvsize);
+		packet_type tmp_optype = get_packet_type(buf, recvsize);
+		key_t tmp_key;
+		uint16_t tmp_serveridx = 0;
+		if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP) {
+			netcache_cache_pop_t tmp_netcache_cache_pop(buf, recvsize);
+			tmp_key = tmp_netcache_cache_pop.key();
+			tmp_serveridx = tmp_netcache_cache_pop.serveridx();
+		}
+		else if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP_FINISH) {
+			netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(buf, recvsize);
+			tmp_key = tmp_netcache_cache_pop_finish.key();
+			tmp_serveridx = tmp_netcache_cache_pop_finish.serveridx();
+		}
+		else {
+			printf("[controller.popserver] invalid packet type: %x\n", optype_t(tmp_optype));
+			exit(-1);
+		}
 
 		// find corresponding server X
 		int tmp_server_physical_idx = -1;
 		for (int i = 0; i < server_physical_num; i++) {
 			for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
-				if (tmp_netcache_cache_pop.serveridx() == server_logical_idxes_list[i][j]) {
+				if (tmp_serveridx == server_logical_idxes_list[i][j]) {
 					tmp_server_physical_idx = i;
 					break;
 				}
@@ -207,15 +223,26 @@ void *run_controller_popserver(void *param) {
 		set_sockaddr(tmp_server_popserver_addr, inet_addr(server_ip_for_controller_list[tmp_server_physical_idx]), server_popserver_port_start + tmp_netcache_cache_pop.serveridx());
 		socklen_t tmp_server_popserver_addrlen = sizeof(struct sockaddr);
 
-		// send NETCACHE_CACHE_POP to corresponding server
+		// send NETCACHE_CACHE_POP/_FINISH to corresponding server
 		udpsendto(controller_popserver_popclient_udpsock, buf, recvsize, 0, &tmp_server_popserver_addr, tmp_server_popserver_addrlen, "controller.popserver.popclient");
 		
-		// receive NETCACHE_CACHE_POP_ACK from corresponding server
+		// receive NETCACHE_CACHE_POP_ACK/_FINISH_ACK from corresponding server
 		bool is_timeout = udprecvfrom(controller_popserver_popclient_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient");
 		if (!is_timeout) { // NOTE: if timeout, it will be covered by switcho.popworker
-			// send NETCACHE_CACHE_POP_ACK to switchos.popworker immediately to avoid timeout
-			netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(buf, recvsize);
-			INVARIANT(tmp_netcache_cache_pop_ack.key() == tmp_netcache_cache_pop.key());
+			// send NETCACHE_CACHE_POP_ACK/_FINISH_ACK to switchos.popworker immediately to avoid timeout
+			packet_type_t tmp_acktype = get_packet_type(buf, recvsize);
+			if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_ACK) {
+				netcache_cache_pop_ack_t tmp_netcache_cache_pop_ack(buf, recvsize);
+				INVARIANT(tmp_netcache_cache_pop_ack.key() == tmp_key);
+			}
+			else if (tmp_acktype == packet_type_t::NETCACHE_CACHE_POP_FINISH_ACK) {
+				netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(buf, recvsize);
+				INVARIANT(tmp_netcache_cache_pop_finish_ack.key() == tmp_key);
+			}
+			else {
+				printf("[controller.popserver] invalid acktype: %x\n", optype_t(tmp_acktype));
+				exit(-1);
+			}
 			udpsendto(controller_popserver_udpsock, buf, recvsize, 0, &switchos_popworker_addr, switchos_popworker_addrlen, "controller.popserver");
 		}
 	}

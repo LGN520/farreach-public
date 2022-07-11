@@ -302,10 +302,11 @@ void *run_switchos_popworker(void *param) {
 				exit(-1);
 			}
 
-			// TODO: fetch value from correpsonding server by controller
+			// fetch value from correpsonding server by controller
 			netcache_cache_pop_t tmp_netcache_cache_pop(tmp_netcache_getreq_pop_ptr->key(), uint16_t(tmp_global_server_logical_idx));
 			pktsize = tmp_netcache_cache_pop.serialize(pktbuf, MAX_BUFSIZE);
 			val_t tmp_val;
+			uint32_t tmp_seq = 0;
 			while (true) {
 				udpsendto(switchos_popworker_popclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "switchos.popworker.popclient_for_controller");
 
@@ -321,6 +322,7 @@ void *run_switchos_popworker(void *param) {
 					}
 					else {
 						tmp_val = tmp_netcache_cache_pop_ack.val();
+						tmp_seq = tmp_netcache_cache_pop_ack.seq();
 						break;
 					}
 				}
@@ -330,7 +332,7 @@ void *run_switchos_popworker(void *param) {
 			int tmp_server_physical_idx = -1;
 			for (int i = 0; i < server_physical_num; i++) {
 				for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
-					if (server_logical_idxes_list[i][j] == tmp_cache_pop_ptr->serveridx()) {
+					if (server_logical_idxes_list[i][j] == tmp_global_server_logical_idx) {
 						tmp_server_physical_idx = i;
 						break;
 					}
@@ -343,7 +345,6 @@ void *run_switchos_popworker(void *param) {
 			if (switchos_perpipeline_cached_empty_index[tmp_pipeidx] < switch_kv_bucket_num) { // With free idx
 				switchos_freeidx = switchos_perpipeline_cached_empty_index[tmp_pipeidx];
 				switchos_perpipeline_cached_empty_index[tmp_pipeidx] += 1;
-				// NOTE: as freeidx of new record must > switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx], no case2 for cache population
 			}
 			else { // Without free idx
 				//CUR_TIME(evict_total_t1);
@@ -552,37 +553,8 @@ void *run_switchos_popworker(void *param) {
 			INVARIANT(switchos_freeidx >= 0 && switchos_freeidx < switch_kv_bucket_num);
 			//printf("[switchos.popworker] switchos_perpipeline_cached_empty_index[%d]: %d, switchos_freeidx: %d\n", tmp_pipeidx, int(switchos_perpipeline_cached_empty_index[tmp_pipeidx]), int(switchos_freeidx)); // TMPDEBUG
 
-			// set valid=0 for atomicity
-			////system("bash tofino/setvalid0.sh");
-			//ptf_sendsize = serialize_setvalid0(ptfbuf, switchos_freeidx, tmp_pipeidx);
-			//udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
-			//udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
-			//INVARIANT(*((int *)ptfbuf) == SWITCHOS_SETVALID0_ACK); // wait for SWITCHOS_SETVALID0_ACK
-			
-			// set valid = 0 through reflector
-			// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
-			while (true) {
-				setvalid_inswitch_t tmp_setvalid_req(tmp_cache_pop_ptr->key(), switchos_freeidx, 0);
-				pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
-				udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
-
-				bool is_timeout = false;
-				is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
-				if (unlikely(is_timeout)) {
-					continue;
-				}
-
-				setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
-				//INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
-				if (unlikely(tmp_setvalid_rsp.key() != tmp_cache_pop_ptr->key())) {
-					printf("invalid key of SETVALID_INSWITCH_ACK %x which should be %x\n", tmp_setvalid_rsp.key().keyhihi, tmp_cache_pop_ptr->key().keyhihi);
-					continue;
-				}
-				break;
-			}
-
 			// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
-			cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx);
+			cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_netcache_getreq_pop_ptr->key(), tmp_val, tmp_seq, switchos_freeidx);
 			pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 
 			while (true) {
@@ -615,39 +587,36 @@ void *run_switchos_popworker(void *param) {
 			// (1) add new <key, value> pair into cache_lookup_tbl; DEPRECATED: (2) and set valid=1 to enable the entry
 			////system("bash tofino/add_cache_lookup_setvalid1.sh");
 			//ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx, tmp_pipeidx);
-			ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx);
+			ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_netcache_getreq_pop_ptr->key(), switchos_freeidx);
 			udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 			udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 			//INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
 			INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
-			
-			// set valid = 1 through reflector
-			// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
-			while (true) {
-				setvalid_inswitch_t tmp_setvalid_req(tmp_cache_pop_ptr->key(), switchos_freeidx, 1);
-				pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
-				udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
-				bool is_timeout = false;
-				is_timeout = udprecvfrom(switchos_popworker_popclient_for_reflector_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.evictclient");
+			switchos_cached_keyidx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_netcache_getreq_pop_ptr->key(), switchos_freeidx));
+			switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_freeidx] = tmp_netcache_getreq_pop_ptr->key();
+			switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_freeidx] = tmp_global_server_logical_idx;
+
+			// send NETCACHE_CACHE_POP_FINISH to server and wait for ACK
+			netcache_cache_pop_finish_t tmp_netcache_cache_pop_finish(tmp_netcache_getreq_pop_ptr->key(), tmp_global_server_logical_idx);
+			pktsize = tmp_netcache_cache_pop_finish.serialize(pktbuf, MAX_BUFSIZE);
+			while (true) {
+				udpsendto(switchos_popworker_popclient_for_controller_udpsock, pktbuf, pktsize, 0, &controller_popserver_addr, controller_popserver_addrlen, "switchos.popworker.popclient_for_controller");
+
+				bool is_timeout = udprecvfrom(switchos_popworker_popclient_for_controller_udpsock, ackbuf, MAX_BUFSIZE, 0, NULL, NULL, ack_recvsize, "switchos.popworker.popclient_for_controller");
 				if (unlikely(is_timeout)) {
 					continue;
 				}
-
-				setvalid_inswitch_ack_t tmp_setvalid_rsp(ackbuf, ack_recvsize);
-				INVARIANT(tmp_setvalid_rsp.key() == tmp_cache_pop_ptr->key());
-				break;
+				else {
+					netcache_cache_pop_finish_ack_t tmp_netcache_cache_pop_finish_ack(ackbuf, ack_recvsize);
+					INVARIANT(tmp_netcache_cache_pop_finish_ack.key() == tmp_netcache_cache_pop_finish.key());
+					break;
+				}
 			}
 
-			switchos_cached_keyidx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_cache_pop_ptr->key(), switchos_freeidx));
-			switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_freeidx] = tmp_cache_pop_ptr->key();
-			switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_freeidx] = tmp_cache_pop_ptr->serveridx();
-
-			// free CACHE_POP
-			delete tmp_cache_pop_ptr;
-			tmp_cache_pop_ptr = NULL;
-			//switchos_cache_pop_ptrs[switchos_tail_for_pop] = NULL;
-			//switchos_tail_for_pop = (switchos_tail_for_pop + 1) % MQ_SIZE;
+			// free NETCACHE_GETREQ_POP
+			delete tmp_netcache_getreq_pop_ptr;
+			tmp_netcache_getreq_pop_ptr = NULL;
 
 			// reset metadata for popclient_for_ptf
 			ptf_sendsize = 0;
@@ -657,13 +626,14 @@ void *run_switchos_popworker(void *param) {
 			switchos_evictvalue = val_t();
 			switchos_evictseq = 0;
 			switchos_evictstat = false;
-		} // tmp_cache_pop_ptr != NULL
+		} // tmp_netcache_getreq_pop_ptr != NULL
 	}
 
 	// send SWITCHOS_PTF_POPSERVER_END to ptf.popserver
 	memcpy(ptfbuf, &SWITCHOS_PTF_POPSERVER_END, sizeof(int));
 	udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, sizeof(int), 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 
+	close(switchos_popworker_popclient_for_controller_udpsock);
 	close(switchos_popworker_popclient_for_reflector_udpsock);
 	close(switchos_popworker_evictclient_for_controller_udpsock);
 	close(switchos_popworker_popclient_for_ptf_udpsock);
