@@ -49,11 +49,16 @@ std::set<netreach_key_t> *server_beingupdated_keyset_list = NULL;
 // server.evictserver <-> controller.evictserver.evictclient
 int *server_evictserver_udpsock_list = NULL;
 
+// data plane <-> per-server.valueupdateserver
+MessagePtrQueue<netcache_valueupdate_t> *server_netcache_valueupdate_ptr_queue_list = NULL;
+int *server_valueupdateserver_udpsock_list = NULL;
+
 void prepare_server();
 // server.workers for processing pkts
 void *run_server_worker(void *param);
 void *run_server_popserver(void *param);
 void *run_server_evictserver(void *param);
+void *run_server_valueupdateserver(void *param);
 void close_server();
 
 void prepare_server() {
@@ -98,6 +103,15 @@ void prepare_server() {
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		uint16_t tmp_global_server_logical_idx = server_logical_idxes_list[server_physical_idx][i];
 		prepare_udpserver(server_evictserver_udpsock_list[i], true, server_evictserver_port_start + tmp_global_server_logical_idx, "server.evictserver");
+	}
+
+	// prepare for inswitch value update
+	server_netcache_valueupdate_ptr_queue_list = new MessagePtrQueue<netcache_valueupdate_t>[current_server_logical_num];
+	server_valueupdateserver_udpsock_list = new int[current_server_logical_num];
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		server_netcache_valueupdate_ptr_queue_list[i].init(MQ_SIZE);
+		uint16_t tmp_global_server_logical_idx = server_logical_idxes_list[server_physical_idx][i];
+		prepare_udpserver(server_valueupdateserver_udpsock_list[i], true, server_valueupdateserver_port_start + tmp_global_server_logical_idx, "server.valueupdateserver");
 	}
 
 	memory_fence();
@@ -149,6 +163,14 @@ void close_server() {
 		delete [] server_evictserver_tcpsock_list;
 		server_evictserver_tcpsock_list = NULL;
 	}*/
+	if (server_netcache_valueupdate_ptr_queue_list != NULL) {
+		delete [] server_netcache_valueupdate_ptr_queue_list;
+		server_netcache_valueupdate_ptr_queue_list = NULL;
+	}
+	if (server_valueupdateserver_udpsock_list != NULL) {
+		delete [] server_valueupdateserver_udpsock_list;
+		server_valueupdateserver_udpsock_list = NULL;
+	}
 }
 
 void *run_server_popserver(void *param) {
@@ -436,9 +458,21 @@ void *run_server_worker(void * param) {
 					is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
 					INVARIANT(!is_being_cached); // key must NOT in beingcached keyset
 					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
-					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateclient
+					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateserver
 						server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_key); // mark it as being updated
-						// TODO: notify server.valueupdateclient to update inswitch value in background
+
+						// notify server.valueupdateserver to update inswitch value in background
+						netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
+						if (pkt_type == packet_type_t::PUTREQ_SEQ) {
+							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, true);
+						}
+						else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
+							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, false);
+						}
+						bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
+						if (!res) {
+							printf("[server.worker %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
+						}
 					}
 					// else: do nothing as key is removed from beingupdated keyset by server.evictserver
 
@@ -540,9 +574,21 @@ void *run_server_worker(void * param) {
 					is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
 					INVARIANT(!is_being_cached); // key must NOT in beingcached keyset
 					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
-					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateclient
+					if (is_cached) { // key is removed from beingupdated keyset by server.valueupdateserver
 						server_beingupdated_keyset_list[local_server_logical_idx].insert(tmp_key); // mark it as being updated
-						// TODO: notify server.valueupdateclient to update inswitch value in background
+
+						// notify server.valueupdateserver to update inswitch value in background
+						netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
+						if (pkt_type == packet_type_t::PUTREQ_SEQ) {
+							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, true);
+						}
+						else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
+							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, false);
+						}
+						bool res = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].write(tmp_netcache_valueupdate_ptr);
+						if (!res) {
+							printf("[server.worker %d-%d] message queue overflow of NETCACHE_VALUEUPDATE\n", local_server_logical_idx, global_server_logical_idx);
+						}
 					}
 					// else: do nothing as key is removed from beingupdated keyset by server.evictserver
 
@@ -714,6 +760,69 @@ void *run_server_evictserver(void *param) {
 	}
 
 	close(server_evictserver_udpsock_list[local_server_logical_idx]);
+	pthread_exit(nullptr);
+}
+
+void *run_server_valueupdateserver(void *param) {
+	uint16_t local_server_logical_idx = *((uint16_t *)param);
+	uint16_t global_server_logical_idx = server_logical_idxes_list[server_physical_idx][local_server_logical_idx];
+
+	// client address (switch will not hide NETCACHE_VALUEUPDATE from clients)
+	struct sockaddr_in client_addr;
+	set_sockaddr(client_addr, inet_addr(client_ips[0]), 123); // client ip and client port are not important
+	socklen_t client_addrlen = sizeof(struct sockaddr_in);
+	
+	printf("[server.valueupdateserver %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
+	transaction_ready_threads++;
+
+	while (!transaction_running) {}
+
+	char sendbuf[MAX_BUFSIZE];
+	char recvbuf[MAX_BUFSIZE];
+	int sendsize = 0;
+	int recvsize = 0;
+	while (transaction_running) {
+		netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = server_netcache_valueupdate_ptr_queue_list[local_server_logical_idx].read();
+		if (tmp_netcache_valueupdate_ptr != NULL) {
+			sendsize = tmp_netcache_valueupdate_ptr->serialize(sendbuf, MAX_BUFSIZE);
+
+			while (true) {
+				udpsendto(server_valueupdateserver_udpsock_list[local_server_logical_idx], sendbuf, sendsize, 0, &client_addr, client_addrlen, "server.valueupdateserver");
+
+				bool is_timeout = udprecvfrom(server_valueupdateserver_udpsock_list[local_server_logical_idx], recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "server.valueupdateserver");
+				if (is_timeout) {
+					continue;
+				}
+				else {
+					netcache_valueupdate_ack_t tmp_netcache_valueupdate_ack(recvbuf, recvsize);
+					if (tmp_netcache_valueupdate_ack.key() != tmp_netcache_valueupdate_ptr->key()) {
+						continue;
+					}
+					else {
+						break;
+					}
+				}
+			}
+
+			// remove key from beingupdated keyset atomically
+			server_mutex_for_keyset_list[local_server_logical_idx].lock();
+			bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_valueupdate_ptr->key()) != server_beingupdated_keyset_list[local_server_logical_idx].end());
+			if (likely(is_being_updated)) {
+				server_beingupdated_keyset_list[local_server_logical_idx].erase(tmp_netcache_valueupdate_ptr->key());
+			}
+			else { // due to cache eviciton
+				bool is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_valueupdate_ptr->key()) != server_beingcached_keyset_list[local_server_logical_idx].end());
+				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_valueupdate_ptr->key()) != server_cached_keyset_list[local_server_logical_idx].end());
+				INVARIANT(!is_being_cached && !is_cached); // key must NOT in beingcached/cached keyset
+			}
+			server_mutex_for_keyset_list[local_server_logical_idx].unlock();
+
+			delete tmp_netcache_valueupdate_ptr;
+			tmp_netcache_valueupdate_ptr = NULL;
+		}
+	}
+
+	close(server_valueupdateserver_udpsock_list[local_server_logical_idx]);
 	pthread_exit(nullptr);
 }
 

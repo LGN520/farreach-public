@@ -101,7 +101,7 @@
 </tr>
 <tr>
 <td align="center">3</td>
-<td align="center">70</td>
+<td align="center">71</td>
 <td align="center">0</td>
 <td align="center">256</td>
 <td align="center">5</td>
@@ -331,7 +331,7 @@
 </tr>
 <tr>
 <td align="center">Totals</td>
-<td align="center">410</td>
+<td align="center">411</td>
 <td align="center">38</td>
 <td align="center">1642</td>
 <td align="center">25</td>
@@ -449,7 +449,7 @@
 </tr>
 <tr>
 <td align="center">3</td>
-<td align="center" bgcolor="#fee700" >54.69%</td>
+<td align="center" bgcolor="#fee300" >55.47%</td>
 <td align="center" bgcolor="#00c000" >0.00%</td>
 <td align="center" bgcolor="#fec400" >61.54%</td>
 <td align="center" bgcolor="#fe5500" >83.33%</td>
@@ -679,7 +679,7 @@
 </tr>
 <tr>
 <td align="center">Average</td>
-<td align="center" bgcolor="#88fe00" >26.69%</td>
+<td align="center" bgcolor="#88fe00" >26.76%</td>
 <td align="center" bgcolor="#18fe00" >4.80%</td>
 <td align="center" bgcolor="#a7fe00" >32.89%</td>
 <td align="center" bgcolor="#b1fe00" >34.72%</td>
@@ -14239,7 +14239,7 @@ contains:
 </title></rect>
 <rect x="40" y="56" width="8" height="8" style="stroke:black; stroke-width:1; fill:orchid""><title>Crossbar Byte 11 in exact Group 0 (parity group 1)
 contains:
-  {op_hdr.optype[15:8]} for table access_deleted_tbl
+  {stat_hdr.stat[7:0]} for table access_deleted_tbl
 </title></rect>
 <rect x="48" y="32" width="8" height="8" style="stroke:black; stroke-width:1; fill:orchid""><title>Crossbar Byte 12 in exact Group 0 (parity group 1)
 contains:
@@ -14247,7 +14247,10 @@ contains:
 </title></rect>
 <rect x="48" y="40" width="8" height="8" style="stroke:black; stroke-width:1; fill:white""><title>Crossbar Byte 13 in exact Group 0 (parity group 1)</title></rect>
 <rect x="48" y="48" width="8" height="8" style="stroke:black; stroke-width:1; fill:white""><title>Crossbar Byte 14 in exact Group 0 (parity group 1)</title></rect>
-<rect x="48" y="56" width="8" height="8" style="stroke:black; stroke-width:1; fill:white""><title>Crossbar Byte 15 in exact Group 0 (parity group 1)</title></rect>
+<rect x="48" y="56" width="8" height="8" style="stroke:black; stroke-width:1; fill:orchid""><title>Crossbar Byte 15 in exact Group 0 (parity group 1)
+contains:
+  {op_hdr.optype[15:8]} for table access_deleted_tbl
+</title></rect>
 <rect x="16" y="72" width="8" height="8" style="stroke:black; stroke-width:1; fill:palegreen""><title>Crossbar Byte 16 in exact Group 1 (parity group 2)
 contains:
   {inswitch_hdr.idx[7:0]} for table access_savedseq_tbl__action__
@@ -18508,7 +18511,7 @@ For Match Table access_case1_tbl's action reset_is_case1:
 <rect x="712" y="32" width="224" height="504" style="stroke:black; stroke-width:1; fill:none""></rect>
 <text x="978" y="54"   style="fill:black;">Totals</text>
 <text x="986" y="78"   style="fill:black;">Exact Match Input xbar</text>
-<text x="994" y="102"   style="fill:black;">  70 of 128 (54.69%)</text>
+<text x="994" y="102"   style="fill:black;">  71 of 128 (55.47%)</text>
 <text x="986" y="126"   style="fill:black;">Ternary Match Input xbar</text>
 <text x="994" y="150"   style="fill:black;">  0 of 66 (0.00%)</text>
 <text x="986" y="174"   style="fill:black;">Hash Bit</text>
@@ -57329,9 +57332,9 @@ For Match Table drop_tbl's action drop_getres_deleted_seq_inswitch:
 </svg><br>
 
 
-<br><i>Created on Sat Jul  9 04:02:43 2022</i>
+<br><i>Created on Mon Jul 11 13:38:51 2022</i>
 <br><i>Compiler version: 5.16.0 (a35e94c)</i>
-<br><i>Run ID: 24b6838b78f58a89</i>
+<br><i>Run ID: 2b83e41b1b64452d</i>
 </div>
 </body>
 </html>

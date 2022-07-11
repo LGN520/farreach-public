@@ -409,6 +409,14 @@ static inline void build_key_access_deleted_tbl
 #endif
   match_bits += 1;
 
+
+#ifdef LITTLE_ENDIAN_CALLER
+  memcpy(match_bits, &match_spec->stat_hdr_stat, 1);
+#else
+  memcpy(match_bits, ((char *) &match_spec->stat_hdr_stat) + 0, 1);
+#endif
+  match_bits += 1;
+
 }
 
 static inline void build_key_access_latest_tbl
@@ -5681,6 +5689,14 @@ static inline void unbuild_key_access_deleted_tbl
 #endif
   match_bits += 1;
 
+
+#ifdef LITTLE_ENDIAN_CALLER
+  memcpy(&match_spec->stat_hdr_stat, match_bits, 1);
+#else
+  memcpy(((char *) &match_spec->stat_hdr_stat) + 0, match_bits, 1);
+#endif
+  match_bits += 1;
+
 }
 
 static inline void unbuild_key_access_latest_tbl
@@ -9904,16 +9920,16 @@ p4_pd_netbufferv4_access_deleted_tbl_match_spec_to_entry_hdl
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 34;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_access_deleted_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -12712,16 +12728,16 @@ p4_pd_netbufferv4_access_deleted_tbl_table_add_with_get_deleted
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 34;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_access_deleted_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[0];
@@ -12762,16 +12778,16 @@ p4_pd_netbufferv4_access_deleted_tbl_table_add_with_set_and_get_deleted
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 34;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_access_deleted_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[0];
@@ -12812,16 +12828,16 @@ p4_pd_netbufferv4_access_deleted_tbl_table_add_with_reset_and_get_deleted
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 34;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_access_deleted_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[0];
@@ -12862,16 +12878,16 @@ p4_pd_netbufferv4_access_deleted_tbl_table_add_with_reset_is_deleted
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 34;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_access_deleted_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[0];
@@ -25563,16 +25579,16 @@ p4_pd_netbufferv4_access_deleted_tbl_table_delete_by_match_spec
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 34;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_access_deleted_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -39267,16 +39283,16 @@ p4_pd_netbufferv4_access_deleted_tbl_table_modify_with_get_deleted_by_match_spec
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 34;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_access_deleted_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -39339,16 +39355,16 @@ p4_pd_netbufferv4_access_deleted_tbl_table_modify_with_set_and_get_deleted_by_ma
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 34;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_access_deleted_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -39411,16 +39427,16 @@ p4_pd_netbufferv4_access_deleted_tbl_table_modify_with_reset_and_get_deleted_by_
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 34;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_access_deleted_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -39483,16 +39499,16 @@ p4_pd_netbufferv4_access_deleted_tbl_table_modify_with_reset_is_deleted_by_match
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 34;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_access_deleted_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -61319,11 +61335,11 @@ p4_pd_netbufferv4_access_deleted_tbl_get_entry
   p4_pd_act_hdl_t act_fn_hdl;
 
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5] = {0};
-  uint8_t pipe_match_mask_bits[5] = {0};
+  uint8_t pipe_match_value_bits[6] = {0};
+  uint8_t pipe_match_mask_bits[6] = {0};
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 5;
-  pipe_match_spec.num_valid_match_bits = 26;
+  pipe_match_spec.num_match_bytes = 6;
+  pipe_match_spec.num_valid_match_bits = 34;
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
   pipe_match_spec.match_field_validity = 0;
   pipe_match_spec.match_field_validity_mask = 0;
@@ -61345,8 +61361,8 @@ p4_pd_netbufferv4_access_deleted_tbl_get_entry
   if (status) return status;
 
   // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 26);
-  // assert(pipe_match_spec.num_match_bytes == 5);
+  // assert(pipe_match_spec.num_valid_match_bits == 34);
+  // assert(pipe_match_spec.num_match_bytes == 6);
   // assert(pipe_match_spec.num_match_validity_fields == 0);
 
   assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
@@ -61372,7 +61388,7 @@ p4_pd_netbufferv4_access_deleted_tbl_get_entry
     break;
   }
 
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 5 > 0);
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 6 > 0);
   if(!is_default_entry)
     unbuild_key_access_deleted_tbl(&pipe_match_spec, match_spec);
 

@@ -219,6 +219,14 @@
           "custom" : false,
           "width" : null,
           "default" : 0
+        },
+        { "name" : "stat_hdr_stat",
+          "type" : "byte",
+          "required" : true,
+          "pointer" : false,
+          "custom" : false,
+          "width" : null,
+          "default" : 0
         }
       ]
     },

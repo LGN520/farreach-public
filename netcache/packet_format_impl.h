@@ -2094,10 +2094,27 @@ NetcachePutRequestSeqCached<key_t, val_t>::NetcachePutRequestSeqCached(const cha
 
 // NetcacheDelRequestSeqCached
 
-template<class key_t, class val_t>
-NetcacheDelRequestSeqCached<key_t, val_t>::NetcacheDelRequestSeqCached(const char * data, uint32_t recv_size) {
+template<class key_t>
+NetcacheDelRequestSeqCached<key_t>::NetcacheDelRequestSeqCached(const char * data, uint32_t recv_size) {
 	this->deserialize(data, recv_size);
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_DELREQ_SEQ_CACHED);
+}
+
+// NetcacheValueupdate
+
+template<class key_t, class val_t>
+NetcacheValueupdate<key_t, val_t>::NetcacheValueupdate(key_t key, val_t val, uint32_t seq, bool stat)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, 0), _stat(stat)
+{
+	this->_type = packet_type_t::NETCACHE_VALUEUPDATE;
+}
+
+// NetcacheValueupdateAck
+
+template<class key_t>
+NetcacheValueupdateAck<key_t>::NetcacheValueupdateAck(const char * data, uint32_t recv_size) {
+	this->deserialize(data, recv_size);
+	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_VALUEUPDATE_ACK);
 }
 
 // APIs

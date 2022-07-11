@@ -116,7 +116,7 @@ uint32_t server_load_factor = 1;
 short server_worker_port_start = -1;
 short server_evictserver_port_start = -1;
 short server_popserver_port_start = -1;
-short server_snapshotdataserver_port_start = -1;
+short server_valueupdateserver_port_start = -1;
 short transaction_loadfinishserver_port = -1;
 
 // each physical server
@@ -301,14 +301,14 @@ inline void parse_ini(const char* config_file) {
 	server_worker_port_start = ini.get_server_worker_port_start();
 	server_evictserver_port_start = ini.get_server_evictserver_port_start();
 	server_popserver_port_start = ini.get_server_popserver_port_start();
-	server_snapshotdataserver_port_start = ini.get_server_snapshotdataserver_port_start();
+	server_valueupdateserver_port_start = ini.get_server_valueupdateserver_port_start();
 	transaction_loadfinishserver_port = ini.get_transaction_loadfinishserver_port();
 
 	COUT_VAR(server_load_factor);
 	COUT_VAR(server_worker_port_start);
 	COUT_VAR(server_evictserver_port_start);
 	COUT_VAR(server_popserver_port_start);
-	COUT_VAR(server_snapshotdataserver_port_start);
+	COUT_VAR(server_valueupdateserver_port_start);
 	COUT_VAR(transaction_loadfinishserver_port);
 	printf("\n");
 	

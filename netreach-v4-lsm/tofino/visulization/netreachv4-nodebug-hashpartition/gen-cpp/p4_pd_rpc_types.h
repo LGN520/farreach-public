@@ -1708,12 +1708,12 @@ void swap(netbufferv4_access_cm4_tbl_match_spec_t &a, netbufferv4_access_cm4_tbl
 class netbufferv4_access_deleted_tbl_match_spec_t {
  public:
 
-  static const char* ascii_fingerprint; // = "FA15C7D77CA497D65C649057DED15F08";
-  static const uint8_t binary_fingerprint[16]; // = {0xFA,0x15,0xC7,0xD7,0x7C,0xA4,0x97,0xD6,0x5C,0x64,0x90,0x57,0xDE,0xD1,0x5F,0x08};
+  static const char* ascii_fingerprint; // = "1A64E2C212329F011BFE09BD9335DFDC";
+  static const uint8_t binary_fingerprint[16]; // = {0x1A,0x64,0xE2,0xC2,0x12,0x32,0x9F,0x01,0x1B,0xFE,0x09,0xBD,0x93,0x35,0xDF,0xDC};
 
   netbufferv4_access_deleted_tbl_match_spec_t(const netbufferv4_access_deleted_tbl_match_spec_t&);
   netbufferv4_access_deleted_tbl_match_spec_t& operator=(const netbufferv4_access_deleted_tbl_match_spec_t&);
-  netbufferv4_access_deleted_tbl_match_spec_t() : op_hdr_optype(0), inswitch_hdr_is_cached(0), validvalue_hdr_validvalue(0), meta_is_latest(0) {
+  netbufferv4_access_deleted_tbl_match_spec_t() : op_hdr_optype(0), inswitch_hdr_is_cached(0), validvalue_hdr_validvalue(0), meta_is_latest(0), stat_hdr_stat(0) {
   }
 
   virtual ~netbufferv4_access_deleted_tbl_match_spec_t() throw();
@@ -1721,6 +1721,7 @@ class netbufferv4_access_deleted_tbl_match_spec_t {
   int8_t inswitch_hdr_is_cached;
   int8_t validvalue_hdr_validvalue;
   int8_t meta_is_latest;
+  int8_t stat_hdr_stat;
 
   void __set_op_hdr_optype(const int16_t val);
 
@@ -1729,6 +1730,8 @@ class netbufferv4_access_deleted_tbl_match_spec_t {
   void __set_validvalue_hdr_validvalue(const int8_t val);
 
   void __set_meta_is_latest(const int8_t val);
+
+  void __set_stat_hdr_stat(const int8_t val);
 
   bool operator == (const netbufferv4_access_deleted_tbl_match_spec_t & rhs) const
   {
@@ -1739,6 +1742,8 @@ class netbufferv4_access_deleted_tbl_match_spec_t {
     if (!(validvalue_hdr_validvalue == rhs.validvalue_hdr_validvalue))
       return false;
     if (!(meta_is_latest == rhs.meta_is_latest))
+      return false;
+    if (!(stat_hdr_stat == rhs.stat_hdr_stat))
       return false;
     return true;
   }
@@ -6183,8 +6188,8 @@ void swap(netbufferv4_access_cm4_tbl_entry_desc_t &a, netbufferv4_access_cm4_tbl
 class netbufferv4_access_deleted_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "4DAE7DFBB5D061119F93C26CE90220D4";
-  static const uint8_t binary_fingerprint[16]; // = {0x4D,0xAE,0x7D,0xFB,0xB5,0xD0,0x61,0x11,0x9F,0x93,0xC2,0x6C,0xE9,0x02,0x20,0xD4};
+  static const char* ascii_fingerprint; // = "218F351C3A7BD0D1894F63B8337D2C87";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x8F,0x35,0x1C,0x3A,0x7B,0xD0,0xD1,0x89,0x4F,0x63,0xB8,0x33,0x7D,0x2C,0x87};
 
   netbufferv4_access_deleted_tbl_entry_desc_t(const netbufferv4_access_deleted_tbl_entry_desc_t&);
   netbufferv4_access_deleted_tbl_entry_desc_t& operator=(const netbufferv4_access_deleted_tbl_entry_desc_t&);
