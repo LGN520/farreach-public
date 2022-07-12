@@ -269,19 +269,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: l2l3_forward_tbl (default: nop; size: client_physical_num+server_physical_num = 4 < 16)
             print "Configuring l2l3_forward_tbl"
             for i in range(client_physical_num):
-                matchspec0 = netbufferv4_l2l3_forward_tbl_match_spec_t(\
+                matchspec0 = nocache_l2l3_forward_tbl_match_spec_t(\
                         ethernet_hdr_dstAddr = macAddr_to_string(client_macs[i]),
                         ipv4_hdr_dstAddr = ipv4Addr_to_i32(client_ips[i]),
                         ipv4_hdr_dstAddr_prefix_length = 32)
-                actnspec0 = netbufferv4_l2l3_forward_action_spec_t(self.client_devports[i])
+                actnspec0 = nocache_l2l3_forward_action_spec_t(self.client_devports[i])
                 self.client.l2l3_forward_tbl_table_add_with_l2l3_forward(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for i in range(server_physical_num):
-                matchspec0 = netbufferv4_l2l3_forward_tbl_match_spec_t(\
+                matchspec0 = nocache_l2l3_forward_tbl_match_spec_t(\
                         ethernet_hdr_dstAddr = macAddr_to_string(server_macs[i]),
                         ipv4_hdr_dstAddr = ipv4Addr_to_i32(server_ips[i]),
                         ipv4_hdr_dstAddr_prefix_length = 32)
-                actnspec0 = netbufferv4_l2l3_forward_action_spec_t(self.server_devports[i])
+                actnspec0 = nocache_l2l3_forward_action_spec_t(self.server_devports[i])
                 self.client.l2l3_forward_tbl_table_add_with_l2l3_forward(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
@@ -328,11 +328,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             udp_dstport = server_worker_port_start + local_server_logical_idx
                             eport = self.server_devports[server_physical_idx]
                             if tmpoptype != SCANREQ:
-                                actnspec0 = netbufferv4_range_partition_action_spec_t(udp_dstport, eport)
+                                actnspec0 = nocache_range_partition_action_spec_t(udp_dstport, eport)
                                 self.client.range_partition_tbl_table_add_with_range_partition(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                             else:
-                                actnspec0 = netbufferv4_range_partition_for_scan_action_spec_t(udp_dstport, eport, global_server_logical_idx)
+                                actnspec0 = nocache_range_partition_for_scan_action_spec_t(udp_dstport, eport, global_server_logical_idx)
                                 self.client.range_partition_tbl_table_add_with_range_partition_for_scan(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
@@ -391,9 +391,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
                             scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end))
                     #last_udpport_plus_one = server_worker_port_start + global_server_logical_idx + 1 # used to calculate max_scannum in data plane
-                    #actnspec0 = netbufferv4_range_partition_for_scan_endkey_action_spec_t(last_udpport_plus_one)
+                    #actnspec0 = nocache_range_partition_for_scan_endkey_action_spec_t(last_udpport_plus_one)
                     end_globalserveridx_plus_one = global_server_logical_idx + 1 # used to calculate max_scannum in data plane
-                    actnspec0 = netbufferv4_range_partition_for_scan_endkey_action_spec_t(end_globalserveridx_plus_one)
+                    actnspec0 = nocache_range_partition_for_scan_endkey_action_spec_t(end_globalserveridx_plus_one)
                     # set cur_scanidx = 0; set max_scannum = last_udpport_plus_one - udp_hdr.dstPort (first_udpport)
                     self.client.range_partition_for_scan_endkey_tbl_table_add_with_range_partition_for_scan_endkey(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)

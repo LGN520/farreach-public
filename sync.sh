@@ -1,5 +1,5 @@
-DIRNAME="netreach-v4-lsm"
-#DIRNAME="nocache"
+#DIRNAME="netreach-v4-lsm"
+DIRNAME="nocache"
 
 ssh ssy@bf1 "rm -rf NetBuffer/$DIRNAME"
 ssh ssy@dl13 "rm -rf projects/NetBuffer/$DIRNAME"

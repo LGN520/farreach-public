@@ -163,6 +163,13 @@
 	+ Core reasons:
 		* (1) server-side simulation overhead: if each server is an individual physical machine, we can have less serious disk contention
 		* (2) client-side simulation overhead: due to limited client-side CPU cores, we cannot launch infinite client threads -> if so, even if some clients may be blocked/delayed by long latency requests, others can still provide sufficient input to saturate servers
++ IMPORTANT NOTE for optype enumeration
+	- We keep the same optype enumeration fo FarReach, NoCache, and NetCache (files: packet_format.h, tofino/main.p4, tofino/common.py, tofino/p4src/parser.p4)
+	- When adding a new optype
+		+ If it is only processed by end-hosts, you need to update optype enumeration and packet format implementation (files: packet_format*, tofino/main.p4, tofino/common.py, tofino/p4src/parser.p4)
+		+ If it is processed by switch, besides previous files, you also need to consider ingress partition_tbl + ig_port_forward_tbl, and egress eg_port_forward_tbl + update_pktlen_tbl + update_ipmac_srcport_tbl
+	- NOTE: packet implemention is different (e.g., NetCache has inswitch_hdr.hashval_for_bfX and clone_hdr.server_sid/port yet FarReach NOT need)
+
 ## Overview
 
 - Packet format
@@ -1805,6 +1812,10 @@
 			+ Reason: to ensure that cache eviction finishes within one second, we can only evict limited keys into switch -> throughput improvement is still limited even if with more keys being changed
 		- Deprecated: Proper rocksdb setting: 128MB memtable + 20 maxnum + 8 flushnum -> avoid flushing overhead (files: rocksdb_wrapper.h) -> sync to nocache
 			+ NOTE: now we use 64MB memtable + 40 maxnum + 16 flushnum -> TODO: tune parameters in final evaluation
+
+## Implement log after NetCache
+
++ Important code change of FarReach/NetCache to populate deleted keys (see details in netcache.md)
 
 ## Run
 

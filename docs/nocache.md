@@ -2,6 +2,12 @@
 
 - Copy from netreach-v4-lsm
 - See [important notes](./netreach-v4-lsm.md) in netreach-v4-lsm.md
++ IMPORTANT NOTE for optype enumeration
+	- We keep the same optype enumeration fo FarReach, NoCache, and NetCache (files: packet_format.h, tofino/main.p4, tofino/common.py, tofino/p4src/parser.p4)
+	- When adding a new optype
+		+ If it is only processed by end-hosts, you need to update optype enumeration and packet format implementation (files: packet_format*, tofino/main.p4, tofino/common.py, tofino/p4src/parser.p4)
+		+ If it is processed by switch, besides previous files, you also need to consider ingress partition_tbl + ig_port_forward_tbl, and egress eg_port_forward_tbl + update_pktlen_tbl + update_ipmac_srcport_tbl
+	- NOTE: packet implemention is different (e.g., NetCache has inswitch_hdr.hashval_for_bfX and clone_hdr.server_sid/port yet FarReach NOT need)
 
 ## Overview
 
