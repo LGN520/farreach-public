@@ -608,7 +608,7 @@ void RocksdbWrapper::init_snapshot() {
 		store_inswitch_snapshot(snapshotid);
 
 		// flush all memtables into disk after loading phase, which also clears WAL buffer (delete old WAL files)
-		db_ptr->Flush(rocksdb::FlushOptions());
+		//db_ptr->Flush(rocksdb::FlushOptions());
 
 		is_snapshot.clear(std::memory_order_release);
 		return;

@@ -330,7 +330,6 @@
 		+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
 	- Launch clients in end host
 		- Warmup phase: `./warmup_client`
-		- Before transaction phase: `./preparefinish_client`
 		- Transaction phase: `./remote_client client_physical_idx`
 - Server rotation for static workload
 	- Use config.ini.rotation-switch-switchos-loading-warmupclient
