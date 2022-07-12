@@ -9,7 +9,7 @@
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
-//#define DEBUG
+#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
 // 0b0001
@@ -144,7 +144,6 @@
 #include "p4src/regs/cm.p4"
 #include "p4src/regs/bf.p4"
 #include "p4src/regs/cache_frequency.p4"
-#include "p4src/regs/validvalue.p4"
 #include "p4src/regs/latest.p4"
 #include "p4src/regs/deleted.p4"
 #include "p4src/regs/seq.p4"

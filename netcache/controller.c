@@ -45,7 +45,7 @@ int controller_popserver_udpsock = -1;
 // controller.popclient <-> server.popserver
 int controller_popserver_popclient_udpsock = -1;
 // TODO: replace with SIGTERM
-bool volatile is_controlelr_popserver_finish = false;
+bool volatile is_controller_popserver_finish = false;
 
 // switchos.popworker <-> controller.evictserver
 int controller_evictserver_udpsock = -1;
@@ -188,8 +188,8 @@ void *run_controller_popserver(void *param) {
 
 		//printf("receive NETCACHE_CACHE_POP or NETCACHE_CACHE_POP_FINISH from switchos and send it to server\n");
 		//dump_buf(buf, recvsize);
-		packet_type tmp_optype = get_packet_type(buf, recvsize);
-		key_t tmp_key;
+		packet_type_t tmp_optype = get_packet_type(buf, recvsize);
+		netreach_key_t tmp_key;
 		uint16_t tmp_serveridx = 0;
 		if (tmp_optype == packet_type_t::NETCACHE_CACHE_POP) {
 			netcache_cache_pop_t tmp_netcache_cache_pop(buf, recvsize);
@@ -221,7 +221,7 @@ void *run_controller_popserver(void *param) {
 
 		// controller.popserver.popclient <-> server.popserver X
 		struct sockaddr_in tmp_server_popserver_addr;
-		set_sockaddr(tmp_server_popserver_addr, inet_addr(server_ip_for_controller_list[tmp_server_physical_idx]), server_popserver_port_start + tmp_netcache_cache_pop.serveridx());
+		set_sockaddr(tmp_server_popserver_addr, inet_addr(server_ip_for_controller_list[tmp_server_physical_idx]), server_popserver_port_start + tmp_serveridx);
 		socklen_t tmp_server_popserver_addrlen = sizeof(struct sockaddr);
 
 		// send NETCACHE_CACHE_POP/_FINISH to corresponding server
@@ -248,9 +248,9 @@ void *run_controller_popserver(void *param) {
 		}
 	}
 
-	is_controlelr_popserver_finish = true;
-	close(controller_popserver_udpsock;
-	close(controller_popserver_popclient_udpsock;
+	is_controller_popserver_finish = true;
+	close(controller_popserver_udpsock);
+	close(controller_popserver_popclient_udpsock);
 	pthread_exit(nullptr);
 }
 
@@ -322,12 +322,5 @@ void *run_controller_evictserver(void *param) {
 }
 
 void close_controller() {
-	if (controller_popserver_udpsock_list != NULL) {
-		delete [] controller_popserver_udpsock_list;
-		controller_popserver_udpsock_list = NULL;
-	}
-	if (controller_popserver_popclient_udpsock_list != NULL) {
-		delete [] controller_popserver_popclient_udpsock_list;
-		controller_popserver_popclient_udpsock_list = NULL;
-	}
+	return;
 }

@@ -404,6 +404,7 @@ class ScanRequestSplit : public ScanRequest<key_t> { // ophdr + scanhdr + splith
 template<class key_t, class val_t>
 class CachePop : public PutRequestSeq<key_t, val_t> { // ophdr + val + seq + stat (not stat_hdr) + serveridx
 	public: 
+		CachePop();
 		CachePop(key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx);
 		CachePop(const char * data, uint32_t recv_size);
 
@@ -525,6 +526,7 @@ class CachePopAck : public GetRequest<key_t> { // ophdr
 template<class key_t>
 class CacheEvictLoadfreqInswitch : public Packet<key_t> { // ophdr + shadowtype + inswitch_hdr
 	public: 
+		CacheEvictLoadfreqInswitch();
 		CacheEvictLoadfreqInswitch(key_t key, uint16_t evictidx);
 
 		uint16_t evictidx() const;
@@ -626,14 +628,15 @@ class NetcacheGetRequestPop : public GetRequest<key_t> { // ophdr + clonehdr
 	private:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
-}
+};
 
 // NOTE: only used in end-hosts
 template<class key_t>
 class NetcacheCachePop : public GetRequest<key_t> { // ophdr + serveridx
 	public: 
-		CachePop(key_t key, uint16_t serveridx);
-		CachePop(const char * data, uint32_t recv_size);
+		NetcacheCachePop();
+		NetcacheCachePop(key_t key, uint16_t serveridx);
+		NetcacheCachePop(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -673,7 +676,7 @@ template<class key_t>
 class NetcacheWarmupRequestInswitchPop : public CacheEvictLoadfreqInswitch<key_t> { // ophdr + shadowtype + inswitch_hdr + clone_hdr
 	public: 
 		NetcacheWarmupRequestInswitchPop(key_t key);
-		NetcacheWarmupRequestInswitch(const char * data, uint32_t recv_size);
+		NetcacheWarmupRequestInswitchPop(const char * data, uint32_t recv_size);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:

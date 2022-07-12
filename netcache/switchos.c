@@ -312,7 +312,7 @@ void *run_switchos_popworker(void *param) {
 			INVARIANT(is_valid == true);
 			
 			if (switchos_cached_keyidx_map.find(tmp_netcache_getreq_pop_ptr->key()) != switchos_cached_keyidx_map.end()) {
-				printf("Error: populating a key %x cached at kvidx %u from server %d\n", tmp_netcache_getreq_pop_ptr->key().keyhihi, switchos_cached_keyidx_map[tmp_netcache_getreq_pop_ptr->key()], int(tmp_netcache_getreq_pop_ptr->serveridx()));
+				printf("Error: populating a key %x cached at kvidx %u from switch\n", tmp_netcache_getreq_pop_ptr->key().keyhihi, switchos_cached_keyidx_map[tmp_netcache_getreq_pop_ptr->key()]);
 				exit(-1);
 			}
 
@@ -543,7 +543,7 @@ void *run_switchos_popworker(void *param) {
 					}
 
 					cache_pop_inswitch_ack_t tmp_cache_pop_inswitch_ack(ackbuf, ack_recvsize);
-					if (tmp_cache_pop_inswitch_ack.key() == tmp_cache_pop_ptr->key()) {
+					if (tmp_cache_pop_inswitch_ack.key() == tmp_cache_pop_inswitch.key()) {
 						with_correctack = true;
 						break;
 					}

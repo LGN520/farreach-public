@@ -1221,6 +1221,15 @@ void ScanRequestSplit<key_t>::deserialize(const char * data, uint32_t recv_size)
 // CachePop (value must <= 128B; only used in end-hosts)
 
 template<class key_t, class val_t>
+CachePop<key_t, val_t>::CachePop()
+	: PutRequestSeq<key_t, val_t>(), _stat(false), _serveridx(0)
+{
+	this->_type = static_cast<optype_t>(PacketType::CACHE_POP);
+	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
+	INVARIANT(_serveridx >= 0);
+}
+
+template<class key_t, class val_t>
 CachePop<key_t, val_t>::CachePop(key_t key, val_t val, uint32_t seq, bool stat, uint16_t serveridx)
 	: PutRequestSeq<key_t, val_t>(key, val, seq), _stat(stat), _serveridx(serveridx)
 {
@@ -1584,6 +1593,13 @@ CachePopAck<key_t>::CachePopAck(const char * data, uint32_t recv_size) {
 // CacheEvictLoadfreqInswitch
 
 template<class key_t>
+CacheEvictLoadfreqInswitch<key_t>::CacheEvictLoadfreqInswitch()
+	: Packet<key_t>(PacketType::CACHE_EVICT_LOADFREQ_INSWITCH, key_t::min()), _evictidx(0)
+{
+	INVARIANT(_evictidx >= 0);
+}
+
+template<class key_t>
 CacheEvictLoadfreqInswitch<key_t>::CacheEvictLoadfreqInswitch(key_t key, uint16_t evictidx)
 	: Packet<key_t>(PacketType::CACHE_EVICT_LOADFREQ_INSWITCH, key), _evictidx(evictidx)
 {
@@ -1854,7 +1870,7 @@ template<class key_t>
 NetcacheGetRequestPop<key_t>::NetcacheGetRequestPop(key_t key)
 	: GetRequest<key_t>(key)
 {
-	this->_type = packet_type_t::NETCACHE_GETREQ_POP;
+	this->_type = optype_t(packet_type_t::NETCACHE_GETREQ_POP);
 }
 
 template<class key_t>
@@ -1886,6 +1902,14 @@ void NetcacheGetRequestPop<key_t>::deserialize(const char * data, uint32_t recv_
 }
 
 // NetcacheCachePop (only used in end-hosts)
+
+template<class key_t>
+NetcacheCachePop<key_t>::NetcacheCachePop()
+	: GetRequest<key_t>(), _serveridx(0)
+{
+	this->_type = static_cast<optype_t>(PacketType::NETCACHE_CACHE_POP);
+	INVARIANT(_serveridx >= 0);
+}
 
 template<class key_t>
 NetcacheCachePop<key_t>::NetcacheCachePop(key_t key, uint16_t serveridx)
@@ -2038,12 +2062,12 @@ template<class key_t>
 void NetcacheWarmupRequestInswitchPop<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(recv_size >= my_size);
-	char *begin = data;
-	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, max_size);
+	const char *begin = data;
+	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
 	begin += tmp_typesize;
-	uint32_t tmp_keysize = this->_key.deserialize(begin, max_size - tmp_typesize);
+	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize);
 	begin += tmp_keysize;
-	uint32_t tmp_shadowtypesize = deserialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
+	uint32_t tmp_shadowtypesize = deserialize_packet_type(this->_type, begin, recv_size - tmp_typesize - tmp_keysize); // shadowtype
 	begin += tmp_shadowtypesize;
 	begin += INSWITCH_PREV_BYTES; // the first bytes of inswitch_hdr
 	begin += sizeof(uint16_t); // inswitch_hdr.idx
@@ -2104,9 +2128,10 @@ NetcacheDelRequestSeqCached<key_t>::NetcacheDelRequestSeqCached(const char * dat
 
 template<class key_t, class val_t>
 NetcacheValueupdate<key_t, val_t>::NetcacheValueupdate(key_t key, val_t val, uint32_t seq, bool stat)
-	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, 0), _stat(stat)
+	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, 0)
 {
-	this->_type = packet_type_t::NETCACHE_VALUEUPDATE;
+	this->_stat = stat;
+	this->_type = optype_t(packet_type_t::NETCACHE_VALUEUPDATE);
 }
 
 // NetcacheValueupdateAck

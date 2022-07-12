@@ -59,7 +59,7 @@ table process_scanreq_split_tbl {
 
 action set_server_sid_and_port(server_sid) {
 	modify_field(clone_hdr.server_sid, server_sid);
-	modify_field(clone_hdr.server_port, udp_hdr.dstPort); // dstport is serverport for GETREQ_INSWITCH
+	modify_field(clone_hdr.server_udpport, udp_hdr.dstPort); // dstport is serverport for GETREQ_INSWITCH
 }
 
 @pragma stage 1

@@ -109,10 +109,13 @@ header_type inswitch_t {
 		hashval_for_cm2: 16; // at most 64K
 		hashval_for_cm3: 16; // at most 64K
 		hashval_for_cm4: 16; // at most 64K
+		// using multiple paddings due to PHV limitation: total bit width of split containers of a header field cannot exceed 32 bits
 		hashval_for_bf1: 18; // at most 256K
+		padding2: 14;
 		hashval_for_bf2: 18; // at most 256K
+		padding3: 14;
 		hashval_for_bf3: 18; // at most 256K
-		padding2: 10;
+		padding4: 14;
 		hashval_for_seq: 16; // at most 32K
 		idx: 16; // index for in-switch cache
 	}

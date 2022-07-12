@@ -18,7 +18,6 @@
 #include "helper.h"
 #include "key.h"
 #include "val.h"
-#include "deleted_set_impl.h"
 #include "snapshot_record.h"
 #include "io_helper.h"
 
@@ -64,8 +63,6 @@
 
 class RocksdbWrapper {
 
-	typedef DeletedSet<netreach_key_t, uint32_t> deleted_set_t;
-
 	public:
 		static void prepare_rocksdb();
 		static rocksdb::Options rocksdb_options;
@@ -76,11 +73,11 @@ class RocksdbWrapper {
 
 		bool open(uint16_t tmpworkerid);
 
-		// loading phase (per-server loaders only touch rocksdb instead of deleted set; not need mutex for atomicity)
+		// loading phase (per-server loaders only touch rocksdb; not need mutex for atomicity)
 		bool force_put(netreach_key_t key, val_t val);
 		bool force_multiput(netreach_key_t *keys, val_t *vals, int maxidx);
 		
-		// transaction phase (per-server worker and evictserver touch both rocksdb and deleted set; need mutex for atomicity)
+		// transaction phase
 		bool get(netreach_key_t key, val_t &val);
 		// NOTE: only normal pkt and evicted pkt can udpate per-key seq
 		// (1) for two normal pkts, we use the order of arriving server as the final order while not comparing the seqs assigned by switch, which does not undermine serializability (besides, packet reordering seems impossible between switch and server due to a single path and FIFO manner of inswitch queue)-> not need to check seq
@@ -101,12 +98,10 @@ class RocksdbWrapper {
 		
 		/* server-side KVS */
 
-		boost::shared_mutex rwlock; // protect db_ptr and deleted_set in get/put/remove/make_snapshot
-		//std::mutex mutexlock; // protect db_ptr and deleted_set in get/put/remove/make_snapshot
+		boost::shared_mutex rwlock; // protect db_ptr in get/put/remove
+		//std::mutex mutexlock; // protect db_ptr in get/put/remove
 		//rocksdb::TransactionDB *db_ptr = NULL;
 		rocksdb::DB *db_ptr = NULL;
-		// NOTE: deleted_set_t and seq_cache_t do not support concurrency control, which is guaranteed by RocksdbWrapper::rwlock
-		deleted_set_t deleted_set; // seqs of recently deleted keys (flush into disk at each snapshot period for reliability)
 
 		/* utils */
 

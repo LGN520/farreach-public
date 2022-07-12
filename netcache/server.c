@@ -38,7 +38,6 @@ std::atomic<size_t> transaction_ready_threads(0);
 size_t transaction_expected_ready_threads = 0;
 bool volatile killed = false;
 
-int transaction_loadfinishserver_udpsock = -1;
 int server_physical_idx = -1;
 
 cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other threads
@@ -49,7 +48,6 @@ cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other
 #include "reflector_impl.h"
 #include "server_impl.h"
 void transaction_main(); // transaction phase
-void *run_transaction_loadfinishserver(void *param);
 void kill(int signum);
 
 int main(int argc, char **argv) {
@@ -108,13 +106,12 @@ void transaction_main() {
 
 	// update transaction_expected_ready_threads
 	// reflector: cp2dpserver + dp2cpserver
-	// server: server_num * (worker + evictserver + popserver)
-	// transaction.main: loadfinishserver
+	// server: server_num * (worker + evictserver + popserver + valueupdateserver)
 	if (server_physical_idx == 0) { // deploy reflector in the first physical server
-		transaction_expected_ready_threads = 2 + 3*current_server_logical_num + 1;
+		transaction_expected_ready_threads = 2 + 4*current_server_logical_num;
 	}
 	else {
-		transaction_expected_ready_threads = 3*current_server_logical_num + 1;
+		transaction_expected_ready_threads = 4*current_server_logical_num;
 	}
 
 	int ret = 0;
@@ -161,6 +158,22 @@ void transaction_main() {
 		ret = pthread_setaffinity_np(popserver_threads[popserver_i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
 		if (ret) {
 			printf("Error of setaffinity for server.popserver; errno: %d\n", errno);
+			exit(-1);
+		}
+	}
+
+	// launch valueupdateservers
+	pthread_t valueupdateserver_threads[current_server_logical_num];
+	uint16_t valueupdateserver_params[current_server_logical_num];
+	for (uint16_t valueupdateserver_i = 0; valueupdateserver_i < current_server_logical_num; valueupdateserver_i++) {
+		valueupdateserver_params[valueupdateserver_i] = valueupdateserver_i;
+		ret = pthread_create(&valueupdateserver_threads[valueupdateserver_i], nullptr, run_server_valueupdateserver, &valueupdateserver_params[valueupdateserver_i]);
+		if (ret) {
+		  COUT_N_EXIT("Error of launching some server.valueupdateserver:" << ret);
+		}
+		ret = pthread_setaffinity_np(valueupdateserver_threads[valueupdateserver_i], sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+		if (ret) {
+			printf("Error of setaffinity for server.valueupdateserver; errno: %d\n", errno);
 			exit(-1);
 		}
 	}
@@ -212,19 +225,6 @@ void transaction_main() {
 			printf("Error of setaffinity for server.evictserver; errno: %d\n", errno);
 			exit(-1);
 		}
-	}
-
-	// launch loadfinishserver
-	prepare_udpserver(transaction_loadfinishserver_udpsock, true, transaction_loadfinishserver_port, "transaction.main.loadfinishserver");
-	pthread_t loadfinishserver_thread;
-	ret = pthread_create(&loadfinishserver_thread, nullptr, run_transaction_loadfinishserver, nullptr);
-	if (ret) {
-	  COUT_N_EXIT("Error of launching transaction.main.loadfinishserver: " << ret);
-	}
-	ret = pthread_setaffinity_np(loadfinishserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
-	if (ret) {
-		printf("Error of setaffinity for main.loadfinishserver; errno: %d\n", errno);
-		exit(-1);
 	}
 
 	while (transaction_ready_threads < transaction_expected_ready_threads) sleep(1);
@@ -468,6 +468,15 @@ void transaction_main() {
 	}
 	printf("server.popservers finish\n");
 
+	printf("wait for server.valueupdateservers\n");
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		int rc = pthread_join(valueupdateserver_threads[i], &status);
+		if (rc) {
+		  COUT_N_EXIT("Error: unable to join server.valueupdateserver " << rc);
+		}
+	}
+	printf("server.valueupdateservers finish\n");
+
 	printf("wait for server.evictserver\n");
 	for (size_t i = 0; i < current_server_logical_num; i++) {
 		int rc = pthread_join(evictserver_threads[i], &status);
@@ -493,43 +502,7 @@ void transaction_main() {
 		printf("reflector.dp2cpserver finish\n");
 	}
 
-	printf("wait for transaction.main.loadfinishserver\n");
-	int rc = pthread_join(loadfinishserver_thread, &status);
-	if (rc) {
-		COUT_N_EXIT("Error: unable to join transaction.main.loadfinishserver " << rc);
-	}
-	printf("transaction.main.loadfinishserver finish\n");
-
 	printf("[transaction.main] all threads end\n");
-}
-
-void *run_transaction_loadfinishserver(void *param) {
-	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
-
-	printf("[transaction.main.loadfinishserver] ready\n");
-	transaction_ready_threads++;
-
-	while(!transaction_running) {}
-
-	char buf[256];
-	int recvsize = 0;
-	while (transaction_running) {
-		bool is_timeout = udprecvfrom(transaction_loadfinishserver_udpsock, buf, 256, 0, NULL, NULL, recvsize, "transaction.main.loadfinishserver");
-		if (is_timeout) {
-			continue;
-		}
-
-		printf("Receive loadfinish notification!\n");
-		for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
-			// make server-side snapshot of snapshot id 0 if necessary
-			db_wrappers[tmp_local_server_logical_idx].init_snapshot();
-		}
-		break;
-	}
-
-	printf("[transaction.main.loadfinishserver] exit\n");
-	close(transaction_loadfinishserver_udpsock);
-	pthread_exit(nullptr);
 }
 
 void kill(int signum) {

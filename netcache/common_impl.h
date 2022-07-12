@@ -51,14 +51,14 @@ typedef WarmupAck<netreach_key_t> warmup_ack_t;
 typedef LoadRequest<netreach_key_t, val_t> load_request_t;
 typedef LoadAck<netreach_key_t> load_ack_t;
 typedef CachePopAck<netreach_key_t> cache_pop_ack_t;
-typedef CacheEvictLoadfreqInswitch<netreach_key_t> cache_evict_loadfreq_inswich_t;
-typedef CacheEvictLoadfreqInswitchAck<netreach_key_t> cache_evict_loadfreq_inswich_ack_t;
-typedef CacheEvictLoaddataInswitch<netreach_key_t> cache_evict_loaddata_inswich_t;
-typedef CacheEvictLoaddataInswitchAck<netreach_key_t, val_t> cache_evict_loaddata_inswich_ack_t;
-// NOTE: both loadsnapshotdata_inswitch_t and cache_evict_loaddata_inswich_t have op_hdr.key to be forwarded into corresponding egress pipeline and inswitch_hdr.idx to read corresponding register; both loadsnapshotdata_inswitch_ack_t and cache_evict_loaddata_inswich_ack_t have val_hdr + seq_hdr + stat_hdr to report data from data plane to switch os;
+typedef CacheEvictLoadfreqInswitch<netreach_key_t> cache_evict_loadfreq_inswitch_t;
+typedef CacheEvictLoadfreqInswitchAck<netreach_key_t> cache_evict_loadfreq_inswitch_ack_t;
+typedef CacheEvictLoaddataInswitch<netreach_key_t> cache_evict_loaddata_inswitch_t;
+typedef CacheEvictLoaddataInswitchAck<netreach_key_t, val_t> cache_evict_loaddata_inswitch_ack_t;
+// NOTE: both loadsnapshotdata_inswitch_t and cache_evict_loaddata_inswitch_t have op_hdr.key to be forwarded into corresponding egress pipeline and inswitch_hdr.idx to read corresponding register; both loadsnapshotdata_inswitch_ack_t and cache_evict_loaddata_inswitch_ack_t have val_hdr + seq_hdr + stat_hdr to report data from data plane to switch os;
 // NOTE: loadsnapshotdata_inswitch_ack_t has an extra inswitch_hdr.idx
-// DEPRECATED: we simply reuse cache_evict_loaddata_inswich_t and cache_evict_loaddata_inswich_ack_t for loading snapshot data
-// NOTE: we cannot simply reuse cache_evict_loaddata_inswich_/ack_t, as reflector cannot distinguish the two optypes and does not know which one of switchos,popserver.popclient_for_reflector or switchos.snapshotserver.snapshotclient_for_reflector it should forward ACK to; actually loading evicted data or snapshot data can happen simultaneously!
+// DEPRECATED: we simply reuse cache_evict_loaddata_inswitch_t and cache_evict_loaddata_inswitch_ack_t for loading snapshot data
+// NOTE: we cannot simply reuse cache_evict_loaddata_inswitch_/ack_t, as reflector cannot distinguish the two optypes and does not know which one of switchos,popserver.popclient_for_reflector or switchos.snapshotserver.snapshotclient_for_reflector it should forward ACK to; actually loading evicted data or snapshot data can happen simultaneously!
 typedef LoadsnapshotdataInswitch<netreach_key_t> loadsnapshotdata_inswitch_t;
 typedef LoadsnapshotdataInswitchAck<netreach_key_t, val_t> loadsnapshotdata_inswitch_ack_t;
 typedef SetvalidInswitch<netreach_key_t> setvalid_inswitch_t;
@@ -71,6 +71,8 @@ typedef NetcacheCachePopFinishAck<netreach_key_t> netcache_cache_pop_finish_ack_
 typedef NetcacheWarmupRequestInswitchPop<netreach_key_t> netcache_warmupreq_inswitch_pop_t;
 typedef NetcacheCacheEvict<netreach_key_t> netcache_cache_evict_t;
 typedef NetcacheCacheEvictAck<netreach_key_t> netcache_cache_evict_ack_t;
+typedef NetcacheValueupdate<netreach_key_t, val_t> netcache_valueupdate_t;
+typedef NetcacheValueupdateAck<netreach_key_t> netcache_valueupdate_ack_t;
 
 /*
  * Constants

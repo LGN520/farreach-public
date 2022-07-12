@@ -17,7 +17,6 @@
 
 //#define DUMP_BUF
 
-typedef DeletedSet<netreach_key_t, uint32_t> deleted_set_t;
 typedef ConcurrentSet<netreach_key_t> concurrent_set_t;
 
 struct alignas(CACHELINE_SIZE) ServerWorkerParam {
@@ -399,7 +398,7 @@ void *run_server_worker(void * param) {
 				CUR_TIME(rocksdb_t1);
 #endif
 
-				key_t tmp_key;
+				netreach_key_t tmp_key;
 				val_t tmp_val;
 				uint32_t tmp_seq;
 				if (pkt_type == packet_type_t::PUTREQ_SEQ) {
@@ -427,7 +426,7 @@ void *run_server_worker(void * param) {
 				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 				if (likely(!is_being_cached && !is_cached)) { // uncached
 					if (pkt_type == packet_type_t::PUTREQ_SEQ) {
-						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key. tmp_val, tmp_seq); // perform PUT operation
+						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
 					else {
 						tmp_stat = db_wrappers[local_server_logical_idx].remove(tmp_key, tmp_seq); // perform DEL operation
@@ -477,7 +476,7 @@ void *run_server_worker(void * param) {
 					// else: do nothing as key is removed from beingupdated keyset by server.evictserver
 
 					if (pkt_type == packet_type_t::PUTREQ_SEQ) {
-						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key. tmp_val, tmp_seq); // perform PUT operation
+						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
 					else {
 						tmp_stat = db_wrappers[local_server_logical_idx].remove(tmp_key, tmp_seq); // perform DEL operation
@@ -516,7 +515,7 @@ void *run_server_worker(void * param) {
 				CUR_TIME(rocksdb_t1);
 #endif
 
-				key_t tmp_key;
+				netreach_key_t tmp_key;
 				val_t tmp_val;
 				uint32_t tmp_seq;
 				if (pkt_type == packet_type_t::PUTREQ_SEQ) {
@@ -544,7 +543,7 @@ void *run_server_worker(void * param) {
 				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 				if (unlikely(!is_being_cached && !is_cached)) { // uncached
 					if (pkt_type == packet_type_t::PUTREQ_SEQ) {
-						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key. tmp_val, tmp_seq); // perform PUT operation
+						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
 					else {
 						tmp_stat = db_wrappers[local_server_logical_idx].remove(tmp_key, tmp_seq); // perform DEL operation
@@ -593,7 +592,7 @@ void *run_server_worker(void * param) {
 					// else: do nothing as key is removed from beingupdated keyset by server.evictserver
 
 					if (pkt_type == packet_type_t::PUTREQ_SEQ) {
-						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key. tmp_val, tmp_seq); // perform PUT operation
+						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
 					else {
 						tmp_stat = db_wrappers[local_server_logical_idx].remove(tmp_key, tmp_seq); // perform DEL operation
@@ -642,7 +641,7 @@ void *run_server_worker(void * param) {
 
 				//COUT_THIS("results size: " << results.size());
 
-				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), global_server_logical_idx, db_wrappers[local_server_logical_idx].get_snapshotid(), results.size(), results);
+				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), global_server_logical_idx, 0, results.size(), results);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
