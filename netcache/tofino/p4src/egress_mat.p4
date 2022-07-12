@@ -416,6 +416,16 @@ action update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack
 //action forward_cache_evict_loadfreq_inswitch_ack() {
 //}
 
+action update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack() {
+	modify_field(op_hdr.optype, NETCACHE_VALUEUPDATE_ACK);
+
+	remove_header(shadowtype_hdr);
+	remove_header(seq_hdr);
+	remove_header(stat_hdr);
+
+	// NOTE: egress_port has already been set in ig_port_forward_tbl at ingress pipeline
+}
+
 #ifdef DEBUG
 // Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
 counter eg_port_forward_counter {
@@ -466,6 +476,7 @@ table eg_port_forward_tbl {
 #endif
 		update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone; // clone to reflector and hence switchos; but not need clone for pktloss due to switchos-side timeout-and-retry
 		//forward_cache_evict_loadfreq_inswitch_ack;
+		update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack;
 		nop;
 	}
 	default_action: nop();
@@ -532,7 +543,7 @@ table update_ipmac_srcport_tbl {
 
 // NOTE: only one operand in add can be action parameter or constant -> resort to controller to configure different hdrlen
 /*
-// CACHE_POP_INSWITCH_ACK, GETREQ (cloned by NETCACHE_GETREQ_POP), WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP)
+// CACHE_POP_INSWITCH_ACK, GETREQ (cloned by NETCACHE_GETREQ_POP), WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP), NETCACHE_VALUEUPDATE_ACK
 action update_onlyop_pktlen() {
 	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 1(debug_hdr)
 	//modify_field(udp_hdr.hdrlen, 27);

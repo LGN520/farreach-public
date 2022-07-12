@@ -455,6 +455,19 @@ action update_warmupreq_to_netcache_warmupreq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
+action update_netcache_valueupdate_to_netcache_valueupdate_inswitch() {
+	modify_field(op_hdr.optype, NETCACHE_VALUEUPDATE_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, NETCACHE_VALUEUPDATE_INSWITCH);
+
+	add_header(inswitch_hdr);
+
+	// NOTE: NETCACHE_VALUEUPDATE does not need partition_tbl, as in-switch record must in the same pipeline of the ingress port, which can also send NETCACHE_VALUEUPDATE_ACK back to corresponding server
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
+
+	// swap to set dstport as corresponding server.valueupdateserver port
+	swap(udp_hdr.srcPort, udp_hdr.dstPort);
+}
+
 @pragma stage 6
 table ig_port_forward_tbl {
 	reads {
@@ -468,6 +481,7 @@ table ig_port_forward_tbl {
 		update_scanreq_to_scanreq_split;
 #endif
 		update_warmupreq_to_netcache_warmupreq_inswitch;
+		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		nop;
 	}
 	default_action: nop();

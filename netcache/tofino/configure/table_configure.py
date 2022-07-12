@@ -530,7 +530,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
 
-            # Table: ig_port_forward_tbl (default: nop; size: 7)
+            # Table: ig_port_forward_tbl (default: nop; size: 8)
             print "Configuring ig_port_forward_tbl"
             matchspec0 = netcache_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ)
@@ -553,12 +553,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype = WARMUPREQ)
             self.client.ig_port_forward_tbl_table_add_with_update_warmupreq_to_netcache_warmupreq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netcache_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = NETCACHE_VALUEUPDATE)
+            self.client.ig_port_forward_tbl_table_add_with_update_netcache_valueupdate_to_netcache_valueupdate_inswitch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline
 
             # Stage 0
 
-            # Table: access_latest_tbl (default: reset_is_latest; size: 5)
+            # Table: access_latest_tbl (default: reset_is_latest; size: 6)
             print "Configuring access_latest_tbl"
             for is_cached in cached_list:
                 matchspec0 = netcache_access_latest_tbl_match_spec_t(\
@@ -581,6 +585,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         inswitch_hdr_is_cached = is_cached)
                 self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
+                matchspec0 = netcache_access_latest_tbl_match_spec_t(\
+                        op_hdr_optype = NETCACHE_VALUEUPDATE_INSWITCH,
+                        inswitch_hdr_is_cached = is_cached)
+                if is_cached == 1:
+                    self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_seq_tbl (default: nop; size: 2)
             print "Configuring access_seq_tbl"
@@ -740,7 +750,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.access_cache_frequency_tbl_table_add_with_get_cache_frequency(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_deleted_tbl (default: reset_is_deleted; size: 12)
+            # Table: access_deleted_tbl (default: reset_is_deleted; size: 16)
             print "Configuring access_deleted_tbl"
             for is_cached in cached_list:
                 for is_latest in latest_list:
@@ -748,22 +758,36 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         matchspec0 = netcache_access_deleted_tbl_match_spec_t(\
                                 op_hdr_optype = GETREQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                meta_is_latest = is_latest)
+                                meta_is_latest = is_latest,
+                                stat_hdr_stat = is_stat)
                         if is_cached == 1:
                             self.client.access_deleted_tbl_table_add_with_get_deleted(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
                         matchspec0 = netcache_access_deleted_tbl_match_spec_t(\
                                 op_hdr_optype = CACHE_POP_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
-                                meta_is_latest = is_latest)
+                                meta_is_latest = is_latest,
+                                stat_hdr_stat = is_stat)
                         if is_stat == 1:
                             self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
                         elif is_stat == 0:
                             self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
+                        matchspec0 = netcache_access_deleted_tbl_match_spec_t(\
+                                op_hdr_optype = NETCACHE_VALUEUPDATE_INSWITCH,
+                                inswitch_hdr_is_cached = is_cached,
+                                meta_is_latest = is_latest,
+                                stat_hdr_stat = is_stat)
+                        if is_cached == 1:
+                            if is_stat == 1:
+                                self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                            elif is_stat == 0:
+                                self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_savedseq_tbl (default: nop; size: 4)
+            # Table: access_savedseq_tbl (default: nop; size: 6)
             print "Configuring access_savedseq_tbl"
             for is_cached in cached_list:
                 for is_latest in latest_list:
@@ -773,10 +797,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             meta_is_latest = is_latest)
                     self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
+                    matchspec0 = netcache_access_savedseq_tbl_match_spec_t(\
+                            op_hdr_optype = NETCACHE_VALUEUPDATE_INSWITCH,
+                            inswitch_hdr_is_cached = is_cached,
+                            meta_is_latest = is_latest)
+                    if is_cached == 1:
+                        self.client.access_savedseq_tbl_table_add_with_set_and_get_savedseq(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 3
 
-            # Table: update_vallen_tbl (default: reset_access_val_mode; 6)
+            # Table: update_vallen_tbl (default: reset_access_val_mode; 8)
             print "Configuring update_vallen_tbl"
             for is_cached in cached_list:
                 for is_latest in latest_list:
@@ -793,6 +824,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             meta_is_latest = is_latest)
                     self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
+                    matchspec0 = netcache_update_vallen_tbl_match_spec_t(\
+                            op_hdr_optype = NETCACHE_VALUEUPDATE_INSWITCH,
+                            inswitch_hdr_is_cached = is_cached,
+                            meta_is_latest = is_latest)
+                    if is_cached == 1:
+                        self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_bfX_tbl (default: reset_is_reportX; size: 3)
             bf_hashnum = 3
@@ -981,7 +1019,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             else:
                 self.configure_eg_port_forward_tbl_with_range()
 
-            # Table: update_pktlen_tbl (default: nop; 3*17+9 = 60)
+            # Table: update_pktlen_tbl (default: nop; 3*17+10 = 61)
             print "Configuring update_pktlen_tbl"
             for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                 if i == 0:
@@ -1031,13 +1069,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             op_clone_iplen = 53
             op_inswitch_clone_udplen = 59
             op_inswitch_clone_iplen = 79
-            matchspec0 = netcache_update_pktlen_tbl_match_spec_t(\
-                    op_hdr_optype=CACHE_POP_INSWITCH_ACK,
-                    vallen_hdr_vallen_start=0,
-                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-            actnspec0 = netcache_update_pktlen_action_spec_t(onlyop_udplen, onlyop_iplen)
-            self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+            for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETREQ, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:
+                matchspec0 = netcache_update_pktlen_tbl_match_spec_t(\
+                        op_hdr_optype=tmpoptype,
+                        vallen_hdr_vallen_start=0,
+                        vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
+                actnspec0 = netcache_update_pktlen_action_spec_t(onlyop_udplen, onlyop_iplen)
+                self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             for tmpoptype in [DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED]:
                 matchspec0 = netcache_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
@@ -1068,24 +1107,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
             matchspec0 = netcache_update_pktlen_tbl_match_spec_t(\
-                    op_hdr_optype=GETREQ,
-                    vallen_hdr_vallen_start=0,
-                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-            actnspec0 = netcache_update_pktlen_action_spec_t(onlyop_udplen, onlyop_iplen)
-            self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-            matchspec0 = netcache_update_pktlen_tbl_match_spec_t(\
                     op_hdr_optype=NETCACHE_WARMUPREQ_INSWITCH_POP,
                     vallen_hdr_vallen_start=0,
                     vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
             actnspec0 = netcache_update_pktlen_action_spec_t(op_inswitch_clone_udplen, op_inswitch_clone_iplen)
-            self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
-                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-            matchspec0 = netcache_update_pktlen_tbl_match_spec_t(\
-                    op_hdr_optype=WARMUPACK,
-                    vallen_hdr_vallen_start=0,
-                    vallen_hdr_vallen_end=switch_max_vallen) # [0, 128]
-            actnspec0 = netcache_update_pktlen_action_spec_t(onlyop_udplen, onlyop_iplen)
             self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
 
@@ -1107,41 +1132,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         ipv4Addr_to_i32(tmp_client_ip), \
                         ipv4Addr_to_i32(tmp_server_ip), \
                         server_worker_port_start)
-                matchspec0 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype = convert_u16_to_i16(GETRES), 
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec1 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(PUTRES), 
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec2 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(DELRES),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec3 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(SCANRES_SPLIT),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec4 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(WARMUPACK),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec5 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(LOADACK),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec6 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(WARMUPACK),
-                        eg_intr_md_egress_port = tmp_devport)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec3, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec4, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec5, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec6, actnspec0)
+                for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK]
+                    matchspec0 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
+                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
+                            eg_intr_md_egress_port = tmp_devport)
+                    self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             # for request from client to server, egress port has been set by partition_tbl in ingress pipeline
             for tmp_server_physical_idx in range(server_physical_num):
                 tmp_devport = self.server_devports[tmp_server_physical_idx]
@@ -1150,7 +1146,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = netcache_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED, SCANREQ_SPLIT, LOADREQ]:
+                for tmpoptype in [GETREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED, SCANREQ_SPLIT, LOADREQ, NETCACHE_VALUEUPDATE_ACK]:
                     matchspec0 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)
@@ -1174,26 +1170,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             actnspec2 = netcache_update_dstipmac_switch2switchos_action_spec_t(\
                     macAddr_to_string(self.reflector_mac_for_switch), \
                     ipv4Addr_to_i32(self.reflector_ip_for_switch))
-            matchspec8 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(CACHE_POP_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec9 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(CACHE_EVICT_LOADFREQ_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec10 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(NETCACHE_GETREQ_POP),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec11 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(NETCACHE_WARMUPREQ_INSWITCH_POP),
-                    eg_intr_md_egress_port=tmp_devport)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec8, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec9, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec10, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec11, actnspec2)
+            for tmpoptype in [CACHE_POP_INSWITCH_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK, NETCACHE_GETREQ_POP, NETCACHE_WARMUPREQ_INSWITCH_POP]:
+                matchspec0 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
+                        op_hdr_optype=convert_u16_to_i16(tmpoptype),
+                        eg_intr_md_egress_port=tmp_devport)
+                self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_switch2switchos(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec2)
 
             # Table: add_and_remove_value_header_tbl (default: remove_all; 17*4=68)
             print "Configuring add_and_remove_value_header_tbl"
@@ -1519,6 +1501,23 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             #        self.sess_hdl, self.dev_tgt, matchspec0)
                                             # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                             pass
+                                        # is_hot=0, is_report=0, tmp_client_sid=0, is_lastclone_for_pktloss=0, tmp_server_sid=0 for NETCACHE_VALUEUPDATE_INSWITCH
+                                        if is_hot == 0 and is_report == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0:
+                                            # size: 8
+                                            matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
+                                                op_hdr_optype = NETCACHE_WARMUPREQ_INSWITCH,
+                                                inswitch_hdr_is_cached = is_cached,
+                                                meta_is_hot = is_hot,
+                                                meta_is_report = is_report,
+                                                meta_is_latest = is_latest,
+                                                meta_is_deleted = is_deleted,
+                                                #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                inswitch_hdr_client_sid = tmp_client_sid,
+                                                meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                clone_hdr_server_sid = tmp_server_sid)
+                                            # Update NETCACHE_VALUEUPDATE_INSWITCH as NETCACHE_VALUEUPDATE_ACK to server
+                                            self.client.eg_port_forward_tbl_table_add_with_update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack(\
+                                                    self.sess_hdl, self.dev_tgt, matchspec0)
 
     def configure_eg_port_forward_tbl_with_range(self):
         # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num+2*server_physical_num=27+854*2=1735 < 2048 < 21+854*8=6859 < 8192)
@@ -1643,6 +1642,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
                                                     inswitch_hdr_client_sid = tmp_client_sid,
                                                     meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    meta_is_last_scansplit = is_last_scansplit,
                                                     clone_hdr_server_sid = tmp_server_sid)
                                                 if is_lastclone_for_pktloss == 0:
                                                     actnspec0 = netcache_forward_netcache_getreq_pop_clone_for_pktloss_and_getreq(self.reflector_sid)
@@ -1816,4 +1816,22 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                 # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                 pass
+                                            # is_hot=0, is_report=0, tmp_client_sid=0, is_lastclone_for_pktloss=0, tmp_server_sid=0 for NETCACHE_VALUEUPDATE_INSWITCH
+                                            if is_hot == 0 and is_report == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0 and is_last_scansplit == 0:
+                                                # size: 8
+                                                matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = NETCACHE_WARMUPREQ_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    meta_is_report = is_report,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    inswitch_hdr_client_sid = tmp_client_sid,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    meta_is_last_scansplit = is_last_scansplit,
+                                                    clone_hdr_server_sid = tmp_server_sid)
+                                                # Update NETCACHE_VALUEUPDATE_INSWITCH as NETCACHE_VALUEUPDATE_ACK to server
+                                                self.client.eg_port_forward_tbl_table_add_with_update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
 

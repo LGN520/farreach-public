@@ -32,6 +32,7 @@
 #define DELREQ_SEQ_INSWITCH_CASE1 0x005f
 #define LOADSNAPSHOTDATA_INSWITCH_ACK 0x006f
 #define CACHE_POP_INSWITCH 0x007f
+#define NETCACHE_VALUEUPDATE_INSWITCH 0x008f
 // 0b1011
 #define GETRES_LATEST_SEQ 0x000b
 #define GETRES_DELETED_SEQ 0x001b
@@ -199,7 +200,7 @@ control ingress {
 
 	// Stage 6
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
-	apply(ig_port_forward_tbl); // update op_hdr.optype
+	apply(ig_port_forward_tbl); // update op_hdr.optype (update egress_port for NETCACHE_VALUEUPDATE)
 }
 
 /* Egress Processing */
