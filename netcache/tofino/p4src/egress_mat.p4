@@ -604,9 +604,9 @@ action update_ophdr_clonehdr_pktlen() {
 
 // NETCACHE_WARMUPREQ_INSWITCH_POP
 action update_ophdr_inswitchhdr_clonehdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 24(inswitchhdr) + 7(clonehdr)
-	modify_field(udp_hdr.hdrlen, 59);
-	modify_field(ipv4_hdr.totalLen, 79);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 28(inswitchhdr) + 7(clonehdr)
+	modify_field(udp_hdr.hdrlen, 63);
+	modify_field(ipv4_hdr.totalLen, 83);
 }
 */
 

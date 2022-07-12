@@ -13,7 +13,7 @@
 //#define VALID_MASK 0x01
 
 // # of bytes before idx in inswitch_hdr
-#define INSWITCH_PREV_BYTES 22
+#define INSWITCH_PREV_BYTES 26
 
 // # of bytes in clone_hdr
 #define CLONE_BYTES 7

@@ -168,13 +168,11 @@ void prepare_controller() {
 }
 
 void *run_controller_popserver(void *param) {
-	// controlelr.popserver i <-> server.popclient i
-	uint16_t global_server_logical_idx = *((uint16_t *)param);
 
 	struct sockaddr_in switchos_popworker_addr;
 	socklen_t switchos_popworker_addrlen = sizeof(struct sockaddr);
 
-	printf("[controller.popserver %d] ready\n", global_server_logical_idx);
+	printf("[controller.popserver] ready\n");
 	controller_ready_threads++;
 
 	while (!controller_running) {}

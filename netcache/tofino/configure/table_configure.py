@@ -683,16 +683,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 1
 
             # Table: prepare_for_cachepop_tbl (default: set_server_sid_and_port(0); size: server_physical_num=2 < 8)
-            for tmpoptype in [GETREQ_INSWITCH]:
+            for tmpoptype in [GETREQ_INSWITCH, SCANREQ_SPLIT]:
                 for tmp_server_physical_idx in range(server_physical_num):
                     tmp_devport = self.server_devports[tmp_server_physical_idx]
                     tmp_server_sid = self.server_sids[tmp_server_physical_idx]
                     matchspec0 = netcache_prepare_for_cachepop_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             eg_intr_md_egress_port = tmp_devport)
-                    actnspec0 = netcache_set_server_sid_and_port_action_spec_t(tmp_server_sid)
-                    self.client.prepare_for_cachepop_tbl_table_add_with_set_server_sid_and_port(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                    if tmpoptype != SCANREQ_SPLIT:
+                        actnspec0 = netcache_set_server_sid_and_port_action_spec_t(tmp_server_sid)
+                        self.client.prepare_for_cachepop_tbl_table_add_with_set_server_sid_and_port(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                    elif tmpoptype == SCANREQ_SPLIT and RANGE_SUPPORT == True:
+                        self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_cmi_tbl (default: initialize_cmi_predicate; size: 3)
             cm_hashnum = 4
@@ -1069,8 +1073,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             frequency_iplen = 50
             op_clone_udplen = 33
             op_clone_iplen = 53
-            op_inswitch_clone_udplen = 59
-            op_inswitch_clone_iplen = 79
+            op_inswitch_clone_udplen = 63
+            op_inswitch_clone_iplen = 83
             for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETREQ, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:
                 matchspec0 = netcache_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
@@ -1265,6 +1269,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 for is_lastclone_for_pktloss in lastclone_list:
                                     for tmp_server_sid in tmp_server_sids: # Only work for NETCACHE_GETREQ_POP
                                         # is_hot=0, is_report=0, is_latest=0, is_deleted=0, is_lastclone_for_pktloss=0, tmp_server_sid=0 for NETCACHE_WARMUPREQ_INSWITCH
+                                        # NOTE: tmp_server_sid must be 0 as the last NETCACHE_WARMUPREQ_INSWITCH_POP is cloned as WARMUPACK to client instead of server
                                         if is_hot == 0 and is_report == 0 and is_latest == 0 and is_deleted == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
                                             # size: 2*client_physical_num=4 < 2*8=16
                                             matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
@@ -1308,8 +1313,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 self.client.eg_port_forward_tbl_table_add_with_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         # is_lastclone_for_pktloss should be 0 for GETREQ_INSWITCH
-                                        if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and tmp_server_sid == 0:
-                                            # size: 16*client_physical_num=64 < 16*8=128
+                                        if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and tmp_server_sid != 0:
+                                            # size: 32*client_physical_num*server_physical_num=128 < 32*8*8=2048
+                                            # NOTE: tmp_client_sid != 0 to prepare for cache hit; tmp_server_sid != 0 to prepare for cache pop (clone last NETCACHE_GETREQ_POP as GETREQ to server)
                                             matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
                                                 op_hdr_optype = GETREQ_INSWITCH,
                                                 inswitch_hdr_is_cached = is_cached,
@@ -1543,6 +1549,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                     for is_last_scansplit in [0, 1]:
                                         for tmp_server_sid in tmp_server_sids: # Only work for NETCACHE_GETREQ_POP and SCANREQ_SPLIT
                                             # is_hot=0, is_report=0, is_latest=0, is_deleted=0, is_lastclone_for_pktloss=0, is_last_scansplit=0, tmp_server_sid=0 for NETCACHE_WARMUPREQ_INSWITCH
+                                            # NOTE: tmp_server_sid must be 0 as the last NETCACHE_WARMUPREQ_INSWITCH_POP is cloned as WARMUPACK to client instead of server
                                             if is_hot == 0 and is_report == 0 and is_latest == 0 and is_deleted == 0 and is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
                                                 # size: 2*client_physical_num=4 < 2*8=16
                                                 matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
@@ -1587,10 +1594,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     actnspec0 = netcache_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid)
                                                     self.client.eg_port_forward_tbl_table_add_with_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                            # is_lastclone_for_pktloss should be 0 for GETREQ_INSWITCH
-                                            # is_last_scansplit and tmp_server_sid must be 0
-                                            if is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0 and tmp_client_sid != 0:
-                                                # size: 16*client_physical_num=32 < 16*8=128
+                                            # is_lastclone_for_pktloss and is_last_scansplit should be 0 for GETREQ_INSWITCH
+                                            # NOTE: tmp_client_sid != 0 to prepare for cache hit; tmp_server_sid != 0 to prepare for cache pop (clone last NETCACHE_GETREQ_POP as GETREQ to server)
+                                            if is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid != 0 and tmp_client_sid != 0:
+                                                # size: 32*client_physical_num*server_physical_num=128 < 32*8*8=2048
                                                 matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = GETREQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,

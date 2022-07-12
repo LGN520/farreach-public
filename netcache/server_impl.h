@@ -194,6 +194,7 @@ void *run_server_popserver(void *param) {
 	bool is_timeout = udprecvfrom(server_popserver_udpsock_list[local_server_logical_idx], recvbuf, MAX_BUFSIZE, 0, &controller_popserver_popclient_addr, &controller_popserver_popclient_addrlen, recvsize, "server.popserver");
 	if (is_timeout) {
 		controller_popserver_popclient_addrlen = sizeof(struct sockaddr_in);
+		continue;
 	}
 
 	packet_type_t tmp_optype = get_packet_type(recvbuf, recvsize);
@@ -651,7 +652,7 @@ void *run_server_worker(void * param) {
 				rsp_size = rsp.dynamic_serialize(scanbuf);
 				udpsendlarge_ipfrag(server_worker_udpsock_list[local_server_logical_idx], scanbuf.array(), rsp_size, 0, &client_addr, client_addrlen, "server.worker", scan_response_split_t::get_frag_hdrsize());
 #ifdef DUMP_BUF
-				dump_buf(buf, rsp_size);
+				dump_buf(scanbuf.array(), rsp_size);
 #endif
 				break;
 			}
