@@ -105,7 +105,7 @@
 	* Compile FarReach under range partition -> try dynamic workload -> OK
 	* Compile FarReach under hash partition -> try dynamic workload
 	* Compile NoCache under range partition -> try dynamic workload
-	* TODO: Compile NoCache under hash partition -> try dynamic workload
+	* Compile NoCache under hash partition -> try dynamic workload
 
 + Implement NetCache
 	* Client: not change
