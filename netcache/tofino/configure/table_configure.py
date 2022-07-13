@@ -915,29 +915,29 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring update_vallo10_tbl"
             self.configure_update_val_tbl("lo10")
 
-#            # Table: update_vallo11_tbl (default: nop; 14)
-#            print "Configuring update_vallo11_tbl"
-#            self.configure_update_val_tbl("lo11")
-#
-#            # Table: update_vallo12_tbl (default: nop; 14)
-#            print "Configuring update_vallo12_tbl"
-#            self.configure_update_val_tbl("lo12")
-#
-#            # Table: update_vallo13_tbl (default: nop; 14)
-#            print "Configuring update_vallo13_tbl"
-#            self.configure_update_val_tbl("lo13")
-#
-#            # Table: update_vallo14_tbl (default: nop; 14)
-#            print "Configuring update_vallo14_tbl"
-#            self.configure_update_val_tbl("lo14")
-#
-#            # Table: update_vallo15_tbl (default: nop; 14)
-#            print "Configuring update_vallo15_tbl"
-#            self.configure_update_val_tbl("lo15")
-#
-#            # Table: update_vallo16_tbl (default: nop; 14)
-#            print "Configuring update_vallo16_tbl"
-#            self.configure_update_val_tbl("lo16")
+            # Table: update_vallo11_tbl (default: nop; 14)
+            print "Configuring update_vallo11_tbl"
+            self.configure_update_val_tbl("lo11")
+
+            # Table: update_vallo12_tbl (default: nop; 14)
+            print "Configuring update_vallo12_tbl"
+            self.configure_update_val_tbl("lo12")
+
+            # Table: update_vallo13_tbl (default: nop; 14)
+            print "Configuring update_vallo13_tbl"
+            self.configure_update_val_tbl("lo13")
+
+            # Table: update_vallo14_tbl (default: nop; 14)
+            print "Configuring update_vallo14_tbl"
+            self.configure_update_val_tbl("lo14")
+
+            # Table: update_vallo15_tbl (default: nop; 14)
+            print "Configuring update_vallo15_tbl"
+            self.configure_update_val_tbl("lo15")
+
+            # Table: update_vallo16_tbl (default: nop; 14)
+            print "Configuring update_vallo16_tbl"
+            self.configure_update_val_tbl("lo16")
 
             # Table: update_valhi1_tbl (default: nop; 14)
             print "Configuring update_valhi1_tbl"
@@ -979,29 +979,29 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring update_valhi10_tbl"
             self.configure_update_val_tbl("hi10")
 
-#            # Table: update_valhi11_tbl (default: nop; 14)
-#            print "Configuring update_valhi11_tbl"
-#            self.configure_update_val_tbl("hi11")
-#
-#            # Table: update_valhi12_tbl (default: nop; 14)
-#            print "Configuring update_valhi12_tbl"
-#            self.configure_update_val_tbl("hi12")
-#
-#            # Table: update_valhi13_tbl (default: nop; 14)
-#            print "Configuring update_valhi13_tbl"
-#            self.configure_update_val_tbl("hi13")
-#
-#            # Table: update_valhi14_tbl (default: nop; 14)
-#            print "Configuring update_valhi14_tbl"
-#            self.configure_update_val_tbl("hi14")
-#
-#            # Table: update_valhi15_tbl (default: nop; 14)
-#            print "Configuring update_valhi15_tbl"
-#            self.configure_update_val_tbl("hi15")
-#
-#            # Table: update_valhi16_tbl (default: nop; 14)
-#            print "Configuring update_valhi16_tbl"
-#            self.configure_update_val_tbl("hi16")
+            # Table: update_valhi11_tbl (default: nop; 14)
+            print "Configuring update_valhi11_tbl"
+            self.configure_update_val_tbl("hi11")
+
+            # Table: update_valhi12_tbl (default: nop; 14)
+            print "Configuring update_valhi12_tbl"
+            self.configure_update_val_tbl("hi12")
+
+            # Table: update_valhi13_tbl (default: nop; 14)
+            print "Configuring update_valhi13_tbl"
+            self.configure_update_val_tbl("hi13")
+
+            # Table: update_valhi14_tbl (default: nop; 14)
+            print "Configuring update_valhi14_tbl"
+            self.configure_update_val_tbl("hi14")
+
+            # Table: update_valhi15_tbl (default: nop; 14)
+            print "Configuring update_valhi15_tbl"
+            self.configure_update_val_tbl("hi15")
+
+            # Table: update_valhi16_tbl (default: nop; 14)
+            print "Configuring update_valhi16_tbl"
+            self.configure_update_val_tbl("hi16")
 
             # Stage 9
 
