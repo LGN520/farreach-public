@@ -1152,11 +1152,26 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = netcache_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED, SCANREQ_SPLIT, LOADREQ, NETCACHE_VALUEUPDATE_ACK]:
+                for tmpoptype in [GETREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED, SCANREQ_SPLIT, LOADREQ]:
                     matchspec0 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)
                     self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_client2server(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec1)
+                tmp_client_mac = client_macs[0]
+                tmp_client_ip = client_ips[0]
+                tmp_client_port = 123 # not cared by switchos
+                actnspec1 = netcache_update_ipmac_srcport_client2server_action_spec_t(\
+                        macAddr_to_string(tmp_client_mac), \
+                        macAddr_to_string(tmp_server_mac), \
+                        ipv4Addr_to_i32(tmp_client_ip), \
+                        ipv4Addr_to_i32(tmp_server_ip), \
+                        tmp_client_port)
+                for tmpoptype in [NETCACHE_VALUEUPDATE_ACK]: # simulate client -> server
+                    matchspec0 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
+                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
+                            eg_intr_md_egress_port = tmp_devport)
+                    self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2server(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec1)
             # Here we use server_mac/ip to simulate reflector_mac/ip = switchos_mac/ip
             # (1) eg_intr_md.egress_port of the first GETRES_CASE1 is set by ipv4_forward_tbl (as ingress port), which will be finally dropped -> update ip/mac/srcport or not is not important
@@ -1164,19 +1179,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # (3) eg_intr_md.egress_port of the first ACK for cache population/eviction is set by partition_tbl in ingress pipeline, which will be finally dropped -> update ip/mac/srcport or not is not important
             # (4) eg_intr_md.egress_port of the cloned ACK for cache population/eviction is set by clone_e2e, which must be the devport towards switchos (aka reflector)
             tmp_devport = self.reflector_devport
-            #tmp_client_ip = client_ips[0]
-            #tmp_client_mac = client_macs[0]
-            #tmp_client_port = 123 # not cared by servers
-            #actnspec2 = netcache_update_ipmac_srcport_switch2switchos_action_spec_t(\
-            #        macAddr_to_string(tmp_client_mac), \
-            #        macAddr_to_string(self.reflector_mac_for_switch), \
-            #        ipv4Addr_to_i32(tmp_client_ip), \
-            #        ipv4Addr_to_i32(self.reflector_ip_for_switch), \
-            #        tmp_client_port)
+            tmp_client_ip = client_ips[0]
+            tmp_client_mac = client_macs[0]
+            tmp_client_port = 123 # not cared by servers
+            actnspec2 = netcache_update_ipmac_srcport_switch2switchos_action_spec_t(\
+                    macAddr_to_string(tmp_client_mac), \
+                    macAddr_to_string(self.reflector_mac_for_switch), \
+                    ipv4Addr_to_i32(tmp_client_ip), \
+                    ipv4Addr_to_i32(self.reflector_ip_for_switch), \
+                    tmp_client_port)
+            for tmpoptype in [CACHE_POP_INSWITCH_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK]: # simulate client/switch -> switchos
+                matchspec0 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
+                        op_hdr_optype=convert_u16_to_i16(tmpoptype),
+                        eg_intr_md_egress_port=tmp_devport)
+                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec2)
             actnspec2 = netcache_update_dstipmac_switch2switchos_action_spec_t(\
                     macAddr_to_string(self.reflector_mac_for_switch), \
                     ipv4Addr_to_i32(self.reflector_ip_for_switch))
-            for tmpoptype in [CACHE_POP_INSWITCH_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK, NETCACHE_GETREQ_POP, NETCACHE_WARMUPREQ_INSWITCH_POP]:
+            for tmpoptype in [NETCACHE_GETREQ_POP, NETCACHE_WARMUPREQ_INSWITCH_POP]:
                 matchspec0 = netcache_update_ipmac_srcport_tbl_match_spec_t(\
                         op_hdr_optype=convert_u16_to_i16(tmpoptype),
                         eg_intr_md_egress_port=tmp_devport)
@@ -1309,7 +1330,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             elif is_lastclone_for_pktloss == 1:
                                                 # Update NETCACHE_WARMUP_INSWITCH_POP as WARMUPACK to client by mirroring
                                                 # NOTE: WARMUPACK performs default action nop() to be forwarded to client
-                                                actnspec0 = netcache_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid)
+                                                actnspec0 = netcache_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
                                                 self.client.eg_port_forward_tbl_table_add_with_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         # is_lastclone_for_pktloss should be 0 for GETREQ_INSWITCH
@@ -1591,7 +1612,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 elif is_lastclone_for_pktloss == 1:
                                                     # Update NETCACHE_WARMUP_INSWITCH_POP as WARMUPACK to client by mirroring
                                                     # NOTE: WARMUPACK performs default action nop() to be forwarded to client
-                                                    actnspec0 = netcache_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid)
+                                                    actnspec0 = netcache_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
                                                     self.client.eg_port_forward_tbl_table_add_with_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_lastclone_for_pktloss and is_last_scansplit should be 0 for GETREQ_INSWITCH
