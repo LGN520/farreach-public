@@ -130,7 +130,7 @@ table is_hot_tbl {
 	size: 1;
 }
 
-// Stage 4
+// Stage 7
 
 action set_is_report() {
 	modify_field(meta.is_report, 1);
@@ -140,7 +140,7 @@ action reset_is_report() {
 	modify_field(meta.is_report, 0);
 }
 
-@pragma stage 4
+@pragma stage 7
 table is_report_tbl {
 	reads {
 		meta.is_report1: exact;

@@ -183,21 +183,25 @@ control ingress {
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
-	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
-	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
-	apply(hash_for_bf1_tbl);
 
 	// Stage 4
-	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
-	apply(hash_for_bf2_tbl);
+	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
+	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
-	// Stage 5
-	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
-	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
-	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
-	apply(hash_for_bf3_tbl);
+	// Stgae 5
+	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
+	apply(hash_for_bf1_tbl);
 
 	// Stage 6
+	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
+	apply(hash_for_bf2_tbl);
+
+	// Stage 7
+	apply(hash_for_bf3_tbl);
+	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
+	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
+
+	// Stage 8
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
 	apply(ig_port_forward_tbl); // update op_hdr.optype (update egress_port for NETCACHE_VALUEUPDATE)
 }
@@ -241,21 +245,25 @@ control egress {
 
 	// Stage 4
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3
-	apply(is_report_tbl);
 	apply(update_vallo1_tbl);
 	apply(update_valhi1_tbl);
 	apply(update_vallo2_tbl);
 	apply(update_valhi2_tbl);
 
-	// Stage 5-7
+	// Stage 5
 	apply(update_vallo3_tbl);
 	apply(update_valhi3_tbl);
 	apply(update_vallo4_tbl);
 	apply(update_valhi4_tbl);
+
+	// Stage 6
 	apply(update_vallo5_tbl);
 	apply(update_valhi5_tbl);
 	apply(update_vallo6_tbl);
 	apply(update_valhi6_tbl);
+
+	// Stage 7
+	apply(is_report_tbl); // NOTE: place is_report_tbl here due to tricky Tofino MAT placement limitation -> not sure the reason
 	apply(update_vallo7_tbl);
 	apply(update_valhi7_tbl);
 	apply(update_vallo8_tbl);

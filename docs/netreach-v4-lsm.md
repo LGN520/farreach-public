@@ -163,6 +163,8 @@
 	+ Core reasons:
 		* (1) server-side simulation overhead: if each server is an individual physical machine, we can have less serious disk contention
 		* (2) client-side simulation overhead: due to limited client-side CPU cores, we cannot launch infinite client threads -> if so, even if some clients may be blocked/delayed by long latency requests, others can still provide sufficient input to saturate servers
+- NOTE: for hash calculation in switch
+	+ One stage can perform at most two hash calculations
 + IMPORTANT NOTE for optype enumeration
 	- We keep the same optype enumeration fo FarReach, NoCache, and NetCache (files: packet_format.h, tofino/main.p4, tofino/common.py, tofino/p4src/parser.p4)
 	- When adding a new optype

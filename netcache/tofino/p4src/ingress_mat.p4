@@ -232,11 +232,13 @@ table range_partition_for_scan_endkey_tbl {
 }
 #endif
 
+// Stage 4
+
 action hash_for_cm2() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm2, 0, hash_calc2, CM_BUCKET_COUNT);
 }
 
-@pragma stage 3
+@pragma stage 4
 table hash_for_cm2_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -253,7 +255,7 @@ action hash_for_seq() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_seq, 0, hash_calc, SEQ_BUCKET_COUNT);
 }
 
-@pragma stage 3
+@pragma stage 4
 table hash_for_seq_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -266,30 +268,13 @@ table hash_for_seq_tbl {
 	size: 2;
 }
 
-action hash_for_bf1() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf1, 0, hash_calc, BF_BUCKET_COUNT);
-}
-
-@pragma stage 3
-table hash_for_bf1_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf1;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
-// Stage 4
+// Stage 5
 
 action hash_for_cm3() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc3, CM_BUCKET_COUNT);
 }
 
-@pragma stage 4
+@pragma stage 5
 table hash_for_cm3_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -302,11 +287,47 @@ table hash_for_cm3_tbl {
 	size: 2;
 }
 
+action hash_for_bf1() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf1, 0, hash_calc, BF_BUCKET_COUNT);
+}
+
+@pragma stage 5
+table hash_for_bf1_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_bf1;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}
+
+// Stage 6
+
+action hash_for_cm4() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
+}
+
+@pragma stage 6
+table hash_for_cm4_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_cm4;
+		nop;
+	}
+	default_action: nop();
+	size: 2;
+}
+
 action hash_for_bf2() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf2, 0, hash_calc2, BF_BUCKET_COUNT);
 }
 
-@pragma stage 4
+@pragma stage 6
 table hash_for_bf2_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -319,19 +340,19 @@ table hash_for_bf2_tbl {
 	size: 2;
 }
 
-// Stage 5
+// Stage 7
 
-action hash_for_cm4() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
+action hash_for_bf3() {
+	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
 }
 
-@pragma stage 5
-table hash_for_cm4_tbl {
+@pragma stage 7
+table hash_for_bf3_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		hash_for_cm4;
+		hash_for_bf3;
 		nop;
 	}
 	default_action: nop();
@@ -351,7 +372,7 @@ action set_client_sid(client_sid) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
 }
 
-@pragma stage 5
+@pragma stage 7
 table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -369,7 +390,7 @@ action forward_normal_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
-@pragma stage 5
+@pragma stage 7
 table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -383,31 +404,14 @@ table ipv4_forward_tbl {
 	size: 64;
 }
 
-action hash_for_bf3() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
-}
-
-@pragma stage 5
-table hash_for_bf3_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf3;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
-// Stage 6
+// Stage 8
 
 action sample() {
 	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2); // WRONG: we should not sample key
 	modify_field_rng_uniform(inswitch_hdr.is_sampled, 0, 1); // generate a random value in [0, 1] to sample packet
 }
 
-@pragma stage 6
+@pragma stage 8
 table sample_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -468,7 +472,7 @@ action update_netcache_valueupdate_to_netcache_valueupdate_inswitch() {
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }
 
-@pragma stage 6
+@pragma stage 8
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
