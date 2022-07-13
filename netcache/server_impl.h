@@ -519,19 +519,19 @@ void *run_server_worker(void * param) {
 				netreach_key_t tmp_key;
 				val_t tmp_val;
 				uint32_t tmp_seq;
-				if (pkt_type == packet_type_t::PUTREQ_SEQ) {
-					put_request_seq_t req(buf, recv_size);
+				if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
+					netcache_put_request_seq_cached_t req(buf, recv_size);
 					tmp_key = req.key();
 					tmp_val = req.val();
 					tmp_seq = req.seq();
 				}
-				else if (pkt_type == packet_type_t::DELREQ_SEQ) {
-					del_request_seq_t req(buf, recv_size);
+				else if (pkt_type == packet_type_t::NETCACHE_DELREQ_SEQ_CACHED) {
+					netcache_del_request_seq_cached_t req(buf, recv_size);
 					tmp_key = req.key();
 					tmp_seq = req.seq();
 				}
 				else {
-					printf("[server.worker] invalid pkttype: %x which should be PUTREQ_SEQ/DELREQ_SEQ\n", optype_t(pkt_type));
+					printf("[server.worker] invalid pkttype: %x which should be NETCACHED_PUTREQ_SEQ_CACHED/NETCACHE_DELREQ_SEQ_CACHED\n", optype_t(pkt_type));
 					exit(-1);
 				}
 
@@ -543,7 +543,7 @@ void *run_server_worker(void * param) {
 				bool is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
 				bool is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 				if (unlikely(!is_being_cached && !is_cached)) { // uncached
-					if (pkt_type == packet_type_t::PUTREQ_SEQ) {
+					if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
 						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
 					else {
@@ -579,7 +579,7 @@ void *run_server_worker(void * param) {
 
 						// notify server.valueupdateserver to update inswitch value in background
 						netcache_valueupdate_t *tmp_netcache_valueupdate_ptr = NULL; // freed by server.valueupdateserver
-						if (pkt_type == packet_type_t::PUTREQ_SEQ) {
+						if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
 							tmp_netcache_valueupdate_ptr = new netcache_valueupdate_t(tmp_key, tmp_val, tmp_seq, true);
 						}
 						else { // NOTE: for DEL, tmp_val = val_t() whose length is 0
@@ -592,7 +592,7 @@ void *run_server_worker(void * param) {
 					}
 					// else: do nothing as key is removed from beingupdated keyset by server.evictserver
 
-					if (pkt_type == packet_type_t::PUTREQ_SEQ) {
+					if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
 						tmp_stat = db_wrappers[local_server_logical_idx].put(tmp_key, tmp_val, tmp_seq); // perform PUT operation
 					}
 					else {
@@ -607,7 +607,7 @@ void *run_server_worker(void * param) {
 				CUR_TIME(rocksdb_t2);
 #endif
 				
-				if (pkt_type == packet_type_t::PUTREQ_SEQ) {
+				if (pkt_type == packet_type_t::NETCACHE_PUTREQ_SEQ_CACHED) {
 					put_response_t rsp(tmp_key, true, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}

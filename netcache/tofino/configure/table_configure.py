@@ -609,7 +609,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
             if RANGE_SUPPORT:
-                # Table: process_scanreq_split_tbl (default: reset_meta_serversid_remainscannum; size <= 2 * 128)
+                # Table: process_scanreq_split_tbl (default: reset_meta_serversid_remainscannum; size <= 4 * 128)
                 print "Configuring process_scanreq_split_tbl"
                 #for clone_src in [NOT_CLONED, CLONED_FROM_EGRESS]:
                 for is_clone in [0, 1]:
@@ -679,22 +679,33 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 actnspec0 = netcache_process_cloned_scanreq_split_action_spec_t(tmp_udpport, tmp_server_sid)
                                 self.client.process_scanreq_split_tbl_table_add_with_process_cloned_scanreq_split(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                        for tmpoptype in [NETCACHE_GETREQ_POP]:
+                            matchspec0 = netcache_process_scanreq_split_tbl_match_spec_t(\
+                                    op_hdr_optype = tmpoptype,
+                                    split_hdr_globalserveridx = global_server_logical_idx,
+                                    split_hdr_is_clone = is_clone)
+                            self.client.process_scanreq_split_tbl_table_add_with_nop(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 1
 
             # Table: prepare_for_cachepop_tbl (default: set_server_sid_and_port(0); size: server_physical_num=2 < 8)
-            for tmpoptype in [GETREQ_INSWITCH, SCANREQ_SPLIT]:
+            for tmpoptype in [GETREQ_INSWITCH, SCANREQ_SPLIT, NETCACHE_GETREQ_POP]:
                 for tmp_server_physical_idx in range(server_physical_num):
                     tmp_devport = self.server_devports[tmp_server_physical_idx]
                     tmp_server_sid = self.server_sids[tmp_server_physical_idx]
                     matchspec0 = netcache_prepare_for_cachepop_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             eg_intr_md_egress_port = tmp_devport)
-                    if tmpoptype != SCANREQ_SPLIT:
+                    if tmpoptype != SCANREQ_SPLIT and tmpoptype != NETCACHE_GETREQ_POP:
                         actnspec0 = netcache_set_server_sid_and_port_action_spec_t(tmp_server_sid)
                         self.client.prepare_for_cachepop_tbl_table_add_with_set_server_sid_and_port(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                        # NOTE: we explictly invoke nop() for SCANREQ_SPLIT and NETCACHE_GETREQ_POP to avoid reset their clone_hdr.server_sid: SCANREQ_SPLIT.server_sid is set by process_scanreq_split to clone next SCANREQ_SPLIT to next server; NETCACHE_GETREQ_POP.server_sid is inherited from original GETREQ_INSWITCH to clone alst NETCACHE_GETREQ_POP as GETREQ to corresponding server
                     elif tmpoptype == SCANREQ_SPLIT and RANGE_SUPPORT == True:
+                        self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
+                                self.sess_hdl, self.dev_tgt, matchspec0)
+                    elif tmpoptype == NETCACHE_GETREQ_POP: # TODO: eport should be reflector.devport for NETCACHE_GETREQ_POP
                         self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
@@ -1534,7 +1545,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         if is_hot == 0 and is_report == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0:
                                             # size: 8
                                             matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
-                                                op_hdr_optype = NETCACHE_WARMUPREQ_INSWITCH,
+                                                op_hdr_optype = NETCACHE_VALUEUPDATE_INSWITCH,
                                                 inswitch_hdr_is_cached = is_cached,
                                                 meta_is_hot = is_hot,
                                                 meta_is_report = is_report,
@@ -1654,7 +1665,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             #actnspec0 = netcache_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
                                                             self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                                                    else:
+                                                    else: # is_cached == 1 and is_latest == 1
                                                         # Update GETREQ_INSWITCH as GETRES to client by mirroring
                                                         actnspec0 = netcache_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
@@ -1850,7 +1861,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             if is_hot == 0 and is_report == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0 and is_last_scansplit == 0:
                                                 # size: 8
                                                 matchspec0 = netcache_eg_port_forward_tbl_match_spec_t(\
-                                                    op_hdr_optype = NETCACHE_WARMUPREQ_INSWITCH,
+                                                    op_hdr_optype = NETCACHE_VALUEUPDATE_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
                                                     meta_is_report = is_report,

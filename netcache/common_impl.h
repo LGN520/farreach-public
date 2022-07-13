@@ -71,6 +71,8 @@ typedef NetcacheCachePopFinishAck<netreach_key_t> netcache_cache_pop_finish_ack_
 typedef NetcacheWarmupRequestInswitchPop<netreach_key_t> netcache_warmupreq_inswitch_pop_t;
 typedef NetcacheCacheEvict<netreach_key_t> netcache_cache_evict_t;
 typedef NetcacheCacheEvictAck<netreach_key_t> netcache_cache_evict_ack_t;
+typedef NetcachePutRequestSeqCached<netreach_key_t, val_t> netcache_put_request_seq_cached_t;
+typedef NetcacheDelRequestSeqCached<netreach_key_t> netcache_del_request_seq_cached_t;
 typedef NetcacheValueupdate<netreach_key_t, val_t> netcache_valueupdate_t;
 typedef NetcacheValueupdateAck<netreach_key_t> netcache_valueupdate_ack_t;
 

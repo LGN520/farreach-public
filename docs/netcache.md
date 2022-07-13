@@ -381,13 +381,13 @@
 - Cache population
 	+ WARMUPREQ -> NETCACHE_WARMUP_INSWITCH_POP and WARMUPACK by switch
 		* Perform population: NETCACHE_CACHE_POP/_ACK -> CACHE_POP_INSIWTCH (latest=1) -> NETCACHE_CACHE_FINISH/_ACK
-	+ GETREQ w/ is_hot=1 and is_report=0 -> NETCACHE_GETREQ_POP and GETRES by server -> perform population (latest=1)
+	+ Sufficient GETREQs under sampling -> GETREQ w/ is_hot=1 and is_report=0 -> NETCACHE_GETREQ_POP and GETRES by server -> perform population (latest=1)
 		* Set latest=0 manually -> GETREQ w/ is_hot=1 and is_report=1 -> GETRES by server w/o population (latest=0)
-		* Set is_report=1 manullay -> GETREQ w/ is_hot=1 and is_report=0 -> NETCACHE_GETREQ_POP and GETRES by server -> no population (latest=0)
+		* Set is_report=0 manullay -> GETREQ w/ is_hot=1 and is_report=0 -> NETCACHE_GETREQ_POP and GETRES by server -> no population (latest=0)
 - Cache hit
 	+ GETREQ -> GETRES by switch (latest=1)
-	+ PUTREQ -> set latest=0 -> NETCACHE_PUTREQ_CACHED -> PUTRES by server -> NETCACHE_VALUEUPDATE/_ACK (latest=1)
-	+ DELREQ -> set latest=0 -> NETCACHE_DELREQ_CACHED -> DELRES by server -> NETCACHE_VALUEUPDATE/_ACK (latest=1)
+	+ PUTREQ -> set latest=0 -> NETCACHE_PUTREQ_CACHED -> PUTRES by server -> NETCACHE_VALUEUPDATE/_ACK (latest=1, deleted=0)
+	+ DELREQ -> set latest=0 -> NETCACHE_DELREQ_CACHED -> DELRES by server -> NETCACHE_VALUEUPDATE/_ACK (latest=1, deleted=1)
 - Cache eviction
 	+ WARMUPREQ of another key -> NETCACHE_WARMUP_INSWITCH_POP and WARMUPACK by switch
 		* Perform eviction: CACHE_EVICT_LOADFREQ_INSWITCH/_ACK -> remove victim.key from cache_lookup_tbl -> NETCACHE_CACHE_EVICT/_ACK -> server remove key from beingcached/cached/beingupdated keyset

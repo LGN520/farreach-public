@@ -90,8 +90,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 op_hdr_keyhilo = convert_u32_to_i32(keyhilo),
                 #op_hdr_keyhihi = convert_u32_to_i32(keyhihi),
                 op_hdr_keyhihilo = convert_u16_to_i16(keyhihilo),
-                op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi),
-                meta_need_recirculate = 0)
+                op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi))
         actnspec0 = netcache_cached_action_action_spec_t(freeidx)
         self.client.cache_lookup_tbl_table_add_with_cached_action(\
                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -176,8 +175,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 op_hdr_keyhilo = convert_u32_to_i32(keyhilo),
                 #op_hdr_keyhihi = convert_u32_to_i32(keyhihi),
                 op_hdr_keyhihilo = convert_u16_to_i16(keyhihilo),
-                op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi),
-                meta_need_recirculate = 0)
+                op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi))
         #actnspec0 = netcache_cached_action_action_spec_t(evictidx)
         self.client.cache_lookup_tbl_table_delete_by_match_spec(\
                 self.sess_hdl, self.dev_tgt, matchspec0)

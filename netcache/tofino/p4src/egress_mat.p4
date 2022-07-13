@@ -49,6 +49,7 @@ table process_scanreq_split_tbl {
 		process_scanreq_split;
 		process_cloned_scanreq_split;
 		reset_meta_serversid_remainscannum;
+		nop;
 	}
 	default_action: reset_meta_serversid_remainscannum();
 	size: PROCESS_SCANREQ_SPLIT_ENTRY_NUM;
@@ -423,6 +424,7 @@ action update_netcache_valueupdate_inswitch_to_netcache_valueupdate_ack() {
 
 	remove_header(shadowtype_hdr);
 	remove_header(seq_hdr);
+	remove_header(inswitch_hdr);
 	remove_header(stat_hdr);
 
 	// NOTE: egress_port has already been set in ig_port_forward_tbl at ingress pipeline

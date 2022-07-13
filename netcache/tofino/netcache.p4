@@ -122,8 +122,8 @@
 #define RANGE_PARTITION_ENTRY_NUM 2048
 // RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM = 1 * MAX_SERVER_NUM
 #define RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM 128
-// PROCESS_SCANREQ_SPLIT_ENTRY_NUM = 2 * MAX_SERVER_NUM
-#define PROCESS_SCANREQ_SPLIT_ENTRY_NUM 256
+// PROCESS_SCANREQ_SPLIT_ENTRY_NUM = 4 * MAX_SERVER_NUM
+#define PROCESS_SCANREQ_SPLIT_ENTRY_NUM 512
 // HASH_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
 #define HASH_PARTITION_ENTRY_NUM 1024
 
@@ -205,6 +205,12 @@ control ingress {
 /* Egress Processing */
 
 control egress {
+
+	// [IMPORTANT]
+	// Both process_scanreq_split_tbl and prepare_for_cachepop_tbl will reset clone_hdr.server_sid as 0 by default -> MUST be very careful for all pkt types which will use clone_hdr.server_sid
+	// For GETREQ, although clone_hdr.server_sid is reset at process_scanreq_split_tbl, it is set based on eport at prepare_for_cachepop_tbl -> OK
+	// For SCANREQ_SPLIT, after setting server_sid based on split_hdr.globalserveridx, it needs to invoke nop() explicitly in prepare_for_cachepop_tbl to avoid reset server_sid
+	// For NETCACHE_GETREQ_POP, it needs to invoke nop() in BOTH process_scanreq_split_tbl and prepare_for_cachehit_tbl to avoid reset server_sid
 
 	// Stage 0
 	apply(access_latest_tbl); // NOTE: latest_reg corresponds to stats.validity in NetCache paper, which will be used to *invalidate* the value by PUT/DELREQ
