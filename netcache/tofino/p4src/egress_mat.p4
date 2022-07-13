@@ -32,10 +32,20 @@ action process_cloned_scanreq_split(udpport, server_sid) {
 	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
 	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
-action reset_meta_serversid_remainscannum() {
+/*action reset_meta_serversid_remainscannum() {
 	modify_field(clone_hdr.server_sid, 0);
 	modify_field(meta.remain_scannum, 0);
+}*/
+action reset_meta_remainscannum() {
+	modify_field(meta.remain_scannum, 0);
 }
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter process_scanreq_split_counter {
+	type : packets_and_bytes;
+	direct: process_scanreq_split_tbl;
+}
+#endif
 @pragma stage 0
 table process_scanreq_split_tbl {
 	reads {
@@ -48,10 +58,12 @@ table process_scanreq_split_tbl {
 	actions {
 		process_scanreq_split;
 		process_cloned_scanreq_split;
-		reset_meta_serversid_remainscannum;
+		//reset_meta_serversid_remainscannum;
+		reset_meta_remainscannum;
 		nop;
 	}
-	default_action: reset_meta_serversid_remainscannum();
+	//default_action: reset_meta_serversid_remainscannum();
+	default_action: reset_meta_remainscannum();
 	size: PROCESS_SCANREQ_SPLIT_ENTRY_NUM;
 }
 #endif
@@ -63,6 +75,18 @@ action set_server_sid_and_port(server_sid) {
 	modify_field(clone_hdr.server_udpport, udp_hdr.dstPort); // dstport is serverport for GETREQ_INSWITCH
 }
 
+action reset_server_sid() {
+	modify_field(clone_hdr.server_sid, 0);
+}
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter prepare_for_cachepop_counter {
+	type : packets_and_bytes;
+	direct: prepare_for_cachepop_tbl;
+}
+#endif
+
 @pragma stage 1
 table prepare_for_cachepop_tbl {
 	reads {
@@ -71,10 +95,11 @@ table prepare_for_cachepop_tbl {
 	}
 	actions {
 		set_server_sid_and_port;
+		reset_server_sid;
 		nop;
 	}
-	default_action: set_server_sid_and_port(0);
-	size: 8;
+	default_action: reset_server_sid();
+	size: 32;
 }
 
 // Stage 2
@@ -191,7 +216,7 @@ action update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clo
 	modify_field(udp_hdr.dstPort, reflector_port);
 	modify_field(clone_hdr.clonenum_for_pktloss, 3); // 3 ACKs (drop w/ 3 -> clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> drop and clone for WARMUPACK to client)
 
-	add_header(clone_hdr); // NOTE: clone_hdr.server_sid has been set in prepare_for_cachepop_tbl
+	add_header(clone_hdr); // NOTE: clone_hdr.server_sid is reset as 0 in process_scanreq_split_tbl and prepare_for_cachepop_tbl
 
 	//modify_field(eg_intr_md.egress_port, port); // set eport to switchos
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring

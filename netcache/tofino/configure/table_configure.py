@@ -609,7 +609,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
             if RANGE_SUPPORT:
-                # Table: process_scanreq_split_tbl (default: reset_meta_serversid_remainscannum; size <= 4 * 128)
+                # Table: process_scanreq_split_tbl (default: reset_meta_remainscannum; size <= 2 * 128)
                 print "Configuring process_scanreq_split_tbl"
                 #for clone_src in [NOT_CLONED, CLONED_FROM_EGRESS]:
                 for is_clone in [0, 1]:
@@ -679,25 +679,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 actnspec0 = netcache_process_cloned_scanreq_split_action_spec_t(tmp_udpport, tmp_server_sid)
                                 self.client.process_scanreq_split_tbl_table_add_with_process_cloned_scanreq_split(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                        for tmpoptype in [NETCACHE_GETREQ_POP]:
-                            matchspec0 = netcache_process_scanreq_split_tbl_match_spec_t(\
-                                    op_hdr_optype = tmpoptype,
-                                    split_hdr_globalserveridx = global_server_logical_idx,
-                                    split_hdr_is_clone = is_clone)
-                            self.client.process_scanreq_split_tbl_table_add_with_nop(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0)
+                        #for tmpoptype in [NETCACHE_GETREQ_POP]:
+                        #    matchspec0 = netcache_process_scanreq_split_tbl_match_spec_t(\
+                        #            op_hdr_optype = tmpoptype,
+                        #            split_hdr_globalserveridx = global_server_logical_idx,
+                        #            split_hdr_is_clone = is_clone)
+                        #    self.client.process_scanreq_split_tbl_table_add_with_nop(\
+                        #            self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 1
 
-            # Table: prepare_for_cachepop_tbl (default: set_server_sid_and_port(0); size: server_physical_num=2 < 8)
-            for tmpoptype in [GETREQ_INSWITCH, SCANREQ_SPLIT, NETCACHE_GETREQ_POP]:
+            # Table: prepare_for_cachepop_tbl (default: reset_server_sid(); size: 2*server_physical_num+1=5 < 17)
+            for tmpoptype in [GETREQ_INSWITCH, SCANREQ_SPLIT]:
                 for tmp_server_physical_idx in range(server_physical_num):
                     tmp_devport = self.server_devports[tmp_server_physical_idx]
                     tmp_server_sid = self.server_sids[tmp_server_physical_idx]
                     matchspec0 = netcache_prepare_for_cachepop_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             eg_intr_md_egress_port = tmp_devport)
-                    if tmpoptype != SCANREQ_SPLIT and tmpoptype != NETCACHE_GETREQ_POP:
+                    if tmpoptype == GETREQ_INSWITCH:
                         actnspec0 = netcache_set_server_sid_and_port_action_spec_t(tmp_server_sid)
                         self.client.prepare_for_cachepop_tbl_table_add_with_set_server_sid_and_port(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -705,9 +705,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     elif tmpoptype == SCANREQ_SPLIT and RANGE_SUPPORT == True:
                         self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
-                    elif tmpoptype == NETCACHE_GETREQ_POP: # TODO: eport should be reflector.devport for NETCACHE_GETREQ_POP
-                        self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = netcache_prepare_for_cachepop_tbl_match_spec_t(\
+                    op_hdr_optype = NETCACHE_GETREQ_POP,
+                    eg_intr_md_egress_port = self.reflector_devport)
+            self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_cmi_tbl (default: initialize_cmi_predicate; size: 3)
             cm_hashnum = 4

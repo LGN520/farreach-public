@@ -122,8 +122,8 @@
 #define RANGE_PARTITION_ENTRY_NUM 2048
 // RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM = 1 * MAX_SERVER_NUM
 #define RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM 128
-// PROCESS_SCANREQ_SPLIT_ENTRY_NUM = 4 * MAX_SERVER_NUM
-#define PROCESS_SCANREQ_SPLIT_ENTRY_NUM 512
+// PROCESS_SCANREQ_SPLIT_ENTRY_NUM = 2 * MAX_SERVER_NUM
+#define PROCESS_SCANREQ_SPLIT_ENTRY_NUM 256
 // HASH_PARTITION_ENTRY_NUM = 8 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
 #define HASH_PARTITION_ENTRY_NUM 1024
 
@@ -207,21 +207,21 @@ control ingress {
 control egress {
 
 	// [IMPORTANT]
-	// Both process_scanreq_split_tbl and prepare_for_cachepop_tbl will reset clone_hdr.server_sid as 0 by default -> MUST be very careful for all pkt types which will use clone_hdr.server_sid
-	// For GETREQ, although clone_hdr.server_sid is reset at process_scanreq_split_tbl, it is set based on eport at prepare_for_cachepop_tbl -> OK
-	// For SCANREQ_SPLIT, after setting server_sid based on split_hdr.globalserveridx, it needs to invoke nop() explicitly in prepare_for_cachepop_tbl to avoid reset server_sid
-	// For NETCACHE_GETREQ_POP, it needs to invoke nop() in BOTH process_scanreq_split_tbl and prepare_for_cachehit_tbl to avoid reset server_sid
+	// Only prepare_for_cachepop_tbl will reset clone_hdr.server_sid as 0 by default, while process_scanreq_split_tbl only resets meta.remain_scannum by default (it ony modifies clone_hdr.server_sid for SCANREQ_SPLIT) -> MUST be very careful for all pkt types which will use clone_hdr.server_sid
+	// For GETREQ_INSWITCH, clone_hdr.server_sid is NOT reset at process_scanreq_split_tbl, and is only set based on eport at prepare_for_cachepop_tbl -> OK
+	// For SCANREQ_SPLIT, after setting server_sid based on split_hdr.globalserveridx at process_scanreq_split_tbl, it needs to invoke nop() explicitly in prepare_for_cachepop_tbl to avoid reset server_sid
+	// For NETCACHE_GETREQ_POP, after inheriting clone_hdr.server_sid from GETREQ_INSWITCH, process_scanreq_split does NOT reset clone_hdr.server_sid by default, and it needs to invoke nop() explicitly in prepare_for_cachepop_tbl to avoid reset server_sid
 
 	// Stage 0
 	apply(access_latest_tbl); // NOTE: latest_reg corresponds to stats.validity in NetCache paper, which will be used to *invalidate* the value by PUT/DELREQ
 	apply(access_seq_tbl);
 	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
 #ifdef RANGE_SUPPORT
-	apply(process_scanreq_split_tbl);
+	apply(process_scanreq_split_tbl); // NOT reset clone_hdr.server_sid by default here
 #endif
 
 	// Stage 1
-	apply(prepare_for_cachepop_tbl);
+	apply(prepare_for_cachepop_tbl); // reset clone_hdr.server_sid by default here
 	apply(access_cm1_tbl);
 	apply(access_cm2_tbl);
 	apply(access_cm3_tbl);

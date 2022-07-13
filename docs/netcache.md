@@ -382,8 +382,10 @@
 	+ WARMUPREQ -> NETCACHE_WARMUP_INSWITCH_POP and WARMUPACK by switch
 		* Perform population: NETCACHE_CACHE_POP/_ACK -> CACHE_POP_INSIWTCH (latest=1) -> NETCACHE_CACHE_FINISH/_ACK
 	+ Sufficient GETREQs under sampling -> GETREQ w/ is_hot=1 and is_report=0 -> NETCACHE_GETREQ_POP and GETRES by server -> perform population (latest=1)
+		* Note latest=1 -> GETREQ w/ is_hot=0 and is_report=1 -> GETRES by switch (latest=1)
 		* Set latest=0 manually -> GETREQ w/ is_hot=1 and is_report=1 -> GETRES by server w/o population (latest=0)
-		* Set is_report=0 manullay -> GETREQ w/ is_hot=1 and is_report=0 -> NETCACHE_GETREQ_POP and GETRES by server -> no population (latest=0)
+		* Set bf1=0 manullay -> GETREQ w/ is_hot=1 and is_report=0 -> NETCACHE_GETREQ_POP and GETRES by server -> no population (latest=0, bf1=1)
+			- NOTE: due to sampling, not every GETREQ can trigger NETCACHE_GETREQ_POP and filtered by switchos
 - Cache hit
 	+ GETREQ -> GETRES by switch (latest=1)
 	+ PUTREQ -> set latest=0 -> NETCACHE_PUTREQ_CACHED -> PUTRES by server -> NETCACHE_VALUEUPDATE/_ACK (latest=1, deleted=0)
