@@ -185,8 +185,8 @@
 		+ Run `su` to enter root account
 		+ Run `bash compile.sh` to compile p4 into binary code
 		+ Run `bash start_switch.sh` to launch Tofino
-	- Configure switch (NOTE: not need switchos and ptf.popserver/snapshotserer due to no in-switch cache)
-		+ Create a new terminal and run `bash configure.sh` to configure data plane, then run `bash ptf_cleaner.sh`
+	- Configure switch (NOTE: not need switchos and ptf.popserver/snapshotserer/cleaner due to no in-switch cache)
+		+ Create a new terminal and run `bash configure.sh` to configure data plane
 	- NOTE: not need controller due to no in-switch cache
 	- Launch servers in end host
 		+ `./server server_physical_idx`

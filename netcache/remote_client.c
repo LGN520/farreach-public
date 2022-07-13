@@ -35,7 +35,7 @@
 
 #include "common_impl.h"
 
-#define DUMP_BUF
+//#define DUMP_BUF
 
 struct alignas(CACHELINE_SIZE) ClientWorkerParam {
 	uint16_t local_client_logical_idx;
@@ -982,6 +982,7 @@ void *run_client_worker(void *param) {
 			}
 		}
 		tmptype = preload_types[preload_idx];
+		//tmptype = optype_t(packet_type_t::GETREQ); // TMPDEBUG: use read-only workload
 		tmpkey = preload_keys[preload_idx];
 		//tmpval = preload_vals[preload_idx];
 		preload_idx += 1;

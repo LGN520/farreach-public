@@ -251,6 +251,10 @@ void *run_server_popserver(void *param) {
 		printf("[server.popserver] invalid optype: %x\n", optype_t(tmp_optype));
 		exit(-1);
 	}
+
+	/*if (server_beingcached_keyset_list[local_server_logical_idx].size() % 100 == 0 || server_cached_keyset_list[local_server_logical_idx].size() % 100 == 0) {
+		printf("server %d-%d beingcache sized %d cached size %d\n", local_server_logical_idx, global_server_logical_idx, server_beingcached_keyset_list[local_server_logical_idx].size(), server_cached_keyset_list[local_server_logical_idx].size());
+	}*/
   }
 
   close(server_popserver_udpsock_list[local_server_logical_idx]);
@@ -743,8 +747,13 @@ void *run_server_evictserver(void *param) {
 		// keep atomicity
 		server_mutex_for_keyset_list[local_server_logical_idx].lock();
 		// NETCACHE_CACHE_EVICT's key must in beingcached keyset or cached keyset
-		INVARIANT((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) || \
-				(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyset_list[local_server_logical_idx].end()));
+		//INVARIANT((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) || \
+		//		(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyset_list[local_server_logical_idx].end()));
+		if (!((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) || \
+					(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyset_list[local_server_logical_idx].end()))) {
+			printf("[server.evictserver %d-%d ERROR] evicted key %x is not in beingcached keyset (size: %d) or cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_beingcached_keyset_list[local_server_logical_idx].size(), server_cached_keyset_list[local_server_logical_idx].size());
+			exit(-1);
+		}
 		// remove key from beingcached/cached/beingupdated keyset
 		server_beingcached_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());
 		server_cached_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());

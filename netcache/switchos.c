@@ -432,7 +432,7 @@ void *run_switchos_popworker(void *param) {
 				// switchos.popworker.evictclient sends CACHE_EVICT to controller.evictserver
 				
 				//CUR_TIME(evict_sendrecv_t1);
-				netcache_cache_evict_t tmp_netcache_cache_evict(cur_evictkey, tmp_global_server_logical_idx);
+				netcache_cache_evict_t tmp_netcache_cache_evict(cur_evictkey, switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_evictidx]);
 				pktsize = tmp_netcache_cache_evict.serialize(pktbuf, MAX_BUFSIZE);
 				while (true) {
 					//printf("send NETCACHE_CACHE_EVICT to controller.evictserver\n");
