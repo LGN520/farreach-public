@@ -195,6 +195,8 @@ void transaction_main() {
 		server_worker_params[worker_i].wait_beforerecv_latency_list.reserve(100 * 1024 * 1024);
 		server_worker_params[worker_i].udprecv_latency_list.reserve(100 * 1024 * 1024);
 		server_worker_params[worker_i].rocksdb_latency_list.reserve(100 * 1024 * 1024);
+		server_worker_params[worker_i].beingcached_latency_list.reserve(100 * 1024 * 1024);
+		server_worker_params[worker_i].beingupdated_latency_list.reserve(100 * 1024 * 1024);
 #endif
 		ret = pthread_create(&worker_threads[worker_i], nullptr, run_server_worker, (void *)&server_worker_params[worker_i]);
 		if (ret) {
@@ -298,7 +300,8 @@ void transaction_main() {
 		std::vector<double> cursec_udprecv_latency_list;
 		std::vector<double> cursec_process_latency_list;
 		std::vector<double> cursec_rocksdb_latency_list;
-		std::vector<double> cursec_udpsend_latency_list;
+		std::vector<double> cursec_beingcached_latency_list;
+		std::vector<double> cursec_beingupdated_latency_list;
 		for (size_t j = 0; j < current_server_logical_num; j++) {
 			int startidx = 0;
 			if (i != 0) startidx = persec_perserver_aggpktcnt[i-1][j];
@@ -313,6 +316,10 @@ void transaction_main() {
 			cursec_process_latency_list.insert(cursec_process_latency_list.end(), cursec_curserver_process_latency_list.begin(), cursec_curserver_process_latency_list.end());
 			std::vector<double> cursec_curserver_rocksdb_latency_list(server_worker_params[j].rocksdb_latency_list.begin() + startidx, server_worker_params[j].rocksdb_latency_list.begin() + endidx);
 			cursec_rocksdb_latency_list.insert(cursec_rocksdb_latency_list.end(), cursec_curserver_rocksdb_latency_list.begin(), cursec_curserver_rocksdb_latency_list.end());
+			std::vector<double> cursec_curserver_beingcached_latency_list(server_worker_params[j].beingcached_latency_list.begin() + startidx, server_worker_params[j].beingcached_latency_list.begin() + endidx);
+			cursec_beingcached_latency_list.insert(cursec_beingcached_latency_list.end(), cursec_curserver_beingcached_latency_list.begin(), cursec_curserver_beingcached_latency_list.end());
+			std::vector<double> cursec_curserver_beingupdated_latency_list(server_worker_params[j].beingupdated_latency_list.begin() + startidx, server_worker_params[j].beingupdated_latency_list.begin() + endidx);
+			cursec_beingupdated_latency_list.insert(cursec_beingupdated_latency_list.end(), cursec_curserver_beingupdated_latency_list.begin(), cursec_curserver_beingupdated_latency_list.end());
 
 			std::string tmplabel;
 			GET_STRING(tmplabel, "wait_latency_list server "<<j);
@@ -325,12 +332,18 @@ void transaction_main() {
 			dump_latency(cursec_curserver_process_latency_list, tmplabel);
 			GET_STRING(tmplabel, "rocksdb_latency_list server "<<j);
 			dump_latency(cursec_curserver_rocksdb_latency_list, tmplabel);
+			GET_STRING(tmplabel, "beingcached_latency_list server "<<j);
+			dump_latency(cursec_curserver_beingcached_latency_list, tmplabel);
+			GET_STRING(tmplabel, "beingupdated_latency_list server "<<j);
+			dump_latency(cursec_curserver_beingupdated_latency_list, tmplabel);
 		}
 		dump_latency(cursec_wait_latency_list, "wait_latency_list overall");
 		dump_latency(cursec_wait_beforerecv_latency_list, "wait_beforerecv_latency_list overall");
 		dump_latency(cursec_udprecv_latency_list, "udprecv_latency_list overall");
 		dump_latency(cursec_process_latency_list, "process_latency_list overall");
 		dump_latency(cursec_rocksdb_latency_list, "rocksdb_latency_list overall");
+		dump_latency(cursec_beingcached_latency_list, "beingcached_latency_list overall");
+		dump_latency(cursec_beingupdated_latency_list, "beingupdated_latency_list overall");
 		printf("\n");
 	}
 #endif
@@ -447,6 +460,56 @@ void transaction_main() {
 		worker_avg_rocksdb_latency_list[i] = tmp_avg_rocksdb_latency;
 	}
 	dump_latency(worker_avg_rocksdb_latency_list, "worker_avg_rocksdb_latency_list");
+
+	// dump beingcached latency
+	printf("\nbeingcached latency:\n");
+	std::vector<double> beingcached_latency_list;
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		printf("[server %d]\n", i);
+		std::string tmp_label;
+		GET_STRING(tmp_label, "beingcached_latency_list " << i);
+		dump_latency(server_worker_params[i].beingcached_latency_list, tmp_label);
+
+		beingcached_latency_list.insert(beingcached_latency_list.end(), server_worker_params[i].beingcached_latency_list.begin(), server_worker_params[i].beingcached_latency_list.end());
+	}
+	printf("[overall]\n");
+	dump_latency(beingcached_latency_list, "beingcached_latency_list overall");
+	printf("\n");
+	std::vector<double> worker_avg_beingcached_latency_list(current_server_logical_num);
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		double tmp_avg_beingcached_latency = 0.0;
+		for (size_t j = 0; j < server_worker_params[i].beingcached_latency_list.size(); j++) {
+			tmp_avg_beingcached_latency += server_worker_params[i].beingcached_latency_list[j];
+		}
+		tmp_avg_beingcached_latency /= server_worker_params[i].beingcached_latency_list.size();
+		worker_avg_beingcached_latency_list[i] = tmp_avg_beingcached_latency;
+	}
+	dump_latency(worker_avg_beingcached_latency_list, "worker_avg_beingcached_latency_list");
+
+	// dump beingupdated latency
+	printf("\nbeingupdated latency:\n");
+	std::vector<double> beingupdated_latency_list;
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		printf("[server %d]\n", i);
+		std::string tmp_label;
+		GET_STRING(tmp_label, "beingupdated_latency_list " << i);
+		dump_latency(server_worker_params[i].beingupdated_latency_list, tmp_label);
+
+		beingupdated_latency_list.insert(beingupdated_latency_list.end(), server_worker_params[i].beingupdated_latency_list.begin(), server_worker_params[i].beingupdated_latency_list.end());
+	}
+	printf("[overall]\n");
+	dump_latency(beingupdated_latency_list, "beingupdated_latency_list overall");
+	printf("\n");
+	std::vector<double> worker_avg_beingupdated_latency_list(current_server_logical_num);
+	for (size_t i = 0; i < current_server_logical_num; i++) {
+		double tmp_avg_beingupdated_latency = 0.0;
+		for (size_t j = 0; j < server_worker_params[i].beingupdated_latency_list.size(); j++) {
+			tmp_avg_beingupdated_latency += server_worker_params[i].beingupdated_latency_list[j];
+		}
+		tmp_avg_beingupdated_latency /= server_worker_params[i].beingupdated_latency_list.size();
+		worker_avg_beingupdated_latency_list[i] = tmp_avg_beingupdated_latency;
+	}
+	dump_latency(worker_avg_beingupdated_latency_list, "worker_avg_beingupdated_latency_list");
 #endif
 
 	void *status;

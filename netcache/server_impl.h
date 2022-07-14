@@ -27,6 +27,8 @@ struct alignas(CACHELINE_SIZE) ServerWorkerParam {
   std::vector<double> wait_beforerecv_latency_list;
   std::vector<double> udprecv_latency_list;
   std::vector<double> rocksdb_latency_list;
+  std::vector<double> beingcached_latency_list;
+  std::vector<double> beingupdated_latency_list;
 #endif
 };
 typedef ServerWorkerParam server_worker_param_t;
@@ -336,6 +338,9 @@ void *run_server_worker(void * param) {
   struct timespec udprecv_t1, udprecv_t2, udprecv_t3;
   struct timespec rocksdb_t1, rocksdb_t2, rocksdb_t3;
   struct timespec statistic_t1, statistic_t2, statistic_t3;
+  struct timespec beingcached_t1, beingcached_t2, beingcached_t3;
+  struct timespec beingupdated_t1, beingupdated_t2, beingupdated_t3;
+  double beingcached_time = 0.0, beingupdated_time = 0.0;
 #endif
   bool is_first_pkt = true;
   while (transaction_running) {
@@ -424,6 +429,11 @@ void *run_server_worker(void * param) {
 
 				//COUT_THIS("[server] key = " << tmp_key.to_string())
 				
+#ifdef DEBUG_SERVER
+				beingcached_time = 0.0;
+				beingupdated_time = 0.0;
+#endif
+				
 				bool tmp_stat = false;
 				server_mutex_for_keyset_list[local_server_logical_idx].lock();
 				bool is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
@@ -439,17 +449,28 @@ void *run_server_worker(void * param) {
 				}
 				else if (unlikely(is_being_cached)) { // being cached
 					INVARIANT(!is_cached);
+#ifdef DEBUG_SERVER
+					CUR_TIME(beingcached_t1);
+#endif
 					while (is_being_cached) {
 						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 						usleep(1); // wait for cache population finish
 						server_mutex_for_keyset_list[local_server_logical_idx].lock();
 						is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
 					}
+#ifdef DEBUG_SERVER
+					CUR_TIME(beingcached_t2);
+					DELTA_TIME(beingcached_t2, beingcached_t1, beingcached_t3);
+					beingcached_time = GET_MICROSECOND(beingcached_t3);
+#endif
 
 					is_cached = (server_cached_keyset_list[local_server_logical_idx].find(tmp_key) != server_cached_keyset_list[local_server_logical_idx].end());
 					INVARIANT(is_cached);
 				}
 				if (unlikely(is_cached)) { // already cached
+#ifdef DEBUG_SERVER
+					CUR_TIME(beingupdated_t1);
+#endif
 					while (is_being_updated) { // being updated
 						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 						usleep(1); // wait for inswitch value update finish
@@ -457,6 +478,11 @@ void *run_server_worker(void * param) {
 						is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 					}
 					INVARIANT(!is_being_updated);
+#ifdef DEBUG_SERVER
+					CUR_TIME(beingupdated_t2);
+					DELTA_TIME(beingupdated_t2, beingupdated_t1, beingupdated_t3);
+					beingupdated_time = GET_MICROSECOND(beingupdated_t3);
+#endif
 
 					// Double-check due to potential cache eviction
 					is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
@@ -541,6 +567,11 @@ void *run_server_worker(void * param) {
 
 				//COUT_THIS("[server] key = " << tmp_key.to_string() << " val = " << req.val().to_string())
 				
+#ifdef DEBUG_SERVER
+				beingcached_time = 0.0;
+				beingupdated_time = 0.0;
+#endif
+
 				bool tmp_stat = false;
 				server_mutex_for_keyset_list[local_server_logical_idx].lock();
 				bool is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
@@ -566,6 +597,9 @@ void *run_server_worker(void * param) {
 					INVARIANT(is_cached);
 				}
 				if (likely(is_cached)) { // already cached
+#ifdef DEBUG_SERVER
+					CUR_TIME(beingupdated_t1);
+#endif
 					while (is_being_updated) { // being updated
 						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
 						usleep(1); // wait for inswitch value update finish
@@ -573,6 +607,11 @@ void *run_server_worker(void * param) {
 						is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 					}
 					INVARIANT(!is_being_updated);
+#ifdef DEBUG_SERVER
+					CUR_TIME(beingupdated_t2);
+					DELTA_TIME(beingupdated_t2, beingupdated_t1, beingupdated_t3);
+					beingupdated_time = GET_MICROSECOND(beingupdated_t3);
+#endif
 
 					// Double-check due to potential cache eviction
 					is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
@@ -697,6 +736,9 @@ void *run_server_worker(void * param) {
 
 		DELTA_TIME(rocksdb_t2, rocksdb_t1, rocksdb_t3);
 		thread_param.rocksdb_latency_list.push_back(GET_MICROSECOND(rocksdb_t3));
+
+		thread_param.beingcached_latency_list.push_back(beingcached_time);
+		thread_param.beingupdated_latency_list.push_back(beingupdated_time);
 
 		CUR_TIME(wait_t1);
 #endif
