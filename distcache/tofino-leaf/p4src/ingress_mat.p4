@@ -106,6 +106,10 @@ table hash_for_partition_tbl {
 // Stage 2
 
 #ifdef RANGE_SUPPORT
+action range_partition_to_spine(eport, globalswitchidx) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	modify_field(op_hdr.globalswitchidx, globalswitchidx);
+}
 action range_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
@@ -124,6 +128,7 @@ table range_partition_tbl {
 		//ig_intr_md.ingress_port: exact;
 	}
 	actions {
+		range_partition_to_spine;
 		range_partition;
 		//reset_is_wrong_pipeline;
 		range_partition_for_scan;
@@ -139,6 +144,10 @@ table range_partition_tbl {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
 }*/
+action hash_partition_to_spine(eport, globalswitchidx) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	modify_field(op_hdr.globalswitchidx, globalswitchidx);
+}
 action hash_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
@@ -151,6 +160,7 @@ table hash_partition_tbl {
 		//ig_intr_md.ingress_port: exact;
 	}
 	actions {
+		hash_partition_to_spine;
 		hash_partition;
 		//reset_is_wrong_pipeline;
 		nop;
