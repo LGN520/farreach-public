@@ -1,0 +1,10 @@
+# Template of result.out
+#
+# First line : linenum (aka server_total_logical_num_for_rotation)
+# Second line: bottleneck_server_pktcnt total_pktcnt avg_thpt(MOPS) avg_latency(us)
+# Each following line: bottleneck_server_pktcnt rotated_server_pktcnt total_pktcnt avg_thpt(MOPS) avg_latency(us)
+# For example:
+3
+1000 2000 1.0 100
+1000 100 2200 1.1 110
+1000 200 2400 1.2 120

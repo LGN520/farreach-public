@@ -1,0 +1,15 @@
+# Step 1: controller sends SNAPSHOT_START
+
+# Step 2: cache population
+
+READ usertable user7456195669291483653 [ <all fields>]
+READ usertable user7456195669291483653 [ <all fields>]
+
+# Step 3: switchos sets snapshot flag as true, and backup metadata
+
+# Step 4: special case2
+
+UPDATE usertable user5223880262323894244 [ field0=6Dq/G'>Q)$Q-5:h2K%./0%_+;G;,,&75.$_};/b7+"',p+(x-,n#Um/.n7Xo?\y>)&)#l/]=7I+0O7!I-!!4;=6<%<9M=!Z59*0).d#445V3)Ri?[%*?28Z):S;!K!,P ]
+UPDATE usertable user643709410794525705 [ field0=1X70H{=^u.T=/J}?*`:(f>H+!)t2-.5N78,t(Y550 +U{.Ow?%j:Gk::d#9v+T}*V1=<.0/&72l6]k&-(,F5:<z?'>(]i?G#<_i6U+3&"8Ey'<($X-?H'19(+Zo* x12 ]
+
+# Step 4: switchos loads snapshot and finishes
