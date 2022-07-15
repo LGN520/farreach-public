@@ -491,15 +491,6 @@ uint16_t IniparserWrapper::get_switch_max_vallen() {
 	return uint16_t(tmp);
 }
 
-const char* IniparserWrapper::get_switchos_ip() {
-	const char *switchos_ip = iniparser_getstring(ini, "switch:switchos_ip", nullptr);
-	if (switchos_ip == nullptr) {
-		printf("Invalid entry of [switch:switchos_ip]\n");
-		exit(-1);
-	}
-	return switchos_ip;
-}
-
 uint32_t IniparserWrapper::get_switchos_sample_cnt() {
 	int tmp = iniparser_getint(ini, "switch:switchos_sample_cnt", -1);
 	if (tmp == -1) {
@@ -552,6 +543,131 @@ short IniparserWrapper::get_switchos_ptf_snapshotserver_port() {
 		exit(-1);
 	}
 	return short(tmp);
+}
+
+uint32_t IniparserWrapper::get_spineswitch_total_logical_num() {
+	int tmp = iniparser_getint(ini, "switch:spineswitch_total_logical_num", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:spineswitch_total_logical_num]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
+uint32_t IniparserWrapper::get_leafswitch_total_logical_num() {
+	int tmp = iniparser_getint(ini, "switch:leafswitch_total_logical_num", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:leafswitch_total_logical_num]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
+}
+
+// spineswitch
+
+std::vector<uint16_t> IniparserWrapper::get_spineswitch_logical_idxes() {
+	char key[256] = "spineswitch:switch_logical_idxes";
+	const char *tmpstr = iniparser_getstring(ini, key, nullptr);
+	if (tmpstr == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
+		exit(-1);
+	}
+
+	std::vector<uint16_t> result;
+	const char *begin = tmpstr;
+	while (true) {
+		char *end = strchr((char *)begin, ':');
+		if (end == NULL) {
+			end = (char *)tmpstr + strlen(tmpstr);
+		}
+
+		INVARIANT(end - begin > 0);
+		std::string idxstr(begin, end - begin);
+		uint16_t tmpidx = uint16_t(std::stoul(idxstr));
+		result.push_back(tmpidx);
+
+		begin = end + 1;
+		if (begin - tmpstr >= strlen(tmpstr)) {
+			break;
+		}
+	}
+	return result;
+}
+
+const char *IniparserWrapper::get_spineswitchos_ip() {
+	const char *spineswitchos_ip = iniparser_getstring(ini, "spineswitch:switchos_ip", nullptr);
+	if (spineswitchos_ip == nullptr) {
+		printf("Invalid entry of spineswitch:switchos_ip\n");
+		exit(-1);
+	}
+	return spineswitchos_ip;
+}
+
+const char *IniparserWrapper::get_spineswitch_fpport_to_leaf() {
+	const char *spineswitch_fpport_to_leaf = iniparser_getstring(ini, "spineswitch:spineswitch_fpport_to_leaf", nullptr);
+	if (spineswitch_fpport_to_leaf == nullptr) {
+		printf("Invalid entry of spineswitch:spineswitch_fpport_to_leaf\n");
+		exit(-1);
+	}
+	return spineswitch_fpport_to_leaf;
+}
+
+// leafswitch
+
+std::vector<uint16_t> IniparserWrapper::get_leafswitch_logical_idxes() {
+	char key[256] = "leafswitch:switch_logical_idxes";
+	const char *tmpstr = iniparser_getstring(ini, key, nullptr);
+	if (tmpstr == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
+		exit(-1);
+	}
+
+	std::vector<uint16_t> result;
+	const char *begin = tmpstr;
+	while (true) {
+		char *end = strchr((char *)begin, ':');
+		if (end == NULL) {
+			end = (char *)tmpstr + strlen(tmpstr);
+		}
+
+		INVARIANT(end - begin > 0);
+		std::string idxstr(begin, end - begin);
+		uint16_t tmpidx = uint16_t(std::stoul(idxstr));
+		result.push_back(tmpidx);
+
+		begin = end + 1;
+		if (begin - tmpstr >= strlen(tmpstr)) {
+			break;
+		}
+	}
+	return result;
+}
+
+const char *IniparserWrapper::get_leafswitchos_ip() {
+	const char *leafswitchos_ip = iniparser_getstring(ini, "leafswitch:switchos_ip", nullptr);
+	if (leafswitchos_ip == nullptr) {
+		printf("Invalid entry of leafswitch:switchos_ip\n");
+		exit(-1);
+	}
+	return leafswitchos_ip;
+}
+
+const char *IniparserWrapper::get_leafswitch_fpport_to_spine() {
+	const char *leafswitch_fpport_to_spine = iniparser_getstring(ini, "leafswitch:leafswitch_fpport_to_spine", nullptr);
+	if (leafswitch_fpport_to_spine == nullptr) {
+		printf("Invalid entry of leafswitch:leafswitch_fpport_to_spine\n");
+		exit(-1);
+	}
+	return leafswitch_fpport_to_spine;
+}
+
+uint32_t IniparserWrapper::get_leafswitch_pipeidx() {
+	int tmp = iniparser_getint(ini, "leafswitch:leafswitch_pipeidx", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [leafswitch:leafswitch_pipeidx]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint32_t(tmp);
 }
 
 // Reflector

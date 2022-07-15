@@ -133,13 +133,25 @@ short controller_warmupfinishserver_port = -1;
 uint32_t switch_partition_count;
 uint32_t switch_kv_bucket_num;
 uint32_t switch_pipeline_num;
-const char *switchos_ip = nullptr;
 uint32_t switchos_sample_cnt = 0;
 short switchos_popserver_port = -1;
 short switchos_snapshotserver_port = -1;
 short switchos_specialcaseserver_port = -1;
 short switchos_ptf_popserver_port = -1;
 short switchos_ptf_snapshotserver_port = -1;
+uint32_t spineswitch_total_logical_num;
+uint32_t leafswitch_total_logical_num;
+
+// spineswitch
+std::vector<uint16_t> spineswitch_logical_idxes;
+const char *spineswitchos_ip = nullptr;
+const char *spineswitch_fpport_to_leaf = nullptr;
+
+// leafswitch
+std::vector<uint16_t> leafswitch_logical_idxes;
+const char *leafswitchos_ip = nullptr;
+const char *leafswitch_fpport_to_leaf = nullptr;
+uint32_t leafswitch_pipeidx;
 
 // reflector
 const char *reflector_ip_for_switchos = nullptr;
@@ -372,13 +384,14 @@ inline void parse_ini(const char* config_file) {
 	switch_kv_bucket_num = ini.get_switch_kv_bucket_num();
 	switch_pipeline_num = ini.get_switch_pipeline_num();
 	val_t::SWITCH_MAX_VALLEN = ini.get_switch_max_vallen();
-	switchos_ip = ini.get_switchos_ip();
 	switchos_sample_cnt = ini.get_switchos_sample_cnt();
 	switchos_popserver_port = ini.get_switchos_popserver_port();
 	switchos_snapshotserver_port = ini.get_switchos_snapshotserver_port();
 	switchos_specialcaseserver_port = ini.get_switchos_specialcaseserver_port();
 	switchos_ptf_popserver_port = ini.get_switchos_ptf_popserver_port();
 	switchos_ptf_snapshotserver_port = ini.get_switchos_ptf_snapshotserver_port();
+	spineswitch_total_logical_num = ini.get_spineswitch_total_logical_num();
+	leafswitch_total_logical_num = ini.get_leafswitch_total_logical_num();
 
 	// validate pipeidxes of clients and servers
 	for (size_t i = 0; i < client_physical_num; i++) {
@@ -393,17 +406,46 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(switch_pipeline_num);
 	COUT_VAR(val_t::SWITCH_MAX_VALLEN);
 	COUT_VAR(switchos_popserver_port);
-	printf("switchos ip: %s\n", switchos_ip);
 	COUT_VAR(switchos_sample_cnt);
 	COUT_VAR(switchos_snapshotserver_port);
 	COUT_VAR(switchos_specialcaseserver_port);
 	COUT_VAR(switchos_ptf_popserver_port);
 	COUT_VAR(switchos_ptf_snapshotserver_port);
+	COUT_VAR(spineswitch_total_logical_num);
+	COUT_VAR(leafswitch_total_logical_num);
 	if (switchos_sample_cnt > switch_kv_bucket_num) {
 		switchos_sample_cnt = switch_kv_bucket_num;
 		printf("[WARNING] switchos_sample_cnt > switch_kv_bucket_num, set switchos_sample_cnt as switch_kv_bucket_num\n");
 	}
 	printf("\n");
+
+	// spineswitch
+	spineswitch_logical_idxes = ini.get_spineswitch_logical_idxes();
+	spineswitchos_ip = ini.get_spineswitchos_ip();
+	spineswitch_fpport_to_leaf = ini.get_spineswitch_fpport_to_leaf();
+	printf("spineswitch_logical_idxes: ");
+	for (size_t i = 0; i < spineswitch_logical_idxes.size(); i++) {
+		printf("%d ". spineswitch_logical_idxes[i]);
+	}
+	printf("\n");
+	printf("spineswitchos_ip: %s\n", spineswitchos_ip);
+	printf("spineswitch_fpport_to_leaf: %s\n", spineswitch_fpport_to_leaf);
+	INVARIANT(spineswitch_logical_idxes.size() == spineswitch_total_logical_num);
+
+	// leafswitch
+	leafswitch_logical_idxes = ini.get_leafswitch_logical_idxes();
+	leafswitchos_ip = ini.get_leafswitchos_ip();
+	leafswitch_fpport_to_spine = ini.get_leafswitch_fpport_to_spine();
+	leafswitch_pipeidx = ini.get_leafswitch_pipeidx();
+	printf("leafswitch_logical_idxes: ");
+	for (size_t i = 0; i < leafswitch_logical_idxes.size(); i++) {
+		printf("%d ". leafswitch_logical_idxes[i]);
+	}
+	printf("\n");
+	printf("leafswitchos_ip: %s\n", leafswitchos_ip);
+	printf("leafswitch_fpport_to_spine: %s\n", leafswitch_fpport_to_spine);
+	COUT_VAR(leafswitch_pipeidx);
+	INVARIANT(leafswitch_logical_idxes.size() == leafswitch_total_logical_num);
 
 	// reflector
 	reflector_ip_for_switchos = ini.get_reflector_ip_for_switchos();

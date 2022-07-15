@@ -148,6 +148,7 @@ header_type frequency_t {
 
 header_type metadata_t {
 	fields {
+		hashval_for_spineselect: 16;
 #ifndef RANGE_SUPPORT
 		hashval_for_partition: 16; // at most 32K
 #endif

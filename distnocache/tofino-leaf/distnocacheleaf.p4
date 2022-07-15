@@ -90,6 +90,8 @@
 
 // MAX_SERVER_NUM <= 128
 #define MAX_SERVER_NUM 128
+// SPINESELECT_ENTRY_NUM = 6 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
+#define SPINESELECT_ENTRY_NUM 1024
 // RANGE_PARTITION_ENTRY_NUM = 5 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
 #define RANGE_PARTITION_ENTRY_NUM 1024
 // RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM = 1 * MAX_SERVER_NUM
@@ -121,26 +123,30 @@ control ingress {
 	if (not valid(op_hdr)) {
 		apply(l2l3_forward_tbl); // forward traditional packet
 	}
+	apply(hash_for_spineselect_tbl); // set meta.hashval_for_spineselect
 #ifndef RANGE_SUPPORT
 	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif
 
-	// Stage 1 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
+	// Stage 1
+	apply(spineselect_tbl); // forward requests from client to spine switch
+
+	// Stage 2 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 #ifdef RANGE_SUPPORT
 	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
 #else
 	apply(hash_partition_tbl);
 #endif
 
-	// Stage 2
+	// Stage 3
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
 
-	// Stage 3
+	// Stage 4
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
-	// Stage 4
+	// Stage 5
 #ifdef RANGE_SUPPORT
 	apply(ig_port_forward_tbl); // update op_hdr.optype
 #endif

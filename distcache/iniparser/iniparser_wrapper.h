@@ -75,13 +75,25 @@ class IniparserWrapper {
 		uint32_t get_switch_kv_bucket_num();
 		uint32_t get_switch_pipeline_num();
 		uint16_t get_switch_max_vallen();
-		const char *get_switchos_ip();
 		uint32_t get_switchos_sample_cnt();
 		short get_switchos_popserver_port();
 		short get_switchos_snapshotserver_port();
 		short get_switchos_specialcaseserver_port();
 		short get_switchos_ptf_popserver_port();
 		short get_switchos_ptf_snapshotserver_port();
+		uint32_t get_spineswitch_total_logical_num();
+		uint32_t get_leafswitch_total_logical_num();
+
+		// spineswitch
+		std::vector<uint16_t> get_spineswitch_logical_idxes();
+		const char *get_spineswitchos_ip();
+		const char *get_spineswitch_fpport_to_leaf();
+
+		// leafswitch
+		std::vector<uint16_t> get_leafswitch_logical_idxes();
+		const char *get_leafswitchos_ip();
+		const char *get_leafswitch_fpport_to_spine();
+		uint32_t get_leafswitch_pipeidx();
 
 		// reflector
 		const char *get_reflector_ip_for_switchos();

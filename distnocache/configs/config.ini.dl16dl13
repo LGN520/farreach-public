@@ -2,7 +2,7 @@
 ;workload_name=workloada
 workload_name=synthetic
 ; workload_mode: 0 - static mode; 1 - dynamic mode
-workload_mode=0
+workload_mode=1
 ; 6*10 seconds
 dynamic_periodnum=7
 dynamic_periodinterval=10
@@ -13,14 +13,14 @@ max_vallen=128
 ; data size of each batch when reading files to load workload
 load_batch_size=10000
 ; # of physical clients (update MAT size correspondingly)
-client_physical_num=2
+client_physical_num=1
 ; # of physical servers (update MAT size correspondingly)
-server_physical_num=2
+server_physical_num=1
 ; total # of client threads
-client_total_logical_num=1024
+client_total_logical_num=512
 ; total # of server threads (all server logical idxes must < server_total_logical_num)
 ; change MAX_SERVER_NUM in tofino/netbufferv4.p4 if necessary
-server_total_logical_num=8
+server_total_logical_num=4
 ; only used by remote_client for server rotation under static workload
 server_total_logical_num_for_rotation=128
 
@@ -64,11 +64,11 @@ server_load_factor=5
 ; reserve 1152 (0x480) ~ 1279 (0x4FF), which & 0xF80 = 0x480, for logical server simulation per physical server
 ; NOTE: update p4src/parser accordingly
 server_worker_port_start=1152
-; [server_evictserver_port_start, server_evictserver_port_start + max serveridx]
+; [server_evictserver_port_start, server_evictserver_port_start + max global server logical idx]
 server_evictserver_port_start=2222
-; [server_snapshotserver_port_start, server_snapshotserver_port_start + max serveridx]
+; [server_snapshotserver_port_start, server_snapshotserver_port_start + max global server logical idx]
 server_snapshotserver_port_start=3333
-; [server_snapshotdataserver_port_start, server_snapshotdataserver_port_start + max serveridx]
+; [server_snapshotdataserver_port_start, server_snapshotdataserver_port_start + max global server logical idx]
 server_snapshotdataserver_port_start=4444
 ; a single port
 transaction_loadfinishserver_port=8000
@@ -117,16 +117,15 @@ controller_warmupfinishserver_port=5010
 
 [switch]
 ; hash partition range / virtual partition num
-; change PARTITION_COUNT in tofino/netbufferv4.p4 accordingly (only for hash partition)
+; change PARTITION_COUNT in tofino-spine/main.p4 and tofino-leaf/main.p4 accordingly (only for hash partition)
 switch_partition_count=32768
-; change KV_BUCKET_COUNT in tofino/netbufferv4.p4 accordingly (one stage can hold at most 32700 instead of 32768)
+; change KV_BUCKET_COUNT in tofino-spine/main.p4 and tofino-leaf/main.p4 accordingly (one stage can hold at most 32700 instead of 32768)
 ;switch_kv_bucket_num=32700
 switch_kv_bucket_num=10000
 ; max # of pipelines in switch
 switch_pipeline_num=2
 ; max # of bytes supported in switch (8B aligned)
 switch_max_vallen=128
-switchos_ip=172.16.112.17
 switchos_sample_cnt=10
 ; a single port
 switchos_popserver_port=5003
@@ -138,11 +137,26 @@ switchos_specialcaseserver_port=5005
 switchos_ptf_popserver_port=5006
 ; a single port
 switchos_ptf_snapshotserver_port=5007
+spineswitch_total_logical_num=4
+leafswitch_total_logical_num=16
+
+[spineswitch]
+switch_logical_idxes=0:1:2:3
+switchos_ip=
+; bf2 -> bf1
+spineswitch_fpport_to_leaf=32/0
+
+[leafswitch]
+switch_logical_idxes=4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19
+switchos_ip=172.16.112.17
+; bf1 -> bf1
+leafswitch_fpport_to_spine=31/0
+leafswitch_pipeidx=1
 
 ; NOTE: we place reflector at the first physical server
 [reflector]
 reflector_ip_for_switchos=172.16.112.16
-; a single port
+; a single port (NOTE: udpate p4src/parser.p4 accordingly)
 reflector_dp2cpserver_port=5008
-; a single port
+; a single port (NOTE: udpate p4src/parser.p4 accordingly)
 reflector_cp2dpserver_port=5009

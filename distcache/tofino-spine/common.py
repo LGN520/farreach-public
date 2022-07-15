@@ -22,6 +22,23 @@ switch_max_vallen = int(config.get("switch", "switch_max_vallen"))
 switchos_sample_cnt = int(config.get("switch", "switchos_sample_cnt"))
 switchos_ptf_popserver_port = int(config.get("switch", "switchos_ptf_popserver_port"))
 switchos_ptf_snapshotserver_port = int(config.get("switch", "switchos_ptf_snapshotserver_port"))
+spineswitch_total_logical_num = int(config.get("switch", "spineswitch_total_logical_num"))
+leafswitch_total_logical_num = int(config.get("switch", "leafswitch_total_logical_num"))
+
+# spineswitch
+tmpstr = str(config.get("spineswitch:switch_logical_idxes"))
+spineswitch_logical_idxes = tmpstr.split(':')
+for i in range(len(spineswitch_logical_idxes)):
+    spineswitch_logical_idxes[i] = int(spineswitch_logical_idxes[i])
+spineswitch_fpport_to_leaf = str(config.get("spineswitch:spineswitch_fpport_to_leaf"))
+
+# leafswitch
+tmpstr = str(config.get("leafswitch:switch_logical_idxes"))
+leafswitch_logical_idxes = tmpstr.split(':')
+for i in range(len(leafswitch_logical_idxes)):
+    leafswitch_logical_idxes[i] = int(leafswitch_logical_idxes[i])
+leafswitch_fpport_to_spine = str(config.get("leafswitch:leafswitch_fpport_to_spine"))
+leafswitch_pipeidx = int(config.get("leafswitch:leafswitch_pipeidx"))
 
 # reflector port
 reflector_dp2cpserver_port = int(config.get("reflector", "reflector_dp2cpserver_port"))

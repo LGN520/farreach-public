@@ -57,6 +57,7 @@ enum class PacketType {
 typedef PacketType packet_type_t;
 
 typedef uint16_t optype_t;
+typedef uint16_t switchidx_t;
 
 template<class key_t> class ScanRequestSplit;
 template<class key_t, class val_t> class PutRequestSeq;
@@ -65,19 +66,25 @@ template<class key_t>
 class Packet {
 	public:
 		Packet();
-		Packet(packet_type_t type, key_t key);
+		Packet(packet_type_t type, switchidx_t globalswitchidx, key_t key);
 		virtual ~Packet(){}
 
 		packet_type_t type() const;
+		switchidx_t globalswitchidx() const;
 		key_t key() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size) = 0;
 	protected:
 		optype_t _type;
+		switchidx_t _globalswitchidx;
 		key_t _key;
 
 		virtual uint32_t size() = 0;
 		virtual void deserialize(const char * data, uint32_t recv_size) = 0;
+
+		uint32_t serialize_ophdr(char * const data, uint32_t max_size);
+		uint32_t dynamic_serialize_ophdr(dynamic_array_t &dynamic_data);
+		uint32_t deserialize_ophdr(const char * data, uint32_t recv_size);
 };
 
 template<class key_t>
@@ -621,5 +628,8 @@ static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsi
 static uint32_t dynamic_serialize_packet_type(optype_t type, dynamic_array_t &dynamic_data);
 static packet_type_t get_packet_type(const char * data, uint32_t recv_size);
 static uint32_t deserialize_packet_type(optype_t &type, const char * data, uint32_t recvsize);
+static uint32_t serialize_switchidx(switchidx_t switchidx, char *data, uint32_t maxsize);
+static uint32_t dynamic_serialize_switchidx(switchidx_t switchidx, dynamic_array_t &dynamic_data, int off);
+static uint32_t deserialize_switchidx(switchidx_t &switchidx, const char *data, uint32_t recvsize);
 
 #endif

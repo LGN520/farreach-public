@@ -118,6 +118,8 @@
 
 // MAX_SERVER_NUM <= 128
 #define MAX_SERVER_NUM 128
+// SPINESELECT_ENTRY_NUM = 6 * MAX_SERVER_NUM < 8 * MAX_SERVER_NUM
+#define SPINESELECT_ENTRY_NUM 1024
 // RANGE_PARTITION_ENTRY_NUM = 9 * MAX_SERVER_NUM < 16 * MAX_SERVER_NUM
 #define RANGE_PARTITION_ENTRY_NUM 2048
 // RANGE_PARTITION_FOR_SCAN_ENDKEY_ENTRY_NUM = 1 * MAX_SERVER_NUM
@@ -161,11 +163,13 @@ control ingress {
 		apply(l2l3_forward_tbl); // forward traditional packet
 	}
 	apply(set_hot_threshold_tbl); // set inswitch_hdr.hot_threshold
+	apply(hash_for_spineselect_tbl); // set meta.hashval_for_spineselect
 
 	// Stage 1
 #ifndef RANGE_SUPPORT
 	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif
+	apply(spineselect_tbl); // forward requests from client to spine switch
 
 	// Stage 2 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 #ifdef RANGE_SUPPORT

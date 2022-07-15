@@ -58,13 +58,47 @@ table hash_for_partition_tbl {
 }
 #endif
 
+action hash_for_spineselect() {
+	modify_field_with_hash_based_offset(meta.hashval_for_spineselect, 0, hash_calc, PARTITION_COUNT);
+}
+
+@pragma stage 0
+table hash_for_spineselect_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_spineselect;
+		nop;
+	}
+	default_action: nop();
+	size: 8;
+}
+
 // Stage 1
 
-#ifdef RANGE_SUPPORT
-action range_partition_to_spine(eport, globalswitchidx) {
+action spineselect(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
+
+@pragma stage 1
+table spineselect_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.hashval_for_spineselect: range;
+	}
+	actions {
+		spineselect;
+		nop;
+	}
+	default_action: nop();
+	size: SPINESELECT_ENTRY_NUM;
+}
+
+// Stage 2
+
+#ifdef RANGE_SUPPORT
 action range_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
@@ -74,14 +108,13 @@ action range_partition_for_scan(udpport, eport, start_globalserveridx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(split_hdr.globalserveridx, start_globalserveridx);
 }
-@pragma stage 1
+@pragma stage 2
 table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
 		op_hdr.keyhihihi: range;
 	}
 	actions {
-		range_partition_to_spine;
 		range_partition;
 		range_partition_for_scan;
 		nop;
@@ -90,22 +123,17 @@ table range_partition_tbl {
 	size: RANGE_PARTITION_ENTRY_NUM;
 }
 #else
-action hash_partition_to_spine(eport, globalswitchidx) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(op_hdr.globalswitchidx, globalswitchidx);
-}
 action hash_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
-@pragma stage 1
+@pragma stage 2
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.hashval_for_partition: range;
 	}
 	actions {
-		hash_partition_to_spine;
 		hash_partition;
 		nop;
 	}
@@ -114,7 +142,7 @@ table hash_partition_tbl {
 }
 #endif
 
-// Stage 2
+// Stage 3
 
 #ifdef RANGE_SUPPORT
 //action range_partition_for_scan_endkey(last_udpport_plus_one) {
@@ -125,7 +153,7 @@ action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
 	subtract(split_hdr.max_scannum, end_globalserveridx_plus_one, split_hdr.globalserveridx);
 }
 
-@pragma stage 2
+@pragma stage 3
 table range_partition_for_scan_endkey_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -140,13 +168,13 @@ table range_partition_for_scan_endkey_tbl {
 }
 #endif
 
-// Stage 3
+// Stage 4
 
 action forward_normal_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
-@pragma stage 3
+@pragma stage 4
 table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -160,7 +188,7 @@ table ipv4_forward_tbl {
 	size: 64;
 }
 
-// Stage 4
+// Stage 5
 
 #ifdef RANGE_SUPPORT
 action update_scanreq_to_scanreq_split() {
@@ -168,7 +196,7 @@ action update_scanreq_to_scanreq_split() {
 	add_header(split_hdr);
 }
 
-@pragma stage 4
+@pragma stage 5
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;

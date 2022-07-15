@@ -80,6 +80,23 @@ table set_hot_threshold_tbl {
 	size: 1;
 }
 
+action hash_for_spineselect() {
+	modify_field_with_hash_based_offset(meta.hashval_for_spineselect, 0, hash_calc, PARTITION_COUNT);
+}
+
+@pragma stage 0
+table hash_for_spineselect_tbl {
+	reads {
+		op_hdr.optype: exact;
+	}
+	actions {
+		hash_for_spineselect;
+		nop;
+	}
+	default_action: nop();
+	size: 8;
+}
+
 // Stage 1
 
 /*action reset_is_wrong_pipeline() {
@@ -103,13 +120,28 @@ table hash_for_partition_tbl {
 }
 #endif
 
-// Stage 2
-
-#ifdef RANGE_SUPPORT
-action range_partition_to_spine(eport, globalswitchidx) {
+action spineselect(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
+
+@pragma stage 1
+table spineselect_tbl {
+	reads {
+		op_hdr.optype: exact;
+		meta.hashval_for_spineselect: range;
+	}
+	actions {
+		spineselect;
+		nop;
+	}
+	default_action: nop();
+	size: SPINESELECT_ENTRY_NUM;
+}
+
+// Stage 2
+
+#ifdef RANGE_SUPPORT
 action range_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
@@ -128,7 +160,6 @@ table range_partition_tbl {
 		//ig_intr_md.ingress_port: exact;
 	}
 	actions {
-		range_partition_to_spine;
 		range_partition;
 		//reset_is_wrong_pipeline;
 		range_partition_for_scan;
@@ -144,10 +175,6 @@ table range_partition_tbl {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
 }*/
-action hash_partition_to_spine(eport, globalswitchidx) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(op_hdr.globalswitchidx, globalswitchidx);
-}
 action hash_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
@@ -160,7 +187,6 @@ table hash_partition_tbl {
 		//ig_intr_md.ingress_port: exact;
 	}
 	actions {
-		hash_partition_to_spine;
 		hash_partition;
 		//reset_is_wrong_pipeline;
 		nop;
