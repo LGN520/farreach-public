@@ -18,7 +18,7 @@
 // # of bytes in clone_hdr
 #define CLONE_BYTES 7
 
-// # of bytes before cur_scanidx&max_scannum in split_hdr
+// # of bytes before cur_scanidx&max_scannum&cur_scanswitchidx&max_scanswitchnum in split_hdr
 #define SPLIT_PREV_BYTES 3
 
 // # of padding bytes in stat_hdr
@@ -207,7 +207,7 @@ class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 };
 
 template<class key_t, class val_t>
-class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(endkey) + splithdr(isclone+curscanidx+maxscannum) + nodeidx_foreval(not processed by switch) + snapshotid(not processed by switch) + pairs
+class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(endkey) + splithdr(isclone+curscanidx+maxscannum+curscanswitchidx+maxscanswitchnum) + nodeidx_foreval(not processed by switch) + snapshotid(not processed by switch) + pairs
 	public: 
 		//ScanResponseSplit(key_t key, key_t endkey, uint32_t num, uint16_t cur_scanidx, uint16_t max_scannum, int32_t pairnum, std::vector<std::pair<key_t, val_t>> pairs);
 		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<key_t, snapshot_record_t>> pairs);
@@ -228,6 +228,7 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(en
 		static size_t get_srcid_off();
 		static size_t get_srcid_len();
 		static bool get_srcid_conversion();
+		// TODO: get_srcswitchnum/id_off/len/conversion
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);
@@ -393,11 +394,13 @@ template<class key_t>
 class ScanRequestSplit : public ScanRequest<key_t> { // ophdr + scanhdr + splithdr
 	public: 
 		ScanRequestSplit();
-		ScanRequestSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum);
+		ScanRequestSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t cur_scanswitchidx, uint16_t max_scanswitchnum);
 		ScanRequestSplit(const char * data, uint32_t recv_size);
 
 		uint16_t cur_scanidx() const;
 		uint16_t max_scannum() const;
+		uint16_t cur_scanswitchidx() const;
+		uint16_t max_scanswitchnum() const;
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 	protected:
@@ -405,6 +408,8 @@ class ScanRequestSplit : public ScanRequest<key_t> { // ophdr + scanhdr + splith
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		uint16_t _cur_scanidx;
 		uint16_t _max_scannum;
+		uint16_t _cur_scanswitchidx;
+		uint16_t _max_scanswitchnum;
 };
 
 // NOTE: only used in end-hosts

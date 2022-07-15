@@ -412,22 +412,21 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # Table: range_partition_for_scan_endkey_tbl (default: nop; size <= 1 * 128)
                 # TODO: limit max_scannum <= constant (e.g., 32)
                 print "Configuring range_partition_for_scan_endkey_tbl"
-                key_range_per_server = pow(2, 16) / server_total_logical_num
+                key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
                 endkey_start = 0 # [0, 2^16-1]
-                for global_server_logical_idx in range(server_total_logical_num):
-                    if global_server_logical_idx == server_total_logical_num - 1:
+                for i in range(leafswitch_total_logical_num):
+                    global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
+                    if i == leafswitch_total_logical_num - 1:
                         endkey_end = pow(2, 16) - 1
                     else:
-                        endkey_end = endkey_start + key_range_per_server - 1
+                        endkey_end = endkey_start + key_range_per_leafswitch - 1
                     # NOTE: both start and end are included
                     matchspec0 = distcachespine_range_partition_for_scan_endkey_tbl_match_spec_t(\
                             op_hdr_optype = SCANREQ,
                             scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
                             scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end))
-                    #last_udpport_plus_one = server_worker_port_start + global_server_logical_idx + 1 # used to calculate max_scannum in data plane
-                    #actnspec0 = distcachespine_range_partition_for_scan_endkey_action_spec_t(last_udpport_plus_one)
-                    end_globalserveridx_plus_one = global_server_logical_idx + 1 # used to calculate max_scannum in data plane
-                    actnspec0 = distcachespine_range_partition_for_scan_endkey_action_spec_t(end_globalserveridx_plus_one)
+                    end_globalswitchidx_plus_one = global_leafswitch_logical_idx + 1 # used to calculate max_scannum in data plane
+                    actnspec0 = distcachespine_range_partition_for_scan_endkey_action_spec_t(end_globalswitchidx_plus_one)
                     # set cur_scanidx = 0; set max_scannum = last_udpport_plus_one - udp_hdr.dstPort (first_udpport)
                     self.client.range_partition_for_scan_endkey_tbl_table_add_with_range_partition_for_scan_endkey(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)

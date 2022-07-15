@@ -501,8 +501,8 @@ ScanResponseSplit<key_t, val_t>::ScanResponseSplit(key_t key, key_t endkey, uint
 	this->_pairs.assign(pairs.begin(), pairs.end());
 }*/
 template<class key_t, class val_t>
-ScanResponseSplit<key_t, val_t>::ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t pairnum, std::vector<std::pair<key_t, snapshot_record_t>> pairs) 
-	: ScanRequestSplit<key_t>(key, endkey, cur_scanidx, max_scannum), _nodeidx_foreval(nodeidx_foreval), _snapshotid(snapshotid), _pairnum(pairnum)
+ScanResponseSplit<key_t, val_t>::ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t cur_scanswitchidx, uint16_t max_scanswitchnum, uint16_t nodeidx_foreval, int snapshotid, int32_t pairnum, std::vector<std::pair<key_t, snapshot_record_t>> pairs) 
+	: ScanRequestSplit<key_t>(key, endkey, cur_scanidx, max_scannum, cur_scanswitchidx, max_scanswitchnum), _nodeidx_foreval(nodeidx_foreval), _snapshotid(snapshotid), _pairnum(pairnum)
 {	
 	this->_type = static_cast<optype_t>(PacketType::SCANRES_SPLIT);
 	INVARIANT(snapshotid >= 0);
@@ -539,7 +539,7 @@ std::vector<std::pair<key_t, snapshot_record_t>> ScanResponseSplit<key_t, val_t>
 
 template<class key_t, class val_t>
 uint32_t ScanResponseSplit<key_t, val_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int) + sizeof(int32_t);
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int) + sizeof(int32_t); // ophdr + scanhdr.endkey + splithdr (isclone + globalserveridx + cur_scanidx, max_scannum, cur_scanswitchidx, max_scanswitchnum) + nodeidx_foreval + snapshotid + pairnum
 }
 
 template<class key_t, class val_t>
@@ -560,6 +560,12 @@ uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t 
 	begin += sizeof(uint16_t);
 	uint16_t bigendian_max_scannum = htons(uint16_t(this->_max_scannum));
 	memcpy(begin, (void *)&bigendian_max_scannum, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
+	uint16_t bigendian_cur_scanswitchidx = htons(uint16_t(this->_cur_scanswitchidx));
+	memcpy(begin, (void *)&bigendian_cur_scanswitchidx, sizeof(uint16_t));
+	begin += sizeof(uint16_t);
+	uint16_t bigendian_max_scanswitchnum = htons(uint16_t(this->_max_scanswitchnum));
+	memcpy(begin, (void *)&bigendian_max_scanswitchnum, sizeof(uint16_t));
 	begin += sizeof(uint16_t);
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	memcpy(begin, (void *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
@@ -1138,13 +1144,13 @@ uint32_t DelRequestSeqCase3<key_t>::serialize(char * const data, uint32_t max_si
 
 template<class key_t>
 ScanRequestSplit<key_t>::ScanRequestSplit() 
-	: ScanRequest<key_t>(), _cur_scanidx(0), _max_scannum(0)
+	: ScanRequest<key_t>(), _cur_scanidx(0), _max_scannum(0), _cur_scanswitchidx(0), _max_scanswitchnum(0)
 {
 }
 
 template<class key_t>
-ScanRequestSplit<key_t>::ScanRequestSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum)
-	: ScanRequest<key_t>(key, endkey), _cur_scanidx(cur_scanidx), _max_scannum(max_scannum)
+ScanRequestSplit<key_t>::ScanRequestSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t cur_scanswitchidx, uint16_t max_scanswitchnum)
+	: ScanRequest<key_t>(key, endkey), _cur_scanidx(cur_scanidx), _max_scannum(max_scannum), _cur_scanswitchidx(cur_scanswitchidx), _max_scanswitchnum(max_scanswitchnum)
 {
 	this->_type = static_cast<optype_t>(packet_type_t::SCANREQ_SPLIT);
 }
@@ -1166,8 +1172,18 @@ uint16_t ScanRequestSplit<key_t>::max_scannum() const {
 }
 
 template<class key_t>
+uint16_t ScanRequestSplit<key_t>::cur_scanswitchidx() const {
+	return this->_cur_scanswitchidx;
+}
+
+template<class key_t>
+uint16_t ScanRequestSplit<key_t>::max_scanswitchnum() const {
+	return this->_max_scanswitchnum;
+}
+
+template<class key_t>
 uint32_t ScanRequestSplit<key_t>::size() {
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t);// + sizeof(uint32_t);
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t);// + sizeof(uint32_t);
 }
 
 template<class key_t>
@@ -1192,7 +1208,13 @@ void ScanRequestSplit<key_t>::deserialize(const char * data, uint32_t recv_size)
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_max_scannum, begin, sizeof(uint16_t));
 	this->_max_scannum = ntohs(this->_max_scannum);
-	//begin += sizeof(uint16_t);
+	begin += sizeof(uint16_t);
+	memcpy((void *)&this->_cur_scanswitchidx, begin, sizeof(uint16_t));
+	this->_cur_scanswitchidx = ntohs(this->_cur_scanswitchidx);
+	begin += sizeof(uint16_t);
+	memcpy((void *)&this->_max_scanswitchnum, begin, sizeof(uint16_t));
+	this->_max_scanswitchnum = ntohs(this->_max_scanswitchnum);
+	begin += sizeof(uint16_t);
 }
 
 // CachePop (value must <= 128B; only used in end-hosts)

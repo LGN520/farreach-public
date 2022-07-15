@@ -211,23 +211,26 @@ bool udprecvlarge(int sockfd, dynamic_array_t &buf, int flags, struct sockaddr_i
 }
 
 
-bool udprecvlarge_multisrc_udpfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	return udprecvlarge_multisrc(sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, 0, UDP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion, isfilter, optype, targetkey);
+bool udprecvlarge_multisrc_udpfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, size_t srcswitchnum_off, size_t srcswitchnum_len, bool srcswitchnum_conversion, size_t srcswitchid_off, size_t srcswitchid_len, bool srcswitchid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
+	return udprecvlarge_multisrc(sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, 0, UDP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion, srcswitchnum_off, srcswitchnum_len, srcswitchnum_conversion, srcswitchid_off, srcswitchid_len, srcswitchid_conversion, isfilter, optype, targetkey);
 }
 
-bool udprecvlarge_multisrc_ipfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
-	return udprecvlarge_multisrc(sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion, isfilter, optype, targetkey);
+bool udprecvlarge_multisrc_ipfrag(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, size_t srcswitchnum_off, size_t srcswitchnum_len, bool srcswitchnum_conversion, size_t srcswitchid_off, size_t srcswitchid_len, bool srcswitchid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
+	return udprecvlarge_multisrc(sockfd, bufs_ptr, bufnum, flags, src_addrs, addrlens, role, frag_hdrsize, IP_FRAGMENT_MAXSIZE, srcnum_off, srcnum_len, srcnum_conversion, srcid_off, srcid_len, srcid_conversion, srcswitchnum_off, srcswitchnum_len, srcswitchnum_conversion, srcswitchid_off, srcswitchid_len, srcswitchid_conversion, isfilter, optype, targetkey);
 }
 
-// NOTE: receive large packet from multiple sources; used for SCANRES_SPLIT (IMPORTANT: srcid > 0 && srcid <= srcnum <= bufnum)
-// *bufs_ptr: max_srcnum dynamic arrays; if is_timeout = true, *bufs_ptr = NULL;
-// bufnum: max_srcnum; if is_timeout = true, bufnum = 0;
-// src_addrs: NULL or bufnum; addrlens: NULL or bufnum
-// For example, srcnum for SCANRES_SPLIT is split_hdr.max_scannum; srcid for SCANRES_SPLIT is split_hdr.cur_scanidx
-bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnum, int flags, struct sockaddr_in *src_addrs, socklen_t *addrlens, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
+// NOTE: receive large packet from multiple sources; used for SCANRES_SPLIT
+// IMPORTANT: srcswitchid > 0 && srcswitchid <= srcswitchnum; srcid > 0 && srcid <= srcnum; each srcswitchid can have different srcnums
+// perswitch_perserver_bufs: srcswitchnum * srcnum dynamic arrays; if is_timeout = true, size = 0
+// perswitch_perserver_addrs/addrlens have the same shape as perswitch_perserver_bufs
+// For example, for SCANRES_SPLIT, srcswitchnum is split_hdr.max_scanswitchnum; srcswitchid is split_hdr.cur_scanswitchidx; srcnum is split_hdr.max_scannum; srcid is split_hdr.cur_scanidx
+bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>> &perswitch_perserver_bufs, int flags, std::vector<std::vector<struct sockaddr_in>> &perswitch_perserver_addrs, std::vector<std::vector<socklen_t>> &perswitch_perserver_addrlens, const char* role, size_t frag_hdrsize, size_t frag_maxsize, size_t srcnum_off, size_t srcnum_len, bool srcnum_conversion, size_t srcid_off, size_t srcid_len, bool srcid_conversion, size_t srcswitchnum_off, size_t srcswitchnum_len, bool srcswitchnum_conversion, size_t srcswitchid_off, size_t srcswitchid_len, bool srcswitchid_conversion, bool isfilter, optype_t optype, netreach_key_t targetkey) {
 	INVARIANT(srcnum_len == 1 || srcnum_len == 2 || srcnum_len == 4);
 	INVARIANT(srcid_len == 1 || srcid_len == 2 || srcid_len == 4);
 	INVARIANT(srcnum_off <= frag_hdrsize && srcid_off <= frag_hdrsize);
+	INVARIANT(srcswitchnum_len == 1 || srcswitchnum_len == 2 || srcswitchnum_len == 4);
+	INVARIANT(srcswitchid_len == 1 || srcswitchid_len == 2 || srcswitchid_len == 4);
+	INVARIANT(srcswitchnum_off <= frag_hdrsize && srcswitchid_off <= frag_hdrsize);
 
 	bool is_timeout = false;
 	size_t final_frag_hdrsize = frag_hdrsize + sizeof(uint16_t) + sizeof(uint16_t);
@@ -240,12 +243,11 @@ bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnu
 	int frag_recvsize = 0;
 	// set by the global first fragment
 	bool global_isfirst = true;
-	size_t max_srcnum = 0;
-	size_t cur_srcnum = 0;
-	// set by the first fragment of each srcid
-	bool *local_isfirsts = NULL;
-	uint16_t *max_fragnums = NULL;
-	uint16_t *cur_fragnums = NULL;
+	size_t cur_srcswitchnum = 0; // already received switchnum
+	std::vector<size_t> perswitch_cur_srcnums; // per-switch already received servernum
+	// set by the first fragment of each srcswitchid and each srcid
+	std::vector<std::vector<uint16_t>> perswitch_perserver_max_fragnums;
+	std::vector<std::vector<uint16_t>> perswitch_perserver_cur_fragnums; // per-switch per-server already received fragnum
 	netreach_key_t tmpkey;
 	while (true) {
 		is_timeout = udprecvfrom(sockfd, fragbuf, frag_maxsize, flags, &tmp_srcaddr, &tmp_addrlen, frag_recvsize, role);
@@ -264,91 +266,98 @@ bool udprecvlarge_multisrc(int sockfd, dynamic_array_t **bufs_ptr, size_t &bufnu
 			}
 		}
 
-		// set max_srcnum for the global first packet
-		if (global_isfirst) {
+		if (global_isfirst) { // first packet in global -> get switchnum
 			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
-			memcpy(&max_srcnum, fragbuf + srcnum_off, srcnum_len);
-			if (srcnum_conversion && srcnum_len == 2) max_srcnum = size_t(ntohs(uint16_t(max_srcnum)));
-			else if (srcnum_conversion && srcnum_len == 4) max_srcnum = size_t(ntohl(uint32_t(max_srcnum)));
+
+			size_t max_srcswitchnum = 0;
+			memcpy(&max_srcswitchnum, fragbuf + srcswitchnum_off, srcswitchnum_len);
+			if (srcswitchnum_conversion && srcswitchnum_len == 2) max_srcswitchnum = size_t(ntohs(uint16_t(max_srcswitchnum)));
+			else if (srcswitchnum_conversion && srcswitchnum_len == 4) max_srcswitchnum = size_t(ntohl(uint32_t(max_srcswitchnum)));
+			INVARIANT(max_srcswitchnum > 0);
 
 			// initialize
-			bufnum = max_srcnum;
-			*bufs_ptr = new dynamic_array_t[max_srcnum];
-			local_isfirsts = new bool[max_srcnum];
-			max_fragnums = new uint16_t[max_srcnum];
-			cur_fragnums = new uint16_t[max_srcnum];
-			for (size_t i = 0; i < max_srcnum; i++) {
-				(*bufs_ptr)[i].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
-				local_isfirsts[i] = true;
-				max_fragnums[i] = 0;
-				cur_fragnums[i] = 0;
-			}
+			perswitch_perserver_bufs.resize(max_srcswitchnum);
+			perswitch_perserver_addrs.resize(max_srcswitchnum);
+			perswitch_perserver_addrlens.resize(max_srcswitchnum);
+			perswitch_cur_srcnums.resize(max_srcswitchnum, 0);
+			perswitch_perserver_max_fragnums.resize(max_srcswitchnum);
+			perswitch_perserver_cur_fragnums.resize(max_srcswitchnum);
 
 			global_isfirst = false;
 		}
 
+		// get switchidx
+		uint16_t tmpsrcswitchid = 0;
+		memcpy(&tmpsrcswitchid, fragbuf + srcswitchid_off, srcswitchid_len);
+		if (srcswitchid_conversion && srcswitchid_len == 2) tmpsrcswitchid = size_t(ntohs(uint16_t(tmpsrcswitchid)));
+		else if (srcswitchid_conversion && srcswitchid_len == 4) tmpsrcswitchid = size_t(ntohl(uint32_t(tmpsrcswitchid)));
+		INVARIANT(tmpsrcswitchid > 0 && tmpsrcswitchid <= perswitch_perserver_bufs.size());
+		int tmp_switchidx = tmpsrcswitchid - 1; // [1, max_srcswitchnum] -> [0, max_srcswitchnum-1]
+
+		if (perswitch_perserver_bufs[tmp_switchidx].size() == 0) { // first packet from the leaf switch -> get servernum for the switch
+			size_t max_srcnum = 0;
+			memcpy(&max_srcnum, fragbuf + srcnum_off, srcnum_len);
+			if (srcnum_conversion && srcnum_len == 2) max_srcnum = size_t(ntohs(uint16_t(max_srcnum)));
+			else if (srcnum_conversion && srcnum_len == 4) max_srcnum = size_t(ntohl(uint32_t(max_srcnum)));
+			INVARIANT(max_srcnum > 0);
+
+			// initialize
+			perswitch_perserver_bufs[tmp_switchidx].resize(max_srcnum);
+			perswitch_perserver_addrs[tmp_switchidx].resize(max_srcnum);
+			perswitch_perserver_addrlens[tmp_switchidx].resize(max_srcnum, sizeof(struct sockaddr_in));
+			perswitch_perserver_max_fragnums[tmp_switchidx].resize(max_srcnum, 0);
+			perswitch_perserver_cur_fragnums[tmp_switchidx].resize(max_srcnum, 0);
+		}
+
+		// get serveridx
 		uint16_t tmpsrcid = 0;
 		memcpy(&tmpsrcid, fragbuf + srcid_off, srcid_len);
 		if (srcid_conversion && srcid_len == 2) tmpsrcid = size_t(ntohs(uint16_t(tmpsrcid)));
 		else if (srcid_conversion && srcid_len == 4) tmpsrcid = size_t(ntohl(uint32_t(tmpsrcid)));
 		//printf("tmpsrcid: %d, max_srcnum: %d, bufnum: %d\n", tmpsrcid, max_srcnum, bufnum);
-		INVARIANT(tmpsrcid > 0 && tmpsrcid <= max_srcnum);
-
+		INVARIANT(tmpsrcid > 0 && tmpsrcid <= perswitch_perserver_bufs[tmp_switchidx].size());
 		int tmp_bufidx = tmpsrcid - 1; // [1, max_srcnum] -> [0, max_srcnum-1]
-		dynamic_array_t &tmpbuf = (*bufs_ptr)[tmp_bufidx];
 
-		if (local_isfirsts[tmp_bufidx]) {
-			if (src_addrs != NULL) {
-				src_addrs[tmp_bufidx] = tmp_srcaddr;
-				addrlens[tmp_bufidx] = tmp_addrlen;
-			}
+		// get dynamic array for the switch and the server
+		dynamic_array_t &tmpbuf = perswitch_perserver_bufs[tmp_switchidx][tmp_bufidx];
+
+		if (perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx] == 0) { // first packet from the leaf switch and the server
+			uint16_t max_fragnum = 0;
+			memcpy(&max_fragnum, fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
+			INVARIANT(max_fragnum > 0);
+
+			perswitch_perserver_addrs[tmp_switchidx][tmp_bufidx] = tmp_srcaddr;
+			perswitch_perserver_addrlens[tmp_switchidx][tmp_bufidx] = tmp_addrlen;
+			perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx] = max_fragnum;
 
 			tmpbuf.dynamic_memcpy(0, fragbuf, frag_hdrsize);
-			memcpy(&max_fragnums[tmp_bufidx], fragbuf + frag_hdrsize + sizeof(uint16_t), sizeof(uint16_t));
-
-			local_isfirsts[tmp_bufidx] = false;
 		}
 
 		uint16_t cur_fragidx = 0;
 		memcpy(&cur_fragidx, fragbuf + frag_hdrsize, sizeof(uint16_t));
-		INVARIANT(cur_fragidx < max_fragnums[tmp_bufidx]);
+		INVARIANT(cur_fragidx < perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]);
 		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnums[tmp_bufidx], frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 
 		tmpbuf.dynamic_memcpy(frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
 
-		cur_fragnums[tmp_bufidx] += 1;
-		INVARIANT(cur_fragnums[tmp_bufidx] <= max_fragnums[tmp_bufidx]);
-		if (cur_fragnums[tmp_bufidx] == max_fragnums[tmp_bufidx]) {
-			cur_srcnum += 1;
-			if (cur_srcnum >= max_srcnum) {
-				break;
+		perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] += 1;
+		INVARIANT(perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] <= perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]);
+		if (perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] == perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]) {
+			perswitch_cur_srcnums[tmp_switchidx] += 1;
+			if (perswitch_cur_srcnums[tmp_switchidx] >= perswitch_perserver_bufs[tmp_switchidx].size()) {
+				cur_srcswitchnum += 1;
+				if (cur_srcswitchnum >= perswitch_perserver_bufs.size()) {
+					break;
+				}
 			}
 		}
 	}
 
-	INVARIANT(cur_srcnum == bufnum && bufnum == max_srcnum);
-	if (local_isfirsts != NULL) {
-		delete [] local_isfirsts;
-		local_isfirsts = NULL;
-	}
-	if (max_fragnums != NULL) {
-		delete [] max_fragnums;
-		max_fragnums = NULL;
-	}
-	if (cur_fragnums != NULL) {
-		delete [] cur_fragnums;
-		cur_fragnums = NULL;
-	}
-
 	if (is_timeout) {
-		if ((*bufs_ptr) != NULL) {
-			delete [] (*bufs_ptr);
-			*bufs_ptr = NULL;
-		}
-		bufnum = 0;
+		perswitch_perserver_bufs.clear();
+		perswitch_perserver_addrs.clear();
+		perswitch_perserver_addrlens.clear();
 	}
-
-	INVARIANT(bufnum == 0 || (bufnum > 0 && (*bufs_ptr) != NULL));
 
 	return is_timeout;
 }

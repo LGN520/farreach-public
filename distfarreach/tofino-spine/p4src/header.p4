@@ -63,9 +63,13 @@ header_type scan_t {
 header_type split_t {
 	fields {
 		is_clone: 8;
+		// used for servers
 		globalserveridx: 16;
 		cur_scanidx: 16;
 		max_scannum: 16;
+		// used for leaf switches
+		cur_scanswitchidx: 16;
+		max_scanswitchnum: 16;
 	}
 }
 #endif
