@@ -61,14 +61,9 @@ table hash_for_partition_tbl {
 // Stage 1
 
 #ifdef RANGE_SUPPORT
-action range_partition(udpport, eport) {
-	modify_field(udp_hdr.dstPort, udpport);
+action range_partition(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-action range_partition_for_scan(udpport, eport, start_globalserveridx) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(split_hdr.globalserveridx, start_globalserveridx);
+	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
 @pragma stage 1
 table range_partition_tbl {
@@ -78,16 +73,15 @@ table range_partition_tbl {
 	}
 	actions {
 		range_partition;
-		range_partition_for_scan;
 		nop;
 	}
 	default_action: nop();
 	size: RANGE_PARTITION_ENTRY_NUM;
 }
 #else
-action hash_partition(udpport, eport) {
-	modify_field(udp_hdr.dstPort, udpport);
+action hash_partition(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
 @pragma stage 1
 table hash_partition_tbl {

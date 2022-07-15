@@ -106,56 +106,38 @@ table hash_for_partition_tbl {
 // Stage 2
 
 #ifdef RANGE_SUPPORT
-action range_partition(udpport, eport) {
-	modify_field(udp_hdr.dstPort, udpport);
+action range_partition(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-}
-action range_partition_for_scan(udpport, eport, start_globalserveridx) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(split_hdr.globalserveridx, start_globalserveridx);
+	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
 @pragma stage 2
 table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
-		//op_hdr.keyhihi: range;
 		op_hdr.keyhihihi: range;
-		//ig_intr_md.ingress_port: exact;
 	}
 	actions {
 		range_partition;
-		//reset_is_wrong_pipeline;
-		range_partition_for_scan;
 		nop;
 	}
-	//default_action: reset_is_wrong_pipeline();
 	default_action: nop();
 	size: RANGE_PARTITION_ENTRY_NUM;
 }
 #else
-/*action hash_partition(udpport, eport, is_wrong_pipeline) {
-	modify_field(udp_hdr.dstPort, udpport);
+action hash_partition(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
-	modify_field(inswitch_hdr.is_wrong_pipeline, is_wrong_pipeline);
-}*/
-action hash_partition(udpport, eport) {
-	modify_field(udp_hdr.dstPort, udpport);
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
 @pragma stage 2
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
 		meta.hashval_for_partition: range;
-		//ig_intr_md.ingress_port: exact;
 	}
 	actions {
 		hash_partition;
-		//reset_is_wrong_pipeline;
 		nop;
 	}
-	//default_action: reset_is_wrong_pipeline();
 	default_action: nop();
 	size: HASH_PARTITION_ENTRY_NUM;
 }
