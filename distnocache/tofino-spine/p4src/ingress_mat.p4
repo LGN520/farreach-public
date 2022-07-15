@@ -151,6 +151,11 @@ action update_scanreq_to_scanreq_split() {
 	modify_field(op_hdr.optype, SCANREQ_SPLIT);
 	add_header(split_hdr);
 }
+#endif
+
+update loadreq_to_loadreq_spine() {
+	modify_field(op_hdr.optype, LOADREQ_SPINE);
+}
 
 @pragma stage 4
 table ig_port_forward_tbl {
@@ -161,9 +166,9 @@ table ig_port_forward_tbl {
 #ifdef RANGE_SUPPORT
 		update_scanreq_to_scanreq_split;
 #endif
+		update_loadreq_to_loadreq_spine;
 		nop;
 	}
 	default_action: nop();
 	size: 8;
 }
-#endif

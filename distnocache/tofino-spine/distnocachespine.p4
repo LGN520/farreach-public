@@ -141,9 +141,7 @@ control ingress {
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
 	// Stage 4
-#ifdef RANGE_SUPPORT
 	apply(ig_port_forward_tbl); // update op_hdr.optype
-#endif
 }
 
 /* Egress Processing */

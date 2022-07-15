@@ -370,8 +370,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             key_range_per_spineswitch = switch_partition_count / spineswitch_total_logical_num
             for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ]:
                 key_start = 0 # [0, 2^16-1]
-                for global_spineswitch_logical_idx in spineswitch_logical_idxes:
-                    if global_spineswitch_logical_idx == spineswitch_total_logical_num - 1:
+                for i in range(spineswitch_total_logical_num):
+                    global_spineswitch_logical_idx = spineswitch_logical_idxes[i]
+                    if i == spineswitch_total_logical_num - 1:
                         key_end = switch_partition_count - 1
                     else:
                         key_end = key_start + key_range_per_spineswitch - 1

@@ -565,7 +565,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
 
-            # Table: ig_port_forward_tbl (default: nop; size: 6)
+            # Table: ig_port_forward_tbl (default: nop; size: 8)
             print "Configuring ig_port_forward_tbl"
             matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ,
@@ -598,6 +598,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         meta_need_recirculate = 0)
                 self.client.ig_port_forward_tbl_table_add_with_update_scanreq_to_scanreq_split(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = WARMUPREQ,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_warmupreq_to_warmupreq_spine(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distfarreachspine_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = LOADREQ,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_loadreq_to_loadreq_spine(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline
 

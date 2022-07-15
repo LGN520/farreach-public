@@ -454,6 +454,10 @@ action update_netcache_valueupdate_to_netcache_valueupdate_inswitch() {
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }
 
+update loadreq_to_loadreq_spine() {
+	modify_field(op_hdr.optype, LOADREQ_SPINE);
+}
+
 @pragma stage 8
 table ig_port_forward_tbl {
 	reads {
@@ -468,6 +472,7 @@ table ig_port_forward_tbl {
 #endif
 		update_warmupreq_to_netcache_warmupreq_inswitch;
 		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
+		update_loadreq_to_loadreq_spine;
 		nop;
 	}
 	default_action: nop();

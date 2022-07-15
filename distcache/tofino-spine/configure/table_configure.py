@@ -190,6 +190,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             port, chnl = server_fpport.split("/")
             devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
             self.server_devports.append(devport)
+        port, chnl = spineswitch_fpport_to_leaf.split("/")
+        devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+        self.leafswitch_devport = devport
 
         self.recirPorts = [64, 192]
 
@@ -359,77 +362,48 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             if RANGE_SUPPORT == True:
                 # Table: range_partition_tbl (default: nop; size <= 9 * 128)
                 print "Configuring range_partition_tbl"
-                key_range_per_server = pow(2, 16) / server_total_logical_num
+                key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH]:
                     key_start = 0 # [0, 2^16-1]
-                    for global_server_logical_idx in range(server_total_logical_num):
-                        if global_server_logical_idx == server_total_logical_num - 1:
+                    for i in range(leafswitch_total_logical_num):
+                        global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
+                        if i == leafswitch_total_logical_num - 1:
                             key_end = pow(2, 16) - 1
                         else:
-                            key_end = key_start + key_range_per_server - 1
+                            key_end = key_start + key_range_per_leafswitch - 1
                         # NOTE: both start and end are included
                         matchspec0 = distcachespine_range_partition_tbl_match_spec_t(\
                                 op_hdr_optype = tmpoptype,
                                 op_hdr_keyhihihi_start = convert_u16_to_i16(key_start),
                                 op_hdr_keyhihihi_end = convert_u16_to_i16(key_end))
-                        # Forward to the egress pipeline of server
-                        server_physical_idx = -1
-                        local_server_logical_idx = -1
-                        for tmp_server_physical_idx in range(server_physical_num):
-                            for tmp_local_server_logical_idx in range(len(server_logical_idxes_list[tmp_server_physical_idx])):
-                                if global_server_logical_idx == server_logical_idxes_list[tmp_server_physical_idx][tmp_local_server_logical_idx]:
-                                    server_physical_idx = tmp_server_physical_idx
-                                    local_server_logical_idx = tmp_local_server_logical_idx
-                                    break
-                        if server_physical_idx == -1:
-                            print "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in range_partition_tbl".format(global_server_logical_idx)
-                        else:
-                            #udp_dstport = server_worker_port_start + global_server_logical_idx
-                            udp_dstport = server_worker_port_start + local_server_logical_idx
-                            eport = self.server_devports[server_physical_idx]
-                            if tmpoptype != SCANREQ:
-                                actnspec0 = distcachespine_range_partition_action_spec_t(udp_dstport, eport)
-                                self.client.range_partition_tbl_table_add_with_range_partition(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                            else:
-                                actnspec0 = distcachespine_range_partition_for_scan_action_spec_t(udp_dstport, eport, global_server_logical_idx)
-                                self.client.range_partition_tbl_table_add_with_range_partition_for_scan(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        # Forward to the egress pipeline of leaf switch
+                        eport = self.leafswitch_devport
+                        actnspec0 = distcachespine_range_partition_action_spec_t(eport, global_leafswitch_logical_idx)
+                        self.client.range_partition_tbl_table_add_with_range_partition(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
             else:
                 # Table: hash_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring hash_partition_tbl"
-                hash_range_per_server = switch_partition_count / server_total_logical_num
+                hash_range_per_leafswitch = switch_partition_count / leafswitch_total_logical_num
                 for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH]:
                     hash_start = 0 # [0, partition_count-1]
-                    for global_server_logical_idx in range(server_total_logical_num):
-                        if global_server_logical_idx == server_total_logical_num - 1:
+                    for i in range(leafswitch_total_logical_num):
+                        global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
+                        if i == leafswitch_total_logical_num - 1:
                             hash_end = switch_partition_count - 1 # if end is not included, then it is just processed by port 1111
                         else:
-                            hash_end = hash_start + hash_range_per_server - 1
+                            hash_end = hash_start + hash_range_per_leafswitch - 1
                         # NOTE: both start and end are included
                         matchspec0 = distcachespine_hash_partition_tbl_match_spec_t(\
                                 op_hdr_optype = convert_u16_to_i16(tmpoptype),
                                 meta_hashval_for_partition_start = convert_u16_to_i16(hash_start),
                                 meta_hashval_for_partition_end = convert_u16_to_i16(hash_end))
-                        # Forward to the egress pipeline of server
-                        server_physical_idx = -1
-                        local_server_logical_idx = -1
-                        for tmp_server_physical_idx in range(server_physical_num):
-                            for tmp_local_server_logical_idx in range(len(server_logical_idxes_list[tmp_server_physical_idx])):
-                                if global_server_logical_idx == server_logical_idxes_list[tmp_server_physical_idx][tmp_local_server_logical_idx]:
-                                    server_physical_idx = tmp_server_physical_idx
-                                    local_server_logical_idx = tmp_local_server_logical_idx
-                                    break
-                        if server_physical_idx == -1:
-                            print "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in hash_partition_tbl".format(global_server_logical_idx)
-                        else:
-                            #udp_dstport = server_worker_port_start + global_server_logical_idx
-                            udp_dstport = server_worker_port_start + local_server_logical_idx
-                            eport = self.server_devports[server_physical_idx]
-                            actnspec0 = distcachespine_hash_partition_action_spec_t(udp_dstport, eport)
-                            self.client.hash_partition_tbl_table_add_with_hash_partition(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        # Forward to the egress pipeline of leaf switch
+                        eport = self.leafswitch_devport
+                        actnspec0 = distcachespine_hash_partition_action_spec_t(eport, global_leafswitch_logical_idx)
+                        self.client.hash_partition_tbl_table_add_with_hash_partition(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         hash_start = hash_end + 1
 
             # Stage 3
@@ -530,7 +504,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
 
-            # Table: ig_port_forward_tbl (default: nop; size: 8)
+            # Table: ig_port_forward_tbl (default: nop; size: 7)
             print "Configuring ig_port_forward_tbl"
             matchspec0 = distcachespine_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETREQ)
@@ -556,6 +530,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec0 = distcachespine_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = NETCACHE_VALUEUPDATE)
             self.client.ig_port_forward_tbl_table_add_with_update_netcache_valueupdate_to_netcache_valueupdate_inswitch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distcachespine_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = LOADREQ)
+            self.client.ig_port_forward_tbl_table_add_with_update_loadreq_to_loadreq_spine(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline

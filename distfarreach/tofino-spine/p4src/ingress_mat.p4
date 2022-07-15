@@ -474,6 +474,14 @@ action update_scanreq_to_scanreq_split() {
 }
 #endif
 
+update_warmupreq_to_warmupreq_spine() {
+	modify_field(op_hdr.optype, WARMUPREQ_SPINE);
+}
+
+update loadreq_to_loadreq_spine() {
+	modify_field(op_hdr.optype, LOADREQ_SPINE);
+}
+
 @pragma stage 6
 table ig_port_forward_tbl {
 	reads {
@@ -489,6 +497,8 @@ table ig_port_forward_tbl {
 #ifdef RANGE_SUPPORT
 		update_scanreq_to_scanreq_split;
 #endif
+		update_warmupreq_to_warmupreq_spine;
+		update_loadreq_to_loadreq_spine;
 		nop;
 	}
 	default_action: nop();
