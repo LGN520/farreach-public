@@ -1382,41 +1382,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     ipv4Addr_to_i32(tmp_client_ip), \
                     ipv4Addr_to_i32(self.reflector_ip_for_switch), \
                     tmp_client_port)
-            matchspec6 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(GETRES_LATEST_SEQ_INSWITCH_CASE1), 
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec7 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(GETRES_DELETED_SEQ_INSWITCH_CASE1),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec8 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(CACHE_POP_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec9 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(CACHE_EVICT_LOADFREQ_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec10 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(CACHE_EVICT_LOADDATA_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec11 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(LOADSNAPSHOTDATA_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec12 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(SETVALID_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec6, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec7, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec8, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec9, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec10, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec11, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec12, actnspec2)
+            for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, CACHE_POP_INSWITCH_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, SETVALID_INSWITCH_ACK]:
+                matchspec0 = netbufferv4_update_ipmac_srcport_tbl_match_spec_t(\
+                        op_hdr_optype=convert_u16_to_i16(tmpoptype),
+                        eg_intr_md_egress_port=tmp_devport)
+                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec2)
 
             # Table: add_and_remove_value_header_tbl (default: remove_all; 17*12=204)
             print "Configuring add_and_remove_value_header_tbl"

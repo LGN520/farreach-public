@@ -1198,62 +1198,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring update_ipmac_srcport_tbl"
             # (1) for response from server to client, egress port has been set based on ip.dstaddr (or by clone_i2e) in ingress pipeline
             # (2) for response from switch to client, egress port has been set by clone_e2e in egress pipeline
-            for tmp_client_physical_idx in range(client_physical_num):
-                tmp_devport = self.client_devports[tmp_client_physical_idx]
-                tmp_client_mac = client_macs[tmp_client_physical_idx]
-                tmp_client_ip = client_ips[tmp_client_physical_idx]
-                tmp_server_mac = server_macs[0]
-                tmp_server_ip = server_ips[0]
-                actnspec0 = distfarreachspine_update_ipmac_srcport_server2client_action_spec_t(\
-                        macAddr_to_string(tmp_client_mac), \
-                        macAddr_to_string(tmp_server_mac), \
-                        ipv4Addr_to_i32(tmp_client_ip), \
-                        ipv4Addr_to_i32(tmp_server_ip), \
-                        server_worker_port_start)
+            tmp_devport = self.clientleafswitch_devport
+            tmp_server_mac = server_macs[0]
+            tmp_server_ip = server_ips[0]
+            actnspec0 = distfarreachspine_update_srcipmac_srcport_server2client_action_spec_t(\
+                    macAddr_to_string(tmp_server_mac), \
+                    ipv4Addr_to_i32(tmp_server_ip), \
+                    server_worker_port_start)
+            for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK]:
                 matchspec0 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype = convert_u16_to_i16(GETRES), 
+                        op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                         eg_intr_md_egress_port = tmp_devport)
-                matchspec1 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(PUTRES), 
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec2 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(DELRES),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec3 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(SCANRES_SPLIT),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec4 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(WARMUPACK),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec5 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(LOADACK),
-                        eg_intr_md_egress_port = tmp_devport)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
+                self.client.update_ipmac_srcport_tbl_table_add_with_update_srcipmac_srcport_server2client(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec3, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec4, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec5, actnspec0)
-            # for request from client to server, egress port has been set by partition_tbl in ingress pipeline
-            for tmp_server_physical_idx in range(server_physical_num):
-                tmp_devport = self.server_devports[tmp_server_physical_idx]
-                tmp_server_mac = server_macs[tmp_server_physical_idx]
-                tmp_server_ip = server_ips[tmp_server_physical_idx]
-                actnspec1 = distfarreachspine_update_dstipmac_client2server_action_spec_t(\
-                        macAddr_to_string(tmp_server_mac), \
-                        ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ]:
-                    matchspec0 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
-                            eg_intr_md_egress_port = tmp_devport)
-                    self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_client2server(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec1)
             # Here we use server_mac/ip to simulate reflector_mac/ip = switchos_mac/ip
             # (1) eg_intr_md.egress_port of the first GETRES_CASE1 is set by ipv4_forward_tbl (as ingress port), which will be finally dropped -> update ip/mac/srcport or not is not important
             # (2) eg_intr_md.egress_port of cloned GETRES_CASE1s is set by clone_e2e, which must be the devport towards switchos (aka reflector)
@@ -1269,41 +1226,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     ipv4Addr_to_i32(tmp_client_ip), \
                     ipv4Addr_to_i32(self.reflector_ip_for_switch), \
                     tmp_client_port)
-            matchspec6 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(GETRES_LATEST_SEQ_INSWITCH_CASE1), 
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec7 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(GETRES_DELETED_SEQ_INSWITCH_CASE1),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec8 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(CACHE_POP_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec9 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(CACHE_EVICT_LOADFREQ_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec10 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(CACHE_EVICT_LOADDATA_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec11 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(LOADSNAPSHOTDATA_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            matchspec12 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
-                    op_hdr_optype=convert_u16_to_i16(SETVALID_INSWITCH_ACK),
-                    eg_intr_md_egress_port=tmp_devport)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec6, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec7, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec8, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec9, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec10, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec11, actnspec2)
-            self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
-                    self.sess_hdl, self.dev_tgt, matchspec12, actnspec2)
+            for tmpoptype in [GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, CACHE_POP_INSWITCH_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, SETVALID_INSWITCH_ACK]:
+                matchspec0 = distfarreachspine_update_ipmac_srcport_tbl_match_spec_t(\
+                        op_hdr_optype=convert_u16_to_i16(tmpoptype),
+                        eg_intr_md_egress_port=tmp_devport)
+                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec2)
 
             # Table: add_and_remove_value_header_tbl (default: remove_all; 17*12=204)
             print "Configuring add_and_remove_value_header_tbl"
@@ -1423,15 +1351,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_pop(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                     else:
-                                                        # Update GETREQ_INSWITCH as GETREQ to server
+                                                        # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                         #actnspec0 = distfarreachspine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                 else:
                                                     if validvalue == 0:
-                                                        # Update GETREQ_INSWITCH as GETREQ to server
+                                                        # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                         #actnspec0 = distfarreachspine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                     elif validvalue == 1:
                                                         if is_latest == 0:
@@ -1446,9 +1374,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     elif validvalue == 3:
                                                         if is_latest == 0:
-                                                            # Update GETREQ_INSWITCH as GETREQ to server
+                                                            # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                             #actnspec0 = distfarreachspine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         else:
                                                             # Update GETREQ_INSWITCH as GETRES to client by mirroring
@@ -1523,7 +1451,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     inswitch_hdr_snapshot_flag = snapshot_flag,
                                                     meta_is_case1 = is_case1)
                                                 if is_lastclone_for_pktloss == 0:
-                                                    # Forward GETRES_LATEST_SEQ_INSWITCH_CASE0 (by clone_e2e) to reflector (w/ clone)
+                                                    # Forward GETRES_LATEST_SEQ_INSWITCH_CASE1 (by clone_e2e) to reflector (w/ clone)
                                                     actnspec0 = distfarreachspine_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.reflector_sid)
                                                     self.client.eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -2063,15 +1991,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_pop(\
                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                                             else:
-                                                                # Update GETREQ_INSWITCH as GETREQ to server
+                                                                # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                                 #actnspec0 = distfarreachspine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                                         else:
                                                             if validvalue == 0:
-                                                                # Update GETREQ_INSWITCH as GETREQ to server
+                                                                # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                                 #actnspec0 = distfarreachspine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                                             elif validvalue == 1:
                                                                 if is_latest == 0:
@@ -2086,9 +2014,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                             elif validvalue == 3:
                                                                 if is_latest == 0:
-                                                                    # Update GETREQ_INSWITCH as GETREQ to server
+                                                                    # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                                     #actnspec0 = distfarreachspine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 else:
                                                                     # Update GETREQ_INSWITCH as GETRES to client by mirroring

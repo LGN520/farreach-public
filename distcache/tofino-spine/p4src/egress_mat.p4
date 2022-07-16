@@ -218,13 +218,11 @@ action update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(client_s
 	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
 }
 
-action update_getreq_inswitch_to_getreq() {
-	modify_field(op_hdr.optype, GETREQ);
+action update_getreq_inswitch_to_getreq_spine() {
+	modify_field(op_hdr.optype, GETREQ_SPINE);
 
 	remove_header(shadowtype_hdr);
 	remove_header(inswitch_hdr);
-
-	//modify_field(eg_intr_md.egress_port, eport);
 }
 
 action update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(switchos_sid, reflector_port) {
@@ -443,7 +441,7 @@ table eg_port_forward_tbl {
 		update_netcache_warmupreq_inswitch_to_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack;
 		forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack;
 		update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring;
-		update_getreq_inswitch_to_getreq;
+		update_getreq_inswitch_to_getreq_spine;
 		update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq;
 		forward_netcache_getreq_pop_clone_for_pktloss_and_getreq;
 		update_netcache_getreq_pop_to_getreq_by_mirroring;
@@ -479,12 +477,9 @@ counter update_ipmac_srcport_counter {
 }
 #endif
 
-// NOTE: we need to set dstip/mac for pkt from server to client especially for those w/ cache hit
-action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, server_ip, server_port) {
+action update_srcipmac_srcport_server2client(server_mac, server_ip, server_port) {
 	modify_field(ethernet_hdr.srcAddr, server_mac);
-	modify_field(ethernet_hdr.dstAddr, client_mac);
 	modify_field(ipv4_hdr.srcAddr, server_ip);
-	modify_field(ipv4_hdr.dstAddr, client_ip);
 	modify_field(udp_hdr.srcPort, server_port);
 }
 
@@ -505,20 +500,6 @@ action update_dstipmac_switch2switchos(switch_mac, switch_ip) {
 	modify_field(ipv4_hdr.dstAddr, switch_ip);
 }
 
-// NOTE: for pkt from client, we should keep original srcip/mac, i.e., client ip/mac, which will be used by server later for response and by switch for ipv4_forward_tbl
-action update_dstipmac_client2server(server_mac, server_ip) {
-	modify_field(ethernet_hdr.dstAddr, server_mac);
-	modify_field(ipv4_hdr.dstAddr, server_ip);
-}
-// NOTE: for NETCACHE_VALUEUPDATE_ACK, we must reset srcip/mac, i.e., server ip/mac, otherwise it will be ignored by server NIC
-action update_ipmac_srcport_client2server(client_mac, server_mac, client_ip, server_ip, client_port) {
-	modify_field(ethernet_hdr.srcAddr, client_mac);
-	modify_field(ethernet_hdr.dstAddr, server_mac);
-	modify_field(ipv4_hdr.srcAddr, client_ip);
-	modify_field(ipv4_hdr.dstAddr, server_ip);
-	modify_field(udp_hdr.srcPort, client_port);
-}
-
 // NOTE: dstport of REQ, RES, and notification has been updated in partition_tbl, server, and eg_port_forward_tbl
 @pragma stage 10
 table update_ipmac_srcport_tbl {
@@ -527,11 +508,9 @@ table update_ipmac_srcport_tbl {
 		eg_intr_md.egress_port: exact;
 	}
 	actions {
-		update_ipmac_srcport_server2client; // focus on dstip and dstmac to corresponding client; use server[0] as srcip and srcmac; use server_worker_port_start as srcport
+		update_srcipmac_srcport_server2client; // NOT change dstip and dstmac; use server[0] as srcip and srcmac; use server_worker_port_start as srcport
 		update_ipmac_srcport_switch2switchos; // focus on dstip and dstmac to reflector; use client[0] as srcip and srcmac; use constant (123) as srcport
 		update_dstipmac_switch2switchos; // keep original srcip/mac for NETCACHE_GETREQ_POP
-		update_dstipmac_client2server; // focus on dstip and dstmac to corresponding server; NOT change srcip, srcmac, and srcport
-		update_ipmac_srcport_client2server; // reset srcip/mac for NETCACHE_VALUEUPDATE_ACK
 		nop;
 	}
 	default_action: nop();

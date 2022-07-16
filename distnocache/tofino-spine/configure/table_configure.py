@@ -472,38 +472,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring update_ipmac_srcport_tbl"
             # (1) for response from server to client, egress port has been set based on ip.dstaddr (or by clone_i2e) in ingress pipeline
             # (2) for response from switch to client, egress port has been set by clone_e2e in egress pipeline
-            for tmp_client_physical_idx in range(client_physical_num):
-                tmp_devport = self.client_devports[tmp_client_physical_idx]
-                tmp_client_mac = client_macs[tmp_client_physical_idx]
-                tmp_client_ip = client_ips[tmp_client_physical_idx]
-                tmp_server_mac = server_macs[0]
-                tmp_server_ip = server_ips[0]
-                actnspec0 = distnocachespine_update_ipmac_srcport_server2client_action_spec_t(\
-                        macAddr_to_string(tmp_client_mac), \
-                        macAddr_to_string(tmp_server_mac), \
-                        ipv4Addr_to_i32(tmp_client_ip), \
-                        ipv4Addr_to_i32(tmp_server_ip), \
-                        server_worker_port_start)
-                for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, LOADACK]:
-                    matchspec0 = distnocachespine_update_ipmac_srcport_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
-                            eg_intr_md_egress_port = tmp_devport)
-                    self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            # for request from client to server, egress port has been set by partition_tbl in ingress pipeline
-            for tmp_server_physical_idx in range(server_physical_num):
-                tmp_devport = self.server_devports[tmp_server_physical_idx]
-                tmp_server_mac = server_macs[tmp_server_physical_idx]
-                tmp_server_ip = server_ips[tmp_server_physical_idx]
-                actnspec1 = distnocachespine_update_dstipmac_client2server_action_spec_t(\
-                        macAddr_to_string(tmp_server_mac), \
-                        ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ_SPLIT, LOADREQ]:
-                    matchspec0 = distnocachespine_update_ipmac_srcport_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
-                            eg_intr_md_egress_port = tmp_devport)
-                    self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_client2server(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec1)
+            tmp_devport = self.clientleafswitch_devport
+            tmp_server_mac = server_macs[0]
+            tmp_server_ip = server_ips[0]
+            actnspec0 = distnocachespine_update_srcipmac_srcport_server2client_action_spec_t(\
+                    macAddr_to_string(tmp_server_mac), \
+                    ipv4Addr_to_i32(tmp_server_ip), \
+                    server_worker_port_start)
+            for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, LOADACK]:
+                matchspec0 = distnocachespine_update_ipmac_srcport_tbl_match_spec_t(\
+                        op_hdr_optype = convert_u16_to_i16(tmpoptype), 
+                        eg_intr_md_egress_port = tmp_devport)
+                self.client.update_ipmac_srcport_tbl_table_add_with_update_srcipmac_srcport_server2client(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             
 
             self.conn_mgr.complete_operations(self.sess_hdl)

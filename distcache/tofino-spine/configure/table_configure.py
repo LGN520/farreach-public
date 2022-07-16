@@ -1032,53 +1032,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring update_ipmac_srcport_tbl"
             # (1) for response from server to client, egress port has been set based on ip.dstaddr (or by clone_i2e) in ingress pipeline
             # (2) for response from switch to client, egress port has been set by clone_e2e in egress pipeline
-            for tmp_client_physical_idx in range(client_physical_num):
-                tmp_devport = self.client_devports[tmp_client_physical_idx]
-                tmp_client_mac = client_macs[tmp_client_physical_idx]
-                tmp_client_ip = client_ips[tmp_client_physical_idx]
-                tmp_server_mac = server_macs[0]
-                tmp_server_ip = server_ips[0]
-                actnspec0 = distcachespine_update_ipmac_srcport_server2client_action_spec_t(\
-                        macAddr_to_string(tmp_client_mac), \
-                        macAddr_to_string(tmp_server_mac), \
-                        ipv4Addr_to_i32(tmp_client_ip), \
-                        ipv4Addr_to_i32(tmp_server_ip), \
-                        server_worker_port_start)
-                for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK]:
-                    matchspec0 = distcachespine_update_ipmac_srcport_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
-                            eg_intr_md_egress_port = tmp_devport)
-                    self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            # for request from client to server, egress port has been set by partition_tbl in ingress pipeline
-            for tmp_server_physical_idx in range(server_physical_num):
-                tmp_devport = self.server_devports[tmp_server_physical_idx]
-                tmp_server_mac = server_macs[tmp_server_physical_idx]
-                tmp_server_ip = server_ips[tmp_server_physical_idx]
-                actnspec1 = distcachespine_update_dstipmac_client2server_action_spec_t(\
-                        macAddr_to_string(tmp_server_mac), \
-                        ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED, SCANREQ_SPLIT, LOADREQ]:
-                    matchspec0 = distcachespine_update_ipmac_srcport_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
-                            eg_intr_md_egress_port = tmp_devport)
-                    self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_client2server(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec1)
-                tmp_client_mac = client_macs[0]
-                tmp_client_ip = client_ips[0]
-                tmp_client_port = 123 # not cared by switchos
-                actnspec1 = distcachespine_update_ipmac_srcport_client2server_action_spec_t(\
-                        macAddr_to_string(tmp_client_mac), \
-                        macAddr_to_string(tmp_server_mac), \
-                        ipv4Addr_to_i32(tmp_client_ip), \
-                        ipv4Addr_to_i32(tmp_server_ip), \
-                        tmp_client_port)
-                for tmpoptype in [NETCACHE_VALUEUPDATE_ACK]: # simulate client -> server
-                    matchspec0 = distcachespine_update_ipmac_srcport_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
-                            eg_intr_md_egress_port = tmp_devport)
-                    self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_client2server(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec1)
+            tmp_devport = self.clientleafswitch_devport
+            tmp_server_mac = server_macs[0]
+            tmp_server_ip = server_ips[0]
+            actnspec0 = distcachespine_update_srcipmac_srcport_server2client_action_spec_t(\
+                    macAddr_to_string(tmp_server_mac), \
+                    ipv4Addr_to_i32(tmp_server_ip), \
+                    server_worker_port_start)
+            for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK]:
+                matchspec0 = distcachespine_update_ipmac_srcport_tbl_match_spec_t(\
+                        op_hdr_optype = convert_u16_to_i16(tmpoptype), 
+                        eg_intr_md_egress_port = tmp_devport)
+                self.client.update_ipmac_srcport_tbl_table_add_with_update_srcipmac_srcport_server2client(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             # Here we use server_mac/ip to simulate reflector_mac/ip = switchos_mac/ip
             # (1) eg_intr_md.egress_port of the first GETRES_CASE1 is set by ipv4_forward_tbl (as ingress port), which will be finally dropped -> update ip/mac/srcport or not is not important
             # (2) eg_intr_md.egress_port of cloned GETRES_CASE1s is set by clone_e2e, which must be the devport towards switchos (aka reflector)
@@ -1261,9 +1227,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                 else:
-                                                    # Update GETREQ_INSWITCH as GETREQ to server
+                                                    # Update GETREQ_INSWITCH as GETREQ_SPINE to leaf
                                                     #actnspec0 = distcachespine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                             else: # is_cached == 1
                                                 if is_latest == 0: # follow algorithm 1 in NetCache paper to report hot key if necessary
@@ -1273,9 +1239,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     else:
-                                                        # Update GETREQ_INSWITCH as GETREQ to server
+                                                        # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                         #actnspec0 = distcachespine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                 else: # is_cached == 1 and is_latest == 1
                                                     # Update GETREQ_INSWITCH as GETRES to client by mirroring
@@ -1544,9 +1510,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     else:
-                                                        # Update GETREQ_INSWITCH as GETREQ to server
+                                                        # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                         #actnspec0 = distcachespine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                 else:
                                                     if is_latest == 0:
@@ -1556,9 +1522,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         else:
-                                                            # Update GETREQ_INSWITCH as GETREQ to server
+                                                            # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                             #actnspec0 = distcachespine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq(\
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                     else: # is_cached == 1 and is_latest == 1
                                                         # Update GETREQ_INSWITCH as GETRES to client by mirroring
