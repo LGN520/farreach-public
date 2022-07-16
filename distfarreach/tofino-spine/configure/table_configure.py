@@ -191,17 +191,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
         # get the device ports from front panel ports
-        for client_fpport in client_fpports:
-            port, chnl = client_fpport.split("/")
-            devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-            self.client_devports.append(devport)
-        for server_fpport in server_fpports:
-            port, chnl = server_fpport.split("/")
-            devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-            self.server_devports.append(devport)
         port, chnl = spineswitch_fpport_to_leaf.split("/")
         devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
         self.leafswitch_devport = devport
+        # TODO: reflector_devport
 
         self.recirPorts = [64, 192]
 
@@ -253,16 +246,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.conn_mgr.recirculation_enable(self.sess_hdl, 0, i);
 
             # Add and enable the platform ports
-            for i in self.client_devports:
-               self.pal.pal_port_add(0, i,
-                                     pal_port_speed_t.BF_SPEED_40G,
-                                     pal_fec_type_t.BF_FEC_TYP_NONE)
-               self.pal.pal_port_enable(0, i)
-            for i in self.server_devports:
-               self.pal.pal_port_add(0, i,
-                                     pal_port_speed_t.BF_SPEED_40G,
-                                     pal_fec_type_t.BF_FEC_TYP_NONE)
-               self.pal.pal_port_enable(0, i)
+            self.pal.pal_port_add(0, self.leafswitch_devport,
+                                  pal_port_speed_t.BF_SPEED_40G,
+                                  pal_fec_type_t.BF_FEC_TYP_NONE)
+            self.pal.pal_port_enable(0, i)
+            # TODO: reflector_devport
 
             # Add special ports
             speed_10g = 2
@@ -350,15 +338,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             
             # Table: need_recirculate_tbl (default: reset_need_recirculate; size: <=8)
-            #print "Configuring need_recirculate_tbl"
-            #for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
-            #    for iport in self.devPorts:
-            #        matchspec0 = distfarreachspine_need_recirculate_tbl_match_spec_t(\
-            #                op_hdr_optype = tmpoptype,
-            #                ig_intr_md_ingress_port = iport)
-            #        if (tmpoptype == GETREQ) or (iport in pipeidx_ports_map[ingress_pipeidx]):
-            #            self.client.need_recirculate_tbl_table_add_with_reset_need_recirculate(\
-            #                    self.sess_hdl, self.dev_tgt, matchspec0)
+            # See enable/disable_singlepath in ptf_snapshotserver/table_configure.py
 
             # Table: set_hot_threshold_tbl (default: set_hot_threshold; size: 1)
             print "Configuring set_hot_threshold_tbl"
@@ -368,14 +348,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: recirculate_tbl (default: nop; size: 2)
+            # Table: recirculate_tbl (default: nop; size: 4)
             print "Configuring recirculate_tbl"
-            for tmpoptype in [PUTREQ, DELREQ]:
+            for tmpoptype in [PUTREQ, DELREQ, PUTREQ_SPINE, DELREQ_SPINE]:
                 matchspec0 = distfarreachspine_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
                 # recirculate to the pipeline of the first physical client for atomicity of setting snapshot flag
-                actnspec0 = distfarreachspine_recirculate_pkt_action_spec_t(self.recirPorts[client_pipeidxes[0]])
+                actnspec0 = distfarreachspine_recirculate_pkt_action_spec_t(self.recirPorts[leafswitch_pipeidx])
                 self.client.recirculate_tbl_table_add_with_recirculate_pkt(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 

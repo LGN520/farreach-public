@@ -69,22 +69,16 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
         # force to recirculate to ingress pipeline of the first physical client fpport
-        single_ingress_pipeidx = client_pipeidxes[0]
+        single_ingress_pipeidx = leafswitch_pipeidx
 
         self.unmatched_devports = []
-        for client_physical_idx in range(client_physical_num):
-            if client_pipeidxes[client_physical_idx] != single_ingress_pipeidx:
-                # get devport fro front panel port
-                port, chnl = client_fpports[client_physical_idx].split("/")
-                tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-                self.unmatched_devports.append(tmp_devport)
-        # GETRES_LATEST/DELETED_SEQ may also incur CASE1s (need to read snapshot flag)
-        for server_physical_idx in range(server_physical_num):
-            if server_pipeidxes[server_physical_idx] != single_ingress_pipeidx:
-                # get devport fro front panel port
-                port, chnl = server_fpports[server_physical_idx].split("/")
-                tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-                self.unmatched_devports.append(tmp_devport)
+        # NOTE: as we only have a single physical leaf switch, we do not have unmatched devports in spine switch
+        #for leafswitch_physical_idx in range(leafswitch_physical_num):
+        #    if leafswitch_pipeidxes[leafswitch_physical_idx] != single_ingress_pipeidx:
+        #        # get devport fro front panel port
+        #        port, chnl = spineswitch_fpports_to_leaf[leafswitch_physical_idx].split("/")
+        #        tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+        #        self.unmatched_devports.append(tmp_devport)
 
     def cleanup(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
