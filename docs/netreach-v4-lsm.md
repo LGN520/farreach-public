@@ -165,6 +165,12 @@
 		* (2) client-side simulation overhead: due to limited client-side CPU cores, we cannot launch infinite client threads -> if so, even if some clients may be blocked/delayed by long latency requests, others can still provide sufficient input to saturate servers
 - NOTE: for hash calculation in switch
 	+ One stage can perform at most two hash calculations
++ TRICKY NOTE: for unsuccessful change of packet header field
+	+ Sometimes even if we use modify_field to change packet header field value (e.g., stat_hdr.stat, clone_hdr.clonenum_for_pktloss), the change does NOT work after deparser (i.e., the value is not changed as expected, which is always 0)
+	+ Possible reason: compiler bug of Tofino itself, which mis-assigns / mis-reuses PHV containers, and hence the packet header fields are reset or overwritten???
+	+ Solution: avoid from sharing PHV containers with other packet headers
+		* (1) Add padding bytes into packet header to make it 4B aligned such that all fields of the packet header are more likely placed into one 32-bit PHV container
+		* (2) Change field bit width (e.g., from 8 bits to 16/32 bits) such that the field is more likely to occupy an individual PHV container
 + IMPORTANT NOTE for optype enumeration
 	- We keep the same optype enumeration fo FarReach, NoCache, and NetCache (files: packet_format.h, tofino/main.p4, tofino/common.py, tofino/p4src/parser.p4)
 	- When adding a new optype

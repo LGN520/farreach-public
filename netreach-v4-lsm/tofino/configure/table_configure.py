@@ -1198,8 +1198,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 #val_seq_iplen = aligned_vallen + 55
                 val_stat_udplen = aligned_vallen + 34
                 val_stat_iplen = aligned_vallen + 54
-                val_seq_inswitch_stat_clone_udplen = aligned_vallen + 57
-                val_seq_inswitch_stat_clone_iplen = aligned_vallen + 77
+                val_seq_inswitch_stat_clone_udplen = aligned_vallen + 58
+                val_seq_inswitch_stat_clone_iplen = aligned_vallen + 78
                 val_seq_udplen = aligned_vallen + 34
                 val_seq_iplen = aligned_vallen + 54
                 val_seq_stat_udplen = aligned_vallen + 38

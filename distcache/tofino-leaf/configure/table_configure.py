@@ -1118,10 +1118,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             scanreqsplit_iplen = 69
             frequency_udplen = 30
             frequency_iplen = 50
-            op_clone_udplen = 33
-            op_clone_iplen = 53
-            op_inswitch_clone_udplen = 63
-            op_inswitch_clone_iplen = 83
+            op_clone_udplen = 44
+            op_clone_iplen = 64
+            op_inswitch_clone_udplen = 74
+            op_inswitch_clone_iplen = 94
             for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETREQ, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:
                 matchspec0 = distcacheleaf_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,

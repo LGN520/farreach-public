@@ -639,16 +639,16 @@ action update_scanreqsplit_pktlen() {
 
 // NETCACHE_GETREQ_POP
 action update_ophdr_clonehdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 7(clonehdr)
-	modify_field(udp_hdr.hdrlen, 33);
-	modify_field(ipv4_hdr.totalLen, 53);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 8(clonehdr)
+	modify_field(udp_hdr.hdrlen, 34);
+	modify_field(ipv4_hdr.totalLen, 54);
 }
 
 // NETCACHE_WARMUPREQ_INSWITCH_POP
 action update_ophdr_inswitchhdr_clonehdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 28(inswitchhdr) + 7(clonehdr)
-	modify_field(udp_hdr.hdrlen, 63);
-	modify_field(ipv4_hdr.totalLen, 83);
+	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 28(inswitchhdr) + 8(clonehdr)
+	modify_field(udp_hdr.hdrlen, 64);
+	modify_field(ipv4_hdr.totalLen, 84);
 }
 */
 

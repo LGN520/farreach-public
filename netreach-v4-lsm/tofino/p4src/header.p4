@@ -125,7 +125,7 @@ header_type stat_t {
 
 header_type clone_t {
 	fields {
-		clonenum_for_pktloss: 8;
+		clonenum_for_pktloss: 16;
 		client_udpport: 16;
 	}
 }
