@@ -223,7 +223,7 @@ control egress {
 	// Stage 0
 	apply(access_latest_tbl); // NOTE: latest_reg corresponds to stats.validity in netcache paper, which will be used to *invalidate* the value by PUT/DELREQ
 	apply(access_seq_tbl);
-	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
+	apply(save_client_info_tbl); // save srcip/srcmac/udp.dstport (client ip/mac/udpport) for cache hit response of GET/PUT/DELREQ_INSWITCH
 #ifdef RANGE_SUPPORT
 	apply(process_scanreq_split_tbl); // NOT reset clone_hdr.server_sid by default here
 #endif

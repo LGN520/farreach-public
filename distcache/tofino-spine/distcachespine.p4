@@ -141,7 +141,6 @@
 #include "p4src/parser.p4"
 
 // registers and MATs
-#include "p4src/regs/cm.p4"
 #include "p4src/regs/bf.p4"
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/latest.p4"
@@ -177,7 +176,6 @@ control ingress {
 #else
 	apply(hash_partition_tbl);
 #endif
-	apply(hash_for_cm1_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
 
 	// Stage 3
 #ifdef RANGE_SUPPORT
@@ -185,15 +183,12 @@ control ingress {
 #endif
 
 	// Stage 4
-	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
 	// Stgae 5
-	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
 	apply(hash_for_bf1_tbl);
 
 	// Stage 6
-	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
 	apply(hash_for_bf2_tbl);
 
 	// Stage 7
@@ -219,20 +214,15 @@ control egress {
 	// Stage 0
 	apply(access_latest_tbl); // NOTE: latest_reg corresponds to stats.validity in netcache paper, which will be used to *invalidate* the value by PUT/DELREQ
 	apply(access_seq_tbl);
-	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
+	apply(save_client_info_tbl); // save srcip/srcmac/udp.dstport (client ip/mac/udpport) for cache hit response of GET/PUT/DELREQ_INSWITCH
 #ifdef RANGE_SUPPORT
 	apply(process_scanreq_split_tbl); // NOT reset clone_hdr.server_sid by default here
 #endif
 
 	// Stage 1
 	apply(prepare_for_cachepop_tbl); // reset clone_hdr.server_sid by default here
-	apply(access_cm1_tbl);
-	apply(access_cm2_tbl);
-	apply(access_cm3_tbl);
-	apply(access_cm4_tbl);
 
 	// Stage 2
-	apply(is_hot_tbl);
 	apply(access_cache_frequency_tbl);
 	apply(access_deleted_tbl);
 	apply(access_savedseq_tbl);

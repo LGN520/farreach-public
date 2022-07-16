@@ -16,7 +16,7 @@
 #define INSWITCH_PREV_BYTES 26
 
 // # of bytes in clone_hdr
-#define CLONE_BYTES 7
+#define CLONE_BYTES 17
 
 // # of bytes before cur_scanidx&max_scannum&cur_scanswitchidx&max_scanswitchnum in split_hdr
 #define SPLIT_PREV_BYTES 3

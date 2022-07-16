@@ -137,6 +137,8 @@ header_type stat_t {
 header_type clone_t {
 	fields {
 		clonenum_for_pktloss: 8;
+		client_ip: 32;
+		client_mac: 48;
 		client_udpport: 16;
 		server_sid: 10; // clone to server for SCANREQ_SPLIT or last cloned NETCACHE_GETREQ_POP
 		padding: 6;
@@ -155,11 +157,6 @@ header_type metadata_t {
 #ifndef RANGE_SUPPORT
 		hashval_for_partition: 16; // at most 32K
 #endif
-		cm1_predicate: 4;
-		cm2_predicate: 4;
-		cm3_predicate: 4;
-		cm4_predicate: 4;
-		is_hot: 1;
 		is_report1: 1;
 		is_report2: 1;
 		is_report3: 1;
@@ -174,15 +171,6 @@ header_type metadata_t {
 #endif
 	}
 }
-
-/*header_type debug_t {
-	fields {
-		// 8-bit container
-		is_hot: 1;
-		is_lastclone_for_pktloss: 1;
-		padding: 6;
-	}
-}*/
 
 // Header instances
 

@@ -634,12 +634,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.access_seq_tbl_table_add_with_assign_seq(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: save_client_udpport_tbl (default: nop; size: 4)
-            print "Configuring save_client_udpport_tbl"
+            # Table: save_client_info_tbl (default: nop; size: 4)
+            print "Configuring save_client_info_tbl"
             for tmpoptype in[GETREQ_INSWITCH, NETCACHE_WARMUPREQ_INSWITCH]:
-                matchspec0 = distcacheleaf_save_client_udpport_tbl_match_spec_t(\
+                matchspec0 = distcacheleaf_save_client_info_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype)
-                self.client.save_client_udpport_tbl_table_add_with_save_client_udpport(\
+                self.client.save_client_info_tbl_table_add_with_save_client_info(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
             if RANGE_SUPPORT:
@@ -1420,7 +1420,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                 else: # is_cached == 1 and is_latest == 1
                                                     # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                    actnspec0 = distcacheleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                    actnspec0 = distcacheleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         # is_cached=0 (no inswitch_hdr), is_hot=0 (not access CM), is_report=0 (not access BF), is_latest=0, is_deleted=0, tmp_client_sid=0 (no inswitch_hdr), tmp_server_sid!=0 for NETCACHE_GETREQ_POP
@@ -1703,7 +1703,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                     else: # is_cached == 1 and is_latest == 1
                                                         # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                        actnspec0 = distcacheleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                        actnspec0 = distcacheleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=0 (no inswitch_hdr), is_hot=0 (not access CM), is_report=0 (not access BF), is_latest=0, is_deleted=0, tmp_client_sid=0 (no inswitch_hdr), tmp_server_sid!=0 for NETCACHE_GETREQ_POP

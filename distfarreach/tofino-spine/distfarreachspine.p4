@@ -177,7 +177,6 @@
 #include "p4src/parser.p4"
 
 // registers and MATs
-#include "p4src/regs/cm.p4"
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/validvalue.p4"
 #include "p4src/regs/latest.p4"
@@ -222,21 +221,17 @@ control ingress {
 #else
 	apply(hash_partition_tbl);
 #endif
-	apply(hash_for_cm1_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
 
 	// Stage 3
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
-	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
 	// Stage 4
-	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
 	apply(snapshot_flag_tbl); // for snapshot (access inswitch_hdr.snapshot_flag)
 
 	// Stage 5
-	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
 	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
@@ -250,13 +245,8 @@ control ingress {
 control egress {
 
 	// Stage 0
-	apply(access_cm1_tbl);
-	apply(access_cm2_tbl);
-	apply(access_cm3_tbl);
-	apply(access_cm4_tbl);
 
 	// Stage 1
-	apply(is_hot_tbl);
 	apply(access_cache_frequency_tbl);
 	apply(access_validvalue_tbl);
 	apply(access_seq_tbl);
@@ -266,7 +256,7 @@ control egress {
 
 	// Stage 2
 	apply(access_latest_tbl);
-	apply(save_client_udpport_tbl); // save udp.dstport (client port) for cache hit response of GETREQ/PUTREQ/DELREQ and PUTREQ/DELREQ_CASE1
+	apply(save_client_info_tbl); // save srcip/srcmac/udp.dstport (client ip/mac/udpport) for cache hit response of GET/PUT/DELREQ_INSWITCH
 
 	// Stage 3
 	apply(access_deleted_tbl);

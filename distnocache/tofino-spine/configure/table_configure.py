@@ -130,27 +130,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
         # get the device ports from front panel ports
-        for client_fpport in client_fpports:
-            port, chnl = client_fpport.split("/")
-            devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-            self.client_devports.append(devport)
-        for server_fpport in server_fpports:
-            port, chnl = server_fpport.split("/")
-            devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-            self.server_devports.append(devport)
         port, chnl = spineswitch_fpport_to_leaf.split("/")
         devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-        self.leafswitch_devport = devport
+        self.clientleafswitch_devport = devport
+        self.serverleafswitch_devport = devport
+        # TODO: reflector_devport
 
         self.recirPorts = [64, 192]
 
         # NOTE: in each pipeline, 64-67 are recir/cpu ports, 68-71 are recir/pktgen ports
         #self.cpuPorts = [64, 192] # CPU port is 100G
 
-        sidnum = len(self.client_devports) + len(self.server_devports)
+        #sidnum = len(self.client_devports) + len(self.server_devports)
+        #sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
+        #self.client_sids = sids[0:len(self.client_devports)]
+        #self.server_sids = sids[len(self.client_devports):sidnum]
+        sidnum = 1
         sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
-        self.client_sids = sids[0:len(self.client_devports)]
-        self.server_sids = sids[len(self.client_devports):sidnum]
+        self.clientleafswitch_sid = sids[0]
+        self.serverleafswitch_sid = sids[0]
 
         # NOTE: data plane communicate with switchos by software-based reflector, which is deployed in one server machine
         isvalid = False
@@ -160,7 +158,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.reflector_ip_for_switch = server_ips[i]
                 self.reflector_mac_for_switch = server_macs[i]
                 self.reflector_devport = self.server_devports[i]
-                self.refletor_sid = self.server_sids[i] # clone to switchos (i.e., reflector at [the first] physical server)
+                self.reflector_sid = self.server_sids[i] # clone to switchos (i.e., reflector at [the first] physical server)
         if isvalid == False:
             print "[ERROR] invalid reflector configuration"
             exit(-1)
@@ -192,16 +190,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.conn_mgr.recirculation_enable(self.sess_hdl, 0, i);
 
             # Add and enable the platform ports
-            for i in self.client_devports:
-               self.pal.pal_port_add(0, i,
-                                     pal_port_speed_t.BF_SPEED_40G,
-                                     pal_fec_type_t.BF_FEC_TYP_NONE)
-               self.pal.pal_port_enable(0, i)
-            for i in self.server_devports:
-               self.pal.pal_port_add(0, i,
-                                     pal_port_speed_t.BF_SPEED_40G,
-                                     pal_fec_type_t.BF_FEC_TYP_NONE)
-               self.pal.pal_port_enable(0, i)
+            # NOTE: clientleafswitch.sid/devport = serverleafswitch.sid/devport as we only have one physical leaf switch to simulate both client-/server-leaf switch
+            self.pal.pal_port_add(0, self.clientleafswitch_devport,
+                                  pal_port_speed_t.BF_SPEED_40G,
+                                  pal_fec_type_t.BF_FEC_TYP_NONE)
+            self.pal.pal_port_enable(0, i)
+            # TODO: reflector_devport
 
             # Add special ports
             speed_10g = 2
@@ -216,50 +210,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #    self.devport_mgr.devport_mgr_set_copy_to_cpu(0, True, i)
 
             # Bind sid with platform port for packet mirror
-#            print "Binding sid {} with port {} for ingress mirroring".format(self.sids[0], self.devPorts[0]) # clone to client
-#            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-#                                  Direction_e.PD_DIR_INGRESS,
-#                                  self.sids[0],
-#                                  self.devPorts[0],
-#                                  True)
-#            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-#            print "Binding sid {} with port {} for egress mirroring".format(self.sids[0], self.devPorts[0]) # clone to client
-#            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-#                                  Direction_e.PD_DIR_EGRESS,
-#                                  self.sids[0],
-#                                  self.devPorts[0],
-#                                  True)
-#            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-#            print "Binding sid {} with port {} for ingress mirroring".format(self.sids[1], self.devPorts[1]) # clone to server
-#            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-#                                  Direction_e.PD_DIR_INGRESS,
-#                                  self.sids[1],
-#                                  self.devPorts[1],
-#                                  True)
-#            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-#            print "Binding sid {} with port {} for egress mirroring".format(self.sids[1], self.devPorts[1]) # clone to server
-#            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-#                                  Direction_e.PD_DIR_EGRESS,
-#                                  self.sids[1],
-#                                  self.devPorts[1],
-#                                  True)
-#            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-            for i in range(client_physical_num):
-                print "Binding sid {} with client devport {} for both direction mirroring".format(self.client_sids[i], self.client_devports[i]) # clone to client
-                info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-                                      Direction_e.PD_DIR_BOTH,
-                                      self.client_sids[i],
-                                      self.client_devports[i],
-                                      True)
-                self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-            for i in range(server_physical_num):
-                print "Binding sid {} with server devport {} for both direction mirroring".format(self.server_sids[i], self.server_devports[i]) # clone to server
-                info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-                                      Direction_e.PD_DIR_BOTH,
-                                      self.server_sids[i],
-                                      self.server_devports[i],
-                                      True)
-                self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+            # NOTE: clientleafswitch.sid/devport = serverleafswitch.sid/devport as we only have one physical leaf switch to simulate both client-/server-leaf switch
+            print "Binding sid {} with leafswitch devport {} for both direction mirroring".format(self.clientleafswitch_sid, self.clientleafswitch_devport) # clone to leafswitch
+            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                  Direction_e.PD_DIR_BOTH,
+                                  self.clientleafswitch_sid,
+                                  self.clientleafswitch_devport,
+                                  True)
+            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
             ################################
             ### Normal MAT Configuration ###
@@ -317,7 +275,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 op_hdr_keyhihihi_start = convert_u16_to_i16(key_start),
                                 op_hdr_keyhihihi_end = convert_u16_to_i16(key_end))
                         # Forward to the egress pipeline of leaf switch
-                        eport = self.leafswitch_devport
+                        eport = self.serverleafswitch_devport
                         actnspec0 = distnocachespine_range_partition_action_spec_t(eport, global_leafswitch_logical_idx)
                         self.client.range_partition_tbl_table_add_with_range_partition(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
@@ -340,7 +298,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_hashval_for_partition_start = convert_u16_to_i16(hash_start),
                                 meta_hashval_for_partition_end = convert_u16_to_i16(hash_end))
                         # Forward to the egress pipeline of leaf switch
-                        eport = self.leafswitch_devport
+                        eport = self.serverleafswitch_devport
                         actnspec0 = distnocachespine_hash_partition_action_spec_t(eport, global_leafswitch_logical_idx)
                         self.client.hash_partition_tbl_table_add_with_hash_partition(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)

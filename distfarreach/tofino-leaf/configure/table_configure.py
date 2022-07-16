@@ -811,12 +811,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stgae 2
 
-            # Table: save_client_udpport_tbl (default: nop; size: 4)
-            print "Configuring save_client_udpport_tbl"
+            # Table: save_client_info_tbl (default: nop; size: 4)
+            print "Configuring save_client_info_tbl"
             for tmpoptype in[GETREQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH]:
-                matchspec0 = distfarreachleaf_save_client_udpport_tbl_match_spec_t(\
+                matchspec0 = distfarreachleaf_save_client_info_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype)
-                self.client.save_client_udpport_tbl_table_add_with_save_client_udpport(\
+                self.client.save_client_info_tbl_table_add_with_save_client_info(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_latest_tbl (default: reset_is_latest; size: 18)
@@ -1590,7 +1590,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         else:
                                                             # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                            actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                            actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     elif validvalue == 3:
@@ -1601,7 +1601,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         else:
                                                             # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                            actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                            actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ
@@ -2230,7 +2230,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 else:
                                                                     # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                                    actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                                    actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                             elif validvalue == 3:
@@ -2241,7 +2241,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 else:
                                                                     # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                                    actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                                    actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ

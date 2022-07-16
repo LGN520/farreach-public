@@ -192,17 +192,23 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.server_devports.append(devport)
         port, chnl = spineswitch_fpport_to_leaf.split("/")
         devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-        self.leafswitch_devport = devport
+        self.clientleafswitch_devport = devport
+        self.serverleafswitch_devport = devport
+        # TODO: reflector_devport
 
         self.recirPorts = [64, 192]
 
         # NOTE: in each pipeline, 64-67 are recir/cpu ports, 68-71 are recir/pktgen ports
         #self.cpuPorts = [64, 192] # CPU port is 100G
 
-        sidnum = len(self.client_devports) + len(self.server_devports)
+        #sidnum = len(self.client_devports) + len(self.server_devports)
+        #sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
+        #self.client_sids = sids[0:len(self.client_devports)]
+        #self.server_sids = sids[len(self.client_devports):sidnum]
+        sidnum = 1
         sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
-        self.client_sids = sids[0:len(self.client_devports)]
-        self.server_sids = sids[len(self.client_devports):sidnum]
+        self.clientleafswitch_sid = sids[0]
+        self.serverleafswitch_sid = sids[0]
 
         # NOTE: data plane communicate with switchos by software-based reflector, which is deployed in one server machine
         isvalid = False
@@ -244,16 +250,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.conn_mgr.recirculation_enable(self.sess_hdl, 0, i);
 
             # Add and enable the platform ports
-            for i in self.client_devports:
-               self.pal.pal_port_add(0, i,
-                                     pal_port_speed_t.BF_SPEED_40G,
-                                     pal_fec_type_t.BF_FEC_TYP_NONE)
-               self.pal.pal_port_enable(0, i)
-            for i in self.server_devports:
-               self.pal.pal_port_add(0, i,
-                                     pal_port_speed_t.BF_SPEED_40G,
-                                     pal_fec_type_t.BF_FEC_TYP_NONE)
-               self.pal.pal_port_enable(0, i)
+            # NOTE: clientleafswitch.sid/devport = serverleafswitch.sid/devport as we only have one physical leaf switch to simulate both client-/server-leaf switch
+            self.pal.pal_port_add(0, self.clientleafswitch_devport,
+                                  pal_port_speed_t.BF_SPEED_40G,
+                                  pal_fec_type_t.BF_FEC_TYP_NONE)
+            self.pal.pal_port_enable(0, i)
+            # TODO: reflector_devport
 
             # Add special ports
             speed_10g = 2
@@ -268,50 +270,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             #    self.devport_mgr.devport_mgr_set_copy_to_cpu(0, True, i)
 
             # Bind sid with platform port for packet mirror
-#            print "Binding sid {} with port {} for ingress mirroring".format(self.sids[0], self.devPorts[0]) # clone to client
-#            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-#                                  Direction_e.PD_DIR_INGRESS,
-#                                  self.sids[0],
-#                                  self.devPorts[0],
-#                                  True)
-#            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-#            print "Binding sid {} with port {} for egress mirroring".format(self.sids[0], self.devPorts[0]) # clone to client
-#            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-#                                  Direction_e.PD_DIR_EGRESS,
-#                                  self.sids[0],
-#                                  self.devPorts[0],
-#                                  True)
-#            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-#            print "Binding sid {} with port {} for ingress mirroring".format(self.sids[1], self.devPorts[1]) # clone to server
-#            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-#                                  Direction_e.PD_DIR_INGRESS,
-#                                  self.sids[1],
-#                                  self.devPorts[1],
-#                                  True)
-#            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-#            print "Binding sid {} with port {} for egress mirroring".format(self.sids[1], self.devPorts[1]) # clone to server
-#            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-#                                  Direction_e.PD_DIR_EGRESS,
-#                                  self.sids[1],
-#                                  self.devPorts[1],
-#                                  True)
-#            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-            for i in range(client_physical_num):
-                print "Binding sid {} with client devport {} for both direction mirroring".format(self.client_sids[i], self.client_devports[i]) # clone to client
-                info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-                                      Direction_e.PD_DIR_BOTH,
-                                      self.client_sids[i],
-                                      self.client_devports[i],
-                                      True)
-                self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
-            for i in range(server_physical_num):
-                print "Binding sid {} with server devport {} for both direction mirroring".format(self.server_sids[i], self.server_devports[i]) # clone to server
-                info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
-                                      Direction_e.PD_DIR_BOTH,
-                                      self.server_sids[i],
-                                      self.server_devports[i],
-                                      True)
-                self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+            # NOTE: clientleafswitch.sid/devport = serverleafswitch.sid/devport as we only have one physical leaf switch to simulate both client-/server-leaf switch
+            print "Binding sid {} with leafswitch devport {} for both direction mirroring".format(self.clientleafswitch_sid, self.clientleafswitch_devport) # clone to leafswitch
+            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                  Direction_e.PD_DIR_BOTH,
+                                  self.clientleafswitch_sid,
+                                  self.clientleafswitch_devport,
+                                  True)
+            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
             ################################
             ### Normal MAT Configuration ###
@@ -377,7 +343,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 op_hdr_keyhihihi_start = convert_u16_to_i16(key_start),
                                 op_hdr_keyhihihi_end = convert_u16_to_i16(key_end))
                         # Forward to the egress pipeline of leaf switch
-                        eport = self.leafswitch_devport
+                        eport = self.serverleafswitch_devport
                         actnspec0 = distcachespine_range_partition_action_spec_t(eport, global_leafswitch_logical_idx)
                         self.client.range_partition_tbl_table_add_with_range_partition(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
@@ -400,7 +366,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 meta_hashval_for_partition_start = convert_u16_to_i16(hash_start),
                                 meta_hashval_for_partition_end = convert_u16_to_i16(hash_end))
                         # Forward to the egress pipeline of leaf switch
-                        eport = self.leafswitch_devport
+                        eport = self.serverleafswitch_devport
                         actnspec0 = distcachespine_hash_partition_action_spec_t(eport, global_leafswitch_logical_idx)
                         self.client.hash_partition_tbl_table_add_with_hash_partition(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
@@ -435,15 +401,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
             print "Leave cache_lookup_tbl managed by controller in runtime"
 
-            # Table: hash_for_cm1/2/3/4_tbl (default: nop; size: 1)
-            for i in range(1, 5):
-                print "Configuring hash_for_cm{}_tbl".format(i)
-                for tmpoptype in [GETREQ]:
-                    matchspec0 = eval("distcachespine_hash_for_cm{}_tbl_match_spec_t".format(i))(\
-                            op_hdr_optype = tmpoptype)
-                    eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(i, i))(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
-
             # Table: hash_for_seq_tbl (default: nop; size: 2)
             print "Configuring hash_for_seq_tbl"
             for tmpoptype in [PUTREQ, DELREQ]:
@@ -457,25 +414,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 2*client_physical_num=4 < 2*8=16 < 32)
             print "Configuring prepare_for_cachehit_tbl"
             for tmpoptype in [GETREQ, WARMUPREQ]:
-                for tmp_client_physical_idx in range(client_physical_num):
-                    matchspec0 = distcachespine_prepare_for_cachehit_tbl_match_spec_t(\
-                            op_hdr_optype = tmpoptype,
-                            ig_intr_md_ingress_port = self.client_devports[tmp_client_physical_idx])
-                    actnspec0 = distcachespine_set_client_sid_action_spec_t(self.client_sids[tmp_client_physical_idx])
-                    self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                # Should not used: no req from server
-                #for tmp_server_physical_idx in range(len(self.server_devports)):
-                #    matchspec0 = distcachespine_prepare_for_cachehit_tbl_match_spec_t(\
-                #            op_hdr_optype = tmpoptype,
-                #            ig_intr_md_ingress_port = self.server_devports[tmp_server_physical_idx])
-                #    actnspec0 = distcachespine_set_client_sid_action_spec_t(self.server_sids[tmp_server_physical_idx])
-                #    self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
-                #            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            # set default sid as sids[0]
-            #actnspec0 = distcachespine_set_client_sid_action_spec_t(self.sids[0])
-            #self.client.prepare_for_cachehit_tbl_set_default_action_set_client_sid(\
-            #        self.sess_hdl, self.dev_tgt, actnspec0)
+                matchspec0 = distcachespine_prepare_for_cachehit_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ig_intr_md_ingress_port = self.clientleafswitch_devport)
+                actnspec0 = distcachespine_set_client_sid_action_spec_t(self.clientleafswitch_sid)
+                self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: ipv4_forward_tbl (default: nop; size: 6*client_physical_num=12 < 6*8=48)
             print "Configuring ipv4_forward_tbl"
@@ -577,12 +521,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.access_seq_tbl_table_add_with_assign_seq(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: save_client_udpport_tbl (default: nop; size: 4)
-            print "Configuring save_client_udpport_tbl"
+            # Table: save_client_info_tbl (default: nop; size: 4)
+            print "Configuring save_client_info_tbl"
             for tmpoptype in[GETREQ_INSWITCH, NETCACHE_WARMUPREQ_INSWITCH]:
-                matchspec0 = distcachespine_save_client_udpport_tbl_match_spec_t(\
+                matchspec0 = distcachespine_save_client_info_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype)
-                self.client.save_client_udpport_tbl_table_add_with_save_client_udpport(\
+                self.client.save_client_info_tbl_table_add_with_save_client_info(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
             if RANGE_SUPPORT:
@@ -688,35 +632,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_cmi_tbl (default: initialize_cmi_predicate; size: 3)
-            cm_hashnum = 4
-            for i in range(1, cm_hashnum+1):
-                print "Configuring access_cm{}_tbl".format(i)
-                for tmpoptype in [GETREQ_INSWITCH]:
-                    for is_cached in cached_list:
-                        for is_latest in latest_list:
-                            if is_cached == 1 and is_latest == 1: # follow algorithm 1 in NetCache paper to update CM
-                                continue
-                            else:
-                                matchspec0 = eval("distcachespine_access_cm{}_tbl_match_spec_t".format(i))(\
-                                        op_hdr_optype = tmpoptype,
-                                        inswitch_hdr_is_sampled = 1,
-                                        inswitch_hdr_is_cached = is_cached,
-                                        meta_is_latest = is_latest)
-                                eval("self.client.access_cm{}_tbl_table_add_with_update_cm{}".format(i, i))(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0)
-
             # Stgae 2
-
-            # Table: is_hot_tbl (default: reset_is_hot; size: 1)
-            print "Configuring is_hot_tbl"
-            matchspec0 = distcachespine_is_hot_tbl_match_spec_t(\
-                    meta_cm1_predicate = 2,
-                    meta_cm2_predicate = 2,
-                    meta_cm3_predicate = 2,
-                    meta_cm4_predicate = 2)
-            self.client.is_hot_tbl_table_add_with_set_is_hot(\
-                    self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: access_cache_frequency_tbl (default: nop; size: 17)
             print "Configuring access_cache_frequency_tbl"
@@ -1363,7 +1279,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                 else: # is_cached == 1 and is_latest == 1
                                                     # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                    actnspec0 = distcachespine_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                    actnspec0 = distcachespine_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         # is_cached=0 (no inswitch_hdr), is_hot=0 (not access CM), is_report=0 (not access BF), is_latest=0, is_deleted=0, tmp_client_sid=0 (no inswitch_hdr), tmp_server_sid!=0 for NETCACHE_GETREQ_POP
@@ -1646,7 +1562,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                     else: # is_cached == 1 and is_latest == 1
                                                         # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                        actnspec0 = distcachespine_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
+                                                        actnspec0 = distcachespine_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=0 (no inswitch_hdr), is_hot=0 (not access CM), is_report=0 (not access BF), is_latest=0, is_deleted=0, tmp_client_sid=0 (no inswitch_hdr), tmp_server_sid!=0 for NETCACHE_GETREQ_POP

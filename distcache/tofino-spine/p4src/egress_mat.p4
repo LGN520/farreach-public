@@ -2,17 +2,19 @@
 
 // Stage 0
 
-action save_client_udpport() {
+action save_client_info() {
+	modify_field(clone_hdr.client_ip, ipv4_hdr.srcAddr);
+	modify_field(clone_hdr.client_mac, ethernet_hdr.srcAddr);
 	modify_field(clone_hdr.client_udpport, udp_hdr.srcPort);
 }
 
-@pragma stage 0
-table save_client_udpport_tbl {
+@pragma stage 2
+table save_client_info_tbl {
 	reads {
 		op_hdr.optype: exact;
 	}
 	actions {
-		save_client_udpport;
+		save_client_info;
 		nop;
 	}
 	default_action: nop();
@@ -100,34 +102,6 @@ table prepare_for_cachepop_tbl {
 	}
 	default_action: reset_server_sid();
 	size: 32;
-}
-
-// Stage 2
-
-action set_is_hot() {
-	modify_field(meta.is_hot, 1);
-	//modify_field(debug_hdr.is_hot, 1);
-}
-
-action reset_is_hot() {
-	modify_field(meta.is_hot, 0);
-	//modify_field(debug_hdr.is_hot, 0);
-}
-
-@pragma stage 2
-table is_hot_tbl {
-	reads {
-		meta.cm1_predicate: exact;
-		meta.cm2_predicate: exact;
-		meta.cm3_predicate: exact;
-		meta.cm4_predicate: exact;
-	}
-	actions {
-		set_is_hot;
-		reset_is_hot;
-	}
-	default_action: reset_is_hot();
-	size: 1;
 }
 
 // Stage 7
@@ -284,32 +258,17 @@ action update_netcache_getreq_pop_to_getreq_by_mirroring(server_sid) {
 	clone_egress_pkt_to_egress(server_sid); // clone to client (inswitch_hdr.client_sid)
 }
 
-action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
+action update_getreq_inswitch_to_getres_by_mirroring(client_sid, stat) {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, stat);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-	modify_field(udp_hdr.srcPort, server_port);
+
+	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
+	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
 	remove_header(inswitch_hdr);
-	/*add_header(vallen_hdr);
-	add_header(val1_hdr);
-	add_header(val2_hdr);
-	add_header(val3_hdr);
-	add_header(val4_hdr);
-	add_header(val5_hdr);
-	add_header(val6_hdr);
-	add_header(val7_hdr);
-	add_header(val8_hdr);
-	add_header(val9_hdr);
-	add_header(val10_hdr);
-	add_header(val11_hdr);
-	add_header(val12_hdr);
-	add_header(val13_hdr);
-	add_header(val14_hdr);
-	add_header(val15_hdr);
-	add_header(val16_hdr);*/
 	add_header(stat_hdr);
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
@@ -468,8 +427,6 @@ table eg_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 		inswitch_hdr.is_cached: exact;
-		meta.is_hot: exact;
-		//debug_hdr.is_hot: exact;
 		meta.is_report: exact; // only work for GETREQ_INSWITCH
 		meta.is_latest: exact;
 		meta.is_deleted: exact;
