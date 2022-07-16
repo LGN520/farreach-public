@@ -685,7 +685,7 @@ void *run_server_worker(void * param) {
 
 				//COUT_THIS("results size: " << results.size());
 
-				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), global_server_logical_idx, 0, results.size(), results);
+				scan_response_split_t rsp(req.key(), req.endkey(), req.cur_scanidx(), req.max_scannum(), req.cur_scanswitchidx(), req.max_scanswitchnum(), global_server_logical_idx, db_wrappers[local_server_logical_idx].get_snapshotid(), results.size(), results);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif

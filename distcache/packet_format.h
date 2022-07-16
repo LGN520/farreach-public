@@ -222,13 +222,22 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(en
 		uint32_t dynamic_serialize(dynamic_array_t &dynamic_data);
 
 		static size_t get_frag_hdrsize();
+
+		// cur_scanidx and max_scannum of server for a given leaf switch
 		static size_t get_srcnum_off();
 		static size_t get_srcnum_len();
 		static bool get_srcnum_conversion();
 		static size_t get_srcid_off();
 		static size_t get_srcid_len();
 		static bool get_srcid_conversion();
-		// TODO: get_srcswitchnum/id_off/len/conversion
+
+		// cur_scanswitchidx and max_scanswitchnum of leaf switch
+		static size_t get_srcswitchnum_off();
+		static size_t get_srcswitchnum_len();
+		static bool get_srcswitchnum_conversion();
+		static size_t get_srcswitchid_off();
+		static size_t get_srcswitchid_len();
+		static bool get_srcswitchid_conversion();
 	protected:
 		virtual uint32_t size();
 		virtual void deserialize(const char * data, uint32_t recv_size);

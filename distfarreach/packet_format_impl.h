@@ -671,7 +671,7 @@ template<class key_t, class val_t>
 size_t ScanResponseSplit<key_t, val_t>::get_frag_hdrsize() {
 	//return sizeof(optype_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // op_hdr + scan_hdr + split_hdr + nodeidx_foreval (used to identify fragments from different servers)
 	// NOTE: we only need nodeidx_foreval for entire split packet instead of each fragment; so we can place it in fragment body isntead of fragment header in udpsendlarge_ipfrag (see socket_helper.c)
-	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t); // op_hdr + scan_hdr + split_hdr
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // op_hdr + scan_hdr + split_hdr (isclone + globalserveridx + cur_scanidx + max_scannum + cur_scanswitchidx + max_scanswitchnum)
 }
 
 template<class key_t, class val_t>
@@ -701,6 +701,36 @@ size_t ScanResponseSplit<key_t, val_t>::get_srcid_len() {
 
 template<class key_t, class val_t>
 bool ScanResponseSplit<key_t, val_t>::get_srcid_conversion() {
+	return true;
+}
+
+template<class key_t, class val_t>
+size_t ScanResponseSplit<key_t, val_t>::get_srcswitchnum_off() {
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t); // offset of split_hdr.max_scanswitchnum
+}
+
+template<class key_t, class val_t>
+size_t ScanResponseSplit<key_t, val_t>::get_srcswitchnum_len() {
+	return sizeof(uint16_t);
+}
+
+template<class key_t, class val_t>
+bool ScanResponseSplit<key_t, val_t>::get_srcswitchnum_conversion() {
+	return true;
+}
+
+template<class key_t, class val_t>
+size_t ScanResponseSplit<key_t, val_t>::get_srcswitchid_off() {
+	return sizeof(optype_t) + sizeof(switchidx_t) + sizeof(key_t) + sizeof(key_t) + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t); // offset of split_hdr.cur_scanswitchidx
+}
+
+template<class key_t, class val_t>
+size_t ScanResponseSplit<key_t, val_t>::get_srcswitchid_len() {
+	return sizeof(uint16_t);
+}
+
+template<class key_t, class val_t>
+bool ScanResponseSplit<key_t, val_t>::get_srcswitchid_conversion() {
 	return true;
 }
 

@@ -1305,6 +1305,11 @@ void *run_client_worker(void *param) {
 					delete [] scanbufs;
 					scanbufs = NULL;
 				}
+
+				if (is_timeout) {
+					thread_param.unmatched_cnt++;
+					continue;
+				}
 			}
 			else {
 				printf("Invalid request type: %u\n", uint32_t(tmptype));

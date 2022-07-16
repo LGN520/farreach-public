@@ -982,7 +982,6 @@ void *run_client_worker(void *param) {
 			}
 		}
 		tmptype = preload_types[preload_idx];
-		//tmptype = optype_t(packet_type_t::GETREQ); // TMPDEBUG: use read-only workload
 		tmpkey = preload_keys[preload_idx];
 		//tmpval = preload_vals[preload_idx];
 		preload_idx += 1;
@@ -1267,11 +1266,11 @@ void *run_client_worker(void *param) {
 				udpsendto(client_udpsock_list[local_client_logical_idx], buf, req_size, 0, &server_addr, server_addrlen, "ycsb_remove_client");
 				CUR_TIME(send_t2);
 
-				size_t received_scannum = 0;
-				dynamic_array_t *scanbufs = NULL;
+				std::vector<std::vector<dynamic_array_t>> perswitch_perserver_scanbufs;
+				std::vector<std::vector<struct sockaddr_in>> perswitch_perserver_addrs;
+				std::vector<std::vector<socklen_t>> perswitch_perserver_addrlens;
 				set_recvtimeout(client_udpsock_list[local_client_logical_idx], CLIENT_SCAN_SOCKET_TIMEOUT_SECS, 0); // 10s for SCAN
-				//is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[local_client_logical_idx], scanbufs, server_num, MAX_BUFSIZE, 0, NULL, NULL, scan_recvsizes, received_scannum, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion());
-				is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[local_client_logical_idx], &scanbufs, received_scannum, 0, NULL, NULL, "ycsb_remote_client", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), true, optype_t(packet_type_t::SCANRES_SPLIT), tmpkey);
+				is_timeout = udprecvlarge_multisrc_ipfrag(client_udpsock_list[local_client_logical_idx], perswitch_perserver_scanbufs, 0, perswitch_perserver_addrs, perswitch_perserver_addrlens, "remote_client.worker", scan_response_split_t::get_frag_hdrsize(), scan_response_split_t::get_srcnum_off(), scan_response_split_t::get_srcnum_len(), scan_response_split_t::get_srcnum_conversion(), scan_response_split_t::get_srcid_off(), scan_response_split_t::get_srcid_len(), scan_response_split_t::get_srcid_conversion(), scan_response_split_t::get_srcswitchnum_off(), scan_response_split_t::get_srcswitchnum_len(), scan_response_split_t::get_srcswitchnum_conversion(), scan_response_split_t::get_srcswitchid_off(), scan_response_split_t::get_srcswitchid_len(), scan_response_split_t::get_srcswitchid_conversion(), true, optype_t(packet_type_t::SCANRES_SPLIT), tmpkey);
 				CUR_TIME(wait_t1);
 				set_recvtimeout(client_udpsock_list[local_client_logical_idx], CLIENT_SOCKET_TIMEOUT_SECS, 0); // 100ms for other reqs
 				if (is_timeout) {
@@ -1281,29 +1280,36 @@ void *run_client_worker(void *param) {
 
 				int snapshotid = -1;
 				int totalnum = 0;
-				for (int tmpscanidx = 0; tmpscanidx < received_scannum; tmpscanidx++) {
-					//scan_response_split_t rsp(scanbufs + tmpscanidx * MAX_BUFSIZE, scan_recvsizes[tmpscanidx]);
-					scan_response_split_t rsp(scanbufs[tmpscanidx].array(), scanbufs[tmpscanidx].size());
-					FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] startkey = " << rsp.key().to_string()
-							<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
-					totalnum += rsp.pairnum();
-					// check scan response consistency
-					if (snapshotid == -1) {
-						snapshotid = rsp.snapshotid();
-						tmp_nodeidx_foreval = rsp.nodeidx_foreval();
+				int tmp_srcswitchnum = perswitch_perserver_scanbufs.size();
+				COUT_VAR(tmp_srcswitchnum);
+				for (int i = 0; i < tmp_srcswitchnum; i++) {
+					printf("[leaf switch %d] tmp_srcservernum %d\n", i, perswitch_perserver_scanbufs[i].size());
+					for (int j = 0; j < perswitch_perserver_scanbufs[i].size(); j++) {
+						scan_response_split_t rsp(perswitch_perserver_scanbufs[i][j].array(), perswitch_perserver_scanbufs[i][j].size());
+						FDEBUG_THIS(ofs, "[client " << uint32_t(local_client_logical_idx) << "] startkey = " << rsp.key().to_string()
+								<< "endkey = " << rsp.endkey().to_string() << " pairnum = " << rsp.pairnum());
+						totalnum += rsp.pairnum();
+						// check scan response consistency
+						if (snapshotid == -1) {
+							snapshotid = rsp.snapshotid();
+							tmp_nodeidx_foreval = rsp.nodeidx_foreval();
+						}
+						else if (snapshotid != rsp.snapshotid()) {
+							printf("Inconsistent scan response!\n"); // TMPDEBUG
+							is_timeout = true; // retry
+							break;
+						}
 					}
-					else if (snapshotid != rsp.snapshotid()) {
-						printf("Inconsistent scan response!\n"); // TMPDEBUG
-						is_timeout = true; // retry
+
+					if (is_timeout) {
 						break;
 					}
 				}
-				COUT_VAR(received_scannum);
 				COUT_VAR(totalnum);
 
-				if (scanbufs != NULL) {
-					delete [] scanbufs;
-					scanbufs = NULL;
+				if (is_timeout) {
+					thread_param.unmatched_cnt++;
+					continue;
 				}
 			}
 			else {
