@@ -208,10 +208,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         # NOTE: in each pipeline, 64-67 are recir/cpu ports, 68-71 are recir/pktgen ports
         #self.cpuPorts = [64, 192] # CPU port is 100G
 
-        sidnum = len(self.client_devports) + len(self.server_devports)
+        sidnum = len(self.client_devports) + len(self.server_devports) + 1
         sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
         self.client_sids = sids[0:len(self.client_devports)]
-        self.server_sids = sids[len(self.client_devports):sidnum]
+        self.server_sids = sids[len(self.client_devports):sidnum-1]
+        self.spineswitch_sid = sids[sidnum-1]
 
         # NOTE: data plane communicate with switchos by software-based reflector, which is deployed in one server machine
         isvalid = False
@@ -321,6 +322,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                       self.server_devports[i],
                                       True)
                 self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+            print "Binding sid {} with spineswitch devport {} for both direction mirroring".format(self.spineswitch_sid, self.spineswitch_devport) # clone to spineswitch
+            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                  Direction_e.PD_DIR_BOTH,
+                                  self.spineswitch_sid,
+                                  self.spineswitch_devport,
+                                  True)
+            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
             ################################
             ### Normal MAT Configuration ###
@@ -538,21 +546,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: hash_for_cm1/2/3/4_tbl (default: nop; size: 2)
             for i in range(1, 5):
                 print "Configuring hash_for_cm{}_tbl".format(i)
-                for tmpoptype in [GETREQ, PUTREQ]:
+                for tmpoptype in [GETREQ_SPINE, PUTREQ]:
                     matchspec0 = eval("distfarreachleaf_hash_for_cm{}_tbl_match_spec_t".format(i))(\
                             op_hdr_optype = tmpoptype,
                             meta_need_recirculate = 0)
                     eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(i, i))(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: hash_for_seq_tbl (default: nop; size: 2)
-            print "Configuring hash_for_seq_tbl"
-            for tmpoptype in [PUTREQ, DELREQ]:
-                matchspec0 = distfarreachleaf_hash_for_seq_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        meta_need_recirculate = 0)
-                self.client.hash_for_seq_tbl_table_add_with_hash_for_seq(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stage 3
 
@@ -567,28 +566,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 3*client_physical_num=6 < 3*8=24 < 32)
             print "Configuring prepare_for_cachehit_tbl"
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
-                for tmp_client_physical_idx in range(client_physical_num):
-                    matchspec0 = distfarreachleaf_prepare_for_cachehit_tbl_match_spec_t(\
-                            op_hdr_optype = tmpoptype,
-                            ig_intr_md_ingress_port = self.client_devports[tmp_client_physical_idx],
-                            meta_need_recirculate = 0)
-                    actnspec0 = distfarreachleaf_set_client_sid_action_spec_t(self.client_sids[tmp_client_physical_idx])
-                    self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                # Should not used: no req from server
-                #for tmp_server_physical_idx in range(len(self.server_devports)):
-                #    matchspec0 = distfarreachleaf_prepare_for_cachehit_tbl_match_spec_t(\
-                #            op_hdr_optype = tmpoptype,
-                #            ig_intr_md_ingress_port = self.server_devports[tmp_server_physical_idx],
-                #            meta_need_recirculate = 0)
-                #    actnspec0 = distfarreachleaf_set_client_sid_action_spec_t(self.server_sids[tmp_server_physical_idx])
-                #    self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
-                #            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            # set default sid as sids[0]
-            #actnspec0 = distfarreachleaf_set_client_sid_action_spec_t(self.sids[0])
-            #self.client.prepare_for_cachehit_tbl_set_default_action_set_client_sid(\
-            #        self.sess_hdl, self.dev_tgt, actnspec0)
+            for tmpoptype in [GETREQ_SPINE, PUTREQ, DELREQ]:
+                matchspec0 = distfarreachleaf_prepare_for_cachehit_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        ig_intr_md_ingress_port = self.spineswitch_devport,
+                        meta_need_recirculate = 0)
+                actnspec0 = distfarreachleaf_set_client_sid_action_spec_t(self.spineswitch_sid)
+                self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: ipv4_forward_tbl (default: nop; size: 8*client_physical_num=16 < 8*8=64)
             print "Configuring ipv4_forward_tbl"
@@ -619,7 +604,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: sample_tbl (default: nop; size: 2)
             print "Configuring sample_tbl"
-            for tmpoptype in [GETREQ, PUTREQ]:
+            for tmpoptype in [GETREQ_SPINE, PUTREQ]:
                 matchspec0 = distfarreachleaf_sample_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 0)
@@ -630,9 +615,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Table: ig_port_forward_tbl (default: nop; size: 6)
             print "Configuring ig_port_forward_tbl"
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETREQ,
+                    op_hdr_optype = GETREQ_SPINE,
                     meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_getreq_to_getreq_inswitch(\
+            self.client.ig_port_forward_tbl_table_add_with_update_getreq_spine_to_getreq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETRES_LATEST_SEQ,
@@ -799,14 +784,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         op_hdr_optype = SETVALID_INSWITCH,
                         inswitch_hdr_is_cached = is_cached) # key may or may not be cached for SETVALID_INSWITCH
                 self.client.access_validvalue_tbl_table_add_with_set_validvalue(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
-
-            # Table: access_seq_tbl (default: nop; size: 2)
-            print "Configuring access_seq_tbl"
-            for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
-                matchspec0 = distfarreachleaf_access_seq_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype)
-                self.client.access_seq_tbl_table_add_with_assign_seq(\
                         self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Stgae 2

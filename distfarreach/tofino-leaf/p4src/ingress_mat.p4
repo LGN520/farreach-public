@@ -256,6 +256,7 @@ table cache_lookup_tbl {
 		//op_hdr.keyhihi: exact;
 		op_hdr.keyhihilo: exact;
 		op_hdr.keyhihihi: exact;
+		op_hdr.globalswitchidx: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {
@@ -324,24 +325,6 @@ table hash_for_cm2_tbl {
 	}
 	actions {
 		hash_for_cm2;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
-action hash_for_seq() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_seq, 0, hash_calc, SEQ_BUCKET_COUNT);
-}
-
-@pragma stage 3
-table hash_for_seq_tbl {
-	reads {
-		op_hdr.optype: exact;
-		meta.need_recirculate: exact;
-	}
-	actions {
-		hash_for_seq;
 		nop;
 	}
 	default_action: nop();
@@ -484,7 +467,7 @@ table sample_tbl {
 	size: 2;
 }
 
-action update_getreq_to_getreq_inswitch() {
+action update_getreq_spine_to_getreq_inswitch() {
 	modify_field(op_hdr.optype, GETREQ_INSWITCH);
 	modify_field(shadowtype_hdr.shadowtype, GETREQ_INSWITCH);
 	add_header(shadowtype_hdr);
@@ -531,7 +514,7 @@ table ig_port_forward_tbl {
 		meta.need_recirculate: exact;
 	}
 	actions {
-		update_getreq_to_getreq_inswitch;
+		update_getreq_spine_to_getreq_inswitch;
 		update_getres_latest_seq_to_getres_latest_seq_inswitch;
 		update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
 		update_putreq_to_putreq_inswitch;

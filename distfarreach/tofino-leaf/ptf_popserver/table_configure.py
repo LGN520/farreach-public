@@ -82,7 +82,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         self.client.register_write_validvalue_reg(self.sess_hdl, tmp_devtgt, index, value)
 
     #def add_cache_lookup_setvalid1(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, piptidx):
-    def add_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx):
+    def add_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, globalswitchidx, freeidx):
         #print "Add key into cache_lookup_tbl for all pipelines"
         matchspec0 = distfarreachleaf_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
@@ -91,6 +91,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 #op_hdr_keyhihi = convert_u32_to_i32(keyhihi),
                 op_hdr_keyhihilo = convert_u16_to_i16(keyhihilo),
                 op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi),
+                op_hdr_globalswitchidx = convert_u16_to_i16(globalswitchidx),
                 meta_need_recirculate = 0)
         actnspec0 = distfarreachleaf_cached_action_action_spec_t(freeidx)
         self.client.cache_lookup_tbl_table_add_with_cached_action(\
@@ -168,7 +169,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         #sendbuf = sendbuf + struct.pack("={}sI?".format(len(evictvalbytes)), evictvalbytes, evictseq, evictstat)
         #return sendbuf
 
-    def remove_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi):
+    def remove_cache_lookup(self, keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, globalswitchidx):
         #print "Remove key from cache_lookup_tbl for all pipelines"
         matchspec0 = distfarreachleaf_cache_lookup_tbl_match_spec_t(\
                 op_hdr_keylolo = convert_u32_to_i32(keylolo),
@@ -177,6 +178,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 #op_hdr_keyhihi = convert_u32_to_i32(keyhihi),
                 op_hdr_keyhihilo = convert_u16_to_i16(keyhihilo),
                 op_hdr_keyhihihi = convert_u16_to_i16(keyhihihi),
+                op_hdr_globalswitchidx = convert_u16_to_i16(globalswitchidx),
                 meta_need_recirculate = 0)
         #actnspec0 = distfarreachleaf_cached_action_action_spec_t(evictidx)
         self.client.cache_lookup_tbl_table_delete_by_match_spec(\

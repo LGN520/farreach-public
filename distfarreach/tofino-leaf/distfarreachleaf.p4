@@ -186,7 +186,6 @@
 #include "p4src/regs/validvalue.p4"
 #include "p4src/regs/latest.p4"
 #include "p4src/regs/deleted.p4"
-#include "p4src/regs/seq.p4"
 #include "p4src/regs/val.p4"
 #include "p4src/regs/case1.p4"
 
@@ -235,7 +234,6 @@ control ingress {
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
 	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
-	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
 	// Stage 4
 	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
@@ -265,7 +263,6 @@ control egress {
 	apply(is_hot_tbl);
 	apply(access_cache_frequency_tbl);
 	apply(access_validvalue_tbl);
-	apply(access_seq_tbl);
 #ifdef RANGE_SUPPORT
 	apply(process_scanreq_split_tbl);
 #endif

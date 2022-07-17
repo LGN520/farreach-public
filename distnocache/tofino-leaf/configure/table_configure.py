@@ -138,16 +138,20 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             port, chnl = server_fpport.split("/")
             devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
             self.server_devports.append(devport)
+        port, chnl = leafswitch_fpport_to_spine.split("/")
+        devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+        self.spineswitch_devport = devport
 
         self.recirPorts = [64, 192]
 
         # NOTE: in each pipeline, 64-67 are recir/cpu ports, 68-71 are recir/pktgen ports
         #self.cpuPorts = [64, 192] # CPU port is 100G
 
-        sidnum = len(self.client_devports) + len(self.server_devports)
+        sidnum = len(self.client_devports) + len(self.server_devports) + 1
         sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
         self.client_sids = sids[0:len(self.client_devports)]
-        self.server_sids = sids[len(self.client_devports):sidnum]
+        self.server_sids = sids[len(self.client_devports):sidnum-1]
+        self.spineswitch_sid = sids[sidnum-1]
 
         # NOTE: data plane communicate with switchos by software-based reflector, which is deployed in one server machine
         isvalid = False
@@ -260,6 +264,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                       self.server_devports[i],
                                       True)
                 self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+            print "Binding sid {} with spineswitch devport {} for both direction mirroring".format(self.spineswitch_sid, self.spineswitch_devport) # clone to spineswitch
+            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                  Direction_e.PD_DIR_BOTH,
+                                  self.spineswitch_sid,
+                                  self.spineswitch_devport,
+                                  True)
+            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 
             ################################
             ### Normal MAT Configuration ###
@@ -299,7 +310,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             if RANGE_SUPPORT == False:
                 # Table: hash_for_partition_tbl (default: nop; size: 4)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ, PUTREQ, DELREQ, LOADREQ]:
+                for tmpoptype in [GETREQ_SPINE, PUTREQ, DELREQ, LOADREQ]:
                     matchspec0 = distnocacheleaf_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype))
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\

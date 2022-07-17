@@ -150,7 +150,6 @@
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/latest.p4"
 #include "p4src/regs/deleted.p4"
-#include "p4src/regs/seq.p4"
 #include "p4src/regs/val.p4"
 
 #include "p4src/ingress_mat.p4"
@@ -192,7 +191,6 @@ control ingress {
 
 	// Stage 4
 	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
-	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
 	// Stgae 5
 	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
@@ -224,7 +222,6 @@ control egress {
 
 	// Stage 0
 	apply(access_latest_tbl); // NOTE: latest_reg corresponds to stats.validity in netcache paper, which will be used to *invalidate* the value by PUT/DELREQ
-	apply(access_seq_tbl);
 	apply(save_client_info_tbl); // save srcip/srcmac/udp.dstport (client ip/mac/udpport) for cache hit response of GET/PUT/DELREQ_INSWITCH
 #ifdef RANGE_SUPPORT
 	apply(process_scanreq_split_tbl); // NOT reset clone_hdr.server_sid by default here
