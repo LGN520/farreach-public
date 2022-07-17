@@ -1824,6 +1824,34 @@
 ## Implement log after NetCache
 
 + Important code change of FarReach/NetCache to populate deleted keys (see details in netcache.md)
++ Issue of FarReach: w/ non-duplicate GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1, yet NO PUT/DELREQ_SEQ_INSWITCH_CASE1
+	* Temporarily switch to debug mode
+	* Reason: we set clone_hdr.clonenum_for_pktloss = 3 for PUTREQ_SEQ_INSWITCH_CASE1, yet it equals 0 after deparser and cloning
+		- Similar to previous issue: we set stat_hdr.stat = 1, yet it equals 0 after deparser, which may due to the bug of Tofino compiler itself (e.g., incorrect reuse of PHV container???)
+		- NOTE: the first cloned GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1 is also treaded as the last cloned one (i.e., is_lastclone_for_pktloss = 1), which incrs non-duplicate CASE1 report
+			+ For PUT/DELREQ_SEQ_INSWITCH_CASE1, the last cloned pkt will be converted as PUT/DELRES and cloned to client, so there is NO PUT/DELREQ_SEQ_INSWITCH_CASE1
+			+ While for GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1, the last cloned pkt performs nop() in eg_port_forward_tbl and still arrives at reflector, so there is a single GETREQ_LATEST/DELETED_SEQ_INSWITCH_CASE1
+	* Solution: add 8b padding into clone_hdr; update pktlen accordingly (files: p4src/header.p4, packet_format.h, p4src/egress_mat.p4, configure/table_configure.py) -> FAIL
+	* Solution: change bit width of clone_hdr.clonenum_for_pktloss from 8 to 16; update pktlen accordingly(files: p4src/header.p4, packet_format.h, p4src/egress_mat.p4, configure/table_configure.py) -> OK
+		- Sync packet_format.h to nocache and distnocache
+		- Sync all to distfarreach and distnocache
+		- Sync all to netcache
+			+ Change usleep(1) as nanosleep(1000) during netcache's blocking (from 1us sleep to 1ms sleep), which may be the reason of netcache's worse performance than nocache under write-only workload -> FAIL; still 0.07 MOPS in the first 10 seconds (w/o key popularity change) due to blocking
+				* Reason: long time to wait for blocking is mainly due to waiting for in-switch value update (server.valueupdateserver) instead of sleeping interrupt
+			+ Test correctness of cache population, which needs clone_hdr for NETCACHE_WARMUPREQ_INSWITCH_POP and NETCACHE_GETREQ_POP
+			+ Test read-only performnace w/ 4/1 servers -> from 1 MOPS to 1.2 MOPS quickly due to runtime cache eviction
+			+ Test write-only performnace w/ 4/1 servers -> 0.07 MOPS in the first 10 seconds, ~0.2 MOPS after removing 200 hotest keys
+				* Reason: after removing 200 hotest keys, most requests will not suffer from long blocking latency for in-switch value update
+				* NOTE: NetCache paper shows that it has similar perf as NoCache under write-only workload, which is not affected by its blocking design -> maybe due to very short in-switch value update latency due to DPDK or testbed issues or other tricks
+				* NOTE: we aim to improve the write performance of FarReach instead of improving performance of NetCache -> it is ok for us to not reproduce all the results of NetCache, as we have different implementation details, testbed settings, and tricks
+			+ Update visualization files of netcache-nodebug-hashpartition
+	* Resume to non-debug mode (rollback config.ini, main.p4, sync.sh, update synthetic-warmup.out)
+	* Update visualization files of netbufferv4-nodebug-hashpartition
+	* Test effect on system performance if w/ snapshot -> sync to nocache/netcache/distfarreach/distnocache/distcache
+		- Issue: snapshot loading time from 0.1s to 0.6s due to timeout of LOADSNAPSHOTDATA_INSWITCH_ACK
+			+ Solution: increase udp recv buffer size of reflector.dp2cpserver, switchos.specialcaseserver, and switchos.snapshotserver.snapshotclient_for_reflector -> ONLY work for ~5000 special cases; NOT work for >8000 special cases
+			+ Solution: reduce timeout threshold of switchos.specialcaseserver and switchos.snapshotserver.snapshotclient_for_reflector from 0.5s to 0.1s -> OK; loading time ranges from 0.1s to 0.2s (due to timeout of LOADSNAPSHOTDATA_INSWITCH_ACK)
+		- NOTE: reporting CASE1s does NOT affect system performance
 
 ## Run
 
