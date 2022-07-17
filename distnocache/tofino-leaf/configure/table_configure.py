@@ -467,8 +467,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 5
 
             # Table: ig_port_forward_tbl (default: nop; size: 1)
+            print "Configuring ig_port_forward_tbl"
+            matchspec0 = distnocacheleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = GETREQ_SPINE)
+            self.client.ig_port_forward_tbl_table_add_with_update_getreq_spine_to_getreq(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
             if RANGE_SUPPORT:
-                print "Configuring ig_port_forward_tbl"
                 matchspec0 = distnocacheleaf_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = SCANREQ)
                 self.client.ig_port_forward_tbl_table_add_with_update_scanreq_to_scanreq_split(\
@@ -600,6 +604,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.update_ipmac_srcport_tbl_table_add_with_update_srcipmac_srcport_server2client(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             # for request from client to server, egress port has been set by partition_tbl in ingress pipeline
+            # NOTE: for each pkt from client to spine, as its eport must be spineswitch.devport instead of server.devport, it will not invoke update_dstipmac_client2server() here
             for tmp_server_physical_idx in range(server_physical_num):
                 tmp_devport = self.server_devports[tmp_server_physical_idx]
                 tmp_server_mac = server_macs[tmp_server_physical_idx]

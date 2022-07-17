@@ -351,6 +351,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: ig_port_forward_tbl (default: nop; size: 2)
             print "Configuring ig_port_forward_tbl"
+            matchspec0 = distnocachespine_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = GETREQ)
+            self.client.ig_port_forward_tbl_table_add_with_update_getreq_to_getreq_spine(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
             if RANGE_SUPPORT:
                 matchspec0 = distnocachespine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = SCANREQ)

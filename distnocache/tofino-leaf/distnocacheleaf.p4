@@ -149,9 +149,7 @@ control ingress {
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
 	// Stage 5
-#ifdef RANGE_SUPPORT
 	apply(ig_port_forward_tbl); // update op_hdr.optype
-#endif
 }
 
 /* Egress Processing */
@@ -175,6 +173,7 @@ control egress {
 
 	// stage 3
 	// NOTE: resource in stage 11 is not enough for update_ipmac_src_port_tbl, so we place it into stage 10
+	// NOTE: for GET/PUT/DEL/SCAN/WARMUP/LOADREQ from client, they do NOT perform client2server in update_ipmac_srcport_tbl as their eport must be the devport of spine switch instead of a server
 	apply(update_ipmac_srcport_tbl); // Update ip, mac, and srcport for RES to client and notification to switchos
 
 	// Stage 4

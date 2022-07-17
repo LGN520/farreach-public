@@ -1143,7 +1143,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
     def configure_eg_port_forward_tbl(self):
         # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num=27+852*2=1731 < 2048 < 27+852*8=6843 < 8192)
-        tmp_client_sids = [0] + self.client_sids
+        tmp_client_sids = [0, self.clientleafswitch_sid]
         tmp_server_sids = [0] + self.server_sids
         for is_cached in cached_list:
             for is_hot in hot_list:
@@ -1422,7 +1422,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
     def configure_eg_port_forward_tbl_with_range(self):
         # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num+2*server_physical_num=27+854*2=1735 < 2048 < 21+854*8=6859 < 8192)
-        tmp_client_sids = [0] + self.client_sids
+        tmp_client_sids = [0, self.clientleafswitch_sid]
         tmp_server_sids = [0] + self.server_sids
         for is_cached in cached_list:
             for is_hot in hot_list:

@@ -144,6 +144,10 @@ table ipv4_forward_tbl {
 
 // Stage 4
 
+update update_getreq_to_getreq_spine() {
+	modify_field(op_hdr.optype, GETREQ_SPINE);
+}
+
 #ifdef RANGE_SUPPORT
 action update_scanreq_to_scanreq_split() {
 	modify_field(op_hdr.optype, SCANREQ_SPLIT);
@@ -151,7 +155,7 @@ action update_scanreq_to_scanreq_split() {
 }
 #endif
 
-update loadreq_to_loadreq_spine() {
+update update_loadreq_to_loadreq_spine() {
 	modify_field(op_hdr.optype, LOADREQ_SPINE);
 }
 
@@ -161,6 +165,7 @@ table ig_port_forward_tbl {
 		op_hdr.optype: exact;
 	}
 	actions {
+		update_getreq_to_getreq_spine;
 #ifdef RANGE_SUPPORT
 		update_scanreq_to_scanreq_split;
 #endif
