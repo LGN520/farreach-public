@@ -2668,8 +2668,8 @@ void swap(netbufferv4_l2l3_forward_tbl_match_spec_t &a, netbufferv4_l2l3_forward
 class netbufferv4_lastclone_lastscansplit_tbl_match_spec_t {
  public:
 
-  static const char* ascii_fingerprint; // = "2F32B8B152B4427223DB9D670291659B";
-  static const uint8_t binary_fingerprint[16]; // = {0x2F,0x32,0xB8,0xB1,0x52,0xB4,0x42,0x72,0x23,0xDB,0x9D,0x67,0x02,0x91,0x65,0x9B};
+  static const char* ascii_fingerprint; // = "C88FB7958D86460D03E699333A272947";
+  static const uint8_t binary_fingerprint[16]; // = {0xC8,0x8F,0xB7,0x95,0x8D,0x86,0x46,0x0D,0x03,0xE6,0x99,0x33,0x3A,0x27,0x29,0x47};
 
   netbufferv4_lastclone_lastscansplit_tbl_match_spec_t(const netbufferv4_lastclone_lastscansplit_tbl_match_spec_t&);
   netbufferv4_lastclone_lastscansplit_tbl_match_spec_t& operator=(const netbufferv4_lastclone_lastscansplit_tbl_match_spec_t&);
@@ -2678,11 +2678,11 @@ class netbufferv4_lastclone_lastscansplit_tbl_match_spec_t {
 
   virtual ~netbufferv4_lastclone_lastscansplit_tbl_match_spec_t() throw();
   int16_t op_hdr_optype;
-  int8_t clone_hdr_clonenum_for_pktloss;
+  int16_t clone_hdr_clonenum_for_pktloss;
 
   void __set_op_hdr_optype(const int16_t val);
 
-  void __set_clone_hdr_clonenum_for_pktloss(const int8_t val);
+  void __set_clone_hdr_clonenum_for_pktloss(const int16_t val);
 
   bool operator == (const netbufferv4_lastclone_lastscansplit_tbl_match_spec_t & rhs) const
   {
@@ -7438,8 +7438,8 @@ void swap(netbufferv4_l2l3_forward_tbl_entry_desc_t &a, netbufferv4_l2l3_forward
 class netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "7504C86215B26B2C6D18E79B82F0843C";
-  static const uint8_t binary_fingerprint[16]; // = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+  static const char* ascii_fingerprint; // = "D37634C1944DE98B30E4E9C24C64725D";
+  static const uint8_t binary_fingerprint[16]; // = {0xD3,0x76,0x34,0xC1,0x94,0x4D,0xE9,0x8B,0x30,0xE4,0xE9,0xC2,0x4C,0x64,0x72,0x5D};
 
   netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t(const netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t&);
   netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t& operator=(const netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t&);

@@ -380,7 +380,7 @@ struct netbufferv4_l2l3_forward_tbl_match_spec_t {
 
 struct netbufferv4_lastclone_lastscansplit_tbl_match_spec_t {
   1: required i16 op_hdr_optype;
-  2: required byte clone_hdr_clonenum_for_pktloss;
+  2: required i16 clone_hdr_clonenum_for_pktloss;
 }
 
 struct netbufferv4_need_recirculate_tbl_match_spec_t {

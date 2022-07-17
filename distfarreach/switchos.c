@@ -52,7 +52,7 @@ typedef CachePopInswitchAck<netreach_key_t> cache_pop_inswitch_ack_t;
 typedef CacheEvict<netreach_key_t, val_t> cache_evict_t;
 typedef CacheEvictAck<netreach_key_t> cache_evict_ack_t;
 typedef CacheEvictCase2<netreach_key_t, val_t> cache_evict_case2_t;
-typedef ConcurrentMap<uint16_t, special_case_t> concurrent_specicalcase_map_t;
+typedef ConcurrentMap<uint16_t, special_case_t> concurrent_specialcase_map_t;
 typedef CachePopAck<netreach_key_t> cache_pop_ack_t;
 typedef CacheEvictLoadfreqInswitch<netreach_key_t> cache_evict_loadfreq_inswitch_t;
 typedef CacheEvictLoadfreqInswitchAck<netreach_key_t> cache_evict_loadfreq_inswitch_ack_t;
@@ -116,7 +116,7 @@ int switchos_specialcaseserver_udpsock = -1;
 // special cases updated by specialcaseserver and popworker
 std::mutex switchos_mutex_for_specialcases;
 //std::map<uint16_t, special_case_t> volatile switchos_specialcases;
-concurrent_specicalcase_map_t ** volatile switchos_perpipeline_specialcases_ptr = NULL;
+concurrent_specialcase_map_t ** volatile switchos_perpipeline_specialcases_ptr = NULL;
 
 // rollback after collecting all special cases
 bool volatile is_snapshot_end = false;
@@ -269,10 +269,10 @@ void prepare_switchos() {
 	create_udpsock(switchos_snapshotserver_snapshotclient_for_reflector_udpsock, true, "switchos.snapshotserver.snapshotclient_for_reflector", 0, SWITCHOS_SNAPSHOTCLIENT_FOR_REFLECTOR_TIMEOUT_USECS, UDP_LARGE_RCVBUFSIZE); // 0.5s for low snapshot latency
 
 	// prepare specialcaseserver socket
-	prepare_udpserver(switchos_specialcaseserver_udpsock, true, switchos_specialcaseserver_port, "switchos.specialcaseserver", 0, SWITCHOS_SPECIALCASESERVER_TIMEOUT_USECS); // timeout interval: 1000us to avoid long wait time when making snapshot
+	prepare_udpserver(switchos_specialcaseserver_udpsock, true, switchos_specialcaseserver_port, "switchos.specialcaseserver", 0, SWITCHOS_SPECIALCASESERVER_TIMEOUT_USECS, 2*UDP_LARGE_RCVBUFSIZE); // timeout interval: 1000us to avoid long wait time when making snapshot
 	//switchos_specialcases->clear();
 	
-	switchos_perpipeline_specialcases_ptr = new concurrent_specicalcase_map_t *[switch_pipeline_num];
+	switchos_perpipeline_specialcases_ptr = new concurrent_specialcase_map_t *[switch_pipeline_num];
 	for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
 		switchos_perpipeline_specialcases_ptr[tmp_pipeidx] = NULL;
 	}
@@ -1019,7 +1019,7 @@ void *run_switchos_snapshotserver(void *param) {
 			
 			// create new speical cases (freed by next SNAPSHOT_CLEANUP)
 			for (uint32_t tmp_pipeidx = 0; tmp_pipeidx < switch_pipeline_num; tmp_pipeidx++) {
-				switchos_perpipeline_specialcases_ptr[tmp_pipeidx] = new concurrent_specicalcase_map_t();
+				switchos_perpipeline_specialcases_ptr[tmp_pipeidx] = new concurrent_specialcase_map_t();
 			}
 
 			CUR_TIME(stop_cachepop_t1);
@@ -1228,7 +1228,7 @@ void *run_switchos_snapshotserver(void *param) {
 					switchos_perpipeline_snapshot_stats[tmp_pipeidx][iter->first] = iter->second._valid;
 				}*/
 				INVARIANT(switchos_perpipeline_specialcases_ptr[tmp_pipeidx] != NULL);
-				concurrent_specicalcase_map_t::DataSource source(0, (concurrent_specicalcase_map_t *)switchos_perpipeline_specialcases_ptr[tmp_pipeidx]);
+				concurrent_specialcase_map_t::DataSource source(0, (concurrent_specialcase_map_t *)switchos_perpipeline_specialcases_ptr[tmp_pipeidx]);
 				source.advance_to_next_valid();
 				int specialcase_cnt = 0;
 				while (source.has_next) {

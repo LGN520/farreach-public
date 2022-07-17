@@ -177,7 +177,7 @@ typedef struct p4_pd_netbufferv4_l2l3_forward_tbl_match_spec {
 
 typedef struct p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec {
   uint16_t op_hdr_optype;
-  uint8_t clone_hdr_clonenum_for_pktloss;
+  uint16_t clone_hdr_clonenum_for_pktloss;
 } p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec_t;
 
 typedef struct p4_pd_netbufferv4_need_recirculate_tbl_match_spec {
@@ -25487,7 +25487,7 @@ typedef struct __attribute__((__packed__)) p4_pd_netbufferv4_ig_snapshot_trig_sp
   uint8_t stat_hdr_stat;
   uint16_t stat_hdr_nodeidx_foreval;
   uint8_t stat_hdr_padding;
-  uint8_t clone_hdr_clonenum_for_pktloss;
+  uint16_t clone_hdr_clonenum_for_pktloss;
   uint16_t clone_hdr_client_udpport;
   uint32_t frequency_hdr_frequency;
   uint8_t validvalue_hdr_validvalue;
@@ -25603,7 +25603,7 @@ typedef struct __attribute__((__packed__)) p4_pd_netbufferv4_eg_snapshot_trig_sp
   uint8_t stat_hdr_stat;
   uint16_t stat_hdr_nodeidx_foreval;
   uint8_t stat_hdr_padding;
-  uint8_t clone_hdr_clonenum_for_pktloss;
+  uint16_t clone_hdr_clonenum_for_pktloss;
   uint16_t clone_hdr_client_udpport;
   uint32_t frequency_hdr_frequency;
   uint8_t validvalue_hdr_validvalue;

@@ -1234,11 +1234,12 @@ static inline void build_key_lastclone_lastscansplit_tbl
 
 
 #ifdef LITTLE_ENDIAN_CALLER
-  memcpy(match_bits, &match_spec->clone_hdr_clonenum_for_pktloss, 1);
+  tmp16 = htons(match_spec->clone_hdr_clonenum_for_pktloss);
+  memcpy(match_bits, &tmp16, 2);
 #else
-  memcpy(match_bits, ((char *) &match_spec->clone_hdr_clonenum_for_pktloss) + 0, 1);
+  memcpy(match_bits, ((char *) &match_spec->clone_hdr_clonenum_for_pktloss) + 0, 2);
 #endif
-  match_bits += 1;
+  match_bits += 2;
 
 }
 
@@ -6519,11 +6520,12 @@ static inline void unbuild_key_lastclone_lastscansplit_tbl
 
 
 #ifdef LITTLE_ENDIAN_CALLER
-  memcpy(&match_spec->clone_hdr_clonenum_for_pktloss, match_bits, 1);
+  memcpy(&tmp16, match_bits, 2);
+  match_spec->clone_hdr_clonenum_for_pktloss = ntohs(tmp16);
 #else
-  memcpy(((char *) &match_spec->clone_hdr_clonenum_for_pktloss) + 0, match_bits, 1);
+  memcpy(((char *) &match_spec->clone_hdr_clonenum_for_pktloss) + 0, match_bits, 2);
 #endif
-  match_bits += 1;
+  match_bits += 2;
 
 }
 
@@ -10584,16 +10586,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec_to_entry_hdl
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3];
+  uint8_t pipe_match_value_bits[4];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[3];
-  if (3) {
-    memset(pipe_match_value_bits, 0, 3);
-    memset(pipe_match_mask_bits, 0, 3);
+  uint8_t pipe_match_mask_bits[4];
+  if (4) {
+    memset(pipe_match_value_bits, 0, 4);
+    memset(pipe_match_mask_bits, 0, 4);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 24;
-  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 32;
+  pipe_match_spec.num_match_bytes = 4;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -17614,16 +17616,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3];
+  uint8_t pipe_match_value_bits[4];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[3];
-  if (3) {
-    memset(pipe_match_value_bits, 0, 3);
-    memset(pipe_match_mask_bits, 0, 3);
+  uint8_t pipe_match_mask_bits[4];
+  if (4) {
+    memset(pipe_match_value_bits, 0, 4);
+    memset(pipe_match_mask_bits, 0, 4);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 24;
-  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 32;
+  pipe_match_spec.num_match_bytes = 4;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[0];
@@ -17664,16 +17666,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_add_with_reset_is_lastclone_
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3];
+  uint8_t pipe_match_value_bits[4];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[3];
-  if (3) {
-    memset(pipe_match_value_bits, 0, 3);
-    memset(pipe_match_mask_bits, 0, 3);
+  uint8_t pipe_match_mask_bits[4];
+  if (4) {
+    memset(pipe_match_value_bits, 0, 4);
+    memset(pipe_match_mask_bits, 0, 4);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 24;
-  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 32;
+  pipe_match_spec.num_match_bytes = 4;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[0];
@@ -26523,16 +26525,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_delete_by_match_spec
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3];
+  uint8_t pipe_match_value_bits[4];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[3];
-  if (3) {
-    memset(pipe_match_value_bits, 0, 3);
-    memset(pipe_match_mask_bits, 0, 3);
+  uint8_t pipe_match_mask_bits[4];
+  if (4) {
+    memset(pipe_match_value_bits, 0, 4);
+    memset(pipe_match_mask_bits, 0, 4);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 24;
-  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 32;
+  pipe_match_spec.num_match_bytes = 4;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -46327,16 +46329,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3];
+  uint8_t pipe_match_value_bits[4];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[3];
-  if (3) {
-    memset(pipe_match_value_bits, 0, 3);
-    memset(pipe_match_mask_bits, 0, 3);
+  uint8_t pipe_match_mask_bits[4];
+  if (4) {
+    memset(pipe_match_value_bits, 0, 4);
+    memset(pipe_match_mask_bits, 0, 4);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 24;
-  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 32;
+  pipe_match_spec.num_match_bytes = 4;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -46399,16 +46401,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_reset_is_lastclo
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3];
+  uint8_t pipe_match_value_bits[4];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[3];
-  if (3) {
-    memset(pipe_match_value_bits, 0, 3);
-    memset(pipe_match_mask_bits, 0, 3);
+  uint8_t pipe_match_mask_bits[4];
+  if (4) {
+    memset(pipe_match_value_bits, 0, 4);
+    memset(pipe_match_mask_bits, 0, 4);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 24;
-  pipe_match_spec.num_match_bytes = 3;
+  pipe_match_spec.num_valid_match_bits = 32;
+  pipe_match_spec.num_match_bytes = 4;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -63667,11 +63669,11 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry
   p4_pd_act_hdl_t act_fn_hdl;
 
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[3] = {0};
-  uint8_t pipe_match_mask_bits[3] = {0};
+  uint8_t pipe_match_value_bits[4] = {0};
+  uint8_t pipe_match_mask_bits[4] = {0};
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 3;
-  pipe_match_spec.num_valid_match_bits = 24;
+  pipe_match_spec.num_match_bytes = 4;
+  pipe_match_spec.num_valid_match_bits = 32;
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
   pipe_match_spec.match_field_validity = 0;
   pipe_match_spec.match_field_validity_mask = 0;
@@ -63693,8 +63695,8 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry
   if (status) return status;
 
   // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 24);
-  // assert(pipe_match_spec.num_match_bytes == 3);
+  // assert(pipe_match_spec.num_valid_match_bits == 32);
+  // assert(pipe_match_spec.num_match_bytes == 4);
   // assert(pipe_match_spec.num_match_validity_fields == 0);
 
   assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
@@ -63714,7 +63716,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry
     break;
   }
 
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 3 > 0);
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 4 > 0);
   if(!is_default_entry)
     unbuild_key_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
@@ -77519,6 +77521,10 @@ p4_pd_netbufferv4_snapshot_capture_trigger_set(
           pd_trig_mask.u.ig.stat_hdr_nodeidx_foreval = htons(pd_trig_mask.u.ig.stat_hdr_nodeidx_foreval);
 #endif
 #ifdef LITTLE_ENDIAN_CALLER
+          pd_trig_spec.u.ig.clone_hdr_clonenum_for_pktloss = htons(pd_trig_spec.u.ig.clone_hdr_clonenum_for_pktloss);
+          pd_trig_mask.u.ig.clone_hdr_clonenum_for_pktloss = htons(pd_trig_mask.u.ig.clone_hdr_clonenum_for_pktloss);
+#endif
+#ifdef LITTLE_ENDIAN_CALLER
           pd_trig_spec.u.ig.clone_hdr_client_udpport = htons(pd_trig_spec.u.ig.clone_hdr_client_udpport);
           pd_trig_mask.u.ig.clone_hdr_client_udpport = htons(pd_trig_mask.u.ig.clone_hdr_client_udpport);
 #endif
@@ -77778,6 +77784,10 @@ p4_pd_netbufferv4_snapshot_capture_trigger_set(
 #ifdef LITTLE_ENDIAN_CALLER
           pd_trig_spec.u.eg.stat_hdr_nodeidx_foreval = htons(pd_trig_spec.u.eg.stat_hdr_nodeidx_foreval);
           pd_trig_mask.u.eg.stat_hdr_nodeidx_foreval = htons(pd_trig_mask.u.eg.stat_hdr_nodeidx_foreval);
+#endif
+#ifdef LITTLE_ENDIAN_CALLER
+          pd_trig_spec.u.eg.clone_hdr_clonenum_for_pktloss = htons(pd_trig_spec.u.eg.clone_hdr_clonenum_for_pktloss);
+          pd_trig_mask.u.eg.clone_hdr_clonenum_for_pktloss = htons(pd_trig_mask.u.eg.clone_hdr_clonenum_for_pktloss);
 #endif
 #ifdef LITTLE_ENDIAN_CALLER
           pd_trig_spec.u.eg.clone_hdr_client_udpport = htons(pd_trig_spec.u.eg.clone_hdr_client_udpport);

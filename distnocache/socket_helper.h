@@ -19,8 +19,8 @@
 #define CLIENT_SOCKET_TIMEOUT_SECS 5 // 5s (for dynamic workload due to server-side disk contention of simulation overhead)
 #define CLIENT_SCAN_SOCKET_TIMEOUT_SECS 5 // 5s
 // for low snapshot latency
-#define SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS 500000 // 0.5s
-#define SWITCHOS_SNAPSHOTCLIENT_FOR_REFLECTOR_TIMEOUT_USECS 500000 // 0.5s
+#define SWITCHOS_POPCLIENT_FOR_REFLECTOR_TIMEOUT_USECS 100000 // 0.1s
+#define SWITCHOS_SNAPSHOTCLIENT_FOR_REFLECTOR_TIMEOUT_USECS 100000 // 0.1s
 #define SWITCHOS_SPECIALCASESERVER_TIMEOUT_USECS 1000 // 1ms
 
 // payload only used by end-hosts -> linux kernel performs ip-level fragmentation

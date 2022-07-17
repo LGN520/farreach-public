@@ -789,7 +789,7 @@
           "default" : 0
         },
         { "name" : "clone_hdr_clonenum_for_pktloss",
-          "type" : "byte",
+          "type" : "i16",
           "required" : true,
           "pointer" : false,
           "custom" : false,

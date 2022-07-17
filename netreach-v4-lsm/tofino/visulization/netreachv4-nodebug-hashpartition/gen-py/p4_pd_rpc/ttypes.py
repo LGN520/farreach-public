@@ -4613,7 +4613,7 @@ class netbufferv4_lastclone_lastscansplit_tbl_match_spec_t:
   thrift_spec = (
     None, # 0
     (1, TType.I16, 'op_hdr_optype', None, None, ), # 1
-    (2, TType.BYTE, 'clone_hdr_clonenum_for_pktloss', None, None, ), # 2
+    (2, TType.I16, 'clone_hdr_clonenum_for_pktloss', None, None, ), # 2
   )
 
   def __init__(self, op_hdr_optype=None, clone_hdr_clonenum_for_pktloss=None,):
@@ -4635,8 +4635,8 @@ class netbufferv4_lastclone_lastscansplit_tbl_match_spec_t:
         else:
           iprot.skip(ftype)
       elif fid == 2:
-        if ftype == TType.BYTE:
-          self.clone_hdr_clonenum_for_pktloss = iprot.readByte();
+        if ftype == TType.I16:
+          self.clone_hdr_clonenum_for_pktloss = iprot.readI16();
         else:
           iprot.skip(ftype)
       else:
@@ -4654,8 +4654,8 @@ class netbufferv4_lastclone_lastscansplit_tbl_match_spec_t:
       oprot.writeI16(self.op_hdr_optype)
       oprot.writeFieldEnd()
     if self.clone_hdr_clonenum_for_pktloss is not None:
-      oprot.writeFieldBegin('clone_hdr_clonenum_for_pktloss', TType.BYTE, 2)
-      oprot.writeByte(self.clone_hdr_clonenum_for_pktloss)
+      oprot.writeFieldBegin('clone_hdr_clonenum_for_pktloss', TType.I16, 2)
+      oprot.writeI16(self.clone_hdr_clonenum_for_pktloss)
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()

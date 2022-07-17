@@ -22,7 +22,7 @@ else
 		sudo arp -s 10.0.1.16 3c:fd:fe:b5:1f:e1
 	fi
 
-	sudo sysctl -w net.core.rmem_max=8388608
+	sudo sysctl -w net.core.rmem_max=16777216
 	sudo sysctl -w net.core.rmem_default=212992
 
 	sudo hugeadm --thp-never

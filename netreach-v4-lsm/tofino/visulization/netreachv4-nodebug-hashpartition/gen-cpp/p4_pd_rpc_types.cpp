@@ -6387,12 +6387,12 @@ void netbufferv4_lastclone_lastscansplit_tbl_match_spec_t::__set_op_hdr_optype(c
   this->op_hdr_optype = val;
 }
 
-void netbufferv4_lastclone_lastscansplit_tbl_match_spec_t::__set_clone_hdr_clonenum_for_pktloss(const int8_t val) {
+void netbufferv4_lastclone_lastscansplit_tbl_match_spec_t::__set_clone_hdr_clonenum_for_pktloss(const int16_t val) {
   this->clone_hdr_clonenum_for_pktloss = val;
 }
 
-const char* netbufferv4_lastclone_lastscansplit_tbl_match_spec_t::ascii_fingerprint = "2F32B8B152B4427223DB9D670291659B";
-const uint8_t netbufferv4_lastclone_lastscansplit_tbl_match_spec_t::binary_fingerprint[16] = {0x2F,0x32,0xB8,0xB1,0x52,0xB4,0x42,0x72,0x23,0xDB,0x9D,0x67,0x02,0x91,0x65,0x9B};
+const char* netbufferv4_lastclone_lastscansplit_tbl_match_spec_t::ascii_fingerprint = "C88FB7958D86460D03E699333A272947";
+const uint8_t netbufferv4_lastclone_lastscansplit_tbl_match_spec_t::binary_fingerprint[16] = {0xC8,0x8F,0xB7,0x95,0x8D,0x86,0x46,0x0D,0x03,0xE6,0x99,0x33,0x3A,0x27,0x29,0x47};
 
 uint32_t netbufferv4_lastclone_lastscansplit_tbl_match_spec_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -6425,8 +6425,8 @@ uint32_t netbufferv4_lastclone_lastscansplit_tbl_match_spec_t::read(::apache::th
         }
         break;
       case 2:
-        if (ftype == ::apache::thrift::protocol::T_BYTE) {
-          xfer += iprot->readByte(this->clone_hdr_clonenum_for_pktloss);
+        if (ftype == ::apache::thrift::protocol::T_I16) {
+          xfer += iprot->readI16(this->clone_hdr_clonenum_for_pktloss);
           isset_clone_hdr_clonenum_for_pktloss = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -6457,8 +6457,8 @@ uint32_t netbufferv4_lastclone_lastscansplit_tbl_match_spec_t::write(::apache::t
   xfer += oprot->writeI16(this->op_hdr_optype);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("clone_hdr_clonenum_for_pktloss", ::apache::thrift::protocol::T_BYTE, 2);
-  xfer += oprot->writeByte(this->clone_hdr_clonenum_for_pktloss);
+  xfer += oprot->writeFieldBegin("clone_hdr_clonenum_for_pktloss", ::apache::thrift::protocol::T_I16, 2);
+  xfer += oprot->writeI16(this->clone_hdr_clonenum_for_pktloss);
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldStop();
@@ -20081,8 +20081,8 @@ void netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::__set_action_desc(con
   this->action_desc = val;
 }
 
-const char* netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::ascii_fingerprint = "D37634C1944DE98B30E4E9C24C64725D";
+const uint8_t netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::binary_fingerprint[16] = {0xD3,0x76,0x34,0xC1,0x94,0x4D,0xE9,0x8B,0x30,0xE4,0xE9,0xC2,0x4C,0x64,0x72,0x5D};
 
 uint32_t netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
