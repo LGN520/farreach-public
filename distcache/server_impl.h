@@ -326,6 +326,10 @@ void *run_server_worker(void * param) {
   int rsp_size = 0;
   char recvbuf[MAX_BUFSIZE];
 
+  struct timespec polling_interrupt_for_blocking;
+  polling_interrupt_for_blocking.tv_sec = 0;
+  polling_interrupt_for_blocking.tc_nsec = 1000; // 1ms = 1000ns
+
   printf("[server.worker %d-%d] ready\n", local_server_logical_idx, global_server_logical_idx);
   transaction_ready_threads++;
 
@@ -454,7 +458,8 @@ void *run_server_worker(void * param) {
 #endif
 					while (is_being_cached) {
 						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
-						usleep(1); // wait for cache population finish
+						//usleep(1); // wait for cache population finish
+						nanosleep(&polling_interrupt_for_blocking, NULL); // wait for cache population finish
 						server_mutex_for_keyset_list[local_server_logical_idx].lock();
 						is_being_cached = (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingcached_keyset_list[local_server_logical_idx].end());
 					}
@@ -473,7 +478,8 @@ void *run_server_worker(void * param) {
 #endif
 					while (is_being_updated) { // being updated
 						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
-						usleep(1); // wait for inswitch value update finish
+						//usleep(1); // wait for inswitch value update finish
+						nanosleep(&polling_interrupt_for_blocking, NULL); // wait for cache population finish
 						server_mutex_for_keyset_list[local_server_logical_idx].lock();
 						is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 					}
@@ -602,7 +608,8 @@ void *run_server_worker(void * param) {
 #endif
 					while (is_being_updated) { // being updated
 						server_mutex_for_keyset_list[local_server_logical_idx].unlock();
-						usleep(1); // wait for inswitch value update finish
+						//usleep(1); // wait for inswitch value update finish
+						nanosleep(&polling_interrupt_for_blocking, NULL); // wait for cache population finish
 						server_mutex_for_keyset_list[local_server_logical_idx].lock();
 						is_being_updated = (server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_key) != server_beingupdated_keyset_list[local_server_logical_idx].end());
 					}
