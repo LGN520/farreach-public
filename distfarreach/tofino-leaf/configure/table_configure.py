@@ -376,9 +376,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: recirculate_tbl (default: nop; size: 2)
+            # Table: recirculate_tbl (default: nop; size: 4)
             print "Configuring recirculate_tbl"
-            for tmpoptype in [PUTREQ, DELREQ]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
                 matchspec0 = distfarreachleaf_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
@@ -601,7 +601,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,
                             ipv4_hdr_dstAddr_prefix_length = 32,
-                            meta_need_recirculate = 0)
+                            meta_need_recirculate = 0) # NOTE: meta.need_recirculate must be 0 for those packets
                     actnspec0 = distfarreachleaf_forward_normal_response_action_spec_t(eport)
                     self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
@@ -1349,46 +1349,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # (2) for response from switch to client, egress port has been set by clone_e2e in egress pipeline
             for tmp_client_physical_idx in range(client_physical_num):
                 tmp_devport = self.client_devports[tmp_client_physical_idx]
-                tmp_client_mac = client_macs[tmp_client_physical_idx]
-                tmp_client_ip = client_ips[tmp_client_physical_idx]
                 tmp_server_mac = server_macs[0]
                 tmp_server_ip = server_ips[0]
-                actnspec0 = distfarreachleaf_update_ipmac_srcport_server2client_action_spec_t(\
-                        macAddr_to_string(tmp_client_mac), \
+                actnspec0 = distfarreachleaf_update_srcipmac_srcport_server2client_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
-                        ipv4Addr_to_i32(tmp_client_ip), \
                         ipv4Addr_to_i32(tmp_server_ip), \
                         server_worker_port_start)
-                matchspec0 = distfarreachleaf_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype = convert_u16_to_i16(GETRES), 
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec1 = distfarreachleaf_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(PUTRES), 
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec2 = distfarreachleaf_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(DELRES),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec3 = distfarreachleaf_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(SCANRES_SPLIT),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec4 = distfarreachleaf_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(WARMUPACK),
-                        eg_intr_md_egress_port = tmp_devport)
-                matchspec5 = distfarreachleaf_update_ipmac_srcport_tbl_match_spec_t(\
-                        op_hdr_optype=convert_u16_to_i16(LOADACK),
-                        eg_intr_md_egress_port = tmp_devport)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec1, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec2, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec3, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec4, actnspec0)
-                self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_server2client(\
-                        self.sess_hdl, self.dev_tgt, matchspec5, actnspec0)
+                for tmpoptype in [GETRES, PUTRES, DELRES, SCANRES_SPLIT, WARMUPACK, LOADACK]:
+                    matchspec0 = distfarreachleaf_update_ipmac_srcport_tbl_match_spec_t(\
+                            op_hdr_optype = convert_u16_to_i16(tmpoptype), 
+                            eg_intr_md_egress_port = tmp_devport)
+                    self.client.update_ipmac_srcport_tbl_table_add_with_update_srcipmac_srcport_server2client(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             # for request from client to server, egress port has been set by partition_tbl in ingress pipeline
             for tmp_server_physical_idx in range(server_physical_num):
                 tmp_devport = self.server_devports[tmp_server_physical_idx]

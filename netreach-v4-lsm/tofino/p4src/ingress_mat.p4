@@ -119,7 +119,7 @@ table recirculate_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 16;
 }
 
 // Stage 1 (need_recirculate = 0)

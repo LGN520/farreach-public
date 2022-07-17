@@ -852,11 +852,9 @@ counter update_ipmac_srcport_counter {
 }
 #endif
 
-action update_ipmac_srcport_server2client(client_mac, server_mac, client_ip, server_ip, server_port) {
+action update_srcipmac_srcport_server2client(server_mac, server_ip, server_port) {
 	modify_field(ethernet_hdr.srcAddr, server_mac);
-	modify_field(ethernet_hdr.dstAddr, client_mac);
 	modify_field(ipv4_hdr.srcAddr, server_ip);
-	modify_field(ipv4_hdr.dstAddr, client_ip);
 	modify_field(udp_hdr.srcPort, server_port);
 }
 
@@ -883,7 +881,7 @@ table update_ipmac_srcport_tbl {
 		eg_intr_md.egress_port: exact;
 	}
 	actions {
-		update_ipmac_srcport_server2client; // focus on dstip and dstmac to corresponding client; use server[0] as srcip and srcmac; use server_worker_port_start as srcport
+		update_srcipmac_srcport_server2client; // NOT change dstip and dstmac; use server[0] as srcip and srcmac; use server_worker_port_start as srcport
 		update_ipmac_srcport_switch2switchos; // focus on dstip and dstmac to reflector; use client[0] as srcip and srcmac; use constant (123) as srcport
 		update_dstipmac_client2server; // focus on dstip and dstmac to corresponding server; NOT change srcip, srcmac, and srcport
 		nop;
