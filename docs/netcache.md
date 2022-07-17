@@ -2,6 +2,9 @@
 
 - Copy from netreach-v4-lsm
 - See [important notes](./netreach-v4-lsm.md) in netreach-v4-lsm.md
++ [IMPORTANT] Discuss with Qun about NetCache implementation issues
+	* Refer to NitroSketch to mention that we implement write-through policy and cache consistency mechanism of NetCache using the same partition strategy as in FarReach
+	* Briefly explain the tricky details in readme of implementation repo (TODO)
 + IMPORTANT NOTE for optype enumeration
 	- We keep the same optype enumeration fo FarReach, NoCache, and NetCache (files: packet_format.h, tofino/main.p4, tofino/common.py, tofino/p4src/parser.p4)
 	- When adding a new optype
@@ -282,6 +285,56 @@
 			+ Remove server.loadfinishserver
 			+ Remove preparefinishclient
 
++ Debug and test NetCache
+	* Pass compilation of P4 and C/C++
+	* Pass correctness test of range partition
+		- Pass testcases of normal requests
+			* Issue: GETREQ_INSWITCH does not become GETREQ
+				- Reason: GETREQ_INSWITCH performs prepare_for_cachepop_tbl, which changes clone_hdr.server_sid
+				- Solution: match both inswitch_hdr.client_sid and clone_hdr.server_sid for GETREQ_INSWITCH in eg_port_forward_tbl
+			* Issue: SCANREQ_SPLIT does not increase split_hdr.cur_scanidx
+				- Reason: although SCANREQ_SPLIT performs process_scanreq_split_tbl to set clone_hdr.server_sid, it performs the default action of prepare_for_cachepop_tbl, which resets clone_hdr.server_sid = 0
+				- Solution: explicitly match SCANREQ_SPLIT to perform nop() in prepare_for_cachepop_tbl to avoid reset
+		- Pass testcases of cache population
+			* Issue: incorrect length of NETCACHE_WARMUPREQ_INSWITCH_POP
+				- Reason: incorrect inswitch_hdr length
+				- Solution: update inswitch_hdr length in update_pktlen_tbl and packet_format.h
+			* Issue: no CACHE_POP_INSWITCH_ACK
+				- Reason: NIC will only receive the packet whose dst.ip/mac = NIC.ip/mac AND src.ip/mac != NIC.ip/mac
+				- Solution: reset src.ip/mac for CACHE_POP_INSWITCH -> fix src.ip/mac issue in update_ipmac_srcport_tbl
+			* Issue: no WARMUPACK
+				- Reason: we do not set udp.srcPort in update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(), and the pkt is dropped by parser/deparser due to NO reserved udp ports
+				- Solution: set udp.srcPort for NETCACHE_WARMUPREQ_INSWITCH_POP in eg_port_forward_tbl
+			* Issue: no duplicate NETCACHE_GETREQ_POP and no GETREQ converted from last NETCACHE_GETREQ_POP
+				- Reason: clone_hdr.server_sid of NETCACHE_GETREQ_POP is reset as 0 due to default action of process_scanreq_split_tbl and prepare_for_cachepop_tbl
+				- [DEPRECATED] Solution: perform nop() in BOTH process_scanreq_split_tbl AND prepare_for_cachepop_tbl for NETCACHE_GETREQ_POP as SCANREQ_SPLIT -> FAIL: clone_hdr.server_sid of NETCACHE_GETREQ_POP is still 0
+				- Reason: split_hdr.globalserveridx and split_hdr.is_clone of NETCACHE_GETREQ_POP is undefined -> value is not sure?
+				- Solution: we only reset clone_hdr.server_sid by default in prepare_for_cachepop_tbl, while process_scanreq_split_tbl only resets meta.remain_scannum by default -> for pkts using server_sid (GETREQ_INSWITCH, SCANREQ_SPLIT, NETCACHE_GETREQ_POP), we explicitly invoken non-default actions in prepare_for_cachepop_tbl to avoid reset
+		- Pass testcases of cache hit
+			* Issue: no NETCACHE_VALUEUPDATE_ACK -> next PUT/DELREQ_SEQ or NETCACHE_PUT/DELREQ_SEQ_CACHED is blocked by beingupdated keyset, and latest_reg is reset as 1 by NETCACHE_VALUEUPDATE repeatedly
+				- Reason: falsely match NETCACHE_WARMUPREQ_INSWITCH for update_netcache_valueudpate_inswitch_to_netcache_valueupdate_ack() in eg_port_forward_tbl
+				- Solution: fix ptf matching error; remove inswitch_hdr when convert NETCACHE_VALUEUPDATE_INSWITCH to NETCACHE_VALUEUPDATE_ACK
+		- Pass testcases of cache eviction
+	* Test dynamic workload of range partition
+		- Fix MAT placement limitation in ingress/egress pipeline
+		- Simply test correctness
+		- Read-only workload:
+			+ 512/1 clients + 4/1 servers: 0.8 MOPS (> NoCache ~0.2 MOPS due to cache hit)
+			+ 1024/2 clients + 8/2 servers: 1.1 MOPS
+		- Write-only workload:
+			+ 512/1 clients + 4/1 servers: 0.07 MOPS (close to NoCache ~0.1 MOPS)
+			+ 1024/2 clients + 8/2 servers: 0.07 MOPS -> due to blocking on beingupdated keyset???
+	* Test dynamic workload of hash partition
+		- Simply test correctness
+		- Read-only workload:
+			+ 1024/2 clients + 8/2 servers: 1.7 MOPS (> NoCache ~0.2 MOPS due to cache hit)
+		- Write-only workload:
+			+ 1024/2 clients + 8/2 servers: 0.18 MOPS (close to NoCache ~0.2 MOPS)
+	* Fix NetCache performance issue under write-only workload if any
+		- 512/1 clients + 4/1 servers: 0.15 MOPS (0.07 MOPS in first 10 secs -> 0.2 MOPS in following 10 secs)
+		- Reason: (1) in-switch cache does not serve PUTREQ; (2) ~1/3 process latency is paid on waiting for in-switch value update
+			+ NOTE: in the first 10 secs, most queries target on hotest keys which incur long wait latency for in-switch value update; while after changing key popularity, most queries target on new hot keys, which are not cached in switch -> no waiting for value update
+
 ## Run
 
 - Hardware configure
@@ -307,8 +360,8 @@
 	+ For example:
 	+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > workloada-load.out`
 	+ `./bin/ycsb.sh run basic -P workloads/workloada -P netbuffer.dat > workloada-run.out`
-	+ `./split_workload load linenum` -> workloada-load-{split_num}/*-*.out
-	+ `./split_workload run linenum` -> workloada-run-{server_num}/*.out
+	+ `./split_workload load linenum` -> workloada-load-{split_num}/\*-\*.out
+	+ `./split_workload run linenum` -> workloada-run-{server_num}/\*.out
 - Change partition method (hash/range partition)
 	+ RANGE_SUPPORT in tofino/netbufferv4.p4
 	+ USE_HASH/RANGE in helper.h
