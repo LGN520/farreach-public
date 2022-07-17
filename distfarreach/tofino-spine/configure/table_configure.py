@@ -457,8 +457,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring ipv4_forward_tbl"
             for tmp_client_physical_idx in range(client_physical_num):
                 ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
-                eport = self.client_devports[tmp_client_physical_idx]
-                tmpsid = self.client_sids[tmp_client_physical_idx]
+                #eport = self.client_devports[tmp_client_physical_idx]
+                #tmpsid = self.client_sids[tmp_client_physical_idx]
+                eport = self.clientleafswitch_devport
+                tmpsid = self.clientleafswitch_sid
                 for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
                     matchspec0 = distfarreachspine_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),

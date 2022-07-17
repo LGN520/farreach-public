@@ -390,7 +390,7 @@ void *run_server_worker(void * param) {
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				get_response_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+				get_response_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif

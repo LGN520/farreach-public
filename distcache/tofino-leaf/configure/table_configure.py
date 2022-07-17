@@ -539,6 +539,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     actnspec0 = distcacheleaf_forward_normal_response_action_spec_t(eport)
                     self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                eport = self.spineswitch_devport
+                tmpsid = self.spineswitch_sid
+                for tmpoptype in [GETRES_SERVER]:
+                    matchspec0 = distcacheleaf_ipv4_forward_tbl_match_spec_t(\
+                            op_hdr_optype = convert_u16_to_i16(tmpoptype),
+                            ipv4_hdr_dstAddr = ipv4addr0,
+                            ipv4_hdr_dstAddr_prefix_length = 32,
+                            meta_need_recirculate = 0) # NOTE: meta.need_recirculate must be 0 for those packets
+                    actnspec0 = distcacheleaf_forward_normal_response_action_spec_t(eport)
+                    self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Stage 4
 
@@ -577,6 +588,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = NETCACHE_VALUEUPDATE)
             self.client.ig_port_forward_tbl_table_add_with_update_netcache_valueupdate_to_netcache_valueupdate_inswitch(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = GETRES_SERVER,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_getres_server_to_getres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline

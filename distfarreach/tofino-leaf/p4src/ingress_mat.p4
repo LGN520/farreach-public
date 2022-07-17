@@ -507,6 +507,11 @@ action update_scanreq_to_scanreq_split() {
 }
 #endif
 
+action update_getres_server_to_getres() {
+	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
+}
+
 @pragma stage 6
 table ig_port_forward_tbl {
 	reads {
@@ -522,6 +527,7 @@ table ig_port_forward_tbl {
 #ifdef RANGE_SUPPORT
 		update_scanreq_to_scanreq_split;
 #endif
+		update_getres_server_to_getres;
 		nop;
 	}
 	default_action: nop();

@@ -492,6 +492,11 @@ action update_netcache_valueupdate_to_netcache_valueupdate_inswitch() {
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }
 
+action update_getres_server_to_getres() {
+	modify_field(op_hdr.optype, GETRES);
+	modify_field(shadowtype_hdr.shadowtype, GETRES);
+}
+
 @pragma stage 8
 table ig_port_forward_tbl {
 	reads {
@@ -506,6 +511,7 @@ table ig_port_forward_tbl {
 #endif
 		update_warmupreq_to_netcache_warmupreq_inswitch;
 		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
+		update_getres_server_to_getres;
 		nop;
 	}
 	default_action: nop();

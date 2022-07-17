@@ -22,6 +22,7 @@ typedef PutRequest<netreach_key_t, val_t> put_request_t;
 typedef DelRequest<netreach_key_t> del_request_t;
 typedef ScanRequest<netreach_key_t> scan_request_t;
 typedef GetResponse<netreach_key_t, val_t> get_response_t;
+typedef GetResponseServer<netreach_key_t, val_t> get_response_server_t;
 typedef PutResponse<netreach_key_t> put_response_t;
 typedef DelResponse<netreach_key_t> del_response_t;
 typedef ScanResponseSplit<netreach_key_t, val_t> scan_response_split_t;
