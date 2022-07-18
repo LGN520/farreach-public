@@ -194,16 +194,13 @@ action update_getreq_spine_to_getreq() {
 	modify_field(op_hdr.optype, GETREQ);
 }
 
-#ifdef RANGE_SUPPORT
-action update_scanreq_to_scanreq_split() {
-	modify_field(op_hdr.optype, SCANREQ_SPLIT);
-	add_header(split_hdr);
-}
-#endif
-
 action update_getres_server_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
+}
+
+action update_scanres_split_server_to_scanres_split() {
+	modify_field(op_hdr.optype, SCANRES_SPLIT);
 }
 
 @pragma stage 5
@@ -213,10 +210,8 @@ table ig_port_forward_tbl {
 	}
 	actions {
 		update_getreq_spine_to_getreq;
-#ifdef RANGE_SUPPORT
-		update_scanreq_to_scanreq_split;
-#endif
 		update_getres_server_to_getres;
+		update_scanres_split_server_to_scanres_split;
 		nop;
 	}
 	default_action: nop();

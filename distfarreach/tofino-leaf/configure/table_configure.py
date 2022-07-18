@@ -652,7 +652,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 eport = self.spineswitch_devport
                 tmpsid = self.spineswitch_sid
-                for tmpoptype in [GETRES_SERVER]:
+                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER]:
                     matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,
@@ -701,16 +701,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_delreq_to_delreq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            if RANGE_SUPPORT:
-                matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                        op_hdr_optype = SCANREQ,
-                        meta_need_recirculate = 0)
-                self.client.ig_port_forward_tbl_table_add_with_update_scanreq_to_scanreq_split(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETRES_SERVER,
                     meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_getres_server_to_getres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = SCANRES_SPLIT_SERVER,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_scanres_split_server_to_scanres_split(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline

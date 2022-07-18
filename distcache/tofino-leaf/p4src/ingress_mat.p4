@@ -464,13 +464,6 @@ action update_delreq_to_delreq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
-#ifdef RANGE_SUPPORT
-action update_scanreq_to_scanreq_split() {
-	modify_field(op_hdr.optype, SCANREQ_SPLIT);
-	add_header(split_hdr);
-}
-#endif
-
 action update_warmupreq_to_netcache_warmupreq_inswitch() {
 	modify_field(op_hdr.optype, NETCACHE_WARMUPREQ_INSWITCH);
 	modify_field(shadowtype_hdr.shadowtype, NETCACHE_WARMUPREQ_INSWITCH);
@@ -496,6 +489,10 @@ action update_getres_server_to_getres() {
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 }
 
+action update_scanres_split_server_to_scanres_split() {
+	modify_field(op_hdr.optype, SCANRES_SPLIT);
+}
+
 @pragma stage 8
 table ig_port_forward_tbl {
 	reads {
@@ -505,12 +502,10 @@ table ig_port_forward_tbl {
 		update_getreq_spine_to_getreq_inswitch;
 		update_putreq_to_putreq_inswitch;
 		update_delreq_to_delreq_inswitch;
-#ifdef RANGE_SUPPORT
-		update_scanreq_to_scanreq_split;
-#endif
 		update_warmupreq_to_netcache_warmupreq_inswitch;
 		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		update_getres_server_to_getres;
+		update_scanres_split_server_to_scanres_split;
 		nop;
 	}
 	default_action: nop();

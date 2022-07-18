@@ -743,6 +743,15 @@ bool ScanResponseSplit<key_t, val_t>::get_srcswitchid_conversion() {
 	return true;
 }
 
+// ScanResponseSplitServer
+
+template<class key_t, class val_t>
+ScanResponseSplitServer<key_t, val_t>::ScanResponseSplitServer(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t cur_scanswitchidx, uint16_t max_scanswitchnum, uint16_t nodeidx_foreval, int snapshotid, int32_t pairnum, std::vector<std::pair<key_t, snapshot_record_t>> pairs) 
+	: ScanResponseSplit<key_t, val_t>(key, endkey, cur_scanidx, max_scannum, cur_scanswitchidx, max_scanswitchnum, nodeidx_foreval, snapshotid, pairnum, pairs)
+{	
+	this->_type = static_cast<optype_t>(PacketType::SCANRES_SPLIT_SERVER);
+}
+
 // GetRequestPOP
 
 template<class key_t>

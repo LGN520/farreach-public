@@ -89,6 +89,7 @@
 #define NETCACHE_VALUEUPDATE_ACK 0x0190
 // For distributed extension
 #define GETREQ_SPINE 0x0200
+#define SCANRES_SPLIT_SERVER 0x0210
 
 #ifndef DEBUG
 

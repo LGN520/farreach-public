@@ -495,16 +495,13 @@ action update_delreq_to_delreq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
-#ifdef RANGE_SUPPORT
-action update_scanreq_to_scanreq_split() {
-	modify_field(op_hdr.optype, SCANREQ_SPLIT);
-	add_header(split_hdr);
-}
-#endif
-
 action update_getres_server_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
+}
+
+action update_scanres_split_server_to_scanres_split() {
+	modify_field(op_hdr.optype, SCANRES_SPLIT);
 }
 
 @pragma stage 6
@@ -519,10 +516,8 @@ table ig_port_forward_tbl {
 		update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
 		update_putreq_to_putreq_inswitch;
 		update_delreq_to_delreq_inswitch;
-#ifdef RANGE_SUPPORT
-		update_scanreq_to_scanreq_split;
-#endif
 		update_getres_server_to_getres;
+		update_scanres_split_server_to_scanres_split;
 		nop;
 	}
 	default_action: nop();

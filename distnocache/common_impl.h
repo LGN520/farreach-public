@@ -26,6 +26,7 @@ typedef GetResponseServer<netreach_key_t, val_t> get_response_server_t;
 typedef PutResponse<netreach_key_t> put_response_t;
 typedef DelResponse<netreach_key_t> del_response_t;
 typedef ScanResponseSplit<netreach_key_t, val_t> scan_response_split_t;
+typedef ScanResponseSplitServer<netreach_key_t, val_t> scan_response_split_server_t;
 typedef GetRequestPOP<netreach_key_t> get_request_pop_t;
 typedef GetRequestNLatest<netreach_key_t> get_request_nlatest_t;
 typedef GetResponseLatestSeq<netreach_key_t, val_t> get_response_latest_seq_t;
