@@ -437,6 +437,15 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	begin += STAT_PADDING_BYTES;
 }
 
+// PutResponseServer
+
+template<class key_t>
+PutResponseServer<key_t>::PutResponseServer(key_t key, bool stat, uint16_t nodeidx_foreval) 
+	: PutResponse<key_t>(key, stat, nodeidx_foreval)
+{	
+	this->_type = optype_t(packet_type_t::PUTRES_SERVER);
+}
+
 // DelResponse
 
 template<class key_t>
@@ -498,6 +507,15 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);
 	begin += sizeof(uint16_t);
 	begin += STAT_PADDING_BYTES;
+}
+
+// DelResponseServer
+
+template<class key_t>
+DelResponseServer<key_t>::DelResponseServer(key_t key, bool stat, uint16_t nodeidx_foreval) 
+	: DelResponse<key_t>(key, stat, nodeidx_foreval)
+{	
+	this->_type = optype_t(packet_type_t::DELRES_SERVER);
 }
 
 // ScanResponseSplit

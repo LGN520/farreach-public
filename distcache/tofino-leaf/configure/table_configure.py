@@ -593,7 +593,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 eport = self.spineswitch_devport
                 tmpsid = self.spineswitch_sid
-                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER]:
+                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER]:
                     matchspec0 = distcacheleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,
@@ -645,6 +645,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype = SCANRES_SPLIT_SERVER,
                     meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_scanres_split_server_to_scanres_split(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = PUTRES_SERVER,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_putres_server_to_putres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = DELRES_SERVER,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_delres_server_to_delres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline
@@ -1542,7 +1552,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         # size: 4
                                         if is_hot == 0 and is_report == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0:
                                             matchspec0 = distcacheleaf_eg_port_forward_tbl_match_spec_t(\
-                                                op_hdr_optype = PUTREQ_INSWITCH,
+                                                op_hdr_optype = PUTREQ_SEQ_INSWITCH,
                                                 inswitch_hdr_is_cached = is_cached,
                                                 meta_is_hot = is_hot,
                                                 meta_is_report = is_report,
@@ -1553,8 +1563,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                 clone_hdr_server_sid = tmp_server_sid)
                                             if is_cached == 0:
-                                                # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
-                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
+                                                # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ to server
+                                                self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                             elif is_cached == 1:
                                                 # Update PUTREQ_INSWITCH as NETCACHE_PUTREQ_SEQ_CACHED to server
@@ -1564,7 +1574,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         # size: 4
                                         if is_hot == 0 and is_report == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and tmp_server_sid == 0:
                                             matchspec0 = distcacheleaf_eg_port_forward_tbl_match_spec_t(\
-                                                op_hdr_optype = DELREQ_INSWITCH,
+                                                op_hdr_optype = DELREQ_SEQ_INSWITCH,
                                                 inswitch_hdr_is_cached = is_cached,
                                                 meta_is_hot = is_hot,
                                                 meta_is_report = is_report,
@@ -1575,8 +1585,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                 clone_hdr_server_sid = tmp_server_sid)
                                             if is_cached == 0:
-                                                # Update DELREQ_INSWITCH as DELREQ_SEQ to server
-                                                self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq(\
+                                                # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ to server
+                                                self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                             elif is_cached == 1:
                                                 # Update DELREQ_INSWITCH as NETCACHE_DELREQ_SEQ_CACHED to server
@@ -1831,7 +1841,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             # size: 4
                                             if is_hot == 0 and is_report == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                 matchspec0 = distcacheleaf_eg_port_forward_tbl_match_spec_t(\
-                                                    op_hdr_optype = PUTREQ_INSWITCH,
+                                                    op_hdr_optype = PUTREQ_SEQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
                                                     meta_is_report = is_report,
@@ -1843,8 +1853,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_is_last_scansplit = is_last_scansplit,
                                                     clone_hdr_server_sid = tmp_server_sid)
                                                 if is_cached == 0:
-                                                    # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
+                                                    # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ to server
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                 elif is_cached == 1:
                                                     # Update PUTREQ_INSWITCH as NETCACHE_PUTREQ_SEQ_CACHED to server
@@ -1855,7 +1865,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             # size: 4
                                             if is_hot == 0 and is_report == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                 matchspec0 = distcacheleaf_eg_port_forward_tbl_match_spec_t(\
-                                                    op_hdr_optype = DELREQ_INSWITCH,
+                                                    op_hdr_optype = DELREQ_SEQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
                                                     meta_is_report = is_report,
@@ -1867,8 +1877,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_is_last_scansplit = is_last_scansplit,
                                                     clone_hdr_server_sid = tmp_server_sid)
                                                 if is_cached == 0:
-                                                    # Update DELREQ_INSWITCH as DELREQ_SEQ to server
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq(\
+                                                    # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ to server
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                 elif is_cached == 1:
                                                     # Update DELREQ_INSWITCH as NETCACHE_DELREQ_SEQ_CACHED to server

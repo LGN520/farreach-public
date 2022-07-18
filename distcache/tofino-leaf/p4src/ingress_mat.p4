@@ -491,6 +491,16 @@ action update_scanres_split_server_to_scanres_split() {
 	modify_field(op_hdr.optype, SCANRES_SPLIT);
 }
 
+action update_putres_server_to_putres() {
+	modify_field(op_hdr.optype, PUTRES);
+	modify_field(shadowtype_hdr.shadowtype, PUTRES);
+}
+
+action update_delres_server_to_delres() {
+	modify_field(op_hdr.optype, DELRES);
+	modify_field(shadowtype_hdr.shadowtype, DELRES);
+}
+
 @pragma stage 8
 table ig_port_forward_tbl {
 	reads {
@@ -504,6 +514,8 @@ table ig_port_forward_tbl {
 		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		update_getres_server_to_getres;
 		update_scanres_split_server_to_scanres_split;
+		update_putres_server_to_putres;
+		update_delres_server_to_delres;
 		nop;
 	}
 	default_action: nop();

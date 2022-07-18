@@ -652,7 +652,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 eport = self.spineswitch_devport
                 tmpsid = self.spineswitch_sid
-                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER]:
+                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER]:
                     matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,
@@ -710,6 +710,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype = SCANRES_SPLIT_SERVER,
                     meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_scanres_split_server_to_scanres_split(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = PUTRES_SERVER,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_putres_server_to_putres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = DELRES_SERVER,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_delres_server_to_delres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline
@@ -1830,7 +1840,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             # size: 512*client_physical_num=1024 < 512*8 = 4096
                                             if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0:
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
-                                                    op_hdr_optype = PUTREQ_INSWITCH,
+                                                    op_hdr_optype = PUTREQ_SEQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
                                                     validvalue_hdr_validvalue = validvalue,
@@ -1857,8 +1867,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_pop_seq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         elif is_hot == 0:
-                                                            # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
+                                                            # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                 elif is_cached == 1:
                                                     if validvalue == 0 or validvalue == 3:
@@ -1867,8 +1877,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_case3(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         elif snapshot_flag == 0:
-                                                            # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
+                                                            # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                     elif validvalue == 1:
                                                         if snapshot_flag == 1 and is_case1 == 0:
@@ -1881,17 +1891,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 actnspec0 = distfarreachleaf_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         else:
-                                                            #if is_wrong_pipeline == 0:
-                                                            #    # Update PUTREQ_INSWITCH as PUTRES to client
-                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres(\
-                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            #elif is_wrong_pipeline == 1:
-                                                            #    # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
-                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
-                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
-                                                            actnspec0 = distfarreachleaf_update_putreq_inswitch_to_putres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
+                                                            # Update PUTREQ_SEQ_INSWITCH as PUTRES to client by mirroring
+                                                            actnspec0 = distfarreachleaf_update_putreq_seq_inswitch_to_putres_by_mirroring_action_spec_t(tmp_client_sid)
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for PUTREQ_SEQ_INSWITCH_CASE1
                                             # size: 4*client_physical_num=8 < 4*8=32
@@ -1930,7 +1932,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             # size: 256*client_physical_num=512 < 256*8=2048
                                             if is_hot == 0 and is_lastclone_for_pktloss == 0 and tmp_client_sid != 0:
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
-                                                    op_hdr_optype = DELREQ_INSWITCH,
+                                                    op_hdr_optype = DELREQ_SEQ_INSWITCH,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
                                                     validvalue_hdr_validvalue = validvalue,
@@ -1947,8 +1949,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_case3(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                     elif snapshot_flag == 0:
-                                                        # Update DELREQ_INSWITCH as DELREQ_SEQ to server
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq(\
+                                                        # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ to server
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                 elif is_cached == 1:
                                                     if validvalue == 0 or validvalue == 3:
@@ -1957,8 +1959,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_case3(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         elif snapshot_flag == 0:
-                                                            # Update DELREQ_INSWITCH as DELREQ_SEQ to server
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq(\
+                                                            # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                     elif validvalue == 1:
                                                         if snapshot_flag == 1 and is_case1 == 0:
@@ -1971,17 +1973,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 actnspec0 = distfarreachleaf_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         else:
-                                                            #if is_wrong_pipeline == 0:
-                                                            #    # Update DELREQ_INSWITCH as DELRES to client
-                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres(\
-                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            #elif is_wrong_pipeline == 1:
-                                                            #    # Update DELREQ_INSWITCH as DELRES to client by mirroring
-                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
-                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            # Update DELREQ_INSWITCH as DELRES to client by mirroring
-                                                            actnspec0 = distfarreachleaf_update_delreq_inswitch_to_delres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
+                                                            # Update DELREQ_SEQ_INSWITCH as DELRES to client by mirroring
+                                                            actnspec0 = distfarreachleaf_update_delreq_seq_inswitch_to_delres_by_mirroring_action_spec_t(tmp_client_sid)
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for DELREQ_SEQ_INSWITCH_CASE1
                                             # size: 16*client_physical_num=32 < 16*8=128
@@ -2495,7 +2489,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     # size: 512*client_physical_num=1024 < 512*8 = 4096
                                                     if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
-                                                            op_hdr_optype = PUTREQ_INSWITCH,
+                                                            op_hdr_optype = PUTREQ_SEQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
                                                             validvalue_hdr_validvalue = validvalue,
@@ -2524,8 +2518,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_pop_seq(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 elif is_hot == 0:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
+                                                                    # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ to server
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                         elif is_cached == 1:
                                                             if validvalue == 0 or validvalue == 3:
@@ -2534,8 +2528,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_case3(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 elif snapshot_flag == 0:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_SEQ to server
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq(\
+                                                                    # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ to server
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_seq(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                             elif validvalue == 1:
                                                                 if snapshot_flag == 1 and is_case1 == 0:
@@ -2548,17 +2542,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                         actnspec0 = distfarreachleaf_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                                 else:
-                                                                    #if is_wrong_pipeline == 0:
-                                                                    #    # Update PUTREQ_INSWITCH as PUTRES to client
-                                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres(\
-                                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    #elif is_wrong_pipeline == 1:
-                                                                    #    # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
-                                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
-                                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
-                                                                    actnspec0 = distfarreachleaf_update_putreq_inswitch_to_putres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
+                                                                    # Update PUTREQ_SEQ_INSWITCH as PUTRES to client by mirroring
+                                                                    actnspec0 = distfarreachleaf_update_putreq_seq_inswitch_to_putres_by_mirroring_action_spec_t(tmp_client_sid)
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putres_by_mirroring(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for PUTREQ_SEQ_INSWITCH_CASE1
                                                     # is_last_scansplit and tmp_server_sid must be 0
@@ -2601,7 +2587,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     # size: 256*client_physical_num=512 < 256*8=2048
                                                     if is_hot == 0 and is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
-                                                            op_hdr_optype = DELREQ_INSWITCH,
+                                                            op_hdr_optype = DELREQ_SEQ_INSWITCH,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
                                                             validvalue_hdr_validvalue = validvalue,
@@ -2620,8 +2606,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_case3(\
                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                                             elif snapshot_flag == 0:
-                                                                # Update DELREQ_INSWITCH as DELREQ_SEQ to server
-                                                                self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq(\
+                                                                # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ to server
+                                                                self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq(\
                                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                                         elif is_cached == 1:
                                                             if validvalue == 0 or validvalue == 3:
@@ -2630,8 +2616,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_case3(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 elif snapshot_flag == 0:
-                                                                    # Update DELREQ_INSWITCH as DELREQ_SEQ to server
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq(\
+                                                                    # Update DELREQ_SEQ_INSWITCH as DELREQ_SEQ to server
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delreq_seq(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                             elif validvalue == 1:
                                                                 if snapshot_flag == 1 and is_case1 == 0:
@@ -2644,17 +2630,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                         actnspec0 = distfarreachleaf_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                                 else:
-                                                                    #if is_wrong_pipeline == 0:
-                                                                    #    # Update DELREQ_INSWITCH as DELRES to client
-                                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres(\
-                                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    #elif is_wrong_pipeline == 1:
-                                                                    #    # Update DELREQ_INSWITCH as DELRES to client by mirroring
-                                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
-                                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    # Update DELREQ_INSWITCH as DELRES to client by mirroring
-                                                                    actnspec0 = distfarreachleaf_update_delreq_inswitch_to_delres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
+                                                                    # Update DELREQ_SEQ_INSWITCH as DELRES to client by mirroring
+                                                                    actnspec0 = distfarreachleaf_update_delreq_seq_inswitch_to_delres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_to_delres_by_mirroring(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for DELREQ_SEQ_INSWITCH_CASE1
                                                     # is_last_scansplit and tmp_server_sid must be 0

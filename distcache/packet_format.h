@@ -44,7 +44,7 @@ enum class PacketType {
 	PUTREQ_SEQ_INSWITCH=0x0007,
 	GETREQ_INSWITCH=0x0004, DELREQ_INSWITCH=0x0014, CACHE_EVICT_LOADFREQ_INSWITCH=0x0024, CACHE_EVICT_LOADDATA_INSWITCH=0x0034, LOADSNAPSHOTDATA_INSWITCH=0x0044, SETVALID_INSWITCH=0x0054, NETCACHE_WARMUPREQ_INSWITCH=0x0064, NETCACHE_WARMUPREQ_INSWITCH_POP=0x0074,
 	DELREQ_SEQ=0x0002, DELREQ_SEQ_CASE3=0x0012, NETCACHE_DELREQ_SEQ_CACHED=0x0022,
-	PUTRES=0x0008, DELRES=0x0018,
+	PUTRES=0x0008, DELRES=0x0018, PUTRES_SERVER=0x0028, DELRES_SERVER=0x0038,
 	WARMUPREQ=0x0000, SCANREQ=0x0010, SCANREQ_SPLIT=0x0020, GETREQ=0x0030, DELREQ=0x0040, GETREQ_POP=0x0050, GETREQ_NLATEST=0x0060, CACHE_POP_INSWITCH_ACK=0x0070, SCANRES_SPLIT=0x0080, CACHE_POP=0x0090, CACHE_EVICT=0x00a0, CACHE_EVICT_ACK=0x00b0, CACHE_EVICT_CASE2=0x00c0, WARMUPACK=0x00d0, LOADACK=0x00e0, CACHE_POP_ACK=0x00f0, CACHE_EVICT_LOADFREQ_INSWITCH_ACK=0x0100, SETVALID_INSWITCH_ACK=0x0110, NETCACHE_GETREQ_POP=0x0120, NETCACHE_CACHE_POP=0x0130, NETCACHE_CACHE_POP_ACK=0x0140, NETCACHE_CACHE_POP_FINISH=0x0150, NETCACHE_CACHE_POP_FINISH_ACK=0x0160, NETCACHE_CACHE_EVICT=0x0170, NETCACHE_CACHE_EVICT_ACK=0x0180, NETCACHE_VALUEUPDATE_ACK=0x0190, GETREQ_SPINE=0x0200, SCANRES_SPLIT_SERVER=0x0210
 };
 /*enum class PacketType {
@@ -197,6 +197,12 @@ class PutResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 };
 
 template<class key_t>
+class PutResponseServer : public PutResponse<key_t> { // ophdr + shadowtype + stat_hdr
+	public:
+		PutResponseServer(key_t key, bool stat, uint16_t nodeidx_foreval);
+};
+
+template<class key_t>
 class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 	public: 
 		DelResponse(key_t key, bool stat, uint16_t nodeidx_foreval);
@@ -212,6 +218,12 @@ class DelResponse : public Packet<key_t> { // ophdr + shadowtype + stat_hdr
 	private:
 		bool _stat;
 		uint16_t _nodeidx_foreval;
+};
+
+template<class key_t>
+class DelResponseServer : public DelResponse<key_t> { // ophdr + shadowtype + stat_hdr
+	public:
+		DelResponseServer(key_t key, bool stat, uint16_t nodeidx_foreval);
 };
 
 template<class key_t, class val_t>

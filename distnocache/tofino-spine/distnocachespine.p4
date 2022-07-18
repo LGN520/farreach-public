@@ -63,6 +63,8 @@
 // 0b1000
 #define PUTRES 0x0008
 #define DELRES 0x0018
+#define PUTRES_SERVER 0x0028
+#define DELRES_SERVER 0x0038
 // 0b0000
 #define WARMUPREQ 0x0000
 #define SCANREQ 0x0010
