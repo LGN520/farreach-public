@@ -311,61 +311,17 @@ action update_putreq_inswitch_to_putreq_pop_seq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-/*action update_putreq_inswitch_to_putres() {
+action update_putreq_inswitch_to_putres_by_mirroring(client_sid) {
 	modify_field(op_hdr.optype, PUTRES);
 	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
-	remove_header(inswitch_hdr);
-	remove_header(vallen_hdr);
-	remove_header(val1_hdr);
-	remove_header(val2_hdr);
-	remove_header(val3_hdr);
-	remove_header(val4_hdr);
-	remove_header(val5_hdr);
-	remove_header(val6_hdr);
-	remove_header(val7_hdr);
-	remove_header(val8_hdr);
-	remove_header(val9_hdr);
-	remove_header(val10_hdr);
-	remove_header(val11_hdr);
-	remove_header(val12_hdr);
-	remove_header(val13_hdr);
-	remove_header(val14_hdr);
-	remove_header(val15_hdr);
-	remove_header(val16_hdr);
-	add_header(stat_hdr);
-
-	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
-}*/
-
-action update_putreq_inswitch_to_putres_by_mirroring(client_sid, server_port) {
-	modify_field(op_hdr.optype, PUTRES);
-	modify_field(shadowtype_hdr.shadowtype, PUTRES);
-	modify_field(stat_hdr.stat, 1);
-	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-	modify_field(udp_hdr.srcPort, server_port);
+	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
+	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
 	remove_header(inswitch_hdr);
-	/*remove_header(vallen_hdr);
-	remove_header(val1_hdr);
-	remove_header(val2_hdr);
-	remove_header(val3_hdr);
-	remove_header(val4_hdr);
-	remove_header(val5_hdr);
-	remove_header(val6_hdr);
-	remove_header(val7_hdr);
-	remove_header(val8_hdr);
-	remove_header(val9_hdr);
-	remove_header(val10_hdr);
-	remove_header(val11_hdr);
-	remove_header(val12_hdr);
-	remove_header(val13_hdr);
-	remove_header(val14_hdr);
-	remove_header(val15_hdr);
-	remove_header(val16_hdr);*/
 	add_header(stat_hdr);
 
 	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
@@ -502,24 +458,14 @@ action update_delreq_inswitch_to_delreq_seq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-/*action update_delreq_inswitch_to_delres() {
+action update_delreq_inswitch_to_delres_by_mirroring(client_sid) {
 	modify_field(op_hdr.optype, DELRES);
 	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
-	remove_header(inswitch_hdr);
-	add_header(stat_hdr);
-
-	modify_field(eg_intr_md.egress_port, inswitch_hdr.eport_for_res);
-}*/
-
-action update_delreq_inswitch_to_delres_by_mirroring(client_sid, server_port) {
-	modify_field(op_hdr.optype, DELRES);
-	modify_field(shadowtype_hdr.shadowtype, DELRES);
-	modify_field(stat_hdr.stat, 1);
-	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
-	modify_field(udp_hdr.srcPort, server_port);
+	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
+	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
 	remove_header(inswitch_hdr);
@@ -774,7 +720,6 @@ table eg_port_forward_tbl {
 		//forward_cache_pop_inswitch_ack; // last clone of CACHE_POP_INSWITCH_ACK
 		update_putreq_inswitch_to_putreq_seq;
 		update_putreq_inswitch_to_putreq_pop_seq;
-		//update_putreq_inswitch_to_putres;
 		update_putreq_inswitch_to_putres_by_mirroring;
 		update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
 		forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
@@ -783,7 +728,6 @@ table eg_port_forward_tbl {
 		update_putreq_inswitch_to_putreq_seq_case3;
 		update_putreq_inswitch_to_putreq_pop_seq_case3;
 		update_delreq_inswitch_to_delreq_seq;
-		//update_delreq_inswitch_to_delres;
 		update_delreq_inswitch_to_delres_by_mirroring;
 		update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
 		forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;

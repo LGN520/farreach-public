@@ -1611,16 +1611,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 actnspec0 = distfarreachspine_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         else:
-                                                            #if is_wrong_pipeline == 0:
-                                                            #    # Update PUTREQ_INSWITCH as PUTRES to client
-                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres(\
-                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            #elif is_wrong_pipeline == 1:
-                                                            #    # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
-                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
-                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
                                                             # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
-                                                            actnspec0 = distfarreachspine_update_putreq_inswitch_to_putres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
+                                                            actnspec0 = distfarreachspine_update_putreq_inswitch_to_putres_by_mirroring_action_spec_t(tmp_client_sid)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for PUTREQ_SEQ_INSWITCH_CASE1
@@ -1701,16 +1693,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 actnspec0 = distfarreachspine_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                         else:
-                                                            #if is_wrong_pipeline == 0:
-                                                            #    # Update DELREQ_INSWITCH as DELRES to client
-                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres(\
-                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                            #elif is_wrong_pipeline == 1:
-                                                            #    # Update DELREQ_INSWITCH as DELRES to client by mirroring
-                                                            #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
-                                                            #            self.sess_hdl, self.dev_tgt, matchspec0)
                                                             # Update DELREQ_INSWITCH as DELRES to client by mirroring
-                                                            actnspec0 = distfarreachspine_update_delreq_inswitch_to_delres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
+                                                            actnspec0 = distfarreachspine_update_delreq_inswitch_to_delres_by_mirroring_action_spec_t(tmp_client_sid)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for DELREQ_SEQ_INSWITCH_CASE1
@@ -2278,16 +2262,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                         actnspec0 = distfarreachspine_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                                 else:
-                                                                    #if is_wrong_pipeline == 0:
-                                                                    #    # Update PUTREQ_INSWITCH as PUTRES to client
-                                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres(\
-                                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    #elif is_wrong_pipeline == 1:
-                                                                    #    # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
-                                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
-                                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
                                                                     # Update PUTREQ_INSWITCH as PUTRES to client by mirroring
-                                                                    actnspec0 = distfarreachspine_update_putreq_inswitch_to_putres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
+                                                                    actnspec0 = distfarreachspine_update_putreq_inswitch_to_putres_by_mirroring_action_spec_t(tmp_client_sid)
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putres_by_mirroring(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for PUTREQ_SEQ_INSWITCH_CASE1
@@ -2374,16 +2350,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                         actnspec0 = distfarreachspine_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                                 else:
-                                                                    #if is_wrong_pipeline == 0:
-                                                                    #    # Update DELREQ_INSWITCH as DELRES to client
-                                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres(\
-                                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
-                                                                    #elif is_wrong_pipeline == 1:
-                                                                    #    # Update DELREQ_INSWITCH as DELRES to client by mirroring
-                                                                    #    self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
-                                                                    #            self.sess_hdl, self.dev_tgt, matchspec0)
                                                                     # Update DELREQ_INSWITCH as DELRES to client by mirroring
-                                                                    actnspec0 = distfarreachspine_update_delreq_inswitch_to_delres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
+                                                                    actnspec0 = distfarreachspine_update_delreq_inswitch_to_delres_by_mirroring_action_spec_t(tmp_client_sid)
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_delres_by_mirroring(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                                     # is_cached=1 (trigger CASE1 only if is_cached=1, inherited from clone_e2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, snapshot_flag=1, is_case1 should be 0 for DELREQ_SEQ_INSWITCH_CASE1

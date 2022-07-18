@@ -12,7 +12,8 @@
 // (2) scan/split: specific value (X + 0b0000); not parsed optypes: X + 0b0000
 // op_hdr + vallen&value + shadowtype (0b0001): PUTREQ, WARMUPREQ (deprecated), LOADREQ
 // op_hdr + vallen&value + shadowtype + seq (0b0011): PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, NETCACHE_PUTREQ_SEQ_CACHED
-// op_hdr + vallen&value + shadowtype + seq + inswitch_hdr (0b0111): NONE
+// op_hdr + shadowtype + seq + inswitch_hdr (0b0110): DELREQ_SEQ_INSWITCH
+// op_hdr + vallen&value + shadowtype + seq + inswitch_hdr (0b0111): PUTREQ_SEQ_INSWITCH
 // op_hdr + vallen&value + shadowtype + seq + inswitch_hdr + stat (0b1111) (XXX_CASE1 w/ clone_hdr): GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, LOADSNAPSHOTDATA_INSWITCH_ACK, CACHE_POP_INSWITC, NETCACHE_VALUEUPDATE_INSWITCHH
 // op_hdr + vallen&value + shadowtype + seq + stat (0b1011): GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, CACHE_EVICT_LOADDATA_INSWITCH_ACK, NETCACHE_VALUEUPDATE
 // op_hdr + vallen&value + shadowtype + stat (0b1001): GETRES, GETRES_SERVER

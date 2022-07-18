@@ -310,7 +310,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             if RANGE_SUPPORT == False:
                 # Table: hash_for_partition_tbl (default: nop; size: 4)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ_SPINE, PUTREQ, DELREQ, LOADREQ]:
+                for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, DELREQ_SEQ, LOADREQ_SPINE]:
                     matchspec0 = distnocacheleaf_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype))
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\

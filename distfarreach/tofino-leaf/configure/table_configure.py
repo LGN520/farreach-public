@@ -692,14 +692,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres_deleted_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = PUTREQ,
+                    op_hdr_optype = PUTREQ_SEQ,
                     meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_putreq_to_putreq_inswitch(\
+            self.client.ig_port_forward_tbl_table_add_with_update_putreq_seq_to_putreq_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = DELREQ,
+                    op_hdr_optype = DELREQ_SEQ,
                     meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_delreq_to_delreq_inswitch(\
+            self.client.ig_port_forward_tbl_table_add_with_update_delreq_seq_to_delreq_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = GETRES_SERVER,
@@ -720,7 +720,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             cm_hashnum = 4
             for i in range(1, cm_hashnum+1):
                 print "Configuring access_cm{}_tbl".format(i)
-                for tmpoptype in [GETREQ_INSWITCH, PUTREQ_INSWITCH]:
+                for tmpoptype in [GETREQ_INSWITCH, PUTREQ_SEQ_INSWITCH]:
                     matchspec0 = eval("distfarreachleaf_access_cm{}_tbl_match_spec_t".format(i))(\
                             op_hdr_optype = tmpoptype,
                             inswitch_hdr_is_sampled = 1,
@@ -814,7 +814,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_cache_frequency_tbl (default: nop; size: 10)
             print "Configuring access_cache_frequency_tbl"
-            for tmpoptype in [GETREQ_INSWITCH, PUTREQ_INSWITCH]:
+            for tmpoptype in [GETREQ_INSWITCH, PUTREQ_SEQ_INSWITCH]:
                 matchspec0 = distfarreachleaf_access_cache_frequency_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         inswitch_hdr_is_sampled = 1,
@@ -838,7 +838,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: access_validvalue_tbl (default: reset_meta_validvalue; size: 7)
             print "Configuring access_validvalue_tbl"
-            for tmpoptype in [GETREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+            for tmpoptype in [GETREQ_INSWITCH, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
                 matchspec0 = distfarreachleaf_access_validvalue_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         inswitch_hdr_is_cached = 1)
@@ -856,7 +856,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: save_client_info_tbl (default: nop; size: 4)
             print "Configuring save_client_info_tbl"
-            for tmpoptype in[GETREQ_INSWITCH, PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+            for tmpoptype in[GETREQ_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
                 matchspec0 = distfarreachleaf_save_client_info_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype)
                 self.client.save_client_info_tbl_table_add_with_save_client_info(\
@@ -881,7 +881,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         if is_cached == 1 and validvalue == 1:
                             self.client.access_latest_tbl_table_add_with_set_and_get_latest(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
-                    for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+                    for tmpoptype in [PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
                         matchspec0 = distfarreachleaf_access_latest_tbl_match_spec_t(\
                                 op_hdr_optype = tmpoptype,
                                 inswitch_hdr_is_cached = is_cached,
@@ -935,7 +935,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.client.access_deleted_tbl_table_add_with_set_and_get_deleted(\
                                         self.sess_hdl, self.dev_tgt, matchspec0)
                             matchspec0 = distfarreachleaf_access_deleted_tbl_match_spec_t(\
-                                    op_hdr_optype = PUTREQ_INSWITCH,
+                                    op_hdr_optype = PUTREQ_SEQ_INSWITCH,
                                     inswitch_hdr_is_cached = is_cached,
                                     validvalue_hdr_validvalue = validvalue,
                                     meta_is_latest = is_latest,
@@ -944,7 +944,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.client.access_deleted_tbl_table_add_with_reset_and_get_deleted(\
                                         self.sess_hdl, self.dev_tgt, matchspec0)
                             matchspec0 = distfarreachleaf_access_deleted_tbl_match_spec_t(\
-                                    op_hdr_optype = DELREQ_INSWITCH,
+                                    op_hdr_optype = DELREQ_SEQ_INSWITCH,
                                     inswitch_hdr_is_cached = is_cached,
                                     validvalue_hdr_validvalue = validvalue,
                                     meta_is_latest = is_latest,
@@ -997,7 +997,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
                                         self.sess_hdl, self.dev_tgt, matchspec0)
                         matchspec0 = distfarreachleaf_update_vallen_tbl_match_spec_t(\
-                                op_hdr_optype = PUTREQ_INSWITCH,
+                                op_hdr_optype = PUTREQ_SEQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
                                 validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
@@ -1005,7 +1005,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
                                     self.sess_hdl, self.dev_tgt, matchspec0)
                         matchspec0 = distfarreachleaf_update_vallen_tbl_match_spec_t(\
-                                op_hdr_optype = DELREQ_INSWITCH,
+                                op_hdr_optype = DELREQ_SEQ_INSWITCH,
                                 inswitch_hdr_is_cached = is_cached,
                                 validvalue_hdr_validvalue = validvalue,
                                 meta_is_latest = is_latest)
@@ -1033,7 +1033,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             for is_cached in cached_list:
                 for validvalue in validvalue_list:
                     for is_latest in latest_list:
-                        for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+                        for tmpoptype in [PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
                             matchspec0 = distfarreachleaf_access_savedseq_tbl_match_spec_t(\
                                     op_hdr_optype = tmpoptype,
                                     inswitch_hdr_is_cached = is_cached,
@@ -1080,7 +1080,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     if is_latest == 0:
                         self.client.access_case1_tbl_table_add_with_try_case1(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
-                for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+                for tmpoptype in [PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
                     matchspec0 = distfarreachleaf_access_case1_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             inswitch_hdr_is_cached = 1,
@@ -1472,7 +1472,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: add_and_remove_value_header_tbl (default: remove_all; 17*12=204)
             print "Configuring add_and_remove_value_header_tbl"
-            # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_INSWITCH
+            # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_SEQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
             for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES, LOADREQ, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16

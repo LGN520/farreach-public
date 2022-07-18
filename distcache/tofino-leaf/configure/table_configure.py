@@ -367,7 +367,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             if RANGE_SUPPORT == False:
                 # Table: hash_for_partition_tbl (default: nop; size: 8)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH]:
                     matchspec0 = distcacheleaf_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype))
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
@@ -621,12 +621,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.ig_port_forward_tbl_table_add_with_update_getreq_spine_to_getreq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = PUTREQ)
-            self.client.ig_port_forward_tbl_table_add_with_update_putreq_to_putreq_inswitch(\
+                    op_hdr_optype = PUTREQ_SEQ)
+            self.client.ig_port_forward_tbl_table_add_with_update_putreq_seq_to_putreq_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = DELREQ)
-            self.client.ig_port_forward_tbl_table_add_with_update_delreq_to_delreq_inswitch(\
+                    op_hdr_optype = DELREQ_SEQ)
+            self.client.ig_port_forward_tbl_table_add_with_update_delreq_seq_to_delreq_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = WARMUPREQ)
@@ -661,7 +661,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.access_latest_tbl_table_add_with_get_latest(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
                 # NOTE: write queries of NetCache "invalidates" in-switch value by setting latest=0
-                for tmpoptype in [PUTREQ_INSWITCH, DELREQ_INSWITCH]:
+                for tmpoptype in [PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
                     matchspec0 = distcacheleaf_access_latest_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             inswitch_hdr_is_cached = is_cached)
@@ -1297,7 +1297,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: add_and_remove_value_header_tbl (default: remove_all; 17*4=68)
             print "Configuring add_and_remove_value_header_tbl"
-            # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_INSWITCH
+            # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_SEQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
             for tmpoptype in [PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, GETRES, LOADREQ]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
