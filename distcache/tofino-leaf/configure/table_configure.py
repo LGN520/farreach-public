@@ -402,42 +402,69 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # Table: range_partition_tbl (default: nop; size <= 9 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_server = pow(2, 16) / server_total_logical_num
+                key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
+                servernum_per_leafswitch = server_total_logical_num / leafswitch_total_logical_num
                 for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, SETVALID_INSWITCH]:
-                    key_start = 0 # [0, 2^16-1]
-                    for global_server_logical_idx in range(server_total_logical_num):
-                        if global_server_logical_idx == server_total_logical_num - 1:
-                            key_end = pow(2, 16) - 1
+                    valid_serveridx_start = 0 # [0, server_total_logical_num-1]
+                    valid_key_start = 0 # [0, 2^16-1]
+                    for i in range(leafswitch_total_logical_num):
+                        # Get valid key range and serveridx range
+                        global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
+                        if i == leafswitch_total_logical_num - 1:
+                            valid_serveridx_end = server_total_logical_num - 1
+                            valid_key_end = pow(2, 16) - 1
                         else:
-                            key_end = key_start + key_range_per_server - 1
-                        # NOTE: both start and end are included
-                        matchspec0 = distcacheleaf_range_partition_tbl_match_spec_t(\
-                                op_hdr_optype = tmpoptype,
-                                op_hdr_keyhihihi_start = convert_u16_to_i16(key_start),
-                                op_hdr_keyhihihi_end = convert_u16_to_i16(key_end))
-                        # Forward to the egress pipeline of server
-                        server_physical_idx = -1
-                        local_server_logical_idx = -1
-                        for tmp_server_physical_idx in range(server_physical_num):
-                            for tmp_local_server_logical_idx in range(len(server_logical_idxes_list[tmp_server_physical_idx])):
-                                if global_server_logical_idx == server_logical_idxes_list[tmp_server_physical_idx][tmp_local_server_logical_idx]:
-                                    server_physical_idx = tmp_server_physical_idx
-                                    local_server_logical_idx = tmp_local_server_logical_idx
-                                    break
-                        if server_physical_idx == -1:
-                            print "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in range_partition_tbl".format(global_server_logical_idx)
-                        else:
-                            #udp_dstport = server_worker_port_start + global_server_logical_idx
-                            udp_dstport = server_worker_port_start + local_server_logical_idx
-                            eport = self.server_devports[server_physical_idx]
-                            if tmpoptype != SCANREQ:
-                                actnspec0 = distcacheleaf_range_partition_action_spec_t(udp_dstport, eport)
-                                self.client.range_partition_tbl_table_add_with_range_partition(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                            valid_serveridx_end = valid_serveridx_start + servernum_per_leafswitch - 1
+                            valid_key_end = valid_key_start + key_range_per_leafswitch - 1
+                        # For each server in [valid_serveridx_start, valid_serveridx_end]
+                        for j in range(servernum_per_leafswitch):
+                            global_server_logical_idx = valid_serveridx_start + j
+                            if global_server_logical_idx > valid_serveridx_end:
+                                print "[ERROR] invalid serveridx[{}] {} for leafswitch[{}] {} which should <= {}".format(j, global_server_logical_idx, i, global_leafswitch_logical_idx, valid_serveridx_end)
+                                exit(-1)
+
+                            # Get key_start and key_end for match_spec_t
+                            if j == 0:
+                                key_start = 0
+                                key_end = valid_key_start + key_range_per_server
+                            elif j == servernum_per_leafswitch - 1:
+                                key_start = valid_key_start + j * key_range_per_server
+                                key_end = pow(2, 16) - 1
                             else:
-                                actnspec0 = distcacheleaf_range_partition_for_scan_action_spec_t(udp_dstport, eport, global_server_logical_idx)
-                                self.client.range_partition_tbl_table_add_with_range_partition_for_scan(\
-                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                        key_start = key_end + 1
+                                key_start = valid_key_start + j * key_range_per_server
+                                key_end = key_start + key_range_per_server
+
+                            # NOTE: both start and end are included
+                            matchspec0 = distcacheleaf_range_partition_tbl_match_spec_t(\
+                                    op_hdr_optype = tmpoptype,
+                                    op_hdr_keyhihihi_start = convert_u16_to_i16(key_start),
+                                    op_hdr_keyhihihi_end = convert_u16_to_i16(key_end),
+                                    op_hdr_globalswitchidx = convert_u16_to_i16(global_leafswitch_logical_idx))
+                            # Forward to the egress pipeline of server
+                            server_physical_idx = -1
+                            local_server_logical_idx = -1
+                            for tmp_server_physical_idx in range(server_physical_num):
+                                for tmp_local_server_logical_idx in range(len(server_logical_idxes_list[tmp_server_physical_idx])):
+                                    if global_server_logical_idx == server_logical_idxes_list[tmp_server_physical_idx][tmp_local_server_logical_idx]:
+                                        server_physical_idx = tmp_server_physical_idx
+                                        local_server_logical_idx = tmp_local_server_logical_idx
+                                        break
+                            if server_physical_idx == -1:
+                                print "WARNING: no physical server covers global_server_logical_idx {} -> no corresponding MAT entries in range_partition_tbl".format(global_server_logical_idx)
+                            else:
+                                #udp_dstport = server_worker_port_start + global_server_logical_idx
+                                udp_dstport = server_worker_port_start + local_server_logical_idx
+                                eport = self.server_devports[server_physical_idx]
+                                if tmpoptype != SCANREQ:
+                                    actnspec0 = distcacheleaf_range_partition_action_spec_t(udp_dstport, eport)
+                                    self.client.range_partition_tbl_table_add_with_range_partition(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                                else:
+                                    actnspec0 = distcacheleaf_range_partition_for_scan_action_spec_t(udp_dstport, eport, global_server_logical_idx)
+                                    self.client.range_partition_tbl_table_add_with_range_partition_for_scan(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        valid_serveridx_start = valid_serveridx_end + 1
+                        valid_key_start = valid_key_end + 1
             else:
                 # Table: hash_partition_tbl (default: nop; size <= 8 * 128)
                 print "Configuring hash_partition_tbl"
@@ -481,25 +508,50 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 # TODO: limit max_scannum <= constant (e.g., 32)
                 print "Configuring range_partition_for_scan_endkey_tbl"
                 key_range_per_server = pow(2, 16) / server_total_logical_num
-                endkey_start = 0 # [0, 2^16-1]
-                for global_server_logical_idx in range(server_total_logical_num):
-                    if global_server_logical_idx == server_total_logical_num - 1:
-                        endkey_end = pow(2, 16) - 1
+                key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
+                servernum_per_leafswitch = server_total_logical_num / leafswitch_total_logical_num
+                valid_serveridx_start = 0 # [0, server_total_logical_num-1]
+                valid_key_start = 0 # [0, 2^16-1]
+                for i in range(leafswitch_total_logical_num):
+                    # Get valid key range and serveridx range
+                    global_leafswitch_logical_idx = leafswitch_logical_idxes[i]
+                    if i == leafswitch_total_logical_num - 1:
+                        valid_serveridx_end = server_total_logical_num - 1
+                        valid_key_end = pow(2, 16) - 1
                     else:
-                        endkey_end = endkey_start + key_range_per_server - 1
-                    # NOTE: both start and end are included
-                    matchspec0 = distcacheleaf_range_partition_for_scan_endkey_tbl_match_spec_t(\
-                            op_hdr_optype = SCANREQ,
-                            scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
-                            scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end))
-                    #last_udpport_plus_one = server_worker_port_start + global_server_logical_idx + 1 # used to calculate max_scannum in data plane
-                    #actnspec0 = distcacheleaf_range_partition_for_scan_endkey_action_spec_t(last_udpport_plus_one)
-                    end_globalserveridx_plus_one = global_server_logical_idx + 1 # used to calculate max_scannum in data plane
-                    actnspec0 = distcacheleaf_range_partition_for_scan_endkey_action_spec_t(end_globalserveridx_plus_one)
-                    # set cur_scanidx = 0; set max_scannum = last_udpport_plus_one - udp_hdr.dstPort (first_udpport)
-                    self.client.range_partition_for_scan_endkey_tbl_table_add_with_range_partition_for_scan_endkey(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                    endkey_start = endkey_end + 1
+                        valid_serveridx_end = valid_serveridx_start + servernum_per_leafswitch - 1
+                        valid_key_end = valid_key_start + key_range_per_leafswitch - 1
+                    # For each server in [valid_serveridx_start, valid_serveridx_end]
+                    for j in range(servernum_per_leafswitch):
+                        global_server_logical_idx = valid_serveridx_start + j
+                        if global_server_logical_idx > valid_serveridx_end:
+                            print "[ERROR] invalid serveridx[{}] {} for leafswitch[{}] {} which should <= {}".format(j, global_server_logical_idx, i, global_leafswitch_logical_idx, valid_serveridx_end)
+                            exit(-1)
+
+                        # Get endkey_start and endkey_end for match_spec_t
+                        if j == 0:
+                            endkey_start = 0
+                            endkey_end = valid_key_start + key_range_per_server
+                        elif j == servernum_per_leafswitch - 1:
+                            endkey_start = valid_key_start + j * key_range_per_server
+                            endkey_end = pow(2, 16) - 1
+                        else:
+                            endkey_start = valid_key_start + j * key_range_per_server
+                            endkey_end = endkey_start + key_range_per_server
+
+                        # NOTE: both start and end are included
+                        matchspec0 = distcacheleaf_range_partition_for_scan_endkey_tbl_match_spec_t(\
+                                op_hdr_optype = SCANREQ,
+                                scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
+                                scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end),
+                                op_hdr_globalswitchidx = convert_u16_to_i16(global_leafswitch_logical_idx))
+                        end_globalserveridx_plus_one = global_server_logical_idx + 1 # used to calculate max_scannum in data plane
+                        actnspec0 = distcacheleaf_range_partition_for_scan_endkey_action_spec_t(end_globalserveridx_plus_one)
+                        # set cur_scanidx = 0; set max_scannum = last_udpport_plus_one - udp_hdr.dstPort (first_udpport)
+                        self.client.range_partition_for_scan_endkey_tbl_table_add_with_range_partition_for_scan_endkey(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                    valid_serveridx_start = valid_serveridx_end + 1
+                    valid_key_start = valid_key_end + 1
 
             # Table: cache_lookup_tbl (default: uncached_action; size: 32K/64K)
             print "Leave cache_lookup_tbl managed by controller in runtime"

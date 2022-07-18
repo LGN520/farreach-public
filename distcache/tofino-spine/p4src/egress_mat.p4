@@ -365,15 +365,13 @@ action update_delreq_inswitch_to_netcache_delreq_seq_cached() {
 #ifdef RANGE_SUPPORT
 action forward_scanreq_split_and_clone(server_sid) {
 	modify_field(split_hdr.is_clone, 1);
-	add_to_field(split_hdr.cur_scanidx, 1);
-	add_to_field(split_hdr.globalserveridx, 1);
+	add_to_field(split_hdr.cur_scanswitchidx, 1);
 	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
 	clone_egress_pkt_to_egress(server_sid); // clone to server (clone_hdr.server_sid)
 }
 action forward_scanreq_split() {
 	modify_field(split_hdr.is_clone, 1);
-	add_to_field(split_hdr.cur_scanidx, 1);
-	add_to_field(split_hdr.globalserveridx, 1);
+	add_to_field(split_hdr.cur_scanswitchidx, 1);
 	// NOTE: eg_intr_md.egress_port has been set by process_(cloned)_scanreq_split_tbl in stage 0
 }
 #endif

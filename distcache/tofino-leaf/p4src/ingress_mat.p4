@@ -155,9 +155,8 @@ action range_partition_for_scan(udpport, eport, start_globalserveridx) {
 table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
-		//op_hdr.keyhihi: range;
 		op_hdr.keyhihihi: range;
-		//ig_intr_md.ingress_port: exact;
+		op_hdr.globalswitchidx: exact;
 	}
 	actions {
 		range_partition;
@@ -257,8 +256,8 @@ action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
 table range_partition_for_scan_endkey_tbl {
 	reads {
 		op_hdr.optype: exact;
-		//scan_hdr.keyhihi: range;
 		scan_hdr.keyhihihi: range;
+		op_hdr.globalswitchidx: exact;
 	}
 	actions {
 		range_partition_for_scan_endkey;

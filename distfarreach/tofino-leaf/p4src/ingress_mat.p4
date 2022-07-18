@@ -199,18 +199,15 @@ action range_partition_for_scan(udpport, eport, start_globalserveridx) {
 table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
-		//op_hdr.keyhihi: range;
 		op_hdr.keyhihihi: range;
-		//ig_intr_md.ingress_port: exact;
+		op_hdr.globalswitchidx: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {
 		range_partition;
-		//reset_is_wrong_pipeline;
 		range_partition_for_scan;
 		nop;
 	}
-	//default_action: reset_is_wrong_pipeline();
 	default_action: nop();
 	size: RANGE_PARTITION_ENTRY_NUM;
 }
@@ -288,11 +285,9 @@ table hash_for_cm1_tbl {
 // Stage 3
 
 #ifdef RANGE_SUPPORT
-//action range_partition_for_scan_endkey(last_udpport_plus_one) {
 action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
 	modify_field(split_hdr.is_clone, 0);
 	modify_field(split_hdr.cur_scanidx, 0);
-	//subtract(split_hdr.max_scannum, last_udpport_plus_one, udp_hdr.dstPort);
 	subtract(split_hdr.max_scannum, end_globalserveridx_plus_one, split_hdr.globalserveridx);
 }
 
@@ -300,8 +295,8 @@ action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
 table range_partition_for_scan_endkey_tbl {
 	reads {
 		op_hdr.optype: exact;
-		//scan_hdr.keyhihi: range;
 		scan_hdr.keyhihihi: range;
+		op_hdr.globalswitchidx: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {

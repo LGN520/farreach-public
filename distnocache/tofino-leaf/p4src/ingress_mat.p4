@@ -113,6 +113,7 @@ table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
 		op_hdr.keyhihihi: range;
+		op_hdr.globalswitchidx: exact;
 	}
 	actions {
 		range_partition;
@@ -145,11 +146,9 @@ table hash_partition_tbl {
 // Stage 3
 
 #ifdef RANGE_SUPPORT
-//action range_partition_for_scan_endkey(last_udpport_plus_one) {
 action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
 	modify_field(split_hdr.is_clone, 0);
 	modify_field(split_hdr.cur_scanidx, 0);
-	//subtract(split_hdr.max_scannum, last_udpport_plus_one, udp_hdr.dstPort);
 	subtract(split_hdr.max_scannum, end_globalserveridx_plus_one, split_hdr.globalserveridx);
 }
 
@@ -158,6 +157,7 @@ table range_partition_for_scan_endkey_tbl {
 	reads {
 		op_hdr.optype: exact;
 		scan_hdr.keyhihihi: range;
+		op_hdr.globalswitchidx: exact;
 	}
 	actions {
 		range_partition_for_scan_endkey;
