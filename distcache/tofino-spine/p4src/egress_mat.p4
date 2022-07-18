@@ -23,21 +23,16 @@ table save_client_info_tbl {
 
 #ifdef RANGE_SUPPORT
 action process_scanreq_split(server_sid) {
-	modify_field(clone_hdr.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
+	modify_field(clone_hdr.server_sid, server_sid); // clone to server-leaf for next SCANREQ_SPLIT
+	subtract(meta.remain_scannum, split_hdr.max_scanswitchnum, split_hdr.cur_scanswitchidx);
 	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
-action process_cloned_scanreq_split(udpport, server_sid) {
-	//add_to_field(udp_hdr.dstPort, 1);
-	modify_field(udp_hdr.dstPort, udpport); // set udpport for current SCANREQ_SPLIT
-	modify_field(clone_hdr.server_sid, server_sid); // clone to server for next SCANREQ_SPLIT
-	subtract(meta.remain_scannum, split_hdr.max_scannum, split_hdr.cur_scanidx);
+action process_cloned_scanreq_split(server_sid) {
+	add_to_field(op_hdr.globalswitchidx, 1); // CANNOT be placed in eg_port_forward_tbl as server-leaf needs globalswitchidx for cache lookup and scanreq split
+	modify_field(meta.server_sid, server_sid); // clone to server-leaf for next SCANREQ_SPLIT
+	subtract(meta.remain_scannum, split_hdr.max_scanswichnum, split_hdr.cur_scanswitchidx);
 	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
-/*action reset_meta_serversid_remainscannum() {
-	modify_field(clone_hdr.server_sid, 0);
-	modify_field(meta.remain_scannum, 0);
-}*/
 action reset_meta_remainscannum() {
 	modify_field(meta.remain_scannum, 0);
 }
@@ -52,19 +47,16 @@ counter process_scanreq_split_counter {
 table process_scanreq_split_tbl {
 	reads {
 		op_hdr.optype: exact;
-		//udp_hdr.dstPort: exact;
-		split_hdr.globalserveridx: exact;
+		op_hdr.globalswitchidx: exact;
 		//eg_intr_md_from_parser_aux.clone_src: exact; // NOTE: access intrinsic metadata
 		split_hdr.is_clone: exact;
 	}
 	actions {
 		process_scanreq_split;
 		process_cloned_scanreq_split;
-		//reset_meta_serversid_remainscannum;
 		reset_meta_remainscannum;
 		nop;
 	}
-	//default_action: reset_meta_serversid_remainscannum();
 	default_action: reset_meta_remainscannum();
 	size: PROCESS_SCANREQ_SPLIT_ENTRY_NUM;
 }
