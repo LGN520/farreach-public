@@ -331,12 +331,12 @@ action update_putreq_seq_inswitch_to_putreq_seq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_putreq_inswitch_to_putreq_pop_seq() {
+action update_putreq_seq_inswitch_to_putreq_pop_seq() {
 	modify_field(op_hdr.optype, PUTREQ_POP_SEQ);
 	modify_field(shadowtype_hdr.shadowtype, PUTREQ_POP_SEQ);
 
 	remove_header(inswitch_hdr);
-	add_header(seq_hdr);
+	//add_header(seq_hdr);
 
 	//modify_field(eg_intr_md.egress_port, eport);
 }
@@ -755,7 +755,7 @@ table eg_port_forward_tbl {
 		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone; // clone for first CACHE_POP_INSWITCH_ACK (not need to clone for duplication due to switchos-side timeout-and-retry)
 		//forward_cache_pop_inswitch_ack; // last clone of CACHE_POP_INSWITCH_ACK
 		update_putreq_seq_inswitch_to_putreq_seq;
-		update_putreq_inswitch_to_putreq_pop_seq;
+		update_putreq_seq_inswitch_to_putreq_pop_seq;
 		update_putreq_seq_inswitch_to_putres_by_mirroring;
 		update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
 		forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;

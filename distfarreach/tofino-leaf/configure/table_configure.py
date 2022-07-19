@@ -1883,8 +1883,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                     elif snapshot_flag == 0:
                                                         if is_hot == 1:
-                                                            # Update PUTREQ_INSWITCH as PUTREQ_POP_SEQ to server
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_pop_seq(\
+                                                            # Update PUTREQ_SEQ_INSWITCH as PUTREQ_POP_SEQ to server
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_pop_seq(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                         elif is_hot == 0:
                                                             # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ to server
@@ -2534,8 +2534,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                             elif snapshot_flag == 0:
                                                                 if is_hot == 1:
-                                                                    # Update PUTREQ_INSWITCH as PUTREQ_POP_SEQ to server
-                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_putreq_pop_seq(\
+                                                                    # Update PUTREQ_SEQ_INSWITCH as PUTREQ_POP_SEQ to server
+                                                                    self.client.eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_to_putreq_pop_seq(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0)
                                                                 elif is_hot == 0:
                                                                     # Update PUTREQ_SEQ_INSWITCH as PUTREQ_SEQ to server
