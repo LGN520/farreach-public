@@ -57,6 +57,9 @@ snapshot_flag_list = [0, 1]
 case1_list = [0, 1]
 access_val_mode_list = [0, 1, 2, 3]
 
+reflector_ip_for_switchos = leaf_reflector_ip_for_switchos
+reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_devport
+reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_devport
 
 if test_param_get("arch") == "tofino":
   MIR_SESS_COUNT = 1024
@@ -161,7 +164,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.reflector_ip_for_switch = server_ips[i]
                 self.reflector_mac_for_switch = server_macs[i]
                 self.reflector_devport = self.server_devports[i]
-                self.refletor_sid = self.server_sids[i] # clone to switchos (i.e., reflector at [the first] physical server)
+                self.reflector_sid = self.server_sids[i] # clone to switchos (i.e., reflector at [the first] physical server)
+        if isvalid == False:
+            for i in range(client_physical_num):
+                if reflector_ip_for_switchos == client_ip_for_controller_list[i]:
+                    isvalid = True
+                    self.reflector_ip_for_switch = client_ips[i]
+                    self.reflector_mac_for_switch = client_macs[i]
+                    self.reflector_devport = self.client_devports[i]
+                    self.reflector_sid = self.client_sids[i]
         if isvalid == False:
             print "[ERROR] invalid reflector configuration"
             exit(-1)
@@ -203,9 +214,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                      pal_port_speed_t.BF_SPEED_40G,
                                      pal_fec_type_t.BF_FEC_TYP_NONE)
                self.pal.pal_port_enable(0, i)
-            port, chnl = leafswitch_fpport_to_spine.split("/")
-            devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-            self.spineswitch_devport = devport
+           self.pal.pal_port_add(0, self.spineswitch_devport,
+                                 pal_port_speed_t.BF_SPEED_40G,
+                                 pal_fec_type_t.BF_FEC_TYP_NONE)
+           self.pal.pal_port_enable(0, self.spineswitch_devport)
 
             # Add special ports
             speed_10g = 2

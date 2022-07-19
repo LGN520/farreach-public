@@ -171,8 +171,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         pd_base_tests.ThriftInterfaceDataPlane.setUp(self)
         self.sess_hdl = self.conn_mgr.client_init()
         self.dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
-        self.client_devports = []
-        self.server_devports = []
 
         self.platform_type = "mavericks"
         board_type = self.pltfm_pm.pltfm_pm_board_type_get()
@@ -182,14 +180,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.platform_type = "montara"
 
         # get the device ports from front panel ports
-        for client_fpport in client_fpports:
-            port, chnl = client_fpport.split("/")
-            devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-            self.client_devports.append(devport)
-        for server_fpport in server_fpports:
-            port, chnl = server_fpport.split("/")
-            devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-            self.server_devports.append(devport)
         port, chnl = spineswitch_fpport_to_leaf.split("/")
         devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
         self.clientleafswitch_devport = devport
@@ -294,7 +284,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         ethernet_hdr_dstAddr = macAddr_to_string(client_macs[i]),
                         ipv4_hdr_dstAddr = ipv4Addr_to_i32(client_ips[i]),
                         ipv4_hdr_dstAddr_prefix_length = 32)
-                actnspec0 = distcachespine_l2l3_forward_action_spec_t(self.client_devports[i])
+                actnspec0 = distcachespine_l2l3_forward_action_spec_t(self.clientleafswitch_devport)
                 self.client.l2l3_forward_tbl_table_add_with_l2l3_forward(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for i in range(server_physical_num):
@@ -302,7 +292,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         ethernet_hdr_dstAddr = macAddr_to_string(server_macs[i]),
                         ipv4_hdr_dstAddr = ipv4Addr_to_i32(server_ips[i]),
                         ipv4_hdr_dstAddr_prefix_length = 32)
-                actnspec0 = distcachespine_l2l3_forward_action_spec_t(self.server_devports[i])
+                actnspec0 = distcachespine_l2l3_forward_action_spec_t(self.serverleafswitch_devport)
                 self.client.l2l3_forward_tbl_table_add_with_l2l3_forward(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
@@ -578,21 +568,21 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 1
 
             # Table: prepare_for_cachepop_tbl (default: reset_server_sid(); size: 2*server_physical_num+1=5 < 17)
+            # NOTE: spine switch in DistCache does NOT need to prepare_for_cachepop for GETREQ_INSWITCH
             for tmpoptype in [GETREQ_INSWITCH, SCANREQ_SPLIT]:
-                for tmp_server_physical_idx in range(server_physical_num):
-                    tmp_devport = self.server_devports[tmp_server_physical_idx]
-                    tmp_server_sid = self.server_sids[tmp_server_physical_idx]
-                    matchspec0 = distcachespine_prepare_for_cachepop_tbl_match_spec_t(\
-                            op_hdr_optype = tmpoptype,
-                            eg_intr_md_egress_port = tmp_devport)
-                    if tmpoptype == GETREQ_INSWITCH:
-                        actnspec0 = distcachespine_set_server_sid_and_port_action_spec_t(tmp_server_sid)
-                        self.client.prepare_for_cachepop_tbl_table_add_with_set_server_sid_and_port(\
-                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                        # NOTE: we explictly invoke nop() for SCANREQ_SPLIT and NETCACHE_GETREQ_POP to avoid reset their clone_hdr.server_sid: SCANREQ_SPLIT.server_sid is set by process_scanreq_split to clone next SCANREQ_SPLIT to next server; NETCACHE_GETREQ_POP.server_sid is inherited from original GETREQ_INSWITCH to clone alst NETCACHE_GETREQ_POP as GETREQ to corresponding server
-                    elif tmpoptype == SCANREQ_SPLIT and RANGE_SUPPORT == True:
-                        self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
-                                self.sess_hdl, self.dev_tgt, matchspec0)
+                tmp_devport = self.serverleafswitch_devport
+                tmp_server_sid = self.serverleafswitch_sid
+                matchspec0 = distcachespine_prepare_for_cachepop_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        eg_intr_md_egress_port = tmp_devport)
+                if tmpoptype == GETREQ_INSWITCH:
+                    actnspec0 = distcachespine_set_server_sid_and_port_action_spec_t(tmp_server_sid)
+                    self.client.prepare_for_cachepop_tbl_table_add_with_set_server_sid_and_port(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                    # NOTE: we explictly invoke nop() for SCANREQ_SPLIT and NETCACHE_GETREQ_POP to avoid reset their clone_hdr.server_sid: SCANREQ_SPLIT.server_sid is set by process_scanreq_split to clone next SCANREQ_SPLIT to next server; NETCACHE_GETREQ_POP.server_sid is inherited from original GETREQ_INSWITCH to clone alst NETCACHE_GETREQ_POP as GETREQ to corresponding server
+                elif tmpoptype == SCANREQ_SPLIT and RANGE_SUPPORT == True:
+                    self.client.prepare_for_cachepop_tbl_table_add_with_nop(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distcachespine_prepare_for_cachepop_tbl_match_spec_t(\
                     op_hdr_optype = NETCACHE_GETREQ_POP,
                     eg_intr_md_egress_port = self.reflector_devport)

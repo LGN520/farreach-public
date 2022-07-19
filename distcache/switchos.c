@@ -37,6 +37,12 @@
 // cache eviction: get_evictdata_setvalid3.sh, remove_cache_lookup.sh
 // cache population: setvalid0.sh, add_cache_lookup_setvalid1.sh
 
+char switchos_role[256];
+// set reflector configuration based on switchos role
+char reflector_ip_for_switchos[256];
+short reflector_dp2cpserver_port = -1;
+short reflector_cp2dpserver_port = -1;
+
 bool volatile switchos_running = false;
 std::atomic<size_t> switchos_ready_threads(0);
 const size_t switchos_expected_ready_threads = 2;
@@ -84,6 +90,27 @@ inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16
 inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key);
 
 int main(int argc, char **argv) {
+	if (argc < 2) {
+		printf("Usage: ./switchos spine/leaf\n");
+		exit(-1);
+	}
+
+	memcpy(switchos_role, argv[1], strlen(argv[1]));
+	// update reflector configuration based on switchos role
+	if (strcmp(switchos_role, "spine", 5) == 0) {
+		reflector_ip_for_switchos = spine_reflector_ip_for_switchos;
+		reflector_dp2cpserver_port = spine_reflector_dp2cpserver_port;
+		reflector_cp2dpserver_port = spine_reflector_cp2dpserver_port;
+	}
+	else if (strcmp(switchos_role, "leaf", 4) == 0) {
+		reflector_ip_for_switchos = leaf_reflector_ip_for_switchos;
+		reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_port;
+		reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_port;
+	}
+	else {
+		printf("Invalid switchos role: %s which should be spine/leaf\n", switchos_role);
+		exit(-1);
+	}
 
 	parse_ini("config.ini");
 	parse_control_ini("control_type.ini");

@@ -670,30 +670,59 @@ uint32_t IniparserWrapper::get_leafswitch_pipeidx() {
 	return uint32_t(tmp);
 }
 
-// Reflector
+// reflector_for_leaf
 
-const char* IniparserWrapper::get_reflector_ip_for_switchos() {
-	const char *reflector_ip_for_switchos = iniparser_getstring(ini, "reflector:reflector_ip_for_switchos", nullptr);
+const char* IniparserWrapper::get_leaf_reflector_ip_for_switchos() {
+	const char *reflector_ip_for_switchos = iniparser_getstring(ini, "reflector_for_leaf:reflector_ip_for_switchos", nullptr);
 	if (reflector_ip_for_switchos == nullptr) {
-		printf("Invalid entry of [reflector:reflector_ip_for_switchos]\n");
+		printf("Invalid entry of [reflector_for_leaf:reflector_ip_for_switchos]\n");
 		exit(-1);
 	}
 	return reflector_ip_for_switchos;
 }
 
-short IniparserWrapper::get_reflector_dp2cpserver_port() {
-	int tmp = iniparser_getint(ini, "reflector:reflector_dp2cpserver_port", -1);
+short IniparserWrapper::get_leaf_reflector_dp2cpserver_port() {
+	int tmp = iniparser_getint(ini, "reflector_for_leaf:reflector_dp2cpserver_port", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [reflector:reflector_dp2cpserver_port]: %d\n", tmp);
+		printf("Invalid entry of [reflector_for_leaf:reflector_dp2cpserver_port]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);
 }
 
-short IniparserWrapper::get_reflector_cp2dpserver_port() {
-	int tmp = iniparser_getint(ini, "reflector:reflector_cp2dpserver_port", -1);
+short IniparserWrapper::get_leaf_reflector_cp2dpserver_port() {
+	int tmp = iniparser_getint(ini, "reflector_for_leaf:reflector_cp2dpserver_port", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [reflector:reflector_cp2dpserver_port]: %d\n", tmp);
+		printf("Invalid entry of [reflector_for_leaf:reflector_cp2dpserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+// reflector_for_spine
+
+const char* IniparserWrapper::get_spine_reflector_ip_for_switchos() {
+	const char *reflector_ip_for_switchos = iniparser_getstring(ini, "reflector_for_spine:reflector_ip_for_switchos", nullptr);
+	if (reflector_ip_for_switchos == nullptr) {
+		printf("Invalid entry of [reflector_for_spine:reflector_ip_for_switchos]\n");
+		exit(-1);
+	}
+	return reflector_ip_for_switchos;
+}
+
+short IniparserWrapper::get_spine_reflector_dp2cpserver_port() {
+	int tmp = iniparser_getint(ini, "reflector_for_spine:reflector_dp2cpserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [reflector_for_spine:reflector_dp2cpserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+short IniparserWrapper::get_spine_reflector_cp2dpserver_port() {
+	int tmp = iniparser_getint(ini, "reflector_for_spine:reflector_cp2dpserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [reflector_for_spine:reflector_cp2dpserver_port]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);

@@ -52,7 +52,7 @@ parser parse_udp_dstport {
 	return select(udp_hdr.dstPort) {
 		0x0480 mask 0xFF80: parse_op; // reserve multiple udp port due to server simulation
 		0x1080 mask 0xFF80: parse_op; // reserve for server.valueupdateserver in NetCache
-		5008: parse_op; // reserve reflector.dp2cpserver_port due to hardware link simulation between switch and switchos
+		5018: parse_op; // reserve reflector.dp2cpserver_port due to hardware link simulation between switch and switchos
 		default: parse_udp_srcport;
 	}
 }
@@ -61,7 +61,7 @@ parser parse_udp_srcport {
 	return select(udp_hdr.srcPort) {
 		0x0480 mask 0xFF80: parse_op; // reserve multiple udp port due to server simulation
 		0x1080 mask 0xFF80: parse_op; // reserve for server.valueupdateserver in NetCache
-		5009: parse_op; // reserve reflector.cp2dpserver_port due to hardware link simulation between switch and switchos
+		5019: parse_op; // reserve reflector.cp2dpserver_port due to hardware link simulation between switch and switchos
 		default: ingress; // traditional packet
 	}
 }

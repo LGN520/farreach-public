@@ -45,7 +45,7 @@ cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other
 /* functions */
 
 // transaction phase
-#include "reflector_impl.h"
+//#include "reflector_impl.h"
 #include "server_impl.h"
 void transaction_main(); // transaction phase
 void kill(int signum);
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
   /* (2) transaction phase */
   printf("[main] transaction phase start\n");
 
-  prepare_reflector();
+  //prepare_reflector();
   prepare_server();
   transaction_main();
 
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 
   free_common();
   // close_load_server();
-  close_reflector();
+  //close_reflector();
   close_server();
 
   COUT_THIS("[ycsb_server.main] Exit successfully")
@@ -107,12 +107,13 @@ void transaction_main() {
 	// update transaction_expected_ready_threads
 	// reflector: cp2dpserver + dp2cpserver
 	// server: server_num * (worker + evictserver + popserver + valueupdateserver)
-	if (server_physical_idx == 0) { // deploy reflector in the first physical server
+	/*if (server_physical_idx == 0) { // deploy reflector in the first physical server
 		transaction_expected_ready_threads = 2 + 4*current_server_logical_num;
 	}
 	else {
 		transaction_expected_ready_threads = 4*current_server_logical_num;
-	}
+	}*/
+	transaction_expected_ready_threads = 4*current_server_logical_num;
 
 	int ret = 0;
 
@@ -120,7 +121,7 @@ void transaction_main() {
 
 	cpu_set_t serverworker_cpuset; // [0, server_cores-1] for each server.worker
 
-	pthread_t reflector_cp2dpserver_thread;
+	/*pthread_t reflector_cp2dpserver_thread;
 	pthread_t reflector_dp2cpserver_thread;
 	if (server_physical_idx == 0) {
 		// launch reflector.cp2dpserver
@@ -144,7 +145,7 @@ void transaction_main() {
 			printf("Error of setaffinity for reflector.dp2cpserver; errno: %d\n", errno);
 			exit(-1);
 		}
-	}
+	}*/
 
 	// launch popservers
 	pthread_t popserver_threads[current_server_logical_num];
@@ -549,7 +550,7 @@ void transaction_main() {
 	}
 	printf("server.evictserver finish\n");
 
-	if (server_physical_idx == 0) {
+	/*if (server_physical_idx == 0) {
 		printf("wait for reflector.cp2dpserver\n");
 		int rc = pthread_join(reflector_cp2dpserver_thread, &status);
 		if (rc) {
@@ -563,7 +564,7 @@ void transaction_main() {
 			COUT_N_EXIT("Error: unable to join reflector.dp2cpserver " << rc);
 		}
 		printf("reflector.dp2cpserver finish\n");
-	}
+	}*/
 
 	printf("[transaction.main] all threads end\n");
 }

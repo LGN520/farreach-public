@@ -46,7 +46,7 @@ cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other
 /* functions */
 
 // transaction phase
-#include "reflector_impl.h"
+//#include "reflector_impl.h"
 #include "server_impl.h"
 void transaction_main(); // transaction phase
 void *run_transaction_loadfinishserver(void *param);
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
   /* (2) transaction phase */
   printf("[main] transaction phase start\n");
 
-  prepare_reflector();
+  //prepare_reflector();
   prepare_server();
   transaction_main();
 
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 
   free_common();
   // close_load_server();
-  close_reflector();
+  //close_reflector();
   close_server();
 
   COUT_THIS("[ycsb_server.main] Exit successfully")
@@ -107,15 +107,16 @@ void transaction_main() {
 	uint32_t current_server_logical_num = server_logical_idxes_list[server_physical_idx].size();
 
 	// update transaction_expected_ready_threads
-	// reflector: cp2dpserver + dp2cpserver
+	//// reflector: cp2dpserver + dp2cpserver
 	// server: server_num * (worker + evictserver + snapshotserver + snapshotdataserver)
 	// transaction.main: loadfinishserver
-	if (server_physical_idx == 0) { // deploy reflector in the first physical server
+	/*if (server_physical_idx == 0) { // deploy reflector in the first physical server
 		transaction_expected_ready_threads = 2 + 4*current_server_logical_num + 1;
 	}
 	else {
 		transaction_expected_ready_threads = 4*current_server_logical_num + 1;
-	}
+	}*/
+	transaction_expected_ready_threads = 4*current_server_logical_num + 1;
 
 	int ret = 0;
 
@@ -123,7 +124,7 @@ void transaction_main() {
 
 	cpu_set_t serverworker_cpuset; // [0, server_cores-1] for each server.worker
 
-	pthread_t reflector_cp2dpserver_thread;
+	/*pthread_t reflector_cp2dpserver_thread;
 	pthread_t reflector_dp2cpserver_thread;
 	if (server_physical_idx == 0) {
 		// launch reflector.cp2dpserver
@@ -147,7 +148,7 @@ void transaction_main() {
 			printf("Error of setaffinity for reflector.dp2cpserver; errno: %d\n", errno);
 			exit(-1);
 		}
-	}
+	}*/
 
 	// launch popclients
 	/*pthread_t popclient_threads[server_num];
@@ -527,7 +528,7 @@ void transaction_main() {
 	}
 	printf("server.snapshotdataservers finish\n");
 
-	if (server_physical_idx == 0) {
+	/*if (server_physical_idx == 0) {
 		printf("wait for reflector.cp2dpserver\n");
 		int rc = pthread_join(reflector_cp2dpserver_thread, &status);
 		if (rc) {
@@ -541,7 +542,7 @@ void transaction_main() {
 			COUT_N_EXIT("Error: unable to join reflector.dp2cpserver " << rc);
 		}
 		printf("reflector.dp2cpserver finish\n");
-	}
+	}*/
 
 	printf("wait for transaction.main.loadfinishserver\n");
 	int rc = pthread_join(loadfinishserver_thread, &status);

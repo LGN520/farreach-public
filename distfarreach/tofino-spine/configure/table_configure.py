@@ -180,8 +180,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         pd_base_tests.ThriftInterfaceDataPlane.setUp(self)
         self.sess_hdl = self.conn_mgr.client_init()
         self.dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
-        self.client_devports = []
-        self.server_devports = []
 
         self.platform_type = "mavericks"
         board_type = self.pltfm_pm.pltfm_pm_board_type_get()
@@ -295,7 +293,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         ethernet_hdr_dstAddr = macAddr_to_string(client_macs[i]),
                         ipv4_hdr_dstAddr = ipv4Addr_to_i32(client_ips[i]),
                         ipv4_hdr_dstAddr_prefix_length = 32)
-                actnspec0 = distfarreachspine_l2l3_forward_action_spec_t(self.client_devports[i])
+                actnspec0 = distfarreachspine_l2l3_forward_action_spec_t(self.clientleafswitch_devport)
                 self.client.l2l3_forward_tbl_table_add_with_l2l3_forward(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             for i in range(server_physical_num):
@@ -303,7 +301,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         ethernet_hdr_dstAddr = macAddr_to_string(server_macs[i]),
                         ipv4_hdr_dstAddr = ipv4Addr_to_i32(server_ips[i]),
                         ipv4_hdr_dstAddr_prefix_length = 32)
-                actnspec0 = distfarreachspine_l2l3_forward_action_spec_t(self.server_devports[i])
+                actnspec0 = distfarreachspine_l2l3_forward_action_spec_t(self.serverleafswitch_devport)
                 self.client.l2l3_forward_tbl_table_add_with_l2l3_forward(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
             

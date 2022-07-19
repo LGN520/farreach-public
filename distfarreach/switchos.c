@@ -59,6 +59,12 @@ typedef CacheEvictLoadfreqInswitchAck<netreach_key_t> cache_evict_loadfreq_inswi
 typedef CacheEvictLoaddataInswitch<netreach_key_t> cache_evict_loaddata_inswitch_t;
 typedef CacheEvictLoaddataInswitchAck<netreach_key_t, val_t> cache_evict_loaddata_inswitch_ack_t;
 
+char switchos_role[256];
+// set reflector configuration based on switchos role
+char reflector_ip_for_switchos[256];
+short reflector_dp2cpserver_port = -1;
+short reflector_cp2dpserver_port = -1;
+
 bool recover_mode = false;
 
 bool volatile switchos_running = false;
@@ -146,8 +152,30 @@ inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key);
 //void parse_snapshotdata_fromptf(char *buf, uint32_t buflen, val_t *values, uint32_t *seqs, bool *stats, uint32_t record_cnt);
 
 int main(int argc, char **argv) {
-	if ((argc == 2) && (strcmp(argv[1], "recover") == 0)) {
+	if (argc < 2) {
+		printf("Usage: ./switchos spine/leaf\n");
+		exit(-1);
+	}
+
+	if ((argc == 3) && (strcmp(argv[2], "recover") == 0)) {
 		recover_mode = true;
+	}
+
+	memcpy(switchos_role, argv[1], strlen(argv[1]));
+	// update reflector configuration based on switchos role
+	if (strcmp(switchos_role, "spine", 5) == 0) {
+		reflector_ip_for_switchos = spine_reflector_ip_for_switchos;
+		reflector_dp2cpserver_port = spine_reflector_dp2cpserver_port;
+		reflector_cp2dpserver_port = spine_reflector_cp2dpserver_port;
+	}
+	else if (strcmp(switchos_role, "leaf", 4) == 0) {
+		reflector_ip_for_switchos = leaf_reflector_ip_for_switchos;
+		reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_port;
+		reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_port;
+	}
+	else {
+		printf("Invalid switchos role: %s which should be spine/leaf\n", switchos_role);
+		exit(-1);
 	}
 
 	parse_ini("config.ini");

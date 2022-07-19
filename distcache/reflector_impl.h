@@ -48,11 +48,11 @@ void *run_reflector_cp2dpserver(void *param) {
 
 	char buf[MAX_BUFSIZE];
 	printf("[reflector.cp2dpserver] ready\n");
-	transaction_ready_threads++;
+	reflector_ready_threads++;
 
-	while (!transaction_running) {}
+	while (!reflector_running) {}
 
-	while (transaction_running) {
+	while (reflector_running) {
 		int recvsize = -1;
 		bool is_timeout = true;
 		is_timeout = udprecvfrom(reflector_cp2dpserver_udpsock, buf, MAX_BUFSIZE, 0, &tmp_addr, &tmp_addrlen, recvsize, "reflector.cp2dpserver");
@@ -100,11 +100,11 @@ void *run_reflector_dp2cpserver(void *param) {
 	socklen_t switchos_popserver_addrlen = sizeof(struct sockaddr_in);
 
 	printf("[reflector.dp2cpserver] ready\n");
-	transaction_ready_threads++;
+	reflector_ready_threads++;
 
-	while (!transaction_running) {}
+	while (!reflector_running) {}
 
-	while (transaction_running) {
+	while (reflector_running) {
 
 		bool is_timeout = udprecvfrom(reflector_dp2cpserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.dp2cpserver");
 		if (is_timeout) {

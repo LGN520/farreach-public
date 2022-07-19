@@ -159,10 +159,15 @@ const char *leafswitchos_ip = nullptr;
 const char *leafswitch_fpport_to_leaf = nullptr;
 uint32_t leafswitch_pipeidx;
 
-// reflector
-const char *reflector_ip_for_switchos = nullptr;
-short reflector_dp2cpserver_port = -1;
-short reflector_cp2dpserver_port = -1;
+// reflector_for_leaf
+const char *leaf_reflector_ip_for_switchos = nullptr;
+short leaf_reflector_dp2cpserver_port = -1;
+short leaf_reflector_cp2dpserver_port = -1;
+
+// reflector_for_spine
+const char *spine_reflector_ip_for_switchos = nullptr;
+short spine_reflector_dp2cpserver_port = -1;
+short spine_reflector_cp2dpserver_port = -1;
 
 // calculated metadata
 char raw_load_workload_filename[256]; // used by split_workload for loading phase
@@ -453,14 +458,24 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(leafswitch_pipeidx);
 	INVARIANT(leafswitch_logical_idxes.size() == leafswitch_total_logical_num);
 
-	// reflector
-	reflector_ip_for_switchos = ini.get_reflector_ip_for_switchos();
-	reflector_dp2cpserver_port = ini.get_reflector_dp2cpserver_port();
-	reflector_cp2dpserver_port = ini.get_reflector_cp2dpserver_port();
+	// reflector_for_leaf
+	leaf_reflector_ip_for_switchos = ini.get_leaf_reflector_ip_for_switchos();
+	leaf_reflector_dp2cpserver_port = ini.get_leaf_reflector_dp2cpserver_port();
+	leaf_reflector_cp2dpserver_port = ini.get_leaf_reflector_cp2dpserver_port();
 
-	printf("reflector ip for switchos: %s\n", reflector_ip_for_switchos);
-	COUT_VAR(reflector_dp2cpserver_port);
-	COUT_VAR(reflector_cp2dpserver_port);
+	printf("reflector_for_leaf ip for switchos: %s\n", leaf_reflector_ip_for_switchos);
+	COUT_VAR(leaf_reflector_dp2cpserver_port);
+	COUT_VAR(leaf_reflector_cp2dpserver_port);
+	printf("\n");
+
+	// reflector_for_spine
+	spine_reflector_ip_for_switchos = ini.get_spine_reflector_ip_for_switchos();
+	spine_reflector_dp2cpserver_port = ini.get_spine_reflector_dp2cpserver_port();
+	spine_reflector_cp2dpserver_port = ini.get_spine_reflector_cp2dpserver_port();
+
+	printf("reflector_for_spine ip for switchos: %s\n", spine_reflector_ip_for_switchos);
+	COUT_VAR(spine_reflector_dp2cpserver_port);
+	COUT_VAR(spine_reflector_cp2dpserver_port);
 	printf("\n");
 
 	// calculated metadata

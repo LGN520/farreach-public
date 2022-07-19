@@ -61,7 +61,7 @@ client_ip_for_client0=172.16.112.15
 ; # of loading threads for per-server db (not used in ycsb benchmark)
 server_load_factor=5
 ; [server_worker_port_start, server_worker_port_start + local server logical num - 1]
-; reserve 1152 (0x480) ~ 1279 (0x4FF), which & 0xF80 = 0x480, for logical server simulation per physical server
+; reserve 1152 (0x480) ~ 1279 (0x4FF), which & 0xFF80 = 0x480, for logical server simulation per physical server
 ; NOTE: update p4src/parser accordingly
 server_worker_port_start=1152
 ; [server_evictserver_port_start, server_evictserver_port_start + max global server logical idx]
@@ -142,21 +142,39 @@ leafswitch_total_logical_num=16
 
 [spineswitch]
 switch_logical_idxes=0:1:2:3
-switchos_ip=
 ; bf2 -> bf1
+;switchos_ip=172.16.112.18
+;spineswitch_fpport_to_leaf=32/0
+; bf3 -> bf1
+switchos_ip=172.16.112.19
 spineswitch_fpport_to_leaf=32/0
 
 [leafswitch]
 switch_logical_idxes=4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19
 switchos_ip=172.16.112.17
-; bf1 -> bf1
-leafswitch_fpport_to_spine=31/0
+; bf1 -> bf2
+;leafswitch_fpport_to_spine=31/0
+;leafswitch_pipeidx=1
+; bf1 -> bf3
+leafswitch_fpport_to_spine=32/0
 leafswitch_pipeidx=1
 
-; NOTE: we place reflector at the first physical server
-[reflector]
+; NOTE: we place reflector_for_leaf at the corresponding physical machine, which must connect with switch
+[reflector_for_leaf]
+; bf1 is connected with all four physical machines
 reflector_ip_for_switchos=172.16.112.16
 ; a single port (NOTE: udpate p4src/parser.p4 accordingly)
 reflector_dp2cpserver_port=5008
 ; a single port (NOTE: udpate p4src/parser.p4 accordingly)
 reflector_cp2dpserver_port=5009
+
+; NOTE: we place reflector_for_spine at the corresponding physical machine, which must connect with switch
+[reflector_for_spine]
+; bf2 is connected with dl16/13 (two physical servers)
+;reflector_ip_for_switchos=172.16.112.16
+; bf3 is connected with dl11 (one physical client)
+reflector_ip_for_switchos=172.16.112.11
+; a single port (NOTE: udpate p4src/parser.p4 accordingly)
+reflector_dp2cpserver_port=5018
+; a single port (NOTE: udpate p4src/parser.p4 accordingly)
+reflector_cp2dpserver_port=5019

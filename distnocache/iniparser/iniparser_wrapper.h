@@ -95,10 +95,15 @@ class IniparserWrapper {
 		const char *get_leafswitch_fpport_to_spine();
 		uint32_t get_leafswitch_pipeidx();
 
-		// reflector
-		const char *get_reflector_ip_for_switchos();
-		short get_reflector_dp2cpserver_port();
-		short get_reflector_cp2dpserver_port();
+		// reflector_for_leaf
+		const char *get_leaf_reflector_ip_for_switchos();
+		short get_leaf_reflector_dp2cpserver_port();
+		short get_leaf_reflector_cp2dpserver_port();
+
+		// reflector_for_spine
+		const char *get_spine_reflector_ip_for_switchos();
+		short get_spine_reflector_dp2cpserver_port();
+		short get_spine_reflector_cp2dpserver_port();
 
 		/* control_type.ini */
 
