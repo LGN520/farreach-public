@@ -10,7 +10,7 @@
 // NOTE: carefully assign optype to reduce branches
 // (1) vallen&value: mask 0b0001; seq: mask 0b0010; inswitch_hdr: mask 0b0100; stat: mask 0b1000;
 // (2) scan/split: specific value (X + 0b0000); not parsed optypes: X + 0b0000
-// op_hdr + vallen&value + shadowtype (0b0001): PUTREQ, WARMUPREQ (deprecated), LOADREQ
+// op_hdr + vallen&value + shadowtype (0b0001): PUTREQ, WARMUPREQ (deprecated), LOADREQ, LOADREQ_SPINE
 // op_hdr + vallen&value + shadowtype + seq (0b0011): PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, NETCACHE_PUTREQ_SEQ_CACHED
 // op_hdr + shadowtype + seq + inswitch_hdr (0b0110): DELREQ_SEQ_INSWITCH
 // op_hdr + vallen&value + shadowtype + seq + inswitch_hdr (0b0111): PUTREQ_SEQ_INSWITCH
@@ -24,7 +24,7 @@
 // NOTE: followings are ended with 0b0000
 // op_hdr + scan_hdr (specific value): SCANREQ
 // op_hdr + scan_hdr + split_hdr (specific value): SCANREQ_SPLIT
-// only op_hdr (default): WARMUPREQ, GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK (deprecated: w/ clone_hdr), WARMUPACK, LOADACK, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK (w/ frequency_hdr), NETCACHE_GETREQ_POP, NETCACHE_VALUEUPATE_ACK, GETREQ_SPINE, SCANRES_SPLIT/_SERVER (w/ split_hdr + scan data)
+// only op_hdr (default): WARMUPREQ, GETREQ, DELREQ, GETREQ_POP, GETREQ_NLATEST, CACHE_POP_INSWITCH_ACK (deprecated: w/ clone_hdr), WARMUPACK, LOADACK, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK (w/ frequency_hdr), NETCACHE_GETREQ_POP, NETCACHE_VALUEUPATE_ACK, GETREQ_SPINE, SCANRES_SPLIT/_SERVER (w/ split_hdr + scan data), WARMUPREQ_SPINE, WARMUPACK_SERVER, LOADACK_SERVER
 // not parsed in switch: CACHE_POP, CACHE_EVICT, CACHE_EVICT_ACK, CACHE_EVICT_CASE2, CACHE_POP_ACK, CACHE_EVICT_LOADFREQ_INSWITCH_ACK, SETVALID_INSWITCH_ACK, NETCACHE_CACHE_POP/_ACK, NETCACHE_CACHE_POP_FINISH/_ACK, NETCACHE_CACHE_EVICT/_ACK
 
 parser start {

@@ -16,6 +16,7 @@
 #define PUTREQ 0x0001
 //#define WARMUPREQ 0x0011
 #define LOADREQ 0x0021
+#define LOADREQ_SPINE 0x0031
 // 0b0011
 #define PUTREQ_SEQ 0x0003
 #define PUTREQ_POP_SEQ 0x0013
@@ -95,6 +96,9 @@
 // For distributed extension
 #define GETREQ_SPINE 0x0200
 #define SCANRES_SPLIT_SERVER 0x0210
+#define WARMUPREQ_SPINE 0x0220
+#define WARMUPACK_SERVER 0x0230
+#define LOADACK_SERVER 0x0240
 
 #ifndef DEBUG
 

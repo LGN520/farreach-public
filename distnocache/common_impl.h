@@ -67,6 +67,8 @@ typedef LoadsnapshotdataInswitch<netreach_key_t> loadsnapshotdata_inswitch_t;
 typedef LoadsnapshotdataInswitchAck<netreach_key_t, val_t> loadsnapshotdata_inswitch_ack_t;
 typedef SetvalidInswitch<netreach_key_t> setvalid_inswitch_t;
 typedef SetvalidInswitchAck<netreach_key_t> setvalid_inswitch_ack_t;
+typedef WarmupAckServer<netreach_key_t> warmup_ack_server_t;
+typedef LoadAckServer<netreach_key_t> load_ack_server_t;
 
 /*
  * Constants

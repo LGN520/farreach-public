@@ -501,6 +501,19 @@ action update_delres_server_to_delres() {
 	modify_field(shadowtype_hdr.shadowtype, DELRES);
 }
 
+action update_warmupreq_spine_to_warmupreq() {
+	modify_field(op_hdr.optype, WARMUPREQ);
+}
+
+action update_loadreq_spine_to_loadreq() {
+	modify_field(op_hdr.optype, LOADREQ);
+	modify_field(shadowtype_hdr.shadowtype, LOADREQ);
+}
+
+action update_loadack_server_to_loadack() {
+	modify_field(op_hdr.optype, LOADACK);
+}
+
 @pragma stage 8
 table ig_port_forward_tbl {
 	reads {
@@ -516,6 +529,9 @@ table ig_port_forward_tbl {
 		update_scanres_split_server_to_scanres_split;
 		update_putres_server_to_putres;
 		update_delres_server_to_delres;
+		update_warmupreq_spine_to_warmupreq;
+		update loadreq_spine_to_loadreq;
+		update_loadackserver_to_loadack;
 		nop;
 	}
 	default_action: nop();

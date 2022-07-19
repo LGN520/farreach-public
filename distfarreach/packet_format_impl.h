@@ -1891,6 +1891,24 @@ uint32_t SetvalidInswitchAck<key_t>::serialize(char * const data, uint32_t max_s
 	COUT_N_EXIT("Invalid invoke of serialize for SetvalidInswitchAck");
 }
 
+// WarmupAckServer 
+
+template<class key_t>
+WarmupAckServer<key_t>::WarmupAckServer(key_t key) 
+	: WarmupAck<key_t>(key)
+{
+	this->_type = static_cast<optype_t>(PacketType::WARMUPACK_SERVER);
+}
+
+// LoadAckServer
+
+template<class key_t>
+LoadAckServer<key_t>::LoadAckServer(key_t key) 
+	: LoadAck<key_t>(key)
+{
+	this->_type = static_cast<optype_t>(PacketType::LOADACK_SERVER);
+}
+
 
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {

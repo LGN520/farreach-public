@@ -2185,6 +2185,24 @@ NetcacheValueupdateAck<key_t>::NetcacheValueupdateAck(const char * data, uint32_
 	INVARIANT(static_cast<packet_type_t>(this->_type) == PacketType::NETCACHE_VALUEUPDATE_ACK);
 }
 
+// WarmupAckServer 
+
+template<class key_t>
+WarmupAckServer<key_t>::WarmupAckServer(key_t key) 
+	: WarmupAck<key_t>(key)
+{
+	this->_type = static_cast<optype_t>(PacketType::WARMUPACK_SERVER);
+}
+
+// LoadAckServer
+
+template<class key_t>
+LoadAckServer<key_t>::LoadAckServer(key_t key) 
+	: LoadAck<key_t>(key)
+{
+	this->_type = static_cast<optype_t>(PacketType::LOADACK_SERVER);
+}
+
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize) {
 	INVARIANT(maxsize >= sizeof(optype_t));

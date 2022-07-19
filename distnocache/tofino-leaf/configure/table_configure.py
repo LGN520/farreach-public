@@ -517,7 +517,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 eport = self.spineswitch_devport
                 tmpsid = self.spineswitch_sid
-                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER]:
+                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER, LOADACK_SERVER]:
                     matchspec0 = distnocacheleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,
@@ -545,15 +545,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_scanres_split_server_to_scanres_split(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+            matchspec0 = distnocacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = PUTRES_SERVER,
                     meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_putres_server_to_putres(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
-            matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
+            matchspec0 = distnocacheleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = DELRES_SERVER,
                     meta_need_recirculate = 0)
             self.client.ig_port_forward_tbl_table_add_with_update_delres_server_to_delres(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distnocacheleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = LOADREQ_SPINE,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_loadreq_spine_to_loadreq(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distnocacheleaf_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = LOADACK_SERVER,
+                    meta_need_recirculate = 0)
+            self.client.ig_port_forward_tbl_table_add_with_update_loadack_server_to_loadack(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Egress pipeline

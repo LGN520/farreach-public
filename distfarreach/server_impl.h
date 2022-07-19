@@ -656,7 +656,7 @@ void *run_server_worker(void * param) {
 				uint32_t tmp_seq = 0;
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				
-				warmup_ack_t rsp(req.key());
+				warmup_ack_server_t rsp(req.key());
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF
@@ -691,7 +691,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].force_put(req.key(), req.val());
 				UNUSED(tmp_stat);
 				
-				load_ack_t rsp(req.key());
+				load_ack_server_t rsp(req.key());
 				rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");
 #ifdef DUMP_BUF

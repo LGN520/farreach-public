@@ -79,6 +79,8 @@ typedef NetcachePutRequestSeqCached<netreach_key_t, val_t> netcache_put_request_
 typedef NetcacheDelRequestSeqCached<netreach_key_t> netcache_del_request_seq_cached_t;
 typedef NetcacheValueupdate<netreach_key_t, val_t> netcache_valueupdate_t;
 typedef NetcacheValueupdateAck<netreach_key_t> netcache_valueupdate_ack_t;
+typedef WarmupAckServer<netreach_key_t> warmup_ack_server_t;
+typedef LoadAckServer<netreach_key_t> load_ack_server_t;
 
 /*
  * Constants
