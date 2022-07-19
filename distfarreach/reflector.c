@@ -22,6 +22,7 @@ char reflector_role[256];
 char reflector_ip_for_switchos[256];
 short reflector_dp2cpserver_port = -1;
 short reflector_cp2dpserver_port = -1;
+char switchos_ip[256];
 int server_physical_idx = -1;
 
 bool volatile reflector_running = false;
@@ -48,14 +49,16 @@ int main(int argc, char **argv) {
 
 	// update global variables based on reflector.role
 	if (strcmp(reflector_role, "spine", 5) == 0) {
-		reflector_ip_for_switchos = spine_reflector_ip_for_switchos;
+		memcpy(reflector_ip_for_switchos, spine_reflector_ip_for_switchos, strlen(spine_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = spine_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = spine_reflector_cp2dpserver_port;
+		memcpy(switchos_ip, spineswitchos_ip, strlen(spineswitchos_ip));
 	}
 	else if (strcmp(reflector_role, "leaf", 4) == 0) {
-		reflector_ip_for_switchos = leaf_reflector_ip_for_switchos;
+		memcpy(reflector_ip_for_switchos, leaf_reflector_ip_for_switchos, strlen(leaf_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_port;
+		memcpy(switchos_ip, leafswitchos_ip, strlen(leafswitchos_ip));
 	}
 	else {
 		printf("Invalid reflector role: %s which should be spine/leaf\n", reflector_role);

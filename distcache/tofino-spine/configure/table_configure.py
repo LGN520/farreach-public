@@ -184,7 +184,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
         self.clientleafswitch_devport = devport
         self.serverleafswitch_devport = devport
-        # TODO: reflector_devport
+        port, chnl = spine_reflector_fpport_for_switch.split("/")
+        self.reflector_devport = self.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
 
         self.recirPorts = [64, 192]
 
@@ -195,23 +196,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
         #sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
         #self.client_sids = sids[0:len(self.client_devports)]
         #self.server_sids = sids[len(self.client_devports):sidnum]
-        sidnum = 1
+        sidnum = 2
         sids = random.sample(xrange(BASE_SID_NORM, MAX_SID_NORM), sidnum)
         self.clientleafswitch_sid = sids[0]
         self.serverleafswitch_sid = sids[0]
+        self.reflector_sid = sids[1]
 
         # NOTE: data plane communicate with switchos by software-based reflector, which is deployed in one server machine
-        isvalid = False
-        for i in range(server_physical_num):
-            if reflector_ip_for_switchos == server_ip_for_controller_list[i]:
-                isvalid = True
-                self.reflector_ip_for_switch = server_ips[i]
-                self.reflector_mac_for_switch = server_macs[i]
-                self.reflector_devport = self.server_devports[i]
-                self.reflector_sid = self.server_sids[i] # clone to switchos (i.e., reflector at [the first] physical server)
-        if isvalid == False:
-            print "[ERROR] invalid reflector configuration"
-            exit(-1)
+        self.reflector_ip_for_switch = spine_reflector_ip_for_switch
+        self.reflector_mac_for_switch = spine_reflector_mac_for_switch
 
     ### MAIN ###
 
@@ -244,8 +237,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.pal.pal_port_add(0, self.clientleafswitch_devport,
                                   pal_port_speed_t.BF_SPEED_40G,
                                   pal_fec_type_t.BF_FEC_TYP_NONE)
-            self.pal.pal_port_enable(0, i)
-            # TODO: reflector_devport
+            self.pal.pal_port_enable(0, self.clientleafswitch_devport)
+            self.pal.pal_port_add(0, self.reflector_devport,
+                                  pal_port_speed_t.BF_SPEED_40G,
+                                  pal_fec_type_t.BF_FEC_TYP_NONE)
+            self.pal.pal_port_enable(0, self.reflector_devport)
 
             # Add special ports
             speed_10g = 2
@@ -266,6 +262,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                   Direction_e.PD_DIR_BOTH,
                                   self.clientleafswitch_sid,
                                   self.clientleafswitch_devport,
+                                  True)
+            self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
+            print "Binding sid {} with reflector devport {} for both direction mirroring".format(self.reflector_sid, self.reflector_devport) # clone to reflector
+            info = mirror_session(MirrorType_e.PD_MIRROR_TYPE_NORM,
+                                  Direction_e.PD_DIR_BOTH,
+                                  self.reflector_sid,
+                                  self.reflector_devport,
                                   True)
             self.mirror.mirror_session_create(self.sess_hdl, self.dev_tgt, info)
 

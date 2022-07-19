@@ -173,8 +173,14 @@ reflector_cp2dpserver_port=5009
 [reflector_for_spine]
 ; bf2 is connected with dl16/13 (two physical servers)
 ;reflector_ip_for_switchos=172.16.112.16
+;reflector_ip_for_switch=10.0.2.16
+;reflector_mac_for_switch=3c:fd:fe:b5:1f:e0
+;reflector_fpport_for_switch=16/0
 ; bf3 is connected with dl11 (one physical client)
 reflector_ip_for_switchos=172.16.112.11
+reflector_ip_for_switch=10.0.2.11
+reflector_mac_for_switch=3c:fd:fe:bb:ca:78
+reflector_fpport_for_switch=5/0
 ; a single port (NOTE: udpate p4src/parser.p4 accordingly)
 reflector_dp2cpserver_port=5018
 ; a single port (NOTE: udpate p4src/parser.p4 accordingly)

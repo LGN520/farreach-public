@@ -13,6 +13,8 @@ else
 		sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8
 		sudo arp -s 10.0.1.15 3c:fd:fe:b5:28:59
 		sudo arp -s 10.0.1.16 3c:fd:fe:b5:1f:e1
+		# bf3 as spine
+		sudo ifconfig enp129s0f0 10.0.2.11/24
 	elif [ ${client_physical_idx} -eq 1 ]
 	then
 		sudo ifconfig enp129s0f1 10.0.1.15/24
@@ -20,6 +22,8 @@ else
 		sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8
 		sudo arp -s 10.0.1.15 3c:fd:fe:b5:28:59
 		sudo arp -s 10.0.1.16 3c:fd:fe:b5:1f:e1
+		# bf2 as spine
+		sudo ifconfig enp129s0f0 10.0.2.15/24
 	fi
 
 	sudo sysctl -w net.core.rmem_max=8388608

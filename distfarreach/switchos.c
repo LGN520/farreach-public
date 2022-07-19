@@ -164,12 +164,12 @@ int main(int argc, char **argv) {
 	memcpy(switchos_role, argv[1], strlen(argv[1]));
 	// update reflector configuration based on switchos role
 	if (strcmp(switchos_role, "spine", 5) == 0) {
-		reflector_ip_for_switchos = spine_reflector_ip_for_switchos;
+		memcpy(reflector_ip_for_switchos, spine_reflector_ip_for_switchos, strlen(spine_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = spine_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = spine_reflector_cp2dpserver_port;
 	}
 	else if (strcmp(switchos_role, "leaf", 4) == 0) {
-		reflector_ip_for_switchos = leaf_reflector_ip_for_switchos;
+		memcpy(reflector_ip_for_switchos, leaf_reflector_ip_for_switchos, strlen(leaf_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_port;
 	}

@@ -104,6 +104,9 @@ class IniparserWrapper {
 		const char *get_spine_reflector_ip_for_switchos();
 		short get_spine_reflector_dp2cpserver_port();
 		short get_spine_reflector_cp2dpserver_port();
+		const char *get_spine_reflector_ip_for_switch();
+		void get_spine_reflector_mac_for_switch(uint8_t* macaddr);
+		const char *get_spine_reflector_fpport_for_switch();
 
 		/* control_type.ini */
 

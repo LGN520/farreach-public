@@ -219,7 +219,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.reflector_sid = self.server_sids[i] # clone to switchos (i.e., reflector at [the first] physical server)
         if isvalid == False:
             for i in range(client_physical_num):
-                if reflector_ip_for_switchos == client_ip_for_controller_list[i]:
+                if reflector_ip_for_switchos == client_ip_for_client0_list[i]:
                     isvalid = True
                     self.reflector_ip_for_switch = client_ips[i]
                     self.reflector_mac_for_switch = client_macs[i]

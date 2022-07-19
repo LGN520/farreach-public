@@ -728,6 +728,37 @@ short IniparserWrapper::get_spine_reflector_cp2dpserver_port() {
 	return short(tmp);
 }
 
+const char* IniparserWrapper::get_spine_reflector_ip_for_switch() {
+	const char *reflector_ip_for_switch = iniparser_getstring(ini, "reflector_for_spine:reflector_ip_for_switch", nullptr);
+	if (reflector_ip_for_switch == nullptr) {
+		printf("Invalid entry of [reflector_for_spine:reflector_ip_for_switch]\n");
+		exit(-1);
+	}
+	return reflector_ip_for_switch;
+}
+
+void IniparserWrapper::get_spine_reflector_mac_for_switch(uint8_t *macaddr) {
+	char key[256];
+	sprintf(key, "reflector_for_spine:reflector_mac_for_switch");
+	const char *macstr = iniparser_getstring(ini, key, nullptr);
+	if (macstr == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
+		exit(-1);
+	}
+	parse_mac(macaddr, macstr);
+}
+
+const char *IniparserWrapper::get_reflector_fpport_for_switch() {
+	char key[256];
+	sprintf(key, "reflector_for_spine:reflector_fpport_for_switch");
+	const char *fpportstr = iniparser_getstring(ini, key, nullptr);
+	if (fpportstr == nullptr) {
+		printf("Invalid entry of [%s]\n", key);
+		exit(-1);
+	}
+	return fpportstr;
+}
+
 /* control_type.ini */
 
 // switchos
