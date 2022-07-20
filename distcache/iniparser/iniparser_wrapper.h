@@ -76,7 +76,8 @@ class IniparserWrapper {
 		uint32_t get_switch_pipeline_num();
 		uint16_t get_switch_max_vallen();
 		uint32_t get_switchos_sample_cnt();
-		short get_switchos_popserver_port();
+		short get_switchos_dppopserver_port();
+		short get_switchos_cppopserver_port();
 		short get_switchos_snapshotserver_port();
 		short get_switchos_specialcaseserver_port();
 		short get_switchos_ptf_popserver_port();

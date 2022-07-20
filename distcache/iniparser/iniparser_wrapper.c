@@ -500,10 +500,19 @@ uint32_t IniparserWrapper::get_switchos_sample_cnt() {
 	return uint32_t(tmp);
 }
 
-short IniparserWrapper::get_switchos_popserver_port() {
-	int tmp = iniparser_getint(ini, "switch:switchos_popserver_port", -1);
+short IniparserWrapper::get_switchos_dppopserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_dppopserver_port", -1);
 	if (tmp == -1) {
-		printf("Invalid entry of [switch:switchos_popserver_port]: %d\n", tmp);
+		printf("Invalid entry of [switch:switchos_dppopserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+short IniparserWrapper::get_switchos_cppopserver_port() {
+	int tmp = iniparser_getint(ini, "switch:switchos_cppopserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:switchos_cppopserver_port]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);

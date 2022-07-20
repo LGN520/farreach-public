@@ -46,7 +46,7 @@ bool volatile switchos_popserver_finish = false;
 
 // reflector.dp2cpserver -> switchos.popserver
 int switchos_popserver_udpsock = -1;
-// used by switchos.popsever and switchos.popworker
+// used by switchos.popsever and switchos.popworker -> whether the key has been reported by data plane
 std::mutex mutex_for_cached_keyset;
 std::set<netreach_key_t> switchos_popserver_cached_keyset;
 // message queue between switchos.popserver and switchos.popworker
@@ -560,6 +560,7 @@ void *run_switchos_popworker(void *param) {
 			//INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
 			INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_ACK
 
+			// update inswitch cache metadata
 			switchos_cached_keyidx_map.insert(std::pair<netreach_key_t, uint32_t>(tmp_netcache_getreq_pop_ptr->key(), switchos_freeidx));
 			switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_freeidx] = tmp_netcache_getreq_pop_ptr->key();
 			switchos_perpipeline_cached_serveridxarray[tmp_pipeidx][switchos_freeidx] = tmp_global_server_logical_idx;

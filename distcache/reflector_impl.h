@@ -95,9 +95,9 @@ void *run_reflector_dp2cpserver(void *param) {
 	char buf[MAX_BUFSIZE];
 	int recvsize = 0;
 
-	struct sockaddr_in switchos_popserver_addr;
-	set_sockaddr(switchos_popserver_addr, inet_addr(switchos_ip), switchos_popserver_port);
-	socklen_t switchos_popserver_addrlen = sizeof(struct sockaddr_in);
+	struct sockaddr_in switchos_dppopserver_addr;
+	set_sockaddr(switchos_dppopserver_addr, inet_addr(switchos_ip), switchos_dppopserver_port);
+	socklen_t switchos_dppopserver_addrlen = sizeof(struct sockaddr_in);
 
 	printf("[reflector.dp2cpserver] ready\n");
 	reflector_ready_threads++;
@@ -125,7 +125,7 @@ void *run_reflector_dp2cpserver(void *param) {
 			case packet_type_t::NETCACHE_GETREQ_POP:
 			case packet_type_t::NETCACHE_WARMUPREQ_INSWITCH_POP:
 				{
-					udpsendto(reflector_dp2cpserver_popclient_udpsock, buf, recvsize, 0, &switchos_popserver_addr, switchos_popserver_addrlen, "reflector.dp2cpserver.popclient");
+					udpsendto(reflector_dp2cpserver_popclient_udpsock, buf, recvsize, 0, &switchos_dppopserver_addr, switchos_dppopserver_addrlen, "reflector.dp2cpserver.popclient");
 					break;
 				}
 			default:

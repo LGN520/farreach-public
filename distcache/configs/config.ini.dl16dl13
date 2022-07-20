@@ -129,7 +129,8 @@ switch_pipeline_num=2
 switch_max_vallen=128
 switchos_sample_cnt=10
 ; a single port
-switchos_popserver_port=5003
+switchos_dppopserver_port=5003
+switchos_cppopserver_port=5013
 ; a single port
 switchos_snapshotserver_port=5004
 ; a single port
