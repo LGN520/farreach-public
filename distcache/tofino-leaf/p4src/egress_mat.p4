@@ -8,7 +8,7 @@ action save_client_info() {
 	modify_field(clone_hdr.client_udpport, udp_hdr.srcPort);
 }
 
-@pragma stage 2
+@pragma stage 0
 table save_client_info_tbl {
 	reads {
 		op_hdr.optype: exact;

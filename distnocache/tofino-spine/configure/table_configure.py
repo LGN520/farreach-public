@@ -491,7 +491,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
     def configure_eg_port_forward_tbl_with_range(self):
         # Table: eg_port_forward_tbl (default: nop; size: 2*server_physical_num=4 < 2*8 = 16)
-        tmp_server_sids = [0] + self.server_sids
+        tmp_server_sids = [0, self.serverleafswitch_sid]
         for is_last_scansplit in [0, 1]:
             for tmp_server_sid in tmp_server_sids:
                 # size: 2*server_physical_num=4 < 2*8=16

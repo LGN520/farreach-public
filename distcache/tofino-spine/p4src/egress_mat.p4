@@ -8,7 +8,7 @@ action save_client_info() {
 	modify_field(clone_hdr.client_udpport, udp_hdr.srcPort);
 }
 
-@pragma stage 2
+@pragma stage 0
 table save_client_info_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -94,6 +94,34 @@ table prepare_for_cachepop_tbl {
 	}
 	default_action: reset_server_sid();
 	size: 32;
+}
+
+// Stage 2
+
+action set_is_hot() {
+	modify_field(meta.is_hot, 1);
+	//modify_field(debug_hdr.is_hot, 1);
+}
+
+action reset_is_hot() {
+	modify_field(meta.is_hot, 0);
+	//modify_field(debug_hdr.is_hot, 0);
+}
+
+@pragma stage 2
+table is_hot_tbl {
+	reads {
+		meta.cm1_predicate: exact;
+		meta.cm2_predicate: exact;
+		meta.cm3_predicate: exact;
+		meta.cm4_predicate: exact;
+	}
+	actions {
+		set_is_hot;
+		reset_is_hot;
+	}
+	default_action: reset_is_hot();
+	size: 1;
 }
 
 // Stage 7
@@ -195,11 +223,13 @@ action forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(s
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
 }
 
-action update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(client_sid, server_port) {
+action update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(client_sid) {
 	modify_field(op_hdr.optype, WARMUPACK);
 	// DEPRECATED: udp.srcport will be set as server_worker_port_start in update_ipmac_srcport_tbl
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports
-	modify_field(udp_hdr.srcPort, server_port);
+
+	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
+	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
 	remove_header(shadowtype_hdr);

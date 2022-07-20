@@ -154,7 +154,6 @@
 #include "p4src/parser.p4"
 
 // registers and MATs
-#include "p4src/regs/bf.p4"
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/latest.p4"
 #include "p4src/regs/deleted.p4"
@@ -199,13 +198,10 @@ control ingress {
 	apply(hash_for_seq_tbl); // for seq (access inswitch_hdr.hashval_for_seq)
 
 	// Stgae 5
-	apply(hash_for_bf1_tbl);
 
 	// Stage 6
-	apply(hash_for_bf2_tbl);
 
 	// Stage 7
-	apply(hash_for_bf3_tbl);
 	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
@@ -236,15 +232,13 @@ control egress {
 	apply(prepare_for_cachepop_tbl); // reset clone_hdr.server_sid by default here
 
 	// Stage 2
+	apply(is_hot_tbl);
 	apply(access_cache_frequency_tbl);
 	apply(access_deleted_tbl);
 	apply(access_savedseq_tbl);
 
 	// Stage 3
 	apply(update_vallen_tbl);
-	apply(access_bf1_tbl);
-	apply(access_bf2_tbl);
-	apply(access_bf3_tbl);
 
 	// Stage 4
 	// NOTE: value registers do not reply on op_hdr.optype, they only rely on meta.access_val_mode, which is set by update_vallen_tbl in stage 3

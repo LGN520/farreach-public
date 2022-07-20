@@ -704,17 +704,6 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         self.client.update_vallen_tbl_table_add_with_set_and_get_vallen(\
                                 self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: access_bfX_tbl (default: reset_is_reportX; size: 3)
-            bf_hashnum = 3
-            for i in range(1, bf_hashnum+1):
-                print "Configuring access_bf{}_tbl".format(i)
-                for tmpoptype in [GETREQ_INSWITCH]:
-                    matchspec0 = eval("distcachespine_access_bf{}_tbl_match_spec_t".format(i))(\
-                            op_hdr_optype = tmpoptype,
-                            meta_is_hot = 1)
-                    eval("self.client.access_bf{}_tbl_table_add_with_update_bf{}".format(i, i))(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
-
             # Stage 4
 
             # Table: is_report_tbl (default: reset_is_report; size: 1)
@@ -1104,7 +1093,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
     def configure_eg_port_forward_tbl(self):
         # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num=27+852*2=1731 < 2048 < 27+852*8=6843 < 8192)
         tmp_client_sids = [0, self.clientleafswitch_sid]
-        tmp_server_sids = [0] + self.server_sids
+        tmp_server_sids = [0, self.serverleafswitch_sid]
         for is_cached in cached_list:
             for is_hot in hot_list:
                 for is_report in report_list:
@@ -1162,11 +1151,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                             elif is_lastclone_for_pktloss == 1:
                                                 # Update NETCACHE_WARMUP_INSWITCH_POP as WARMUPACK to client by mirroring
                                                 # NOTE: WARMUPACK performs default action nop() to be forwarded to client
-                                                actnspec0 = distcachespine_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
+                                                actnspec0 = distcachespine_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid)
                                                 self.client.eg_port_forward_tbl_table_add_with_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         # is_lastclone_for_pktloss should be 0 for GETREQ_INSWITCH
-                                        if is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and tmp_server_sid != 0:
+                                        if is_hot == 0 and is_report == 0 and is_lastclone_for_pktloss == 0 and tmp_client_sid != 0 and tmp_server_sid != 0:
                                             # size: 32*client_physical_num*server_physical_num=128 < 32*8*8=2048
                                             # NOTE: tmp_client_sid != 0 to prepare for cache hit; tmp_server_sid != 0 to prepare for cache pop (clone last NETCACHE_GETREQ_POP as GETREQ to server)
                                             matchspec0 = distcachespine_eg_port_forward_tbl_match_spec_t(\
@@ -1181,28 +1170,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                 clone_hdr_server_sid = tmp_server_sid)
                                             if is_cached == 0:
-                                                if is_hot == 1 and is_report == 0:
-                                                    # Update GETREQ_INSWITCH as NETCACHE_GETREQ_POP to switchos by cloning
-                                                    actnspec0 = distcachespine_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq_action_spec_t(self.reflector_sid, reflector_dp2cpserver_port)
-                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(\
-                                                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                else:
-                                                    # Update GETREQ_INSWITCH as GETREQ_SPINE to leaf
+                                                # Update GETREQ_INSWITCH as GETREQ_SPINE to leaf
+                                                #actnspec0 = distcachespine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                            else: # is_cached == 1
+                                                if is_latest == 0: # follow algorithm 1 in NetCache paper to report hot key if necessary
+                                                    # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                     #actnspec0 = distcachespine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0)
-                                            else: # is_cached == 1
-                                                if is_latest == 0: # follow algorithm 1 in NetCache paper to report hot key if necessary
-                                                    if is_hot == 1 and is_report == 0:
-                                                        # Update GETREQ_INSWITCH as NETCACHE_GETREQ_POP to switchos by cloning
-                                                        actnspec0 = distcachespine_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq_action_spec_t(self.reflector_sid, reflector_dp2cpserver_port)
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    else:
-                                                        # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
-                                                        #actnspec0 = distcachespine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0)
                                                 else: # is_cached == 1 and is_latest == 1
                                                     # Update GETREQ_INSWITCH as GETRES to client by mirroring
                                                     actnspec0 = distcachespine_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
@@ -1383,7 +1360,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
     def configure_eg_port_forward_tbl_with_range(self):
         # Table: eg_port_forward_tbl (default: nop; size: 27+852*client_physical_num+2*server_physical_num=27+854*2=1735 < 2048 < 21+854*8=6859 < 8192)
         tmp_client_sids = [0, self.clientleafswitch_sid]
-        tmp_server_sids = [0] + self.server_sids
+        tmp_server_sids = [0, self.serverleafswitch_sid]
         for is_cached in cached_list:
             for is_hot in hot_list:
                 for is_report in report_list:
@@ -1444,12 +1421,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                 elif is_lastclone_for_pktloss == 1:
                                                     # Update NETCACHE_WARMUP_INSWITCH_POP as WARMUPACK to client by mirroring
                                                     # NOTE: WARMUPACK performs default action nop() to be forwarded to client
-                                                    actnspec0 = distcachespine_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start)
+                                                    actnspec0 = distcachespine_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring_action_spec_t(tmp_client_sid)
                                                     self.client.eg_port_forward_tbl_table_add_with_update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_lastclone_for_pktloss and is_last_scansplit should be 0 for GETREQ_INSWITCH
                                             # NOTE: tmp_client_sid != 0 to prepare for cache hit; tmp_server_sid != 0 to prepare for cache pop (clone last NETCACHE_GETREQ_POP as GETREQ to server)
-                                            if is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid != 0 and tmp_client_sid != 0:
+                                            if is_hot == 0 and is_report == 0 and is_lastclone_for_pktloss == 0 and is_last_scansplit == 0 and tmp_server_sid != 0 and tmp_client_sid != 0:
                                                 # size: 32*client_physical_num*server_physical_num=128 < 32*8*8=2048
                                                 matchspec0 = distcachespine_eg_port_forward_tbl_match_spec_t(\
                                                     op_hdr_optype = GETREQ_INSWITCH,
@@ -1464,28 +1441,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_is_last_scansplit = is_last_scansplit,
                                                     clone_hdr_server_sid = tmp_server_sid)
                                                 if is_cached == 0:
-                                                    if is_hot == 1 and is_report == 0:
-                                                        # Update GETREQ_INSWITCH as NETCACHE_GETREQ_POP to switchos by cloning
-                                                        actnspec0 = distcachespine_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq_action_spec_t(self.reflector_sid, reflector_dp2cpserver_port)
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(\
-                                                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    else:
+                                                    # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
+                                                    #actnspec0 = distcachespine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
+                                                            self.sess_hdl, self.dev_tgt, matchspec0)
+                                                else:
+                                                    if is_latest == 0:
                                                         # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
                                                         #actnspec0 = distcachespine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
-                                                else:
-                                                    if is_latest == 0:
-                                                        if is_hot == 1 and is_report == 0:
-                                                            # Update GETREQ_INSWITCH as NETCACHE_GETREQ_POP to switchos by cloning
-                                                            actnspec0 = distcachespine_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq_action_spec_t(self.reflector_sid, reflector_dp2cpserver_port)
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                        else:
-                                                            # Update GETREQ_INSWITCH as GETREQ_SPINE to server-leaf
-                                                            #actnspec0 = distcachespine_update_getreq_inswitch_to_getreq_action_spec_t(self.devPorts[1])
-                                                            self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getreq_spine(\
-                                                                    self.sess_hdl, self.dev_tgt, matchspec0)
                                                     else: # is_cached == 1 and is_latest == 1
                                                         # Update GETREQ_INSWITCH as GETRES to client by mirroring
                                                         actnspec0 = distcachespine_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)

@@ -471,6 +471,15 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     eval("self.client.hash_for_cm{}_tbl_table_add_with_hash_for_cm{}".format(i, i))(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
+            # Table: hash_for_bf1/2/3_tbl (default: nop; size: 1)
+            for i in range(1, 4):
+                print "Configuring hash_for_bf{}_tbl".format(i)
+                for tmpoptype in [GETREQ]:
+                    matchspec0 = eval("netcache_hash_for_bf{}_tbl_match_spec_t".format(i))(\
+                            op_hdr_optype = tmpoptype)
+                    eval("self.client.hash_for_bf{}_tbl_table_add_with_hash_for_bf{}".format(i, i))(\
+                            self.sess_hdl, self.dev_tgt, matchspec0)
+
             # Table: hash_for_seq_tbl (default: nop; size: 2)
             print "Configuring hash_for_seq_tbl"
             for tmpoptype in [PUTREQ, DELREQ]:

@@ -217,60 +217,9 @@ table hash_for_seq_tbl {
 
 // Stage 5
 
-action hash_for_bf1() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf1, 0, hash_calc, BF_BUCKET_COUNT);
-}
-
-@pragma stage 5
-table hash_for_bf1_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf1;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
 // Stage 6
 
-action hash_for_bf2() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf2, 0, hash_calc2, BF_BUCKET_COUNT);
-}
-
-@pragma stage 6
-table hash_for_bf2_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf2;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
-
 // Stage 7
-
-action hash_for_bf3() {
-	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_bf3, 0, hash_calc3, BF_BUCKET_COUNT);
-}
-
-@pragma stage 7
-table hash_for_bf3_tbl {
-	reads {
-		op_hdr.optype: exact;
-	}
-	actions {
-		hash_for_bf3;
-		nop;
-	}
-	default_action: nop();
-	size: 2;
-}
 
 /*action set_client_sid(client_sid, eport) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
