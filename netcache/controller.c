@@ -36,8 +36,6 @@ bool volatile controller_running = false;
 std::atomic<size_t> controller_ready_threads(0);
 size_t controller_expected_ready_threads = -1;
 
-uint32_t server_total_logical_num_for_controller;
-
 // cache population/eviction
 
 // switchos.popworker.popclient_for_controller <-> controller.popserver
@@ -66,12 +64,6 @@ cpu_set_t nonserverworker_cpuset; // [server_cores, total_cores-1] for all other
 int main(int argc, char **argv) {
 	parse_ini("config.ini");
 	parse_control_ini("control_type.ini");
-
-#ifdef SERVER_ROTATION
-	server_total_logical_num_for_controller = server_total_logical_num_for_rotation;
-#else
-	server_total_logical_num_for_controller = server_total_logical_num;
-#endif
 
 	int ret = 0;
 
@@ -203,7 +195,7 @@ void *run_controller_popserver(void *param) {
 			printf("[controller.popserver] invalid packet type: %x\n", optype_t(tmp_optype));
 			exit(-1);
 		}
-		INVARIANT(tmp_serveridx >= 0 && tmp_serveridx < server_total_logical_num_for_controller);
+		INVARIANT(tmp_serveridx >= 0 && tmp_serveridx < max_server_total_logical_num);
 
 		// find corresponding server X
 		int tmp_server_physical_idx = -1;
@@ -283,7 +275,7 @@ void *run_controller_evictserver(void *param) {
 		// set dstaddr for the corresponding server
 		netcache_cache_evict_t tmp_netcache_cache_evict(buf, recvsize);
 		uint16_t tmp_global_server_logical_idx = tmp_netcache_cache_evict.serveridx();
-		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < server_total_logical_num_for_controller);
+		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < max_server_total_logical_num);
 		int tmp_server_physical_idx = -1;
 		for (int i = 0; i < server_physical_num; i++) {
 			for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {

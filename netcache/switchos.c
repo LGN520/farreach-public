@@ -229,12 +229,6 @@ void *run_switchos_popserver(void *param) {
 
 void *run_switchos_popworker(void *param) {
 
-#ifdef SERVER_ROTATION
-	uint32_t server_total_logical_num_for_switchos = server_total_logical_num_for_rotation;
-#else
-	uint32_t server_total_logical_num_for_switchos = server_total_logical_num;
-#endif
-
 	// used to fetch value from server by controller
 	struct sockaddr_in controller_popserver_addr;
 	set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_switchos), controller_popserver_port_start);
@@ -296,9 +290,9 @@ void *run_switchos_popworker(void *param) {
 		if (tmp_netcache_getreq_pop_ptr != NULL) {
 			// calculate global server logical index
 #ifdef USE_HASH
-			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_hashpartition_idx(switch_partition_count, server_total_logical_num_for_switchos);
+			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
 #elif defined(USE_RANGE)
-			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_rangepartition_idx(server_total_logical_num_for_switchos);
+			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_rangepartition_idx(max_server_total_logical_num);
 #endif
 			
 			// TMPDEBUG

@@ -775,7 +775,7 @@ void *run_server_evictserver(void *param) {
 		if (!server_cached_keyset_list[local_server_logical_idx].is_exist(tmp_cache_evict_ptr->key())) {
 			printf("[ERROR] server %d-%d does not cache key %x whose expected server is %d\n",\
 					local_server_logical_idx, global_server_logical_idx, tmp_cache_evict_ptr->key().keyhihi,\
-					tmp_cache_evict_ptr->key().get_hashpartition_idx(switch_partition_count, server_total_logical_num));
+					tmp_cache_evict_ptr->key().get_hashpartition_idx(switch_partition_count, max_server_total_logical_num));
 			exit(-1);
 		}
 

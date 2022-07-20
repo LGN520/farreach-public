@@ -44,8 +44,6 @@ bool volatile controller_running = false;
 std::atomic<size_t> controller_ready_threads(0);
 size_t controller_expected_ready_threads = -1;
 
-uint32_t server_total_logical_num_for_controller;
-
 // cache population/eviction
 
 // server.popclient <-> controller.popserver
@@ -92,12 +90,6 @@ int main(int argc, char **argv) {
 	parse_ini("config.ini");
 	parse_control_ini("control_type.ini");
 
-#ifdef SERVER_ROTATION
-	server_total_logical_num_for_controller = server_total_logical_num_for_rotation;
-#else
-	server_total_logical_num_for_controller = server_total_logical_num;
-#endif
-
 	int ret = 0;
 
 	// NOTE: now we deploy controller in the same physical machine with servers
@@ -116,9 +108,9 @@ int main(int argc, char **argv) {
 
 	prepare_controller();
 
-	pthread_t popserver_threads[server_total_logical_num_for_controller];
-	uint16_t popserver_params[server_total_logical_num_for_controller];
-	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num_for_controller; tmp_global_server_logical_idx++) {
+	pthread_t popserver_threads[max_server_total_logical_num];
+	uint16_t popserver_params[max_server_total_logical_num];
+	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 		popserver_params[tmp_global_server_logical_idx] = tmp_global_server_logical_idx;
 		ret = pthread_create(&popserver_threads[tmp_global_server_logical_idx], nullptr, run_controller_popserver, &popserver_params[tmp_global_server_logical_idx]);
 		if (ret) {
@@ -166,7 +158,7 @@ int main(int argc, char **argv) {
 	controller_running = false;
 
 	void * status;
-	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num_for_controller; tmp_global_server_logical_idx++) {
+	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 		int rc = pthread_join(popserver_threads[tmp_global_server_logical_idx], &status);
 		if (rc) {
 			COUT_N_EXIT("Error:unable to join popserver " << rc);
@@ -191,13 +183,13 @@ void prepare_controller() {
 
 	controller_running =false;
 
-	controller_expected_ready_threads = server_total_logical_num_for_controller + 2;
-	controller_expected_popserver_finish_threads = server_total_logical_num_for_controller;
+	controller_expected_ready_threads = max_server_total_logical_num + 2;
+	controller_expected_popserver_finish_threads = max_server_total_logical_num;
 
 	// prepare popserver sockets
-	controller_popserver_udpsock_list = new int[server_total_logical_num_for_controller];
-	controller_popserver_popclient_udpsock_list = new int[server_total_logical_num_for_controller];
-	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num_for_controller; tmp_global_server_logical_idx++) {
+	controller_popserver_udpsock_list = new int[max_server_total_logical_num];
+	controller_popserver_popclient_udpsock_list = new int[max_server_total_logical_num];
+	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 		prepare_udpserver(controller_popserver_udpsock_list[tmp_global_server_logical_idx], false, controller_popserver_port_start + tmp_global_server_logical_idx, "controller.popserver");
 		create_udpsock(controller_popserver_popclient_udpsock_list[tmp_global_server_logical_idx], true, "controller.popserver.popclient");
 	}
@@ -228,9 +220,9 @@ void prepare_controller() {
 
 	// prepare snapshotclient
 	create_udpsock(controller_snapshotclient_for_switchos_udpsock, true, "controller.snapshotclient_for_switchos", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
-	controller_snapshotclient_for_server_udpsock_list = new int[server_total_logical_num_for_controller];
-	controller_snapshotclient_for_server_databuf_list = new dynamic_array_t[server_total_logical_num_for_controller];
-	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num_for_controller; tmp_global_server_logical_idx++) {
+	controller_snapshotclient_for_server_udpsock_list = new int[max_server_total_logical_num];
+	controller_snapshotclient_for_server_databuf_list = new dynamic_array_t[max_server_total_logical_num];
+	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 		create_udpsock(controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx], true, "controller.snapshotclient_for_server", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 		controller_snapshotclient_for_server_databuf_list[tmp_global_server_logical_idx].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	}
@@ -375,7 +367,7 @@ void *run_controller_evictserver(void *param) {
 			tmp_cache_evict_ptr = new cache_evict_case2_t(buf, recvsize);
 		}
 		uint16_t tmp_global_server_logical_idx = tmp_cache_evict_ptr->serveridx();
-		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < server_total_logical_num_for_controller);
+		INVARIANT(tmp_global_server_logical_idx >= 0 && tmp_global_server_logical_idx < max_server_total_logical_num);
 		int tmp_server_physical_idx = -1;
 		for (int i = 0; i < server_physical_num; i++) {
 			for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
@@ -425,11 +417,11 @@ void *run_controller_snapshotclient(void *param) {
 	set_sockaddr(switchos_snapshotserver_addr, inet_addr(switchos_ip), switchos_snapshotserver_port);
 	socklen_t switchos_snapshotserver_addrlen = sizeof(struct sockaddr_in);
 
-	struct sockaddr_in server_snapshotserver_addr_list[server_total_logical_num_for_controller];
-	socklen_t server_snapshotserver_addrlen_list[server_total_logical_num_for_controller];
-	struct sockaddr_in server_snapshotdataserver_addr_list[server_total_logical_num_for_controller];
-	socklen_t server_snapshotdataserver_addrlen_list[server_total_logical_num_for_controller];
-	//for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num_for_controller; tmp_global_server_logical_idx++) {
+	struct sockaddr_in server_snapshotserver_addr_list[max_server_total_logical_num];
+	socklen_t server_snapshotserver_addrlen_list[max_server_total_logical_num];
+	struct sockaddr_in server_snapshotdataserver_addr_list[max_server_total_logical_num];
+	socklen_t server_snapshotdataserver_addrlen_list[max_server_total_logical_num];
+	//for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 	for (int valid_idx = 0; valid_idx < valid_global_server_logical_idxes.size(); valid_idx++) {
 		uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[valid_idx];
 		int tmp_server_physical_idx = -1;
@@ -458,8 +450,8 @@ void *run_controller_snapshotclient(void *param) {
 	cleanup_subthread_param_for_switchos.udpsock = controller_snapshotclient_for_switchos_udpsock;
 	cleanup_subthread_param_for_switchos.dstaddr = switchos_snapshotserver_addr;
 	cleanup_subthread_param_for_switchos.dstaddrlen = switchos_snapshotserver_addrlen;
-	pthread_t cleanup_subthread_for_server_list[server_total_logical_num_for_controller];
-	snapshotclient_subthread_param_t cleanup_subthread_param_for_server_list[server_total_logical_num_for_controller];
+	pthread_t cleanup_subthread_for_server_list[max_server_total_logical_num];
+	snapshotclient_subthread_param_t cleanup_subthread_param_for_server_list[max_server_total_logical_num];
 	for (int valid_idx = 0; valid_idx < valid_global_server_logical_idxes.size(); valid_idx++) {
 		uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[valid_idx];
 		cleanup_subthread_param_for_server_list[tmp_global_server_logical_idx].udpsock = controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx];
@@ -474,8 +466,8 @@ void *run_controller_snapshotclient(void *param) {
 	start_subthread_param_for_switchos.udpsock = controller_snapshotclient_for_switchos_udpsock;
 	start_subthread_param_for_switchos.dstaddr = switchos_snapshotserver_addr;
 	start_subthread_param_for_switchos.dstaddrlen = switchos_snapshotserver_addrlen;
-	pthread_t start_subthread_for_server_list[server_total_logical_num_for_controller];
-	snapshotclient_subthread_param_t start_subthread_param_for_server_list[server_total_logical_num_for_controller];
+	pthread_t start_subthread_for_server_list[max_server_total_logical_num];
+	snapshotclient_subthread_param_t start_subthread_param_for_server_list[max_server_total_logical_num];
 	for (int valid_idx = 0; valid_idx < valid_global_server_logical_idxes.size(); valid_idx++) {
 		uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[valid_idx];
 		start_subthread_param_for_server_list[tmp_global_server_logical_idx].udpsock = controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx];
@@ -485,8 +477,8 @@ void *run_controller_snapshotclient(void *param) {
 	}
 
 	// prepare for concurrent SNAPSHOT_SENDDATA
-	pthread_t senddata_subthread_for_server_list[server_total_logical_num_for_controller];
-	snapshotclient_subthread_param_t senddata_subthread_param_for_server_list[server_total_logical_num_for_controller];
+	pthread_t senddata_subthread_for_server_list[max_server_total_logical_num];
+	snapshotclient_subthread_param_t senddata_subthread_param_for_server_list[max_server_total_logical_num];
 	for (int valid_idx = 0; valid_idx < valid_global_server_logical_idxes.size(); valid_idx++) {
 		uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[valid_idx];
 		senddata_subthread_param_for_server_list[tmp_global_server_logical_idx].udpsock = controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx];
@@ -642,7 +634,6 @@ void *run_controller_snapshotclient(void *param) {
 					uint16_t tmp_serveridx = *((uint16_t *)(databuf.array() + tmp_offset + sizeof(int32_t)));
 					int32_t tmp_recordcnt = *((int32_t *)(databuf.array() + tmp_offset + sizeof(int32_t) + sizeof(uint16_t)));
 
-#ifndef SERVER_ROTATION
 					bool is_valid = false;
 					for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
 						if (tmp_serveridx == valid_global_server_logical_idxes[i]) {
@@ -650,6 +641,12 @@ void *run_controller_snapshotclient(void *param) {
 							break;
 						}
 					}
+#ifdef SERVER_ROTATION
+					if (is_valid == false) {
+						tmp_offset += tmp_serverbytes;
+						continue;
+					}
+#else
 					INVARIANT(is_valid == true);
 #endif
 
@@ -692,7 +689,7 @@ void *run_controller_snapshotclient(void *param) {
 	}
 
 	close(controller_snapshotclient_for_switchos_udpsock);
-	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num_for_controller; tmp_global_server_logical_idx++) {
+	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 		close(controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx]);
 	}
 	pthread_exit(nullptr);

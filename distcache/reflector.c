@@ -49,14 +49,14 @@ int main(int argc, char **argv) {
   	memcpy(reflector_role, argv[1], strlen(argv[1]));
 
 	// update global variables based on reflector.role
-	if (strcmp(reflector_role, "spine", 5) == 0) {
+	if (strcmp(reflector_role, "spine") == 0) {
 		memcpy(reflector_ip_for_switchos, spine_reflector_ip_for_switchos, strlen(spine_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = spine_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = spine_reflector_cp2dpserver_port;
 		memcpy(reflector_cp2dp_dstip, spine_reflector_cp2dp_dstip, strlen(spine_reflector_cp2dp_dstip));
 		memcpy(switchos_ip, spineswitchos_ip, strlen(spineswitchos_ip));
 	}
-	else if (strcmp(reflector_role, "leaf", 4) == 0) {
+	else if (strcmp(reflector_role, "leaf") == 0) {
 		memcpy(reflector_ip_for_switchos, leaf_reflector_ip_for_switchos, strlen(leaf_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_port;
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 
 	// find physical server if any based on reflector_ip_for_switchos
 	for (int i = 0; i < server_physical_num; i++) {
-		if (strcmp(reflector_ip_for_switchos) == server_ips[i]) {
+		if (strcmp(reflector_ip_for_switchos, server_ips[i]) == 0) {
 			server_physical_idx = i;
 			break;
 		}

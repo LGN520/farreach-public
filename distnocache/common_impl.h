@@ -92,6 +92,8 @@ uint32_t server_physical_num = 0;
 uint32_t client_total_logical_num = 0;
 uint32_t server_total_logical_num = 0;
 uint32_t server_total_logical_num_for_rotation = 0;
+// NOTE: even under server rotation, max_server_total_logical_num = server_total_logical_num in prepare/load/warmup phase; max_server_total_logical_num != server_total_logical_num ONLY in transaction phase; (prepare phase: launch and configure switch and switchos; ONLY controller and server restart for each time of experiment under server rotation)
+uint32_t max_server_total_logical_num = 0;
 
 // common client configuration
 short client_rotationdataserver_port = 0;
@@ -258,6 +260,11 @@ inline void parse_ini(const char* config_file) {
 	client_total_logical_num = ini.get_client_total_logical_num();
 	server_total_logical_num = ini.get_server_total_logical_num();
 	server_total_logical_num_for_rotation = ini.get_server_total_logical_num_for_rotation();
+#ifdef SERVER_ROTATION
+	max_server_total_logical_num = server_total_logical_num_for_rotation;
+#else
+	max_server_total_logical_num = server_total_logical_num;
+#endif
 
 	/*if (workload_mode == 0) { // static workload
 #ifndef SERVER_ROTATION
@@ -278,6 +285,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(client_total_logical_num);
 	COUT_VAR(server_total_logical_num);
 	COUT_VAR(server_total_logical_num_for_rotation);
+	COUT_VAR(max_server_total_logical_num);
 	printf("\n");
 
 	// common client configuration
@@ -345,14 +353,12 @@ inline void parse_ini(const char* config_file) {
 		if (server_worker_corenums[server_physical_idx] < server_logical_idxes_list[server_physical_idx].size()) {
 			printf("[ERROR] server[%d] worker corenum %d < thread num %d, which could incur CPU contention!\n", server_physical_idx, server_worker_corenums[server_physical_idx], server_logical_idxes_list[server_physical_idx].size());
 		}
-#ifndef SERVER_ROTATION
 		for (size_t i = 0; i < server_logical_idxes_list[server_physical_idx].size(); i++) {
-			if (server_logical_idxes_list[server_physical_idx][i] >= server_total_logical_num) {
-				printf("[ERROR] server logical idx %d cannot >= server_total_logical_num %d\n", server_logical_idxes_list[server_physical_idx][i], server_total_logical_num);
+			if (server_logical_idxes_list[server_physical_idx][i] >= max_server_total_logical_num) {
+				printf("[ERROR] server logical idx %d cannot >= max_server_total_logical_num %d\n", server_logical_idxes_list[server_physical_idx][i], max_server_total_logical_num);
 				exit(-1);
 			}
 		}
-#endif
 		tmp_server_total_logical_num += server_logical_idxes_list[server_physical_idx].size();
 		server_ips.push_back(ini.get_server_ip(server_physical_idx));
 		uint8_t *tmp_server_mac = new uint8_t[6];
@@ -463,6 +469,11 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(leafswitch_pipeidx);
 	INVARIANT(leafswitch_logical_idxes.size() == leafswitch_total_logical_num);
 
+	// validate spine/leaf switchnum and servernum
+	INVARIANT(spineswitch_total_logical_num <= leafswitch_total_logical_num);
+	INVARIANT(leafswitch_total_logical_num <= max_server_total_logical_num);
+	INVARIANT(max_server_total_logical_num % leafswitch_total_logical_num == 0);
+
 	// reflector_for_leaf
 	leaf_reflector_ip_for_switchos = ini.get_leaf_reflector_ip_for_switchos();
 	leaf_reflector_dp2cpserver_port = ini.get_leaf_reflector_dp2cpserver_port();
@@ -498,21 +509,13 @@ inline void parse_ini(const char* config_file) {
 	// calculated metadata
 
 	LOAD_RAW_WORKLOAD(raw_load_workload_filename, workload_name);
-#ifdef SERVER_ROTATION
-	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, server_total_logical_num_for_rotation); // get the split directory for loading phase
-#else
-	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, server_total_logical_num); // get the split directory for loading phase
-#endif
+	LOAD_SPLIT_DIR(server_load_workload_dir, workload_name, max_server_total_logical_num); // get the split directory for loading phase
 	WARMUP_RAW_WORKLOAD(raw_warmup_workload_filename, workload_name);
 	RUN_RAW_WORKLOAD(raw_run_workload_filename, workload_name);
 	RUN_SPLIT_DIR(client_workload_dir, workload_name, client_total_logical_num);
 	//max_sending_rate *= server_num;
 	//per_client_per_period_max_sending_rate = max_sending_rate / client_num / (1 * 1000 * 1000 / rate_limit_period);
-#ifdef SERVER_ROTATION
-	perserver_keyrange = 64*1024 / server_total_logical_num_for_rotation; // 2^16 / server_num
-#else
-	perserver_keyrange = 64*1024 / server_total_logical_num; // 2^16 / server_num
-#endif
+	perserver_keyrange = 64*1024 / max_server_total_logical_num; // 2^16 / server_num
 
 	printf("raw_load_workload_filename for loading phase: %s\n", raw_load_workload_filename);
 	printf("server_load_workload_dir for loading phase: %s\n", server_load_workload_dir);

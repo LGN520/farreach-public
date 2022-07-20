@@ -77,17 +77,18 @@ uint32_t volatile * switchos_perpipeline_cached_empty_index = 0; // [empty index
 void prepare_switchos();
 void *run_switchos_popserver(void *param);
 void *run_switchos_popworker(void *param);
+uint16_t calculate_switchidx(key_t key);
 void close_switchos();
 
 // switchos <-> ptf.popserver
 //inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx, uint32_t pipeidx);
 //inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx, uint32_t pipeidx);
-inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t freeidx);
+inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t switchidx, uint16_t freeidx);
 //inline uint32_t serialize_setvalid3(char *buf, uint16_t evictidx, uint32_t pipeidx);
 // NOTE: now we load evicted data directly from data plane instead of via ptf channel
 //inline uint32_t serialize_get_evictdata_setvalid3(char *buf, uint32_t pipeidx);
 //inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
-inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key);
+inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key, uint16_t switchidx);
 
 int main(int argc, char **argv) {
 	if (argc < 2) {
@@ -95,14 +96,17 @@ int main(int argc, char **argv) {
 		exit(-1);
 	}
 
+	parse_ini("config.ini");
+	parse_control_ini("control_type.ini");
+
 	memcpy(switchos_role, argv[1], strlen(argv[1]));
 	// update reflector configuration based on switchos role
-	if (strcmp(switchos_role, "spine", 5) == 0) {
+	if (strcmp(switchos_role, "spine") == 0) {
 		memcpy(reflector_ip_for_switchos, spine_reflector_ip_for_switchos, strlen(spine_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = spine_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = spine_reflector_cp2dpserver_port;
 	}
-	else if (strcmp(switchos_role, "leaf", 4) == 0) {
+	else if (strcmp(switchos_role, "leaf") == 0) {
 		memcpy(reflector_ip_for_switchos, leaf_reflector_ip_for_switchos, strlen(leaf_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_port;
@@ -111,9 +115,6 @@ int main(int argc, char **argv) {
 		printf("Invalid switchos role: %s which should be spine/leaf\n", switchos_role);
 		exit(-1);
 	}
-
-	parse_ini("config.ini");
-	parse_control_ini("control_type.ini");
 
 	prepare_switchos();
 
@@ -256,12 +257,6 @@ void *run_switchos_popserver(void *param) {
 
 void *run_switchos_popworker(void *param) {
 
-#ifdef SERVER_ROTATION
-	uint32_t server_total_logical_num_for_switchos = server_total_logical_num_for_rotation;
-#else
-	uint32_t server_total_logical_num_for_switchos = server_total_logical_num;
-#endif
-
 	// used to fetch value from server by controller
 	struct sockaddr_in controller_popserver_addr;
 	set_sockaddr(controller_popserver_addr, inet_addr(controller_ip_for_switchos), controller_popserver_port_start);
@@ -323,9 +318,9 @@ void *run_switchos_popworker(void *param) {
 		if (tmp_netcache_getreq_pop_ptr != NULL) {
 			// calculate global server logical index
 #ifdef USE_HASH
-			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_hashpartition_idx(switch_partition_count, server_total_logical_num_for_switchos);
+			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
 #elif defined(USE_RANGE)
-			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_rangepartition_idx(server_total_logical_num_for_switchos);
+			uint32_t tmp_global_server_logical_idx = tmp_netcache_getreq_pop_ptr->key().get_rangepartition_idx(max_server_total_logical_num);
 #endif
 			
 			// TMPDEBUG
@@ -344,17 +339,27 @@ void *run_switchos_popworker(void *param) {
 			}
 
 			// find corresponding pipeline idx
-			int tmp_server_physical_idx = -1;
-			for (int i = 0; i < server_physical_num; i++) {
-				for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
-					if (server_logical_idxes_list[i][j] == tmp_global_server_logical_idx) {
-						tmp_server_physical_idx = i;
-						break;
+			uint32_t tmp_pipeidx = 0;
+			if (strcmp(switchos_role, "spine") == 0) {
+				tmp_pipeidx = leafswitch_pipeidx;
+			}
+			elif (strcmp(switchos_role, "leaf") == 0) {
+				int tmp_server_physical_idx = -1;
+				for (int i = 0; i < server_physical_num; i++) {
+					for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
+						if (server_logical_idxes_list[i][j] == tmp_cache_pop_ptr->serveridx()) {
+							tmp_server_physical_idx = i;
+							break;
+						}
 					}
 				}
+				INVARIANT(tmp_server_physical_idx != -1);
+				tmp_pipeidx = server_pipeidxes[tmp_server_physical_idx];
 			}
-			INVARIANT(tmp_server_physical_idx != -1);
-			uint32_t tmp_pipeidx = server_pipeidxes[tmp_server_physical_idx];
+			else {
+				printf("[switchos.popworker] invalid switchos role: %s\n", switchos_role);
+				exit(-1);
+			}
 
 			// assign switchos_freeidx for new record 
 			if (switchos_perpipeline_cached_empty_index[tmp_pipeidx] < switch_kv_bucket_num) { // With free idx
@@ -447,10 +452,13 @@ void *run_switchos_popworker(void *param) {
 
 				//CUR_TIME(evict_load_t2);
 
+				// calculate correpsonding switchidx
+				uint16_t tmp_evictswitchidx = calculate_switchidx(cur_evictkey);
+
 				//CUR_TIME(evict_remove_t1);
 				// remove evicted data from cache_lookup_tbl
 				//system("bash tofino/remove_cache_lookup.sh");
-				ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, cur_evictkey);
+				ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, cur_evictkey, tmp_evictswitchidx);
 				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 				INVARIANT(*((int *)ptfbuf) == SWITCHOS_REMOVE_CACHE_LOOKUP_ACK); // wait for SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
@@ -584,10 +592,13 @@ void *run_switchos_popworker(void *param) {
 				}
 			}
 
+			// calculate corresponding switchidx based on role
+			uint16_t tmp_switchidx = calculate_switchidx(tmp_netcache_getreq_pop_ptr->key());
+
 			// (1) add new <key, value> pair into cache_lookup_tbl; DEPRECATED: (2) and set valid=1 to enable the entry
 			////system("bash tofino/add_cache_lookup_setvalid1.sh");
 			//ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx, tmp_pipeidx);
-			ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_netcache_getreq_pop_ptr->key(), switchos_freeidx);
+			ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_netcache_getreq_pop_ptr->key(), tmp_switchidx, switchos_freeidx);
 			udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 			udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 			//INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
@@ -640,6 +651,21 @@ void *run_switchos_popworker(void *param) {
 	pthread_exit(nullptr);
 }
 
+uint16_t calculate_switchidx(key_t key) {
+	uint16_t tmp_switchidx = 0;
+	if (strcmp(switchos_role, "spine") == 0) {
+		tmp_switchidx = uint16_t(key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+	}
+	else if (strcmp(switchos_role, "leaf") == 0) {
+		tmp_switchidx = uint16_t(key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+	}
+	else {
+		printf("[switchos.popworker] invalid switchos role: %s\n", switchos_role);
+		exit(-1);
+	}
+	return tmp_switchidx;
+}
+
 void close_switchos() {
 	/*if (switchos_cache_pop_ptrs != NULL) {
 		for (size_t i = 0; i < MQ_SIZE; i++) {
@@ -683,11 +709,12 @@ void close_switchos() {
 }*/
 
 //inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx, uint32_t pipeidx) {
-inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t freeidx) {
+inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t switchidx, uint16_t freeidx) {
 	memcpy(buf, &SWITCHOS_ADD_CACHE_LOOKUP, sizeof(int));
 	uint32_t tmp_keysize = key.serialize(buf + sizeof(int), MAX_BUFSIZE - sizeof(int));
-	memcpy(buf + sizeof(int) + tmp_keysize, &freeidx, sizeof(uint16_t));
-	return sizeof(int) + tmp_keysize + sizeof(uint16_t);
+	memcpy(buf + sizeof(int) + tmp_keysize, &switchidx, sizeof(uint16_t));
+	memcpy(buf + sizeof(int) + tmp_keysize + sizeof(uint16_t), &freeidx, sizeof(uint16_t));
+	return sizeof(int) + tmp_keysize + sizeof(uint16_t) + sizeof(uint16_t);
 	//memcpy(buf + sizeof(int) + tmp_keysize + sizeof(uint16_t), &pipeidx, sizeof(uint32_t));
 	//return sizeof(int) + tmp_keysize + sizeof(uint16_t) + sizeof(uint32_t);
 }
@@ -716,8 +743,9 @@ inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx
 	switchos_evictstat = *((bool *)curptr);
 }*/
 
-inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key) {
+inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key, uint16_t switchidx) {
 	memcpy(buf, &SWITCHOS_REMOVE_CACHE_LOOKUP, sizeof(int));
 	uint32_t tmp_keysize = key.serialize(buf + sizeof(int), MAX_BUFSIZE - sizeof(int));
-	return sizeof(int) + tmp_keysize;
+	memcpy(buf + sizeof(int) + tmp_keysize, &switchidx, sizeof(uint16_t));
+	return sizeof(int) + tmp_keysize + sizeof(uint16_t);
 }

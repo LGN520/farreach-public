@@ -133,6 +133,7 @@ void prepare_switchos();
 void recover();
 void *run_switchos_popserver(void *param);
 void *run_switchos_popworker(void *param);
+uint16_t calculate_switchidx(key_t key);
 void *run_switchos_snapshotserver(void *param);
 void *run_switchos_specialcaseserver(void *param);
 void process_specialcase(const uint16_t &tmpidx, const netreach_key_t &tmpkey, const val_t &tmpval, const uint32_t &tmpseq, const bool &tmpstat);
@@ -141,12 +142,12 @@ void close_switchos();
 // switchos <-> ptf.popserver
 //inline uint32_t serialize_setvalid0(char *buf, uint16_t freeidx, uint32_t pipeidx);
 //inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx, uint32_t pipeidx);
-inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t freeidx);
+inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t switchidx, uint16_t freeidx);
 //inline uint32_t serialize_setvalid3(char *buf, uint16_t evictidx, uint32_t pipeidx);
 // NOTE: now we load evicted data directly from data plane instead of via ptf channel
 //inline uint32_t serialize_get_evictdata_setvalid3(char *buf, uint32_t pipeidx);
 //inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx, val_t &switchos_evictvalue, uint32_t &switchos_evictseq, bool &switchos_evictstat);
-inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key);
+inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key, uint16_t switchidx);
 // NOTE: now we load snapshot data directly from data plane instead of via ptf channel
 //inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx, uint32_t pipeidx);
 //void parse_snapshotdata_fromptf(char *buf, uint32_t buflen, val_t *values, uint32_t *seqs, bool *stats, uint32_t record_cnt);
@@ -157,18 +158,21 @@ int main(int argc, char **argv) {
 		exit(-1);
 	}
 
+	parse_ini("config.ini");
+	parse_control_ini("control_type.ini");
+
 	if ((argc == 3) && (strcmp(argv[2], "recover") == 0)) {
 		recover_mode = true;
 	}
 
 	memcpy(switchos_role, argv[1], strlen(argv[1]));
 	// update reflector configuration based on switchos role
-	if (strcmp(switchos_role, "spine", 5) == 0) {
+	if (strcmp(switchos_role, "spine") == 0) {
 		memcpy(reflector_ip_for_switchos, spine_reflector_ip_for_switchos, strlen(spine_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = spine_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = spine_reflector_cp2dpserver_port;
 	}
-	else if (strcmp(switchos_role, "leaf", 4) == 0) {
+	else if (strcmp(switchos_role, "leaf") == 0) {
 		memcpy(reflector_ip_for_switchos, leaf_reflector_ip_for_switchos, strlen(leaf_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_port;
@@ -177,9 +181,6 @@ int main(int argc, char **argv) {
 		printf("Invalid switchos role: %s which should be spine/leaf\n", switchos_role);
 		exit(-1);
 	}
-
-	parse_ini("config.ini");
-	parse_control_ini("control_type.ini");
 
 	prepare_switchos();
 
@@ -516,17 +517,27 @@ void *run_switchos_popworker(void *param) {
 				}
 
 				// find corresponding pipeline idx
-				int tmp_server_physical_idx = -1;
-				for (int i = 0; i < server_physical_num; i++) {
-					for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
-						if (server_logical_idxes_list[i][j] == tmp_cache_pop_ptr->serveridx()) {
-							tmp_server_physical_idx = i;
-							break;
+				uint32_t tmp_pipeidx = 0;
+				if (strcmp(switchos_role, "spine") == 0) {
+					tmp_pipeidx = leafswitch_pipeidx;
+				}
+				elif (strcmp(switchos_role, "leaf") == 0) {
+					int tmp_server_physical_idx = -1;
+					for (int i = 0; i < server_physical_num; i++) {
+						for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
+							if (server_logical_idxes_list[i][j] == tmp_cache_pop_ptr->serveridx()) {
+								tmp_server_physical_idx = i;
+								break;
+							}
 						}
 					}
+					INVARIANT(tmp_server_physical_idx != -1);
+					tmp_pipeidx = server_pipeidxes[tmp_server_physical_idx];
 				}
-				INVARIANT(tmp_server_physical_idx != -1);
-				uint32_t tmp_pipeidx = server_pipeidxes[tmp_server_physical_idx];
+				else {
+					printf("[switchos.popworker] invalid switchos role: %s\n", switchos_role);
+					exit(-1);
+				}
 
 				// assign switchos_freeidx for new record 
 				if (switchos_perpipeline_cached_empty_index[tmp_pipeidx] < switch_kv_bucket_num) { // With free idx
@@ -712,10 +723,13 @@ void *run_switchos_popworker(void *param) {
 								uint32_t(switchos_evictseq), bool(switchos_evictstat));
 					}
 
+					// calculate correpsonding switchidx
+					uint16_t tmp_evictswitchidx = calculate_switchidx(cur_evictkey);
+
 					//CUR_TIME(evict_remove_t1);
 					// remove evicted data from cache_lookup_tbl
 					//system("bash tofino/remove_cache_lookup.sh");
-					ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, cur_evictkey);
+					ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, cur_evictkey, tmp_evictswitchidx);
 					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 					INVARIANT(*((int *)ptfbuf) == SWITCHOS_REMOVE_CACHE_LOOKUP_ACK); // wait for SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
@@ -820,10 +834,13 @@ void *run_switchos_popworker(void *param) {
 					}
 				}
 
+				// calculate corresponding switchidx based on role
+				uint16_t tmp_switchidx = calculate_switchidx(tmp_cache_pop_ptr->key());
+
 				// (1) add new <key, value> pair into cache_lookup_tbl; DEPRECATED: (2) and set valid=1 to enable the entry
 				////system("bash tofino/add_cache_lookup_setvalid1.sh");
 				//ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx, tmp_pipeidx);
-				ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx);
+				ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_cache_pop_ptr->key(), tmp_switchidx, switchos_freeidx);
 				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 				//INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
@@ -882,6 +899,21 @@ void *run_switchos_popworker(void *param) {
 	pthread_exit(nullptr);
 }
 
+uint16_t calculate_switchidx(key_t key) {
+	uint16_t tmp_switchidx = 0;
+	if (strcmp(switchos_role, "spine") == 0) {
+		tmp_switchidx = uint16_t(key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));
+	}
+	else if (strcmp(switchos_role, "leaf") == 0) {
+		tmp_switchidx = uint16_t(key.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num));
+	}
+	else {
+		printf("[switchos.popworker] invalid switchos role: %s\n", switchos_role);
+		exit(-1);
+	}
+	return tmp_switchidx;
+}
+
 void *run_switchos_snapshotserver(void *param) {
 	// for SNAPSHOT_START/_ACK
 	struct sockaddr_in controller_snapshotclient_addr;
@@ -909,14 +941,14 @@ void *run_switchos_snapshotserver(void *param) {
 	}
 	
 	// for consistent snapshot data to controller
-	dynamic_array_t tmp_sendbuf_list[server_total_logical_num];
-	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num; tmp_global_server_logical_idx++) {
+	dynamic_array_t tmp_sendbuf_list[max_server_total_logical_num];
+	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 		tmp_sendbuf_list[tmp_global_server_logical_idx].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	}
-	int tmp_send_bytes[server_total_logical_num];
-	memset((void *)tmp_send_bytes, 0, server_total_logical_num*sizeof(int));
-	int tmp_record_cnts[server_total_logical_num];
-	memset((void *)tmp_record_cnts, 0, server_total_logical_num*sizeof(int));
+	int tmp_send_bytes[max_server_total_logical_num];
+	memset((void *)tmp_send_bytes, 0, max_server_total_logical_num*sizeof(int));
+	int tmp_record_cnts[max_server_total_logical_num];
+	memset((void *)tmp_record_cnts, 0, max_server_total_logical_num*sizeof(int));
 	dynamic_array_t sendbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 
 	printf("[switchos.snapshotserver] ready\n");
@@ -1287,9 +1319,9 @@ void *run_switchos_snapshotserver(void *param) {
 			// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes, per-server data>
 			// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
-			memset((void *)tmp_send_bytes, 0, server_total_logical_num*sizeof(int));
-			memset((void *)tmp_record_cnts, 0, server_total_logical_num*sizeof(int));
-			for (size_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num; tmp_global_server_logical_idx++) {
+			memset((void *)tmp_send_bytes, 0, max_server_total_logical_num*sizeof(int));
+			memset((void *)tmp_record_cnts, 0, max_server_total_logical_num*sizeof(int));
+			for (size_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 				tmp_sendbuf_list[tmp_global_server_logical_idx].clear();
 			}
 			sendbuf.clear();
@@ -1309,7 +1341,7 @@ void *run_switchos_snapshotserver(void *param) {
 				}
 			}
 			int total_bytes = sizeof(int) + sizeof(int32_t); // leave 4B for SNAPSHOT_DATA and total_bytes
-			for (uint16_t tmp_serveridx = 0; tmp_serveridx < server_total_logical_num; tmp_serveridx++) {
+			for (uint16_t tmp_serveridx = 0; tmp_serveridx < max_server_total_logical_num; tmp_serveridx++) {
 				if (tmp_record_cnts[tmp_serveridx] > 0) {
 					int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int);
 					sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_perserver_bytes, sizeof(int32_t));
@@ -1554,11 +1586,12 @@ void close_switchos() {
 }*/
 
 //inline uint32_t serialize_add_cache_lookup_setvalid1(char *buf, netreach_key_t key, uint16_t freeidx, uint32_t pipeidx) {
-inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t freeidx) {
+inline uint32_t serialize_add_cache_lookup(char *buf, netreach_key_t key, uint16_t switchidx, uint16_t freeidx) {
 	memcpy(buf, &SWITCHOS_ADD_CACHE_LOOKUP, sizeof(int));
 	uint32_t tmp_keysize = key.serialize(buf + sizeof(int), MAX_BUFSIZE - sizeof(int));
-	memcpy(buf + sizeof(int) + tmp_keysize, &freeidx, sizeof(uint16_t));
-	return sizeof(int) + tmp_keysize + sizeof(uint16_t);
+	memcpy(buf + sizeof(int) + tmp_keysize, &switchidx, sizeof(uint16_t));
+	memcpy(buf + sizeof(int) + tmp_keysize + sizeof(uint16_t), &freeidx, sizeof(uint16_t));
+	return sizeof(int) + tmp_keysize + sizeof(uint16_t) + sizeof(uint16_t);
 	//memcpy(buf + sizeof(int) + tmp_keysize + sizeof(uint16_t), &pipeidx, sizeof(uint32_t));
 	//return sizeof(int) + tmp_keysize + sizeof(uint16_t) + sizeof(uint32_t);
 }
@@ -1587,10 +1620,11 @@ inline void parse_evictdata(char *buf, int recvsize, uint16_t &switchos_evictidx
 	switchos_evictstat = *((bool *)curptr);
 }*/
 
-inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key) {
+inline uint32_t serialize_remove_cache_lookup(char *buf, netreach_key_t key, uint16_t switchidx) {
 	memcpy(buf, &SWITCHOS_REMOVE_CACHE_LOOKUP, sizeof(int));
 	uint32_t tmp_keysize = key.serialize(buf + sizeof(int), MAX_BUFSIZE - sizeof(int));
-	return sizeof(int) + tmp_keysize;
+	memcpy(buf + sizeof(int) + tmp_keysize, &switchidx, sizeof(uint16_t));
+	return sizeof(int) + tmp_keysize + sizeof(uint16_t);
 }
 
 /*inline uint32_t serialize_load_snapshot_data(char *buf, uint32_t emptyidx, uint32_t pipeidx) {

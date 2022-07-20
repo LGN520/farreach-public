@@ -214,14 +214,14 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
                 # parse key and freeidx
                 keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, recvbuf = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
                 #freeidx, pipeidx = struct.unpack("=HI", recvbuf)
-                freeidx = struct.unpack("=H", recvbuf)[0]
+                globalswitchidx, freeidx = struct.unpack("=2H", recvbuf)
 
                 #if (keylolo, keylohi, keyhilo, keyhihilo, keyhihihi) not in ptf_cached_keyset:
                 #   ptf_cached_keyset.add((keylolo, keylohi, keyhilo, keyhihilo, keyhihihi))
 
                 # add <key, idx> into cache_lookup_tbl, and set valid = 1
                 #self.add_cache_lookup_setvalid1(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx, pipeidx)
-                self.add_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, freeidx)
+                self.add_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, globalswitchidx, freeidx)
 
                 #else:
                 #    print "Duplicate cache population key {} {} {} {} {}".format(hex(keylolo), hex(keylohi), hex(keyhilo), hex(kyhihilo), hex(keyhihihi))
@@ -248,10 +248,11 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 #                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_REMOVE_CACHE_LOOKUP:
                 # parse key
-                keylolo, keylohi, keyhilo, keyhihilo, keyhihihi = struct.unpack("!3I2H", recvbuf)
+                keylolo, keylohi, keyhilo, keyhihilo, keyhihihi = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
+                globalswitchidx = struct.unpack("=H", recvbuf)[0]
 
                 # remove key from cache_lookup_tbl
-                self.remove_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi)
+                self.remove_cache_lookup(keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, globalswitchidx)
 
                 # send back SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
                 sendbuf = struct.pack("=i", SWITCHOS_REMOVE_CACHE_LOOKUP_ACK)

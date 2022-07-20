@@ -881,14 +881,14 @@ void *run_switchos_snapshotserver(void *param) {
 	}
 	
 	// for consistent snapshot data to controller
-	dynamic_array_t tmp_sendbuf_list[server_total_logical_num];
-	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num; tmp_global_server_logical_idx++) {
+	dynamic_array_t tmp_sendbuf_list[max_server_total_logical_num];
+	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 		tmp_sendbuf_list[tmp_global_server_logical_idx].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 	}
-	int tmp_send_bytes[server_total_logical_num];
-	memset((void *)tmp_send_bytes, 0, server_total_logical_num*sizeof(int));
-	int tmp_record_cnts[server_total_logical_num];
-	memset((void *)tmp_record_cnts, 0, server_total_logical_num*sizeof(int));
+	int tmp_send_bytes[max_server_total_logical_num];
+	memset((void *)tmp_send_bytes, 0, max_server_total_logical_num*sizeof(int));
+	int tmp_record_cnts[max_server_total_logical_num];
+	memset((void *)tmp_record_cnts, 0, max_server_total_logical_num*sizeof(int));
 	dynamic_array_t sendbuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
 
 	printf("[switchos.snapshotserver] ready\n");
@@ -1259,9 +1259,9 @@ void *run_switchos_snapshotserver(void *param) {
 			// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes, per-server data>
 			// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
 			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
-			memset((void *)tmp_send_bytes, 0, server_total_logical_num*sizeof(int));
-			memset((void *)tmp_record_cnts, 0, server_total_logical_num*sizeof(int));
-			for (size_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num; tmp_global_server_logical_idx++) {
+			memset((void *)tmp_send_bytes, 0, max_server_total_logical_num*sizeof(int));
+			memset((void *)tmp_record_cnts, 0, max_server_total_logical_num*sizeof(int));
+			for (size_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 				tmp_sendbuf_list[tmp_global_server_logical_idx].clear();
 			}
 			sendbuf.clear();
@@ -1281,7 +1281,7 @@ void *run_switchos_snapshotserver(void *param) {
 				}
 			}
 			int total_bytes = sizeof(int) + sizeof(int32_t); // leave 4B for SNAPSHOT_DATA and total_bytes
-			for (uint16_t tmp_serveridx = 0; tmp_serveridx < server_total_logical_num; tmp_serveridx++) {
+			for (uint16_t tmp_serveridx = 0; tmp_serveridx < max_server_total_logical_num; tmp_serveridx++) {
 				if (tmp_record_cnts[tmp_serveridx] > 0) {
 					int32_t tmp_perserver_bytes = tmp_send_bytes[tmp_serveridx] + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int);
 					sendbuf.dynamic_memcpy(total_bytes, (char *)&tmp_perserver_bytes, sizeof(int32_t));

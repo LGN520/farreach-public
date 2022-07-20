@@ -60,7 +60,6 @@ std::atomic<size_t> finish_threads(0);
 
 int *client_udpsock_list = NULL;
 int client_physical_idx = -1;
-int server_total_logical_num_for_client;
 
 #ifdef SERVER_ROTATION
 std::vector<uint16_t> valid_global_server_logical_idxes;
@@ -101,12 +100,6 @@ int main(int argc, char **argv) {
 		printf("[Error] fail to set affinity of client.main; errno: %d\n", errno);
 		exit(-1);
 	}*/
-
-#ifdef SERVER_ROTATION
-	server_total_logical_num_for_client = server_total_logical_num_for_rotation;
-#else
-	server_total_logical_num_for_client = server_total_logical_num;
-#endif
 
 #ifdef SERVER_ROTATION
 	INVARIANT(workload_mode == 0);
@@ -336,8 +329,8 @@ void run_benchmark() {
 				for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 					cursec_perclient_aggpktcnts[local_client_logical_idx] = client_worker_params[local_client_logical_idx].process_latency_list.size();
 					cursec_perclient_aggcachehitcnts[local_client_logical_idx] = client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map[0xFFFF];
-					std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_total_logical_num_for_client);
-					for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
+					std::vector<int> cursec_curclient_perserver_aggcachemisscnts(max_server_total_logical_num);
+					for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < max_server_total_logical_num; global_server_logical_idx++) {
 						cursec_curclient_perserver_aggcachemisscnts[global_server_logical_idx] = client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map[global_server_logical_idx];
 					}
 					cursec_perclient_perserver_aggcachemisscnts[local_client_logical_idx] = cursec_curclient_perserver_aggcachemisscnts;
@@ -395,8 +388,8 @@ void run_benchmark() {
 						for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 							cursec_perclient_aggpktcnts[local_client_logical_idx] = client_worker_params[local_client_logical_idx].process_latency_list.size();
 							cursec_perclient_aggcachehitcnts[local_client_logical_idx] = client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map[0xFFFF];
-							std::vector<int> cursec_curclient_perserver_aggcachemisscnts(server_total_logical_num_for_client);
-							for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
+							std::vector<int> cursec_curclient_perserver_aggcachemisscnts(max_server_total_logical_num);
+							for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < max_server_total_logical_num; global_server_logical_idx++) {
 								cursec_curclient_perserver_aggcachemisscnts[global_server_logical_idx] = client_worker_params[local_client_logical_idx].nodeidx_pktcnt_map[global_server_logical_idx];
 							}
 							cursec_perclient_perserver_aggcachemisscnts[local_client_logical_idx] = cursec_curclient_perserver_aggcachemisscnts;
@@ -472,7 +465,7 @@ void run_benchmark() {
 			for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 				cursec_perclient_pktcnts[local_client_logical_idx] = persec_perclient_aggpktcnts[i][local_client_logical_idx] - persec_perclient_aggpktcnts[i-1][local_client_logical_idx];
 				cursec_perclient_cachehitcnts[local_client_logical_idx] = persec_perclient_aggcachehitcnts[i][local_client_logical_idx] - persec_perclient_aggcachehitcnts[i-1][local_client_logical_idx];
-				for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
+				for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < max_server_total_logical_num; global_server_logical_idx++) {
 					cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx] = persec_perclient_perserver_aggcachemisscnts[i][local_client_logical_idx][global_server_logical_idx] - persec_perclient_perserver_aggcachemisscnts[i-1][local_client_logical_idx][global_server_logical_idx];
 				}
 			}
@@ -522,25 +515,25 @@ void run_benchmark() {
 		// per-server load ratio seems not important
 		/*printf("per-client servers' load ratio: ");
 		int cursec_total_cachemisscnt = 0;
-		int cursec_perserver_cachemisscnts[server_total_logical_num];
-		memset(cursec_perserver_cachemisscnts, 0, sizeof(int)*server_total_logical_num);
+		int cursec_perserver_cachemisscnts[max_server_total_logical_num];
+		memset(cursec_perserver_cachemisscnts, 0, sizeof(int)*max_server_total_logical_num);
 		for (uint16_t local_client_logical_idx = 0; local_client_logical_idx < current_client_logical_num; local_client_logical_idx++) {
 			int cursec_curclient_total_cachemisscnt = 0;
-			for (size_t serveridx = 0; serveridx < server_total_logical_num; serveridx++) {
+			for (size_t serveridx = 0; serveridx < max_server_total_logical_num; serveridx++) {
 				cursec_curclient_total_cachemisscnt += cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][serveridx];
 				cursec_perserver_cachemisscnts[serveridx] += cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][serveridx];
 			}
 			cursec_total_cachemisscnt += cursec_curclient_total_cachemisscnt;
 
 			printf("%d-", cursec_curclient_total_cachemisscnt);
-			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
-				if (global_server_logical_idx != server_total_logical_num - 1) printf("%f-", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
+			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < max_server_total_logical_num; global_server_logical_idx++) {
+				if (global_server_logical_idx != max_server_total_logical_num - 1) printf("%f-", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
 				else printf("%f ", cursec_perclient_perserver_cachemisscnts[local_client_logical_idx][global_server_logical_idx]/double(cursec_curclient_total_cachemisscnt));
 			}
 		}
 		printf("\noverall load ratio: %d-", cursec_total_cachemisscnt);
-		for (size_t serveridx = 0; serveridx < server_total_logical_num; serveridx++) {
-			if (serveridx != server_total_logical_num - 1) printf("%f-", cursec_perserver_cachemisscnts[serveridx]/double(cursec_total_cachemisscnt));
+		for (size_t serveridx = 0; serveridx < max_server_total_logical_num; serveridx++) {
+			if (serveridx != max_server_total_logical_num - 1) printf("%f-", cursec_perserver_cachemisscnts[serveridx]/double(cursec_total_cachemisscnt));
 			else printf("%f\n", cursec_perserver_cachemisscnts[serveridx]/double(cursec_total_cachemisscnt));
 		}*/
 
@@ -643,8 +636,8 @@ void run_benchmark() {
 
 	COUT_THIS("cache hit pktcnt: " << nodeidx_pktcnt_map[0xFFFF]);
 	printf("per-server pktcnt: ");
-	for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
-		if (global_server_logical_idx != server_total_logical_num_for_client - 1) {
+	for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < max_server_total_logical_num; global_server_logical_idx++) {
+		if (global_server_logical_idx != max_server_total_logical_num - 1) {
 			printf("%d ", nodeidx_pktcnt_map[global_server_logical_idx]);
 		}
 		else {
@@ -749,7 +742,7 @@ void run_benchmark() {
 			bool rotationdata_isexist = isexist(rotationdata_filepath);
 			FILE *fd = fopen(rotationdata_filepath.c_str(), "a+");
 			if (!rotationdata_isexist) {
-				fprintf(fd, "%d\n", server_total_logical_num_for_rotation);
+				fprintf(fd, "%d\n", max_server_total_logical_num);
 			}
 			if (valid_global_server_logical_idxes.size() == 2) {
 				printf("result for server rotation of all clients: %d %d %d %f %f\n", agg_bottleneckserver_pktcnt, \
@@ -823,12 +816,12 @@ void run_benchmark() {
 		}
 		printf("\nper-sec per-server throughput:\n");
 		for (int i = 0; i < seccnt; i++) {
-			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < server_total_logical_num_for_client; global_server_logical_idx++) {
+			for (uint16_t global_server_logical_idx = 0; global_server_logical_idx < max_server_total_logical_num; global_server_logical_idx++) {
 				int tmppktcnt = 0;
 				if (persec_nodeidx_pktcnt_map[i].find(global_server_logical_idx) != persec_nodeidx_pktcnt_map[i].end()) {
 					tmppktcnt = persec_nodeidx_pktcnt_map[i][global_server_logical_idx];
 				}
-				if (global_server_logical_idx != server_total_logical_num_for_client - 1) {
+				if (global_server_logical_idx != max_server_total_logical_num - 1) {
 					printf("%d ", tmppktcnt);
 				}
 				else {
@@ -927,9 +920,9 @@ void *run_client_worker(void *param) {
 
 #ifdef SERVER_ROTATION
 #ifdef USE_HASH
-		uint32_t expected_serveridx = iter->key().get_hashpartition_idx(switch_partition_count, server_total_logical_num_for_client);
+		uint32_t expected_serveridx = iter->key().get_hashpartition_idx(switch_partition_count, max_server_total_logical_num);
 #elif defined(USE_RANGE)
-		uint32_t expected_serveridx = iter->key().get_rangepartition_idx(server_total_logical_num_for_client);
+		uint32_t expected_serveridx = iter->key().get_rangepartition_idx(max_server_total_logical_num);
 #endif
 		if ((valid_global_server_logical_idxes.size() == 1 && expected_serveridx != valid_global_server_logical_idxes[0]) || \
 			(valid_global_server_logical_idxes.size() == 2 && expected_serveridx != valid_global_server_logical_idxes[0] && expected_serveridx != valid_global_server_logical_idxes[1])) {
@@ -1326,7 +1319,7 @@ void *run_client_worker(void *param) {
 		}
 
 		if (tmptype != optype_t(packet_type_t::LOADREQ)) {
-			INVARIANT(tmp_nodeidx_foreval == 0xFFFF || tmp_nodeidx_foreval < server_total_logical_num_for_client);
+			INVARIANT(tmp_nodeidx_foreval == 0xFFFF || tmp_nodeidx_foreval < max_server_total_logical_num);
 			if (thread_param.nodeidx_pktcnt_map.find(tmp_nodeidx_foreval) == thread_param.nodeidx_pktcnt_map.end()) {
 				thread_param.nodeidx_pktcnt_map.insert(std::pair<uint16_t, int>(tmp_nodeidx_foreval, 1));
 			}

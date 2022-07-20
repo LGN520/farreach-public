@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
 	}*/
 
 	if (op == 0) { // load
-		splitnum = server_total_logical_num;
+		splitnum = max_server_total_logical_num;
 		memcpy(output_dir, server_load_workload_dir, 256);
 		memcpy(filename, raw_load_workload_filename, 256);
 	}
