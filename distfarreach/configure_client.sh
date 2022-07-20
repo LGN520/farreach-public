@@ -13,6 +13,10 @@ else
 		sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8
 		sudo arp -s 10.0.1.15 3c:fd:fe:b5:28:59
 		sudo arp -s 10.0.1.16 3c:fd:fe:b5:1f:e1
+		sudo arp -s 10.0.2.11 3c:fd:fe:bb:ca:78
+		sudo arp -s 10.0.2.13 3c:fd:fe:bb:c9:c9
+		sudo arp -s 10.0.2.15 3c:fd:fe:b5:28:58
+		sudo arp -s 10.0.2.16 3c:fd:fe:b5:1f:e0
 		# bf3 as spine
 		sudo ifconfig enp129s0f0 10.0.2.11/24
 	elif [ ${client_physical_idx} -eq 1 ]
@@ -22,6 +26,10 @@ else
 		sudo arp -s 10.0.1.13 3c:fd:fe:bb:c9:c8
 		sudo arp -s 10.0.1.15 3c:fd:fe:b5:28:59
 		sudo arp -s 10.0.1.16 3c:fd:fe:b5:1f:e1
+		sudo arp -s 10.0.2.11 3c:fd:fe:bb:ca:78
+		sudo arp -s 10.0.2.13 3c:fd:fe:bb:c9:c9
+		sudo arp -s 10.0.2.15 3c:fd:fe:b5:28:58
+		sudo arp -s 10.0.2.16 3c:fd:fe:b5:1f:e0
 		# bf2 as spine
 		sudo ifconfig enp129s0f0 10.0.2.15/24
 	fi

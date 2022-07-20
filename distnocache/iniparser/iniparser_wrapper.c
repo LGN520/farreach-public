@@ -699,6 +699,15 @@ short IniparserWrapper::get_leaf_reflector_cp2dpserver_port() {
 	return short(tmp);
 }
 
+const char* IniparserWrapper::get_leaf_reflector_cp2dp_dstip() {
+	const char *reflector_cp2dp_dstip = iniparser_getstring(ini, "reflector_for_leaf:reflector_cp2dp_dstip", nullptr);
+	if (reflector_cp2dp_dstip == nullptr) {
+		printf("Invalid entry of [reflector_for_leaf:reflector_cp2dp_dstip]\n");
+		exit(-1);
+	}
+	return reflector_cp2dp_dstip;
+}
+
 // reflector_for_spine
 
 const char* IniparserWrapper::get_spine_reflector_ip_for_switchos() {
@@ -748,7 +757,7 @@ void IniparserWrapper::get_spine_reflector_mac_for_switch(uint8_t *macaddr) {
 	parse_mac(macaddr, macstr);
 }
 
-const char *IniparserWrapper::get_reflector_fpport_for_switch() {
+const char *IniparserWrapper::get_spine_reflector_fpport_for_switch() {
 	char key[256];
 	sprintf(key, "reflector_for_spine:reflector_fpport_for_switch");
 	const char *fpportstr = iniparser_getstring(ini, key, nullptr);
@@ -757,6 +766,15 @@ const char *IniparserWrapper::get_reflector_fpport_for_switch() {
 		exit(-1);
 	}
 	return fpportstr;
+}
+
+const char* IniparserWrapper::get_spine_reflector_cp2dp_dstip() {
+	const char *reflector_cp2dp_dstip = iniparser_getstring(ini, "reflector_for_spine:reflector_cp2dp_dstip", nullptr);
+	if (reflector_cp2dp_dstip == nullptr) {
+		printf("Invalid entry of [reflector_for_spine:reflector_cp2dp_dstip]\n");
+		exit(-1);
+	}
+	return reflector_cp2dp_dstip;
 }
 
 /* control_type.ini */

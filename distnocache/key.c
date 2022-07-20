@@ -501,3 +501,29 @@ uint32_t Key::get_rangepartition_idx(uint32_t servernum) {
 	INVARIANT(targetidx >=0 && targetidx < servernum);
 	return targetidx;
 }
+
+// NOTE: NOT rely on partition strategy
+uint32_t Key::get_spineswitch_idx(uint32_t partitionnum, uint32_t spineswitchnum) {
+	char buf[16];
+	uint32_t tmp_keysize = this->serialize(buf, 16);
+	uint32_t hashresult = crc32((unsigned char *)buf, tmp_keysize) % partitionnum;
+	uint32_t targetidx = hashresult / (partitionnum / spineswitchnum);
+	//printf("key: %x, crc32 result: %u, targetidx: %d\n", keyhihi, hashresult, targetidx);
+	INVARIANT(targetidx >=0 && targetidx < spineswitchnum);
+	return targetidx;
+}
+
+// NOTE: rely on partition strategy
+uint32_t Key::get_leafswitch_idx(uint32_t partitionnum, uint32_t servernum, uint32_t leafswitchnum, uint32_t spineswitchnum) {
+#ifdef USE_HASH
+	uint32_t partitionidx = get_hashpartition_idx(partitionnum, servernum);
+#elif defined(USE_RANGE)
+	uint32_t partitionidx = get_rangepartition_idx(servernum);
+	UNUSED(partitionnum);
+#endif
+	uint32_t targetidx = partitionidx / (servernum / leafswitchnum);
+	targetidx += spineswitchnum;
+	//printf("key: %x, crc32 partitionidx: %u, targetidx: %d\n", keyhihi, partitionidx, targetidx);
+	INVARIANT(targetidx >= spineswitchnum && targetidx < leafswitchnum + spineswitchnum);
+	return targetidx;
+}

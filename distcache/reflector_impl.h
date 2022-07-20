@@ -40,7 +40,7 @@ void prepare_reflector() {
 void *run_reflector_cp2dpserver(void *param) {
 	// client address (switch will not hide CACHE_POP_INSWITCH from clients)
 	struct sockaddr_in client_addr;
-	set_sockaddr(client_addr, inet_addr(client_ips[0]), 123); // client ip and client port are not important
+	set_sockaddr(client_addr, inet_addr(reflector_cp2dp_dstip), 123); // client port is not important, yet we NEED client_ip to choose correct NIC
 	socklen_t client_addrlen = sizeof(struct sockaddr_in);
 
 	struct sockaddr_in tmp_addr;

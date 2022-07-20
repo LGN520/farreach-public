@@ -22,6 +22,7 @@ char reflector_role[256];
 char reflector_ip_for_switchos[256];
 short reflector_dp2cpserver_port = -1;
 short reflector_cp2dpserver_port = -1;
+char reflector_cp2dp_dstip[256];
 char switchos_ip[256];
 int server_physical_idx = -1;
 
@@ -52,12 +53,14 @@ int main(int argc, char **argv) {
 		memcpy(reflector_ip_for_switchos, spine_reflector_ip_for_switchos, strlen(spine_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = spine_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = spine_reflector_cp2dpserver_port;
+		memcpy(reflector_cp2dp_dstip, spine_reflector_cp2dp_dstip, strlen(spine_reflector_cp2dp_dstip));
 		memcpy(switchos_ip, spineswitchos_ip, strlen(spineswitchos_ip));
 	}
 	else if (strcmp(reflector_role, "leaf", 4) == 0) {
 		memcpy(reflector_ip_for_switchos, leaf_reflector_ip_for_switchos, strlen(leaf_reflector_ip_for_switchos));
 		reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_port;
 		reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_port;
+		memcpy(reflector_cp2dp_dstip, leaf_reflector_cp2dp_dstip, strlen(leaf_reflector_cp2dp_dstip));
 		memcpy(switchos_ip, leafswitchos_ip, strlen(leafswitchos_ip));
 	}
 	else {

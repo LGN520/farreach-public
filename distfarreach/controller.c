@@ -77,6 +77,7 @@ dynamic_array_t *controller_snapshotclient_for_server_databuf_list = NULL;
 
 void prepare_controller();
 void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
+void validate_switchidx(key_t key); // validate spine/leaf switchidx for the give key
 void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
 void controller_load_snapshotid(); // retrieve latest snapshot id
 void controller_update_snapshotid(); // store latest snapshotid and inswitch snapshot data
@@ -309,6 +310,9 @@ void *run_controller_popserver(void *param) {
 		//dump_buf(buf, recvsize);
 		cache_pop_t tmp_cache_pop(buf, recvsize);
 
+		// validate spine/leaf switchidx
+		validate_switchidx(tmp_cache_pop.key());
+
 		// send CACHE_POP to switch os
 		udpsendto(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &switchos_popserver_addr, switchos_popserver_addrlen, "controller.popserver.popclient");
 		
@@ -335,6 +339,33 @@ void *run_controller_popserver(void *param) {
 	close(controller_popserver_udpsock_list[global_server_logical_idx]);
 	close(controller_popserver_popclient_udpsock_list[global_server_logical_idx]);
 	pthread_exit(nullptr);
+}
+
+void validate_switchidx(key_t key) {
+	uint32_t tmp_spineswitchidx = key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num);
+	bool tmp_valid = false;
+	for (size_t i = 0; i < spineswitch_total_logical_num; i++) {
+		if (tmp_spineswitchidx == spineswitch_logical_idxes[i]) {
+			tmp_valid = true;
+			break;
+		}
+	}
+	if (tmp_valid == false) {
+		printf("Invalid spintswitchidx %d for key %x\n", tmp_spineswitchidx, key.keyhihi);
+		exit(-1);
+	}
+	uint32_t tmp_leafswitchidx = key.get_leafswitch_idx(switch_partition_count, server_total_logical_num_for_controller, leafswitch_total_logical_num, spineswitch_total_logical_num);
+	tmp_valid = false;
+	for (size_t i = 0; i < leafswitch_total_logical_num; i++) {
+		if (tmp_leafswitchidx == leafswitch_logical_idxes[i]) {
+			tmp_valid = true;
+			break;
+		}
+	}
+	if (tmp_valid == false) {
+		printf("Invalid leafswitchidx %d for key %x\n", tmp_leafswitchidx, key.keyhihi);
+		exit(-1);
+	}
 }
 
 void *run_controller_evictserver(void *param) {

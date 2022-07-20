@@ -175,6 +175,7 @@ uint32_t leafswitch_pipeidx;
 const char *leaf_reflector_ip_for_switchos = nullptr;
 short leaf_reflector_dp2cpserver_port = -1;
 short leaf_reflector_cp2dpserver_port = -1;
+const char *leaf_reflector_cp2dp_dstip = nullptr;
 
 // reflector_for_spine
 const char *spine_reflector_ip_for_switchos = nullptr;
@@ -183,6 +184,7 @@ short spine_reflector_cp2dpserver_port = -1;
 const char *spine_reflector_ip_for_switch = nullptr;
 uint8_t *spine_reflector_mac_for_switch = nullptr;
 const char *spine_reflector_fpport_for_switch = nullptr;
+const char *spine_reflector_cp2dp_dstip = nullptr;
 
 // calculated metadata
 char raw_load_workload_filename[256]; // used by split_workload for loading phase
@@ -477,10 +479,12 @@ inline void parse_ini(const char* config_file) {
 	leaf_reflector_ip_for_switchos = ini.get_leaf_reflector_ip_for_switchos();
 	leaf_reflector_dp2cpserver_port = ini.get_leaf_reflector_dp2cpserver_port();
 	leaf_reflector_cp2dpserver_port = ini.get_leaf_reflector_cp2dpserver_port();
+	leaf_reflector_cp2dp_dstip = ini.get_leaf_reflector_cp2dp_dstip();
 
 	printf("reflector_for_leaf ip for switchos: %s\n", leaf_reflector_ip_for_switchos);
 	COUT_VAR(leaf_reflector_dp2cpserver_port);
 	COUT_VAR(leaf_reflector_cp2dpserver_port);
+	printf("reflector_for_leaf dstip for cp2dp: %s", leaf_reflector_cp2dp_dstip);
 	printf("\n");
 
 	// reflector_for_spine
@@ -491,6 +495,7 @@ inline void parse_ini(const char* config_file) {
 	spine_reflector_mac_for_switch = new uint8_t[6];
 	ini.get_spine_reflector_mac_for_switch(spine_reflector_mac_for_switch);
 	spine_reflector_fpport_for_switch = ini.get_spine_reflector_fpport_for_switch();
+	spine_reflector_cp2dp_dstip = ini.get_spine_reflector_cp2dp_dstip();
 
 	printf("reflector_for_spine ip for switchos: %s\n", spine_reflector_ip_for_switchos);
 	COUT_VAR(spine_reflector_dp2cpserver_port);
@@ -499,6 +504,7 @@ inline void parse_ini(const char* config_file) {
 	printf("reflector_for_spine mac for switch: ");
 	dump_macaddr(spine_reflector_mac_for_switch);
 	printf("reflector_for_spine fpport for switch: %s\n", spine_reflector_fpport_for_switch);
+	printf("reflector_for_spine dstip for cp2dp: %s", spine_reflector_cp2dp_dstip);
 	printf("\n");
 
 	// calculated metadata

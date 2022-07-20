@@ -167,6 +167,8 @@ reflector_ip_for_switchos=172.16.112.16
 reflector_dp2cpserver_port=5008
 ; a single port (NOTE: udpate p4src/parser.p4 accordingly)
 reflector_cp2dpserver_port=5009
+; NOTE: cp2dp_dstip CANNOT be the same as the ip of NIC in deployed physical machine (i.e., 10.0.1.16)
+reflector_cp2dp_dstip=10.0.1.11
 
 ; NOTE: we place reflector_for_spine at the corresponding physical machine, which must connect with switch
 [reflector_for_spine]
@@ -184,3 +186,5 @@ reflector_fpport_for_switch=5/0
 reflector_dp2cpserver_port=5018
 ; a single port (NOTE: udpate p4src/parser.p4 accordingly)
 reflector_cp2dpserver_port=5019
+; NOTE: cp2dp_dstip CANNOT be the same as the ip of NIC in deployed physical machine (i.e., 10.0.2.11/16)
+reflector_cp2dp_dstip=10.0.2.15

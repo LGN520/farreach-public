@@ -99,6 +99,7 @@ class IniparserWrapper {
 		const char *get_leaf_reflector_ip_for_switchos();
 		short get_leaf_reflector_dp2cpserver_port();
 		short get_leaf_reflector_cp2dpserver_port();
+		const char *get_leaf_reflector_cp2dp_dstip();
 
 		// reflector_for_spine
 		const char *get_spine_reflector_ip_for_switchos();
@@ -107,6 +108,7 @@ class IniparserWrapper {
 		const char *get_spine_reflector_ip_for_switch();
 		void get_spine_reflector_mac_for_switch(uint8_t* macaddr);
 		const char *get_spine_reflector_fpport_for_switch();
+		const char *get_spine_reflector_cp2dp_dstip();
 
 		/* control_type.ini */
 
