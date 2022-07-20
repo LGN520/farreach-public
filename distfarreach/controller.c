@@ -50,8 +50,9 @@ uint32_t server_total_logical_num_for_controller;
 
 // server.popclient <-> controller.popserver
 int *controller_popserver_udpsock_list = NULL;
-// controller.popclient <-> switchos.popserver
-int *controller_popserver_popclient_udpsock_list = NULL;
+// controller.popclient_for_spine/leaf <-> spine/leaf.switchos.popserver
+int *controller_popserver_popclient_for_spine_udpsock_list = NULL;
+int *controller_popserver_popclient_for_leaf_udpsock_list = NULL;
 // TODO: replace with SIGTERM
 std::atomic<size_t> controller_popserver_finish_threads(0);
 size_t controller_expected_popserver_finish_threads = -1;
@@ -190,6 +191,8 @@ int main(int argc, char **argv) {
 void prepare_controller() {
 	printf("[controller] prepare start\n");
 
+	srand(0); // set random seed as 0 to choose spine/leaf for CACHE_POP
+
 	controller_running =false;
 
 	controller_expected_ready_threads = server_total_logical_num_for_controller + 2;
@@ -197,10 +200,12 @@ void prepare_controller() {
 
 	// prepare popserver sockets
 	controller_popserver_udpsock_list = new int[server_total_logical_num_for_controller];
-	controller_popserver_popclient_udpsock_list = new int[server_total_logical_num_for_controller];
+	controller_popserver_popclient_for_spine_udpsock_list = new int[server_total_logical_num_for_controller];
+	controller_popserver_popclient_for_leaf_udpsock_list = new int[server_total_logical_num_for_controller];
 	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < server_total_logical_num_for_controller; tmp_global_server_logical_idx++) {
 		prepare_udpserver(controller_popserver_udpsock_list[tmp_global_server_logical_idx], false, controller_popserver_port_start + tmp_global_server_logical_idx, "controller.popserver");
-		create_udpsock(controller_popserver_popclient_udpsock_list[tmp_global_server_logical_idx], true, "controller.popserver.popclient");
+		create_udpsock(controller_popserver_popclient__for_spine_udpsock_list[tmp_global_server_logical_idx], true, "controller.popserver.popclient_for_spine");
+		create_udpsock(controller_popserver_popclient_for_leaf_udpsock_list[tmp_global_server_logical_idx], true, "controller.popserver.popclient_for_leaf");
 	}
 
 	//controller_cachedkey_serveridx_map.clear();
@@ -282,10 +287,15 @@ void *run_controller_popserver(void *param) {
 	socklen_t server_popclient_addrlen = sizeof(struct sockaddr);
 	//bool with_server_popclient_addr = false;
 
-	// controller.popserver.popclient i <-> switchos.popserver
-	struct sockaddr_in switchos_popserver_addr;
-	set_sockaddr(switchos_popserver_addr, inet_addr(switchos_ip), switchos_popserver_port);
-	socklen_t switchos_popserver_addrlen = sizeof(struct sockaddr);
+	// controller.popserver.popclient_for_spine i <-> spineswitchos.popserver
+	struct sockaddr_in spineswitchos_popserver_addr;
+	set_sockaddr(spineswitchos_popserver_addr, inet_addr(spineswitchos_ip), switchos_popserver_port);
+	socklen_t spineswitchos_popserver_addrlen = sizeof(struct sockaddr);
+
+	// controller.popserver.popclient_for_leaf i <-> leafswitchos.popserver
+	struct sockaddr_in leafswitchos_popserver_addr;
+	set_sockaddr(leafswitchos_popserver_addr, inet_addr(leafswitchos_ip), switchos_popserver_port);
+	socklen_t leafswitchos_popserver_addrlen = sizeof(struct sockaddr);
 
 	printf("[controller.popserver %d] ready\n", global_server_logical_idx);
 	controller_ready_threads++;
@@ -313,12 +323,24 @@ void *run_controller_popserver(void *param) {
 		// validate spine/leaf switchidx
 		validate_switchidx(tmp_cache_pop.key());
 
-		// send CACHE_POP to switch os
-		udpsendto(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &switchos_popserver_addr, switchos_popserver_addrlen, "controller.popserver.popclient");
-		
-		// receive CACHE_POP_ACK from switch os
-		bool is_timeout = udprecvfrom(controller_popserver_popclient_udpsock_list[global_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient");
-		if (!is_timeout) {
+		// (1) choose spine/leaf switch for cache population based on sampling
+		int tmp_sampleidx = -1;
+		tmp_sampleidx = rand() % 2;
+
+		// (2) send CACHE_POP to sampled switch os and wait for CACHE_POP_ACK
+		bool is_timeout = false;
+		if (tmp_sampleidx == 0) { // spine
+			udpsendto(controller_popserver_popclient_for_spine_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &spineswitchos_popserver_addr, spineswitchos_popserver_addrlen, "controller.popserver.popclient_for_spine");
+
+			is_timeout = udprecvfrom(controller_popserver_popclient_for_spine_udpsock_list[global_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_spine");
+		} 
+		else { // leaf
+			udpsendto(controller_popserver_popclient_for_leaf_udpsock_list[global_server_logical_idx], buf, recvsize, 0, &leafswitchos_popserver_addr, leafswitchos_popserver_addrlen, "controller.popserver.popclient_for_leaf");
+
+			is_timeout = udprecvfrom(controller_popserver_popclient_for_leaf_udpsock_list[global_server_logical_idx], buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.popserver.popclient_for_leaf");
+		}
+
+		if (!is_timeout) { // NOTE: controller.popserver does NOT need to retry due to server-side timeout-and-retry mechanism
 			// send CACHE_POP_ACK to server.popclient immediately to avoid timeout
 			cache_pop_ack_t tmp_cache_pop_ack(buf, recvsize);
 			INVARIANT(tmp_cache_pop_ack.key() == tmp_cache_pop.key());
@@ -337,7 +359,8 @@ void *run_controller_popserver(void *param) {
 
 	controller_popserver_finish_threads++;
 	close(controller_popserver_udpsock_list[global_server_logical_idx]);
-	close(controller_popserver_popclient_udpsock_list[global_server_logical_idx]);
+	close(controller_popserver_popclient_for_spine_udpsock_list[global_server_logical_idx]);
+	close(controller_popserver_popclient_for_leaf_udpsock_list[global_server_logical_idx]);
 	pthread_exit(nullptr);
 }
 
@@ -815,9 +838,13 @@ void close_controller() {
 		delete [] controller_popserver_udpsock_list;
 		controller_popserver_udpsock_list = NULL;
 	}
-	if (controller_popserver_popclient_udpsock_list != NULL) {
-		delete [] controller_popserver_popclient_udpsock_list;
-		controller_popserver_popclient_udpsock_list = NULL;
+	if (controller_popserver_popclient_for_spine_udpsock_list != NULL) {
+		delete [] controller_popserver_popclient_for_spine_udpsock_list;
+		controller_popserver_popclient_for_spine_udpsock_list = NULL;
+	}
+	if (controller_popserver_popclient_for_leaf_udpsock_list != NULL) {
+		delete [] controller_popserver_popclient_for_leaf_udpsock_list;
+		controller_popserver_popclient_for_leaf_udpsock_list = NULL;
 	}
 	if (controller_snapshotclient_for_server_udpsock_list != NULL) {
 		delete [] controller_snapshotclient_for_server_udpsock_list;
