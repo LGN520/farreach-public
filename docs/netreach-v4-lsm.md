@@ -1821,7 +1821,7 @@
 		- Deprecated: Proper rocksdb setting: 128MB memtable + 20 maxnum + 8 flushnum -> avoid flushing overhead (files: rocksdb_wrapper.h) -> sync to nocache
 			+ NOTE: now we use 64MB memtable + 40 maxnum + 16 flushnum -> TODO: tune parameters in final evaluation
 
-## Implement log after NetCache
+## Implementation log after NetCache
 
 + Important code change of FarReach/NetCache to populate deleted keys (see details in netcache.md)
 + Issue of FarReach: w/ non-duplicate GETRES_LATEST/DELETED_SEQ_INSWITCH_CASE1, yet NO PUT/DELREQ_SEQ_INSWITCH_CASE1
@@ -1852,6 +1852,15 @@
 			+ Solution: increase udp recv buffer size of reflector.dp2cpserver, switchos.specialcaseserver, and switchos.snapshotserver.snapshotclient_for_reflector -> ONLY work for ~5000 special cases; NOT work for >8000 special cases
 			+ Solution: reduce timeout threshold of switchos.specialcaseserver and switchos.snapshotserver.snapshotclient_for_reflector from 0.5s to 0.1s -> OK; loading time ranges from 0.1s to 0.2s (due to timeout of LOADSNAPSHOTDATA_INSWITCH_ACK)
 		- NOTE: reporting CASE1s does NOT affect system performance
+
+## Implementation log after/during DistFarReach
+
+- [IMPORTANT] we use max_server_total_logical_num to consider server rotation (files: common_impl.h, loader.c, controller.c, [switchos.c], remote_client.c, server_impl.h, split_workload.c)
+	+ If using server rotation, max_server_total_logical_num = server_total_logical_num_for_rotation
+	+ Otherwise, max_server_total_logical_num = server_total_logical_num
+	+ NOTE: for tofino-related files (e.g., tofino-leaf/configure/table_configure.py, tofino-\*/common.py), as we will deploy all the 128 server threads to launch and configure Tofino switch especially for server-leaf switch (prepare phase) + loading & warmup phase under server rotation, so max_server_total_logical_num = server_total_logical_num before transaction phase -> we do NOT need to use max_server_total_logical_num for these files!!!
+	+ NOTE: actually switchos can directly use server_total_logical_num, as it is launched in prepare phase, and CANNOT restart during transaction phase due to inswitch cache metadata in memory
+	+ NOTE: localtest can directly use server_total_logical_num as we do NOT execute localtest under server rotation
 
 ## Run
 
