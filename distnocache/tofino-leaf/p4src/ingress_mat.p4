@@ -185,7 +185,7 @@ table ipv4_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 64;
+	size: 256;
 }
 
 // Stage 5

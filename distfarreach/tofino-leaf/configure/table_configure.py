@@ -641,37 +641,46 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-            # Table: ipv4_forward_tbl (default: nop; size: 8*client_physical_num=16 < 8*8=64)
+            # Table: ipv4_forward_tbl (default: nop; size: 2*(6*client_physical_num+8)=40 < 112)
             print "Configuring ipv4_forward_tbl"
-            for tmp_client_physical_idx in range(client_physical_num):
-                ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
-                eport = self.client_devports[tmp_client_physical_idx]
-                tmpsid = self.client_sids[tmp_client_physical_idx]
-                for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
-                    matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype),
-                            ipv4_hdr_dstAddr = ipv4addr0,
-                            ipv4_hdr_dstAddr_prefix_length = 32,
-                            meta_need_recirculate = 0) # NOTE: meta.need_recirculate must be 0 for those packets
-                    actnspec0 = distfarreachleaf_forward_normal_response_action_spec_t(eport)
-                    self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for is_cached in cached_list:
+                for tmp_client_physical_idx in range(client_physical_num):
+                    ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
+                    eport = self.client_devports[tmp_client_physical_idx]
+                    tmpsid = self.client_sids[tmp_client_physical_idx]
+                    for tmpoptype in [GETRES, PUTRES, DELRES, WARMUPACK, SCANRES_SPLIT, LOADACK]:
+                        matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
+                                op_hdr_optype = convert_u16_to_i16(tmpoptype),
+                                ipv4_hdr_dstAddr = ipv4addr0,
+                                ipv4_hdr_dstAddr_prefix_length = 32,
+                                inswitch_hdr_is_cached = is_cached,
+                                meta_need_recirculate = 0) # NOTE: meta.need_recirculate must be 0 for those packets
+                        actnspec0 = distfarreachleaf_forward_normal_response_action_spec_t(eport)
+                        self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                eport = self.spineswitch_devport
+                tmpsid = self.spineswitch_sid
                 for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
                     matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             ipv4_hdr_dstAddr = ipv4addr0,
                             ipv4_hdr_dstAddr_prefix_length = 32,
+                            inswitch_hdr_is_cached = is_cached,
                             meta_need_recirculate = 0)
-                    actnspec0 = distfarreachleaf_forward_special_get_response_action_spec_t(tmpsid)
-                    self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                eport = self.spineswitch_devport
-                tmpsid = self.spineswitch_sid
+                    if is_cached == 0:
+                        actnspec0 = distfarreachleaf_forward_special_get_response_to_spine_action_spec_t(eport)
+                        self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response_to_spine(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                    elif is_cached == 1:
+                        actnspec0 = distfarreachleaf_forward_special_get_response_to_server_and_clone_to_spine_action_spec_t(tmpsid)
+                        self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response_to_server_and_clone_to_spine(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER, WARMUPACK_SERVER, LOADACK_SERVER]:
                     matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             ipv4_hdr_dstAddr = ipv4addr0,
                             ipv4_hdr_dstAddr_prefix_length = 32,
+                            inswitch_hdr_is_cached = is_cached,
                             meta_need_recirculate = 0) # NOTE: meta.need_recirculate must be 0 for those packets
                     actnspec0 = distfarreachleaf_forward_normal_response_action_spec_t(eport)
                     self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
@@ -1515,11 +1524,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
                     self.sess_hdl, self.dev_tgt, matchspec12, actnspec2)
 
-            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*12=204)
+            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*14=238)
             print "Configuring add_and_remove_value_header_tbl"
             # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_SEQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
-            for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES, LOADREQ, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK]:
+            for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES, LOADREQ, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                     if i == 0:
                         vallen_start = 0
@@ -1711,6 +1720,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         #actnspec0 = distfarreachleaf_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.reflector_sid, self.devPorts[1], 0)
                                                         actnspec0 = distfarreachleaf_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                elif is_cached == 0:
+                                                    # Update GETRES_LATEST_SEQ_INSWITCH as GETRES_LATEST_SEQ to spine (NOT dropped by drop_tbl)
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_inswitch_to_getres_latest_seq(self.sess_hdl, self.dev_tgt, matchspec0)
                                                 # Keep GETERS_LATEST_SEQ_INSWITCH unchanged, and resort to drop_tbl to drop it
                                                 #else:
                                                 #    # Drop GETRES_LATEST_SEQ_INSWITCH
@@ -1788,6 +1800,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                         #actnspec0 = distfarreachleaf_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.reflector_sid, self.devPorts[1], 0)
                                                         actnspec0 = distfarreachleaf_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                elif is_cached == 0:
+                                                    # Update GETRES_DELETED_SEQ_INSWITCH as GETRES_DELETED_SEQ to spine (NOT dropped by drop_tbl)
+                                                    self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq(self.sess_hdl, self.dev_tgt, matchspec0)
                                                 # Keep GETERS_DELETED_SEQ_INSWITCH unchanged, and resort to drop_tbl to drop it
                                                 #else:
                                                 #    # Drop GETRES_DELETED_SEQ_INSWITCH
@@ -2341,6 +2356,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 #actnspec0 = distfarreachleaf_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.reflector_sid, self.devPorts[1], 0)
                                                                 actnspec0 = distfarreachleaf_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                        elif is_cached == 0:
+                                                            # Update GETRES_LATEST_SEQ_INSWITCH as GETRES_LATEST_SEQ to spine (NOT dropped by drop_tbl)
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_inswitch_to_getres_latest_seq(self.sess_hdl, self.dev_tgt, matchspec0)
                                                         # Keep GETERS_LATEST_SEQ_INSWITCH unchanged, and resort to drop_tbl to drop it
                                                         #else:
                                                         #    # Drop GETRES_LATEST_SEQ_INSWITCH
@@ -2427,6 +2445,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 #actnspec0 = distfarreachleaf_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.reflector_sid, self.devPorts[1], 0)
                                                                 actnspec0 = distfarreachleaf_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_action_spec_t(self.reflector_sid, 0, reflector_dp2cpserver_port)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                                                        elif is_cached == 0:
+                                                            # Update GETRES_DELETED_SEQ_INSWITCH as GETRES_DELETED_SEQ to spine (NOT dropped by drop_tbl)
+                                                            self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq(self.sess_hdl, self.dev_tgt, matchspec0)
                                                         # Keep GETERS_DELETED_SEQ_INSWITCH unchanged, and resort to drop_tbl to drop it
                                                         #else:
                                                         #    # Drop GETRES_DELETED_SEQ_INSWITCH

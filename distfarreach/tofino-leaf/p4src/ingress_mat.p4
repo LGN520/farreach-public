@@ -420,9 +420,13 @@ action forward_normal_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
-action forward_special_get_response(client_sid) {
+action forward_special_get_response_to_server_and_clone_to_spine(client_sid) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
-	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding client
+	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding spine switch
+}
+
+action forward_special_get_response_to_spine(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
 @pragma stage 5
@@ -430,15 +434,17 @@ table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
 		ipv4_hdr.dstAddr: lpm;
+		inswitch_hdr.is_cached: exact;
 		meta.need_recirculate: exact;
 	}
 	actions {
 		forward_normal_response;
-		forward_special_get_response;
+		forward_special_get_response_to_server_and_clone_to_spine;
+		forward_special_get_response_to_spine;
 		nop;
 	}
 	default_action: nop();
-	size: 64;
+	size: 256;
 }
 
 // Stage 6

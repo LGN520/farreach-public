@@ -622,17 +622,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     actnspec0 = distcacheleaf_forward_normal_response_action_spec_t(eport)
                     self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                eport = self.spineswitch_devport
-                tmpsid = self.spineswitch_sid
-                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER, LOADACK_SERVER]:
-                    matchspec0 = distcacheleaf_ipv4_forward_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype),
-                            ipv4_hdr_dstAddr = ipv4addr0,
-                            ipv4_hdr_dstAddr_prefix_length = 32,
-                            meta_need_recirculate = 0) # NOTE: meta.need_recirculate must be 0 for those packets
-                    actnspec0 = distcacheleaf_forward_normal_response_action_spec_t(eport)
-                    self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            eport = self.spineswitch_devport
+            tmpsid = self.spineswitch_sid
+            for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER, LOADACK_SERVER]:
+                matchspec0 = distcacheleaf_ipv4_forward_tbl_match_spec_t(\
+                        op_hdr_optype = convert_u16_to_i16(tmpoptype),
+                        ipv4_hdr_dstAddr = ipv4addr0,
+                        ipv4_hdr_dstAddr_prefix_length = 32,
+                        meta_need_recirculate = 0) # NOTE: meta.need_recirculate must be 0 for those packets
+                actnspec0 = distcacheleaf_forward_normal_response_action_spec_t(eport)
+                self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
+                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Stage 4
 
