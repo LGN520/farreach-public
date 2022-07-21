@@ -48,6 +48,11 @@ int controller_popserver_popclient_for_leaf_udpsock = -1;
 // TODO: replace with SIGTERM
 bool volatile is_controller_popserver_finish = false;
 
+// spineswitchos.popworker.victimclient_for_controller <-> controller.victimserver
+int controller_victimserver_udpsock = -1;
+// controller.victimserver <-> leafswitchos.popworker.victimserver
+int controller_victimserver_victimclient_for_leaf_udpsock = -1;
+
 // switchos.popworker <-> controller.evictserver
 int controller_evictserver_udpsock = -1;
 // controller.evictclients <-> servers.evictservers
@@ -59,6 +64,7 @@ int controller_evictserver_evictclient_udpsock = -1;
 
 void prepare_controller();
 void *run_controller_popserver(void *param); // Receive NETCACHE_CACHE_POP from switchos
+void *run_controller_victimserver(void *param); // receive DISTCACHE_CACHE_EVICT_VICTIM from spine switchos
 void validate_switchidx(key_t key); // validate spine/leaf switchidx for the give key
 void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
 void close_controller();
@@ -98,6 +104,17 @@ int main(int argc, char **argv) {
 		exit(-1);
 	}
 
+	pthread_t victimserver_thread;
+	ret = pthread_create(&victimserver_thread, nullptr, run_controller_victimserver, nullptr);
+	if (ret) {
+		COUT_N_EXIT("Error: " << ret);
+	}
+	ret = pthread_setaffinity_np(victimserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
+	if (ret) {
+		printf("Error of setaffinity for controller.victimserver; errno: %d\n", errno);
+		exit(-1);
+	}
+
 	pthread_t evictserver_thread;
 	ret = pthread_create(&evictserver_thread, nullptr, run_controller_evictserver, nullptr);
 	if (ret) {
@@ -125,6 +142,10 @@ int main(int argc, char **argv) {
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join popserver " << rc);
 	}
+	rc = pthread_join(victimserver_thread, &status);
+	if (rc) {
+		COUT_N_EXIT("Error:unable to join victimserver " << rc);
+	}
 	rc = pthread_join(evictserver_thread, &status);
 	if (rc) {
 		COUT_N_EXIT("Error:unable to join," << rc);
@@ -140,13 +161,17 @@ void prepare_controller() {
 
 	controller_running =false;
 
-	controller_expected_ready_threads = 2;
+	controller_expected_ready_threads = 3;
 
 	// prepare popserver sockets
 	prepare_udpserver(controller_popserver_udpsock, false, controller_popserver_port_start, "controller.popserver");
 	create_udpsock(controller_popserver_popclient_for_server_udpsock, true, "controller.popserver.popclient_for_server");
 	create_udpsock(controller_popserver_popclient_for_spine_udpsock, true, "controller.popserver.popclient_for_spine");
 	create_udpsock(controller_popserver_popclient_for_leaf_udpsock, true, "controller.popserver.popclient_for_leaf");
+
+	// prepare victimserver
+	prepare_udpserver(controller_victimserver_udpsock, false, controller_victimserver_port, "controller.victimserver");
+	create_udpsock(controller_victimserver_victimclient_for_leaf_udpsock, true, "controller.victimserver.victimclient_for_leaf");
 
 	// prepare evictserver
 	prepare_udpserver(controller_evictserver_udpsock, false, controller_evictserver_port, "controller.evictserver");
@@ -283,6 +308,52 @@ void *run_controller_popserver(void *param) {
 	close(controller_popserver_popclient_for_server_udpsock);
 	close(controller_popserver_popclient_for_spine_udpsock);
 	close(controller_popserver_popclient_for_leaf_udpsock);
+	pthread_exit(nullptr);
+}
+
+void *run_controller_victimserver(void *param) {
+	struct sockaddr_in spineswitchos_victimclient_addr;
+	socklen_t soineswitchos_victimclient_addrlen = sizeof(struct sockaddr_in);
+
+	struct sockaddr_in leafswitchos_victimserver_addr;
+	set_sockaddr(leafswitchos_victimserver_addr, inet_addr(leafswitchos_ip_for_controller), leafswitchos_victimserver_port);
+	socklen_t leafswitchos_victimserver_addrlen = sizeof(struct sockaddr_in);
+
+	printf("[controller.victimserver] ready\n");
+	controller_ready_threads++;
+
+	while (!controller_running) {}
+
+	// Process NETCACHE_CACHE_POP packet <optype, key, serveridx>
+	char buf[MAX_BUFSIZE];
+	int recvsize = 0;
+	bool is_timeout = false;
+	while (controller_running) {
+		udprecvfrom(controller_victimserver_udpsock, buf, MAX_BUFSIZE, 0, &spineswitchos_victimclient_addr, &spineswitchos_victimclient_addrlen, recvsize, "controller.victimserver");
+
+		//printf("receive DISTCACHE_CACHE_EVICT_VICTIM from spineswitchos\n");
+		//dump_buf(buf, recvsize);
+
+		distcache_cache_evict_victim_t tmp_distcache_cache_evict_victim(buf, recvsize);
+
+		// validate spine/leaf switchidx
+		validate_switchidx(tmp_distcache_cache_evict_victim.key());
+
+		// send DISTCACHE_CACHE_EVICT_VICTIM to leaf switchos
+		udpsendto(controller_victimserver_victimclient_for_leaf_udpsock, buf, recvsize, 0, &leafswitchos_victimserver_addr, leafswitchos_victimserver_addrlen, "controller.victimserver.victimclient_for_leaf");
+
+		// wait for DISTCACHE_CACHE_EVICT_VICTIM_ACK from leaf switchos
+		is_timeout = udprecvfrom(controller_victimserver_victimclient_for_leaf_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controlelr.victimserver.victimclient_for_leaf");
+		if (!is_timeout) {
+			distcache_cache_evict_victim_ack_t tmp_distcache_cache_evict_victim_ack(buf, recvsize);
+			INVARIANT(tmp_distcache_cache_evict_victim_ack.key() == tmp_distcache_cache_evict_victim.key());
+			// send DISTCACHE_CACHE_EVICT_VICTIM_ACK to spine switchos
+			udpsendto(controller_victimserver_udpsock, buf, recvsize, 0, &spineswitchos_victimclient_addr, spineswitchos_victimclient_addrlen, "controller.victimserver");
+		}
+	}
+
+	close(controller_victimserver_udpsock);
+	close(controlelr_victimserver_victimclient_for_leaf_udpsock);
 	pthread_exit(nullptr);
 }
 

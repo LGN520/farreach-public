@@ -209,9 +209,12 @@ void *run_server_popserver(void *param) {
 		// keep atomicity
 		server_mutex_for_keyset_list[local_server_logical_idx].lock();
 		// NETCACHE_CACHE_POP's key must NOT in beingcached/cached/beingupdated keyset
-		INVARIANT((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_beingcached_keyset_list[local_server_logical_idx].end()) && \
-				(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_cached_keyset_list[local_server_logical_idx].end()) && \
-				(server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) == server_beingupdated_keyset_list[local_server_logical_idx].end()));
+		// consider duplicate NETCACHE_CACHE_POP -> key may already in beingcached keyset
+		bool is_beingcached = server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) != server_beingcached_keyset_list[local_server_logical_idx].end();
+		bool is_cached = server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) != server_cached_keyset_list[local_server_logical_idx].end();
+		bool is_beingupdated = server_beingupdated_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop.key()) != server_beingupdated_keyset_list[local_server_logical_idx].end();
+		//INVARIANT(!is_beingcached && !is_cached && !is_beingupdated);
+		INVARIANT(!is_cached && !is_beingupdated);
 		// add key into beingcached keyset
 		server_beingcached_keyset_list[local_server_logical_idx].insert(tmp_netcache_cache_pop.key());
 		// get latest value
@@ -232,7 +235,7 @@ void *run_server_popserver(void *param) {
 
 		// keep atomicity
 		server_mutex_for_keyset_list[local_server_logical_idx].lock();
-		// NETCACHE_CACHE_POP's key must in beingcached or cached keyset
+		// NETCACHE_CACHE_POP_FINISH's key must in beingcached or cached keyset (consider duplicate NETCACHE_CACHE_POP_FINISHs)
 		if (server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) { // in beingcached keyset
 			INVARIANT(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_pop_finish.key()) == server_cached_keyset_list[local_server_logical_idx].end()); // must no in cached keyset
 			// move key from beingcached keyset into cached keyset
@@ -796,12 +799,14 @@ void *run_server_evictserver(void *param) {
 		// keep atomicity
 		server_mutex_for_keyset_list[local_server_logical_idx].lock();
 		// NETCACHE_CACHE_EVICT's key must in beingcached keyset or cached keyset
+		// consider duplicate NETCACHE_CACHE_EVICTs -> key may already be removed from beingcached/cached/beingudpated keyset
 		//INVARIANT((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) || \
 		//		(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyset_list[local_server_logical_idx].end()));
 		if (!((server_beingcached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_beingcached_keyset_list[local_server_logical_idx].end()) || \
 					(server_cached_keyset_list[local_server_logical_idx].find(tmp_netcache_cache_evict.key()) != server_cached_keyset_list[local_server_logical_idx].end()))) {
-			printf("[server.evictserver %d-%d ERROR] evicted key %x is not in beingcached keyset (size: %d) or cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_beingcached_keyset_list[local_server_logical_idx].size(), server_cached_keyset_list[local_server_logical_idx].size());
-			exit(-1);
+			//printf("[server.evictserver %d-%d ERROR] evicted key %x is not in beingcached keyset (size: %d) or cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_beingcached_keyset_list[local_server_logical_idx].size(), server_cached_keyset_list[local_server_logical_idx].size());
+			//exit(-1);
+			printf("[server.evictserver %d-%d WARNING] evicted key %x is not in beingcached keyset (size: %d) or cached keyset (size: %d)\n", local_server_logical_idx, global_server_logical_idx, tmp_netcache_cache_evict.key().keyhihi, server_beingcached_keyset_list[local_server_logical_idx].size(), server_cached_keyset_list[local_server_logical_idx].size());
 		}
 		// remove key from beingcached/cached/beingupdated keyset
 		server_beingcached_keyset_list[local_server_logical_idx].erase(tmp_netcache_cache_evict.key());

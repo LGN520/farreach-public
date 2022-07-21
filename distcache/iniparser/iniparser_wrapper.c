@@ -453,6 +453,15 @@ short IniparserWrapper::get_controller_warmupfinishserver_port() {
 	return short(tmp);
 }
 
+short IniparserWrapper::get_controller_victimserver_port() {
+	int tmp = iniparser_getint(ini, "controller:controller_victimserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [controller:controller_victimserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
 // Switch
 
 uint32_t IniparserWrapper::get_switch_partition_count() {
@@ -549,6 +558,15 @@ short IniparserWrapper::get_switchos_ptf_snapshotserver_port() {
 	int tmp = iniparser_getint(ini, "switch:switchos_ptf_snapshotserver_port", -1);
 	if (tmp == -1) {
 		printf("Invalid entry of [switch:switchos_ptf_snapshotserver_port]: %d\n", tmp);
+		exit(-1);
+	}
+	return short(tmp);
+}
+
+short IniparserWrapper::get_leafswitchos_victimserver_port() {
+	int tmp = iniparser_getint(ini, "switch:leafswitchos_victimserver_port", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [switch:leafswitchos_victimserver_port]: %d\n", tmp);
 		exit(-1);
 	}
 	return short(tmp);

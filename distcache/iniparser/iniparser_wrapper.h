@@ -69,6 +69,7 @@ class IniparserWrapper {
 		short get_controller_evictserver_port();
 		uint32_t get_controller_snapshot_period();
 		short get_controller_warmupfinishserver_port();
+		short get_controller_victimserver_port();
 
 		// switch
 		uint32_t get_switch_partition_count();
@@ -82,6 +83,7 @@ class IniparserWrapper {
 		short get_switchos_specialcaseserver_port();
 		short get_switchos_ptf_popserver_port();
 		short get_switchos_ptf_snapshotserver_port();
+		short get_leafswitchos_victimserver_port();
 		uint32_t get_spineswitch_total_logical_num();
 		uint32_t get_leafswitch_total_logical_num();
 

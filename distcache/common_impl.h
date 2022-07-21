@@ -81,6 +81,8 @@ typedef NetcacheValueupdate<netreach_key_t, val_t> netcache_valueupdate_t;
 typedef NetcacheValueupdateAck<netreach_key_t> netcache_valueupdate_ack_t;
 typedef WarmupAckServer<netreach_key_t> warmup_ack_server_t;
 typedef LoadAckServer<netreach_key_t> load_ack_server_t;
+typedef DistcacheCacheEvictVictim<netreach_key_t> distcache_cache_evict_victim_t;
+typedef DistcacheCacheEvictVictimAck<netreach_key_t> distcache_cache_evict_victim_ack_t;
 
 /*
  * Constants
@@ -148,6 +150,7 @@ short controller_popserver_port_start = -1;
 short controller_evictserver_port = -1;
 uint32_t controller_snapshot_period = 0; // ms
 short controller_warmupfinishserver_port = -1;
+short controller_victimserver_port = -1;
 
 // switch
 uint32_t switch_partition_count;
@@ -160,6 +163,7 @@ short switchos_snapshotserver_port = -1;
 short switchos_specialcaseserver_port = -1;
 short switchos_ptf_popserver_port = -1;
 short switchos_ptf_snapshotserver_port = -1;
+short leafswitchos_victimserver_port = -1;
 uint32_t spineswitch_total_logical_num;
 uint32_t leafswitch_total_logical_num;
 
@@ -405,6 +409,7 @@ inline void parse_ini(const char* config_file) {
 	controller_evictserver_port = ini.get_controller_evictserver_port();
 	controller_snapshot_period = ini.get_controller_snapshot_period();
 	controller_warmupfinishserver_port = ini.get_controller_warmupfinishserver_port();
+	controller_victimserver_port = ini.get_controller_victimserver_port();
 
 	printf("controller ip for server: %s\n", controller_ip_for_server);
 	printf("controller ip for switchos: %s\n", controller_ip_for_switchos);
@@ -412,6 +417,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(controller_evictserver_port);
 	COUT_VAR(controller_snapshot_period);
 	COUT_VAR(controller_warmupfinishserver_port);
+	COUT_VAR(controller_victimserver_port);
 	printf("\n");
 	
 	// switch
@@ -426,6 +432,7 @@ inline void parse_ini(const char* config_file) {
 	switchos_specialcaseserver_port = ini.get_switchos_specialcaseserver_port();
 	switchos_ptf_popserver_port = ini.get_switchos_ptf_popserver_port();
 	switchos_ptf_snapshotserver_port = ini.get_switchos_ptf_snapshotserver_port();
+	leafswitchos_victimserver_port = ini.get_leafswitchos_victimserver_port();
 	spineswitch_total_logical_num = ini.get_spineswitch_total_logical_num();
 	leafswitch_total_logical_num = ini.get_leafswitch_total_logical_num();
 
@@ -447,6 +454,7 @@ inline void parse_ini(const char* config_file) {
 	COUT_VAR(switchos_specialcaseserver_port);
 	COUT_VAR(switchos_ptf_popserver_port);
 	COUT_VAR(switchos_ptf_snapshotserver_port);
+	COUT_VAR(leafswitchos_victimserver_port);
 	COUT_VAR(spineswitch_total_logical_num);
 	COUT_VAR(leafswitch_total_logical_num);
 	if (switchos_sample_cnt > switch_kv_bucket_num) {

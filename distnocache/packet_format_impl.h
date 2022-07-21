@@ -115,7 +115,7 @@ void GetRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 }
 
@@ -170,7 +170,7 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	//uint32_t my_size = this->size();
 	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size-tmp_typesize-tmp_keysize);
 	UNUSED(tmp_valsize);
@@ -217,7 +217,7 @@ void DelRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 }
 
@@ -278,7 +278,7 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
 	UNUSED(tmp_endkeysize);
@@ -352,7 +352,7 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	//uint32_t my_size = this->size();
 	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
@@ -426,7 +426,7 @@ void PutResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	begin += sizeof(optype_t); // deserialize shadowtype
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
@@ -498,7 +498,7 @@ void DelResponse<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	begin += sizeof(optype_t); // deserialize shadowtype
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
@@ -660,7 +660,7 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 	uint32_t my_size = this->size();
 	INVARIANT(recv_size >= my_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
 	begin += tmp_endkeysize;
@@ -937,7 +937,7 @@ void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * d
 	//uint32_t my_size = this->size();
 	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
@@ -1040,7 +1040,7 @@ void PutRequestSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_s
 	//uint32_t my_size = this->size();
 	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
@@ -1162,7 +1162,7 @@ void DelRequestSeq<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	uint32_t my_size = this->size();
 	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	begin += sizeof(optype_t); // deserialize shadowtype
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
@@ -1262,7 +1262,7 @@ void ScanRequestSplit<key_t>::deserialize(const char * data, uint32_t recv_size)
 	uint32_t my_size = this->size();
 	INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
 	begin += tmp_endkeysize;
@@ -1344,7 +1344,7 @@ void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 	//uint32_t my_size = this->size();
 	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
@@ -1498,7 +1498,7 @@ void CacheEvict<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	//uint32_t my_size = this->size();
 	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
@@ -1690,7 +1690,7 @@ void CacheEvictLoadfreqInswitchAck<key_t>::deserialize(const char * data, uint32
 	uint32_t my_size = this->size();
 	INVARIANT(recv_size >= my_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	memcpy(&this->_frequency, begin, sizeof(uint32_t));
 	this->_frequency = ntohl(this->_frequency);
@@ -1756,7 +1756,7 @@ void CacheEvictLoaddataInswitchAck<key_t, val_t>::deserialize(const char * data,
 	uint32_t my_size = this->size();
 	INVARIANT(my_size <= recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
@@ -1810,7 +1810,7 @@ void LoadsnapshotdataInswitchAck<key_t, val_t>::deserialize(const char * data, u
 	//uint32_t my_size = this->size();
 	//INVARIANT(my_size == recv_size);
 	const char *begin = data;
-	uint32_t tmp_ophdrsize = this->deserialize(begin, recv_size);
+	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
 	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
 	begin += tmp_valsize;
