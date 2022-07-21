@@ -456,7 +456,19 @@ action update_putreq_seq_to_putreq_seq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
+action update_netcache_putreq_seq_cached_to_putreq_seq_inswitch() {
+	modify_field(op_hdr.optype, PUTREQ_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_INSWITCH);
+	add_header(inswitch_hdr);
+}
+
 action update_delreq_seq_to_delreq_seq_inswitch() {
+	modify_field(op_hdr.optype, DELREQ_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_INSWITCH);
+	add_header(inswitch_hdr);
+}
+
+action update_netcache_delreq_seq_cached_to_delreq_seq_inswitch() {
 	modify_field(op_hdr.optype, DELREQ_SEQ_INSWITCH);
 	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_INSWITCH);
 	add_header(inswitch_hdr);
@@ -511,7 +523,9 @@ table ig_port_forward_tbl {
 	actions {
 		update_getreq_spine_to_getreq_inswitch;
 		update_putreq_seq_to_putreq_seq_inswitch;
+		update_netcache_putreq_seq_cached_to_putreq_seq_inswitch;
 		update_delreq_seq_to_delreq_seq_inswitch;
+		update_netcache_delreq_seq_cached_to_delreq_seq_inswitch;
 		update_netcache_valueupdate_to_netcache_valueupdate_inswitch;
 		update_getres_server_to_getres;
 		update_scanres_split_server_to_scanres_split;
