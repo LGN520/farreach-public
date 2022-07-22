@@ -408,6 +408,18 @@ update loadreq_to_loadreq_spine() {
 	modify_field(op_hdr.optype, LOADREQ_SPINE);
 }
 
+action update_putreq_seq_to_putreq_seq_inswitch() {
+	modify_field(op_hdr.optype, PUTREQ_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_INSWITCH);
+	add_header(inswitch_hdr);
+}
+
+action update_delreq_seq_to_delreq_seq_inswitch() {
+	modify_field(op_hdr.optype, DELREQ_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_INSWITCH);
+	add_header(inswitch_hdr);
+}
+
 @pragma stage 6
 table ig_port_forward_tbl {
 	reads {
@@ -425,8 +437,10 @@ table ig_port_forward_tbl {
 #endif
 		update_warmupreq_to_warmupreq_spine;
 		update_loadreq_to_loadreq_spine;
+		update_putreq_seq_to_putreq_seq_inswitch;
+		update_delreq_seq_to_delreq_seq_inswitch;
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 16;
 }
