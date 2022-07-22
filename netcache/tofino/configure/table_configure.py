@@ -492,12 +492,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 2*client_physical_num=4 < 2*8=16 < 32)
             print "Configuring prepare_for_cachehit_tbl"
-            for tmpoptype in [GETREQ, WARMUPREQ]:
-                for tmp_client_physical_idx in range(client_physical_num):
+            for client_physical_idx in range(client_phyiscal_num):
+                tmp_clientip = client_ips[client_physical_idx]
+                tmp_clientsid = self.client_sids[client_physical_idx]
+                for tmpoptype in [GETREQ, WARMUPREQ]:
                     matchspec0 = netcache_prepare_for_cachehit_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
-                            ig_intr_md_ingress_port = self.client_devports[tmp_client_physical_idx])
-                    actnspec0 = netcache_set_client_sid_action_spec_t(self.client_sids[tmp_client_physical_idx])
+                            ipv4_hdr_srcAddr = tmp_clientip,
+                            ipv4_hdr_srcAddr_prefix_length = 32)
+                            #ig_intr_md_ingress_port = self.client_devports[client_physical_idx])
+                    actnspec0 = netcache_set_client_sid_action_spec_t(tmp_clientsid)
                     self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 # Should not used: no req from server

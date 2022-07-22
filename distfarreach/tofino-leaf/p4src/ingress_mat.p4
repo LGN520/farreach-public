@@ -115,7 +115,7 @@ table hash_for_spineselect_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 16;
 }
 
 // Stage 1 (need_recirculate = 1)
@@ -167,6 +167,10 @@ action spineselect(eport, globalswitchidx) {
 	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
 
+action spineselect_for_special_response(globalswitchidx) {
+	modify_field(meta.spineswitchidx, globalswitchdx);
+}
+
 @pragma stage 1
 table spineselect_tbl {
 	reads {
@@ -176,6 +180,7 @@ table spineselect_tbl {
 	}
 	actions {
 		spineselect;
+		spineselect_for_speical_response;
 		nop;
 	}
 	default_action: nop();
@@ -194,6 +199,9 @@ action range_partition_for_scan(udpport, eport, start_globalserveridx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(split_hdr.globalserveridx, start_globalserveridx);
 }
+action range_partition_for_special_response(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 2
 table range_partition_tbl {
 	reads {
@@ -205,6 +213,7 @@ table range_partition_tbl {
 	actions {
 		range_partition;
 		range_partition_for_scan;
+		range_partition_for_special_response;
 		nop;
 	}
 	default_action: nop();
@@ -213,6 +222,9 @@ table range_partition_tbl {
 #else
 action hash_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
+action hash_partition_for_special_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 @pragma stage 2
@@ -226,6 +238,7 @@ table hash_partition_tbl {
 	actions {
 		hash_partition;
 		//reset_is_wrong_pipeline;
+		hash_partition_for_special_response;
 		nop;
 	}
 	//default_action: reset_is_wrong_pipeline();
@@ -404,7 +417,8 @@ action set_client_sid(client_sid) {
 table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
-		ig_intr_md.ingress_port: exact;
+		//ig_intr_md.ingress_port: exact;
+		ipv4_hdr.srcAddr: lpm;
 		meta.need_recirculate: exact;
 	}
 	actions {
@@ -420,12 +434,16 @@ action forward_normal_response(eport) {
 }
 
 action forward_special_get_response_to_server_and_clone_to_spine(client_sid) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
+	// NOTE: eport to server has already been set by partition_tbl for GETRES_LATEST/DELETED_SEQ_SERVER/_INSWITCH
+	//modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
 	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding spine switch
 }
 
 action forward_special_get_response_to_spine(eport) {
+	// NOTE: reset eport to spine switch instead of server (set by partition_tbl before)
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+	// NOTE: server-leaf resets globalswitchidx as spineswitchidx (set by spineselect_tbl) for special responses to lookup cache in spine switch
+	modify_field(op_hdr.globalswitchidx, meta.spineswitchidx);
 }
 
 @pragma stage 5

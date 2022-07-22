@@ -395,7 +395,8 @@ action set_client_sid(client_sid) {
 table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
-		ig_intr_md.ingress_port: exact;
+		//ig_intr_md.ingress_port: exact;
+		ipv4_hdr.srcAddr: lpm;
 	}
 	actions {
 		set_client_sid;

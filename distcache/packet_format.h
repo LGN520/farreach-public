@@ -311,7 +311,7 @@ class GetResponseLatestSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val
 template<class key_t, class val_t>
 class GetResponseLatestSeqServer : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=true)
 	public: 
-		GetResponseLatestSeqServer(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
+		GetResponseLatestSeqServer(switchidx_t, switchidx, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
 };
 
 template<class key_t, class val_t>
@@ -346,7 +346,7 @@ class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // oph
 template<class key_t, class val_t>
 class GetResponseDeletedSeqServer : public GetResponseDeletedSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=false)
 	public: 
-		GetResponseDeletedSeqServer(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
+		GetResponseDeletedSeqServer(switchidx_t switchidx, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
 };
 
 template<class key_t, class val_t>

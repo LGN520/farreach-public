@@ -406,13 +406,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 2*client_physical_num=4 < 2*8=16 < 32)
             print "Configuring prepare_for_cachehit_tbl"
-            for tmpoptype in [GETREQ, WARMUPREQ]:
-                matchspec0 = distcachespine_prepare_for_cachehit_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ig_intr_md_ingress_port = self.clientleafswitch_devport)
-                actnspec0 = distcachespine_set_client_sid_action_spec_t(self.clientleafswitch_sid)
-                self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for client_physical_idx in range(client_phyiscal_num):
+                tmp_clientip = client_ips[client_physical_idx]
+                for tmpoptype in [GETREQ, WARMUPREQ]:
+                    matchspec0 = distcachespine_prepare_for_cachehit_tbl_match_spec_t(\
+                            op_hdr_optype = tmpoptype,
+                            ipv4_hdr_srcAddr = tmp_clientip,
+                            ipv4_hdr_srcAddr_prefix_length = 32)
+                            #ig_intr_md_ingress_port = self.clientleafswitch_devport)
+                    actnspec0 = distcachespine_set_client_sid_action_spec_t(self.clientleafswitch_sid)
+                    self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: ipv4_forward_tbl (default: nop; size: 6*client_physical_num=12 < 6*8=48)
             print "Configuring ipv4_forward_tbl"

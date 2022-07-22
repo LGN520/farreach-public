@@ -381,9 +381,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.set_hot_threshold_tbl_set_default_action_set_hot_threshold(\
                     self.sess_hdl, self.dev_tgt, actnspec0)
 
-            # Table: hash_for_spineselect_tbl (default: nop; size: 6)
+            # Table: hash_for_spineselect_tbl (default: nop; size: 10)
             print "Configuring hash_for_spineselect_tbl"
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ]:
+            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
                 matchspec0 = distfarreachleaf_hash_for_spineselect_tbl_match_spec_t(\
                         op_hdr_optype = convert_u16_to_i16(tmpoptype))
                 self.client.hash_for_spineselect_tbl_table_add_with_hash_for_spineselect(\
@@ -405,19 +405,19 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 1
 
             if RANGE_SUPPORT == False:
-                # Table: hash_for_partition_tbl (default: nop; size: 12)
+                # Table: hash_for_partition_tbl (default: nop; size: 16)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
                     matchspec0 = distfarreachleaf_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             meta_need_recirculate = 0)
                     self.client.hash_for_partition_tbl_table_add_with_hash_for_partition(\
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
-            # Table: spineselect_tbl (default: nop; size <= 6 * spineswitch_total_logical_num)
+            # Table: spineselect_tbl (default: nop; size <= 10 * spineswitch_total_logical_num)
             print "Configuring spineselect_tbl"
             key_range_per_spineswitch = switch_partition_count / spineswitch_total_logical_num
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ]:
+            for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
                 key_start = 0 # [0, 2^16-1]
                 for i in range(spineswitch_total_logical_num):
                     global_spineswitch_logical_idx = spineswitch_logical_idxes[i]
@@ -433,20 +433,25 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             meta_need_recirculate = 0)
                     # Forward to the egress pipeline of spine switch (NOT touch any MAT in egress pipelines)
                     eport = self.spineswitch_devport
-                    actnspec0 = distfarreachleaf_spineselect_action_spec_t(eport, global_spineswitch_logical_idx)
-                    self.client.spineselect_tbl_table_add_with_spineselect(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                    if tmpoptype == GETRES_LATEST_SEQ_SERVER or tmpoptype == GETRES_DELETED_SEQ_SERVER or tmpoptype == GETRES_LATEST_SEQ_SERVER_INSWITCH or tmpoptype == GETRES_DELETED_SEQ_SERVER_INSWITCH:
+                        actnspec0 = distfarreachleaf_spineselect_for_special_response_action_spec_t(global_spineswitch_logical_idx)
+                        self.client.spineselect_tbl_table_add_with_spineselect_for_special_response(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                    else:
+                        actnspec0 = distfarreachleaf_spineselect_action_spec_t(eport, global_spineswitch_logical_idx)
+                        self.client.spineselect_tbl_table_add_with_spineselect(\
+                                self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                     key_start = key_end + 1
 
             # Stage 2
 
             if RANGE_SUPPORT == True:
-                # Table: range_partition_tbl (default: nop; size <= 13 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 17 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_server = pow(2, 16) / server_total_logical_num
                 key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
                 servernum_per_leafswitch = server_total_logical_num / leafswitch_total_logical_num
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
                     valid_serveridx_start = 0 # [0, server_total_logical_num-1]
                     valid_key_start = 0 # [0, 2^16-1]
                     for i in range(leafswitch_total_logical_num):
@@ -498,7 +503,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 #udp_dstport = server_worker_port_start + global_server_logical_idx
                                 udp_dstport = server_worker_port_start + local_server_logical_idx
                                 eport = self.server_devports[server_physical_idx]
-                                if tmpoptype != SCANREQ:
+                                if tmpoptype == GETRES_LATEST_SEQ_SERVER or tmpoptype == GETRES_DELETED_SEQ_SERVER or tmpoptype == GETRES_LATEST_SEQ_SERVER_INSWITCH or tmpoptype == GETRES_DELETED_SEQ_SERVER_INSWITCH:
+                                    actnspec0 = distfarreachleaf_range_partition_for_special_response_action_spec_t(eport)
+                                    self.client.range_partition_tbl_table_add_with_range_partition_for_special_response(\
+                                            self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                                elif tmpoptype != SCANREQ:
                                     actnspec0 = distfarreachleaf_range_partition_action_spec_t(udp_dstport, eport)
                                     self.client.range_partition_tbl_table_add_with_range_partition(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
@@ -509,10 +518,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         valid_serveridx_start = valid_serveridx_end + 1
                         valid_key_start = valid_key_end + 1
             else:
-                # Table: hash_partition_tbl (default: nop; size <= 12 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 16 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_server = switch_partition_count / server_total_logical_num
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
                     hash_start = 0 # [0, partition_count-1]
                     for global_server_logical_idx in range(server_total_logical_num):
                         if global_server_logical_idx == server_total_logical_num - 1:
@@ -540,9 +549,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             #udp_dstport = server_worker_port_start + global_server_logical_idx
                             udp_dstport = server_worker_port_start + local_server_logical_idx
                             eport = self.server_devports[server_physical_idx]
-                            actnspec0 = distfarreachleaf_hash_partition_action_spec_t(udp_dstport, eport)
-                            self.client.hash_partition_tbl_table_add_with_hash_partition(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                            if tmpoptype == GETRES_LATEST_SEQ_SERVER or tmpoptype == GETRES_DELETED_SEQ_SERVER or tmpoptype == GETRES_LATEST_SEQ_SERVER_INSWITCH or tmpoptype == GETRES_DELETED_SEQ_SERVER_INSWITCH:
+                                actnspec0 = distfarreachleaf_hash_partition_for_special_response_action_spec_t(eport)
+                                self.client.hash_partition_tbl_table_add_with_hash_partition_for_special_response(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                            else:
+                                actnspec0 = distfarreachleaf_hash_partition_action_spec_t(udp_dstport, eport)
+                                self.client.hash_partition_tbl_table_add_with_hash_partition(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         hash_start = hash_end + 1
 
             # Stage 3
@@ -624,14 +638,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 5*client_physical_num=10 < 5*8=40 < 64)
             print "Configuring prepare_for_cachehit_tbl"
-            for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, DELREQ_SEQ, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
-                matchspec0 = distfarreachleaf_prepare_for_cachehit_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ig_intr_md_ingress_port = self.spineswitch_devport,
-                        meta_need_recirculate = 0)
-                actnspec0 = distfarreachleaf_set_client_sid_action_spec_t(self.spineswitch_sid)
-                self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+            for client_physical_idx in range(client_phyiscal_num):
+                tmp_clientip = client_ips[client_physical_idx]
+                for tmpoptype in [GETREQ_SPINE, PUTREQ_SEQ, DELREQ_SEQ, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH]:
+                    matchspec0 = distfarreachleaf_prepare_for_cachehit_tbl_match_spec_t(\
+                            op_hdr_optype = tmpoptype,
+                            #ig_intr_md_ingress_port = self.spineswitch_devport,
+                            ipv4_hdr_srcAddr = tmp_clientip,
+                            ipv4_hdr_srcAddr_prefix_length = 32,
+                            meta_need_recirculate = 0)
+                    actnspec0 = distfarreachleaf_set_client_sid_action_spec_t(self.spineswitch_sid)
+                    self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Table: ipv4_forward_tbl (default: nop; size: 2*(6*client_physical_num+8)=40 < 112)
             print "Configuring ipv4_forward_tbl"

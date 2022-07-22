@@ -171,6 +171,7 @@ header_type metadata_t {
 		server_sid: 10; // clone to server for SCANREQ_SPLIT
 		remain_scannum: 16;
 		is_last_scansplit: 1;
+		spineswitchidx: 16; // for special response
 #endif
 	}
 }

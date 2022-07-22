@@ -379,9 +379,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 1
 
             if RANGE_SUPPORT == False:
-                # Table: hash_for_partition_tbl (default: nop; size: 10)
+                # Table: hash_for_partition_tbl (default: nop; size: 12)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
                     matchspec0 = netbufferv4_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             meta_need_recirculate = 0)
@@ -391,10 +391,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 2
 
             if RANGE_SUPPORT == True:
-                # Table: range_partition_tbl (default: nop; size <= 11 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 13 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_server = pow(2, 16) / server_total_logical_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, SCANREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
                     key_start = 0 # [0, 2^16-1]
                     for global_server_logical_idx in range(server_total_logical_num):
                         if global_server_logical_idx == server_total_logical_num - 1:
@@ -422,7 +422,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             #udp_dstport = server_worker_port_start + global_server_logical_idx
                             udp_dstport = server_worker_port_start + local_server_logical_idx
                             eport = self.server_devports[server_physical_idx]
-                            if tmpoptype != SCANREQ:
+                            if tmpoptype == GETRES_LATEST_SEQ or tmpoptype == GETRES_DELETED_SEQ:
+                                actnspec0 = netbufferv4_range_partition_for_special_response_action_spec_t(eport)
+                                self.client.range_partition_tbl_table_add_with_range_partition_for_special_response(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                            elif tmpoptype != SCANREQ:
                                 actnspec0 = netbufferv4_range_partition_action_spec_t(udp_dstport, eport)
                                 self.client.range_partition_tbl_table_add_with_range_partition(\
                                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
@@ -432,10 +436,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         key_start = key_end + 1
             else:
-                # Table: hash_partition_tbl (default: nop; size <= 10 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 12 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_server = switch_partition_count / server_total_logical_num
-                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH]:
+                for tmpoptype in [GETREQ, CACHE_POP_INSWITCH, PUTREQ, DELREQ, WARMUPREQ, LOADREQ, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
                     hash_start = 0 # [0, partition_count-1]
                     for global_server_logical_idx in range(server_total_logical_num):
                         if global_server_logical_idx == server_total_logical_num - 1:
@@ -463,9 +467,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             #udp_dstport = server_worker_port_start + global_server_logical_idx
                             udp_dstport = server_worker_port_start + local_server_logical_idx
                             eport = self.server_devports[server_physical_idx]
-                            actnspec0 = netbufferv4_hash_partition_action_spec_t(udp_dstport, eport)
-                            self.client.hash_partition_tbl_table_add_with_hash_partition(\
-                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                            if tmpoptype == GETRES_LATEST_SEQ or tmpoptype == GETRES_DELETED_SEQ:
+                                actnspec0 = netbufferv4_hash_partition_for_special_response_action_spec_t(eport)
+                                self.client.hash_partition_tbl_table_add_with_hash_partition_for_special_response(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                            else:
+                                actnspec0 = netbufferv4_hash_partition_action_spec_t(udp_dstport, eport)
+                                self.client.hash_partition_tbl_table_add_with_hash_partition(\
+                                        self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         hash_start = hash_end + 1
 
             # Stage 3
@@ -531,13 +540,17 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 3*client_physical_num=6 < 3*8=24 < 32)
             print "Configuring prepare_for_cachehit_tbl"
-            for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
-                for tmp_client_physical_idx in range(client_physical_num):
+            for client_physical_idx in range(client_phyiscal_num):
+                tmp_clientip = client_ips[client_physical_idx]
+                tmp_clientsid = self.client_sids[client_physical_idx]
+                for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
                     matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
-                            ig_intr_md_ingress_port = self.client_devports[tmp_client_physical_idx],
+                            #ig_intr_md_ingress_port = self.client_devports[client_physical_idx],
+                            ipv4_hdr_srcAddr = tmp_clientip,
+                            ipv4_hdr_srcAddr_prefix_length = 32,
                             meta_need_recirculate = 0)
-                    actnspec0 = netbufferv4_set_client_sid_action_spec_t(self.client_sids[tmp_client_physical_idx])
+                    actnspec0 = netbufferv4_set_client_sid_action_spec_t(tmp_clientsid)
                     self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 # Should not used: no req from server

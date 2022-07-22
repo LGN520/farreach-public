@@ -182,6 +182,9 @@ action range_partition(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
+action range_partition_for_special_response(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 2
 table range_partition_tbl {
 	reads {
@@ -191,6 +194,7 @@ table range_partition_tbl {
 	}
 	actions {
 		range_partition;
+		range_partition_for_special_response;
 		nop;
 	}
 	default_action: nop();
@@ -201,6 +205,9 @@ action hash_partition(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
+action hash_partition_for_special_response(eport) {
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
+}
 @pragma stage 2
 table hash_partition_tbl {
 	reads {
@@ -210,6 +217,7 @@ table hash_partition_tbl {
 	}
 	actions {
 		hash_partition;
+		hash_partition_for_special_response;
 		nop;
 	}
 	default_action: nop();
@@ -303,7 +311,8 @@ action set_client_sid(client_sid) {
 table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
-		ig_intr_md.ingress_port: exact;
+		//ig_intr_md.ingress_port: exact;
+		ipv4_hdr.srcAddr: lpm;
 		meta.need_recirculate: exact;
 	}
 	actions {
@@ -319,7 +328,8 @@ action forward_normal_response(eport) {
 }
 
 action forward_special_get_response(client_sid) {
-	modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
+	// NOTE: eport to server has already been set by partition_tbl for GETRES_LATEST/DELETED_SEQ
+	//modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port); // Original packet enters the egress pipeline to server
 	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding client
 }
 

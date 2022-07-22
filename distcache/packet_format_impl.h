@@ -863,10 +863,11 @@ void GetResponseLatestSeq<key_t, val_t>::deserialize(const char * data, uint32_t
 // GetResponseLatestSeqServer (value must <= 128B)
 
 template<class key_t, class val_t>
-GetResponseLatestSeqServer<key_t, val_t>::GetResponseLatestSeqServer(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
+GetResponseLatestSeqServer<key_t, val_t>::GetResponseLatestSeqServer(switchidx_t switchidx, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
 	: GetResponseLatestSeq<key_t, val_t>(key, val, seq, nodeidx_foreval)
 {
 	this->_type = optype_t(packet_type_t::GETRES_LATEST_SEQ_SERVER);
+	this->_globalswitchidx = switchidx;
 }
 
 // GetResponseLatestSeqInswitchCase1 (value must <= 128B)
@@ -986,10 +987,11 @@ void GetResponseDeletedSeq<key_t, val_t>::deserialize(const char * data, uint32_
 // GetResponseDeletedSeqServer (value must = 0B)
 
 template<class key_t, class val_t>
-GetResponseDeletedSeqServer<key_t, val_t>::GetResponseDeletedSeqServer(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
+GetResponseDeletedSeqServer<key_t, val_t>::GetResponseDeletedSeqServer(switchidx_t switchidx, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval)
 	: GetResponseDeletedSeq<key_t, val_t>(key, val, seq, nodeidx_foreval)
 {
 	this->_type = static_cast<optype_t>(PacketType::GETRES_DELETED_SEQ_SERVER);
+	this->_globalswitchidx = switchidx;
 }
 
 // GetResponseDeletedSeqInswitchCase1 (value must <= 128B)
