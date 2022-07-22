@@ -420,6 +420,18 @@ action update_delreq_seq_to_delreq_seq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
+action update_getres_latest_seq_server_to_getres_latest_seq_server_inswitch() {
+	modify_field(op_hdr.optype, GETRES_LATEST_SEQ_SERVER_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_LATEST_SEQ_SERVER_INSWITCH);
+	add_header(inswitch_hdr);
+}
+
+action update_getres_deleted_seq_server_to_getres_deleted_seq_server_inswitch() {
+	modify_field(op_hdr.optype, GETRES_DELETED_SEQ_SERVER_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_DELETED_SEQ_SERVER_INSWITCH);
+	add_header(inswitch_hdr);
+}
+
 @pragma stage 6
 table ig_port_forward_tbl {
 	reads {
@@ -439,6 +451,8 @@ table ig_port_forward_tbl {
 		update_loadreq_to_loadreq_spine;
 		update_putreq_seq_to_putreq_seq_inswitch;
 		update_delreq_seq_to_delreq_seq_inswitch;
+		update_getres_latest_seq_server_to_getres_latest_seq_server_inswitch;
+		update_getres_deleted_seq_server_to_getres_deleted_seq_server_inswitch;
 		nop;
 	}
 	default_action: nop();

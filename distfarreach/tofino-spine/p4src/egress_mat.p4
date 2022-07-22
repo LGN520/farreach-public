@@ -428,26 +428,6 @@ action update_putreq_seq_inswitch_case1_to_putres_by_mirroring(client_sid, serve
 	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
 }
 
-action update_putreq_inswitch_to_putreq_seq_case3() {
-	modify_field(op_hdr.optype, PUTREQ_SEQ_CASE3);
-	modify_field(shadowtype_hdr.shadowtype, PUTREQ_SEQ_CASE3);
-
-	remove_header(inswitch_hdr);
-	add_header(seq_hdr);
-
-	//modify_field(eg_intr_md.egress_port, eport);
-}
-
-action update_putreq_inswitch_to_putreq_pop_seq_case3() {
-	modify_field(op_hdr.optype, PUTREQ_POP_SEQ_CASE3);
-	modify_field(shadowtype_hdr.shadowtype, PUTREQ_POP_SEQ_CASE3);
-
-	remove_header(inswitch_hdr);
-	add_header(seq_hdr);
-
-	//modify_field(eg_intr_md.egress_port, eport);
-}
-
 action update_delreq_inswitch_to_delreq_seq() {
 	modify_field(op_hdr.optype, DELREQ_SEQ);
 	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ);
@@ -583,16 +563,6 @@ action update_delreq_seq_inswitch_case1_to_delres_by_mirroring(client_sid, serve
 	clone_egress_pkt_to_egress(client_sid); // clone to client (inswitch_hdr.client_sid)
 }
 
-action update_delreq_inswitch_to_delreq_seq_case3() {
-	modify_field(op_hdr.optype, DELREQ_SEQ_CASE3);
-	modify_field(shadowtype_hdr.shadowtype, DELREQ_SEQ_CASE3);
-
-	remove_header(inswitch_hdr);
-	add_header(seq_hdr);
-
-	//modify_field(eg_intr_md.egress_port, eport);
-}
-
 #ifdef RANGE_SUPPORT
 action forward_scanreq_split_and_clone(server_sid) {
 	modify_field(split_hdr.is_clone, 1);
@@ -719,21 +689,17 @@ table eg_port_forward_tbl {
 		update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone; // clone for first CACHE_POP_INSWITCH_ACK (not need to clone for duplication due to switchos-side timeout-and-retry)
 		//forward_cache_pop_inswitch_ack; // last clone of CACHE_POP_INSWITCH_ACK
 		update_putreq_inswitch_to_putreq_seq;
-		update_putreq_inswitch_to_putreq_pop_seq;
 		update_putreq_inswitch_to_putres_by_mirroring;
 		update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
 		forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
 		//update_putreq_seq_inswitch_case1_to_putres;
 		update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
-		update_putreq_inswitch_to_putreq_seq_case3;
-		update_putreq_inswitch_to_putreq_pop_seq_case3;
 		update_delreq_inswitch_to_delreq_seq;
 		update_delreq_inswitch_to_delres_by_mirroring;
 		update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
 		forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
 		//update_delreq_seq_inswitch_case1_to_delres;
 		update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
-		update_delreq_inswitch_to_delreq_seq_case3;
 #ifdef RANGE_SUPPORT
 		forward_scanreq_split_and_clone;
 		forward_scanreq_split;
@@ -1295,7 +1261,7 @@ table add_and_remove_value_header_tbl {
 		remove_all;
 	}
 	default_action: remove_all();
-	size: 256;
+	size: 512;
 }
 
 action drop_getres_latest_seq_inswitch() {

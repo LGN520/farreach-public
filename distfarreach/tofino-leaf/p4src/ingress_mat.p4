@@ -534,6 +534,18 @@ action update_loadack_server_to_loadack() {
 	modify_field(op_hdr.optype, LOADACK);
 }
 
+action update_getres_latest_seq_server_inswitch_to_getres_latest_seq_inswitch() {
+	modify_field(op_hdr.optype, GETRES_LATEST_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_LATEST_SEQ_INSWITCH);
+	//add_header(inswitch_hdr);
+}
+
+action update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch() {
+	modify_field(op_hdr.optype, GETRES_DELETED_SEQ_INSWITCH);
+	modify_field(shadowtype_hdr.shadowtype, GETRES_DELETED_SEQ_INSWITCH);
+	//add_header(inswitch_hdr);
+}
+
 @pragma stage 6
 table ig_port_forward_tbl {
 	reads {
@@ -554,8 +566,10 @@ table ig_port_forward_tbl {
 		update loadreq_spine_to_loadreq;
 		update_warmupack_server_to_warmupack;
 		update_loadackserver_to_loadack;
+		update_getres_latest_seq_server_inswitch_to_getres_latest_seq_inswitch;
+		update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch;
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 16;
 }
