@@ -374,14 +374,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             
             # Table: need_recirculate_tbl (default: reset_need_recirculate; size: <=8)
             #print "Configuring need_recirculate_tbl"
-            #for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
-            #    for iport in self.devPorts:
-            #        matchspec0 = distfarreachleaf_need_recirculate_tbl_match_spec_t(\
-            #                op_hdr_optype = tmpoptype,
-            #                ig_intr_md_ingress_port = iport)
-            #        if (tmpoptype == GETREQ) or (iport in pipeidx_ports_map[ingress_pipeidx]):
-            #            self.client.need_recirculate_tbl_table_add_with_reset_need_recirculate(\
-            #                    self.sess_hdl, self.dev_tgt, matchspec0)
+            #for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ]:
+            #    matchspec0 = distfarreachleaf_need_recirculate_tbl_match_spec_t(\
+            #            op_hdr_optype = tmpoptype)
+            #    if (tmpoptype == GETREQ) or (iport in pipeidx_ports_map[ingress_pipeidx]):
+            #        self.client.need_recirculate_tbl_table_add_with_reset_need_recirculate(\
+            #                self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: set_hot_threshold_tbl (default: set_hot_threshold; size: 1)
             print "Configuring set_hot_threshold_tbl"
@@ -401,12 +399,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: recirculate_tbl (default: nop; size: 4)
             print "Configuring recirculate_tbl"
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+            for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
                 matchspec0 = distfarreachleaf_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
-                # recirculate to the pipeline of the first physical client for atomicity of setting snapshot flag
-                actnspec0 = distfarreachleaf_recirculate_pkt_action_spec_t(self.recirPorts[client_pipeidxes[0]])
+                # forward to the first spine switch for atomicity of setting snapshot flag
+                actnspec0 = distfarreachleaf_recirculate_pkt_action_spec_t(self.spineswitch_devport)
                 self.client.recirculate_tbl_table_add_with_recirculate_pkt(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
@@ -623,7 +621,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=4)
             #print "Configuring snapshot_flag_tbl"
-            #for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+            #for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
             #    matchspec0 = distfarreachleaf_snapshot_flag_tbl_match_spec_t(\
             #            op_hdr_optype = tmpoptype,
             #            meta_need_recirculate = 0)

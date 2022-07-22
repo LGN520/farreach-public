@@ -321,7 +321,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: recirculate_tbl (default: nop; size: 8)
             print "Configuring recirculate_tbl"
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SPINE, DELREQ_SPINE, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
                 matchspec0 = distfarreachspine_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
@@ -436,7 +436,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=4)
             #print "Configuring snapshot_flag_tbl"
-            #for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+            #for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
             #    matchspec0 = distfarreachspine_snapshot_flag_tbl_match_spec_t(\
             #            op_hdr_optype = tmpoptype,
             #            meta_need_recirculate = 0)

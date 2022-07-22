@@ -79,7 +79,6 @@ action reset_need_recirculate() {
 table need_recirculate_tbl {
 	reads {
 		op_hdr.optype: exact;
-		ig_intr_md.ingress_port: exact;
 	}
 	actions {
 		set_need_recirculate;
@@ -121,8 +120,8 @@ table hash_for_spineselect_tbl {
 
 // Stage 1 (need_recirculate = 1)
 
-action recirculate_pkt(port) {
-	recirculate(port);
+action recirculate_pkt(eport) {
+	modify_field(ig_intr_md_for_tm.ucase_egress_port, eport); // forward to the first spine switch
 }
 
 @pragma stage 1

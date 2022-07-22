@@ -71,37 +71,37 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         # force to recirculate to ingress pipeline of the first physical client fpport
         single_ingress_pipeidx = client_pipeidxes[0]
 
-        self.unmatched_devports = []
-        for client_physical_idx in range(client_physical_num):
-            if client_pipeidxes[client_physical_idx] != single_ingress_pipeidx:
-                # get devport fro front panel port
-                port, chnl = client_fpports[client_physical_idx].split("/")
-                tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-                self.unmatched_devports.append(tmp_devport)
-        # GETRES_LATEST/DELETED_SEQ may also incur CASE1s (need to read snapshot flag)
-        for server_physical_idx in range(server_physical_num):
-            if server_pipeidxes[server_physical_idx] != single_ingress_pipeidx:
-                # get devport fro front panel port
-                port, chnl = server_fpports[server_physical_idx].split("/")
-                tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
-                self.unmatched_devports.append(tmp_devport)
+        #self.unmatched_devports = []
+        #for client_physical_idx in range(client_physical_num):
+        #    if client_pipeidxes[client_physical_idx] != single_ingress_pipeidx:
+        #        # get devport fro front panel port
+        #        port, chnl = client_fpports[client_physical_idx].split("/")
+        #        tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+        #        self.unmatched_devports.append(tmp_devport)
+        ## GETRES_LATEST/DELETED_SEQ may also incur CASE1s (need to read snapshot flag)
+        #for server_physical_idx in range(server_physical_num):
+        #    if server_pipeidxes[server_physical_idx] != single_ingress_pipeidx:
+        #        # get devport fro front panel port
+        #        port, chnl = server_fpports[server_physical_idx].split("/")
+        #        tmp_devport = sel.pal.pal_port_front_panel_port_to_dev_port_get(0, int(port), int(chnl))
+        #        self.unmatched_devports.append(tmp_devport)
 
     def cleanup(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
         # get entry count
         entrynum = self.client.need_recirculate_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
         if entrynum > 0:
-            for iport in self.unmatched_devports:
-                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
-                    matchspec0 = distfarreachleaf_need_recirculate_tbl_match_spec_t(\
-                            op_hdr_optype = tmpoptype,
-                            ig_intr_md_ingress_port = iport)
-                    self.client.need_recirculate_tbl_table_delete_by_match_spec(\
-                            self.sess_hdl, self.dev_tgt, matchspec0)
+            #for iport in self.unmatched_devports:
+            for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+                matchspec0 = distfarreachleaf_need_recirculate_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype)
+                        #ig_intr_md_ingress_port = iport)
+                self.client.need_recirculate_tbl_table_delete_by_match_spec(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
         print "Reset snapshot_flag=0 for all ingress pipelines"
         entrynum = self.client.snapshot_flag_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
         if entrynum > 0:
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+            for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
                 matchspec0 = distfarreachleaf_snapshot_flag_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 0)
@@ -112,17 +112,17 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def enable_singlepath(self):
         print "Set need_recirculate=1 for iports in different ingress pipelines"
-        for iport in self.unmatched_devports:
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
-                matchspec0 = distfarreachleaf_need_recirculate_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ig_intr_md_ingress_port = iport)
-                self.client.need_recirculate_tbl_table_add_with_set_need_recirculate(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
+        #for iport in self.unmatched_devports:
+        for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+            matchspec0 = distfarreachleaf_need_recirculate_tbl_match_spec_t(\
+                    op_hdr_optype = tmpoptype)
+                    #ig_intr_md_ingress_port = iport)
+            self.client.need_recirculate_tbl_table_add_with_set_need_recirculate(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
     def set_snapshot_flag(self):
         print "Set snapshot_flag=1 for all ingress pipelines"
-        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+        for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
             matchspec0 = distfarreachleaf_snapshot_flag_tbl_match_spec_t(\
                     op_hdr_optype = tmpoptype,
                     meta_need_recirculate = 0)
@@ -133,13 +133,13 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def disable_singlepath(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
-        for iport in self.unmatched_devports:
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
-                matchspec0 = distfarreachleaf_need_recirculate_tbl_match_spec_t(\
-                        op_hdr_optype = tmpoptype,
-                        ig_intr_md_ingress_port = iport)
-                self.client.need_recirculate_tbl_table_delete_by_match_spec(\
-                        self.sess_hdl, self.dev_tgt, matchspec0)
+        #for iport in self.unmatched_devports:
+        for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+            matchspec0 = distfarreachleaf_need_recirculate_tbl_match_spec_t(\
+                    op_hdr_optype = tmpoptype)
+                    #ig_intr_md_ingress_port = iport)
+            self.client.need_recirculate_tbl_table_delete_by_match_spec(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
 
     def load_snapshot_data(self, cached_empty_index_backup, pipeidx):
         print "[ERROR] now we directly load snapshot data from data plane instead of via ptf channel"
@@ -195,7 +195,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 
     def reset_snapshot_flag_and_reg(self):
         print "Reset snapshot_flag=0 for all ingress pipelines"
-        for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+        for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
             matchspec0 = distfarreachleaf_snapshot_flag_tbl_match_spec_t(\
                     op_hdr_optype = tmpoptype,
                     meta_need_recirculate = 0)
