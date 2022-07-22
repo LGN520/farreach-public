@@ -401,7 +401,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: recirculate_tbl (default: nop; size: 4)
             print "Configuring recirculate_tbl"
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
                 matchspec0 = distfarreachleaf_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
@@ -623,7 +623,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=4)
             #print "Configuring snapshot_flag_tbl"
-            #for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+            #for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
             #    matchspec0 = distfarreachleaf_snapshot_flag_tbl_match_spec_t(\
             #            op_hdr_optype = tmpoptype,
             #            meta_need_recirculate = 0)
@@ -660,7 +660,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                 eport = self.spineswitch_devport
                 tmpsid = self.spineswitch_sid
-                for tmpoptype in [GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                for tmpoptype in [GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
                     matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             ipv4_hdr_dstAddr = ipv4addr0,
@@ -706,14 +706,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.client.ig_port_forward_tbl_table_add_with_update_getreq_spine_to_getreq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_LATEST_SEQ,
+                    op_hdr_optype = GETRES_LATEST_SEQ_SERVER,
                     meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres_latest_seq_inswitch(\
+            self.client.ig_port_forward_tbl_table_add_with_update_getres_latest_seq_server_to_getres_latest_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
-                    op_hdr_optype = GETRES_DELETED_SEQ,
+                    op_hdr_optype = GETRES_DELETED_SEQ_SERVER,
                     meta_need_recirculate = 0)
-            self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres_deleted_seq_inswitch(\
+            self.client.ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_to_getres_deleted_seq_inswitch(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
             matchspec0 = distfarreachleaf_ig_port_forward_tbl_match_spec_t(\
                     op_hdr_optype = PUTREQ_SEQ,

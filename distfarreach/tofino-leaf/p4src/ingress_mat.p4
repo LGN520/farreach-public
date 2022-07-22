@@ -475,13 +475,13 @@ action update_getreq_spine_to_getreq_inswitch() {
 	add_header(inswitch_hdr);
 }
 
-action update_getres_latest_seq_to_getres_latest_seq_inswitch() {
+action update_getres_latest_seq_server_to_getres_latest_seq_inswitch() {
 	modify_field(op_hdr.optype, GETRES_LATEST_SEQ_INSWITCH);
 	modify_field(shadowtype_hdr.shadowtype, GETRES_LATEST_SEQ_INSWITCH);
 	add_header(inswitch_hdr);
 }
 
-action update_getres_deleted_seq_to_getres_deleted_seq_inswitch() {
+action update_getres_deleted_seq_server_to_getres_deleted_seq_inswitch() {
 	modify_field(op_hdr.optype, GETRES_DELETED_SEQ_INSWITCH);
 	modify_field(shadowtype_hdr.shadowtype, GETRES_DELETED_SEQ_INSWITCH);
 	add_header(inswitch_hdr);
@@ -543,8 +543,8 @@ table ig_port_forward_tbl {
 	}
 	actions {
 		update_getreq_spine_to_getreq_inswitch;
-		update_getres_latest_seq_to_getres_latest_seq_inswitch;
-		update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
+		update_getres_latest_seq_server_to_getres_latest_seq_inswitch;
+		update_getres_deleted_seq_server_to_getres_deleted_seq_inswitch;
 		update_putreq_seq_to_putreq_seq_inswitch;
 		update_delreq_seq_to_delreq_seq_inswitch;
 		update_getres_server_to_getres;

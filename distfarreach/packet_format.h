@@ -37,7 +37,7 @@ enum class PacketType {
 	PUTREQ_SEQ=0x0003, PUTREQ_POP_SEQ=0x0013, PUTREQ_SEQ_CASE3=0x0023, PUTREQ_POP_SEQ_CASE3=0x0033, NETCACHE_PUTREQ_SEQ_CACHED=0x0043,
 	//CACHE_POP_INSWITCH=0x0007,
 	GETRES_LATEST_SEQ_INSWITCH=0x000f, GETRES_DELETED_SEQ_INSWITCH=0x001f, GETRES_LATEST_SEQ_INSWITCH_CASE1=0x002f, GETRES_DELETED_SEQ_INSWITCH_CASE1=0x003f, PUTREQ_SEQ_INSWITCH_CASE1=0x004f, DELREQ_SEQ_INSWITCH_CASE1=0x005f, LOADSNAPSHOTDATA_INSWITCH_ACK=0x006f, CACHE_POP_INSWITCH=0x007f, NETCACHE_VALUEUPDATE_INSWITCH=0x008f,
-	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b, NETCACHE_VALUEUPDATE=0x003b,
+	GETRES_LATEST_SEQ=0x000b, GETRES_DELETED_SEQ=0x001b, CACHE_EVICT_LOADDATA_INSWITCH_ACK=0x002b, NETCACHE_VALUEUPDATE=0x003b, GETRES_LATEST_SEQ_SERVER=0x004b, GETRES_DELETED_SEQ_SERVER=0x005b,
 	GETRES=0x0009, GETRES_SERVER=0x0019,
 	PUTREQ_INSWITCH=0x0005,
 	DELREQ_SEQ_INSWITCH=0x0006,
@@ -309,6 +309,12 @@ class GetResponseLatestSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val
 };
 
 template<class key_t, class val_t>
+class GetResponseLatestSeqServer : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=true)
+	public: 
+		GetResponseLatestSeqServer(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
+};
+
+template<class key_t, class val_t>
 class GetResponseLatestSeqInswitchCase1 : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch.idx + stat_hdr (nodeidx_foreval=0) + clone_hdr
 	public: 
 		GetResponseLatestSeqInswitchCase1();
@@ -335,6 +341,12 @@ class GetResponseDeletedSeq : public GetResponseLatestSeq<key_t, val_t> { // oph
 	protected:
 		virtual void deserialize(const char * data, uint32_t recv_size);
 		// NOTE: _stat must be false for GetResponseDeletedSeq
+};
+
+template<class key_t, class val_t>
+class GetResponseDeletedSeqServer : public GetResponseDeletedSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=false)
+	public: 
+		GetResponseDeletedSeqServer(key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
 };
 
 template<class key_t, class val_t>

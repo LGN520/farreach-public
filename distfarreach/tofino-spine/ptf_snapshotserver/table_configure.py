@@ -86,7 +86,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
         entrynum = self.client.need_recirculate_tbl_get_entry_count(self.sess_hdl, self.dev_tgt)
         if entrynum > 0:
             for iport in self.unmatched_devports:
-                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+                for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SPINE, DELREQ_SPINE, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
                     matchspec0 = distfarreachspine_need_recirculate_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             ig_intr_md_ingress_port = iport)
@@ -107,7 +107,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def enable_singlepath(self):
         print "Set need_recirculate=1 for iports in different ingress pipelines"
         for iport in self.unmatched_devports:
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SPINE, DELREQ_SPINE, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
                 matchspec0 = distfarreachspine_need_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ig_intr_md_ingress_port = iport)
@@ -128,7 +128,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
     def disable_singlepath(self):
         print "Reset need_recirculate=0 for iports in different ingress pipelines"
         for iport in self.unmatched_devports:
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SPINE, DELREQ_SPINE, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
                 matchspec0 = distfarreachspine_need_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         ig_intr_md_ingress_port = iport)

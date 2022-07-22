@@ -319,9 +319,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 1
 
-            # Table: recirculate_tbl (default: nop; size: 4)
+            # Table: recirculate_tbl (default: nop; size: 8)
             print "Configuring recirculate_tbl"
-            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SPINE, DELREQ_SPINE]:
+            for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SPINE, DELREQ_SPINE, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
                 matchspec0 = distfarreachspine_recirculate_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)

@@ -379,11 +379,11 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 				if (tmp_stat) { // key exists
-					get_response_latest_seq_t rsp(req.key(), tmp_val, tmp_seq, global_server_logical_idx);
+					get_response_latest_seq_server_t rsp(req.key(), tmp_val, tmp_seq, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
 				else { // key not exist
-					get_response_deleted_seq_t rsp(req.key(), tmp_val, tmp_seq, global_server_logical_idx);
+					get_response_deleted_seq_server_t rsp(req.key(), tmp_val, tmp_seq, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);
 				}
 				udpsendto(server_worker_udpsock_list[local_server_logical_idx], buf, rsp_size, 0, &client_addr, client_addrlen, "server.worker");

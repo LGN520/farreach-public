@@ -32,8 +32,10 @@ typedef ScanResponseSplitServer<netreach_key_t, val_t> scan_response_split_serve
 typedef GetRequestPOP<netreach_key_t> get_request_pop_t;
 typedef GetRequestNLatest<netreach_key_t> get_request_nlatest_t;
 typedef GetResponseLatestSeq<netreach_key_t, val_t> get_response_latest_seq_t;
+typedef GetResponseLatestSeqServer<netreach_key_t, val_t> get_response_latest_seq_server_t;
 typedef GetResponseLatestSeqInswitchCase1<netreach_key_t, val_t> get_response_latest_seq_inswitch_case1_t;
 typedef GetResponseDeletedSeq<netreach_key_t, val_t> get_response_deleted_seq_t;
+typedef GetResponseDeletedSeqServer<netreach_key_t, val_t> get_response_deleted_seq_server_t;
 typedef GetResponseDeletedSeqInswitchCase1<netreach_key_t, val_t> get_response_deleted_seq_inswitch_case1_t;
 typedef PutRequestSeq<netreach_key_t, val_t> put_request_seq_t;
 typedef PutRequestPopSeq<netreach_key_t, val_t> put_request_pop_seq_t;
