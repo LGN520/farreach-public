@@ -369,6 +369,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             actnspec0 = distfarreachspine_range_partition_for_special_response_action_spec_t(eport)
                             self.client.range_partition_tbl_table_add_with_range_partition_for_special_response(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        elif tmpoptype == PUTREQ_SEQ or tmpoptype == DELREQ_SEQ:
+                            # NOTE: we do NOT change switchidx which is leafswitchidx set by corresponding spine switch before
+                            actnspec0 = distfarreachspine_range_partition_for_special_response_action_spec_t(eport)
+                            self.client.range_partition_tbl_table_add_with_range_partition_for_special_response(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
                         elif tmpoptype == GETRES_LATEST_SEQ or tmpoptype == GETRES_DELETED_SEQ:
                             # NOTE: we do NOT change switchidx which is spineswitchidx set by server-leaf.spineselect_tbl
                             actnspec0 = distfarreachspine_range_partition_for_special_response_action_spec_t(eport)
@@ -401,6 +406,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         eport = self.serverleafswitch_devport
                         if tmpoptype == GETRES_LATEST_SEQ_SERVER or tmpoptype == GETRES_DELETED_SEQ_SERVER:
                             # NOTE: we do NOT change switchidx which is leafswitchidx set by server
+                            actnspec0 = distfarreachspine_hash_partition_for_special_response_action_spec_t(eport)
+                            self.client.hash_partition_tbl_table_add_with_hash_partition_for_special_response(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
+                        elif tmpoptype == PUTREQ_SEQ or tmpoptype == DELREQ_SEQ:
+                            # NOTE: we do NOT change switchidx which is leafswitchidx set by corresponding spine switch before
                             actnspec0 = distfarreachspine_hash_partition_for_special_response_action_spec_t(eport)
                             self.client.hash_partition_tbl_table_add_with_hash_partition_for_special_response(\
                                     self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
