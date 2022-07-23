@@ -1862,6 +1862,44 @@
 	+ NOTE: actually switchos can directly use server_total_logical_num, as it is launched in prepare phase, and CANNOT restart during transaction phase due to inswitch cache metadata in memory
 	+ NOTE: localtest can directly use server_total_logical_num as we do NOT execute localtest under server rotation
 
++ [IMPORTANT] avoid dependency on ingress port, which will be changed under crash-consistent snapshot
+	* (Cache Hit) In FarReach/NetCache/DistFarReach/DistCache, prepare_for_cachehit_tbl can match srcip instead of iport to set client_sid for cache hit in spine/leaf switch
+		- DistFarReach/DistCache files: tofino-*/p4src/ingress_mat.p4, tofino-*/configure/table_configure.py
+		- FarReach/NetCache files: tofino/p4src/ingress_mat.p4, tofino/configure/table_configure.py
+	* (Distributed Recirculate) In DistFarReach, access partition_tbl for GETRES_LATEST/DELETED_SEQ_SERVER and PUT/DELREQ_SEQ if need_recirculate=0 to set eport to corresponding server-leaf switch in spine switch, instead of setting eport = iport
+		- NOTE: need_recirculate=0 has two cases
+			+ Case 1: spine switch singlepath has been disabled -> we can set eport as iport from spine to server-leaf
+			+ Case 2: need_recirculate=1 when pkt arrives spine switch (NOT access following ingress MATs to change pkt headers) -> recirculate original pkt (pkt headers NOT changed through ingress pipeline) to the pipeline of first client-leaf switch -> need_recirculate=1 -> we CANNOT set eport as iport, which has been changed after recirculation	
+			+ Result: we must find the corresponding server-leaf switch based on key
+		- NOTE: for recirculated pkt, the iport becomes recirport which is not in unmatched devports -> need_recirculate must be 0 -> no repeat recirculation
+		- TODOTODO: NOTE: several ways to distinguish original pkt and recirculated pkt
+			+ NOTE: now we match ingress port in need_recirculate_tbl (TODOTODO: if recirculatedpkt.iport = recirport != originaliport)
+			+ TODOTODO: Match is_recirculated of standard metadata in need_recirculate_tbl
+			+ TODOTODO: Modify optype (e.g., from PUTREQ_SEQ to PUTREQ_SEQ_RECIR) -> XXX_RECIR will NOT access need_recirculate_tbl
+	* (Special Response) If need_recirculate=0, partition_tbl sets eport for GETRES_LATEST/DELETED_SEQ/_SERVER/_INSWITCH (instead of setting eport = iport in ipv4_forward_tbl); while ipv4_forward_tbl is only responsible for clone_i2e if necessary
+		- In FarReach
+			+ partition_tbl sets eport to server for GETRES_LATEST/DELETED_SEQ (files: tofino/p4src/ingress_mat.p4, tofino/configure/table_configure.py)
+				* NOTE: range/hash_partition_for_special_response() ONLY changes eport, yet NOT change udp.dstport and split_hdr.globalserveridx
+			+ ipv4_forward_tbl clones pkt to client by clone_i2e, yet NOT set eport = iport (files: tofino/p4src/ingress_mat.p4)
+		- In DistFarReach
+			+ For server-leaf switch, range/hash_partition_tbl ONLY sets eport to server for GETRES_LATEST/DELETED_SEQ_SERVER/_INSWITCH, yet NOT change udp.dstport and split_hdr.globalserveridx (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure,py)
+				* NOTE: server sets leafswitchidx for GETRES_LATEST/DELETED_SEQ_SERVER (files: packet_format.*, server_impl.h)
+				* NOTE: As spine switch ONLY adds inswitch_hdr.snapshot_flag into GETRES_LATEST/DELETED_SEQ_SERVER_INSWITCH yet NOT change globalswitchidx, op_hdr.globalswitchidx is still the leafswitchidx set by server (files: tofino-spine/p4src/ingress_mat.p4, tofino-spine/configure/table_configure.py)
+			+ For server-leaf switch, ipv4_forward_tbl resets eport=spineswitch.devport if is_cached=0 in server-leaf switch, or clone pkt to spine by clone_i2e yet NOT set eport = iport otherwise (files: tofino-leaf/p4src/ingress_mat.p4)
+				* spineselect_tbl calculates meta.spineswitchidx for special response (files: tofino-leaf/p4src/header.p4, tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+				* ipv4_forward_tbl sets op_hdr.globalswitchidx as meta.spineswitchidx if is_cached=0 (NOTE: cache_lookup_tbl has used op_hdr.globalswitchidx) (files: tofino-leaf/p4src/ingress_mat.p4)
+			+ For spine switch, range/hash_partition_tbl ONLY sets eport to server-leaf for GETRES_LATEST/DELETED_SEQ/_SERVER, yet NOT change op_hdr.globalswitchidx (files: tofino-spine/p4src/ingress_mat.p4, tofino-spine/configure/table_configure.py)
+				- For GETRES_LATEST/DELETED_SEQ_SERVER, spine switch does NOT change op_hdr.globalswitchidx, which is leafswitchidx set by server
+				- For GETRES_LATEST/DELETED_SEQ, spine switch does NOT change op_hdr.globalswitchidx, which is spineswitchidx set by server-leaf
+			+ For spine switch, ipv4_forward_tbl clones pkt to client by clone_i2e, yet NOT set eport = iport (files: tofino-spine/p4src/ingress_mat.p4)
+	* Retest FarReach and NetCache
+		- NOTE: for FarReach, we test correctness of cache hit and special response, and test dynamic workload under write-only workload
+		- NOTE: for NetCache, we test correctness of cache hit, and test dynamic workload under read-only and write-only workload
+		- Compile and test FarReach under range partition, and update visualization -> OK
+		- Compile and test FarReach under hash partition, and update visualization -> OK
+		- Compile and test NetCache under range partition, and update visualization -> OK
+		- Compile and test NetCache under hash partition, and update visualization -> OK
+
 ## Run
 
 - Hardware configure
@@ -1887,8 +1925,8 @@
 	+ For example:
 	+ `./bin/ycsb.sh load basic -P workloads/workloada -P netbuffer.dat > workloada-load.out`
 	+ `./bin/ycsb.sh run basic -P workloads/workloada -P netbuffer.dat > workloada-run.out`
-	+ `./split_workload load linenum` -> workloada-load-{split_num}/*-*.out
-	+ `./split_workload run linenum` -> workloada-run-{server_num}/*.out
+	+ `./split_workload load linenum` -> workloada-load-{split_num}/\*-\*.out
+	+ `./split_workload run linenum` -> workloada-run-{server_num}/\*.out
 - Change partition method (hash/range partition)
 	+ RANGE_SUPPORT in tofino/netbufferv4.p4
 	+ USE_HASH/RANGE in helper.h
