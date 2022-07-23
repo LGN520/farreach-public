@@ -167,7 +167,7 @@ typedef struct p4_pd_netbufferv4_l2l3_forward_tbl_match_spec {
 
 typedef struct p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec {
   uint16_t op_hdr_optype;
-  uint8_t clone_hdr_clonenum_for_pktloss;
+  uint16_t clone_hdr_clonenum_for_pktloss;
   uint16_t meta_remain_scannum;
 } p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec_t;
 
@@ -178,7 +178,8 @@ typedef struct p4_pd_netbufferv4_need_recirculate_tbl_match_spec {
 
 typedef struct p4_pd_netbufferv4_prepare_for_cachehit_tbl_match_spec {
   uint16_t op_hdr_optype;
-  uint16_t ig_intr_md_ingress_port;
+  uint32_t ipv4_hdr_srcAddr;
+  uint16_t ipv4_hdr_srcAddr_prefix_length;
   uint8_t meta_need_recirculate;
 } p4_pd_netbufferv4_prepare_for_cachehit_tbl_match_spec_t;
 
@@ -629,6 +630,7 @@ typedef enum p4_pd_netbufferv4_action_names {
   p4_pd_netbufferv4_range_partition_for_scan_endkey,
   p4_pd_netbufferv4_range_partition,
   p4_pd_netbufferv4_range_partition_for_scan,
+  p4_pd_netbufferv4_range_partition_for_special_response,
   p4_pd_netbufferv4_recirculate_pkt,
   p4_pd_netbufferv4_sample,
   p4_pd_netbufferv4_save_client_udpport,
@@ -1049,6 +1051,10 @@ typedef struct p4_pd_netbufferv4_range_partition_for_scan_action_spec {
   uint16_t action_start_globalserveridx;
 } p4_pd_netbufferv4_range_partition_for_scan_action_spec_t;
 
+typedef struct p4_pd_netbufferv4_range_partition_for_special_response_action_spec {
+  uint16_t action_eport;
+} p4_pd_netbufferv4_range_partition_for_special_response_action_spec_t;
+
 typedef struct p4_pd_netbufferv4_recirculate_pkt_action_spec {
   uint8_t action_port;
 } p4_pd_netbufferv4_recirculate_pkt_action_spec_t;
@@ -1405,6 +1411,7 @@ typedef struct p4_pd_netbufferv4_action_specs_t {
     struct p4_pd_netbufferv4_range_partition_for_scan_endkey_action_spec p4_pd_netbufferv4_range_partition_for_scan_endkey;
     struct p4_pd_netbufferv4_range_partition_action_spec p4_pd_netbufferv4_range_partition;
     struct p4_pd_netbufferv4_range_partition_for_scan_action_spec p4_pd_netbufferv4_range_partition_for_scan;
+    struct p4_pd_netbufferv4_range_partition_for_special_response_action_spec p4_pd_netbufferv4_range_partition_for_special_response;
     struct p4_pd_netbufferv4_recirculate_pkt_action_spec p4_pd_netbufferv4_recirculate_pkt;
   /* sample has no parameters */
   /* save_client_udpport has no parameters */
@@ -4243,6 +4250,26 @@ p4_pd_netbufferv4_range_partition_tbl_table_add_with_range_partition_for_scan
  p4_pd_netbufferv4_range_partition_tbl_match_spec_t *match_spec,
  int priority,
  p4_pd_netbufferv4_range_partition_for_scan_action_spec_t *action_spec,
+ p4_pd_entry_hdl_t *entry_hdl
+);
+
+/**
+ * @brief p4_pd_netbufferv4_range_partition_tbl_table_add_with_range_partition_for_special_response
+ * @param sess_hdl
+ * @param dev_tgt
+ * @param match_spec
+ * @param priority
+ * @param action_spec
+ * @param entry_hdl
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_range_partition_tbl_table_add_with_range_partition_for_special_response
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_range_partition_tbl_match_spec_t *match_spec,
+ int priority,
+ p4_pd_netbufferv4_range_partition_for_special_response_action_spec_t *action_spec,
  p4_pd_entry_hdl_t *entry_hdl
 );
 
@@ -15298,6 +15325,40 @@ p4_pd_netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_scan
 );
 
 /**
+ * @brief p4_pd_netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_special_response
+ * @param sess_hdl
+ * @param dev_id
+ * @param entry_hdl
+ * @param action_spec
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_special_response
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t ent_hdl,
+ p4_pd_netbufferv4_range_partition_for_special_response_action_spec_t *action_spec
+);
+
+/**
+ * @brief p4_pd_netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec
+ * @param sess_hdl
+ * @param dev_tgt
+ * @param match_spec
+ * @param priority
+ * @param action_spec
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_range_partition_tbl_match_spec_t *match_spec,
+ int priority,
+ p4_pd_netbufferv4_range_partition_for_special_response_action_spec_t *action_spec
+);
+
+/**
  * @brief p4_pd_netbufferv4_range_partition_tbl_table_modify_with_nop
  * @param sess_hdl
  * @param dev_id
@@ -26084,7 +26145,7 @@ typedef struct __attribute__((__packed__)) p4_pd_netbufferv4_ig_snapshot_trig_sp
   uint8_t stat_hdr_stat;
   uint16_t stat_hdr_nodeidx_foreval;
   uint8_t stat_hdr_padding;
-  uint8_t clone_hdr_clonenum_for_pktloss;
+  uint16_t clone_hdr_clonenum_for_pktloss;
   uint16_t clone_hdr_client_udpport;
   uint32_t frequency_hdr_frequency;
   uint8_t validvalue_hdr_validvalue;
@@ -26210,7 +26271,7 @@ typedef struct __attribute__((__packed__)) p4_pd_netbufferv4_eg_snapshot_trig_sp
   uint8_t stat_hdr_stat;
   uint16_t stat_hdr_nodeidx_foreval;
   uint8_t stat_hdr_padding;
-  uint8_t clone_hdr_clonenum_for_pktloss;
+  uint16_t clone_hdr_clonenum_for_pktloss;
   uint16_t clone_hdr_client_udpport;
   uint32_t frequency_hdr_frequency;
   uint8_t validvalue_hdr_validvalue;

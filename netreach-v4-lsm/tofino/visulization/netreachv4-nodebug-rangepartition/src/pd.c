@@ -1174,11 +1174,12 @@ static inline void build_key_lastclone_lastscansplit_tbl
 
 
 #ifdef LITTLE_ENDIAN_CALLER
-  memcpy(match_bits, &match_spec->clone_hdr_clonenum_for_pktloss, 1);
+  tmp16 = htons(match_spec->clone_hdr_clonenum_for_pktloss);
+  memcpy(match_bits, &tmp16, 2);
 #else
-  memcpy(match_bits, ((char *) &match_spec->clone_hdr_clonenum_for_pktloss) + 0, 1);
+  memcpy(match_bits, ((char *) &match_spec->clone_hdr_clonenum_for_pktloss) + 0, 2);
 #endif
-  match_bits += 1;
+  match_bits += 2;
 
 
 #ifdef LITTLE_ENDIAN_CALLER
@@ -1252,12 +1253,12 @@ static inline void build_key_prepare_for_cachehit_tbl
 
 
 #ifdef LITTLE_ENDIAN_CALLER
-  tmp16 = htons(match_spec->ig_intr_md_ingress_port);
-  memcpy(match_bits, &tmp16, 2);
+  tmp32 = htonl(match_spec->ipv4_hdr_srcAddr);
+  memcpy(match_bits, ((char *) &tmp32) + 0, 4);
 #else
-  memcpy(match_bits, ((char *) &match_spec->ig_intr_md_ingress_port) + 0, 2);
+  memcpy(match_bits, ((char *) &match_spec->ipv4_hdr_srcAddr) + 0, 4);
 #endif
-  match_bits += 2;
+  match_bits += 4;
 
 
 #ifdef LITTLE_ENDIAN_CALLER
@@ -2563,6 +2564,51 @@ static inline void build_mask_l2l3_forward_tbl
 
 }
 
+static inline void build_mask_prepare_for_cachehit_tbl
+(
+ pipe_tbl_match_spec_t *pipe_match_spec,
+ p4_pd_netbufferv4_prepare_for_cachehit_tbl_match_spec_t *match_spec
+)
+{
+  uint8_t *value_bits = pipe_match_spec->match_value_bits;
+  uint8_t *mask_bits = pipe_match_spec->match_mask_bits;
+#ifdef LITTLE_ENDIAN_CALLER
+  uint16_t tmp16;
+  uint32_t tmp32;
+  (void) tmp16;
+  (void) tmp32;
+#endif
+  uint32_t i; /* for value masking */
+  int bits_to_reset; /* for lpm mask */
+  (void) bits_to_reset; /* compiler */
+
+
+  mask_bits += 2;
+  value_bits += 2;
+
+
+  bits_to_reset = 32 - match_spec->ipv4_hdr_srcAddr_prefix_length;
+  if (bits_to_reset >= 8) {
+    memset(mask_bits + 4 - bits_to_reset / 8, 0, bits_to_reset / 8);
+  }
+  if (bits_to_reset % 8 != 0) {
+    mask_bits[4 - 1 - bits_to_reset / 8] = (unsigned char) 0xFF << (bits_to_reset % 8);
+  }
+  for (i = 0; i < 4; i++) {
+    value_bits[i] &= mask_bits[i];
+  }
+  mask_bits += 4;
+  value_bits += 4;
+
+
+#ifdef PD_DEBUG
+  mask_bits[0] &= 1;
+#endif
+  mask_bits += 1;
+  value_bits += 1;
+
+}
+
 static inline void build_mask_range_partition_for_scan_endkey_tbl
 (
  pipe_tbl_match_spec_t *pipe_match_spec,
@@ -3290,8 +3336,16 @@ static inline void build_match_spec_prepare_for_cachehit_tbl
     memset(pipe_match_spec->match_mask_bits, 0xFF, pipe_match_spec->num_match_bytes);
   }
 
-  pipe_match_spec->priority = 0;
-  /* exact match: nothing to do with the mask */
+  /* 0 is highest priority, max possible length is lowest */
+  if (match_spec->ipv4_hdr_srcAddr_prefix_length > 32) {
+    /* Given prefix length for this field is out of bounds */
+    pipe_match_spec->priority = pipe_match_spec->num_valid_match_bits + 1;
+    return;
+  } else {
+    pipe_match_spec->priority = 32;
+    pipe_match_spec->priority -= match_spec->ipv4_hdr_srcAddr_prefix_length;
+  }
+  build_mask_prepare_for_cachehit_tbl(pipe_match_spec, match_spec);
 }
 
 static inline void build_match_spec_process_scanreq_split_tbl
@@ -5426,6 +5480,41 @@ static inline void build_indirect_resources_range_partition_for_scan
 
 }
 
+static inline void build_action_spec_range_partition_for_special_response
+(
+ pipe_action_data_spec_t *pipe_action_spec,
+ p4_pd_netbufferv4_range_partition_for_special_response_action_spec_t *action_spec
+)
+{
+  uint8_t *data_bits = pipe_action_spec->action_data_bits;
+  (void) data_bits;
+
+#ifdef LITTLE_ENDIAN_CALLER
+  uint16_t tmp16;
+  uint32_t tmp32;
+  (void) tmp16;
+  (void) tmp32;
+#endif
+#ifdef LITTLE_ENDIAN_CALLER
+  tmp16 = htons(action_spec->action_eport);
+  memcpy(data_bits, &tmp16, 2);
+#else
+  memcpy(data_bits, ((char *) &action_spec->action_eport) + 0, 2);
+#endif
+
+  data_bits += 2;
+
+}
+
+static inline void build_indirect_resources_range_partition_for_special_response
+(
+ pipe_action_spec_t *pipe_action_spec,
+ p4_pd_netbufferv4_range_partition_for_special_response_action_spec_t *action_spec
+)
+{
+
+}
+
 static inline void build_action_spec_recirculate_pkt
 (
  pipe_action_data_spec_t *pipe_action_spec,
@@ -6798,11 +6887,12 @@ static inline void unbuild_key_lastclone_lastscansplit_tbl
 
 
 #ifdef LITTLE_ENDIAN_CALLER
-  memcpy(&match_spec->clone_hdr_clonenum_for_pktloss, match_bits, 1);
+  memcpy(&tmp16, match_bits, 2);
+  match_spec->clone_hdr_clonenum_for_pktloss = ntohs(tmp16);
 #else
-  memcpy(((char *) &match_spec->clone_hdr_clonenum_for_pktloss) + 0, match_bits, 1);
+  memcpy(((char *) &match_spec->clone_hdr_clonenum_for_pktloss) + 0, match_bits, 2);
 #endif
-  match_bits += 1;
+  match_bits += 2;
 
 
 #ifdef LITTLE_ENDIAN_CALLER
@@ -6876,12 +6966,13 @@ static inline void unbuild_key_prepare_for_cachehit_tbl
 
 
 #ifdef LITTLE_ENDIAN_CALLER
-  memcpy(&tmp16, match_bits, 2);
-  match_spec->ig_intr_md_ingress_port = ntohs(tmp16);
+  tmp32 = 0;
+  memcpy(((char *) &tmp32) + 0, match_bits, 4);
+  match_spec->ipv4_hdr_srcAddr = ntohl(tmp32);
 #else
-  memcpy(((char *) &match_spec->ig_intr_md_ingress_port) + 0, match_bits, 2);
+  memcpy(((char *) &match_spec->ipv4_hdr_srcAddr) + 0, match_bits, 4);
 #endif
-  match_bits += 2;
+  match_bits += 4;
 
 
 #ifdef LITTLE_ENDIAN_CALLER
@@ -8173,6 +8264,43 @@ static inline void unbuild_mask_l2l3_forward_tbl
 
 }
 
+static inline void unbuild_mask_prepare_for_cachehit_tbl
+(
+ pipe_tbl_match_spec_t *pipe_match_spec,
+ p4_pd_netbufferv4_prepare_for_cachehit_tbl_match_spec_t *match_spec
+)
+{
+  uint8_t *mask_bits = pipe_match_spec->match_mask_bits;
+#ifdef LITTLE_ENDIAN_CALLER
+  uint16_t tmp16;
+  uint32_t tmp32;
+  (void) tmp16;
+  (void) tmp32;
+#endif
+  int pref_len;
+  int i;
+  (void) pref_len;
+  (void) i;
+
+
+  mask_bits += 2;
+
+
+  pref_len = 32;
+  for (i = 0; i < 32; i++) {
+    if (mask_bits[4 - 1 - (i / 8)] & (1 << (i % 8))) {
+      break;
+    }
+    pref_len--;
+  }
+  match_spec->ipv4_hdr_srcAddr_prefix_length = pref_len;
+  mask_bits += 4;
+
+
+  mask_bits += 1;
+
+}
+
 static inline void unbuild_mask_range_partition_for_scan_endkey_tbl
 (
  pipe_tbl_match_spec_t *pipe_match_spec,
@@ -9315,6 +9443,34 @@ static inline void unbuild_action_spec_range_partition_for_scan
 
 #else
   memcpy(((char *) &action_spec->action_start_globalserveridx) + 0, data_bits, 2);
+#endif
+  data_bits += 2;
+}
+
+static inline void unbuild_action_spec_range_partition_for_special_response
+(
+ pipe_action_data_spec_t *pipe_action_spec,
+ pd_res_spec_t *res_spec,
+ int num_res,
+ p4_pd_netbufferv4_range_partition_for_special_response_action_spec_t *action_spec
+)
+{
+  uint8_t *data_bits = pipe_action_spec->action_data_bits;
+  unsigned i = 0;
+  (void)i;
+#ifdef LITTLE_ENDIAN_CALLER
+  uint16_t tmp16;
+  uint32_t tmp32;
+  (void) tmp16;
+  (void) tmp32;
+#endif
+
+#ifdef LITTLE_ENDIAN_CALLER
+  memcpy(&tmp16, data_bits, 2);
+  action_spec->action_eport = ntohs(tmp16);
+
+#else
+  memcpy(((char *) &action_spec->action_eport) + 0, data_bits, 2);
 #endif
   data_bits += 2;
 }
@@ -11136,16 +11292,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_match_spec_to_entry_hdl
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 40;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 48;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -11202,16 +11358,16 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_match_spec_to_entry_hdl
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[7];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[7];
+  if (7) {
+    memset(pipe_match_value_bits, 0, 7);
+    memset(pipe_match_mask_bits, 0, 7);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 49;
+  pipe_match_spec.num_match_bytes = 7;
   build_match_spec_prepare_for_cachehit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -14218,7 +14374,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_only_vallen
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871599, &pipe_action_spec,
+					       536871600, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14270,7 +14426,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val1
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871617, &pipe_action_spec,
+					       536871618, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14322,7 +14478,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val2
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871635, &pipe_action_spec,
+					       536871636, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14374,7 +14530,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val3
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871653, &pipe_action_spec,
+					       536871654, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14426,7 +14582,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val4
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871671, &pipe_action_spec,
+					       536871672, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14478,7 +14634,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val5
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871689, &pipe_action_spec,
+					       536871690, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14530,7 +14686,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val6
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871707, &pipe_action_spec,
+					       536871708, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14582,7 +14738,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val7
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871725, &pipe_action_spec,
+					       536871726, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14634,7 +14790,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val8
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871743, &pipe_action_spec,
+					       536871744, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14686,7 +14842,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val9
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871761, &pipe_action_spec,
+					       536871762, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14738,7 +14894,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val10
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871779, &pipe_action_spec,
+					       536871780, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14790,7 +14946,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val11
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871797, &pipe_action_spec,
+					       536871798, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14842,7 +14998,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val12
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871815, &pipe_action_spec,
+					       536871816, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14894,7 +15050,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val13
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871833, &pipe_action_spec,
+					       536871834, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14946,7 +15102,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val14
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871851, &pipe_action_spec,
+					       536871852, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -14998,7 +15154,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val15
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871869, &pipe_action_spec,
+					       536871870, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15050,7 +15206,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_add_to_val16
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871887, &pipe_action_spec,
+					       536871888, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15102,7 +15258,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_add_with_remove_all
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777285, &pipe_match_spec,
-					       536871905, &pipe_action_spec,
+					       536871906, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15154,7 +15310,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_add_with_cached_action
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777266, &pipe_match_spec,
-					       536871230, &pipe_action_spec,
+					       536871232, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15204,7 +15360,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_add_with_uncached_action
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777266, &pipe_match_spec,
-					       536871232, &pipe_action_spec,
+					       536871234, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15254,7 +15410,7 @@ p4_pd_netbufferv4_drop_tbl_table_add_with_drop_getres_latest_seq_inswitch
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777286, &pipe_match_spec,
-					       536871907, &pipe_action_spec,
+					       536871908, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15304,7 +15460,7 @@ p4_pd_netbufferv4_drop_tbl_table_add_with_drop_getres_deleted_seq_inswitch
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777286, &pipe_match_spec,
-					       536871909, &pipe_action_spec,
+					       536871910, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15354,7 +15510,7 @@ p4_pd_netbufferv4_drop_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777286, &pipe_match_spec,
-					       536871910, &pipe_action_spec,
+					       536871911, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15404,7 +15560,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_g
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871328, &pipe_action_spec,
+					       536871329, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15454,7 +15610,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_g
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871332, &pipe_action_spec,
+					       536871333, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15504,7 +15660,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_g
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871336, &pipe_action_spec,
+					       536871337, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15556,7 +15712,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_g
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871348, &pipe_action_spec,
+					       536871349, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15606,7 +15762,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getres_latest_seq_to
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871354, &pipe_action_spec,
+					       536871355, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15658,7 +15814,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getres_latest_seq_in
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871365, &pipe_action_spec,
+					       536871366, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15710,7 +15866,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_forward_getres_latest_seq_i
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871369, &pipe_action_spec,
+					       536871370, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15760,7 +15916,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_t
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871375, &pipe_action_spec,
+					       536871376, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15812,7 +15968,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_i
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871386, &pipe_action_spec,
+					       536871387, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15864,7 +16020,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_forward_getres_deleted_seq_
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871390, &pipe_action_spec,
+					       536871391, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15916,7 +16072,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_cache_pop_inswitch_t
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871399, &pipe_action_spec,
+					       536871400, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -15966,7 +16122,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871404, &pipe_action_spec,
+					       536871405, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16016,7 +16172,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871409, &pipe_action_spec,
+					       536871410, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16068,7 +16224,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871421, &pipe_action_spec,
+					       536871422, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16120,7 +16276,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871433, &pipe_action_spec,
+					       536871434, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16172,7 +16328,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_forward_putreq_seq_inswitch
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871437, &pipe_action_spec,
+					       536871438, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16224,7 +16380,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_seq_inswitch_
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871450, &pipe_action_spec,
+					       536871451, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16274,7 +16430,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871455, &pipe_action_spec,
+					       536871456, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16324,7 +16480,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_putreq_inswitch_to_p
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871460, &pipe_action_spec,
+					       536871461, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16374,7 +16530,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_d
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871465, &pipe_action_spec,
+					       536871466, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16426,7 +16582,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_d
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871477, &pipe_action_spec,
+					       536871478, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16478,7 +16634,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_d
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871489, &pipe_action_spec,
+					       536871490, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16530,7 +16686,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_forward_delreq_seq_inswitch
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871493, &pipe_action_spec,
+					       536871494, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16582,7 +16738,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_delreq_seq_inswitch_
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871506, &pipe_action_spec,
+					       536871507, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16632,7 +16788,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_delreq_inswitch_to_d
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871511, &pipe_action_spec,
+					       536871512, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16684,7 +16840,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_forward_scanreq_split_and_c
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871517, &pipe_action_spec,
+					       536871518, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16734,7 +16890,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_forward_scanreq_split
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871521, &pipe_action_spec,
+					       536871522, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16786,7 +16942,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_cache_evict_loadfreq
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871530, &pipe_action_spec,
+					       536871531, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16838,7 +16994,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_cache_evict_loaddata
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871541, &pipe_action_spec,
+					       536871542, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16890,7 +17046,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_loadsnapshotdata_ins
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871551, &pipe_action_spec,
+					       536871552, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16942,7 +17098,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_update_setvalid_inswitch_to
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871560, &pipe_action_spec,
+					       536871561, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -16992,7 +17148,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777282, &pipe_match_spec,
-					       536871561, &pipe_action_spec,
+					       536871562, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17042,7 +17198,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_add_with_hash_for_cm1
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777267, &pipe_match_spec,
-					       536871234, &pipe_action_spec,
+					       536871236, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17092,7 +17248,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777267, &pipe_match_spec,
-					       536871235, &pipe_action_spec,
+					       536871237, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17142,7 +17298,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_add_with_hash_for_cm2
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777269, &pipe_match_spec,
-					       536871242, &pipe_action_spec,
+					       536871244, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17192,7 +17348,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777269, &pipe_match_spec,
-					       536871243, &pipe_action_spec,
+					       536871245, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17242,7 +17398,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_add_with_hash_for_cm3
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777271, &pipe_match_spec,
-					       536871248, &pipe_action_spec,
+					       536871250, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17292,7 +17448,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777271, &pipe_match_spec,
-					       536871249, &pipe_action_spec,
+					       536871251, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17342,7 +17498,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_add_with_hash_for_cm4
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777273, &pipe_match_spec,
-					       536871255, &pipe_action_spec,
+					       536871257, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17392,7 +17548,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777273, &pipe_match_spec,
-					       536871256, &pipe_action_spec,
+					       536871258, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17442,7 +17598,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_add_with_hash_for_seq
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777270, &pipe_match_spec,
-					       536871245, &pipe_action_spec,
+					       536871247, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17492,7 +17648,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777270, &pipe_match_spec,
-					       536871246, &pipe_action_spec,
+					       536871248, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17542,7 +17698,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_getreq_to_getreq_ins
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777277, &pipe_match_spec,
-					       536871274, &pipe_action_spec,
+					       536871275, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17592,7 +17748,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_getres_latest_seq_to
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777277, &pipe_match_spec,
-					       536871278, &pipe_action_spec,
+					       536871279, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17642,7 +17798,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_getres_deleted_seq_t
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777277, &pipe_match_spec,
-					       536871282, &pipe_action_spec,
+					       536871283, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17692,7 +17848,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_putreq_to_putreq_ins
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777277, &pipe_match_spec,
-					       536871287, &pipe_action_spec,
+					       536871288, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17742,7 +17898,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_delreq_to_delreq_ins
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777277, &pipe_match_spec,
-					       536871292, &pipe_action_spec,
+					       536871293, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17792,7 +17948,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_update_scanreq_to_scanreq_s
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777277, &pipe_match_spec,
-					       536871295, &pipe_action_spec,
+					       536871296, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17842,7 +17998,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777277, &pipe_match_spec,
-					       536871296, &pipe_action_spec,
+					       536871297, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17894,7 +18050,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_add_with_forward_normal_response
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777275, &pipe_match_spec,
-					       536871261, &pipe_action_spec,
+					       536871263, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17946,7 +18102,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_add_with_forward_special_get_response
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777275, &pipe_match_spec,
-					       536871265, &pipe_action_spec,
+					       536871266, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -17996,7 +18152,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777275, &pipe_match_spec,
-					       536871266, &pipe_action_spec,
+					       536871267, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18046,7 +18202,7 @@ p4_pd_netbufferv4_is_hot_tbl_table_add_with_set_is_hot
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777278, &pipe_match_spec,
-					       536871298, &pipe_action_spec,
+					       536871299, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18096,7 +18252,7 @@ p4_pd_netbufferv4_is_hot_tbl_table_add_with_reset_is_hot
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777278, &pipe_match_spec,
-					       536871300, &pipe_action_spec,
+					       536871301, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18215,16 +18371,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 40;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 48;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[0];
@@ -18248,7 +18404,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_add_with_set_is_lastclone
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777281, &pipe_match_spec,
-					       536871318, &pipe_action_spec,
+					       536871319, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18265,16 +18421,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_add_with_set_is_lastscanspli
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 40;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 48;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[0];
@@ -18298,7 +18454,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_add_with_set_is_lastscanspli
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777281, &pipe_match_spec,
-					       536871321, &pipe_action_spec,
+					       536871322, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18315,16 +18471,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_add_with_reset_is_lastclone_
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 40;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 48;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[0];
@@ -18348,7 +18504,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_add_with_reset_is_lastclone_
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777281, &pipe_match_spec,
-					       536871324, &pipe_action_spec,
+					       536871325, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18466,16 +18622,16 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_add_with_set_client_sid
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[7];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[7];
+  if (7) {
+    memset(pipe_match_value_bits, 0, 7);
+    memset(pipe_match_mask_bits, 0, 7);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 49;
+  pipe_match_spec.num_match_bytes = 7;
   build_match_spec_prepare_for_cachehit_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[2];
@@ -18500,7 +18656,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_add_with_set_client_sid
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777274, &pipe_match_spec,
-					       536871258, &pipe_action_spec,
+					       536871260, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18517,16 +18673,16 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_add_with_nop
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[7];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[7];
+  if (7) {
+    memset(pipe_match_value_bits, 0, 7);
+    memset(pipe_match_mask_bits, 0, 7);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 49;
+  pipe_match_spec.num_match_bytes = 7;
   build_match_spec_prepare_for_cachehit_tbl(&pipe_match_spec, match_spec);
 
   uint8_t pipe_action_data_bits[0];
@@ -18550,7 +18706,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777274, &pipe_match_spec,
-					       536871259, &pipe_action_spec,
+					       536871261, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18602,7 +18758,7 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_table_add_with_process_scanreq_split
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777279, &pipe_match_spec,
-					       536871304, &pipe_action_spec,
+					       536871305, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18654,7 +18810,7 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_table_add_with_process_cloned_scanre
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777279, &pipe_match_spec,
-					       536871309, &pipe_action_spec,
+					       536871310, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18704,7 +18860,7 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_table_add_with_reset_meta_serversid_
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777279, &pipe_match_spec,
-					       536871312, &pipe_action_spec,
+					       536871313, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18758,7 +18914,7 @@ p4_pd_netbufferv4_range_partition_for_scan_endkey_tbl_table_add_with_range_parti
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777268, &pipe_match_spec,
-					       536871239, &pipe_action_spec,
+					       536871241, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18810,7 +18966,7 @@ p4_pd_netbufferv4_range_partition_for_scan_endkey_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777268, &pipe_match_spec,
-					       536871240, &pipe_action_spec,
+					       536871242, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -18926,6 +19082,60 @@ p4_pd_netbufferv4_range_partition_tbl_table_add_with_range_partition_for_scan
 }
 
 p4_pd_status_t
+p4_pd_netbufferv4_range_partition_tbl_table_add_with_range_partition_for_special_response
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_range_partition_tbl_match_spec_t *match_spec,
+ int priority,
+ p4_pd_netbufferv4_range_partition_for_special_response_action_spec_t *action_spec,
+ p4_pd_entry_hdl_t *entry_hdl
+)
+{
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[5];
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  uint8_t pipe_match_mask_bits[5];
+  if (5) {
+    memset(pipe_match_value_bits, 0, 5);
+    memset(pipe_match_mask_bits, 0, 5);
+  }
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.num_valid_match_bits = 33;
+  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.priority = priority;
+  build_match_spec_range_partition_tbl(&pipe_match_spec, match_spec);
+
+  uint8_t pipe_action_data_bits[2];
+  memset(pipe_action_data_bits, 0, 2);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 9;
+  pipe_action_data_spec->num_action_data_bytes = 2;
+  pipe_action_spec.resource_count = 0;
+
+  build_action_spec_range_partition_for_special_response(pipe_action_data_spec, action_spec);
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  uint32_t ttl = 0;
+
+
+
+  p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
+					       16777265, &pipe_match_spec,
+					       536871228, &pipe_action_spec,
+					       ttl,
+					       0 /* TODO */,
+					       entry_hdl);
+  return status;
+}
+
+p4_pd_status_t
 p4_pd_netbufferv4_range_partition_tbl_table_add_with_nop
 (
  p4_pd_sess_hdl_t sess_hdl,
@@ -18970,7 +19180,7 @@ p4_pd_netbufferv4_range_partition_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777265, &pipe_match_spec,
-					       536871227, &pipe_action_spec,
+					       536871229, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19122,7 +19332,7 @@ p4_pd_netbufferv4_sample_tbl_table_add_with_sample
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777276, &pipe_match_spec,
-					       536871268, &pipe_action_spec,
+					       536871269, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19172,7 +19382,7 @@ p4_pd_netbufferv4_sample_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777276, &pipe_match_spec,
-					       536871269, &pipe_action_spec,
+					       536871270, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19222,7 +19432,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_add_with_save_client_udpport
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777280, &pipe_match_spec,
-					       536871314, &pipe_action_spec,
+					       536871315, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19272,7 +19482,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777280, &pipe_match_spec,
-					       536871315, &pipe_action_spec,
+					       536871316, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19322,7 +19532,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_add_with_set_snapshot_flag
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777272, &pipe_match_spec,
-					       536871251, &pipe_action_spec,
+					       536871253, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19372,7 +19582,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_add_with_reset_snapshot_flag
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777272, &pipe_match_spec,
-					       536871253, &pipe_action_spec,
+					       536871255, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19424,7 +19634,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_s
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777283, &pipe_match_spec,
-					       536871567, &pipe_action_spec,
+					       536871568, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19476,7 +19686,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_s
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777283, &pipe_match_spec,
-					       536871573, &pipe_action_spec,
+					       536871574, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19528,7 +19738,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_add_with_update_dstipmac_client
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777283, &pipe_match_spec,
-					       536871576, &pipe_action_spec,
+					       536871577, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19578,7 +19788,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777283, &pipe_match_spec,
-					       536871577, &pipe_action_spec,
+					       536871578, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19632,7 +19842,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_add_with_update_pktlen
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777284, &pipe_match_spec,
-					       536871580, &pipe_action_spec,
+					       536871581, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -19684,7 +19894,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_add_with_nop
 
   p4_pd_status_t status = pipe_mgr_mat_ent_add(sess_hdl, pipe_mgr_dev_tgt,
 					       16777284, &pipe_match_spec,
-					       536871581, &pipe_action_spec,
+					       536871582, &pipe_action_spec,
 					       ttl,
 					       0 /* TODO */,
 					       entry_hdl);
@@ -27498,16 +27708,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_delete_by_match_spec
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 40;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 48;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -27592,16 +27802,16 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_delete_by_match_spec
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[7];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[7];
+  if (7) {
+    memset(pipe_match_value_bits, 0, 7);
+    memset(pipe_match_mask_bits, 0, 7);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 49;
+  pipe_match_spec.num_match_bytes = 7;
   build_match_spec_prepare_for_cachehit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -30459,58 +30669,58 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871599:
+    case 536871600:
       action_spec->name = p4_pd_netbufferv4_add_only_vallen;
       break;
-    case 536871617:
+    case 536871618:
       action_spec->name = p4_pd_netbufferv4_add_to_val1;
       break;
-    case 536871635:
+    case 536871636:
       action_spec->name = p4_pd_netbufferv4_add_to_val2;
       break;
-    case 536871653:
+    case 536871654:
       action_spec->name = p4_pd_netbufferv4_add_to_val3;
       break;
-    case 536871671:
+    case 536871672:
       action_spec->name = p4_pd_netbufferv4_add_to_val4;
       break;
-    case 536871689:
+    case 536871690:
       action_spec->name = p4_pd_netbufferv4_add_to_val5;
       break;
-    case 536871707:
+    case 536871708:
       action_spec->name = p4_pd_netbufferv4_add_to_val6;
       break;
-    case 536871725:
+    case 536871726:
       action_spec->name = p4_pd_netbufferv4_add_to_val7;
       break;
-    case 536871743:
+    case 536871744:
       action_spec->name = p4_pd_netbufferv4_add_to_val8;
       break;
-    case 536871761:
+    case 536871762:
       action_spec->name = p4_pd_netbufferv4_add_to_val9;
       break;
-    case 536871779:
+    case 536871780:
       action_spec->name = p4_pd_netbufferv4_add_to_val10;
       break;
-    case 536871797:
+    case 536871798:
       action_spec->name = p4_pd_netbufferv4_add_to_val11;
       break;
-    case 536871815:
+    case 536871816:
       action_spec->name = p4_pd_netbufferv4_add_to_val12;
       break;
-    case 536871833:
+    case 536871834:
       action_spec->name = p4_pd_netbufferv4_add_to_val13;
       break;
-    case 536871851:
+    case 536871852:
       action_spec->name = p4_pd_netbufferv4_add_to_val14;
       break;
-    case 536871869:
+    case 536871870:
       action_spec->name = p4_pd_netbufferv4_add_to_val15;
       break;
-    case 536871887:
+    case 536871888:
       action_spec->name = p4_pd_netbufferv4_add_to_val16;
       break;
-    case 536871905:
+    case 536871906:
       action_spec->name = p4_pd_netbufferv4_remove_all;
       break;
   default:
@@ -30578,14 +30788,14 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871230:
+    case 536871232:
       action_spec->name = p4_pd_netbufferv4_cached_action;
       unbuild_action_spec_cached_action(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_cached_action);
       break;
-    case 536871232:
+    case 536871234:
       action_spec->name = p4_pd_netbufferv4_uncached_action;
       break;
   default:
@@ -30653,13 +30863,13 @@ p4_pd_netbufferv4_drop_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871907:
+    case 536871908:
       action_spec->name = p4_pd_netbufferv4_drop_getres_latest_seq_inswitch;
       break;
-    case 536871909:
+    case 536871910:
       action_spec->name = p4_pd_netbufferv4_drop_getres_deleted_seq_inswitch;
       break;
-    case 536871910:
+    case 536871911:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -30727,176 +30937,176 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871328:
+    case 536871329:
       action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq;
       break;
-    case 536871332:
+    case 536871333:
       action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq_pop;
       break;
-    case 536871336:
+    case 536871337:
       action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq_nlatest;
       break;
-    case 536871348:
+    case 536871349:
       action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getres_by_mirroring;
       unbuild_action_spec_update_getreq_inswitch_to_getres_by_mirroring(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_getreq_inswitch_to_getres_by_mirroring);
       break;
-    case 536871354:
+    case 536871355:
       action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres;
       break;
-    case 536871365:
+    case 536871366:
       action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss;
       unbuild_action_spec_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss);
       break;
-    case 536871369:
+    case 536871370:
       action_spec->name = p4_pd_netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss;
       unbuild_action_spec_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss);
       break;
-    case 536871375:
+    case 536871376:
       action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres;
       break;
-    case 536871386:
+    case 536871387:
       action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
       unbuild_action_spec_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss);
       break;
-    case 536871390:
+    case 536871391:
       action_spec->name = p4_pd_netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
       unbuild_action_spec_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss);
       break;
-    case 536871399:
+    case 536871400:
       action_spec->name = p4_pd_netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone;
       unbuild_action_spec_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone);
       break;
-    case 536871404:
+    case 536871405:
       action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq;
       break;
-    case 536871409:
+    case 536871410:
       action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_pop_seq;
       break;
-    case 536871421:
+    case 536871422:
       action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putres_by_mirroring;
       unbuild_action_spec_update_putreq_inswitch_to_putres_by_mirroring(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_putreq_inswitch_to_putres_by_mirroring);
       break;
-    case 536871433:
+    case 536871434:
       action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
       unbuild_action_spec_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres);
       break;
-    case 536871437:
+    case 536871438:
       action_spec->name = p4_pd_netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
       unbuild_action_spec_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres);
       break;
-    case 536871450:
+    case 536871451:
       action_spec->name = p4_pd_netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
       unbuild_action_spec_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring);
       break;
-    case 536871455:
+    case 536871456:
       action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_case3;
       break;
-    case 536871460:
+    case 536871461:
       action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_pop_seq_case3;
       break;
-    case 536871465:
+    case 536871466:
       action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq;
       break;
-    case 536871477:
+    case 536871478:
       action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delres_by_mirroring;
       unbuild_action_spec_update_delreq_inswitch_to_delres_by_mirroring(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_delreq_inswitch_to_delres_by_mirroring);
       break;
-    case 536871489:
+    case 536871490:
       action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
       unbuild_action_spec_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres);
       break;
-    case 536871493:
+    case 536871494:
       action_spec->name = p4_pd_netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
       unbuild_action_spec_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres);
       break;
-    case 536871506:
+    case 536871507:
       action_spec->name = p4_pd_netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
       unbuild_action_spec_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring);
       break;
-    case 536871511:
+    case 536871512:
       action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_case3;
       break;
-    case 536871517:
+    case 536871518:
       action_spec->name = p4_pd_netbufferv4_forward_scanreq_split_and_clone;
       unbuild_action_spec_forward_scanreq_split_and_clone(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_forward_scanreq_split_and_clone);
       break;
-    case 536871521:
+    case 536871522:
       action_spec->name = p4_pd_netbufferv4_forward_scanreq_split;
       break;
-    case 536871530:
+    case 536871531:
       action_spec->name = p4_pd_netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone;
       unbuild_action_spec_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone);
       break;
-    case 536871541:
+    case 536871542:
       action_spec->name = p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone;
       unbuild_action_spec_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone);
       break;
-    case 536871551:
+    case 536871552:
       action_spec->name = p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
       unbuild_action_spec_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone);
       break;
-    case 536871560:
+    case 536871561:
       action_spec->name = p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
       unbuild_action_spec_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone);
       break;
-    case 536871561:
+    case 536871562:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -30964,10 +31174,10 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871234:
+    case 536871236:
       action_spec->name = p4_pd_netbufferv4_hash_for_cm1;
       break;
-    case 536871235:
+    case 536871237:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -31035,10 +31245,10 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871242:
+    case 536871244:
       action_spec->name = p4_pd_netbufferv4_hash_for_cm2;
       break;
-    case 536871243:
+    case 536871245:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -31106,10 +31316,10 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871248:
+    case 536871250:
       action_spec->name = p4_pd_netbufferv4_hash_for_cm3;
       break;
-    case 536871249:
+    case 536871251:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -31177,10 +31387,10 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871255:
+    case 536871257:
       action_spec->name = p4_pd_netbufferv4_hash_for_cm4;
       break;
-    case 536871256:
+    case 536871258:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -31248,10 +31458,10 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871245:
+    case 536871247:
       action_spec->name = p4_pd_netbufferv4_hash_for_seq;
       break;
-    case 536871246:
+    case 536871248:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -31319,25 +31529,25 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871274:
+    case 536871275:
       action_spec->name = p4_pd_netbufferv4_update_getreq_to_getreq_inswitch;
       break;
-    case 536871278:
+    case 536871279:
       action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres_latest_seq_inswitch;
       break;
-    case 536871282:
+    case 536871283:
       action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
       break;
-    case 536871287:
+    case 536871288:
       action_spec->name = p4_pd_netbufferv4_update_putreq_to_putreq_inswitch;
       break;
-    case 536871292:
+    case 536871293:
       action_spec->name = p4_pd_netbufferv4_update_delreq_to_delreq_inswitch;
       break;
-    case 536871295:
+    case 536871296:
       action_spec->name = p4_pd_netbufferv4_update_scanreq_to_scanreq_split;
       break;
-    case 536871296:
+    case 536871297:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -31405,21 +31615,21 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871261:
+    case 536871263:
       action_spec->name = p4_pd_netbufferv4_forward_normal_response;
       unbuild_action_spec_forward_normal_response(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_forward_normal_response);
       break;
-    case 536871265:
+    case 536871266:
       action_spec->name = p4_pd_netbufferv4_forward_special_get_response;
       unbuild_action_spec_forward_special_get_response(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_forward_special_get_response);
       break;
-    case 536871266:
+    case 536871267:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -31487,10 +31697,10 @@ p4_pd_netbufferv4_is_hot_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871298:
+    case 536871299:
       action_spec->name = p4_pd_netbufferv4_set_is_hot;
       break;
-    case 536871300:
+    case 536871301:
       action_spec->name = p4_pd_netbufferv4_reset_is_hot;
       break;
   default:
@@ -31633,13 +31843,13 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871318:
+    case 536871319:
       action_spec->name = p4_pd_netbufferv4_set_is_lastclone;
       break;
-    case 536871321:
+    case 536871322:
       action_spec->name = p4_pd_netbufferv4_set_is_lastscansplit;
       break;
-    case 536871324:
+    case 536871325:
       action_spec->name = p4_pd_netbufferv4_reset_is_lastclone_lastscansplit;
       break;
   default:
@@ -31778,14 +31988,14 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871258:
+    case 536871260:
       action_spec->name = p4_pd_netbufferv4_set_client_sid;
       unbuild_action_spec_set_client_sid(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_set_client_sid);
       break;
-    case 536871259:
+    case 536871261:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -31853,21 +32063,21 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871304:
+    case 536871305:
       action_spec->name = p4_pd_netbufferv4_process_scanreq_split;
       unbuild_action_spec_process_scanreq_split(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_process_scanreq_split);
       break;
-    case 536871309:
+    case 536871310:
       action_spec->name = p4_pd_netbufferv4_process_cloned_scanreq_split;
       unbuild_action_spec_process_cloned_scanreq_split(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_process_cloned_scanreq_split);
       break;
-    case 536871312:
+    case 536871313:
       action_spec->name = p4_pd_netbufferv4_reset_meta_serversid_remainscannum;
       break;
   default:
@@ -31935,14 +32145,14 @@ p4_pd_netbufferv4_range_partition_for_scan_endkey_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871239:
+    case 536871241:
       action_spec->name = p4_pd_netbufferv4_range_partition_for_scan_endkey;
       unbuild_action_spec_range_partition_for_scan_endkey(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_range_partition_for_scan_endkey);
       break;
-    case 536871240:
+    case 536871242:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -32024,7 +32234,14 @@ p4_pd_netbufferv4_range_partition_tbl_table_get_default_entry
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_range_partition_for_scan);
       break;
-    case 536871227:
+    case 536871228:
+      action_spec->name = p4_pd_netbufferv4_range_partition_for_special_response;
+      unbuild_action_spec_range_partition_for_special_response(pipe_action_data_spec,
+                                    res_spec,
+                                    resource_cnt,
+                                    &action_spec->u.p4_pd_netbufferv4_range_partition_for_special_response);
+      break;
+    case 536871229:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -32167,10 +32384,10 @@ p4_pd_netbufferv4_sample_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871268:
+    case 536871269:
       action_spec->name = p4_pd_netbufferv4_sample;
       break;
-    case 536871269:
+    case 536871270:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -32238,10 +32455,10 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871314:
+    case 536871315:
       action_spec->name = p4_pd_netbufferv4_save_client_udpport;
       break;
-    case 536871315:
+    case 536871316:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -32381,10 +32598,10 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871251:
+    case 536871253:
       action_spec->name = p4_pd_netbufferv4_set_snapshot_flag;
       break;
-    case 536871253:
+    case 536871255:
       action_spec->name = p4_pd_netbufferv4_reset_snapshot_flag;
       break;
   default:
@@ -32452,28 +32669,28 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871567:
+    case 536871568:
       action_spec->name = p4_pd_netbufferv4_update_ipmac_srcport_server2client;
       unbuild_action_spec_update_ipmac_srcport_server2client(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_ipmac_srcport_server2client);
       break;
-    case 536871573:
+    case 536871574:
       action_spec->name = p4_pd_netbufferv4_update_ipmac_srcport_switch2switchos;
       unbuild_action_spec_update_ipmac_srcport_switch2switchos(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_ipmac_srcport_switch2switchos);
       break;
-    case 536871576:
+    case 536871577:
       action_spec->name = p4_pd_netbufferv4_update_dstipmac_client2server;
       unbuild_action_spec_update_dstipmac_client2server(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_dstipmac_client2server);
       break;
-    case 536871577:
+    case 536871578:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -32541,14 +32758,14 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_get_default_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-    case 536871580:
+    case 536871581:
       action_spec->name = p4_pd_netbufferv4_update_pktlen;
       unbuild_action_spec_update_pktlen(pipe_action_data_spec,
                                     res_spec,
                                     resource_cnt,
                                     &action_spec->u.p4_pd_netbufferv4_update_pktlen);
       break;
-    case 536871581:
+    case 536871582:
       action_spec->name = p4_pd_netbufferv4_nop;
       break;
   default:
@@ -41712,7 +41929,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_only_val
              dev_id,
              16777285,
              entry_hdl,
-             536871599,
+             536871600,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41758,7 +41975,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_only_val
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871599,
+             536871600,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41786,7 +42003,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val1
              dev_id,
              16777285,
              entry_hdl,
-             536871617,
+             536871618,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41832,7 +42049,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val1_
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871617,
+             536871618,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41860,7 +42077,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val2
              dev_id,
              16777285,
              entry_hdl,
-             536871635,
+             536871636,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41906,7 +42123,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val2_
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871635,
+             536871636,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41934,7 +42151,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val3
              dev_id,
              16777285,
              entry_hdl,
-             536871653,
+             536871654,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -41980,7 +42197,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val3_
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871653,
+             536871654,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42008,7 +42225,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val4
              dev_id,
              16777285,
              entry_hdl,
-             536871671,
+             536871672,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42054,7 +42271,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val4_
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871671,
+             536871672,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42082,7 +42299,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val5
              dev_id,
              16777285,
              entry_hdl,
-             536871689,
+             536871690,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42128,7 +42345,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val5_
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871689,
+             536871690,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42156,7 +42373,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val6
              dev_id,
              16777285,
              entry_hdl,
-             536871707,
+             536871708,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42202,7 +42419,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val6_
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871707,
+             536871708,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42230,7 +42447,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val7
              dev_id,
              16777285,
              entry_hdl,
-             536871725,
+             536871726,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42276,7 +42493,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val7_
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871725,
+             536871726,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42304,7 +42521,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val8
              dev_id,
              16777285,
              entry_hdl,
-             536871743,
+             536871744,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42350,7 +42567,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val8_
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871743,
+             536871744,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42378,7 +42595,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val9
              dev_id,
              16777285,
              entry_hdl,
-             536871761,
+             536871762,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42424,7 +42641,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val9_
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871761,
+             536871762,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42452,7 +42669,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val10
              dev_id,
              16777285,
              entry_hdl,
-             536871779,
+             536871780,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42498,7 +42715,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val10
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871779,
+             536871780,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42526,7 +42743,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val11
              dev_id,
              16777285,
              entry_hdl,
-             536871797,
+             536871798,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42572,7 +42789,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val11
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871797,
+             536871798,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42600,7 +42817,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val12
              dev_id,
              16777285,
              entry_hdl,
-             536871815,
+             536871816,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42646,7 +42863,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val12
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871815,
+             536871816,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42674,7 +42891,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val13
              dev_id,
              16777285,
              entry_hdl,
-             536871833,
+             536871834,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42720,7 +42937,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val13
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871833,
+             536871834,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42748,7 +42965,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val14
              dev_id,
              16777285,
              entry_hdl,
-             536871851,
+             536871852,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42794,7 +43011,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val14
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871851,
+             536871852,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42822,7 +43039,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val15
              dev_id,
              16777285,
              entry_hdl,
-             536871869,
+             536871870,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42868,7 +43085,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val15
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871869,
+             536871870,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42896,7 +43113,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val16
              dev_id,
              16777285,
              entry_hdl,
-             536871887,
+             536871888,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42942,7 +43159,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_add_to_val16
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871887,
+             536871888,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -42970,7 +43187,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_remove_all
              dev_id,
              16777285,
              entry_hdl,
-             536871905,
+             536871906,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43016,7 +43233,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_table_modify_with_remove_all_b
              pipe_mgr_dev_tgt,
              16777285,
              &pipe_match_spec,
-             536871905,
+             536871906,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43046,7 +43263,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_modify_with_cached_action
              dev_id,
              16777266,
              entry_hdl,
-             536871230,
+             536871232,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43092,7 +43309,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_modify_with_cached_action_by_match_spec
              pipe_mgr_dev_tgt,
              16777266,
              &pipe_match_spec,
-             536871230,
+             536871232,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43120,7 +43337,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_modify_with_uncached_action
              dev_id,
              16777266,
              entry_hdl,
-             536871232,
+             536871234,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43164,7 +43381,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_table_modify_with_uncached_action_by_match_sp
              pipe_mgr_dev_tgt,
              16777266,
              &pipe_match_spec,
-             536871232,
+             536871234,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43192,7 +43409,7 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_drop_getres_latest_seq_inswitch
              dev_id,
              16777286,
              entry_hdl,
-             536871907,
+             536871908,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43236,7 +43453,7 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_drop_getres_latest_seq_inswitch_by_
              pipe_mgr_dev_tgt,
              16777286,
              &pipe_match_spec,
-             536871907,
+             536871908,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43264,7 +43481,7 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_drop_getres_deleted_seq_inswitch
              dev_id,
              16777286,
              entry_hdl,
-             536871909,
+             536871910,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43308,7 +43525,7 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_drop_getres_deleted_seq_inswitch_by
              pipe_mgr_dev_tgt,
              16777286,
              &pipe_match_spec,
-             536871909,
+             536871910,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43336,7 +43553,7 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_nop
              dev_id,
              16777286,
              entry_hdl,
-             536871910,
+             536871911,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43380,7 +43597,7 @@ p4_pd_netbufferv4_drop_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777286,
              &pipe_match_spec,
-             536871910,
+             536871911,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43408,7 +43625,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871328,
+             536871329,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43452,7 +43669,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871328,
+             536871329,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43480,7 +43697,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871332,
+             536871333,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43524,7 +43741,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871332,
+             536871333,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43552,7 +43769,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871336,
+             536871337,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43596,7 +43813,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871336,
+             536871337,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43626,7 +43843,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871348,
+             536871349,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43672,7 +43889,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871348,
+             536871349,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43700,7 +43917,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_latest_seq
              dev_id,
              16777282,
              entry_hdl,
-             536871354,
+             536871355,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43744,7 +43961,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_latest_seq
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871354,
+             536871355,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43774,7 +43991,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_latest_seq
              dev_id,
              16777282,
              entry_hdl,
-             536871365,
+             536871366,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43820,7 +44037,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_latest_seq
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871365,
+             536871366,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43850,7 +44067,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_latest_se
              dev_id,
              16777282,
              entry_hdl,
-             536871369,
+             536871370,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43896,7 +44113,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_latest_se
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871369,
+             536871370,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43924,7 +44141,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_se
              dev_id,
              16777282,
              entry_hdl,
-             536871375,
+             536871376,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43968,7 +44185,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_se
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871375,
+             536871376,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -43998,7 +44215,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_se
              dev_id,
              16777282,
              entry_hdl,
-             536871386,
+             536871387,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44044,7 +44261,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_se
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871386,
+             536871387,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44074,7 +44291,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_s
              dev_id,
              16777282,
              entry_hdl,
-             536871390,
+             536871391,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44120,7 +44337,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_s
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871390,
+             536871391,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44150,7 +44367,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_pop_inswitc
              dev_id,
              16777282,
              entry_hdl,
-             536871399,
+             536871400,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44196,7 +44413,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_pop_inswitc
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871399,
+             536871400,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44224,7 +44441,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871404,
+             536871405,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44268,7 +44485,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871404,
+             536871405,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44296,7 +44513,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871409,
+             536871410,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44340,7 +44557,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871409,
+             536871410,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44370,7 +44587,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871421,
+             536871422,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44416,7 +44633,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871421,
+             536871422,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44446,7 +44663,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871433,
+             536871434,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44492,7 +44709,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871433,
+             536871434,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44522,7 +44739,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_putreq_seq_inswi
              dev_id,
              16777282,
              entry_hdl,
-             536871437,
+             536871438,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44568,7 +44785,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_putreq_seq_inswi
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871437,
+             536871438,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44598,7 +44815,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_seq_inswit
              dev_id,
              16777282,
              entry_hdl,
-             536871450,
+             536871451,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44644,7 +44861,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_seq_inswit
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871450,
+             536871451,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44672,7 +44889,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871455,
+             536871456,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44716,7 +44933,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871455,
+             536871456,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44744,7 +44961,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871460,
+             536871461,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44788,7 +45005,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_putreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871460,
+             536871461,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44816,7 +45033,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871465,
+             536871466,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44860,7 +45077,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871465,
+             536871466,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44890,7 +45107,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871477,
+             536871478,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44936,7 +45153,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871477,
+             536871478,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -44966,7 +45183,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871489,
+             536871490,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45012,7 +45229,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871489,
+             536871490,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45042,7 +45259,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_delreq_seq_inswi
              dev_id,
              16777282,
              entry_hdl,
-             536871493,
+             536871494,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45088,7 +45305,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_delreq_seq_inswi
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871493,
+             536871494,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45118,7 +45335,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_seq_inswit
              dev_id,
              16777282,
              entry_hdl,
-             536871506,
+             536871507,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45164,7 +45381,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_seq_inswit
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871506,
+             536871507,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45192,7 +45409,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
              dev_id,
              16777282,
              entry_hdl,
-             536871511,
+             536871512,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45236,7 +45453,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_delreq_inswitch_t
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871511,
+             536871512,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45266,7 +45483,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_scanreq_split_an
              dev_id,
              16777282,
              entry_hdl,
-             536871517,
+             536871518,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45312,7 +45529,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_scanreq_split_an
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871517,
+             536871518,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45340,7 +45557,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_scanreq_split
              dev_id,
              16777282,
              entry_hdl,
-             536871521,
+             536871522,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45384,7 +45601,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_forward_scanreq_split_by
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871521,
+             536871522,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45414,7 +45631,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_evict_loadf
              dev_id,
              16777282,
              entry_hdl,
-             536871530,
+             536871531,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45460,7 +45677,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_evict_loadf
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871530,
+             536871531,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45490,7 +45707,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_evict_loadd
              dev_id,
              16777282,
              entry_hdl,
-             536871541,
+             536871542,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45536,7 +45753,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_cache_evict_loadd
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871541,
+             536871542,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45566,7 +45783,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_loadsnapshotdata_
              dev_id,
              16777282,
              entry_hdl,
-             536871551,
+             536871552,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45612,7 +45829,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_loadsnapshotdata_
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871551,
+             536871552,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45642,7 +45859,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_setvalid_inswitch
              dev_id,
              16777282,
              entry_hdl,
-             536871560,
+             536871561,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45688,7 +45905,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_update_setvalid_inswitch
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871560,
+             536871561,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45716,7 +45933,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_nop
              dev_id,
              16777282,
              entry_hdl,
-             536871561,
+             536871562,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45760,7 +45977,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777282,
              &pipe_match_spec,
-             536871561,
+             536871562,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45788,7 +46005,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_modify_with_hash_for_cm1
              dev_id,
              16777267,
              entry_hdl,
-             536871234,
+             536871236,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45832,7 +46049,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_modify_with_hash_for_cm1_by_match_spec
              pipe_mgr_dev_tgt,
              16777267,
              &pipe_match_spec,
-             536871234,
+             536871236,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45860,7 +46077,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_modify_with_nop
              dev_id,
              16777267,
              entry_hdl,
-             536871235,
+             536871237,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45904,7 +46121,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777267,
              &pipe_match_spec,
-             536871235,
+             536871237,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45932,7 +46149,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_modify_with_hash_for_cm2
              dev_id,
              16777269,
              entry_hdl,
-             536871242,
+             536871244,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -45976,7 +46193,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_modify_with_hash_for_cm2_by_match_spec
              pipe_mgr_dev_tgt,
              16777269,
              &pipe_match_spec,
-             536871242,
+             536871244,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46004,7 +46221,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_modify_with_nop
              dev_id,
              16777269,
              entry_hdl,
-             536871243,
+             536871245,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46048,7 +46265,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777269,
              &pipe_match_spec,
-             536871243,
+             536871245,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46076,7 +46293,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_modify_with_hash_for_cm3
              dev_id,
              16777271,
              entry_hdl,
-             536871248,
+             536871250,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46120,7 +46337,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_modify_with_hash_for_cm3_by_match_spec
              pipe_mgr_dev_tgt,
              16777271,
              &pipe_match_spec,
-             536871248,
+             536871250,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46148,7 +46365,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_modify_with_nop
              dev_id,
              16777271,
              entry_hdl,
-             536871249,
+             536871251,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46192,7 +46409,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777271,
              &pipe_match_spec,
-             536871249,
+             536871251,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46220,7 +46437,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_modify_with_hash_for_cm4
              dev_id,
              16777273,
              entry_hdl,
-             536871255,
+             536871257,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46264,7 +46481,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_modify_with_hash_for_cm4_by_match_spec
              pipe_mgr_dev_tgt,
              16777273,
              &pipe_match_spec,
-             536871255,
+             536871257,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46292,7 +46509,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_modify_with_nop
              dev_id,
              16777273,
              entry_hdl,
-             536871256,
+             536871258,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46336,7 +46553,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777273,
              &pipe_match_spec,
-             536871256,
+             536871258,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46364,7 +46581,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_modify_with_hash_for_seq
              dev_id,
              16777270,
              entry_hdl,
-             536871245,
+             536871247,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46408,7 +46625,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_modify_with_hash_for_seq_by_match_spec
              pipe_mgr_dev_tgt,
              16777270,
              &pipe_match_spec,
-             536871245,
+             536871247,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46436,7 +46653,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_modify_with_nop
              dev_id,
              16777270,
              entry_hdl,
-             536871246,
+             536871248,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46480,7 +46697,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777270,
              &pipe_match_spec,
-             536871246,
+             536871248,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46508,7 +46725,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getreq_to_getreq_
              dev_id,
              16777277,
              entry_hdl,
-             536871274,
+             536871275,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46552,7 +46769,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getreq_to_getreq_
              pipe_mgr_dev_tgt,
              16777277,
              &pipe_match_spec,
-             536871274,
+             536871275,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46580,7 +46797,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getres_latest_seq
              dev_id,
              16777277,
              entry_hdl,
-             536871278,
+             536871279,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46624,7 +46841,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getres_latest_seq
              pipe_mgr_dev_tgt,
              16777277,
              &pipe_match_spec,
-             536871278,
+             536871279,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46652,7 +46869,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getres_deleted_se
              dev_id,
              16777277,
              entry_hdl,
-             536871282,
+             536871283,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46696,7 +46913,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_getres_deleted_se
              pipe_mgr_dev_tgt,
              16777277,
              &pipe_match_spec,
-             536871282,
+             536871283,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46724,7 +46941,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_putreq_to_putreq_
              dev_id,
              16777277,
              entry_hdl,
-             536871287,
+             536871288,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46768,7 +46985,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_putreq_to_putreq_
              pipe_mgr_dev_tgt,
              16777277,
              &pipe_match_spec,
-             536871287,
+             536871288,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46796,7 +47013,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_delreq_to_delreq_
              dev_id,
              16777277,
              entry_hdl,
-             536871292,
+             536871293,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46840,7 +47057,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_delreq_to_delreq_
              pipe_mgr_dev_tgt,
              16777277,
              &pipe_match_spec,
-             536871292,
+             536871293,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46868,7 +47085,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_scanreq_to_scanre
              dev_id,
              16777277,
              entry_hdl,
-             536871295,
+             536871296,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46912,7 +47129,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_update_scanreq_to_scanre
              pipe_mgr_dev_tgt,
              16777277,
              &pipe_match_spec,
-             536871295,
+             536871296,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46940,7 +47157,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_nop
              dev_id,
              16777277,
              entry_hdl,
-             536871296,
+             536871297,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -46984,7 +47201,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777277,
              &pipe_match_spec,
-             536871296,
+             536871297,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47014,7 +47231,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_forward_normal_response
              dev_id,
              16777275,
              entry_hdl,
-             536871261,
+             536871263,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47060,7 +47277,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_forward_normal_response_by_
              pipe_mgr_dev_tgt,
              16777275,
              &pipe_match_spec,
-             536871261,
+             536871263,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47090,7 +47307,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_forward_special_get_respons
              dev_id,
              16777275,
              entry_hdl,
-             536871265,
+             536871266,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47136,7 +47353,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_forward_special_get_respons
              pipe_mgr_dev_tgt,
              16777275,
              &pipe_match_spec,
-             536871265,
+             536871266,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47164,7 +47381,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_nop
              dev_id,
              16777275,
              entry_hdl,
-             536871266,
+             536871267,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47208,7 +47425,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777275,
              &pipe_match_spec,
-             536871266,
+             536871267,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47236,7 +47453,7 @@ p4_pd_netbufferv4_is_hot_tbl_table_modify_with_set_is_hot
              dev_id,
              16777278,
              entry_hdl,
-             536871298,
+             536871299,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47280,7 +47497,7 @@ p4_pd_netbufferv4_is_hot_tbl_table_modify_with_set_is_hot_by_match_spec
              pipe_mgr_dev_tgt,
              16777278,
              &pipe_match_spec,
-             536871298,
+             536871299,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47308,7 +47525,7 @@ p4_pd_netbufferv4_is_hot_tbl_table_modify_with_reset_is_hot
              dev_id,
              16777278,
              entry_hdl,
-             536871300,
+             536871301,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47352,7 +47569,7 @@ p4_pd_netbufferv4_is_hot_tbl_table_modify_with_reset_is_hot_by_match_spec
              pipe_mgr_dev_tgt,
              16777278,
              &pipe_match_spec,
-             536871300,
+             536871301,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47528,7 +47745,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone
              dev_id,
              16777281,
              entry_hdl,
-             536871318,
+             536871319,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47542,16 +47759,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 40;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 48;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -47572,7 +47789,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_set_is_lastclone
              pipe_mgr_dev_tgt,
              16777281,
              &pipe_match_spec,
-             536871318,
+             536871319,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47600,7 +47817,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_set_is_lastscans
              dev_id,
              16777281,
              entry_hdl,
-             536871321,
+             536871322,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47614,16 +47831,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_set_is_lastscans
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 40;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 48;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -47644,7 +47861,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_set_is_lastscans
              pipe_mgr_dev_tgt,
              16777281,
              &pipe_match_spec,
-             536871321,
+             536871322,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47672,7 +47889,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_reset_is_lastclo
              dev_id,
              16777281,
              entry_hdl,
-             536871324,
+             536871325,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47686,16 +47903,16 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_reset_is_lastclo
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[6];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[6];
+  if (6) {
+    memset(pipe_match_value_bits, 0, 6);
+    memset(pipe_match_mask_bits, 0, 6);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 40;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 48;
+  pipe_match_spec.num_match_bytes = 6;
   build_match_spec_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -47716,7 +47933,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_table_modify_with_reset_is_lastclo
              pipe_mgr_dev_tgt,
              16777281,
              &pipe_match_spec,
-             536871324,
+             536871325,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47890,7 +48107,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_modify_with_set_client_sid
              dev_id,
              16777274,
              entry_hdl,
-             536871258,
+             536871260,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47905,16 +48122,16 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_modify_with_set_client_sid_by_m
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[7];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[7];
+  if (7) {
+    memset(pipe_match_value_bits, 0, 7);
+    memset(pipe_match_mask_bits, 0, 7);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 49;
+  pipe_match_spec.num_match_bytes = 7;
   build_match_spec_prepare_for_cachehit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -47936,7 +48153,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_modify_with_set_client_sid_by_m
              pipe_mgr_dev_tgt,
              16777274,
              &pipe_match_spec,
-             536871258,
+             536871260,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47964,7 +48181,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_modify_with_nop
              dev_id,
              16777274,
              entry_hdl,
-             536871259,
+             536871261,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -47978,16 +48195,16 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_modify_with_nop_by_match_spec
 )
 {
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5];
+  uint8_t pipe_match_value_bits[7];
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  uint8_t pipe_match_mask_bits[5];
-  if (5) {
-    memset(pipe_match_value_bits, 0, 5);
-    memset(pipe_match_mask_bits, 0, 5);
+  uint8_t pipe_match_mask_bits[7];
+  if (7) {
+    memset(pipe_match_value_bits, 0, 7);
+    memset(pipe_match_mask_bits, 0, 7);
   }
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
-  pipe_match_spec.num_valid_match_bits = 26;
-  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.num_valid_match_bits = 49;
+  pipe_match_spec.num_match_bytes = 7;
   build_match_spec_prepare_for_cachehit_tbl(&pipe_match_spec, match_spec);
 
   dev_target_t pipe_mgr_dev_tgt;
@@ -48008,7 +48225,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777274,
              &pipe_match_spec,
-             536871259,
+             536871261,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48038,7 +48255,7 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_table_modify_with_process_scanreq_sp
              dev_id,
              16777279,
              entry_hdl,
-             536871304,
+             536871305,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48084,7 +48301,7 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_table_modify_with_process_scanreq_sp
              pipe_mgr_dev_tgt,
              16777279,
              &pipe_match_spec,
-             536871304,
+             536871305,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48114,7 +48331,7 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_table_modify_with_process_cloned_sca
              dev_id,
              16777279,
              entry_hdl,
-             536871309,
+             536871310,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48160,7 +48377,7 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_table_modify_with_process_cloned_sca
              pipe_mgr_dev_tgt,
              16777279,
              &pipe_match_spec,
-             536871309,
+             536871310,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48188,7 +48405,7 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_table_modify_with_reset_meta_servers
              dev_id,
              16777279,
              entry_hdl,
-             536871312,
+             536871313,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48232,7 +48449,7 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_table_modify_with_reset_meta_servers
              pipe_mgr_dev_tgt,
              16777279,
              &pipe_match_spec,
-             536871312,
+             536871313,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48262,7 +48479,7 @@ p4_pd_netbufferv4_range_partition_for_scan_endkey_tbl_table_modify_with_range_pa
              dev_id,
              16777268,
              entry_hdl,
-             536871239,
+             536871241,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48310,7 +48527,7 @@ p4_pd_netbufferv4_range_partition_for_scan_endkey_tbl_table_modify_with_range_pa
              pipe_mgr_dev_tgt,
              16777268,
              &pipe_match_spec,
-             536871239,
+             536871241,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48338,7 +48555,7 @@ p4_pd_netbufferv4_range_partition_for_scan_endkey_tbl_table_modify_with_nop
              dev_id,
              16777268,
              entry_hdl,
-             536871240,
+             536871242,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48384,7 +48601,7 @@ p4_pd_netbufferv4_range_partition_for_scan_endkey_tbl_table_modify_with_nop_by_m
              pipe_mgr_dev_tgt,
              16777268,
              &pipe_match_spec,
-             536871240,
+             536871242,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48546,6 +48763,84 @@ p4_pd_netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_scan
 }
 
 p4_pd_status_t
+p4_pd_netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_special_response
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t entry_hdl,
+ p4_pd_netbufferv4_range_partition_for_special_response_action_spec_t *action_spec
+)
+{
+
+  uint8_t pipe_action_data_bits[2];
+  memset(pipe_action_data_bits, 0, 2);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 9;
+  pipe_action_data_spec->num_action_data_bytes = 2;
+  pipe_action_spec.resource_count = 0;
+  build_action_spec_range_partition_for_special_response(pipe_action_data_spec, action_spec);
+
+  return pipe_mgr_mat_ent_set_action(sess_hdl,
+             dev_id,
+             16777265,
+             entry_hdl,
+             536871228,
+             &pipe_action_spec,
+             0 /* flags, TODO */);
+}
+
+p4_pd_status_t
+p4_pd_netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_range_partition_tbl_match_spec_t *match_spec,
+ int priority,
+ p4_pd_netbufferv4_range_partition_for_special_response_action_spec_t *action_spec
+)
+{
+  pipe_tbl_match_spec_t pipe_match_spec = {0};
+  uint8_t pipe_match_value_bits[5];
+  pipe_match_spec.match_value_bits = pipe_match_value_bits;
+  uint8_t pipe_match_mask_bits[5];
+  if (5) {
+    memset(pipe_match_value_bits, 0, 5);
+    memset(pipe_match_mask_bits, 0, 5);
+  }
+  pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
+  pipe_match_spec.num_valid_match_bits = 33;
+  pipe_match_spec.num_match_bytes = 5;
+  pipe_match_spec.priority = priority;
+  build_match_spec_range_partition_tbl(&pipe_match_spec, match_spec);
+
+  dev_target_t pipe_mgr_dev_tgt;
+  pipe_mgr_dev_tgt.device_id = dev_tgt.device_id;
+  pipe_mgr_dev_tgt.dev_pipe_id = dev_tgt.dev_pipe_id;
+
+  uint8_t pipe_action_data_bits[2];
+  memset(pipe_action_data_bits, 0, 2);
+  pipe_action_spec_t pipe_action_spec = {0};
+  pipe_action_spec.pipe_action_datatype_bmap = PIPE_ACTION_DATA_TYPE;
+  pipe_action_data_spec_t *pipe_action_data_spec = &pipe_action_spec.act_data;
+  pipe_action_data_spec->action_data_bits = pipe_action_data_bits;
+  pipe_action_data_spec->num_valid_action_data_bits = 9;
+  pipe_action_data_spec->num_action_data_bytes = 2;
+  pipe_action_spec.resource_count = 0;
+  build_action_spec_range_partition_for_special_response(pipe_action_data_spec, action_spec);
+
+  return pipe_mgr_mat_ent_set_action_by_match_spec(sess_hdl,
+             pipe_mgr_dev_tgt,
+             16777265,
+             &pipe_match_spec,
+             536871228,
+             &pipe_action_spec,
+             0 /* flags, TODO */);
+}
+
+p4_pd_status_t
 p4_pd_netbufferv4_range_partition_tbl_table_modify_with_nop
 (
  p4_pd_sess_hdl_t sess_hdl,
@@ -48568,7 +48863,7 @@ p4_pd_netbufferv4_range_partition_tbl_table_modify_with_nop
              dev_id,
              16777265,
              entry_hdl,
-             536871227,
+             536871229,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48614,7 +48909,7 @@ p4_pd_netbufferv4_range_partition_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777265,
              &pipe_match_spec,
-             536871227,
+             536871229,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48790,7 +49085,7 @@ p4_pd_netbufferv4_sample_tbl_table_modify_with_sample
              dev_id,
              16777276,
              entry_hdl,
-             536871268,
+             536871269,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48834,7 +49129,7 @@ p4_pd_netbufferv4_sample_tbl_table_modify_with_sample_by_match_spec
              pipe_mgr_dev_tgt,
              16777276,
              &pipe_match_spec,
-             536871268,
+             536871269,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48862,7 +49157,7 @@ p4_pd_netbufferv4_sample_tbl_table_modify_with_nop
              dev_id,
              16777276,
              entry_hdl,
-             536871269,
+             536871270,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48906,7 +49201,7 @@ p4_pd_netbufferv4_sample_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777276,
              &pipe_match_spec,
-             536871269,
+             536871270,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48934,7 +49229,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_modify_with_save_client_udpport
              dev_id,
              16777280,
              entry_hdl,
-             536871314,
+             536871315,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -48978,7 +49273,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_modify_with_save_client_udpport_
              pipe_mgr_dev_tgt,
              16777280,
              &pipe_match_spec,
-             536871314,
+             536871315,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49006,7 +49301,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_modify_with_nop
              dev_id,
              16777280,
              entry_hdl,
-             536871315,
+             536871316,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49050,7 +49345,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777280,
              &pipe_match_spec,
-             536871315,
+             536871316,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49078,7 +49373,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_modify_with_set_snapshot_flag
              dev_id,
              16777272,
              entry_hdl,
-             536871251,
+             536871253,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49122,7 +49417,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_modify_with_set_snapshot_flag_by_match
              pipe_mgr_dev_tgt,
              16777272,
              &pipe_match_spec,
-             536871251,
+             536871253,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49150,7 +49445,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_modify_with_reset_snapshot_flag
              dev_id,
              16777272,
              entry_hdl,
-             536871253,
+             536871255,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49194,7 +49489,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_table_modify_with_reset_snapshot_flag_by_mat
              pipe_mgr_dev_tgt,
              16777272,
              &pipe_match_spec,
-             536871253,
+             536871255,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49224,7 +49519,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_ipmac_srcpor
              dev_id,
              16777283,
              entry_hdl,
-             536871567,
+             536871568,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49270,7 +49565,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_ipmac_srcpor
              pipe_mgr_dev_tgt,
              16777283,
              &pipe_match_spec,
-             536871567,
+             536871568,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49300,7 +49595,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_ipmac_srcpor
              dev_id,
              16777283,
              entry_hdl,
-             536871573,
+             536871574,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49346,7 +49641,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_ipmac_srcpor
              pipe_mgr_dev_tgt,
              16777283,
              &pipe_match_spec,
-             536871573,
+             536871574,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49376,7 +49671,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_dstipmac_cli
              dev_id,
              16777283,
              entry_hdl,
-             536871576,
+             536871577,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49422,7 +49717,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_update_dstipmac_cli
              pipe_mgr_dev_tgt,
              16777283,
              &pipe_match_spec,
-             536871576,
+             536871577,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49450,7 +49745,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_nop
              dev_id,
              16777283,
              entry_hdl,
-             536871577,
+             536871578,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49494,7 +49789,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777283,
              &pipe_match_spec,
-             536871577,
+             536871578,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49524,7 +49819,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_modify_with_update_pktlen
              dev_id,
              16777284,
              entry_hdl,
-             536871580,
+             536871581,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49572,7 +49867,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_modify_with_update_pktlen_by_match_spe
              pipe_mgr_dev_tgt,
              16777284,
              &pipe_match_spec,
-             536871580,
+             536871581,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49600,7 +49895,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_modify_with_nop
              dev_id,
              16777284,
              entry_hdl,
-             536871581,
+             536871582,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -49646,7 +49941,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_table_modify_with_nop_by_match_spec
              pipe_mgr_dev_tgt,
              16777284,
              &pipe_match_spec,
-             536871581,
+             536871582,
              &pipe_action_spec,
              0 /* flags, TODO */);
 }
@@ -59621,7 +59916,7 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_set_default_action_remove_all
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777285,
-				      536871905,
+				      536871906,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59654,7 +59949,7 @@ p4_pd_netbufferv4_cache_lookup_tbl_set_default_action_uncached_action
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777266,
-				      536871232,
+				      536871234,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59687,7 +59982,7 @@ p4_pd_netbufferv4_drop_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777286,
-				      536871910,
+				      536871911,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59720,7 +60015,7 @@ p4_pd_netbufferv4_eg_port_forward_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777282,
-				      536871561,
+				      536871562,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59753,7 +60048,7 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777267,
-				      536871235,
+				      536871237,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59786,7 +60081,7 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777269,
-				      536871243,
+				      536871245,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59819,7 +60114,7 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777271,
-				      536871249,
+				      536871251,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59852,7 +60147,7 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777273,
-				      536871256,
+				      536871258,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59885,7 +60180,7 @@ p4_pd_netbufferv4_hash_for_seq_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777270,
-				      536871246,
+				      536871248,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59918,7 +60213,7 @@ p4_pd_netbufferv4_ig_port_forward_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777277,
-				      536871296,
+				      536871297,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59951,7 +60246,7 @@ p4_pd_netbufferv4_ipv4_forward_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777275,
-				      536871266,
+				      536871267,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -59984,7 +60279,7 @@ p4_pd_netbufferv4_is_hot_tbl_set_default_action_reset_is_hot
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777278,
-				      536871300,
+				      536871301,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -60050,7 +60345,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_set_default_action_reset_is_lastcl
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777281,
-				      536871324,
+				      536871325,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -60118,7 +60413,7 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_set_default_action_set_client_sid
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777274,
-				      536871258,
+				      536871260,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -60151,7 +60446,7 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_set_default_action_reset_meta_server
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777279,
-				      536871312,
+				      536871313,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -60184,7 +60479,7 @@ p4_pd_netbufferv4_range_partition_for_scan_endkey_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777268,
-				      536871240,
+				      536871242,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -60217,7 +60512,7 @@ p4_pd_netbufferv4_range_partition_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777265,
-				      536871227,
+				      536871229,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -60283,7 +60578,7 @@ p4_pd_netbufferv4_sample_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777276,
-				      536871269,
+				      536871270,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -60316,7 +60611,7 @@ p4_pd_netbufferv4_save_client_udpport_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777280,
-				      536871315,
+				      536871316,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -60384,7 +60679,7 @@ p4_pd_netbufferv4_snapshot_flag_tbl_set_default_action_reset_snapshot_flag
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777272,
-				      536871253,
+				      536871255,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -60417,7 +60712,7 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777283,
-				      536871577,
+				      536871578,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -60450,7 +60745,7 @@ p4_pd_netbufferv4_update_pktlen_tbl_set_default_action_nop
   return pipe_mgr_mat_default_entry_set(sess_hdl,
 				      pipe_mgr_dev_tgt,
 				      16777284,
-				      536871581,
+				      536871582,
 				      &pipe_action_spec,
 				      0 /* flags TODO */,
 				      entry_hdl);
@@ -63846,58 +64141,58 @@ p4_pd_netbufferv4_add_and_remove_value_header_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871599:
+  case 536871600:
     action_spec->name = p4_pd_netbufferv4_add_only_vallen;
     break;
-  case 536871617:
+  case 536871618:
     action_spec->name = p4_pd_netbufferv4_add_to_val1;
     break;
-  case 536871635:
+  case 536871636:
     action_spec->name = p4_pd_netbufferv4_add_to_val2;
     break;
-  case 536871653:
+  case 536871654:
     action_spec->name = p4_pd_netbufferv4_add_to_val3;
     break;
-  case 536871671:
+  case 536871672:
     action_spec->name = p4_pd_netbufferv4_add_to_val4;
     break;
-  case 536871689:
+  case 536871690:
     action_spec->name = p4_pd_netbufferv4_add_to_val5;
     break;
-  case 536871707:
+  case 536871708:
     action_spec->name = p4_pd_netbufferv4_add_to_val6;
     break;
-  case 536871725:
+  case 536871726:
     action_spec->name = p4_pd_netbufferv4_add_to_val7;
     break;
-  case 536871743:
+  case 536871744:
     action_spec->name = p4_pd_netbufferv4_add_to_val8;
     break;
-  case 536871761:
+  case 536871762:
     action_spec->name = p4_pd_netbufferv4_add_to_val9;
     break;
-  case 536871779:
+  case 536871780:
     action_spec->name = p4_pd_netbufferv4_add_to_val10;
     break;
-  case 536871797:
+  case 536871798:
     action_spec->name = p4_pd_netbufferv4_add_to_val11;
     break;
-  case 536871815:
+  case 536871816:
     action_spec->name = p4_pd_netbufferv4_add_to_val12;
     break;
-  case 536871833:
+  case 536871834:
     action_spec->name = p4_pd_netbufferv4_add_to_val13;
     break;
-  case 536871851:
+  case 536871852:
     action_spec->name = p4_pd_netbufferv4_add_to_val14;
     break;
-  case 536871869:
+  case 536871870:
     action_spec->name = p4_pd_netbufferv4_add_to_val15;
     break;
-  case 536871887:
+  case 536871888:
     action_spec->name = p4_pd_netbufferv4_add_to_val16;
     break;
-  case 536871905:
+  case 536871906:
     action_spec->name = p4_pd_netbufferv4_remove_all;
     break;
   default:
@@ -64000,14 +64295,14 @@ p4_pd_netbufferv4_cache_lookup_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871230:
+  case 536871232:
     action_spec->name = p4_pd_netbufferv4_cached_action;
     unbuild_action_spec_cached_action(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_cached_action);
     break;
-  case 536871232:
+  case 536871234:
     action_spec->name = p4_pd_netbufferv4_uncached_action;
     break;
   default:
@@ -64107,13 +64402,13 @@ p4_pd_netbufferv4_drop_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871907:
+  case 536871908:
     action_spec->name = p4_pd_netbufferv4_drop_getres_latest_seq_inswitch;
     break;
-  case 536871909:
+  case 536871910:
     action_spec->name = p4_pd_netbufferv4_drop_getres_deleted_seq_inswitch;
     break;
-  case 536871910:
+  case 536871911:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -64213,176 +64508,176 @@ p4_pd_netbufferv4_eg_port_forward_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871328:
+  case 536871329:
     action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq;
     break;
-  case 536871332:
+  case 536871333:
     action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq_pop;
     break;
-  case 536871336:
+  case 536871337:
     action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getreq_nlatest;
     break;
-  case 536871348:
+  case 536871349:
     action_spec->name = p4_pd_netbufferv4_update_getreq_inswitch_to_getres_by_mirroring;
     unbuild_action_spec_update_getreq_inswitch_to_getres_by_mirroring(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_getreq_inswitch_to_getres_by_mirroring);
     break;
-  case 536871354:
+  case 536871355:
     action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres;
     break;
-  case 536871365:
+  case 536871366:
     action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss;
     unbuild_action_spec_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss);
     break;
-  case 536871369:
+  case 536871370:
     action_spec->name = p4_pd_netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss;
     unbuild_action_spec_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss);
     break;
-  case 536871375:
+  case 536871376:
     action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres;
     break;
-  case 536871386:
+  case 536871387:
     action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
     unbuild_action_spec_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss);
     break;
-  case 536871390:
+  case 536871391:
     action_spec->name = p4_pd_netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
     unbuild_action_spec_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss);
     break;
-  case 536871399:
+  case 536871400:
     action_spec->name = p4_pd_netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone;
     unbuild_action_spec_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone);
     break;
-  case 536871404:
+  case 536871405:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq;
     break;
-  case 536871409:
+  case 536871410:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_pop_seq;
     break;
-  case 536871421:
+  case 536871422:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putres_by_mirroring;
     unbuild_action_spec_update_putreq_inswitch_to_putres_by_mirroring(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_putreq_inswitch_to_putres_by_mirroring);
     break;
-  case 536871433:
+  case 536871434:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
     unbuild_action_spec_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres);
     break;
-  case 536871437:
+  case 536871438:
     action_spec->name = p4_pd_netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
     unbuild_action_spec_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres);
     break;
-  case 536871450:
+  case 536871451:
     action_spec->name = p4_pd_netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
     unbuild_action_spec_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring);
     break;
-  case 536871455:
+  case 536871456:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_seq_case3;
     break;
-  case 536871460:
+  case 536871461:
     action_spec->name = p4_pd_netbufferv4_update_putreq_inswitch_to_putreq_pop_seq_case3;
     break;
-  case 536871465:
+  case 536871466:
     action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq;
     break;
-  case 536871477:
+  case 536871478:
     action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delres_by_mirroring;
     unbuild_action_spec_update_delreq_inswitch_to_delres_by_mirroring(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_delreq_inswitch_to_delres_by_mirroring);
     break;
-  case 536871489:
+  case 536871490:
     action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
     unbuild_action_spec_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres);
     break;
-  case 536871493:
+  case 536871494:
     action_spec->name = p4_pd_netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
     unbuild_action_spec_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres);
     break;
-  case 536871506:
+  case 536871507:
     action_spec->name = p4_pd_netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
     unbuild_action_spec_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring);
     break;
-  case 536871511:
+  case 536871512:
     action_spec->name = p4_pd_netbufferv4_update_delreq_inswitch_to_delreq_seq_case3;
     break;
-  case 536871517:
+  case 536871518:
     action_spec->name = p4_pd_netbufferv4_forward_scanreq_split_and_clone;
     unbuild_action_spec_forward_scanreq_split_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_scanreq_split_and_clone);
     break;
-  case 536871521:
+  case 536871522:
     action_spec->name = p4_pd_netbufferv4_forward_scanreq_split;
     break;
-  case 536871530:
+  case 536871531:
     action_spec->name = p4_pd_netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone;
     unbuild_action_spec_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone);
     break;
-  case 536871541:
+  case 536871542:
     action_spec->name = p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone;
     unbuild_action_spec_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone);
     break;
-  case 536871551:
+  case 536871552:
     action_spec->name = p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
     unbuild_action_spec_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone);
     break;
-  case 536871560:
+  case 536871561:
     action_spec->name = p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
     unbuild_action_spec_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone);
     break;
-  case 536871561:
+  case 536871562:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -64482,10 +64777,10 @@ p4_pd_netbufferv4_hash_for_cm1_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871234:
+  case 536871236:
     action_spec->name = p4_pd_netbufferv4_hash_for_cm1;
     break;
-  case 536871235:
+  case 536871237:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -64585,10 +64880,10 @@ p4_pd_netbufferv4_hash_for_cm2_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871242:
+  case 536871244:
     action_spec->name = p4_pd_netbufferv4_hash_for_cm2;
     break;
-  case 536871243:
+  case 536871245:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -64688,10 +64983,10 @@ p4_pd_netbufferv4_hash_for_cm3_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871248:
+  case 536871250:
     action_spec->name = p4_pd_netbufferv4_hash_for_cm3;
     break;
-  case 536871249:
+  case 536871251:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -64791,10 +65086,10 @@ p4_pd_netbufferv4_hash_for_cm4_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871255:
+  case 536871257:
     action_spec->name = p4_pd_netbufferv4_hash_for_cm4;
     break;
-  case 536871256:
+  case 536871258:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -64894,10 +65189,10 @@ p4_pd_netbufferv4_hash_for_seq_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871245:
+  case 536871247:
     action_spec->name = p4_pd_netbufferv4_hash_for_seq;
     break;
-  case 536871246:
+  case 536871248:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -64997,25 +65292,25 @@ p4_pd_netbufferv4_ig_port_forward_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871274:
+  case 536871275:
     action_spec->name = p4_pd_netbufferv4_update_getreq_to_getreq_inswitch;
     break;
-  case 536871278:
+  case 536871279:
     action_spec->name = p4_pd_netbufferv4_update_getres_latest_seq_to_getres_latest_seq_inswitch;
     break;
-  case 536871282:
+  case 536871283:
     action_spec->name = p4_pd_netbufferv4_update_getres_deleted_seq_to_getres_deleted_seq_inswitch;
     break;
-  case 536871287:
+  case 536871288:
     action_spec->name = p4_pd_netbufferv4_update_putreq_to_putreq_inswitch;
     break;
-  case 536871292:
+  case 536871293:
     action_spec->name = p4_pd_netbufferv4_update_delreq_to_delreq_inswitch;
     break;
-  case 536871295:
+  case 536871296:
     action_spec->name = p4_pd_netbufferv4_update_scanreq_to_scanreq_split;
     break;
-  case 536871296:
+  case 536871297:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -65115,21 +65410,21 @@ p4_pd_netbufferv4_ipv4_forward_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871261:
+  case 536871263:
     action_spec->name = p4_pd_netbufferv4_forward_normal_response;
     unbuild_action_spec_forward_normal_response(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_normal_response);
     break;
-  case 536871265:
+  case 536871266:
     action_spec->name = p4_pd_netbufferv4_forward_special_get_response;
     unbuild_action_spec_forward_special_get_response(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_forward_special_get_response);
     break;
-  case 536871266:
+  case 536871267:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -65231,10 +65526,10 @@ p4_pd_netbufferv4_is_hot_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871298:
+  case 536871299:
     action_spec->name = p4_pd_netbufferv4_set_is_hot;
     break;
-  case 536871300:
+  case 536871301:
     action_spec->name = p4_pd_netbufferv4_reset_is_hot;
     break;
   default:
@@ -65407,11 +65702,11 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry
   p4_pd_act_hdl_t act_fn_hdl;
 
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5] = {0};
-  uint8_t pipe_match_mask_bits[5] = {0};
+  uint8_t pipe_match_value_bits[6] = {0};
+  uint8_t pipe_match_mask_bits[6] = {0};
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 5;
-  pipe_match_spec.num_valid_match_bits = 40;
+  pipe_match_spec.num_match_bytes = 6;
+  pipe_match_spec.num_valid_match_bits = 48;
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
   pipe_match_spec.match_field_validity = 0;
   pipe_match_spec.match_field_validity_mask = 0;
@@ -65433,8 +65728,8 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry
   if (status) return status;
 
   // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 40);
-  // assert(pipe_match_spec.num_match_bytes == 5);
+  // assert(pipe_match_spec.num_valid_match_bits == 48);
+  // assert(pipe_match_spec.num_match_bytes == 6);
   // assert(pipe_match_spec.num_match_validity_fields == 0);
 
   assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
@@ -65443,13 +65738,13 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871318:
+  case 536871319:
     action_spec->name = p4_pd_netbufferv4_set_is_lastclone;
     break;
-  case 536871321:
+  case 536871322:
     action_spec->name = p4_pd_netbufferv4_set_is_lastscansplit;
     break;
-  case 536871324:
+  case 536871325:
     action_spec->name = p4_pd_netbufferv4_reset_is_lastclone_lastscansplit;
     break;
   default:
@@ -65457,7 +65752,7 @@ p4_pd_netbufferv4_lastclone_lastscansplit_tbl_get_entry
     break;
   }
 
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 5 > 0);
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 6 > 0);
   if(!is_default_entry)
     unbuild_key_lastclone_lastscansplit_tbl(&pipe_match_spec, match_spec);
 
@@ -65616,11 +65911,11 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_entry
   p4_pd_act_hdl_t act_fn_hdl;
 
   pipe_tbl_match_spec_t pipe_match_spec = {0};
-  uint8_t pipe_match_value_bits[5] = {0};
-  uint8_t pipe_match_mask_bits[5] = {0};
+  uint8_t pipe_match_value_bits[7] = {0};
+  uint8_t pipe_match_mask_bits[7] = {0};
   pipe_match_spec.match_value_bits = pipe_match_value_bits;
-  pipe_match_spec.num_match_bytes = 5;
-  pipe_match_spec.num_valid_match_bits = 26;
+  pipe_match_spec.num_match_bytes = 7;
+  pipe_match_spec.num_valid_match_bits = 49;
   pipe_match_spec.match_mask_bits = pipe_match_mask_bits;
   pipe_match_spec.match_field_validity = 0;
   pipe_match_spec.match_field_validity_mask = 0;
@@ -65642,8 +65937,8 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_entry
   if (status) return status;
 
   // some sanity checking on the returned spec
-  // assert(pipe_match_spec.num_valid_match_bits == 26);
-  // assert(pipe_match_spec.num_match_bytes == 5);
+  // assert(pipe_match_spec.num_valid_match_bits == 49);
+  // assert(pipe_match_spec.num_match_bytes == 7);
   // assert(pipe_match_spec.num_match_validity_fields == 0);
 
   assert(pipe_action_spec.pipe_action_datatype_bmap == PIPE_ACTION_DATA_TYPE);
@@ -65652,14 +65947,14 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871258:
+  case 536871260:
     action_spec->name = p4_pd_netbufferv4_set_client_sid;
     unbuild_action_spec_set_client_sid(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_set_client_sid);
     break;
-  case 536871259:
+  case 536871261:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -65667,10 +65962,12 @@ p4_pd_netbufferv4_prepare_for_cachehit_tbl_get_entry
     break;
   }
 
-  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 5 > 0);
+  bool is_default_entry = (pipe_match_spec.match_value_bits == NULL && 7 > 0);
   if(!is_default_entry)
     unbuild_key_prepare_for_cachehit_tbl(&pipe_match_spec, match_spec);
 
+  if(!is_default_entry)
+    unbuild_mask_prepare_for_cachehit_tbl(&pipe_match_spec, match_spec);
 
   (void)action_spec;
   if (res_spec) {
@@ -65759,21 +66056,21 @@ p4_pd_netbufferv4_process_scanreq_split_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871304:
+  case 536871305:
     action_spec->name = p4_pd_netbufferv4_process_scanreq_split;
     unbuild_action_spec_process_scanreq_split(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_process_scanreq_split);
     break;
-  case 536871309:
+  case 536871310:
     action_spec->name = p4_pd_netbufferv4_process_cloned_scanreq_split;
     unbuild_action_spec_process_cloned_scanreq_split(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_process_cloned_scanreq_split);
     break;
-  case 536871312:
+  case 536871313:
     action_spec->name = p4_pd_netbufferv4_reset_meta_serversid_remainscannum;
     break;
   default:
@@ -65874,14 +66171,14 @@ p4_pd_netbufferv4_range_partition_for_scan_endkey_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871239:
+  case 536871241:
     action_spec->name = p4_pd_netbufferv4_range_partition_for_scan_endkey;
     unbuild_action_spec_range_partition_for_scan_endkey(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_range_partition_for_scan_endkey);
     break;
-  case 536871240:
+  case 536871242:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -65999,7 +66296,14 @@ p4_pd_netbufferv4_range_partition_tbl_get_entry
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_range_partition_for_scan);
     break;
-  case 536871227:
+  case 536871228:
+    action_spec->name = p4_pd_netbufferv4_range_partition_for_special_response;
+    unbuild_action_spec_range_partition_for_special_response(pipe_action_data_spec,
+                                  res_spec,
+                                  resource_cnt,
+                                  &action_spec->u.p4_pd_netbufferv4_range_partition_for_special_response);
+    break;
+  case 536871229:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -66209,10 +66513,10 @@ p4_pd_netbufferv4_sample_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871268:
+  case 536871269:
     action_spec->name = p4_pd_netbufferv4_sample;
     break;
-  case 536871269:
+  case 536871270:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -66312,10 +66616,10 @@ p4_pd_netbufferv4_save_client_udpport_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871314:
+  case 536871315:
     action_spec->name = p4_pd_netbufferv4_save_client_udpport;
     break;
-  case 536871315:
+  case 536871316:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -66515,10 +66819,10 @@ p4_pd_netbufferv4_snapshot_flag_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871251:
+  case 536871253:
     action_spec->name = p4_pd_netbufferv4_set_snapshot_flag;
     break;
-  case 536871253:
+  case 536871255:
     action_spec->name = p4_pd_netbufferv4_reset_snapshot_flag;
     break;
   default:
@@ -66618,28 +66922,28 @@ p4_pd_netbufferv4_update_ipmac_srcport_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871567:
+  case 536871568:
     action_spec->name = p4_pd_netbufferv4_update_ipmac_srcport_server2client;
     unbuild_action_spec_update_ipmac_srcport_server2client(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_ipmac_srcport_server2client);
     break;
-  case 536871573:
+  case 536871574:
     action_spec->name = p4_pd_netbufferv4_update_ipmac_srcport_switch2switchos;
     unbuild_action_spec_update_ipmac_srcport_switch2switchos(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_ipmac_srcport_switch2switchos);
     break;
-  case 536871576:
+  case 536871577:
     action_spec->name = p4_pd_netbufferv4_update_dstipmac_client2server;
     unbuild_action_spec_update_dstipmac_client2server(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_dstipmac_client2server);
     break;
-  case 536871577:
+  case 536871578:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -66740,14 +67044,14 @@ p4_pd_netbufferv4_update_pktlen_tbl_get_entry
   build_pd_res_spec(&pipe_action_spec, &res_spec, &resource_cnt);
 
   switch(act_fn_hdl) {
-  case 536871580:
+  case 536871581:
     action_spec->name = p4_pd_netbufferv4_update_pktlen;
     unbuild_action_spec_update_pktlen(pipe_action_data_spec,
                                   res_spec,
                                   resource_cnt,
                                   &action_spec->u.p4_pd_netbufferv4_update_pktlen);
     break;
-  case 536871581:
+  case 536871582:
     action_spec->name = p4_pd_netbufferv4_nop;
     break;
   default:
@@ -70484,6 +70788,7 @@ const char * p4_pd_netbufferv4_action_name_strings[] = {
   "p4_pd_netbufferv4_range_partition_for_scan_endkey",
   "p4_pd_netbufferv4_range_partition",
   "p4_pd_netbufferv4_range_partition_for_scan",
+  "p4_pd_netbufferv4_range_partition_for_special_response",
   "p4_pd_netbufferv4_recirculate_pkt",
   "p4_pd_netbufferv4_sample",
   "p4_pd_netbufferv4_save_client_udpport",
@@ -70711,6 +71016,7 @@ p4_pd_netbufferv4_action_names_t p4_pd_netbufferv4_action_string_to_enum(const c
   if (0 == strcmp(s, "p4_pd_netbufferv4_range_partition_for_scan_endkey")) return p4_pd_netbufferv4_range_partition_for_scan_endkey;
   if (0 == strcmp(s, "p4_pd_netbufferv4_range_partition")) return p4_pd_netbufferv4_range_partition;
   if (0 == strcmp(s, "p4_pd_netbufferv4_range_partition_for_scan")) return p4_pd_netbufferv4_range_partition_for_scan;
+  if (0 == strcmp(s, "p4_pd_netbufferv4_range_partition_for_special_response")) return p4_pd_netbufferv4_range_partition_for_special_response;
   if (0 == strcmp(s, "p4_pd_netbufferv4_recirculate_pkt")) return p4_pd_netbufferv4_recirculate_pkt;
   if (0 == strcmp(s, "p4_pd_netbufferv4_sample")) return p4_pd_netbufferv4_sample;
   if (0 == strcmp(s, "p4_pd_netbufferv4_save_client_udpport")) return p4_pd_netbufferv4_save_client_udpport;
@@ -79653,6 +79959,10 @@ p4_pd_netbufferv4_snapshot_capture_trigger_set(
           pd_trig_mask.u.ig.stat_hdr_nodeidx_foreval = htons(pd_trig_mask.u.ig.stat_hdr_nodeidx_foreval);
 #endif
 #ifdef LITTLE_ENDIAN_CALLER
+          pd_trig_spec.u.ig.clone_hdr_clonenum_for_pktloss = htons(pd_trig_spec.u.ig.clone_hdr_clonenum_for_pktloss);
+          pd_trig_mask.u.ig.clone_hdr_clonenum_for_pktloss = htons(pd_trig_mask.u.ig.clone_hdr_clonenum_for_pktloss);
+#endif
+#ifdef LITTLE_ENDIAN_CALLER
           pd_trig_spec.u.ig.clone_hdr_client_udpport = htons(pd_trig_spec.u.ig.clone_hdr_client_udpport);
           pd_trig_mask.u.ig.clone_hdr_client_udpport = htons(pd_trig_mask.u.ig.clone_hdr_client_udpport);
 #endif
@@ -79940,6 +80250,10 @@ p4_pd_netbufferv4_snapshot_capture_trigger_set(
 #ifdef LITTLE_ENDIAN_CALLER
           pd_trig_spec.u.eg.stat_hdr_nodeidx_foreval = htons(pd_trig_spec.u.eg.stat_hdr_nodeidx_foreval);
           pd_trig_mask.u.eg.stat_hdr_nodeidx_foreval = htons(pd_trig_mask.u.eg.stat_hdr_nodeidx_foreval);
+#endif
+#ifdef LITTLE_ENDIAN_CALLER
+          pd_trig_spec.u.eg.clone_hdr_clonenum_for_pktloss = htons(pd_trig_spec.u.eg.clone_hdr_clonenum_for_pktloss);
+          pd_trig_mask.u.eg.clone_hdr_clonenum_for_pktloss = htons(pd_trig_mask.u.eg.clone_hdr_clonenum_for_pktloss);
 #endif
 #ifdef LITTLE_ENDIAN_CALLER
           pd_trig_spec.u.eg.clone_hdr_client_udpport = htons(pd_trig_spec.u.eg.clone_hdr_client_udpport);

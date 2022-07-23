@@ -600,12 +600,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 2*client_physical_num=4 < 2*8=16 < 32)
             print "Configuring prepare_for_cachehit_tbl"
-            for client_physical_idx in range(client_phyiscal_num):
+            for client_physical_idx in range(client_physical_num):
                 tmp_clientip = client_ips[client_physical_idx]
                 for tmpoptype in [GETREQ_SPINE]:
                     matchspec0 = distcacheleaf_prepare_for_cachehit_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
-                            ipv4_hdr_srcAddr = tmp_clientip,
+                            ipv4_hdr_srcAddr = ipv4Addr_to_i32(tmp_clientip),
                             ipv4_hdr_srcAddr_prefix_length = 32)
                             #ig_intr_md_ingress_port = self.spineswitch_devport)
                     actnspec0 = distcacheleaf_set_client_sid_action_spec_t(self.spineswitch_sid)

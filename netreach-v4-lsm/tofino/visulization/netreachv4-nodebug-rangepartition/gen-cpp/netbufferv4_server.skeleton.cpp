@@ -987,6 +987,11 @@ class netbufferv4Handler : virtual public netbufferv4If {
     printf("range_partition_tbl_table_add_with_range_partition_for_scan\n");
   }
 
+  EntryHandle_t range_partition_tbl_table_add_with_range_partition_for_special_response(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_range_partition_tbl_match_spec_t& match_spec, const int32_t priority, const netbufferv4_range_partition_for_special_response_action_spec_t& action_spec) {
+    // Your implementation goes here
+    printf("range_partition_tbl_table_add_with_range_partition_for_special_response\n");
+  }
+
   EntryHandle_t range_partition_tbl_table_add_with_nop(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_range_partition_tbl_match_spec_t& match_spec, const int32_t priority) {
     // Your implementation goes here
     printf("range_partition_tbl_table_add_with_nop\n");
@@ -2965,6 +2970,16 @@ class netbufferv4Handler : virtual public netbufferv4If {
   void range_partition_tbl_table_modify_with_range_partition_for_scan_by_match_spec(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_range_partition_tbl_match_spec_t& match_spec, const int32_t priority, const netbufferv4_range_partition_for_scan_action_spec_t& action_spec) {
     // Your implementation goes here
     printf("range_partition_tbl_table_modify_with_range_partition_for_scan_by_match_spec\n");
+  }
+
+  void range_partition_tbl_table_modify_with_range_partition_for_special_response(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry, const netbufferv4_range_partition_for_special_response_action_spec_t& action_spec) {
+    // Your implementation goes here
+    printf("range_partition_tbl_table_modify_with_range_partition_for_special_response\n");
+  }
+
+  void range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const netbufferv4_range_partition_tbl_match_spec_t& match_spec, const int32_t priority, const netbufferv4_range_partition_for_special_response_action_spec_t& action_spec) {
+    // Your implementation goes here
+    printf("range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec\n");
   }
 
   void range_partition_tbl_table_modify_with_nop(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const int8_t dev_id, const EntryHandle_t entry) {

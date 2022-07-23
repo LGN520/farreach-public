@@ -391,6 +391,8 @@ class netbufferv4_range_partition_action_spec_t;
 
 class netbufferv4_range_partition_for_scan_action_spec_t;
 
+class netbufferv4_range_partition_for_special_response_action_spec_t;
+
 class netbufferv4_recirculate_pkt_action_spec_t;
 
 class netbufferv4_set_hot_threshold_action_spec_t;
@@ -2598,8 +2600,8 @@ void swap(netbufferv4_l2l3_forward_tbl_match_spec_t &a, netbufferv4_l2l3_forward
 class netbufferv4_lastclone_lastscansplit_tbl_match_spec_t {
  public:
 
-  static const char* ascii_fingerprint; // = "11924ABA156D2815442A82BB9335D12A";
-  static const uint8_t binary_fingerprint[16]; // = {0x11,0x92,0x4A,0xBA,0x15,0x6D,0x28,0x15,0x44,0x2A,0x82,0xBB,0x93,0x35,0xD1,0x2A};
+  static const char* ascii_fingerprint; // = "EEBEE5F2DAE75B1AB615147C163DCA93";
+  static const uint8_t binary_fingerprint[16]; // = {0xEE,0xBE,0xE5,0xF2,0xDA,0xE7,0x5B,0x1A,0xB6,0x15,0x14,0x7C,0x16,0x3D,0xCA,0x93};
 
   netbufferv4_lastclone_lastscansplit_tbl_match_spec_t(const netbufferv4_lastclone_lastscansplit_tbl_match_spec_t&);
   netbufferv4_lastclone_lastscansplit_tbl_match_spec_t& operator=(const netbufferv4_lastclone_lastscansplit_tbl_match_spec_t&);
@@ -2608,12 +2610,12 @@ class netbufferv4_lastclone_lastscansplit_tbl_match_spec_t {
 
   virtual ~netbufferv4_lastclone_lastscansplit_tbl_match_spec_t() throw();
   int16_t op_hdr_optype;
-  int8_t clone_hdr_clonenum_for_pktloss;
+  int16_t clone_hdr_clonenum_for_pktloss;
   int16_t meta_remain_scannum;
 
   void __set_op_hdr_optype(const int16_t val);
 
-  void __set_clone_hdr_clonenum_for_pktloss(const int8_t val);
+  void __set_clone_hdr_clonenum_for_pktloss(const int16_t val);
 
   void __set_meta_remain_scannum(const int16_t val);
 
@@ -2687,22 +2689,25 @@ void swap(netbufferv4_need_recirculate_tbl_match_spec_t &a, netbufferv4_need_rec
 class netbufferv4_prepare_for_cachehit_tbl_match_spec_t {
  public:
 
-  static const char* ascii_fingerprint; // = "47122A80B641FECF98DEC5A7D2B1FC3F";
-  static const uint8_t binary_fingerprint[16]; // = {0x47,0x12,0x2A,0x80,0xB6,0x41,0xFE,0xCF,0x98,0xDE,0xC5,0xA7,0xD2,0xB1,0xFC,0x3F};
+  static const char* ascii_fingerprint; // = "E1AFF8138A70C2749C771AC733FAF500";
+  static const uint8_t binary_fingerprint[16]; // = {0xE1,0xAF,0xF8,0x13,0x8A,0x70,0xC2,0x74,0x9C,0x77,0x1A,0xC7,0x33,0xFA,0xF5,0x00};
 
   netbufferv4_prepare_for_cachehit_tbl_match_spec_t(const netbufferv4_prepare_for_cachehit_tbl_match_spec_t&);
   netbufferv4_prepare_for_cachehit_tbl_match_spec_t& operator=(const netbufferv4_prepare_for_cachehit_tbl_match_spec_t&);
-  netbufferv4_prepare_for_cachehit_tbl_match_spec_t() : op_hdr_optype(0), ig_intr_md_ingress_port(0), meta_need_recirculate(0) {
+  netbufferv4_prepare_for_cachehit_tbl_match_spec_t() : op_hdr_optype(0), ipv4_hdr_srcAddr(0), ipv4_hdr_srcAddr_prefix_length(0), meta_need_recirculate(0) {
   }
 
   virtual ~netbufferv4_prepare_for_cachehit_tbl_match_spec_t() throw();
   int16_t op_hdr_optype;
-  int16_t ig_intr_md_ingress_port;
+  int32_t ipv4_hdr_srcAddr;
+  int16_t ipv4_hdr_srcAddr_prefix_length;
   int8_t meta_need_recirculate;
 
   void __set_op_hdr_optype(const int16_t val);
 
-  void __set_ig_intr_md_ingress_port(const int16_t val);
+  void __set_ipv4_hdr_srcAddr(const int32_t val);
+
+  void __set_ipv4_hdr_srcAddr_prefix_length(const int16_t val);
 
   void __set_meta_need_recirculate(const int8_t val);
 
@@ -2710,7 +2715,9 @@ class netbufferv4_prepare_for_cachehit_tbl_match_spec_t {
   {
     if (!(op_hdr_optype == rhs.op_hdr_optype))
       return false;
-    if (!(ig_intr_md_ingress_port == rhs.ig_intr_md_ingress_port))
+    if (!(ipv4_hdr_srcAddr == rhs.ipv4_hdr_srcAddr))
+      return false;
+    if (!(ipv4_hdr_srcAddr_prefix_length == rhs.ipv4_hdr_srcAddr_prefix_length))
       return false;
     if (!(meta_need_recirculate == rhs.meta_need_recirculate))
       return false;
@@ -5568,6 +5575,43 @@ class netbufferv4_range_partition_for_scan_action_spec_t {
 void swap(netbufferv4_range_partition_for_scan_action_spec_t &a, netbufferv4_range_partition_for_scan_action_spec_t &b);
 
 
+class netbufferv4_range_partition_for_special_response_action_spec_t {
+ public:
+
+  static const char* ascii_fingerprint; // = "565787C31CF2D774B532CB755189BF39";
+  static const uint8_t binary_fingerprint[16]; // = {0x56,0x57,0x87,0xC3,0x1C,0xF2,0xD7,0x74,0xB5,0x32,0xCB,0x75,0x51,0x89,0xBF,0x39};
+
+  netbufferv4_range_partition_for_special_response_action_spec_t(const netbufferv4_range_partition_for_special_response_action_spec_t&);
+  netbufferv4_range_partition_for_special_response_action_spec_t& operator=(const netbufferv4_range_partition_for_special_response_action_spec_t&);
+  netbufferv4_range_partition_for_special_response_action_spec_t() : action_eport(0) {
+  }
+
+  virtual ~netbufferv4_range_partition_for_special_response_action_spec_t() throw();
+  int16_t action_eport;
+
+  void __set_action_eport(const int16_t val);
+
+  bool operator == (const netbufferv4_range_partition_for_special_response_action_spec_t & rhs) const
+  {
+    if (!(action_eport == rhs.action_eport))
+      return false;
+    return true;
+  }
+  bool operator != (const netbufferv4_range_partition_for_special_response_action_spec_t &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const netbufferv4_range_partition_for_special_response_action_spec_t & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  friend std::ostream& operator<<(std::ostream& out, const netbufferv4_range_partition_for_special_response_action_spec_t& obj);
+};
+
+void swap(netbufferv4_range_partition_for_special_response_action_spec_t &a, netbufferv4_range_partition_for_special_response_action_spec_t &b);
+
+
 class netbufferv4_recirculate_pkt_action_spec_t {
  public:
 
@@ -5840,7 +5884,7 @@ class netbufferv4_update_pktlen_action_spec_t {
 void swap(netbufferv4_update_pktlen_action_spec_t &a, netbufferv4_update_pktlen_action_spec_t &b);
 
 typedef struct _netbufferv4_action_specs_t__isset {
-  _netbufferv4_action_specs_t__isset() : netbufferv4_cached_action(false), netbufferv4_update_getreq_inswitch_to_getres_by_mirroring(false), netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(false), netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(false), netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(false), netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(false), netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(false), netbufferv4_update_putreq_inswitch_to_putres_by_mirroring(false), netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(false), netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(false), netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(false), netbufferv4_update_delreq_inswitch_to_delres_by_mirroring(false), netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(false), netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(false), netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(false), netbufferv4_forward_scanreq_split_and_clone(false), netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(false), netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(false), netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(false), netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(false), netbufferv4_forward_normal_response(false), netbufferv4_forward_special_get_response(false), netbufferv4_l2l3_forward(false), netbufferv4_set_client_sid(false), netbufferv4_process_scanreq_split(false), netbufferv4_process_cloned_scanreq_split(false), netbufferv4_range_partition_for_scan_endkey(false), netbufferv4_range_partition(false), netbufferv4_range_partition_for_scan(false), netbufferv4_recirculate_pkt(false), netbufferv4_set_hot_threshold(false), netbufferv4_update_ipmac_srcport_server2client(false), netbufferv4_update_ipmac_srcport_switch2switchos(false), netbufferv4_update_dstipmac_client2server(false), netbufferv4_update_pktlen(false) {}
+  _netbufferv4_action_specs_t__isset() : netbufferv4_cached_action(false), netbufferv4_update_getreq_inswitch_to_getres_by_mirroring(false), netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss(false), netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss(false), netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss(false), netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(false), netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone(false), netbufferv4_update_putreq_inswitch_to_putres_by_mirroring(false), netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(false), netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres(false), netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring(false), netbufferv4_update_delreq_inswitch_to_delres_by_mirroring(false), netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(false), netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres(false), netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring(false), netbufferv4_forward_scanreq_split_and_clone(false), netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone(false), netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone(false), netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone(false), netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone(false), netbufferv4_forward_normal_response(false), netbufferv4_forward_special_get_response(false), netbufferv4_l2l3_forward(false), netbufferv4_set_client_sid(false), netbufferv4_process_scanreq_split(false), netbufferv4_process_cloned_scanreq_split(false), netbufferv4_range_partition_for_scan_endkey(false), netbufferv4_range_partition(false), netbufferv4_range_partition_for_scan(false), netbufferv4_range_partition_for_special_response(false), netbufferv4_recirculate_pkt(false), netbufferv4_set_hot_threshold(false), netbufferv4_update_ipmac_srcport_server2client(false), netbufferv4_update_ipmac_srcport_switch2switchos(false), netbufferv4_update_dstipmac_client2server(false), netbufferv4_update_pktlen(false) {}
   bool netbufferv4_cached_action :1;
   bool netbufferv4_update_getreq_inswitch_to_getres_by_mirroring :1;
   bool netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss :1;
@@ -5870,6 +5914,7 @@ typedef struct _netbufferv4_action_specs_t__isset {
   bool netbufferv4_range_partition_for_scan_endkey :1;
   bool netbufferv4_range_partition :1;
   bool netbufferv4_range_partition_for_scan :1;
+  bool netbufferv4_range_partition_for_special_response :1;
   bool netbufferv4_recirculate_pkt :1;
   bool netbufferv4_set_hot_threshold :1;
   bool netbufferv4_update_ipmac_srcport_server2client :1;
@@ -5881,8 +5926,8 @@ typedef struct _netbufferv4_action_specs_t__isset {
 class netbufferv4_action_specs_t {
  public:
 
-  static const char* ascii_fingerprint; // = "F09E86ACC42918EC5C59825D131ED465";
-  static const uint8_t binary_fingerprint[16]; // = {0xF0,0x9E,0x86,0xAC,0xC4,0x29,0x18,0xEC,0x5C,0x59,0x82,0x5D,0x13,0x1E,0xD4,0x65};
+  static const char* ascii_fingerprint; // = "6AF9326A893EDED47384B569D623B249";
+  static const uint8_t binary_fingerprint[16]; // = {0x6A,0xF9,0x32,0x6A,0x89,0x3E,0xDE,0xD4,0x73,0x84,0xB5,0x69,0xD6,0x23,0xB2,0x49};
 
   netbufferv4_action_specs_t(const netbufferv4_action_specs_t&);
   netbufferv4_action_specs_t& operator=(const netbufferv4_action_specs_t&);
@@ -5919,6 +5964,7 @@ class netbufferv4_action_specs_t {
   netbufferv4_range_partition_for_scan_endkey_action_spec_t netbufferv4_range_partition_for_scan_endkey;
   netbufferv4_range_partition_action_spec_t netbufferv4_range_partition;
   netbufferv4_range_partition_for_scan_action_spec_t netbufferv4_range_partition_for_scan;
+  netbufferv4_range_partition_for_special_response_action_spec_t netbufferv4_range_partition_for_special_response;
   netbufferv4_recirculate_pkt_action_spec_t netbufferv4_recirculate_pkt;
   netbufferv4_set_hot_threshold_action_spec_t netbufferv4_set_hot_threshold;
   netbufferv4_update_ipmac_srcport_server2client_action_spec_t netbufferv4_update_ipmac_srcport_server2client;
@@ -5985,6 +6031,8 @@ class netbufferv4_action_specs_t {
   void __set_netbufferv4_range_partition(const netbufferv4_range_partition_action_spec_t& val);
 
   void __set_netbufferv4_range_partition_for_scan(const netbufferv4_range_partition_for_scan_action_spec_t& val);
+
+  void __set_netbufferv4_range_partition_for_special_response(const netbufferv4_range_partition_for_special_response_action_spec_t& val);
 
   void __set_netbufferv4_recirculate_pkt(const netbufferv4_recirculate_pkt_action_spec_t& val);
 
@@ -6058,6 +6106,8 @@ class netbufferv4_action_specs_t {
       return false;
     if (!(netbufferv4_range_partition_for_scan == rhs.netbufferv4_range_partition_for_scan))
       return false;
+    if (!(netbufferv4_range_partition_for_special_response == rhs.netbufferv4_range_partition_for_special_response))
+      return false;
     if (!(netbufferv4_recirculate_pkt == rhs.netbufferv4_recirculate_pkt))
       return false;
     if (!(netbufferv4_set_hot_threshold == rhs.netbufferv4_set_hot_threshold))
@@ -6090,8 +6140,8 @@ void swap(netbufferv4_action_specs_t &a, netbufferv4_action_specs_t &b);
 class netbufferv4_action_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "96C7B79AD099769AE1BB09423F640162";
-  static const uint8_t binary_fingerprint[16]; // = {0x96,0xC7,0xB7,0x9A,0xD0,0x99,0x76,0x9A,0xE1,0xBB,0x09,0x42,0x3F,0x64,0x01,0x62};
+  static const char* ascii_fingerprint; // = "CBC96E5317E177C06FE04C11633461BC";
+  static const uint8_t binary_fingerprint[16]; // = {0xCB,0xC9,0x6E,0x53,0x17,0xE1,0x77,0xC0,0x6F,0xE0,0x4C,0x11,0x63,0x34,0x61,0xBC};
 
   netbufferv4_action_desc_t(const netbufferv4_action_desc_t&);
   netbufferv4_action_desc_t& operator=(const netbufferv4_action_desc_t&);
@@ -6132,8 +6182,8 @@ void swap(netbufferv4_action_desc_t &a, netbufferv4_action_desc_t &b);
 class netbufferv4_access_cache_frequency_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "2CA11B3A1EA40C35A0E1A86CCEE95A69";
-  static const uint8_t binary_fingerprint[16]; // = {0x2C,0xA1,0x1B,0x3A,0x1E,0xA4,0x0C,0x35,0xA0,0xE1,0xA8,0x6C,0xCE,0xE9,0x5A,0x69};
+  static const char* ascii_fingerprint; // = "974EFCFCD342CB87F87260CA05667A36";
+  static const uint8_t binary_fingerprint[16]; // = {0x97,0x4E,0xFC,0xFC,0xD3,0x42,0xCB,0x87,0xF8,0x72,0x60,0xCA,0x05,0x66,0x7A,0x36};
 
   netbufferv4_access_cache_frequency_tbl_entry_desc_t(const netbufferv4_access_cache_frequency_tbl_entry_desc_t&);
   netbufferv4_access_cache_frequency_tbl_entry_desc_t& operator=(const netbufferv4_access_cache_frequency_tbl_entry_desc_t&);
@@ -6194,8 +6244,8 @@ void swap(netbufferv4_access_cache_frequency_tbl_entry_desc_t &a, netbufferv4_ac
 class netbufferv4_access_case1_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "1DFE3CAE747E2214305356681CE0229E";
-  static const uint8_t binary_fingerprint[16]; // = {0x1D,0xFE,0x3C,0xAE,0x74,0x7E,0x22,0x14,0x30,0x53,0x56,0x68,0x1C,0xE0,0x22,0x9E};
+  static const char* ascii_fingerprint; // = "60AD532EE1B316B4DF7C4B9126AB9A52";
+  static const uint8_t binary_fingerprint[16]; // = {0x60,0xAD,0x53,0x2E,0xE1,0xB3,0x16,0xB4,0xDF,0x7C,0x4B,0x91,0x26,0xAB,0x9A,0x52};
 
   netbufferv4_access_case1_tbl_entry_desc_t(const netbufferv4_access_case1_tbl_entry_desc_t&);
   netbufferv4_access_case1_tbl_entry_desc_t& operator=(const netbufferv4_access_case1_tbl_entry_desc_t&);
@@ -6256,8 +6306,8 @@ void swap(netbufferv4_access_case1_tbl_entry_desc_t &a, netbufferv4_access_case1
 class netbufferv4_access_cm1_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "2CA11B3A1EA40C35A0E1A86CCEE95A69";
-  static const uint8_t binary_fingerprint[16]; // = {0x2C,0xA1,0x1B,0x3A,0x1E,0xA4,0x0C,0x35,0xA0,0xE1,0xA8,0x6C,0xCE,0xE9,0x5A,0x69};
+  static const char* ascii_fingerprint; // = "974EFCFCD342CB87F87260CA05667A36";
+  static const uint8_t binary_fingerprint[16]; // = {0x97,0x4E,0xFC,0xFC,0xD3,0x42,0xCB,0x87,0xF8,0x72,0x60,0xCA,0x05,0x66,0x7A,0x36};
 
   netbufferv4_access_cm1_tbl_entry_desc_t(const netbufferv4_access_cm1_tbl_entry_desc_t&);
   netbufferv4_access_cm1_tbl_entry_desc_t& operator=(const netbufferv4_access_cm1_tbl_entry_desc_t&);
@@ -6318,8 +6368,8 @@ void swap(netbufferv4_access_cm1_tbl_entry_desc_t &a, netbufferv4_access_cm1_tbl
 class netbufferv4_access_cm2_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "2CA11B3A1EA40C35A0E1A86CCEE95A69";
-  static const uint8_t binary_fingerprint[16]; // = {0x2C,0xA1,0x1B,0x3A,0x1E,0xA4,0x0C,0x35,0xA0,0xE1,0xA8,0x6C,0xCE,0xE9,0x5A,0x69};
+  static const char* ascii_fingerprint; // = "974EFCFCD342CB87F87260CA05667A36";
+  static const uint8_t binary_fingerprint[16]; // = {0x97,0x4E,0xFC,0xFC,0xD3,0x42,0xCB,0x87,0xF8,0x72,0x60,0xCA,0x05,0x66,0x7A,0x36};
 
   netbufferv4_access_cm2_tbl_entry_desc_t(const netbufferv4_access_cm2_tbl_entry_desc_t&);
   netbufferv4_access_cm2_tbl_entry_desc_t& operator=(const netbufferv4_access_cm2_tbl_entry_desc_t&);
@@ -6380,8 +6430,8 @@ void swap(netbufferv4_access_cm2_tbl_entry_desc_t &a, netbufferv4_access_cm2_tbl
 class netbufferv4_access_cm3_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "2CA11B3A1EA40C35A0E1A86CCEE95A69";
-  static const uint8_t binary_fingerprint[16]; // = {0x2C,0xA1,0x1B,0x3A,0x1E,0xA4,0x0C,0x35,0xA0,0xE1,0xA8,0x6C,0xCE,0xE9,0x5A,0x69};
+  static const char* ascii_fingerprint; // = "974EFCFCD342CB87F87260CA05667A36";
+  static const uint8_t binary_fingerprint[16]; // = {0x97,0x4E,0xFC,0xFC,0xD3,0x42,0xCB,0x87,0xF8,0x72,0x60,0xCA,0x05,0x66,0x7A,0x36};
 
   netbufferv4_access_cm3_tbl_entry_desc_t(const netbufferv4_access_cm3_tbl_entry_desc_t&);
   netbufferv4_access_cm3_tbl_entry_desc_t& operator=(const netbufferv4_access_cm3_tbl_entry_desc_t&);
@@ -6442,8 +6492,8 @@ void swap(netbufferv4_access_cm3_tbl_entry_desc_t &a, netbufferv4_access_cm3_tbl
 class netbufferv4_access_cm4_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "2CA11B3A1EA40C35A0E1A86CCEE95A69";
-  static const uint8_t binary_fingerprint[16]; // = {0x2C,0xA1,0x1B,0x3A,0x1E,0xA4,0x0C,0x35,0xA0,0xE1,0xA8,0x6C,0xCE,0xE9,0x5A,0x69};
+  static const char* ascii_fingerprint; // = "974EFCFCD342CB87F87260CA05667A36";
+  static const uint8_t binary_fingerprint[16]; // = {0x97,0x4E,0xFC,0xFC,0xD3,0x42,0xCB,0x87,0xF8,0x72,0x60,0xCA,0x05,0x66,0x7A,0x36};
 
   netbufferv4_access_cm4_tbl_entry_desc_t(const netbufferv4_access_cm4_tbl_entry_desc_t&);
   netbufferv4_access_cm4_tbl_entry_desc_t& operator=(const netbufferv4_access_cm4_tbl_entry_desc_t&);
@@ -6504,8 +6554,8 @@ void swap(netbufferv4_access_cm4_tbl_entry_desc_t &a, netbufferv4_access_cm4_tbl
 class netbufferv4_access_deleted_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "1DFE3CAE747E2214305356681CE0229E";
-  static const uint8_t binary_fingerprint[16]; // = {0x1D,0xFE,0x3C,0xAE,0x74,0x7E,0x22,0x14,0x30,0x53,0x56,0x68,0x1C,0xE0,0x22,0x9E};
+  static const char* ascii_fingerprint; // = "60AD532EE1B316B4DF7C4B9126AB9A52";
+  static const uint8_t binary_fingerprint[16]; // = {0x60,0xAD,0x53,0x2E,0xE1,0xB3,0x16,0xB4,0xDF,0x7C,0x4B,0x91,0x26,0xAB,0x9A,0x52};
 
   netbufferv4_access_deleted_tbl_entry_desc_t(const netbufferv4_access_deleted_tbl_entry_desc_t&);
   netbufferv4_access_deleted_tbl_entry_desc_t& operator=(const netbufferv4_access_deleted_tbl_entry_desc_t&);
@@ -6566,8 +6616,8 @@ void swap(netbufferv4_access_deleted_tbl_entry_desc_t &a, netbufferv4_access_del
 class netbufferv4_access_latest_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "2CA11B3A1EA40C35A0E1A86CCEE95A69";
-  static const uint8_t binary_fingerprint[16]; // = {0x2C,0xA1,0x1B,0x3A,0x1E,0xA4,0x0C,0x35,0xA0,0xE1,0xA8,0x6C,0xCE,0xE9,0x5A,0x69};
+  static const char* ascii_fingerprint; // = "974EFCFCD342CB87F87260CA05667A36";
+  static const uint8_t binary_fingerprint[16]; // = {0x97,0x4E,0xFC,0xFC,0xD3,0x42,0xCB,0x87,0xF8,0x72,0x60,0xCA,0x05,0x66,0x7A,0x36};
 
   netbufferv4_access_latest_tbl_entry_desc_t(const netbufferv4_access_latest_tbl_entry_desc_t&);
   netbufferv4_access_latest_tbl_entry_desc_t& operator=(const netbufferv4_access_latest_tbl_entry_desc_t&);
@@ -6628,8 +6678,8 @@ void swap(netbufferv4_access_latest_tbl_entry_desc_t &a, netbufferv4_access_late
 class netbufferv4_access_savedseq_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "6D50264926377C0338B361FCE2733965";
-  static const uint8_t binary_fingerprint[16]; // = {0x6D,0x50,0x26,0x49,0x26,0x37,0x7C,0x03,0x38,0xB3,0x61,0xFC,0xE2,0x73,0x39,0x65};
+  static const char* ascii_fingerprint; // = "7442A1498F08267B9480810A11E5FC49";
+  static const uint8_t binary_fingerprint[16]; // = {0x74,0x42,0xA1,0x49,0x8F,0x08,0x26,0x7B,0x94,0x80,0x81,0x0A,0x11,0xE5,0xFC,0x49};
 
   netbufferv4_access_savedseq_tbl_entry_desc_t(const netbufferv4_access_savedseq_tbl_entry_desc_t&);
   netbufferv4_access_savedseq_tbl_entry_desc_t& operator=(const netbufferv4_access_savedseq_tbl_entry_desc_t&);
@@ -6690,8 +6740,8 @@ void swap(netbufferv4_access_savedseq_tbl_entry_desc_t &a, netbufferv4_access_sa
 class netbufferv4_access_seq_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "F8B15103F90C16F5590CB28C702A12BB";
-  static const uint8_t binary_fingerprint[16]; // = {0xF8,0xB1,0x51,0x03,0xF9,0x0C,0x16,0xF5,0x59,0x0C,0xB2,0x8C,0x70,0x2A,0x12,0xBB};
+  static const char* ascii_fingerprint; // = "AF3ECB6B20B812D8290E3219AFCE969C";
+  static const uint8_t binary_fingerprint[16]; // = {0xAF,0x3E,0xCB,0x6B,0x20,0xB8,0x12,0xD8,0x29,0x0E,0x32,0x19,0xAF,0xCE,0x96,0x9C};
 
   netbufferv4_access_seq_tbl_entry_desc_t(const netbufferv4_access_seq_tbl_entry_desc_t&);
   netbufferv4_access_seq_tbl_entry_desc_t& operator=(const netbufferv4_access_seq_tbl_entry_desc_t&);
@@ -6752,8 +6802,8 @@ void swap(netbufferv4_access_seq_tbl_entry_desc_t &a, netbufferv4_access_seq_tbl
 class netbufferv4_access_validvalue_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "ACBACEF710EA20C10E24193B0E685D0F";
-  static const uint8_t binary_fingerprint[16]; // = {0xAC,0xBA,0xCE,0xF7,0x10,0xEA,0x20,0xC1,0x0E,0x24,0x19,0x3B,0x0E,0x68,0x5D,0x0F};
+  static const char* ascii_fingerprint; // = "214E35FA8DECC1D6F66CC73CFCBE6FB6";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x4E,0x35,0xFA,0x8D,0xEC,0xC1,0xD6,0xF6,0x6C,0xC7,0x3C,0xFC,0xBE,0x6F,0xB6};
 
   netbufferv4_access_validvalue_tbl_entry_desc_t(const netbufferv4_access_validvalue_tbl_entry_desc_t&);
   netbufferv4_access_validvalue_tbl_entry_desc_t& operator=(const netbufferv4_access_validvalue_tbl_entry_desc_t&);
@@ -6814,8 +6864,8 @@ void swap(netbufferv4_access_validvalue_tbl_entry_desc_t &a, netbufferv4_access_
 class netbufferv4_add_and_remove_value_header_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "47FB66F2CA753AF97A8B917582F0BE91";
-  static const uint8_t binary_fingerprint[16]; // = {0x47,0xFB,0x66,0xF2,0xCA,0x75,0x3A,0xF9,0x7A,0x8B,0x91,0x75,0x82,0xF0,0xBE,0x91};
+  static const char* ascii_fingerprint; // = "5376D46775EBF0E2FCD3F842F7268504";
+  static const uint8_t binary_fingerprint[16]; // = {0x53,0x76,0xD4,0x67,0x75,0xEB,0xF0,0xE2,0xFC,0xD3,0xF8,0x42,0xF7,0x26,0x85,0x04};
 
   netbufferv4_add_and_remove_value_header_tbl_entry_desc_t(const netbufferv4_add_and_remove_value_header_tbl_entry_desc_t&);
   netbufferv4_add_and_remove_value_header_tbl_entry_desc_t& operator=(const netbufferv4_add_and_remove_value_header_tbl_entry_desc_t&);
@@ -6881,8 +6931,8 @@ void swap(netbufferv4_add_and_remove_value_header_tbl_entry_desc_t &a, netbuffer
 class netbufferv4_cache_lookup_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "0C3898DE53FE3F7D68C958DE511CA13E";
-  static const uint8_t binary_fingerprint[16]; // = {0x0C,0x38,0x98,0xDE,0x53,0xFE,0x3F,0x7D,0x68,0xC9,0x58,0xDE,0x51,0x1C,0xA1,0x3E};
+  static const char* ascii_fingerprint; // = "E6797215970789BE9206431E81070B8C";
+  static const uint8_t binary_fingerprint[16]; // = {0xE6,0x79,0x72,0x15,0x97,0x07,0x89,0xBE,0x92,0x06,0x43,0x1E,0x81,0x07,0x0B,0x8C};
 
   netbufferv4_cache_lookup_tbl_entry_desc_t(const netbufferv4_cache_lookup_tbl_entry_desc_t&);
   netbufferv4_cache_lookup_tbl_entry_desc_t& operator=(const netbufferv4_cache_lookup_tbl_entry_desc_t&);
@@ -6943,8 +6993,8 @@ void swap(netbufferv4_cache_lookup_tbl_entry_desc_t &a, netbufferv4_cache_lookup
 class netbufferv4_drop_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "F8B15103F90C16F5590CB28C702A12BB";
-  static const uint8_t binary_fingerprint[16]; // = {0xF8,0xB1,0x51,0x03,0xF9,0x0C,0x16,0xF5,0x59,0x0C,0xB2,0x8C,0x70,0x2A,0x12,0xBB};
+  static const char* ascii_fingerprint; // = "AF3ECB6B20B812D8290E3219AFCE969C";
+  static const uint8_t binary_fingerprint[16]; // = {0xAF,0x3E,0xCB,0x6B,0x20,0xB8,0x12,0xD8,0x29,0x0E,0x32,0x19,0xAF,0xCE,0x96,0x9C};
 
   netbufferv4_drop_tbl_entry_desc_t(const netbufferv4_drop_tbl_entry_desc_t&);
   netbufferv4_drop_tbl_entry_desc_t& operator=(const netbufferv4_drop_tbl_entry_desc_t&);
@@ -7005,8 +7055,8 @@ void swap(netbufferv4_drop_tbl_entry_desc_t &a, netbufferv4_drop_tbl_entry_desc_
 class netbufferv4_eg_port_forward_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "6489545487AA31F6697DAD9F5431DF05";
-  static const uint8_t binary_fingerprint[16]; // = {0x64,0x89,0x54,0x54,0x87,0xAA,0x31,0xF6,0x69,0x7D,0xAD,0x9F,0x54,0x31,0xDF,0x05};
+  static const char* ascii_fingerprint; // = "A087CBC36C328FD1652BA9DB0A68AD3F";
+  static const uint8_t binary_fingerprint[16]; // = {0xA0,0x87,0xCB,0xC3,0x6C,0x32,0x8F,0xD1,0x65,0x2B,0xA9,0xDB,0x0A,0x68,0xAD,0x3F};
 
   netbufferv4_eg_port_forward_tbl_entry_desc_t(const netbufferv4_eg_port_forward_tbl_entry_desc_t&);
   netbufferv4_eg_port_forward_tbl_entry_desc_t& operator=(const netbufferv4_eg_port_forward_tbl_entry_desc_t&);
@@ -7067,8 +7117,8 @@ void swap(netbufferv4_eg_port_forward_tbl_entry_desc_t &a, netbufferv4_eg_port_f
 class netbufferv4_hash_for_cm1_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "ACBACEF710EA20C10E24193B0E685D0F";
-  static const uint8_t binary_fingerprint[16]; // = {0xAC,0xBA,0xCE,0xF7,0x10,0xEA,0x20,0xC1,0x0E,0x24,0x19,0x3B,0x0E,0x68,0x5D,0x0F};
+  static const char* ascii_fingerprint; // = "214E35FA8DECC1D6F66CC73CFCBE6FB6";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x4E,0x35,0xFA,0x8D,0xEC,0xC1,0xD6,0xF6,0x6C,0xC7,0x3C,0xFC,0xBE,0x6F,0xB6};
 
   netbufferv4_hash_for_cm1_tbl_entry_desc_t(const netbufferv4_hash_for_cm1_tbl_entry_desc_t&);
   netbufferv4_hash_for_cm1_tbl_entry_desc_t& operator=(const netbufferv4_hash_for_cm1_tbl_entry_desc_t&);
@@ -7129,8 +7179,8 @@ void swap(netbufferv4_hash_for_cm1_tbl_entry_desc_t &a, netbufferv4_hash_for_cm1
 class netbufferv4_hash_for_cm2_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "ACBACEF710EA20C10E24193B0E685D0F";
-  static const uint8_t binary_fingerprint[16]; // = {0xAC,0xBA,0xCE,0xF7,0x10,0xEA,0x20,0xC1,0x0E,0x24,0x19,0x3B,0x0E,0x68,0x5D,0x0F};
+  static const char* ascii_fingerprint; // = "214E35FA8DECC1D6F66CC73CFCBE6FB6";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x4E,0x35,0xFA,0x8D,0xEC,0xC1,0xD6,0xF6,0x6C,0xC7,0x3C,0xFC,0xBE,0x6F,0xB6};
 
   netbufferv4_hash_for_cm2_tbl_entry_desc_t(const netbufferv4_hash_for_cm2_tbl_entry_desc_t&);
   netbufferv4_hash_for_cm2_tbl_entry_desc_t& operator=(const netbufferv4_hash_for_cm2_tbl_entry_desc_t&);
@@ -7191,8 +7241,8 @@ void swap(netbufferv4_hash_for_cm2_tbl_entry_desc_t &a, netbufferv4_hash_for_cm2
 class netbufferv4_hash_for_cm3_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "ACBACEF710EA20C10E24193B0E685D0F";
-  static const uint8_t binary_fingerprint[16]; // = {0xAC,0xBA,0xCE,0xF7,0x10,0xEA,0x20,0xC1,0x0E,0x24,0x19,0x3B,0x0E,0x68,0x5D,0x0F};
+  static const char* ascii_fingerprint; // = "214E35FA8DECC1D6F66CC73CFCBE6FB6";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x4E,0x35,0xFA,0x8D,0xEC,0xC1,0xD6,0xF6,0x6C,0xC7,0x3C,0xFC,0xBE,0x6F,0xB6};
 
   netbufferv4_hash_for_cm3_tbl_entry_desc_t(const netbufferv4_hash_for_cm3_tbl_entry_desc_t&);
   netbufferv4_hash_for_cm3_tbl_entry_desc_t& operator=(const netbufferv4_hash_for_cm3_tbl_entry_desc_t&);
@@ -7253,8 +7303,8 @@ void swap(netbufferv4_hash_for_cm3_tbl_entry_desc_t &a, netbufferv4_hash_for_cm3
 class netbufferv4_hash_for_cm4_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "ACBACEF710EA20C10E24193B0E685D0F";
-  static const uint8_t binary_fingerprint[16]; // = {0xAC,0xBA,0xCE,0xF7,0x10,0xEA,0x20,0xC1,0x0E,0x24,0x19,0x3B,0x0E,0x68,0x5D,0x0F};
+  static const char* ascii_fingerprint; // = "214E35FA8DECC1D6F66CC73CFCBE6FB6";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x4E,0x35,0xFA,0x8D,0xEC,0xC1,0xD6,0xF6,0x6C,0xC7,0x3C,0xFC,0xBE,0x6F,0xB6};
 
   netbufferv4_hash_for_cm4_tbl_entry_desc_t(const netbufferv4_hash_for_cm4_tbl_entry_desc_t&);
   netbufferv4_hash_for_cm4_tbl_entry_desc_t& operator=(const netbufferv4_hash_for_cm4_tbl_entry_desc_t&);
@@ -7315,8 +7365,8 @@ void swap(netbufferv4_hash_for_cm4_tbl_entry_desc_t &a, netbufferv4_hash_for_cm4
 class netbufferv4_hash_for_seq_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "ACBACEF710EA20C10E24193B0E685D0F";
-  static const uint8_t binary_fingerprint[16]; // = {0xAC,0xBA,0xCE,0xF7,0x10,0xEA,0x20,0xC1,0x0E,0x24,0x19,0x3B,0x0E,0x68,0x5D,0x0F};
+  static const char* ascii_fingerprint; // = "214E35FA8DECC1D6F66CC73CFCBE6FB6";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x4E,0x35,0xFA,0x8D,0xEC,0xC1,0xD6,0xF6,0x6C,0xC7,0x3C,0xFC,0xBE,0x6F,0xB6};
 
   netbufferv4_hash_for_seq_tbl_entry_desc_t(const netbufferv4_hash_for_seq_tbl_entry_desc_t&);
   netbufferv4_hash_for_seq_tbl_entry_desc_t& operator=(const netbufferv4_hash_for_seq_tbl_entry_desc_t&);
@@ -7377,8 +7427,8 @@ void swap(netbufferv4_hash_for_seq_tbl_entry_desc_t &a, netbufferv4_hash_for_seq
 class netbufferv4_ig_port_forward_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "ACBACEF710EA20C10E24193B0E685D0F";
-  static const uint8_t binary_fingerprint[16]; // = {0xAC,0xBA,0xCE,0xF7,0x10,0xEA,0x20,0xC1,0x0E,0x24,0x19,0x3B,0x0E,0x68,0x5D,0x0F};
+  static const char* ascii_fingerprint; // = "214E35FA8DECC1D6F66CC73CFCBE6FB6";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x4E,0x35,0xFA,0x8D,0xEC,0xC1,0xD6,0xF6,0x6C,0xC7,0x3C,0xFC,0xBE,0x6F,0xB6};
 
   netbufferv4_ig_port_forward_tbl_entry_desc_t(const netbufferv4_ig_port_forward_tbl_entry_desc_t&);
   netbufferv4_ig_port_forward_tbl_entry_desc_t& operator=(const netbufferv4_ig_port_forward_tbl_entry_desc_t&);
@@ -7439,8 +7489,8 @@ void swap(netbufferv4_ig_port_forward_tbl_entry_desc_t &a, netbufferv4_ig_port_f
 class netbufferv4_ipv4_forward_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "06B2A1BB61814B9B7F14E540FD4BD4E4";
-  static const uint8_t binary_fingerprint[16]; // = {0x06,0xB2,0xA1,0xBB,0x61,0x81,0x4B,0x9B,0x7F,0x14,0xE5,0x40,0xFD,0x4B,0xD4,0xE4};
+  static const char* ascii_fingerprint; // = "0998717F24B940803FF63349958B0985";
+  static const uint8_t binary_fingerprint[16]; // = {0x09,0x98,0x71,0x7F,0x24,0xB9,0x40,0x80,0x3F,0xF6,0x33,0x49,0x95,0x8B,0x09,0x85};
 
   netbufferv4_ipv4_forward_tbl_entry_desc_t(const netbufferv4_ipv4_forward_tbl_entry_desc_t&);
   netbufferv4_ipv4_forward_tbl_entry_desc_t& operator=(const netbufferv4_ipv4_forward_tbl_entry_desc_t&);
@@ -7501,8 +7551,8 @@ void swap(netbufferv4_ipv4_forward_tbl_entry_desc_t &a, netbufferv4_ipv4_forward
 class netbufferv4_is_hot_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "773FE24E4D0D1D781433F84BC90885E6";
-  static const uint8_t binary_fingerprint[16]; // = {0x77,0x3F,0xE2,0x4E,0x4D,0x0D,0x1D,0x78,0x14,0x33,0xF8,0x4B,0xC9,0x08,0x85,0xE6};
+  static const char* ascii_fingerprint; // = "B78E22CFBE2620BB38F89253E202818B";
+  static const uint8_t binary_fingerprint[16]; // = {0xB7,0x8E,0x22,0xCF,0xBE,0x26,0x20,0xBB,0x38,0xF8,0x92,0x53,0xE2,0x02,0x81,0x8B};
 
   netbufferv4_is_hot_tbl_entry_desc_t(const netbufferv4_is_hot_tbl_entry_desc_t&);
   netbufferv4_is_hot_tbl_entry_desc_t& operator=(const netbufferv4_is_hot_tbl_entry_desc_t&);
@@ -7563,8 +7613,8 @@ void swap(netbufferv4_is_hot_tbl_entry_desc_t &a, netbufferv4_is_hot_tbl_entry_d
 class netbufferv4_l2l3_forward_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "C7B3CE5AE1A2F37357B9ECAF7182CABD";
-  static const uint8_t binary_fingerprint[16]; // = {0xC7,0xB3,0xCE,0x5A,0xE1,0xA2,0xF3,0x73,0x57,0xB9,0xEC,0xAF,0x71,0x82,0xCA,0xBD};
+  static const char* ascii_fingerprint; // = "E3AF84B78BE4B7D4BC7CD3E6696078DA";
+  static const uint8_t binary_fingerprint[16]; // = {0xE3,0xAF,0x84,0xB7,0x8B,0xE4,0xB7,0xD4,0xBC,0x7C,0xD3,0xE6,0x69,0x60,0x78,0xDA};
 
   netbufferv4_l2l3_forward_tbl_entry_desc_t(const netbufferv4_l2l3_forward_tbl_entry_desc_t&);
   netbufferv4_l2l3_forward_tbl_entry_desc_t& operator=(const netbufferv4_l2l3_forward_tbl_entry_desc_t&);
@@ -7625,8 +7675,8 @@ void swap(netbufferv4_l2l3_forward_tbl_entry_desc_t &a, netbufferv4_l2l3_forward
 class netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "148E133BC39D0F280394D13C6FFF34EC";
-  static const uint8_t binary_fingerprint[16]; // = {0x14,0x8E,0x13,0x3B,0xC3,0x9D,0x0F,0x28,0x03,0x94,0xD1,0x3C,0x6F,0xFF,0x34,0xEC};
+  static const char* ascii_fingerprint; // = "5CD97CF1CDF25A269FC338D660258690";
+  static const uint8_t binary_fingerprint[16]; // = {0x5C,0xD9,0x7C,0xF1,0xCD,0xF2,0x5A,0x26,0x9F,0xC3,0x38,0xD6,0x60,0x25,0x86,0x90};
 
   netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t(const netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t&);
   netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t& operator=(const netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t&);
@@ -7687,8 +7737,8 @@ void swap(netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t &a, netbufferv4_l
 class netbufferv4_need_recirculate_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "9BDBD777BC1833FE139B867DB0B1A97F";
-  static const uint8_t binary_fingerprint[16]; // = {0x9B,0xDB,0xD7,0x77,0xBC,0x18,0x33,0xFE,0x13,0x9B,0x86,0x7D,0xB0,0xB1,0xA9,0x7F};
+  static const char* ascii_fingerprint; // = "08BAB305C3FED5B2FD6F4053E31EBBDB";
+  static const uint8_t binary_fingerprint[16]; // = {0x08,0xBA,0xB3,0x05,0xC3,0xFE,0xD5,0xB2,0xFD,0x6F,0x40,0x53,0xE3,0x1E,0xBB,0xDB};
 
   netbufferv4_need_recirculate_tbl_entry_desc_t(const netbufferv4_need_recirculate_tbl_entry_desc_t&);
   netbufferv4_need_recirculate_tbl_entry_desc_t& operator=(const netbufferv4_need_recirculate_tbl_entry_desc_t&);
@@ -7749,8 +7799,8 @@ void swap(netbufferv4_need_recirculate_tbl_entry_desc_t &a, netbufferv4_need_rec
 class netbufferv4_prepare_for_cachehit_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "6771E1977296F34698C34A11F13EB9F4";
-  static const uint8_t binary_fingerprint[16]; // = {0x67,0x71,0xE1,0x97,0x72,0x96,0xF3,0x46,0x98,0xC3,0x4A,0x11,0xF1,0x3E,0xB9,0xF4};
+  static const char* ascii_fingerprint; // = "0998717F24B940803FF63349958B0985";
+  static const uint8_t binary_fingerprint[16]; // = {0x09,0x98,0x71,0x7F,0x24,0xB9,0x40,0x80,0x3F,0xF6,0x33,0x49,0x95,0x8B,0x09,0x85};
 
   netbufferv4_prepare_for_cachehit_tbl_entry_desc_t(const netbufferv4_prepare_for_cachehit_tbl_entry_desc_t&);
   netbufferv4_prepare_for_cachehit_tbl_entry_desc_t& operator=(const netbufferv4_prepare_for_cachehit_tbl_entry_desc_t&);
@@ -7811,8 +7861,8 @@ void swap(netbufferv4_prepare_for_cachehit_tbl_entry_desc_t &a, netbufferv4_prep
 class netbufferv4_process_scanreq_split_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "6771E1977296F34698C34A11F13EB9F4";
-  static const uint8_t binary_fingerprint[16]; // = {0x67,0x71,0xE1,0x97,0x72,0x96,0xF3,0x46,0x98,0xC3,0x4A,0x11,0xF1,0x3E,0xB9,0xF4};
+  static const char* ascii_fingerprint; // = "B48A0190CC9E4F8448012F023D5DAB83";
+  static const uint8_t binary_fingerprint[16]; // = {0xB4,0x8A,0x01,0x90,0xCC,0x9E,0x4F,0x84,0x48,0x01,0x2F,0x02,0x3D,0x5D,0xAB,0x83};
 
   netbufferv4_process_scanreq_split_tbl_entry_desc_t(const netbufferv4_process_scanreq_split_tbl_entry_desc_t&);
   netbufferv4_process_scanreq_split_tbl_entry_desc_t& operator=(const netbufferv4_process_scanreq_split_tbl_entry_desc_t&);
@@ -7873,8 +7923,8 @@ void swap(netbufferv4_process_scanreq_split_tbl_entry_desc_t &a, netbufferv4_pro
 class netbufferv4_range_partition_for_scan_endkey_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "6F16958B2947672D252C027733417D5E";
-  static const uint8_t binary_fingerprint[16]; // = {0x6F,0x16,0x95,0x8B,0x29,0x47,0x67,0x2D,0x25,0x2C,0x02,0x77,0x33,0x41,0x7D,0x5E};
+  static const char* ascii_fingerprint; // = "3BDF4EC097BA4FBA58E4BFB09F50F6F8";
+  static const uint8_t binary_fingerprint[16]; // = {0x3B,0xDF,0x4E,0xC0,0x97,0xBA,0x4F,0xBA,0x58,0xE4,0xBF,0xB0,0x9F,0x50,0xF6,0xF8};
 
   netbufferv4_range_partition_for_scan_endkey_tbl_entry_desc_t(const netbufferv4_range_partition_for_scan_endkey_tbl_entry_desc_t&);
   netbufferv4_range_partition_for_scan_endkey_tbl_entry_desc_t& operator=(const netbufferv4_range_partition_for_scan_endkey_tbl_entry_desc_t&);
@@ -7940,8 +7990,8 @@ void swap(netbufferv4_range_partition_for_scan_endkey_tbl_entry_desc_t &a, netbu
 class netbufferv4_range_partition_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "6F16958B2947672D252C027733417D5E";
-  static const uint8_t binary_fingerprint[16]; // = {0x6F,0x16,0x95,0x8B,0x29,0x47,0x67,0x2D,0x25,0x2C,0x02,0x77,0x33,0x41,0x7D,0x5E};
+  static const char* ascii_fingerprint; // = "3BDF4EC097BA4FBA58E4BFB09F50F6F8";
+  static const uint8_t binary_fingerprint[16]; // = {0x3B,0xDF,0x4E,0xC0,0x97,0xBA,0x4F,0xBA,0x58,0xE4,0xBF,0xB0,0x9F,0x50,0xF6,0xF8};
 
   netbufferv4_range_partition_tbl_entry_desc_t(const netbufferv4_range_partition_tbl_entry_desc_t&);
   netbufferv4_range_partition_tbl_entry_desc_t& operator=(const netbufferv4_range_partition_tbl_entry_desc_t&);
@@ -8007,8 +8057,8 @@ void swap(netbufferv4_range_partition_tbl_entry_desc_t &a, netbufferv4_range_par
 class netbufferv4_recirculate_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "ACBACEF710EA20C10E24193B0E685D0F";
-  static const uint8_t binary_fingerprint[16]; // = {0xAC,0xBA,0xCE,0xF7,0x10,0xEA,0x20,0xC1,0x0E,0x24,0x19,0x3B,0x0E,0x68,0x5D,0x0F};
+  static const char* ascii_fingerprint; // = "214E35FA8DECC1D6F66CC73CFCBE6FB6";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x4E,0x35,0xFA,0x8D,0xEC,0xC1,0xD6,0xF6,0x6C,0xC7,0x3C,0xFC,0xBE,0x6F,0xB6};
 
   netbufferv4_recirculate_tbl_entry_desc_t(const netbufferv4_recirculate_tbl_entry_desc_t&);
   netbufferv4_recirculate_tbl_entry_desc_t& operator=(const netbufferv4_recirculate_tbl_entry_desc_t&);
@@ -8069,8 +8119,8 @@ void swap(netbufferv4_recirculate_tbl_entry_desc_t &a, netbufferv4_recirculate_t
 class netbufferv4_sample_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "ACBACEF710EA20C10E24193B0E685D0F";
-  static const uint8_t binary_fingerprint[16]; // = {0xAC,0xBA,0xCE,0xF7,0x10,0xEA,0x20,0xC1,0x0E,0x24,0x19,0x3B,0x0E,0x68,0x5D,0x0F};
+  static const char* ascii_fingerprint; // = "214E35FA8DECC1D6F66CC73CFCBE6FB6";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x4E,0x35,0xFA,0x8D,0xEC,0xC1,0xD6,0xF6,0x6C,0xC7,0x3C,0xFC,0xBE,0x6F,0xB6};
 
   netbufferv4_sample_tbl_entry_desc_t(const netbufferv4_sample_tbl_entry_desc_t&);
   netbufferv4_sample_tbl_entry_desc_t& operator=(const netbufferv4_sample_tbl_entry_desc_t&);
@@ -8131,8 +8181,8 @@ void swap(netbufferv4_sample_tbl_entry_desc_t &a, netbufferv4_sample_tbl_entry_d
 class netbufferv4_save_client_udpport_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "F8B15103F90C16F5590CB28C702A12BB";
-  static const uint8_t binary_fingerprint[16]; // = {0xF8,0xB1,0x51,0x03,0xF9,0x0C,0x16,0xF5,0x59,0x0C,0xB2,0x8C,0x70,0x2A,0x12,0xBB};
+  static const char* ascii_fingerprint; // = "AF3ECB6B20B812D8290E3219AFCE969C";
+  static const uint8_t binary_fingerprint[16]; // = {0xAF,0x3E,0xCB,0x6B,0x20,0xB8,0x12,0xD8,0x29,0x0E,0x32,0x19,0xAF,0xCE,0x96,0x9C};
 
   netbufferv4_save_client_udpport_tbl_entry_desc_t(const netbufferv4_save_client_udpport_tbl_entry_desc_t&);
   netbufferv4_save_client_udpport_tbl_entry_desc_t& operator=(const netbufferv4_save_client_udpport_tbl_entry_desc_t&);
@@ -8193,8 +8243,8 @@ void swap(netbufferv4_save_client_udpport_tbl_entry_desc_t &a, netbufferv4_save_
 class netbufferv4_set_hot_threshold_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "E525D96508DC6FAA79E03CFEBFF323E1";
-  static const uint8_t binary_fingerprint[16]; // = {0xE5,0x25,0xD9,0x65,0x08,0xDC,0x6F,0xAA,0x79,0xE0,0x3C,0xFE,0xBF,0xF3,0x23,0xE1};
+  static const char* ascii_fingerprint; // = "5176E6A03BF4E5567ABFCBC80631935C";
+  static const uint8_t binary_fingerprint[16]; // = {0x51,0x76,0xE6,0xA0,0x3B,0xF4,0xE5,0x56,0x7A,0xBF,0xCB,0xC8,0x06,0x31,0x93,0x5C};
 
   netbufferv4_set_hot_threshold_tbl_entry_desc_t(const netbufferv4_set_hot_threshold_tbl_entry_desc_t&);
   netbufferv4_set_hot_threshold_tbl_entry_desc_t& operator=(const netbufferv4_set_hot_threshold_tbl_entry_desc_t&);
@@ -8250,8 +8300,8 @@ void swap(netbufferv4_set_hot_threshold_tbl_entry_desc_t &a, netbufferv4_set_hot
 class netbufferv4_snapshot_flag_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "ACBACEF710EA20C10E24193B0E685D0F";
-  static const uint8_t binary_fingerprint[16]; // = {0xAC,0xBA,0xCE,0xF7,0x10,0xEA,0x20,0xC1,0x0E,0x24,0x19,0x3B,0x0E,0x68,0x5D,0x0F};
+  static const char* ascii_fingerprint; // = "214E35FA8DECC1D6F66CC73CFCBE6FB6";
+  static const uint8_t binary_fingerprint[16]; // = {0x21,0x4E,0x35,0xFA,0x8D,0xEC,0xC1,0xD6,0xF6,0x6C,0xC7,0x3C,0xFC,0xBE,0x6F,0xB6};
 
   netbufferv4_snapshot_flag_tbl_entry_desc_t(const netbufferv4_snapshot_flag_tbl_entry_desc_t&);
   netbufferv4_snapshot_flag_tbl_entry_desc_t& operator=(const netbufferv4_snapshot_flag_tbl_entry_desc_t&);
@@ -8312,8 +8362,8 @@ void swap(netbufferv4_snapshot_flag_tbl_entry_desc_t &a, netbufferv4_snapshot_fl
 class netbufferv4_update_ipmac_srcport_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "9BDBD777BC1833FE139B867DB0B1A97F";
-  static const uint8_t binary_fingerprint[16]; // = {0x9B,0xDB,0xD7,0x77,0xBC,0x18,0x33,0xFE,0x13,0x9B,0x86,0x7D,0xB0,0xB1,0xA9,0x7F};
+  static const char* ascii_fingerprint; // = "08BAB305C3FED5B2FD6F4053E31EBBDB";
+  static const uint8_t binary_fingerprint[16]; // = {0x08,0xBA,0xB3,0x05,0xC3,0xFE,0xD5,0xB2,0xFD,0x6F,0x40,0x53,0xE3,0x1E,0xBB,0xDB};
 
   netbufferv4_update_ipmac_srcport_tbl_entry_desc_t(const netbufferv4_update_ipmac_srcport_tbl_entry_desc_t&);
   netbufferv4_update_ipmac_srcport_tbl_entry_desc_t& operator=(const netbufferv4_update_ipmac_srcport_tbl_entry_desc_t&);
@@ -8374,8 +8424,8 @@ void swap(netbufferv4_update_ipmac_srcport_tbl_entry_desc_t &a, netbufferv4_upda
 class netbufferv4_update_pktlen_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "47FB66F2CA753AF97A8B917582F0BE91";
-  static const uint8_t binary_fingerprint[16]; // = {0x47,0xFB,0x66,0xF2,0xCA,0x75,0x3A,0xF9,0x7A,0x8B,0x91,0x75,0x82,0xF0,0xBE,0x91};
+  static const char* ascii_fingerprint; // = "5376D46775EBF0E2FCD3F842F7268504";
+  static const uint8_t binary_fingerprint[16]; // = {0x53,0x76,0xD4,0x67,0x75,0xEB,0xF0,0xE2,0xFC,0xD3,0xF8,0x42,0xF7,0x26,0x85,0x04};
 
   netbufferv4_update_pktlen_tbl_entry_desc_t(const netbufferv4_update_pktlen_tbl_entry_desc_t&);
   netbufferv4_update_pktlen_tbl_entry_desc_t& operator=(const netbufferv4_update_pktlen_tbl_entry_desc_t&);
@@ -8441,8 +8491,8 @@ void swap(netbufferv4_update_pktlen_tbl_entry_desc_t &a, netbufferv4_update_pktl
 class netbufferv4_update_valhi10_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi10_tbl_entry_desc_t(const netbufferv4_update_valhi10_tbl_entry_desc_t&);
   netbufferv4_update_valhi10_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi10_tbl_entry_desc_t&);
@@ -8503,8 +8553,8 @@ void swap(netbufferv4_update_valhi10_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_valhi11_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi11_tbl_entry_desc_t(const netbufferv4_update_valhi11_tbl_entry_desc_t&);
   netbufferv4_update_valhi11_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi11_tbl_entry_desc_t&);
@@ -8565,8 +8615,8 @@ void swap(netbufferv4_update_valhi11_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_valhi12_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi12_tbl_entry_desc_t(const netbufferv4_update_valhi12_tbl_entry_desc_t&);
   netbufferv4_update_valhi12_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi12_tbl_entry_desc_t&);
@@ -8627,8 +8677,8 @@ void swap(netbufferv4_update_valhi12_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_valhi13_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi13_tbl_entry_desc_t(const netbufferv4_update_valhi13_tbl_entry_desc_t&);
   netbufferv4_update_valhi13_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi13_tbl_entry_desc_t&);
@@ -8689,8 +8739,8 @@ void swap(netbufferv4_update_valhi13_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_valhi14_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi14_tbl_entry_desc_t(const netbufferv4_update_valhi14_tbl_entry_desc_t&);
   netbufferv4_update_valhi14_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi14_tbl_entry_desc_t&);
@@ -8751,8 +8801,8 @@ void swap(netbufferv4_update_valhi14_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_valhi15_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi15_tbl_entry_desc_t(const netbufferv4_update_valhi15_tbl_entry_desc_t&);
   netbufferv4_update_valhi15_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi15_tbl_entry_desc_t&);
@@ -8813,8 +8863,8 @@ void swap(netbufferv4_update_valhi15_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_valhi16_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi16_tbl_entry_desc_t(const netbufferv4_update_valhi16_tbl_entry_desc_t&);
   netbufferv4_update_valhi16_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi16_tbl_entry_desc_t&);
@@ -8875,8 +8925,8 @@ void swap(netbufferv4_update_valhi16_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_valhi1_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi1_tbl_entry_desc_t(const netbufferv4_update_valhi1_tbl_entry_desc_t&);
   netbufferv4_update_valhi1_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi1_tbl_entry_desc_t&);
@@ -8937,8 +8987,8 @@ void swap(netbufferv4_update_valhi1_tbl_entry_desc_t &a, netbufferv4_update_valh
 class netbufferv4_update_valhi2_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi2_tbl_entry_desc_t(const netbufferv4_update_valhi2_tbl_entry_desc_t&);
   netbufferv4_update_valhi2_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi2_tbl_entry_desc_t&);
@@ -8999,8 +9049,8 @@ void swap(netbufferv4_update_valhi2_tbl_entry_desc_t &a, netbufferv4_update_valh
 class netbufferv4_update_valhi3_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi3_tbl_entry_desc_t(const netbufferv4_update_valhi3_tbl_entry_desc_t&);
   netbufferv4_update_valhi3_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi3_tbl_entry_desc_t&);
@@ -9061,8 +9111,8 @@ void swap(netbufferv4_update_valhi3_tbl_entry_desc_t &a, netbufferv4_update_valh
 class netbufferv4_update_valhi4_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi4_tbl_entry_desc_t(const netbufferv4_update_valhi4_tbl_entry_desc_t&);
   netbufferv4_update_valhi4_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi4_tbl_entry_desc_t&);
@@ -9123,8 +9173,8 @@ void swap(netbufferv4_update_valhi4_tbl_entry_desc_t &a, netbufferv4_update_valh
 class netbufferv4_update_valhi5_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi5_tbl_entry_desc_t(const netbufferv4_update_valhi5_tbl_entry_desc_t&);
   netbufferv4_update_valhi5_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi5_tbl_entry_desc_t&);
@@ -9185,8 +9235,8 @@ void swap(netbufferv4_update_valhi5_tbl_entry_desc_t &a, netbufferv4_update_valh
 class netbufferv4_update_valhi6_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi6_tbl_entry_desc_t(const netbufferv4_update_valhi6_tbl_entry_desc_t&);
   netbufferv4_update_valhi6_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi6_tbl_entry_desc_t&);
@@ -9247,8 +9297,8 @@ void swap(netbufferv4_update_valhi6_tbl_entry_desc_t &a, netbufferv4_update_valh
 class netbufferv4_update_valhi7_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi7_tbl_entry_desc_t(const netbufferv4_update_valhi7_tbl_entry_desc_t&);
   netbufferv4_update_valhi7_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi7_tbl_entry_desc_t&);
@@ -9309,8 +9359,8 @@ void swap(netbufferv4_update_valhi7_tbl_entry_desc_t &a, netbufferv4_update_valh
 class netbufferv4_update_valhi8_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi8_tbl_entry_desc_t(const netbufferv4_update_valhi8_tbl_entry_desc_t&);
   netbufferv4_update_valhi8_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi8_tbl_entry_desc_t&);
@@ -9371,8 +9421,8 @@ void swap(netbufferv4_update_valhi8_tbl_entry_desc_t &a, netbufferv4_update_valh
 class netbufferv4_update_valhi9_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_valhi9_tbl_entry_desc_t(const netbufferv4_update_valhi9_tbl_entry_desc_t&);
   netbufferv4_update_valhi9_tbl_entry_desc_t& operator=(const netbufferv4_update_valhi9_tbl_entry_desc_t&);
@@ -9433,8 +9483,8 @@ void swap(netbufferv4_update_valhi9_tbl_entry_desc_t &a, netbufferv4_update_valh
 class netbufferv4_update_vallen_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "6D50264926377C0338B361FCE2733965";
-  static const uint8_t binary_fingerprint[16]; // = {0x6D,0x50,0x26,0x49,0x26,0x37,0x7C,0x03,0x38,0xB3,0x61,0xFC,0xE2,0x73,0x39,0x65};
+  static const char* ascii_fingerprint; // = "7442A1498F08267B9480810A11E5FC49";
+  static const uint8_t binary_fingerprint[16]; // = {0x74,0x42,0xA1,0x49,0x8F,0x08,0x26,0x7B,0x94,0x80,0x81,0x0A,0x11,0xE5,0xFC,0x49};
 
   netbufferv4_update_vallen_tbl_entry_desc_t(const netbufferv4_update_vallen_tbl_entry_desc_t&);
   netbufferv4_update_vallen_tbl_entry_desc_t& operator=(const netbufferv4_update_vallen_tbl_entry_desc_t&);
@@ -9495,8 +9545,8 @@ void swap(netbufferv4_update_vallen_tbl_entry_desc_t &a, netbufferv4_update_vall
 class netbufferv4_update_vallo10_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo10_tbl_entry_desc_t(const netbufferv4_update_vallo10_tbl_entry_desc_t&);
   netbufferv4_update_vallo10_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo10_tbl_entry_desc_t&);
@@ -9557,8 +9607,8 @@ void swap(netbufferv4_update_vallo10_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_vallo11_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo11_tbl_entry_desc_t(const netbufferv4_update_vallo11_tbl_entry_desc_t&);
   netbufferv4_update_vallo11_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo11_tbl_entry_desc_t&);
@@ -9619,8 +9669,8 @@ void swap(netbufferv4_update_vallo11_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_vallo12_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo12_tbl_entry_desc_t(const netbufferv4_update_vallo12_tbl_entry_desc_t&);
   netbufferv4_update_vallo12_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo12_tbl_entry_desc_t&);
@@ -9681,8 +9731,8 @@ void swap(netbufferv4_update_vallo12_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_vallo13_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo13_tbl_entry_desc_t(const netbufferv4_update_vallo13_tbl_entry_desc_t&);
   netbufferv4_update_vallo13_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo13_tbl_entry_desc_t&);
@@ -9743,8 +9793,8 @@ void swap(netbufferv4_update_vallo13_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_vallo14_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo14_tbl_entry_desc_t(const netbufferv4_update_vallo14_tbl_entry_desc_t&);
   netbufferv4_update_vallo14_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo14_tbl_entry_desc_t&);
@@ -9805,8 +9855,8 @@ void swap(netbufferv4_update_vallo14_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_vallo15_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo15_tbl_entry_desc_t(const netbufferv4_update_vallo15_tbl_entry_desc_t&);
   netbufferv4_update_vallo15_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo15_tbl_entry_desc_t&);
@@ -9867,8 +9917,8 @@ void swap(netbufferv4_update_vallo15_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_vallo16_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo16_tbl_entry_desc_t(const netbufferv4_update_vallo16_tbl_entry_desc_t&);
   netbufferv4_update_vallo16_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo16_tbl_entry_desc_t&);
@@ -9929,8 +9979,8 @@ void swap(netbufferv4_update_vallo16_tbl_entry_desc_t &a, netbufferv4_update_val
 class netbufferv4_update_vallo1_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo1_tbl_entry_desc_t(const netbufferv4_update_vallo1_tbl_entry_desc_t&);
   netbufferv4_update_vallo1_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo1_tbl_entry_desc_t&);
@@ -9991,8 +10041,8 @@ void swap(netbufferv4_update_vallo1_tbl_entry_desc_t &a, netbufferv4_update_vall
 class netbufferv4_update_vallo2_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo2_tbl_entry_desc_t(const netbufferv4_update_vallo2_tbl_entry_desc_t&);
   netbufferv4_update_vallo2_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo2_tbl_entry_desc_t&);
@@ -10053,8 +10103,8 @@ void swap(netbufferv4_update_vallo2_tbl_entry_desc_t &a, netbufferv4_update_vall
 class netbufferv4_update_vallo3_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo3_tbl_entry_desc_t(const netbufferv4_update_vallo3_tbl_entry_desc_t&);
   netbufferv4_update_vallo3_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo3_tbl_entry_desc_t&);
@@ -10115,8 +10165,8 @@ void swap(netbufferv4_update_vallo3_tbl_entry_desc_t &a, netbufferv4_update_vall
 class netbufferv4_update_vallo4_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo4_tbl_entry_desc_t(const netbufferv4_update_vallo4_tbl_entry_desc_t&);
   netbufferv4_update_vallo4_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo4_tbl_entry_desc_t&);
@@ -10177,8 +10227,8 @@ void swap(netbufferv4_update_vallo4_tbl_entry_desc_t &a, netbufferv4_update_vall
 class netbufferv4_update_vallo5_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo5_tbl_entry_desc_t(const netbufferv4_update_vallo5_tbl_entry_desc_t&);
   netbufferv4_update_vallo5_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo5_tbl_entry_desc_t&);
@@ -10239,8 +10289,8 @@ void swap(netbufferv4_update_vallo5_tbl_entry_desc_t &a, netbufferv4_update_vall
 class netbufferv4_update_vallo6_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo6_tbl_entry_desc_t(const netbufferv4_update_vallo6_tbl_entry_desc_t&);
   netbufferv4_update_vallo6_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo6_tbl_entry_desc_t&);
@@ -10301,8 +10351,8 @@ void swap(netbufferv4_update_vallo6_tbl_entry_desc_t &a, netbufferv4_update_vall
 class netbufferv4_update_vallo7_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo7_tbl_entry_desc_t(const netbufferv4_update_vallo7_tbl_entry_desc_t&);
   netbufferv4_update_vallo7_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo7_tbl_entry_desc_t&);
@@ -10363,8 +10413,8 @@ void swap(netbufferv4_update_vallo7_tbl_entry_desc_t &a, netbufferv4_update_vall
 class netbufferv4_update_vallo8_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo8_tbl_entry_desc_t(const netbufferv4_update_vallo8_tbl_entry_desc_t&);
   netbufferv4_update_vallo8_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo8_tbl_entry_desc_t&);
@@ -10425,8 +10475,8 @@ void swap(netbufferv4_update_vallo8_tbl_entry_desc_t &a, netbufferv4_update_vall
 class netbufferv4_update_vallo9_tbl_entry_desc_t {
  public:
 
-  static const char* ascii_fingerprint; // = "A8A559FF20FA04A6BCEB7DFD77447494";
-  static const uint8_t binary_fingerprint[16]; // = {0xA8,0xA5,0x59,0xFF,0x20,0xFA,0x04,0xA6,0xBC,0xEB,0x7D,0xFD,0x77,0x44,0x74,0x94};
+  static const char* ascii_fingerprint; // = "84D79B1E276167D441CD3C2F11AC851A";
+  static const uint8_t binary_fingerprint[16]; // = {0x84,0xD7,0x9B,0x1E,0x27,0x61,0x67,0xD4,0x41,0xCD,0x3C,0x2F,0x11,0xAC,0x85,0x1A};
 
   netbufferv4_update_vallo9_tbl_entry_desc_t(const netbufferv4_update_vallo9_tbl_entry_desc_t&);
   netbufferv4_update_vallo9_tbl_entry_desc_t& operator=(const netbufferv4_update_vallo9_tbl_entry_desc_t&);

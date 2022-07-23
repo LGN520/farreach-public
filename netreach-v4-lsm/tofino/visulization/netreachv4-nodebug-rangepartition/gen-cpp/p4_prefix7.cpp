@@ -1,6 +1,62 @@
 #include "p4_prefix.h"
 namespace p4_pd_rpc {
 
+void netbufferv4Processor::process_eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
+  }
+
+  netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", bytes);
+  }
+
+  netbufferv4_eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec_result result;
+  try {
+    iface_->eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec(args.sess_hdl, args.dev_tgt, args.match_spec, args.action_spec);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec");
+  }
+
+  oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", bytes);
+  }
+}
+
 void netbufferv4Processor::process_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
 {
   void* ctx = NULL;
@@ -6830,6 +6886,118 @@ void netbufferv4Processor::process_range_partition_tbl_table_modify_with_range_p
 
   if (this->eventHandler_.get() != NULL) {
     this->eventHandler_->postWrite(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_scan_by_match_spec", bytes);
+  }
+}
+
+void netbufferv4Processor::process_range_partition_tbl_table_modify_with_range_partition_for_special_response(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response");
+  }
+
+  netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_special_response_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response", bytes);
+  }
+
+  netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_special_response_result result;
+  try {
+    iface_->range_partition_tbl_table_modify_with_range_partition_for_special_response(args.sess_hdl, args.dev_id, args.entry, args.action_spec);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("range_partition_tbl_table_modify_with_range_partition_for_special_response", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response");
+  }
+
+  oprot->writeMessageBegin("range_partition_tbl_table_modify_with_range_partition_for_special_response", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response", bytes);
+  }
+}
+
+void netbufferv4Processor::process_range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec");
+  }
+
+  netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec", bytes);
+  }
+
+  netbufferv4_range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec_result result;
+  try {
+    iface_->range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec(args.sess_hdl, args.dev_tgt, args.match_spec, args.priority, args.action_spec);
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec");
+  }
+
+  oprot->writeMessageBegin("range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec", bytes);
   }
 }
 

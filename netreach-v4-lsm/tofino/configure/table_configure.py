@@ -540,14 +540,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 3*client_physical_num=6 < 3*8=24 < 32)
             print "Configuring prepare_for_cachehit_tbl"
-            for client_physical_idx in range(client_phyiscal_num):
+            for client_physical_idx in range(client_physical_num):
                 tmp_clientip = client_ips[client_physical_idx]
                 tmp_clientsid = self.client_sids[client_physical_idx]
                 for tmpoptype in [GETREQ, PUTREQ, DELREQ]:
                     matchspec0 = netbufferv4_prepare_for_cachehit_tbl_match_spec_t(\
                             op_hdr_optype = tmpoptype,
                             #ig_intr_md_ingress_port = self.client_devports[client_physical_idx],
-                            ipv4_hdr_srcAddr = tmp_clientip,
+                            ipv4_hdr_srcAddr = ipv4Addr_to_i32(tmp_clientip),
                             ipv4_hdr_srcAddr_prefix_length = 32,
                             meta_need_recirculate = 0)
                     actnspec0 = netbufferv4_set_client_sid_action_spec_t(tmp_clientsid)

@@ -4450,7 +4450,7 @@ class netbufferv4_lastclone_lastscansplit_tbl_match_spec_t:
   thrift_spec = (
     None, # 0
     (1, TType.I16, 'op_hdr_optype', None, None, ), # 1
-    (2, TType.BYTE, 'clone_hdr_clonenum_for_pktloss', None, None, ), # 2
+    (2, TType.I16, 'clone_hdr_clonenum_for_pktloss', None, None, ), # 2
     (3, TType.I16, 'meta_remain_scannum', None, None, ), # 3
   )
 
@@ -4474,8 +4474,8 @@ class netbufferv4_lastclone_lastscansplit_tbl_match_spec_t:
         else:
           iprot.skip(ftype)
       elif fid == 2:
-        if ftype == TType.BYTE:
-          self.clone_hdr_clonenum_for_pktloss = iprot.readByte();
+        if ftype == TType.I16:
+          self.clone_hdr_clonenum_for_pktloss = iprot.readI16();
         else:
           iprot.skip(ftype)
       elif fid == 3:
@@ -4498,8 +4498,8 @@ class netbufferv4_lastclone_lastscansplit_tbl_match_spec_t:
       oprot.writeI16(self.op_hdr_optype)
       oprot.writeFieldEnd()
     if self.clone_hdr_clonenum_for_pktloss is not None:
-      oprot.writeFieldBegin('clone_hdr_clonenum_for_pktloss', TType.BYTE, 2)
-      oprot.writeByte(self.clone_hdr_clonenum_for_pktloss)
+      oprot.writeFieldBegin('clone_hdr_clonenum_for_pktloss', TType.I16, 2)
+      oprot.writeI16(self.clone_hdr_clonenum_for_pktloss)
       oprot.writeFieldEnd()
     if self.meta_remain_scannum is not None:
       oprot.writeFieldBegin('meta_remain_scannum', TType.I16, 3)
@@ -4622,20 +4622,23 @@ class netbufferv4_prepare_for_cachehit_tbl_match_spec_t:
   """
   Attributes:
    - op_hdr_optype
-   - ig_intr_md_ingress_port
+   - ipv4_hdr_srcAddr
+   - ipv4_hdr_srcAddr_prefix_length
    - meta_need_recirculate
   """
 
   thrift_spec = (
     None, # 0
     (1, TType.I16, 'op_hdr_optype', None, None, ), # 1
-    (2, TType.I16, 'ig_intr_md_ingress_port', None, None, ), # 2
-    (3, TType.BYTE, 'meta_need_recirculate', None, None, ), # 3
+    (2, TType.I32, 'ipv4_hdr_srcAddr', None, None, ), # 2
+    (3, TType.I16, 'ipv4_hdr_srcAddr_prefix_length', None, None, ), # 3
+    (4, TType.BYTE, 'meta_need_recirculate', None, None, ), # 4
   )
 
-  def __init__(self, op_hdr_optype=None, ig_intr_md_ingress_port=None, meta_need_recirculate=None,):
+  def __init__(self, op_hdr_optype=None, ipv4_hdr_srcAddr=None, ipv4_hdr_srcAddr_prefix_length=None, meta_need_recirculate=None,):
     self.op_hdr_optype = op_hdr_optype
-    self.ig_intr_md_ingress_port = ig_intr_md_ingress_port
+    self.ipv4_hdr_srcAddr = ipv4_hdr_srcAddr
+    self.ipv4_hdr_srcAddr_prefix_length = ipv4_hdr_srcAddr_prefix_length
     self.meta_need_recirculate = meta_need_recirculate
 
   def read(self, iprot):
@@ -4653,11 +4656,16 @@ class netbufferv4_prepare_for_cachehit_tbl_match_spec_t:
         else:
           iprot.skip(ftype)
       elif fid == 2:
-        if ftype == TType.I16:
-          self.ig_intr_md_ingress_port = iprot.readI16();
+        if ftype == TType.I32:
+          self.ipv4_hdr_srcAddr = iprot.readI32();
         else:
           iprot.skip(ftype)
       elif fid == 3:
+        if ftype == TType.I16:
+          self.ipv4_hdr_srcAddr_prefix_length = iprot.readI16();
+        else:
+          iprot.skip(ftype)
+      elif fid == 4:
         if ftype == TType.BYTE:
           self.meta_need_recirculate = iprot.readByte();
         else:
@@ -4676,12 +4684,16 @@ class netbufferv4_prepare_for_cachehit_tbl_match_spec_t:
       oprot.writeFieldBegin('op_hdr_optype', TType.I16, 1)
       oprot.writeI16(self.op_hdr_optype)
       oprot.writeFieldEnd()
-    if self.ig_intr_md_ingress_port is not None:
-      oprot.writeFieldBegin('ig_intr_md_ingress_port', TType.I16, 2)
-      oprot.writeI16(self.ig_intr_md_ingress_port)
+    if self.ipv4_hdr_srcAddr is not None:
+      oprot.writeFieldBegin('ipv4_hdr_srcAddr', TType.I32, 2)
+      oprot.writeI32(self.ipv4_hdr_srcAddr)
+      oprot.writeFieldEnd()
+    if self.ipv4_hdr_srcAddr_prefix_length is not None:
+      oprot.writeFieldBegin('ipv4_hdr_srcAddr_prefix_length', TType.I16, 3)
+      oprot.writeI16(self.ipv4_hdr_srcAddr_prefix_length)
       oprot.writeFieldEnd()
     if self.meta_need_recirculate is not None:
-      oprot.writeFieldBegin('meta_need_recirculate', TType.BYTE, 3)
+      oprot.writeFieldBegin('meta_need_recirculate', TType.BYTE, 4)
       oprot.writeByte(self.meta_need_recirculate)
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
@@ -4690,8 +4702,10 @@ class netbufferv4_prepare_for_cachehit_tbl_match_spec_t:
   def validate(self):
     if self.op_hdr_optype is None:
       raise TProtocol.TProtocolException(message='Required field op_hdr_optype is unset!')
-    if self.ig_intr_md_ingress_port is None:
-      raise TProtocol.TProtocolException(message='Required field ig_intr_md_ingress_port is unset!')
+    if self.ipv4_hdr_srcAddr is None:
+      raise TProtocol.TProtocolException(message='Required field ipv4_hdr_srcAddr is unset!')
+    if self.ipv4_hdr_srcAddr_prefix_length is None:
+      raise TProtocol.TProtocolException(message='Required field ipv4_hdr_srcAddr_prefix_length is unset!')
     if self.meta_need_recirculate is None:
       raise TProtocol.TProtocolException(message='Required field meta_need_recirculate is unset!')
     return
@@ -4700,7 +4714,8 @@ class netbufferv4_prepare_for_cachehit_tbl_match_spec_t:
   def __hash__(self):
     value = 17
     value = (value * 31) ^ hash(self.op_hdr_optype)
-    value = (value * 31) ^ hash(self.ig_intr_md_ingress_port)
+    value = (value * 31) ^ hash(self.ipv4_hdr_srcAddr)
+    value = (value * 31) ^ hash(self.ipv4_hdr_srcAddr_prefix_length)
     value = (value * 31) ^ hash(self.meta_need_recirculate)
     return value
 
@@ -10102,6 +10117,73 @@ class netbufferv4_range_partition_for_scan_action_spec_t:
   def __ne__(self, other):
     return not (self == other)
 
+class netbufferv4_range_partition_for_special_response_action_spec_t:
+  """
+  Attributes:
+   - action_eport
+  """
+
+  thrift_spec = (
+    None, # 0
+    (1, TType.I16, 'action_eport', None, None, ), # 1
+  )
+
+  def __init__(self, action_eport=None,):
+    self.action_eport = action_eport
+
+  def read(self, iprot):
+    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
+      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
+      return
+    iprot.readStructBegin()
+    while True:
+      (fname, ftype, fid) = iprot.readFieldBegin()
+      if ftype == TType.STOP:
+        break
+      if fid == 1:
+        if ftype == TType.I16:
+          self.action_eport = iprot.readI16();
+        else:
+          iprot.skip(ftype)
+      else:
+        iprot.skip(ftype)
+      iprot.readFieldEnd()
+    iprot.readStructEnd()
+
+  def write(self, oprot):
+    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
+      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
+      return
+    oprot.writeStructBegin('netbufferv4_range_partition_for_special_response_action_spec_t')
+    if self.action_eport is not None:
+      oprot.writeFieldBegin('action_eport', TType.I16, 1)
+      oprot.writeI16(self.action_eport)
+      oprot.writeFieldEnd()
+    oprot.writeFieldStop()
+    oprot.writeStructEnd()
+
+  def validate(self):
+    if self.action_eport is None:
+      raise TProtocol.TProtocolException(message='Required field action_eport is unset!')
+    return
+
+
+  def __hash__(self):
+    value = 17
+    value = (value * 31) ^ hash(self.action_eport)
+    return value
+
+  def __repr__(self):
+    L = ['%s=%r' % (key, value)
+      for key, value in self.__dict__.iteritems()]
+    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+  def __eq__(self, other):
+    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+  def __ne__(self, other):
+    return not (self == other)
+
 class netbufferv4_recirculate_pkt_action_spec_t:
   """
   Attributes:
@@ -10686,6 +10768,7 @@ class netbufferv4_action_specs_t:
    - netbufferv4_range_partition_for_scan_endkey
    - netbufferv4_range_partition
    - netbufferv4_range_partition_for_scan
+   - netbufferv4_range_partition_for_special_response
    - netbufferv4_recirculate_pkt
    - netbufferv4_set_hot_threshold
    - netbufferv4_update_ipmac_srcport_server2client
@@ -10725,15 +10808,16 @@ class netbufferv4_action_specs_t:
     (27, TType.STRUCT, 'netbufferv4_range_partition_for_scan_endkey', (netbufferv4_range_partition_for_scan_endkey_action_spec_t, netbufferv4_range_partition_for_scan_endkey_action_spec_t.thrift_spec), None, ), # 27
     (28, TType.STRUCT, 'netbufferv4_range_partition', (netbufferv4_range_partition_action_spec_t, netbufferv4_range_partition_action_spec_t.thrift_spec), None, ), # 28
     (29, TType.STRUCT, 'netbufferv4_range_partition_for_scan', (netbufferv4_range_partition_for_scan_action_spec_t, netbufferv4_range_partition_for_scan_action_spec_t.thrift_spec), None, ), # 29
-    (30, TType.STRUCT, 'netbufferv4_recirculate_pkt', (netbufferv4_recirculate_pkt_action_spec_t, netbufferv4_recirculate_pkt_action_spec_t.thrift_spec), None, ), # 30
-    (31, TType.STRUCT, 'netbufferv4_set_hot_threshold', (netbufferv4_set_hot_threshold_action_spec_t, netbufferv4_set_hot_threshold_action_spec_t.thrift_spec), None, ), # 31
-    (32, TType.STRUCT, 'netbufferv4_update_ipmac_srcport_server2client', (netbufferv4_update_ipmac_srcport_server2client_action_spec_t, netbufferv4_update_ipmac_srcport_server2client_action_spec_t.thrift_spec), None, ), # 32
-    (33, TType.STRUCT, 'netbufferv4_update_ipmac_srcport_switch2switchos', (netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t, netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t.thrift_spec), None, ), # 33
-    (34, TType.STRUCT, 'netbufferv4_update_dstipmac_client2server', (netbufferv4_update_dstipmac_client2server_action_spec_t, netbufferv4_update_dstipmac_client2server_action_spec_t.thrift_spec), None, ), # 34
-    (35, TType.STRUCT, 'netbufferv4_update_pktlen', (netbufferv4_update_pktlen_action_spec_t, netbufferv4_update_pktlen_action_spec_t.thrift_spec), None, ), # 35
+    (30, TType.STRUCT, 'netbufferv4_range_partition_for_special_response', (netbufferv4_range_partition_for_special_response_action_spec_t, netbufferv4_range_partition_for_special_response_action_spec_t.thrift_spec), None, ), # 30
+    (31, TType.STRUCT, 'netbufferv4_recirculate_pkt', (netbufferv4_recirculate_pkt_action_spec_t, netbufferv4_recirculate_pkt_action_spec_t.thrift_spec), None, ), # 31
+    (32, TType.STRUCT, 'netbufferv4_set_hot_threshold', (netbufferv4_set_hot_threshold_action_spec_t, netbufferv4_set_hot_threshold_action_spec_t.thrift_spec), None, ), # 32
+    (33, TType.STRUCT, 'netbufferv4_update_ipmac_srcport_server2client', (netbufferv4_update_ipmac_srcport_server2client_action_spec_t, netbufferv4_update_ipmac_srcport_server2client_action_spec_t.thrift_spec), None, ), # 33
+    (34, TType.STRUCT, 'netbufferv4_update_ipmac_srcport_switch2switchos', (netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t, netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t.thrift_spec), None, ), # 34
+    (35, TType.STRUCT, 'netbufferv4_update_dstipmac_client2server', (netbufferv4_update_dstipmac_client2server_action_spec_t, netbufferv4_update_dstipmac_client2server_action_spec_t.thrift_spec), None, ), # 35
+    (36, TType.STRUCT, 'netbufferv4_update_pktlen', (netbufferv4_update_pktlen_action_spec_t, netbufferv4_update_pktlen_action_spec_t.thrift_spec), None, ), # 36
   )
 
-  def __init__(self, netbufferv4_cached_action=None, netbufferv4_update_getreq_inswitch_to_getres_by_mirroring=None, netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss=None, netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss=None, netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss=None, netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss=None, netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone=None, netbufferv4_update_putreq_inswitch_to_putres_by_mirroring=None, netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres=None, netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres=None, netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring=None, netbufferv4_update_delreq_inswitch_to_delres_by_mirroring=None, netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres=None, netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres=None, netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring=None, netbufferv4_forward_scanreq_split_and_clone=None, netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone=None, netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone=None, netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone=None, netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone=None, netbufferv4_forward_normal_response=None, netbufferv4_forward_special_get_response=None, netbufferv4_l2l3_forward=None, netbufferv4_set_client_sid=None, netbufferv4_process_scanreq_split=None, netbufferv4_process_cloned_scanreq_split=None, netbufferv4_range_partition_for_scan_endkey=None, netbufferv4_range_partition=None, netbufferv4_range_partition_for_scan=None, netbufferv4_recirculate_pkt=None, netbufferv4_set_hot_threshold=None, netbufferv4_update_ipmac_srcport_server2client=None, netbufferv4_update_ipmac_srcport_switch2switchos=None, netbufferv4_update_dstipmac_client2server=None, netbufferv4_update_pktlen=None,):
+  def __init__(self, netbufferv4_cached_action=None, netbufferv4_update_getreq_inswitch_to_getres_by_mirroring=None, netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss=None, netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss=None, netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss=None, netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss=None, netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone=None, netbufferv4_update_putreq_inswitch_to_putres_by_mirroring=None, netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres=None, netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres=None, netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring=None, netbufferv4_update_delreq_inswitch_to_delres_by_mirroring=None, netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres=None, netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres=None, netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring=None, netbufferv4_forward_scanreq_split_and_clone=None, netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone=None, netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone=None, netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone=None, netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone=None, netbufferv4_forward_normal_response=None, netbufferv4_forward_special_get_response=None, netbufferv4_l2l3_forward=None, netbufferv4_set_client_sid=None, netbufferv4_process_scanreq_split=None, netbufferv4_process_cloned_scanreq_split=None, netbufferv4_range_partition_for_scan_endkey=None, netbufferv4_range_partition=None, netbufferv4_range_partition_for_scan=None, netbufferv4_range_partition_for_special_response=None, netbufferv4_recirculate_pkt=None, netbufferv4_set_hot_threshold=None, netbufferv4_update_ipmac_srcport_server2client=None, netbufferv4_update_ipmac_srcport_switch2switchos=None, netbufferv4_update_dstipmac_client2server=None, netbufferv4_update_pktlen=None,):
     self.netbufferv4_cached_action = netbufferv4_cached_action
     self.netbufferv4_update_getreq_inswitch_to_getres_by_mirroring = netbufferv4_update_getreq_inswitch_to_getres_by_mirroring
     self.netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss = netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss
@@ -10763,6 +10847,7 @@ class netbufferv4_action_specs_t:
     self.netbufferv4_range_partition_for_scan_endkey = netbufferv4_range_partition_for_scan_endkey
     self.netbufferv4_range_partition = netbufferv4_range_partition
     self.netbufferv4_range_partition_for_scan = netbufferv4_range_partition_for_scan
+    self.netbufferv4_range_partition_for_special_response = netbufferv4_range_partition_for_special_response
     self.netbufferv4_recirculate_pkt = netbufferv4_recirculate_pkt
     self.netbufferv4_set_hot_threshold = netbufferv4_set_hot_threshold
     self.netbufferv4_update_ipmac_srcport_server2client = netbufferv4_update_ipmac_srcport_server2client
@@ -10955,35 +11040,41 @@ class netbufferv4_action_specs_t:
           iprot.skip(ftype)
       elif fid == 30:
         if ftype == TType.STRUCT:
+          self.netbufferv4_range_partition_for_special_response = netbufferv4_range_partition_for_special_response_action_spec_t()
+          self.netbufferv4_range_partition_for_special_response.read(iprot)
+        else:
+          iprot.skip(ftype)
+      elif fid == 31:
+        if ftype == TType.STRUCT:
           self.netbufferv4_recirculate_pkt = netbufferv4_recirculate_pkt_action_spec_t()
           self.netbufferv4_recirculate_pkt.read(iprot)
         else:
           iprot.skip(ftype)
-      elif fid == 31:
+      elif fid == 32:
         if ftype == TType.STRUCT:
           self.netbufferv4_set_hot_threshold = netbufferv4_set_hot_threshold_action_spec_t()
           self.netbufferv4_set_hot_threshold.read(iprot)
         else:
           iprot.skip(ftype)
-      elif fid == 32:
+      elif fid == 33:
         if ftype == TType.STRUCT:
           self.netbufferv4_update_ipmac_srcport_server2client = netbufferv4_update_ipmac_srcport_server2client_action_spec_t()
           self.netbufferv4_update_ipmac_srcport_server2client.read(iprot)
         else:
           iprot.skip(ftype)
-      elif fid == 33:
+      elif fid == 34:
         if ftype == TType.STRUCT:
           self.netbufferv4_update_ipmac_srcport_switch2switchos = netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t()
           self.netbufferv4_update_ipmac_srcport_switch2switchos.read(iprot)
         else:
           iprot.skip(ftype)
-      elif fid == 34:
+      elif fid == 35:
         if ftype == TType.STRUCT:
           self.netbufferv4_update_dstipmac_client2server = netbufferv4_update_dstipmac_client2server_action_spec_t()
           self.netbufferv4_update_dstipmac_client2server.read(iprot)
         else:
           iprot.skip(ftype)
-      elif fid == 35:
+      elif fid == 36:
         if ftype == TType.STRUCT:
           self.netbufferv4_update_pktlen = netbufferv4_update_pktlen_action_spec_t()
           self.netbufferv4_update_pktlen.read(iprot)
@@ -11115,28 +11206,32 @@ class netbufferv4_action_specs_t:
       oprot.writeFieldBegin('netbufferv4_range_partition_for_scan', TType.STRUCT, 29)
       self.netbufferv4_range_partition_for_scan.write(oprot)
       oprot.writeFieldEnd()
+    if self.netbufferv4_range_partition_for_special_response is not None:
+      oprot.writeFieldBegin('netbufferv4_range_partition_for_special_response', TType.STRUCT, 30)
+      self.netbufferv4_range_partition_for_special_response.write(oprot)
+      oprot.writeFieldEnd()
     if self.netbufferv4_recirculate_pkt is not None:
-      oprot.writeFieldBegin('netbufferv4_recirculate_pkt', TType.STRUCT, 30)
+      oprot.writeFieldBegin('netbufferv4_recirculate_pkt', TType.STRUCT, 31)
       self.netbufferv4_recirculate_pkt.write(oprot)
       oprot.writeFieldEnd()
     if self.netbufferv4_set_hot_threshold is not None:
-      oprot.writeFieldBegin('netbufferv4_set_hot_threshold', TType.STRUCT, 31)
+      oprot.writeFieldBegin('netbufferv4_set_hot_threshold', TType.STRUCT, 32)
       self.netbufferv4_set_hot_threshold.write(oprot)
       oprot.writeFieldEnd()
     if self.netbufferv4_update_ipmac_srcport_server2client is not None:
-      oprot.writeFieldBegin('netbufferv4_update_ipmac_srcport_server2client', TType.STRUCT, 32)
+      oprot.writeFieldBegin('netbufferv4_update_ipmac_srcport_server2client', TType.STRUCT, 33)
       self.netbufferv4_update_ipmac_srcport_server2client.write(oprot)
       oprot.writeFieldEnd()
     if self.netbufferv4_update_ipmac_srcport_switch2switchos is not None:
-      oprot.writeFieldBegin('netbufferv4_update_ipmac_srcport_switch2switchos', TType.STRUCT, 33)
+      oprot.writeFieldBegin('netbufferv4_update_ipmac_srcport_switch2switchos', TType.STRUCT, 34)
       self.netbufferv4_update_ipmac_srcport_switch2switchos.write(oprot)
       oprot.writeFieldEnd()
     if self.netbufferv4_update_dstipmac_client2server is not None:
-      oprot.writeFieldBegin('netbufferv4_update_dstipmac_client2server', TType.STRUCT, 34)
+      oprot.writeFieldBegin('netbufferv4_update_dstipmac_client2server', TType.STRUCT, 35)
       self.netbufferv4_update_dstipmac_client2server.write(oprot)
       oprot.writeFieldEnd()
     if self.netbufferv4_update_pktlen is not None:
-      oprot.writeFieldBegin('netbufferv4_update_pktlen', TType.STRUCT, 35)
+      oprot.writeFieldBegin('netbufferv4_update_pktlen', TType.STRUCT, 36)
       self.netbufferv4_update_pktlen.write(oprot)
       oprot.writeFieldEnd()
     oprot.writeFieldStop()
@@ -11177,6 +11272,7 @@ class netbufferv4_action_specs_t:
     value = (value * 31) ^ hash(self.netbufferv4_range_partition_for_scan_endkey)
     value = (value * 31) ^ hash(self.netbufferv4_range_partition)
     value = (value * 31) ^ hash(self.netbufferv4_range_partition_for_scan)
+    value = (value * 31) ^ hash(self.netbufferv4_range_partition_for_special_response)
     value = (value * 31) ^ hash(self.netbufferv4_recirculate_pkt)
     value = (value * 31) ^ hash(self.netbufferv4_set_hot_threshold)
     value = (value * 31) ^ hash(self.netbufferv4_update_ipmac_srcport_server2client)

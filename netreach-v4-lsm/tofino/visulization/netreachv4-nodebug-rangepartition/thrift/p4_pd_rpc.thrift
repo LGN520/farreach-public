@@ -370,7 +370,7 @@ struct netbufferv4_l2l3_forward_tbl_match_spec_t {
 
 struct netbufferv4_lastclone_lastscansplit_tbl_match_spec_t {
   1: required i16 op_hdr_optype;
-  2: required byte clone_hdr_clonenum_for_pktloss;
+  2: required i16 clone_hdr_clonenum_for_pktloss;
   3: required i16 meta_remain_scannum;
 }
 
@@ -381,8 +381,9 @@ struct netbufferv4_need_recirculate_tbl_match_spec_t {
 
 struct netbufferv4_prepare_for_cachehit_tbl_match_spec_t {
   1: required i16 op_hdr_optype;
-  2: required i16 ig_intr_md_ingress_port;
-  3: required byte meta_need_recirculate;
+  2: required i32 ipv4_hdr_srcAddr;
+  3: required i16 ipv4_hdr_srcAddr_prefix_length;
+  4: required byte meta_need_recirculate;
 }
 
 struct netbufferv4_process_scanreq_split_tbl_match_spec_t {
@@ -717,6 +718,10 @@ struct netbufferv4_range_partition_for_scan_action_spec_t {
   3: required i16 action_start_globalserveridx;
 }
 
+struct netbufferv4_range_partition_for_special_response_action_spec_t {
+  1: required i16 action_eport;
+}
+
 struct netbufferv4_recirculate_pkt_action_spec_t {
   1: required byte action_port;
 }
@@ -781,12 +786,13 @@ union netbufferv4_action_specs_t {
   27: netbufferv4_range_partition_for_scan_endkey_action_spec_t netbufferv4_range_partition_for_scan_endkey;
   28: netbufferv4_range_partition_action_spec_t netbufferv4_range_partition;
   29: netbufferv4_range_partition_for_scan_action_spec_t netbufferv4_range_partition_for_scan;
-  30: netbufferv4_recirculate_pkt_action_spec_t netbufferv4_recirculate_pkt;
-  31: netbufferv4_set_hot_threshold_action_spec_t netbufferv4_set_hot_threshold;
-  32: netbufferv4_update_ipmac_srcport_server2client_action_spec_t netbufferv4_update_ipmac_srcport_server2client;
-  33: netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t netbufferv4_update_ipmac_srcport_switch2switchos;
-  34: netbufferv4_update_dstipmac_client2server_action_spec_t netbufferv4_update_dstipmac_client2server;
-  35: netbufferv4_update_pktlen_action_spec_t netbufferv4_update_pktlen;
+  30: netbufferv4_range_partition_for_special_response_action_spec_t netbufferv4_range_partition_for_special_response;
+  31: netbufferv4_recirculate_pkt_action_spec_t netbufferv4_recirculate_pkt;
+  32: netbufferv4_set_hot_threshold_action_spec_t netbufferv4_set_hot_threshold;
+  33: netbufferv4_update_ipmac_srcport_server2client_action_spec_t netbufferv4_update_ipmac_srcport_server2client;
+  34: netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t netbufferv4_update_ipmac_srcport_switch2switchos;
+  35: netbufferv4_update_dstipmac_client2server_action_spec_t netbufferv4_update_dstipmac_client2server;
+  36: netbufferv4_update_pktlen_action_spec_t netbufferv4_update_pktlen;
 }
 
 struct netbufferv4_action_desc_t {
@@ -1679,6 +1685,7 @@ service netbufferv4 {
     EntryHandle_t range_partition_for_scan_endkey_tbl_table_add_with_nop(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_range_partition_for_scan_endkey_tbl_match_spec_t match_spec, 4:i32 priority) throws (1:InvalidTableOperation ouch),
     EntryHandle_t range_partition_tbl_table_add_with_range_partition(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_range_partition_tbl_match_spec_t match_spec, 4:i32 priority, 5:netbufferv4_range_partition_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t range_partition_tbl_table_add_with_range_partition_for_scan(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_range_partition_tbl_match_spec_t match_spec, 4:i32 priority, 5:netbufferv4_range_partition_for_scan_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
+    EntryHandle_t range_partition_tbl_table_add_with_range_partition_for_special_response(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_range_partition_tbl_match_spec_t match_spec, 4:i32 priority, 5:netbufferv4_range_partition_for_special_response_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t range_partition_tbl_table_add_with_nop(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_range_partition_tbl_match_spec_t match_spec, 4:i32 priority) throws (1:InvalidTableOperation ouch),
     EntryHandle_t recirculate_tbl_table_add_with_recirculate_pkt(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_recirculate_tbl_match_spec_t match_spec, 4:netbufferv4_recirculate_pkt_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t recirculate_tbl_table_add_with_nop(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_recirculate_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
@@ -2077,6 +2084,8 @@ service netbufferv4 {
     void range_partition_tbl_table_modify_with_range_partition_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_range_partition_tbl_match_spec_t match_spec, 4:i32 priority, 5:netbufferv4_range_partition_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
     void range_partition_tbl_table_modify_with_range_partition_for_scan(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry, 4:netbufferv4_range_partition_for_scan_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
     void range_partition_tbl_table_modify_with_range_partition_for_scan_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_range_partition_tbl_match_spec_t match_spec, 4:i32 priority, 5:netbufferv4_range_partition_for_scan_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
+    void range_partition_tbl_table_modify_with_range_partition_for_special_response(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry, 4:netbufferv4_range_partition_for_special_response_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
+    void range_partition_tbl_table_modify_with_range_partition_for_special_response_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_range_partition_tbl_match_spec_t match_spec, 4:i32 priority, 5:netbufferv4_range_partition_for_special_response_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
     void range_partition_tbl_table_modify_with_nop(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry) throws (1:InvalidTableOperation ouch),
     void range_partition_tbl_table_modify_with_nop_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_range_partition_tbl_match_spec_t match_spec, 4:i32 priority) throws (1:InvalidTableOperation ouch),
     void recirculate_tbl_table_modify_with_recirculate_pkt(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry, 4:netbufferv4_recirculate_pkt_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
