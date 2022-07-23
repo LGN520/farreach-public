@@ -170,6 +170,7 @@ action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, st
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, stat);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
@@ -388,6 +389,7 @@ action update_putreq_inswitch_to_putres_by_mirroring(client_sid, server_port) {
 	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
@@ -486,6 +488,7 @@ action update_putreq_seq_inswitch_case1_to_putres_by_mirroring(client_sid, serve
 	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
@@ -562,6 +565,7 @@ action update_delreq_inswitch_to_delres_by_mirroring(client_sid, server_port) {
 	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
@@ -651,6 +655,7 @@ action update_delreq_seq_inswitch_case1_to_delres_by_mirroring(client_sid, serve
 	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
 	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 

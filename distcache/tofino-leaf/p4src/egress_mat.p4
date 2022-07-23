@@ -235,7 +235,11 @@ action update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(client_s
 	modify_field(op_hdr.optype, WARMUPACK);
 	// DEPRECATED: udp.srcport will be set as server_worker_port_start in update_ipmac_srcport_tbl
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports
+
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
 	modify_field(udp_hdr.srcPort, server_port);
+	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
+	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
 	remove_header(shadowtype_hdr);
@@ -292,6 +296,8 @@ action update_getreq_inswitch_to_getres_by_mirroring(client_sid, stat) {
 	modify_field(stat_hdr.stat, stat);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
+	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
 	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);

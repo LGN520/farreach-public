@@ -1459,7 +1459,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                 else: # is_cached == 1 and is_latest == 1
                                                     # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                    actnspec0 = distcacheleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
+                                                    actnspec0 = distcacheleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                         # is_cached=0 (no inswitch_hdr), is_hot=0 (not access CM), is_report=0 (not access BF), is_latest=0, is_deleted=0, tmp_client_sid=0 (no inswitch_hdr), tmp_server_sid!=0 for NETCACHE_GETREQ_POP
@@ -1696,7 +1696,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     self.sess_hdl, self.dev_tgt, matchspec0)
                                                     else: # is_cached == 1 and is_latest == 1
                                                         # Update GETREQ_INSWITCH as GETRES to client by mirroring
-                                                        actnspec0 = distcacheleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, tmpstat)
+                                                        actnspec0 = distcacheleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
                                                         self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
                                             # is_cached=0 (no inswitch_hdr), is_hot=0 (not access CM), is_report=0 (not access BF), is_latest=0, is_deleted=0, tmp_client_sid=0 (no inswitch_hdr), tmp_server_sid!=0 for NETCACHE_GETREQ_POP

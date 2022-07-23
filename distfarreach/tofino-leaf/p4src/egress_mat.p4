@@ -167,12 +167,14 @@ action update_getreq_inswitch_to_getreq_nlatest() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_getreq_inswitch_to_getres_by_mirroring(client_sid, stat) {
+action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, stat);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
+	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
 	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
@@ -357,12 +359,14 @@ action update_putreq_seq_inswitch_to_putreq_pop_seq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_putreq_seq_inswitch_to_putres_by_mirroring(client_sid) {
+action update_putreq_seq_inswitch_to_putres_by_mirroring(client_sid, server_port) {
 	modify_field(op_hdr.optype, PUTRES);
 	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
+	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
 	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
@@ -446,7 +450,11 @@ action update_putreq_seq_inswitch_case1_to_putres_by_mirroring(client_sid, serve
 	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
+
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
 	modify_field(udp_hdr.srcPort, server_port);
+	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
+	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
 	/*remove_header(vallen_hdr);
@@ -505,12 +513,14 @@ action update_delreq_seq_inswitch_to_delreq_seq() {
 	//modify_field(eg_intr_md.egress_port, eport);
 }
 
-action update_delreq_seq_inswitch_to_delres_by_mirroring(client_sid) {
+action update_delreq_seq_inswitch_to_delres_by_mirroring(client_sid, server_port) {
 	modify_field(op_hdr.optype, DELRES);
 	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 	
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
+	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
 	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
@@ -602,7 +612,11 @@ action update_delreq_seq_inswitch_case1_to_delres_by_mirroring(client_sid, serve
 	modify_field(shadowtype_hdr.shadowtype, DELRES);
 	modify_field(stat_hdr.stat, 1);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
+
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
 	modify_field(udp_hdr.srcPort, server_port);
+	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
+	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
 
 	/*remove_header(vallen_hdr);

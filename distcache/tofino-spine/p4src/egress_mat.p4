@@ -223,11 +223,13 @@ action forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack(s
 	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
 }
 
-action update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(client_sid) {
+action update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring(client_sid, server_port) {
 	modify_field(op_hdr.optype, WARMUPACK);
 	// DEPRECATED: udp.srcport will be set as server_worker_port_start in update_ipmac_srcport_tbl
 	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports
 
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
+	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
 	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
@@ -247,43 +249,14 @@ action update_getreq_inswitch_to_getreq_spine() {
 	remove_header(inswitch_hdr);
 }
 
-action update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq(switchos_sid, reflector_port) {
-	modify_field(op_hdr.optype, NETCACHE_GETREQ_POP);
-	modify_field(udp_hdr.dstPort, reflector_port);
-	modify_field(clone_hdr.clonenum_for_pktloss, 3); // 3 ACKs (drop w/ 3 -> clone w/ 2 -> clone w/ 1 -> clone w/ 0 -> drop and clone for GETREQ to server)
-
-	remove_header(shadowtype_hdr);
-	remove_header(inswitch_hdr);
-	add_header(clone_hdr); // NOTE: clone_hdr.server_sid has been set in prepare_for_cachepop_tbl
-
-	//modify_field(eg_intr_md.egress_port, port); // set eport to switchos
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
-	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
-}
-
-action forward_netcache_getreq_pop_clone_for_pktloss_and_getreq(switchos_sid) {
-	subtract_from_field(clone_hdr.clonenum_for_pktloss, 1);
-
-	clone_egress_pkt_to_egress(switchos_sid); // clone to switchos
-}
-
-action update_netcache_getreq_pop_to_getreq_by_mirroring(server_sid) {
-	modify_field(op_hdr.optype, GETREQ);
-	// Keep original udp.srcport (aka client udp port)
-	modify_field(udp_hdr.dstPort, clone_hdr.server_udpport);
-
-	remove_header(clone_hdr);
-
-	modify_field(eg_intr_md_for_oport.drop_ctl, 1); // Disable unicast, but enable mirroring
-	clone_egress_pkt_to_egress(server_sid); // clone to client (inswitch_hdr.client_sid)
-}
-
-action update_getreq_inswitch_to_getres_by_mirroring(client_sid, stat) {
+action update_getreq_inswitch_to_getres_by_mirroring(client_sid, server_port, stat) {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
 	modify_field(stat_hdr.stat, stat);
 	modify_field(stat_hdr.nodeidx_foreval, SWITCHIDX_FOREVAL);
 
+	// NOTE: we must set udp.srcPort now, otherwise it will dropped by parser/deparser due to NO reserved udp ports (current pkt will NOT access update_ipmac_srcport_tbl for server2client as current devport is server instead of client)
+	modify_field(udp_hdr.srcPort, server_port);
 	modify_field(ipv4_hdr.dstAddr, clone_hdr.client_ip);
 	modify_field(ethernet_hdr.dstAddr, clone_hdr.client_mac);
 	modify_field(udp_hdr.dstPort, clone_hdr.client_udpport);
@@ -462,9 +435,6 @@ table eg_port_forward_tbl {
 		forward_netcache_warmupreq_inswitch_pop_clone_for_pktloss_and_warmupack;
 		update_netcache_warmupreq_inswitch_pop_to_warmupack_by_mirroring;
 		update_getreq_inswitch_to_getreq_spine;
-		update_getreq_inswitch_to_netcache_getreq_pop_clone_for_pktloss_and_getreq;
-		forward_netcache_getreq_pop_clone_for_pktloss_and_getreq;
-		update_netcache_getreq_pop_to_getreq_by_mirroring;
 		update_getreq_inswitch_to_getres_by_mirroring;
 		//update_cache_pop_inswitch_to_cache_pop_inswitch_ack_clone_for_pktloss; // clone for first CACHE_POP_INSWITCH_ACK
 		//forward_cache_pop_inswitch_ack_clone_for_pktloss; // not last clone of CACHE_POP_INSWITCH_ACK
