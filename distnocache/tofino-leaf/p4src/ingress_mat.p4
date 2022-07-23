@@ -194,6 +194,14 @@ action update_getreq_spine_to_getreq() {
 	modify_field(op_hdr.optype, GETREQ);
 }
 
+action update_distnocache_putreq_spine_to_putreq() {
+	modify_field(op_hdr.optype, PUTREQ);
+}
+
+action update_distnocache_delreq_spine_to_delreq() {
+	modify_field(op_hdr.optype, DELREQ);
+}
+
 action update_getres_server_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
 	modify_field(shadowtype_hdr.shadowtype, GETRES);
@@ -229,6 +237,8 @@ table ig_port_forward_tbl {
 	}
 	actions {
 		update_getreq_spine_to_getreq;
+		update_distnocache_putreq_spine_to_putreq;
+		update_distnocache_delreq_spine_to_delreq;
 		update_getres_server_to_getres;
 		update_scanres_split_server_to_scanres_split;
 		update_putres_server_to_putres;
@@ -238,5 +248,5 @@ table ig_port_forward_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 8;
+	size: 16;
 }

@@ -382,6 +382,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.sess_hdl, self.dev_tgt, actnspec0)
 
             # Table: hash_for_spineselect_tbl (default: nop; size: 10)
+            # NOTE: we calculate meta.spineswitchidx for special get responses here
             print "Configuring hash_for_spineselect_tbl"
             for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
                 matchspec0 = distfarreachleaf_hash_for_spineselect_tbl_match_spec_t(\
@@ -405,9 +406,9 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 1
 
             if RANGE_SUPPORT == False:
-                # Table: hash_for_partition_tbl (default: nop; size: 16)
+                # Table: hash_for_partition_tbl (default: nop; size: 17)
                 print "Configuring hash_for_partition_tbl"
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST]:
                     matchspec0 = distfarreachleaf_hash_for_partition_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype),
                             meta_need_recirculate = 0)
@@ -415,6 +416,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: spineselect_tbl (default: nop; size <= 10 * spineswitch_total_logical_num)
+            # NOTE: we calculate meta.spineswitchidx for special get responses here
             print "Configuring spineselect_tbl"
             key_range_per_spineswitch = switch_partition_count / spineswitch_total_logical_num
             for tmpoptype in [GETREQ, PUTREQ, DELREQ, SCANREQ, WARMUPREQ, LOADREQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
@@ -446,12 +448,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # Stage 2
 
             if RANGE_SUPPORT == True:
-                # Table: range_partition_tbl (default: nop; size <= 17 * 128)
+                # Table: range_partition_tbl (default: nop; size <= 18 * 128)
                 print "Configuring range_partition_tbl"
                 key_range_per_server = pow(2, 16) / server_total_logical_num
                 key_range_per_leafswitch = pow(2, 16) / leafswitch_total_logical_num
                 servernum_per_leafswitch = server_total_logical_num / leafswitch_total_logical_num
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, SCANREQ_SPLIT, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST]:
                     valid_serveridx_start = 0 # [0, server_total_logical_num-1]
                     valid_key_start = 0 # [0, 2^16-1]
                     for i in range(leafswitch_total_logical_num):
@@ -518,10 +520,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         valid_serveridx_start = valid_serveridx_end + 1
                         valid_key_start = valid_key_end + 1
             else:
-                # Table: hash_partition_tbl (default: nop; size <= 16 * 128)
+                # Table: hash_partition_tbl (default: nop; size <= 17 * 128)
                 print "Configuring hash_partition_tbl"
                 hash_range_per_server = switch_partition_count / server_total_logical_num
-                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
+                for tmpoptype in [GETREQ_SPINE, CACHE_POP_INSWITCH, PUTREQ_SEQ, DELREQ_SEQ, WARMUPREQ_SPINE, LOADREQ_SPINE, CACHE_EVICT_LOADFREQ_INSWITCH, CACHE_EVICT_LOADDATA_INSWITCH, LOADSNAPSHOTDATA_INSWITCH, SETVALID_INSWITCH, PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH, GETREQ_NLATEST]:
                     hash_start = 0 # [0, partition_count-1]
                     for global_server_logical_idx in range(server_total_logical_num):
                         if global_server_logical_idx == server_total_logical_num - 1:
@@ -1473,7 +1475,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec1 = distfarreachleaf_update_dstipmac_client2server_action_spec_t(\
                         macAddr_to_string(tmp_server_mac), \
                         ipv4Addr_to_i32(tmp_server_ip))
-                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ]:
+                for tmpoptype in [GETREQ, GETREQ_NLATEST, PUTREQ_SEQ, DELREQ_SEQ, SCANREQ_SPLIT, GETREQ_POP, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, DELREQ_SEQ_CASE3, WARMUPREQ, LOADREQ, GETREQ_NLATEST]:
                     matchspec0 = distfarreachleaf_update_ipmac_srcport_tbl_match_spec_t(\
                             op_hdr_optype = convert_u16_to_i16(tmpoptype), 
                             eg_intr_md_egress_port = tmp_devport)
@@ -1501,11 +1503,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.update_ipmac_srcport_tbl_table_add_with_update_ipmac_srcport_switch2switchos(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec2)
 
-            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*16=272)
+            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*17=289)
             print "Configuring add_and_remove_value_header_tbl"
             # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_SEQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
-            for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES, LOADREQ, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
+            for tmpoptype in [PUTREQ, PUTREQ_SEQ, PUTREQ_POP_SEQ, PUTREQ_SEQ_CASE3, PUTREQ_POP_SEQ_CASE3, GETRES_LATEST_SEQ_INSWITCH_CASE1, GETRES_DELETED_SEQ_INSWITCH_CASE1, PUTREQ_SEQ_INSWITCH_CASE1, DELREQ_SEQ_INSWITCH_CASE1, GETRES, LOADREQ, CACHE_EVICT_LOADDATA_INSWITCH_ACK, LOADSNAPSHOTDATA_INSWITCH_ACK, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                     if i == 0:
                         vallen_start = 0

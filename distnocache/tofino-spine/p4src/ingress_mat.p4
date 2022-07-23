@@ -148,6 +148,14 @@ update update_getreq_to_getreq_spine() {
 	modify_field(op_hdr.optype, GETREQ_SPINE);
 }
 
+update update_putreq_to_distnocache_putreq_spine() {
+	modify_field(op_hdr.optype, DISTNOCACHE_PUTREQ_SPINE);
+}
+
+update update_delreq_to_distnocache_delreq_spine() {
+	modify_field(op_hdr.optype, DISTNOCACHE_DELREQ_SPINE);
+}
+
 #ifdef RANGE_SUPPORT
 action update_scanreq_to_scanreq_split() {
 	modify_field(op_hdr.optype, SCANREQ_SPLIT);
@@ -166,6 +174,8 @@ table ig_port_forward_tbl {
 	}
 	actions {
 		update_getreq_to_getreq_spine;
+		update_putreq_to_distnocache_putreq_spine;
+		update_delreq_to_distnocache_delreq_spine;
 #ifdef RANGE_SUPPORT
 		update_scanreq_to_scanreq_split;
 #endif

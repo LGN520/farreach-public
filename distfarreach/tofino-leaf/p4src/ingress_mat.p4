@@ -158,7 +158,7 @@ table hash_for_partition_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 16;
+	size: 32;
 }
 #endif
 

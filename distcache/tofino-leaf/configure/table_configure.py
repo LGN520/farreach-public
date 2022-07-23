@@ -736,7 +736,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: save_client_info_tbl (default: nop; size: 4)
             print "Configuring save_client_info_tbl"
-            for tmpoptype in[GETREQ_INSWITCH]:
+            for tmpoptype in [GETREQ_INSWITCH]:
                 matchspec0 = distcacheleaf_save_client_info_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype)
                 self.client.save_client_info_tbl_table_add_with_save_client_info(\
@@ -1334,11 +1334,11 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 self.client.update_ipmac_srcport_tbl_table_add_with_update_dstipmac_switch2switchos(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec2)
 
-            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*4=68)
+            # Table: add_and_remove_value_header_tbl (default: remove_all; 17*5=85)
             print "Configuring add_and_remove_value_header_tbl"
             # NOTE: egress pipeline must not output PUTREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, GETRES_LATEST_SEQ_INSWITCH, GETRES_DELETED_SEQ_INSWITCH, CACHE_POP_INSWITCH, and PUTREQ_SEQ_INSWITCH
             # NOTE: even for future PUTREQ_LARGE/GETRES_LARGE, as their values should be in payload, we should invoke add_only_vallen() for vallen in [0, global_max_vallen]
-            for tmpoptype in [PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, GETRES, LOADREQ]:
+            for tmpoptype in [PUTREQ, PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED, GETRES, LOADREQ]:
                 for i in range(switch_max_vallen/8 + 1): # i from 0 to 16
                     if i == 0:
                         vallen_start = 0

@@ -358,6 +358,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     op_hdr_optype = GETREQ)
             self.client.ig_port_forward_tbl_table_add_with_update_getreq_to_getreq_spine(\
                     self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distnocachespine_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = PUTREQ)
+            self.client.ig_port_forward_tbl_table_add_with_update_putreq_to_distnocache_putreq_spine(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
+            matchspec0 = distnocachespine_ig_port_forward_tbl_match_spec_t(\
+                    op_hdr_optype = DELREQ)
+            self.client.ig_port_forward_tbl_table_add_with_update_delreq_to_distnocache_delreq_spine(\
+                    self.sess_hdl, self.dev_tgt, matchspec0)
             if RANGE_SUPPORT:
                 matchspec0 = distnocachespine_ig_port_forward_tbl_match_spec_t(\
                         op_hdr_optype = SCANREQ)
