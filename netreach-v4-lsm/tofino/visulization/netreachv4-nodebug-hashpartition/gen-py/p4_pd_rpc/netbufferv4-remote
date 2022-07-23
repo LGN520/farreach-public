@@ -189,6 +189,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  EntryHandle_t hash_for_seq_tbl_table_add_with_hash_for_seq(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_hash_for_seq_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t hash_for_seq_tbl_table_add_with_nop(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_hash_for_seq_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t hash_partition_tbl_table_add_with_hash_partition(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_hash_partition_tbl_match_spec_t match_spec, i32 priority, netbufferv4_hash_partition_action_spec_t action_spec)')
+  print('  EntryHandle_t hash_partition_tbl_table_add_with_hash_partition_for_special_response(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_hash_partition_tbl_match_spec_t match_spec, i32 priority, netbufferv4_hash_partition_for_special_response_action_spec_t action_spec)')
   print('  EntryHandle_t hash_partition_tbl_table_add_with_nop(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_hash_partition_tbl_match_spec_t match_spec, i32 priority)')
   print('  EntryHandle_t ig_port_forward_tbl_table_add_with_update_getreq_to_getreq_inswitch(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_ig_port_forward_tbl_match_spec_t match_spec)')
   print('  EntryHandle_t ig_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres_latest_seq_inswitch(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_ig_port_forward_tbl_match_spec_t match_spec)')
@@ -550,6 +551,8 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
   print('  void hash_for_seq_tbl_table_modify_with_nop_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_hash_for_seq_tbl_match_spec_t match_spec)')
   print('  void hash_partition_tbl_table_modify_with_hash_partition(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry, netbufferv4_hash_partition_action_spec_t action_spec)')
   print('  void hash_partition_tbl_table_modify_with_hash_partition_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_hash_partition_tbl_match_spec_t match_spec, i32 priority, netbufferv4_hash_partition_action_spec_t action_spec)')
+  print('  void hash_partition_tbl_table_modify_with_hash_partition_for_special_response(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry, netbufferv4_hash_partition_for_special_response_action_spec_t action_spec)')
+  print('  void hash_partition_tbl_table_modify_with_hash_partition_for_special_response_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_hash_partition_tbl_match_spec_t match_spec, i32 priority, netbufferv4_hash_partition_for_special_response_action_spec_t action_spec)')
   print('  void hash_partition_tbl_table_modify_with_nop(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry)')
   print('  void hash_partition_tbl_table_modify_with_nop_by_match_spec(SessionHandle_t sess_hdl, DevTarget_t dev_tgt, netbufferv4_hash_partition_tbl_match_spec_t match_spec, i32 priority)')
   print('  void ig_port_forward_tbl_table_modify_with_update_getreq_to_getreq_inswitch(SessionHandle_t sess_hdl, byte dev_id, EntryHandle_t entry)')
@@ -3081,6 +3084,12 @@ elif cmd == 'hash_partition_tbl_table_add_with_hash_partition':
     sys.exit(1)
   pp.pprint(client.hash_partition_tbl_table_add_with_hash_partition(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),eval(args[4]),))
 
+elif cmd == 'hash_partition_tbl_table_add_with_hash_partition_for_special_response':
+  if len(args) != 5:
+    print('hash_partition_tbl_table_add_with_hash_partition_for_special_response requires 5 args')
+    sys.exit(1)
+  pp.pprint(client.hash_partition_tbl_table_add_with_hash_partition_for_special_response(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),eval(args[4]),))
+
 elif cmd == 'hash_partition_tbl_table_add_with_nop':
   if len(args) != 4:
     print('hash_partition_tbl_table_add_with_nop requires 4 args')
@@ -5246,6 +5255,18 @@ elif cmd == 'hash_partition_tbl_table_modify_with_hash_partition_by_match_spec':
     print('hash_partition_tbl_table_modify_with_hash_partition_by_match_spec requires 5 args')
     sys.exit(1)
   pp.pprint(client.hash_partition_tbl_table_modify_with_hash_partition_by_match_spec(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),eval(args[4]),))
+
+elif cmd == 'hash_partition_tbl_table_modify_with_hash_partition_for_special_response':
+  if len(args) != 4:
+    print('hash_partition_tbl_table_modify_with_hash_partition_for_special_response requires 4 args')
+    sys.exit(1)
+  pp.pprint(client.hash_partition_tbl_table_modify_with_hash_partition_for_special_response(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),))
+
+elif cmd == 'hash_partition_tbl_table_modify_with_hash_partition_for_special_response_by_match_spec':
+  if len(args) != 5:
+    print('hash_partition_tbl_table_modify_with_hash_partition_for_special_response_by_match_spec requires 5 args')
+    sys.exit(1)
+  pp.pprint(client.hash_partition_tbl_table_modify_with_hash_partition_for_special_response_by_match_spec(eval(args[0]),eval(args[1]),eval(args[2]),eval(args[3]),eval(args[4]),))
 
 elif cmd == 'hash_partition_tbl_table_modify_with_nop':
   if len(args) != 3:

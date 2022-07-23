@@ -1,6 +1,131 @@
 #include "p4_prefix.h"
 namespace p4_pd_rpc {
 
+void netbufferv4Client::access_cm1_tbl_table_get_default_entry(netbufferv4_access_cm1_tbl_entry_desc_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const bool read_from_hw)
+{
+  send_access_cm1_tbl_table_get_default_entry(sess_hdl, dev_tgt, read_from_hw);
+  recv_access_cm1_tbl_table_get_default_entry(_return);
+}
+
+void netbufferv4Client::send_access_cm1_tbl_table_get_default_entry(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const bool read_from_hw)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("access_cm1_tbl_table_get_default_entry", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_access_cm1_tbl_table_get_default_entry_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_tgt = &dev_tgt;
+  args.read_from_hw = &read_from_hw;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+void netbufferv4Client::recv_access_cm1_tbl_table_get_default_entry(netbufferv4_access_cm1_tbl_entry_desc_t& _return)
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("access_cm1_tbl_table_get_default_entry") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  netbufferv4_access_cm1_tbl_table_get_default_entry_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    // _return pointer has now been filled
+    return;
+  }
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "access_cm1_tbl_table_get_default_entry failed: unknown result");
+}
+
+EntryHandle_t netbufferv4Client::access_cm2_tbl_table_get_default_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  send_access_cm2_tbl_table_get_default_entry_handle(sess_hdl, dev_tgt);
+  return recv_access_cm2_tbl_table_get_default_entry_handle();
+}
+
+void netbufferv4Client::send_access_cm2_tbl_table_get_default_entry_handle(const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("access_cm2_tbl_table_get_default_entry_handle", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  netbufferv4_access_cm2_tbl_table_get_default_entry_handle_pargs args;
+  args.sess_hdl = &sess_hdl;
+  args.dev_tgt = &dev_tgt;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+EntryHandle_t netbufferv4Client::recv_access_cm2_tbl_table_get_default_entry_handle()
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("access_cm2_tbl_table_get_default_entry_handle") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  EntryHandle_t _return;
+  netbufferv4_access_cm2_tbl_table_get_default_entry_handle_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    return _return;
+  }
+  if (result.__isset.ouch) {
+    throw result.ouch;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "access_cm2_tbl_table_get_default_entry_handle failed: unknown result");
+}
+
 void netbufferv4Client::access_cm2_tbl_table_get_default_entry(netbufferv4_access_cm2_tbl_entry_desc_t& _return, const  ::res_pd_rpc::SessionHandle_t sess_hdl, const  ::res_pd_rpc::DevTarget_t& dev_tgt, const bool read_from_hw)
 {
   send_access_cm2_tbl_table_get_default_entry(sess_hdl, dev_tgt, read_from_hw);
@@ -71151,6 +71276,63 @@ void netbufferv4Processor::process_hash_partition_tbl_table_add_with_hash_partit
   }
 }
 
+void netbufferv4Processor::process_hash_partition_tbl_table_add_with_hash_partition_for_special_response(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("netbufferv4.hash_partition_tbl_table_add_with_hash_partition_for_special_response", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.hash_partition_tbl_table_add_with_hash_partition_for_special_response");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "netbufferv4.hash_partition_tbl_table_add_with_hash_partition_for_special_response");
+  }
+
+  netbufferv4_hash_partition_tbl_table_add_with_hash_partition_for_special_response_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "netbufferv4.hash_partition_tbl_table_add_with_hash_partition_for_special_response", bytes);
+  }
+
+  netbufferv4_hash_partition_tbl_table_add_with_hash_partition_for_special_response_result result;
+  try {
+    result.success = iface_->hash_partition_tbl_table_add_with_hash_partition_for_special_response(args.sess_hdl, args.dev_tgt, args.match_spec, args.priority, args.action_spec);
+    result.__isset.success = true;
+  } catch (InvalidTableOperation &ouch) {
+    result.ouch = ouch;
+    result.__isset.ouch = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "netbufferv4.hash_partition_tbl_table_add_with_hash_partition_for_special_response");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("hash_partition_tbl_table_add_with_hash_partition_for_special_response", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "netbufferv4.hash_partition_tbl_table_add_with_hash_partition_for_special_response");
+  }
+
+  oprot->writeMessageBegin("hash_partition_tbl_table_add_with_hash_partition_for_special_response", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "netbufferv4.hash_partition_tbl_table_add_with_hash_partition_for_special_response", bytes);
+  }
+}
+
 void netbufferv4Processor::process_hash_partition_tbl_table_add_with_nop(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
 {
   void* ctx = NULL;
@@ -87723,62 +87905,6 @@ void netbufferv4Processor::process_eg_port_forward_tbl_table_modify_with_update_
 
   if (this->eventHandler_.get() != NULL) {
     this->eventHandler_->postWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss_by_match_spec", bytes);
-  }
-}
-
-void netbufferv4Processor::process_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
-{
-  void* ctx = NULL;
-  if (this->eventHandler_.get() != NULL) {
-    ctx = this->eventHandler_->getContext("netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", callContext);
-  }
-  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
-  }
-
-  netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss_args args;
-  args.read(iprot);
-  iprot->readMessageEnd();
-  uint32_t bytes = iprot->getTransport()->readEnd();
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postRead(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", bytes);
-  }
-
-  netbufferv4_eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss_result result;
-  try {
-    iface_->eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss(args.sess_hdl, args.dev_id, args.entry, args.action_spec);
-  } catch (InvalidTableOperation &ouch) {
-    result.ouch = ouch;
-    result.__isset.ouch = true;
-  } catch (const std::exception& e) {
-    if (this->eventHandler_.get() != NULL) {
-      this->eventHandler_->handlerError(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
-    }
-
-    ::apache::thrift::TApplicationException x(e.what());
-    oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", ::apache::thrift::protocol::T_EXCEPTION, seqid);
-    x.write(oprot);
-    oprot->writeMessageEnd();
-    oprot->getTransport()->writeEnd();
-    oprot->getTransport()->flush();
-    return;
-  }
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss");
-  }
-
-  oprot->writeMessageBegin("eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", ::apache::thrift::protocol::T_REPLY, seqid);
-  result.write(oprot);
-  oprot->writeMessageEnd();
-  bytes = oprot->getTransport()->writeEnd();
-  oprot->getTransport()->flush();
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postWrite(ctx, "netbufferv4.eg_port_forward_tbl_table_modify_with_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss", bytes);
   }
 }
 } // namespace

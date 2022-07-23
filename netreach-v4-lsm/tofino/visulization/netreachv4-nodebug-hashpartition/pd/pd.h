@@ -187,7 +187,8 @@ typedef struct p4_pd_netbufferv4_need_recirculate_tbl_match_spec {
 
 typedef struct p4_pd_netbufferv4_prepare_for_cachehit_tbl_match_spec {
   uint16_t op_hdr_optype;
-  uint16_t ig_intr_md_ingress_port;
+  uint32_t ipv4_hdr_srcAddr;
+  uint16_t ipv4_hdr_srcAddr_prefix_length;
   uint8_t meta_need_recirculate;
 } p4_pd_netbufferv4_prepare_for_cachehit_tbl_match_spec_t;
 
@@ -593,6 +594,7 @@ typedef enum p4_pd_netbufferv4_action_names {
   p4_pd_netbufferv4_hash_for_partition,
   p4_pd_netbufferv4_hash_for_seq,
   p4_pd_netbufferv4_hash_partition,
+  p4_pd_netbufferv4_hash_partition_for_special_response,
   p4_pd_netbufferv4_update_getreq_to_getreq_inswitch,
   p4_pd_netbufferv4_update_getres_latest_seq_to_getres_latest_seq_inswitch,
   p4_pd_netbufferv4_update_getres_deleted_seq_to_getres_deleted_seq_inswitch,
@@ -960,6 +962,10 @@ typedef struct p4_pd_netbufferv4_hash_partition_action_spec {
   uint16_t action_udpport;
   uint16_t action_eport;
 } p4_pd_netbufferv4_hash_partition_action_spec_t;
+
+typedef struct p4_pd_netbufferv4_hash_partition_for_special_response_action_spec {
+  uint16_t action_eport;
+} p4_pd_netbufferv4_hash_partition_for_special_response_action_spec_t;
 
   /* update_getreq_to_getreq_inswitch has no parameters */
 
@@ -1332,6 +1338,7 @@ typedef struct p4_pd_netbufferv4_action_specs_t {
   /* hash_for_partition has no parameters */
   /* hash_for_seq has no parameters */
     struct p4_pd_netbufferv4_hash_partition_action_spec p4_pd_netbufferv4_hash_partition;
+    struct p4_pd_netbufferv4_hash_partition_for_special_response_action_spec p4_pd_netbufferv4_hash_partition_for_special_response;
   /* update_getreq_to_getreq_inswitch has no parameters */
   /* update_getres_latest_seq_to_getres_latest_seq_inswitch has no parameters */
   /* update_getres_deleted_seq_to_getres_deleted_seq_inswitch has no parameters */
@@ -3719,6 +3726,26 @@ p4_pd_netbufferv4_hash_partition_tbl_table_add_with_hash_partition
  p4_pd_netbufferv4_hash_partition_tbl_match_spec_t *match_spec,
  int priority,
  p4_pd_netbufferv4_hash_partition_action_spec_t *action_spec,
+ p4_pd_entry_hdl_t *entry_hdl
+);
+
+/**
+ * @brief p4_pd_netbufferv4_hash_partition_tbl_table_add_with_hash_partition_for_special_response
+ * @param sess_hdl
+ * @param dev_tgt
+ * @param match_spec
+ * @param priority
+ * @param action_spec
+ * @param entry_hdl
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_hash_partition_tbl_table_add_with_hash_partition_for_special_response
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_hash_partition_tbl_match_spec_t *match_spec,
+ int priority,
+ p4_pd_netbufferv4_hash_partition_for_special_response_action_spec_t *action_spec,
  p4_pd_entry_hdl_t *entry_hdl
 );
 
@@ -14211,6 +14238,40 @@ p4_pd_netbufferv4_hash_partition_tbl_table_modify_with_hash_partition_by_match_s
  p4_pd_netbufferv4_hash_partition_tbl_match_spec_t *match_spec,
  int priority,
  p4_pd_netbufferv4_hash_partition_action_spec_t *action_spec
+);
+
+/**
+ * @brief p4_pd_netbufferv4_hash_partition_tbl_table_modify_with_hash_partition_for_special_response
+ * @param sess_hdl
+ * @param dev_id
+ * @param entry_hdl
+ * @param action_spec
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_hash_partition_tbl_table_modify_with_hash_partition_for_special_response
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ uint8_t dev_id,
+ p4_pd_entry_hdl_t ent_hdl,
+ p4_pd_netbufferv4_hash_partition_for_special_response_action_spec_t *action_spec
+);
+
+/**
+ * @brief p4_pd_netbufferv4_hash_partition_tbl_table_modify_with_hash_partition_for_special_response_by_match_spec
+ * @param sess_hdl
+ * @param dev_tgt
+ * @param match_spec
+ * @param priority
+ * @param action_spec
+*/
+p4_pd_status_t
+p4_pd_netbufferv4_hash_partition_tbl_table_modify_with_hash_partition_for_special_response_by_match_spec
+(
+ p4_pd_sess_hdl_t sess_hdl,
+ p4_pd_dev_target_t dev_tgt,
+ p4_pd_netbufferv4_hash_partition_tbl_match_spec_t *match_spec,
+ int priority,
+ p4_pd_netbufferv4_hash_partition_for_special_response_action_spec_t *action_spec
 );
 
 /**

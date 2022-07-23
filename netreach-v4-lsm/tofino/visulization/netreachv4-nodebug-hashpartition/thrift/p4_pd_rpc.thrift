@@ -390,8 +390,9 @@ struct netbufferv4_need_recirculate_tbl_match_spec_t {
 
 struct netbufferv4_prepare_for_cachehit_tbl_match_spec_t {
   1: required i16 op_hdr_optype;
-  2: required i16 ig_intr_md_ingress_port;
-  3: required byte meta_need_recirculate;
+  2: required i32 ipv4_hdr_srcAddr;
+  3: required i16 ipv4_hdr_srcAddr_prefix_length;
+  4: required byte meta_need_recirculate;
 }
 
 struct netbufferv4_recirculate_tbl_match_spec_t {
@@ -667,6 +668,10 @@ struct netbufferv4_hash_partition_action_spec_t {
   2: required i16 action_eport;
 }
 
+struct netbufferv4_hash_partition_for_special_response_action_spec_t {
+  1: required i16 action_eport;
+}
+
 struct netbufferv4_forward_normal_response_action_spec_t {
   1: required i16 action_eport;
 }
@@ -738,16 +743,17 @@ union netbufferv4_action_specs_t {
   18: netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone_action_spec_t netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
   19: netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone_action_spec_t netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
   20: netbufferv4_hash_partition_action_spec_t netbufferv4_hash_partition;
-  21: netbufferv4_forward_normal_response_action_spec_t netbufferv4_forward_normal_response;
-  22: netbufferv4_forward_special_get_response_action_spec_t netbufferv4_forward_special_get_response;
-  23: netbufferv4_l2l3_forward_action_spec_t netbufferv4_l2l3_forward;
-  24: netbufferv4_set_client_sid_action_spec_t netbufferv4_set_client_sid;
-  25: netbufferv4_recirculate_pkt_action_spec_t netbufferv4_recirculate_pkt;
-  26: netbufferv4_set_hot_threshold_action_spec_t netbufferv4_set_hot_threshold;
-  27: netbufferv4_update_ipmac_srcport_server2client_action_spec_t netbufferv4_update_ipmac_srcport_server2client;
-  28: netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t netbufferv4_update_ipmac_srcport_switch2switchos;
-  29: netbufferv4_update_dstipmac_client2server_action_spec_t netbufferv4_update_dstipmac_client2server;
-  30: netbufferv4_update_pktlen_action_spec_t netbufferv4_update_pktlen;
+  21: netbufferv4_hash_partition_for_special_response_action_spec_t netbufferv4_hash_partition_for_special_response;
+  22: netbufferv4_forward_normal_response_action_spec_t netbufferv4_forward_normal_response;
+  23: netbufferv4_forward_special_get_response_action_spec_t netbufferv4_forward_special_get_response;
+  24: netbufferv4_l2l3_forward_action_spec_t netbufferv4_l2l3_forward;
+  25: netbufferv4_set_client_sid_action_spec_t netbufferv4_set_client_sid;
+  26: netbufferv4_recirculate_pkt_action_spec_t netbufferv4_recirculate_pkt;
+  27: netbufferv4_set_hot_threshold_action_spec_t netbufferv4_set_hot_threshold;
+  28: netbufferv4_update_ipmac_srcport_server2client_action_spec_t netbufferv4_update_ipmac_srcport_server2client;
+  29: netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t netbufferv4_update_ipmac_srcport_switch2switchos;
+  30: netbufferv4_update_dstipmac_client2server_action_spec_t netbufferv4_update_dstipmac_client2server;
+  31: netbufferv4_update_pktlen_action_spec_t netbufferv4_update_pktlen;
 }
 
 struct netbufferv4_action_desc_t {
@@ -1602,6 +1608,7 @@ service netbufferv4 {
     EntryHandle_t hash_for_seq_tbl_table_add_with_hash_for_seq(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_hash_for_seq_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t hash_for_seq_tbl_table_add_with_nop(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_hash_for_seq_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t hash_partition_tbl_table_add_with_hash_partition(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_hash_partition_tbl_match_spec_t match_spec, 4:i32 priority, 5:netbufferv4_hash_partition_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
+    EntryHandle_t hash_partition_tbl_table_add_with_hash_partition_for_special_response(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_hash_partition_tbl_match_spec_t match_spec, 4:i32 priority, 5:netbufferv4_hash_partition_for_special_response_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t hash_partition_tbl_table_add_with_nop(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_hash_partition_tbl_match_spec_t match_spec, 4:i32 priority) throws (1:InvalidTableOperation ouch),
     EntryHandle_t ig_port_forward_tbl_table_add_with_update_getreq_to_getreq_inswitch(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_ig_port_forward_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     EntryHandle_t ig_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres_latest_seq_inswitch(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_ig_port_forward_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
@@ -1965,6 +1972,8 @@ service netbufferv4 {
     void hash_for_seq_tbl_table_modify_with_nop_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_hash_for_seq_tbl_match_spec_t match_spec) throws (1:InvalidTableOperation ouch),
     void hash_partition_tbl_table_modify_with_hash_partition(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry, 4:netbufferv4_hash_partition_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
     void hash_partition_tbl_table_modify_with_hash_partition_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_hash_partition_tbl_match_spec_t match_spec, 4:i32 priority, 5:netbufferv4_hash_partition_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
+    void hash_partition_tbl_table_modify_with_hash_partition_for_special_response(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry, 4:netbufferv4_hash_partition_for_special_response_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
+    void hash_partition_tbl_table_modify_with_hash_partition_for_special_response_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_hash_partition_tbl_match_spec_t match_spec, 4:i32 priority, 5:netbufferv4_hash_partition_for_special_response_action_spec_t action_spec) throws (1:InvalidTableOperation ouch),
     void hash_partition_tbl_table_modify_with_nop(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry) throws (1:InvalidTableOperation ouch),
     void hash_partition_tbl_table_modify_with_nop_by_match_spec(1:res.SessionHandle_t sess_hdl, 2:res.DevTarget_t dev_tgt, 3:netbufferv4_hash_partition_tbl_match_spec_t match_spec, 4:i32 priority) throws (1:InvalidTableOperation ouch),
     void ig_port_forward_tbl_table_modify_with_update_getreq_to_getreq_inswitch(1:res.SessionHandle_t sess_hdl, 2:byte dev_id, 3:EntryHandle_t entry) throws (1:InvalidTableOperation ouch),

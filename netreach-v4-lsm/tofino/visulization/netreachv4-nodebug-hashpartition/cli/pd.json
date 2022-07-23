@@ -828,7 +828,15 @@
           "width" : null,
           "default" : 0
         },
-        { "name" : "ig_intr_md_ingress_port",
+        { "name" : "ipv4_hdr_srcAddr",
+          "type" : "i32",
+          "required" : true,
+          "pointer" : false,
+          "custom" : false,
+          "width" : null,
+          "default" : 0
+        },
+        { "name" : "ipv4_hdr_srcAddr_prefix_length",
           "type" : "i16",
           "required" : true,
           "pointer" : false,
@@ -1844,6 +1852,19 @@
         }
       ]
     },
+    { "name" : "p4_pd_netbufferv4_hash_partition_for_special_response_action_spec_t",
+      "fields" : [
+        {
+          "name" : "action_eport",
+          "type" : "i16",
+          "required" : true,
+          "pointer" : false,
+          "custom" : false,
+          "width" : null,
+          "default" : 0
+        }
+      ]
+    },
     { "name" : "p4_pd_netbufferv4_forward_normal_response_action_spec_t",
       "fields" : [
         {
@@ -2174,6 +2195,7 @@
                 null,
                 null,
                 "p4_pd_netbufferv4_hash_partition_action_spec_t",
+                "p4_pd_netbufferv4_hash_partition_for_special_response_action_spec_t",
                 null,
                 null,
                 null,
@@ -2388,6 +2410,7 @@
                 null,
                 null,
                 "p4_pd_netbufferv4_hash_partition",
+                "p4_pd_netbufferv4_hash_partition_for_special_response",
                 null,
                 null,
                 null,
@@ -4768,6 +4791,19 @@
           ],
           "p4_pd_status_t",
           ["p4_pd_netbufferv4-hash_partition_tbl-add_entry-hash_partition"]
+        ],
+        [
+          "p4_pd_netbufferv4-hash_partition_tbl-table_add_with-hash_partition_for_special_response",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["match_spec", "p4_pd_netbufferv4_hash_partition_tbl_match_spec_t", true, true, false, null, null, false],
+            ["priority", "i32", true, false, false, null, null, false],
+            ["action_spec", "p4_pd_netbufferv4_hash_partition_for_special_response_action_spec_t", true, true, false, null, null, false],
+            ["entry_hdl", "p4_pd_entry_hdl_t", false, true, false, null, 0, true]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-hash_partition_tbl-add_entry-hash_partition_for_special_response"]
         ],
         [
           "p4_pd_netbufferv4-hash_partition_tbl-table_add_with-nop",
@@ -11842,6 +11878,29 @@
           ],
           "p4_pd_status_t",
           ["p4_pd_netbufferv4-hash_partition_tbl-mod_entry-hash_partition-by_match_spec"]
+        ],
+        [
+          "p4_pd_netbufferv4-hash_partition_tbl-table_modify_with-hash_partition_for_special_response",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_id", "byte", false, false, false, null, 0, false],
+            ["entry_hdl", "p4_pd_entry_hdl_t", true, false, false, null, null, false],
+            ["action_spec", "p4_pd_netbufferv4_hash_partition_for_special_response_action_spec_t", true, true, false, null, null, false]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-hash_partition_tbl-mod_entry-hash_partition_for_special_response"]
+        ],
+        [
+          "p4_pd_netbufferv4-hash_partition_tbl-table_modify_with-hash_partition_for_special_response-by_match_spec",
+          [
+            ["sess_hdl", "p4_pd_sess_hdl_t", false, false, false, null, 1, false],
+            ["dev_tgt", "p4_pd_dev_target_t", false, false, false, null, 0, false],
+            ["match_spec", "p4_pd_netbufferv4_hash_partition_tbl_match_spec_t", true, true, false, null, null, false],
+            ["priority", "i32", true, false, false, null, null, false],
+            ["action_spec", "p4_pd_netbufferv4_hash_partition_for_special_response_action_spec_t", true, true, false, null, null, false]
+          ],
+          "p4_pd_status_t",
+          ["p4_pd_netbufferv4-hash_partition_tbl-mod_entry-hash_partition_for_special_response-by_match_spec"]
         ],
         [
           "p4_pd_netbufferv4-hash_partition_tbl-table_modify_with-nop",

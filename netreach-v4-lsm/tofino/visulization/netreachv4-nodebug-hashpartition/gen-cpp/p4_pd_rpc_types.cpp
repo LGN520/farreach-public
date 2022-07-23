@@ -6613,16 +6613,20 @@ void netbufferv4_prepare_for_cachehit_tbl_match_spec_t::__set_op_hdr_optype(cons
   this->op_hdr_optype = val;
 }
 
-void netbufferv4_prepare_for_cachehit_tbl_match_spec_t::__set_ig_intr_md_ingress_port(const int16_t val) {
-  this->ig_intr_md_ingress_port = val;
+void netbufferv4_prepare_for_cachehit_tbl_match_spec_t::__set_ipv4_hdr_srcAddr(const int32_t val) {
+  this->ipv4_hdr_srcAddr = val;
+}
+
+void netbufferv4_prepare_for_cachehit_tbl_match_spec_t::__set_ipv4_hdr_srcAddr_prefix_length(const int16_t val) {
+  this->ipv4_hdr_srcAddr_prefix_length = val;
 }
 
 void netbufferv4_prepare_for_cachehit_tbl_match_spec_t::__set_meta_need_recirculate(const int8_t val) {
   this->meta_need_recirculate = val;
 }
 
-const char* netbufferv4_prepare_for_cachehit_tbl_match_spec_t::ascii_fingerprint = "47122A80B641FECF98DEC5A7D2B1FC3F";
-const uint8_t netbufferv4_prepare_for_cachehit_tbl_match_spec_t::binary_fingerprint[16] = {0x47,0x12,0x2A,0x80,0xB6,0x41,0xFE,0xCF,0x98,0xDE,0xC5,0xA7,0xD2,0xB1,0xFC,0x3F};
+const char* netbufferv4_prepare_for_cachehit_tbl_match_spec_t::ascii_fingerprint = "E1AFF8138A70C2749C771AC733FAF500";
+const uint8_t netbufferv4_prepare_for_cachehit_tbl_match_spec_t::binary_fingerprint[16] = {0xE1,0xAF,0xF8,0x13,0x8A,0x70,0xC2,0x74,0x9C,0x77,0x1A,0xC7,0x33,0xFA,0xF5,0x00};
 
 uint32_t netbufferv4_prepare_for_cachehit_tbl_match_spec_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -6636,7 +6640,8 @@ uint32_t netbufferv4_prepare_for_cachehit_tbl_match_spec_t::read(::apache::thrif
   using ::apache::thrift::protocol::TProtocolException;
 
   bool isset_op_hdr_optype = false;
-  bool isset_ig_intr_md_ingress_port = false;
+  bool isset_ipv4_hdr_srcAddr = false;
+  bool isset_ipv4_hdr_srcAddr_prefix_length = false;
   bool isset_meta_need_recirculate = false;
 
   while (true)
@@ -6656,14 +6661,22 @@ uint32_t netbufferv4_prepare_for_cachehit_tbl_match_spec_t::read(::apache::thrif
         }
         break;
       case 2:
-        if (ftype == ::apache::thrift::protocol::T_I16) {
-          xfer += iprot->readI16(this->ig_intr_md_ingress_port);
-          isset_ig_intr_md_ingress_port = true;
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->ipv4_hdr_srcAddr);
+          isset_ipv4_hdr_srcAddr = true;
         } else {
           xfer += iprot->skip(ftype);
         }
         break;
       case 3:
+        if (ftype == ::apache::thrift::protocol::T_I16) {
+          xfer += iprot->readI16(this->ipv4_hdr_srcAddr_prefix_length);
+          isset_ipv4_hdr_srcAddr_prefix_length = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 4:
         if (ftype == ::apache::thrift::protocol::T_BYTE) {
           xfer += iprot->readByte(this->meta_need_recirculate);
           isset_meta_need_recirculate = true;
@@ -6682,7 +6695,9 @@ uint32_t netbufferv4_prepare_for_cachehit_tbl_match_spec_t::read(::apache::thrif
 
   if (!isset_op_hdr_optype)
     throw TProtocolException(TProtocolException::INVALID_DATA);
-  if (!isset_ig_intr_md_ingress_port)
+  if (!isset_ipv4_hdr_srcAddr)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
+  if (!isset_ipv4_hdr_srcAddr_prefix_length)
     throw TProtocolException(TProtocolException::INVALID_DATA);
   if (!isset_meta_need_recirculate)
     throw TProtocolException(TProtocolException::INVALID_DATA);
@@ -6698,11 +6713,15 @@ uint32_t netbufferv4_prepare_for_cachehit_tbl_match_spec_t::write(::apache::thri
   xfer += oprot->writeI16(this->op_hdr_optype);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("ig_intr_md_ingress_port", ::apache::thrift::protocol::T_I16, 2);
-  xfer += oprot->writeI16(this->ig_intr_md_ingress_port);
+  xfer += oprot->writeFieldBegin("ipv4_hdr_srcAddr", ::apache::thrift::protocol::T_I32, 2);
+  xfer += oprot->writeI32(this->ipv4_hdr_srcAddr);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("meta_need_recirculate", ::apache::thrift::protocol::T_BYTE, 3);
+  xfer += oprot->writeFieldBegin("ipv4_hdr_srcAddr_prefix_length", ::apache::thrift::protocol::T_I16, 3);
+  xfer += oprot->writeI16(this->ipv4_hdr_srcAddr_prefix_length);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("meta_need_recirculate", ::apache::thrift::protocol::T_BYTE, 4);
   xfer += oprot->writeByte(this->meta_need_recirculate);
   xfer += oprot->writeFieldEnd();
 
@@ -6715,18 +6734,21 @@ uint32_t netbufferv4_prepare_for_cachehit_tbl_match_spec_t::write(::apache::thri
 void swap(netbufferv4_prepare_for_cachehit_tbl_match_spec_t &a, netbufferv4_prepare_for_cachehit_tbl_match_spec_t &b) {
   using ::std::swap;
   swap(a.op_hdr_optype, b.op_hdr_optype);
-  swap(a.ig_intr_md_ingress_port, b.ig_intr_md_ingress_port);
+  swap(a.ipv4_hdr_srcAddr, b.ipv4_hdr_srcAddr);
+  swap(a.ipv4_hdr_srcAddr_prefix_length, b.ipv4_hdr_srcAddr_prefix_length);
   swap(a.meta_need_recirculate, b.meta_need_recirculate);
 }
 
 netbufferv4_prepare_for_cachehit_tbl_match_spec_t::netbufferv4_prepare_for_cachehit_tbl_match_spec_t(const netbufferv4_prepare_for_cachehit_tbl_match_spec_t& other111) {
   op_hdr_optype = other111.op_hdr_optype;
-  ig_intr_md_ingress_port = other111.ig_intr_md_ingress_port;
+  ipv4_hdr_srcAddr = other111.ipv4_hdr_srcAddr;
+  ipv4_hdr_srcAddr_prefix_length = other111.ipv4_hdr_srcAddr_prefix_length;
   meta_need_recirculate = other111.meta_need_recirculate;
 }
 netbufferv4_prepare_for_cachehit_tbl_match_spec_t& netbufferv4_prepare_for_cachehit_tbl_match_spec_t::operator=(const netbufferv4_prepare_for_cachehit_tbl_match_spec_t& other112) {
   op_hdr_optype = other112.op_hdr_optype;
-  ig_intr_md_ingress_port = other112.ig_intr_md_ingress_port;
+  ipv4_hdr_srcAddr = other112.ipv4_hdr_srcAddr;
+  ipv4_hdr_srcAddr_prefix_length = other112.ipv4_hdr_srcAddr_prefix_length;
   meta_need_recirculate = other112.meta_need_recirculate;
   return *this;
 }
@@ -6734,7 +6756,8 @@ std::ostream& operator<<(std::ostream& out, const netbufferv4_prepare_for_cacheh
   using apache::thrift::to_string;
   out << "netbufferv4_prepare_for_cachehit_tbl_match_spec_t(";
   out << "op_hdr_optype=" << to_string(obj.op_hdr_optype);
-  out << ", " << "ig_intr_md_ingress_port=" << to_string(obj.ig_intr_md_ingress_port);
+  out << ", " << "ipv4_hdr_srcAddr=" << to_string(obj.ipv4_hdr_srcAddr);
+  out << ", " << "ipv4_hdr_srcAddr_prefix_length=" << to_string(obj.ipv4_hdr_srcAddr_prefix_length);
   out << ", " << "meta_need_recirculate=" << to_string(obj.meta_need_recirculate);
   out << ")";
   return out;
@@ -12764,6 +12787,96 @@ std::ostream& operator<<(std::ostream& out, const netbufferv4_hash_partition_act
 }
 
 
+netbufferv4_hash_partition_for_special_response_action_spec_t::~netbufferv4_hash_partition_for_special_response_action_spec_t() throw() {
+}
+
+
+void netbufferv4_hash_partition_for_special_response_action_spec_t::__set_action_eport(const int16_t val) {
+  this->action_eport = val;
+}
+
+const char* netbufferv4_hash_partition_for_special_response_action_spec_t::ascii_fingerprint = "565787C31CF2D774B532CB755189BF39";
+const uint8_t netbufferv4_hash_partition_for_special_response_action_spec_t::binary_fingerprint[16] = {0x56,0x57,0x87,0xC3,0x1C,0xF2,0xD7,0x74,0xB5,0x32,0xCB,0x75,0x51,0x89,0xBF,0x39};
+
+uint32_t netbufferv4_hash_partition_for_special_response_action_spec_t::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+  bool isset_action_eport = false;
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I16) {
+          xfer += iprot->readI16(this->action_eport);
+          isset_action_eport = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  if (!isset_action_eport)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
+  return xfer;
+}
+
+uint32_t netbufferv4_hash_partition_for_special_response_action_spec_t::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  oprot->incrementRecursionDepth();
+  xfer += oprot->writeStructBegin("netbufferv4_hash_partition_for_special_response_action_spec_t");
+
+  xfer += oprot->writeFieldBegin("action_eport", ::apache::thrift::protocol::T_I16, 1);
+  xfer += oprot->writeI16(this->action_eport);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  oprot->decrementRecursionDepth();
+  return xfer;
+}
+
+void swap(netbufferv4_hash_partition_for_special_response_action_spec_t &a, netbufferv4_hash_partition_for_special_response_action_spec_t &b) {
+  using ::std::swap;
+  swap(a.action_eport, b.action_eport);
+}
+
+netbufferv4_hash_partition_for_special_response_action_spec_t::netbufferv4_hash_partition_for_special_response_action_spec_t(const netbufferv4_hash_partition_for_special_response_action_spec_t& other231) {
+  action_eport = other231.action_eport;
+}
+netbufferv4_hash_partition_for_special_response_action_spec_t& netbufferv4_hash_partition_for_special_response_action_spec_t::operator=(const netbufferv4_hash_partition_for_special_response_action_spec_t& other232) {
+  action_eport = other232.action_eport;
+  return *this;
+}
+std::ostream& operator<<(std::ostream& out, const netbufferv4_hash_partition_for_special_response_action_spec_t& obj) {
+  using apache::thrift::to_string;
+  out << "netbufferv4_hash_partition_for_special_response_action_spec_t(";
+  out << "action_eport=" << to_string(obj.action_eport);
+  out << ")";
+  return out;
+}
+
+
 netbufferv4_forward_normal_response_action_spec_t::~netbufferv4_forward_normal_response_action_spec_t() throw() {
 }
 
@@ -12838,11 +12951,11 @@ void swap(netbufferv4_forward_normal_response_action_spec_t &a, netbufferv4_forw
   swap(a.action_eport, b.action_eport);
 }
 
-netbufferv4_forward_normal_response_action_spec_t::netbufferv4_forward_normal_response_action_spec_t(const netbufferv4_forward_normal_response_action_spec_t& other231) {
-  action_eport = other231.action_eport;
+netbufferv4_forward_normal_response_action_spec_t::netbufferv4_forward_normal_response_action_spec_t(const netbufferv4_forward_normal_response_action_spec_t& other233) {
+  action_eport = other233.action_eport;
 }
-netbufferv4_forward_normal_response_action_spec_t& netbufferv4_forward_normal_response_action_spec_t::operator=(const netbufferv4_forward_normal_response_action_spec_t& other232) {
-  action_eport = other232.action_eport;
+netbufferv4_forward_normal_response_action_spec_t& netbufferv4_forward_normal_response_action_spec_t::operator=(const netbufferv4_forward_normal_response_action_spec_t& other234) {
+  action_eport = other234.action_eport;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_forward_normal_response_action_spec_t& obj) {
@@ -12928,11 +13041,11 @@ void swap(netbufferv4_forward_special_get_response_action_spec_t &a, netbufferv4
   swap(a.action_client_sid, b.action_client_sid);
 }
 
-netbufferv4_forward_special_get_response_action_spec_t::netbufferv4_forward_special_get_response_action_spec_t(const netbufferv4_forward_special_get_response_action_spec_t& other233) {
-  action_client_sid = other233.action_client_sid;
+netbufferv4_forward_special_get_response_action_spec_t::netbufferv4_forward_special_get_response_action_spec_t(const netbufferv4_forward_special_get_response_action_spec_t& other235) {
+  action_client_sid = other235.action_client_sid;
 }
-netbufferv4_forward_special_get_response_action_spec_t& netbufferv4_forward_special_get_response_action_spec_t::operator=(const netbufferv4_forward_special_get_response_action_spec_t& other234) {
-  action_client_sid = other234.action_client_sid;
+netbufferv4_forward_special_get_response_action_spec_t& netbufferv4_forward_special_get_response_action_spec_t::operator=(const netbufferv4_forward_special_get_response_action_spec_t& other236) {
+  action_client_sid = other236.action_client_sid;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_forward_special_get_response_action_spec_t& obj) {
@@ -13018,11 +13131,11 @@ void swap(netbufferv4_l2l3_forward_action_spec_t &a, netbufferv4_l2l3_forward_ac
   swap(a.action_eport, b.action_eport);
 }
 
-netbufferv4_l2l3_forward_action_spec_t::netbufferv4_l2l3_forward_action_spec_t(const netbufferv4_l2l3_forward_action_spec_t& other235) {
-  action_eport = other235.action_eport;
+netbufferv4_l2l3_forward_action_spec_t::netbufferv4_l2l3_forward_action_spec_t(const netbufferv4_l2l3_forward_action_spec_t& other237) {
+  action_eport = other237.action_eport;
 }
-netbufferv4_l2l3_forward_action_spec_t& netbufferv4_l2l3_forward_action_spec_t::operator=(const netbufferv4_l2l3_forward_action_spec_t& other236) {
-  action_eport = other236.action_eport;
+netbufferv4_l2l3_forward_action_spec_t& netbufferv4_l2l3_forward_action_spec_t::operator=(const netbufferv4_l2l3_forward_action_spec_t& other238) {
+  action_eport = other238.action_eport;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_l2l3_forward_action_spec_t& obj) {
@@ -13108,11 +13221,11 @@ void swap(netbufferv4_set_client_sid_action_spec_t &a, netbufferv4_set_client_si
   swap(a.action_client_sid, b.action_client_sid);
 }
 
-netbufferv4_set_client_sid_action_spec_t::netbufferv4_set_client_sid_action_spec_t(const netbufferv4_set_client_sid_action_spec_t& other237) {
-  action_client_sid = other237.action_client_sid;
+netbufferv4_set_client_sid_action_spec_t::netbufferv4_set_client_sid_action_spec_t(const netbufferv4_set_client_sid_action_spec_t& other239) {
+  action_client_sid = other239.action_client_sid;
 }
-netbufferv4_set_client_sid_action_spec_t& netbufferv4_set_client_sid_action_spec_t::operator=(const netbufferv4_set_client_sid_action_spec_t& other238) {
-  action_client_sid = other238.action_client_sid;
+netbufferv4_set_client_sid_action_spec_t& netbufferv4_set_client_sid_action_spec_t::operator=(const netbufferv4_set_client_sid_action_spec_t& other240) {
+  action_client_sid = other240.action_client_sid;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_set_client_sid_action_spec_t& obj) {
@@ -13198,11 +13311,11 @@ void swap(netbufferv4_recirculate_pkt_action_spec_t &a, netbufferv4_recirculate_
   swap(a.action_port, b.action_port);
 }
 
-netbufferv4_recirculate_pkt_action_spec_t::netbufferv4_recirculate_pkt_action_spec_t(const netbufferv4_recirculate_pkt_action_spec_t& other239) {
-  action_port = other239.action_port;
+netbufferv4_recirculate_pkt_action_spec_t::netbufferv4_recirculate_pkt_action_spec_t(const netbufferv4_recirculate_pkt_action_spec_t& other241) {
+  action_port = other241.action_port;
 }
-netbufferv4_recirculate_pkt_action_spec_t& netbufferv4_recirculate_pkt_action_spec_t::operator=(const netbufferv4_recirculate_pkt_action_spec_t& other240) {
-  action_port = other240.action_port;
+netbufferv4_recirculate_pkt_action_spec_t& netbufferv4_recirculate_pkt_action_spec_t::operator=(const netbufferv4_recirculate_pkt_action_spec_t& other242) {
+  action_port = other242.action_port;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_recirculate_pkt_action_spec_t& obj) {
@@ -13288,11 +13401,11 @@ void swap(netbufferv4_set_hot_threshold_action_spec_t &a, netbufferv4_set_hot_th
   swap(a.action_hot_threshold, b.action_hot_threshold);
 }
 
-netbufferv4_set_hot_threshold_action_spec_t::netbufferv4_set_hot_threshold_action_spec_t(const netbufferv4_set_hot_threshold_action_spec_t& other241) {
-  action_hot_threshold = other241.action_hot_threshold;
+netbufferv4_set_hot_threshold_action_spec_t::netbufferv4_set_hot_threshold_action_spec_t(const netbufferv4_set_hot_threshold_action_spec_t& other243) {
+  action_hot_threshold = other243.action_hot_threshold;
 }
-netbufferv4_set_hot_threshold_action_spec_t& netbufferv4_set_hot_threshold_action_spec_t::operator=(const netbufferv4_set_hot_threshold_action_spec_t& other242) {
-  action_hot_threshold = other242.action_hot_threshold;
+netbufferv4_set_hot_threshold_action_spec_t& netbufferv4_set_hot_threshold_action_spec_t::operator=(const netbufferv4_set_hot_threshold_action_spec_t& other244) {
+  action_hot_threshold = other244.action_hot_threshold;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_set_hot_threshold_action_spec_t& obj) {
@@ -13458,19 +13571,19 @@ void swap(netbufferv4_update_ipmac_srcport_server2client_action_spec_t &a, netbu
   swap(a.action_server_port, b.action_server_port);
 }
 
-netbufferv4_update_ipmac_srcport_server2client_action_spec_t::netbufferv4_update_ipmac_srcport_server2client_action_spec_t(const netbufferv4_update_ipmac_srcport_server2client_action_spec_t& other243) {
-  action_client_mac = other243.action_client_mac;
-  action_server_mac = other243.action_server_mac;
-  action_client_ip = other243.action_client_ip;
-  action_server_ip = other243.action_server_ip;
-  action_server_port = other243.action_server_port;
+netbufferv4_update_ipmac_srcport_server2client_action_spec_t::netbufferv4_update_ipmac_srcport_server2client_action_spec_t(const netbufferv4_update_ipmac_srcport_server2client_action_spec_t& other245) {
+  action_client_mac = other245.action_client_mac;
+  action_server_mac = other245.action_server_mac;
+  action_client_ip = other245.action_client_ip;
+  action_server_ip = other245.action_server_ip;
+  action_server_port = other245.action_server_port;
 }
-netbufferv4_update_ipmac_srcport_server2client_action_spec_t& netbufferv4_update_ipmac_srcport_server2client_action_spec_t::operator=(const netbufferv4_update_ipmac_srcport_server2client_action_spec_t& other244) {
-  action_client_mac = other244.action_client_mac;
-  action_server_mac = other244.action_server_mac;
-  action_client_ip = other244.action_client_ip;
-  action_server_ip = other244.action_server_ip;
-  action_server_port = other244.action_server_port;
+netbufferv4_update_ipmac_srcport_server2client_action_spec_t& netbufferv4_update_ipmac_srcport_server2client_action_spec_t::operator=(const netbufferv4_update_ipmac_srcport_server2client_action_spec_t& other246) {
+  action_client_mac = other246.action_client_mac;
+  action_server_mac = other246.action_server_mac;
+  action_client_ip = other246.action_client_ip;
+  action_server_ip = other246.action_server_ip;
+  action_server_port = other246.action_server_port;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_ipmac_srcport_server2client_action_spec_t& obj) {
@@ -13640,19 +13753,19 @@ void swap(netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t &a, net
   swap(a.action_client_port, b.action_client_port);
 }
 
-netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t::netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t(const netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t& other245) {
-  action_client_mac = other245.action_client_mac;
-  action_switch_mac = other245.action_switch_mac;
-  action_client_ip = other245.action_client_ip;
-  action_switch_ip = other245.action_switch_ip;
-  action_client_port = other245.action_client_port;
+netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t::netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t(const netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t& other247) {
+  action_client_mac = other247.action_client_mac;
+  action_switch_mac = other247.action_switch_mac;
+  action_client_ip = other247.action_client_ip;
+  action_switch_ip = other247.action_switch_ip;
+  action_client_port = other247.action_client_port;
 }
-netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t& netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t::operator=(const netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t& other246) {
-  action_client_mac = other246.action_client_mac;
-  action_switch_mac = other246.action_switch_mac;
-  action_client_ip = other246.action_client_ip;
-  action_switch_ip = other246.action_switch_ip;
-  action_client_port = other246.action_client_port;
+netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t& netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t::operator=(const netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t& other248) {
+  action_client_mac = other248.action_client_mac;
+  action_switch_mac = other248.action_switch_mac;
+  action_client_ip = other248.action_client_ip;
+  action_switch_ip = other248.action_switch_ip;
+  action_client_port = other248.action_client_port;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_ipmac_srcport_switch2switchos_action_spec_t& obj) {
@@ -13762,13 +13875,13 @@ void swap(netbufferv4_update_dstipmac_client2server_action_spec_t &a, netbufferv
   swap(a.action_server_ip, b.action_server_ip);
 }
 
-netbufferv4_update_dstipmac_client2server_action_spec_t::netbufferv4_update_dstipmac_client2server_action_spec_t(const netbufferv4_update_dstipmac_client2server_action_spec_t& other247) {
-  action_server_mac = other247.action_server_mac;
-  action_server_ip = other247.action_server_ip;
+netbufferv4_update_dstipmac_client2server_action_spec_t::netbufferv4_update_dstipmac_client2server_action_spec_t(const netbufferv4_update_dstipmac_client2server_action_spec_t& other249) {
+  action_server_mac = other249.action_server_mac;
+  action_server_ip = other249.action_server_ip;
 }
-netbufferv4_update_dstipmac_client2server_action_spec_t& netbufferv4_update_dstipmac_client2server_action_spec_t::operator=(const netbufferv4_update_dstipmac_client2server_action_spec_t& other248) {
-  action_server_mac = other248.action_server_mac;
-  action_server_ip = other248.action_server_ip;
+netbufferv4_update_dstipmac_client2server_action_spec_t& netbufferv4_update_dstipmac_client2server_action_spec_t::operator=(const netbufferv4_update_dstipmac_client2server_action_spec_t& other250) {
+  action_server_mac = other250.action_server_mac;
+  action_server_ip = other250.action_server_ip;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_dstipmac_client2server_action_spec_t& obj) {
@@ -13875,13 +13988,13 @@ void swap(netbufferv4_update_pktlen_action_spec_t &a, netbufferv4_update_pktlen_
   swap(a.action_iplen, b.action_iplen);
 }
 
-netbufferv4_update_pktlen_action_spec_t::netbufferv4_update_pktlen_action_spec_t(const netbufferv4_update_pktlen_action_spec_t& other249) {
-  action_udplen = other249.action_udplen;
-  action_iplen = other249.action_iplen;
+netbufferv4_update_pktlen_action_spec_t::netbufferv4_update_pktlen_action_spec_t(const netbufferv4_update_pktlen_action_spec_t& other251) {
+  action_udplen = other251.action_udplen;
+  action_iplen = other251.action_iplen;
 }
-netbufferv4_update_pktlen_action_spec_t& netbufferv4_update_pktlen_action_spec_t::operator=(const netbufferv4_update_pktlen_action_spec_t& other250) {
-  action_udplen = other250.action_udplen;
-  action_iplen = other250.action_iplen;
+netbufferv4_update_pktlen_action_spec_t& netbufferv4_update_pktlen_action_spec_t::operator=(const netbufferv4_update_pktlen_action_spec_t& other252) {
+  action_udplen = other252.action_udplen;
+  action_iplen = other252.action_iplen;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_pktlen_action_spec_t& obj) {
@@ -13978,6 +14091,10 @@ void netbufferv4_action_specs_t::__set_netbufferv4_hash_partition(const netbuffe
   this->netbufferv4_hash_partition = val;
 }
 
+void netbufferv4_action_specs_t::__set_netbufferv4_hash_partition_for_special_response(const netbufferv4_hash_partition_for_special_response_action_spec_t& val) {
+  this->netbufferv4_hash_partition_for_special_response = val;
+}
+
 void netbufferv4_action_specs_t::__set_netbufferv4_forward_normal_response(const netbufferv4_forward_normal_response_action_spec_t& val) {
   this->netbufferv4_forward_normal_response = val;
 }
@@ -14018,8 +14135,8 @@ void netbufferv4_action_specs_t::__set_netbufferv4_update_pktlen(const netbuffer
   this->netbufferv4_update_pktlen = val;
 }
 
-const char* netbufferv4_action_specs_t::ascii_fingerprint = "1A0D97F1F333C9E1B129864A8C5942E1";
-const uint8_t netbufferv4_action_specs_t::binary_fingerprint[16] = {0x1A,0x0D,0x97,0xF1,0xF3,0x33,0xC9,0xE1,0xB1,0x29,0x86,0x4A,0x8C,0x59,0x42,0xE1};
+const char* netbufferv4_action_specs_t::ascii_fingerprint = "CB3C061A316DDB3B2962DCE3A0B4824D";
+const uint8_t netbufferv4_action_specs_t::binary_fingerprint[16] = {0xCB,0x3C,0x06,0x1A,0x31,0x6D,0xDB,0x3B,0x29,0x62,0xDC,0xE3,0xA0,0xB4,0x82,0x4D};
 
 uint32_t netbufferv4_action_specs_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -14203,13 +14320,21 @@ uint32_t netbufferv4_action_specs_t::read(::apache::thrift::protocol::TProtocol*
         break;
       case 21:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->netbufferv4_hash_partition_for_special_response.read(iprot);
+          this->__isset.netbufferv4_hash_partition_for_special_response = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 22:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->netbufferv4_forward_normal_response.read(iprot);
           this->__isset.netbufferv4_forward_normal_response = true;
         } else {
           xfer += iprot->skip(ftype);
         }
         break;
-      case 22:
+      case 23:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->netbufferv4_forward_special_get_response.read(iprot);
           this->__isset.netbufferv4_forward_special_get_response = true;
@@ -14217,7 +14342,7 @@ uint32_t netbufferv4_action_specs_t::read(::apache::thrift::protocol::TProtocol*
           xfer += iprot->skip(ftype);
         }
         break;
-      case 23:
+      case 24:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->netbufferv4_l2l3_forward.read(iprot);
           this->__isset.netbufferv4_l2l3_forward = true;
@@ -14225,7 +14350,7 @@ uint32_t netbufferv4_action_specs_t::read(::apache::thrift::protocol::TProtocol*
           xfer += iprot->skip(ftype);
         }
         break;
-      case 24:
+      case 25:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->netbufferv4_set_client_sid.read(iprot);
           this->__isset.netbufferv4_set_client_sid = true;
@@ -14233,7 +14358,7 @@ uint32_t netbufferv4_action_specs_t::read(::apache::thrift::protocol::TProtocol*
           xfer += iprot->skip(ftype);
         }
         break;
-      case 25:
+      case 26:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->netbufferv4_recirculate_pkt.read(iprot);
           this->__isset.netbufferv4_recirculate_pkt = true;
@@ -14241,7 +14366,7 @@ uint32_t netbufferv4_action_specs_t::read(::apache::thrift::protocol::TProtocol*
           xfer += iprot->skip(ftype);
         }
         break;
-      case 26:
+      case 27:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->netbufferv4_set_hot_threshold.read(iprot);
           this->__isset.netbufferv4_set_hot_threshold = true;
@@ -14249,7 +14374,7 @@ uint32_t netbufferv4_action_specs_t::read(::apache::thrift::protocol::TProtocol*
           xfer += iprot->skip(ftype);
         }
         break;
-      case 27:
+      case 28:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->netbufferv4_update_ipmac_srcport_server2client.read(iprot);
           this->__isset.netbufferv4_update_ipmac_srcport_server2client = true;
@@ -14257,7 +14382,7 @@ uint32_t netbufferv4_action_specs_t::read(::apache::thrift::protocol::TProtocol*
           xfer += iprot->skip(ftype);
         }
         break;
-      case 28:
+      case 29:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->netbufferv4_update_ipmac_srcport_switch2switchos.read(iprot);
           this->__isset.netbufferv4_update_ipmac_srcport_switch2switchos = true;
@@ -14265,7 +14390,7 @@ uint32_t netbufferv4_action_specs_t::read(::apache::thrift::protocol::TProtocol*
           xfer += iprot->skip(ftype);
         }
         break;
-      case 29:
+      case 30:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->netbufferv4_update_dstipmac_client2server.read(iprot);
           this->__isset.netbufferv4_update_dstipmac_client2server = true;
@@ -14273,7 +14398,7 @@ uint32_t netbufferv4_action_specs_t::read(::apache::thrift::protocol::TProtocol*
           xfer += iprot->skip(ftype);
         }
         break;
-      case 30:
+      case 31:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->netbufferv4_update_pktlen.read(iprot);
           this->__isset.netbufferv4_update_pktlen = true;
@@ -14378,43 +14503,47 @@ uint32_t netbufferv4_action_specs_t::write(::apache::thrift::protocol::TProtocol
   xfer += this->netbufferv4_hash_partition.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("netbufferv4_forward_normal_response", ::apache::thrift::protocol::T_STRUCT, 21);
+  xfer += oprot->writeFieldBegin("netbufferv4_hash_partition_for_special_response", ::apache::thrift::protocol::T_STRUCT, 21);
+  xfer += this->netbufferv4_hash_partition_for_special_response.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("netbufferv4_forward_normal_response", ::apache::thrift::protocol::T_STRUCT, 22);
   xfer += this->netbufferv4_forward_normal_response.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("netbufferv4_forward_special_get_response", ::apache::thrift::protocol::T_STRUCT, 22);
+  xfer += oprot->writeFieldBegin("netbufferv4_forward_special_get_response", ::apache::thrift::protocol::T_STRUCT, 23);
   xfer += this->netbufferv4_forward_special_get_response.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("netbufferv4_l2l3_forward", ::apache::thrift::protocol::T_STRUCT, 23);
+  xfer += oprot->writeFieldBegin("netbufferv4_l2l3_forward", ::apache::thrift::protocol::T_STRUCT, 24);
   xfer += this->netbufferv4_l2l3_forward.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("netbufferv4_set_client_sid", ::apache::thrift::protocol::T_STRUCT, 24);
+  xfer += oprot->writeFieldBegin("netbufferv4_set_client_sid", ::apache::thrift::protocol::T_STRUCT, 25);
   xfer += this->netbufferv4_set_client_sid.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("netbufferv4_recirculate_pkt", ::apache::thrift::protocol::T_STRUCT, 25);
+  xfer += oprot->writeFieldBegin("netbufferv4_recirculate_pkt", ::apache::thrift::protocol::T_STRUCT, 26);
   xfer += this->netbufferv4_recirculate_pkt.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("netbufferv4_set_hot_threshold", ::apache::thrift::protocol::T_STRUCT, 26);
+  xfer += oprot->writeFieldBegin("netbufferv4_set_hot_threshold", ::apache::thrift::protocol::T_STRUCT, 27);
   xfer += this->netbufferv4_set_hot_threshold.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("netbufferv4_update_ipmac_srcport_server2client", ::apache::thrift::protocol::T_STRUCT, 27);
+  xfer += oprot->writeFieldBegin("netbufferv4_update_ipmac_srcport_server2client", ::apache::thrift::protocol::T_STRUCT, 28);
   xfer += this->netbufferv4_update_ipmac_srcport_server2client.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("netbufferv4_update_ipmac_srcport_switch2switchos", ::apache::thrift::protocol::T_STRUCT, 28);
+  xfer += oprot->writeFieldBegin("netbufferv4_update_ipmac_srcport_switch2switchos", ::apache::thrift::protocol::T_STRUCT, 29);
   xfer += this->netbufferv4_update_ipmac_srcport_switch2switchos.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("netbufferv4_update_dstipmac_client2server", ::apache::thrift::protocol::T_STRUCT, 29);
+  xfer += oprot->writeFieldBegin("netbufferv4_update_dstipmac_client2server", ::apache::thrift::protocol::T_STRUCT, 30);
   xfer += this->netbufferv4_update_dstipmac_client2server.write(oprot);
   xfer += oprot->writeFieldEnd();
 
-  xfer += oprot->writeFieldBegin("netbufferv4_update_pktlen", ::apache::thrift::protocol::T_STRUCT, 30);
+  xfer += oprot->writeFieldBegin("netbufferv4_update_pktlen", ::apache::thrift::protocol::T_STRUCT, 31);
   xfer += this->netbufferv4_update_pktlen.write(oprot);
   xfer += oprot->writeFieldEnd();
 
@@ -14446,6 +14575,7 @@ void swap(netbufferv4_action_specs_t &a, netbufferv4_action_specs_t &b) {
   swap(a.netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone, b.netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone);
   swap(a.netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone, b.netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone);
   swap(a.netbufferv4_hash_partition, b.netbufferv4_hash_partition);
+  swap(a.netbufferv4_hash_partition_for_special_response, b.netbufferv4_hash_partition_for_special_response);
   swap(a.netbufferv4_forward_normal_response, b.netbufferv4_forward_normal_response);
   swap(a.netbufferv4_forward_special_get_response, b.netbufferv4_forward_special_get_response);
   swap(a.netbufferv4_l2l3_forward, b.netbufferv4_l2l3_forward);
@@ -14459,71 +14589,73 @@ void swap(netbufferv4_action_specs_t &a, netbufferv4_action_specs_t &b) {
   swap(a.__isset, b.__isset);
 }
 
-netbufferv4_action_specs_t::netbufferv4_action_specs_t(const netbufferv4_action_specs_t& other251) {
-  netbufferv4_cached_action = other251.netbufferv4_cached_action;
-  netbufferv4_update_getreq_inswitch_to_getres_by_mirroring = other251.netbufferv4_update_getreq_inswitch_to_getres_by_mirroring;
-  netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss = other251.netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss;
-  netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss = other251.netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss;
-  netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss = other251.netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
-  netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss = other251.netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
-  netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone = other251.netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone;
-  netbufferv4_update_putreq_inswitch_to_putres_by_mirroring = other251.netbufferv4_update_putreq_inswitch_to_putres_by_mirroring;
-  netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres = other251.netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
-  netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres = other251.netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
-  netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring = other251.netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
-  netbufferv4_update_delreq_inswitch_to_delres_by_mirroring = other251.netbufferv4_update_delreq_inswitch_to_delres_by_mirroring;
-  netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres = other251.netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
-  netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres = other251.netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
-  netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring = other251.netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
-  netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone = other251.netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone;
-  netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone = other251.netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone;
-  netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone = other251.netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
-  netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone = other251.netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
-  netbufferv4_hash_partition = other251.netbufferv4_hash_partition;
-  netbufferv4_forward_normal_response = other251.netbufferv4_forward_normal_response;
-  netbufferv4_forward_special_get_response = other251.netbufferv4_forward_special_get_response;
-  netbufferv4_l2l3_forward = other251.netbufferv4_l2l3_forward;
-  netbufferv4_set_client_sid = other251.netbufferv4_set_client_sid;
-  netbufferv4_recirculate_pkt = other251.netbufferv4_recirculate_pkt;
-  netbufferv4_set_hot_threshold = other251.netbufferv4_set_hot_threshold;
-  netbufferv4_update_ipmac_srcport_server2client = other251.netbufferv4_update_ipmac_srcport_server2client;
-  netbufferv4_update_ipmac_srcport_switch2switchos = other251.netbufferv4_update_ipmac_srcport_switch2switchos;
-  netbufferv4_update_dstipmac_client2server = other251.netbufferv4_update_dstipmac_client2server;
-  netbufferv4_update_pktlen = other251.netbufferv4_update_pktlen;
-  __isset = other251.__isset;
+netbufferv4_action_specs_t::netbufferv4_action_specs_t(const netbufferv4_action_specs_t& other253) {
+  netbufferv4_cached_action = other253.netbufferv4_cached_action;
+  netbufferv4_update_getreq_inswitch_to_getres_by_mirroring = other253.netbufferv4_update_getreq_inswitch_to_getres_by_mirroring;
+  netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss = other253.netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss;
+  netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss = other253.netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss;
+  netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss = other253.netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
+  netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss = other253.netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
+  netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone = other253.netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone;
+  netbufferv4_update_putreq_inswitch_to_putres_by_mirroring = other253.netbufferv4_update_putreq_inswitch_to_putres_by_mirroring;
+  netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres = other253.netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
+  netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres = other253.netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
+  netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring = other253.netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
+  netbufferv4_update_delreq_inswitch_to_delres_by_mirroring = other253.netbufferv4_update_delreq_inswitch_to_delres_by_mirroring;
+  netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres = other253.netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
+  netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres = other253.netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
+  netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring = other253.netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
+  netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone = other253.netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone;
+  netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone = other253.netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone;
+  netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone = other253.netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
+  netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone = other253.netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
+  netbufferv4_hash_partition = other253.netbufferv4_hash_partition;
+  netbufferv4_hash_partition_for_special_response = other253.netbufferv4_hash_partition_for_special_response;
+  netbufferv4_forward_normal_response = other253.netbufferv4_forward_normal_response;
+  netbufferv4_forward_special_get_response = other253.netbufferv4_forward_special_get_response;
+  netbufferv4_l2l3_forward = other253.netbufferv4_l2l3_forward;
+  netbufferv4_set_client_sid = other253.netbufferv4_set_client_sid;
+  netbufferv4_recirculate_pkt = other253.netbufferv4_recirculate_pkt;
+  netbufferv4_set_hot_threshold = other253.netbufferv4_set_hot_threshold;
+  netbufferv4_update_ipmac_srcport_server2client = other253.netbufferv4_update_ipmac_srcport_server2client;
+  netbufferv4_update_ipmac_srcport_switch2switchos = other253.netbufferv4_update_ipmac_srcport_switch2switchos;
+  netbufferv4_update_dstipmac_client2server = other253.netbufferv4_update_dstipmac_client2server;
+  netbufferv4_update_pktlen = other253.netbufferv4_update_pktlen;
+  __isset = other253.__isset;
 }
-netbufferv4_action_specs_t& netbufferv4_action_specs_t::operator=(const netbufferv4_action_specs_t& other252) {
-  netbufferv4_cached_action = other252.netbufferv4_cached_action;
-  netbufferv4_update_getreq_inswitch_to_getres_by_mirroring = other252.netbufferv4_update_getreq_inswitch_to_getres_by_mirroring;
-  netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss = other252.netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss;
-  netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss = other252.netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss;
-  netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss = other252.netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
-  netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss = other252.netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
-  netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone = other252.netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone;
-  netbufferv4_update_putreq_inswitch_to_putres_by_mirroring = other252.netbufferv4_update_putreq_inswitch_to_putres_by_mirroring;
-  netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres = other252.netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
-  netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres = other252.netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
-  netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring = other252.netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
-  netbufferv4_update_delreq_inswitch_to_delres_by_mirroring = other252.netbufferv4_update_delreq_inswitch_to_delres_by_mirroring;
-  netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres = other252.netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
-  netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres = other252.netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
-  netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring = other252.netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
-  netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone = other252.netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone;
-  netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone = other252.netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone;
-  netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone = other252.netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
-  netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone = other252.netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
-  netbufferv4_hash_partition = other252.netbufferv4_hash_partition;
-  netbufferv4_forward_normal_response = other252.netbufferv4_forward_normal_response;
-  netbufferv4_forward_special_get_response = other252.netbufferv4_forward_special_get_response;
-  netbufferv4_l2l3_forward = other252.netbufferv4_l2l3_forward;
-  netbufferv4_set_client_sid = other252.netbufferv4_set_client_sid;
-  netbufferv4_recirculate_pkt = other252.netbufferv4_recirculate_pkt;
-  netbufferv4_set_hot_threshold = other252.netbufferv4_set_hot_threshold;
-  netbufferv4_update_ipmac_srcport_server2client = other252.netbufferv4_update_ipmac_srcport_server2client;
-  netbufferv4_update_ipmac_srcport_switch2switchos = other252.netbufferv4_update_ipmac_srcport_switch2switchos;
-  netbufferv4_update_dstipmac_client2server = other252.netbufferv4_update_dstipmac_client2server;
-  netbufferv4_update_pktlen = other252.netbufferv4_update_pktlen;
-  __isset = other252.__isset;
+netbufferv4_action_specs_t& netbufferv4_action_specs_t::operator=(const netbufferv4_action_specs_t& other254) {
+  netbufferv4_cached_action = other254.netbufferv4_cached_action;
+  netbufferv4_update_getreq_inswitch_to_getres_by_mirroring = other254.netbufferv4_update_getreq_inswitch_to_getres_by_mirroring;
+  netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss = other254.netbufferv4_update_getres_latest_seq_inswitch_to_getres_latest_seq_inswitch_case1_clone_for_pktloss;
+  netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss = other254.netbufferv4_forward_getres_latest_seq_inswitch_case1_clone_for_pktloss;
+  netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss = other254.netbufferv4_update_getres_deleted_seq_inswitch_to_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
+  netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss = other254.netbufferv4_forward_getres_deleted_seq_inswitch_case1_clone_for_pktloss;
+  netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone = other254.netbufferv4_update_cache_pop_inswitch_to_cache_pop_inswitch_ack_drop_and_clone;
+  netbufferv4_update_putreq_inswitch_to_putres_by_mirroring = other254.netbufferv4_update_putreq_inswitch_to_putres_by_mirroring;
+  netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres = other254.netbufferv4_update_putreq_inswitch_to_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
+  netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres = other254.netbufferv4_forward_putreq_seq_inswitch_case1_clone_for_pktloss_and_putres;
+  netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring = other254.netbufferv4_update_putreq_seq_inswitch_case1_to_putres_by_mirroring;
+  netbufferv4_update_delreq_inswitch_to_delres_by_mirroring = other254.netbufferv4_update_delreq_inswitch_to_delres_by_mirroring;
+  netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres = other254.netbufferv4_update_delreq_inswitch_to_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
+  netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres = other254.netbufferv4_forward_delreq_seq_inswitch_case1_clone_for_pktloss_and_delres;
+  netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring = other254.netbufferv4_update_delreq_seq_inswitch_case1_to_delres_by_mirroring;
+  netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone = other254.netbufferv4_update_cache_evict_loadfreq_inswitch_to_cache_evict_loadfreq_inswitch_ack_drop_and_clone;
+  netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone = other254.netbufferv4_update_cache_evict_loaddata_inswitch_to_cache_evict_loaddata_inswitch_ack_drop_and_clone;
+  netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone = other254.netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone;
+  netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone = other254.netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone;
+  netbufferv4_hash_partition = other254.netbufferv4_hash_partition;
+  netbufferv4_hash_partition_for_special_response = other254.netbufferv4_hash_partition_for_special_response;
+  netbufferv4_forward_normal_response = other254.netbufferv4_forward_normal_response;
+  netbufferv4_forward_special_get_response = other254.netbufferv4_forward_special_get_response;
+  netbufferv4_l2l3_forward = other254.netbufferv4_l2l3_forward;
+  netbufferv4_set_client_sid = other254.netbufferv4_set_client_sid;
+  netbufferv4_recirculate_pkt = other254.netbufferv4_recirculate_pkt;
+  netbufferv4_set_hot_threshold = other254.netbufferv4_set_hot_threshold;
+  netbufferv4_update_ipmac_srcport_server2client = other254.netbufferv4_update_ipmac_srcport_server2client;
+  netbufferv4_update_ipmac_srcport_switch2switchos = other254.netbufferv4_update_ipmac_srcport_switch2switchos;
+  netbufferv4_update_dstipmac_client2server = other254.netbufferv4_update_dstipmac_client2server;
+  netbufferv4_update_pktlen = other254.netbufferv4_update_pktlen;
+  __isset = other254.__isset;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_action_specs_t& obj) {
@@ -14549,6 +14681,7 @@ std::ostream& operator<<(std::ostream& out, const netbufferv4_action_specs_t& ob
   out << ", " << "netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone=" << to_string(obj.netbufferv4_update_loadsnapshotdata_inswitch_to_loadsnapshotdata_inswitch_ack_drop_and_clone);
   out << ", " << "netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone=" << to_string(obj.netbufferv4_update_setvalid_inswitch_to_setvalid_inswitch_ack_drop_and_clone);
   out << ", " << "netbufferv4_hash_partition=" << to_string(obj.netbufferv4_hash_partition);
+  out << ", " << "netbufferv4_hash_partition_for_special_response=" << to_string(obj.netbufferv4_hash_partition_for_special_response);
   out << ", " << "netbufferv4_forward_normal_response=" << to_string(obj.netbufferv4_forward_normal_response);
   out << ", " << "netbufferv4_forward_special_get_response=" << to_string(obj.netbufferv4_forward_special_get_response);
   out << ", " << "netbufferv4_l2l3_forward=" << to_string(obj.netbufferv4_l2l3_forward);
@@ -14576,8 +14709,8 @@ void netbufferv4_action_desc_t::__set_data(const netbufferv4_action_specs_t& val
   this->data = val;
 }
 
-const char* netbufferv4_action_desc_t::ascii_fingerprint = "4B42D1AD13B9101DB8BC9DF8DDDCD847";
-const uint8_t netbufferv4_action_desc_t::binary_fingerprint[16] = {0x4B,0x42,0xD1,0xAD,0x13,0xB9,0x10,0x1D,0xB8,0xBC,0x9D,0xF8,0xDD,0xDC,0xD8,0x47};
+const char* netbufferv4_action_desc_t::ascii_fingerprint = "4B45F71343157040F846FFF5A3DE208C";
+const uint8_t netbufferv4_action_desc_t::binary_fingerprint[16] = {0x4B,0x45,0xF7,0x13,0x43,0x15,0x70,0x40,0xF8,0x46,0xFF,0xF5,0xA3,0xDE,0x20,0x8C};
 
 uint32_t netbufferv4_action_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -14658,13 +14791,13 @@ void swap(netbufferv4_action_desc_t &a, netbufferv4_action_desc_t &b) {
   swap(a.data, b.data);
 }
 
-netbufferv4_action_desc_t::netbufferv4_action_desc_t(const netbufferv4_action_desc_t& other253) {
-  name = other253.name;
-  data = other253.data;
+netbufferv4_action_desc_t::netbufferv4_action_desc_t(const netbufferv4_action_desc_t& other255) {
+  name = other255.name;
+  data = other255.data;
 }
-netbufferv4_action_desc_t& netbufferv4_action_desc_t::operator=(const netbufferv4_action_desc_t& other254) {
-  name = other254.name;
-  data = other254.data;
+netbufferv4_action_desc_t& netbufferv4_action_desc_t::operator=(const netbufferv4_action_desc_t& other256) {
+  name = other256.name;
+  data = other256.data;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_action_desc_t& obj) {
@@ -14705,8 +14838,8 @@ void netbufferv4_access_cache_frequency_tbl_entry_desc_t::__set_action_desc(cons
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_cache_frequency_tbl_entry_desc_t::ascii_fingerprint = "519EE782D4C9BAFD2638F0899B751312";
-const uint8_t netbufferv4_access_cache_frequency_tbl_entry_desc_t::binary_fingerprint[16] = {0x51,0x9E,0xE7,0x82,0xD4,0xC9,0xBA,0xFD,0x26,0x38,0xF0,0x89,0x9B,0x75,0x13,0x12};
+const char* netbufferv4_access_cache_frequency_tbl_entry_desc_t::ascii_fingerprint = "54CB1774BD516A00A818DB15BE17481D";
+const uint8_t netbufferv4_access_cache_frequency_tbl_entry_desc_t::binary_fingerprint[16] = {0x54,0xCB,0x17,0x74,0xBD,0x51,0x6A,0x00,0xA8,0x18,0xDB,0x15,0xBE,0x17,0x48,0x1D};
 
 uint32_t netbufferv4_access_cache_frequency_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -14851,21 +14984,21 @@ void swap(netbufferv4_access_cache_frequency_tbl_entry_desc_t &a, netbufferv4_ac
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_cache_frequency_tbl_entry_desc_t::netbufferv4_access_cache_frequency_tbl_entry_desc_t(const netbufferv4_access_cache_frequency_tbl_entry_desc_t& other255) {
-  match_spec = other255.match_spec;
-  has_mbr_hdl = other255.has_mbr_hdl;
-  has_grp_hdl = other255.has_grp_hdl;
-  selector_grp_hdl = other255.selector_grp_hdl;
-  action_mbr_hdl = other255.action_mbr_hdl;
-  action_desc = other255.action_desc;
+netbufferv4_access_cache_frequency_tbl_entry_desc_t::netbufferv4_access_cache_frequency_tbl_entry_desc_t(const netbufferv4_access_cache_frequency_tbl_entry_desc_t& other257) {
+  match_spec = other257.match_spec;
+  has_mbr_hdl = other257.has_mbr_hdl;
+  has_grp_hdl = other257.has_grp_hdl;
+  selector_grp_hdl = other257.selector_grp_hdl;
+  action_mbr_hdl = other257.action_mbr_hdl;
+  action_desc = other257.action_desc;
 }
-netbufferv4_access_cache_frequency_tbl_entry_desc_t& netbufferv4_access_cache_frequency_tbl_entry_desc_t::operator=(const netbufferv4_access_cache_frequency_tbl_entry_desc_t& other256) {
-  match_spec = other256.match_spec;
-  has_mbr_hdl = other256.has_mbr_hdl;
-  has_grp_hdl = other256.has_grp_hdl;
-  selector_grp_hdl = other256.selector_grp_hdl;
-  action_mbr_hdl = other256.action_mbr_hdl;
-  action_desc = other256.action_desc;
+netbufferv4_access_cache_frequency_tbl_entry_desc_t& netbufferv4_access_cache_frequency_tbl_entry_desc_t::operator=(const netbufferv4_access_cache_frequency_tbl_entry_desc_t& other258) {
+  match_spec = other258.match_spec;
+  has_mbr_hdl = other258.has_mbr_hdl;
+  has_grp_hdl = other258.has_grp_hdl;
+  selector_grp_hdl = other258.selector_grp_hdl;
+  action_mbr_hdl = other258.action_mbr_hdl;
+  action_desc = other258.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_cache_frequency_tbl_entry_desc_t& obj) {
@@ -14910,8 +15043,8 @@ void netbufferv4_access_case1_tbl_entry_desc_t::__set_action_desc(const netbuffe
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_case1_tbl_entry_desc_t::ascii_fingerprint = "218F351C3A7BD0D1894F63B8337D2C87";
-const uint8_t netbufferv4_access_case1_tbl_entry_desc_t::binary_fingerprint[16] = {0x21,0x8F,0x35,0x1C,0x3A,0x7B,0xD0,0xD1,0x89,0x4F,0x63,0xB8,0x33,0x7D,0x2C,0x87};
+const char* netbufferv4_access_case1_tbl_entry_desc_t::ascii_fingerprint = "E4152BD27D3D59B20CE430C2D1FB7FC8";
+const uint8_t netbufferv4_access_case1_tbl_entry_desc_t::binary_fingerprint[16] = {0xE4,0x15,0x2B,0xD2,0x7D,0x3D,0x59,0xB2,0x0C,0xE4,0x30,0xC2,0xD1,0xFB,0x7F,0xC8};
 
 uint32_t netbufferv4_access_case1_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -15056,21 +15189,21 @@ void swap(netbufferv4_access_case1_tbl_entry_desc_t &a, netbufferv4_access_case1
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_case1_tbl_entry_desc_t::netbufferv4_access_case1_tbl_entry_desc_t(const netbufferv4_access_case1_tbl_entry_desc_t& other257) {
-  match_spec = other257.match_spec;
-  has_mbr_hdl = other257.has_mbr_hdl;
-  has_grp_hdl = other257.has_grp_hdl;
-  selector_grp_hdl = other257.selector_grp_hdl;
-  action_mbr_hdl = other257.action_mbr_hdl;
-  action_desc = other257.action_desc;
+netbufferv4_access_case1_tbl_entry_desc_t::netbufferv4_access_case1_tbl_entry_desc_t(const netbufferv4_access_case1_tbl_entry_desc_t& other259) {
+  match_spec = other259.match_spec;
+  has_mbr_hdl = other259.has_mbr_hdl;
+  has_grp_hdl = other259.has_grp_hdl;
+  selector_grp_hdl = other259.selector_grp_hdl;
+  action_mbr_hdl = other259.action_mbr_hdl;
+  action_desc = other259.action_desc;
 }
-netbufferv4_access_case1_tbl_entry_desc_t& netbufferv4_access_case1_tbl_entry_desc_t::operator=(const netbufferv4_access_case1_tbl_entry_desc_t& other258) {
-  match_spec = other258.match_spec;
-  has_mbr_hdl = other258.has_mbr_hdl;
-  has_grp_hdl = other258.has_grp_hdl;
-  selector_grp_hdl = other258.selector_grp_hdl;
-  action_mbr_hdl = other258.action_mbr_hdl;
-  action_desc = other258.action_desc;
+netbufferv4_access_case1_tbl_entry_desc_t& netbufferv4_access_case1_tbl_entry_desc_t::operator=(const netbufferv4_access_case1_tbl_entry_desc_t& other260) {
+  match_spec = other260.match_spec;
+  has_mbr_hdl = other260.has_mbr_hdl;
+  has_grp_hdl = other260.has_grp_hdl;
+  selector_grp_hdl = other260.selector_grp_hdl;
+  action_mbr_hdl = other260.action_mbr_hdl;
+  action_desc = other260.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_case1_tbl_entry_desc_t& obj) {
@@ -15115,8 +15248,8 @@ void netbufferv4_access_cm1_tbl_entry_desc_t::__set_action_desc(const netbufferv
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_cm1_tbl_entry_desc_t::ascii_fingerprint = "519EE782D4C9BAFD2638F0899B751312";
-const uint8_t netbufferv4_access_cm1_tbl_entry_desc_t::binary_fingerprint[16] = {0x51,0x9E,0xE7,0x82,0xD4,0xC9,0xBA,0xFD,0x26,0x38,0xF0,0x89,0x9B,0x75,0x13,0x12};
+const char* netbufferv4_access_cm1_tbl_entry_desc_t::ascii_fingerprint = "54CB1774BD516A00A818DB15BE17481D";
+const uint8_t netbufferv4_access_cm1_tbl_entry_desc_t::binary_fingerprint[16] = {0x54,0xCB,0x17,0x74,0xBD,0x51,0x6A,0x00,0xA8,0x18,0xDB,0x15,0xBE,0x17,0x48,0x1D};
 
 uint32_t netbufferv4_access_cm1_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -15261,21 +15394,21 @@ void swap(netbufferv4_access_cm1_tbl_entry_desc_t &a, netbufferv4_access_cm1_tbl
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_cm1_tbl_entry_desc_t::netbufferv4_access_cm1_tbl_entry_desc_t(const netbufferv4_access_cm1_tbl_entry_desc_t& other259) {
-  match_spec = other259.match_spec;
-  has_mbr_hdl = other259.has_mbr_hdl;
-  has_grp_hdl = other259.has_grp_hdl;
-  selector_grp_hdl = other259.selector_grp_hdl;
-  action_mbr_hdl = other259.action_mbr_hdl;
-  action_desc = other259.action_desc;
+netbufferv4_access_cm1_tbl_entry_desc_t::netbufferv4_access_cm1_tbl_entry_desc_t(const netbufferv4_access_cm1_tbl_entry_desc_t& other261) {
+  match_spec = other261.match_spec;
+  has_mbr_hdl = other261.has_mbr_hdl;
+  has_grp_hdl = other261.has_grp_hdl;
+  selector_grp_hdl = other261.selector_grp_hdl;
+  action_mbr_hdl = other261.action_mbr_hdl;
+  action_desc = other261.action_desc;
 }
-netbufferv4_access_cm1_tbl_entry_desc_t& netbufferv4_access_cm1_tbl_entry_desc_t::operator=(const netbufferv4_access_cm1_tbl_entry_desc_t& other260) {
-  match_spec = other260.match_spec;
-  has_mbr_hdl = other260.has_mbr_hdl;
-  has_grp_hdl = other260.has_grp_hdl;
-  selector_grp_hdl = other260.selector_grp_hdl;
-  action_mbr_hdl = other260.action_mbr_hdl;
-  action_desc = other260.action_desc;
+netbufferv4_access_cm1_tbl_entry_desc_t& netbufferv4_access_cm1_tbl_entry_desc_t::operator=(const netbufferv4_access_cm1_tbl_entry_desc_t& other262) {
+  match_spec = other262.match_spec;
+  has_mbr_hdl = other262.has_mbr_hdl;
+  has_grp_hdl = other262.has_grp_hdl;
+  selector_grp_hdl = other262.selector_grp_hdl;
+  action_mbr_hdl = other262.action_mbr_hdl;
+  action_desc = other262.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_cm1_tbl_entry_desc_t& obj) {
@@ -15320,8 +15453,8 @@ void netbufferv4_access_cm2_tbl_entry_desc_t::__set_action_desc(const netbufferv
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_cm2_tbl_entry_desc_t::ascii_fingerprint = "519EE782D4C9BAFD2638F0899B751312";
-const uint8_t netbufferv4_access_cm2_tbl_entry_desc_t::binary_fingerprint[16] = {0x51,0x9E,0xE7,0x82,0xD4,0xC9,0xBA,0xFD,0x26,0x38,0xF0,0x89,0x9B,0x75,0x13,0x12};
+const char* netbufferv4_access_cm2_tbl_entry_desc_t::ascii_fingerprint = "54CB1774BD516A00A818DB15BE17481D";
+const uint8_t netbufferv4_access_cm2_tbl_entry_desc_t::binary_fingerprint[16] = {0x54,0xCB,0x17,0x74,0xBD,0x51,0x6A,0x00,0xA8,0x18,0xDB,0x15,0xBE,0x17,0x48,0x1D};
 
 uint32_t netbufferv4_access_cm2_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -15466,21 +15599,21 @@ void swap(netbufferv4_access_cm2_tbl_entry_desc_t &a, netbufferv4_access_cm2_tbl
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_cm2_tbl_entry_desc_t::netbufferv4_access_cm2_tbl_entry_desc_t(const netbufferv4_access_cm2_tbl_entry_desc_t& other261) {
-  match_spec = other261.match_spec;
-  has_mbr_hdl = other261.has_mbr_hdl;
-  has_grp_hdl = other261.has_grp_hdl;
-  selector_grp_hdl = other261.selector_grp_hdl;
-  action_mbr_hdl = other261.action_mbr_hdl;
-  action_desc = other261.action_desc;
+netbufferv4_access_cm2_tbl_entry_desc_t::netbufferv4_access_cm2_tbl_entry_desc_t(const netbufferv4_access_cm2_tbl_entry_desc_t& other263) {
+  match_spec = other263.match_spec;
+  has_mbr_hdl = other263.has_mbr_hdl;
+  has_grp_hdl = other263.has_grp_hdl;
+  selector_grp_hdl = other263.selector_grp_hdl;
+  action_mbr_hdl = other263.action_mbr_hdl;
+  action_desc = other263.action_desc;
 }
-netbufferv4_access_cm2_tbl_entry_desc_t& netbufferv4_access_cm2_tbl_entry_desc_t::operator=(const netbufferv4_access_cm2_tbl_entry_desc_t& other262) {
-  match_spec = other262.match_spec;
-  has_mbr_hdl = other262.has_mbr_hdl;
-  has_grp_hdl = other262.has_grp_hdl;
-  selector_grp_hdl = other262.selector_grp_hdl;
-  action_mbr_hdl = other262.action_mbr_hdl;
-  action_desc = other262.action_desc;
+netbufferv4_access_cm2_tbl_entry_desc_t& netbufferv4_access_cm2_tbl_entry_desc_t::operator=(const netbufferv4_access_cm2_tbl_entry_desc_t& other264) {
+  match_spec = other264.match_spec;
+  has_mbr_hdl = other264.has_mbr_hdl;
+  has_grp_hdl = other264.has_grp_hdl;
+  selector_grp_hdl = other264.selector_grp_hdl;
+  action_mbr_hdl = other264.action_mbr_hdl;
+  action_desc = other264.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_cm2_tbl_entry_desc_t& obj) {
@@ -15525,8 +15658,8 @@ void netbufferv4_access_cm3_tbl_entry_desc_t::__set_action_desc(const netbufferv
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_cm3_tbl_entry_desc_t::ascii_fingerprint = "519EE782D4C9BAFD2638F0899B751312";
-const uint8_t netbufferv4_access_cm3_tbl_entry_desc_t::binary_fingerprint[16] = {0x51,0x9E,0xE7,0x82,0xD4,0xC9,0xBA,0xFD,0x26,0x38,0xF0,0x89,0x9B,0x75,0x13,0x12};
+const char* netbufferv4_access_cm3_tbl_entry_desc_t::ascii_fingerprint = "54CB1774BD516A00A818DB15BE17481D";
+const uint8_t netbufferv4_access_cm3_tbl_entry_desc_t::binary_fingerprint[16] = {0x54,0xCB,0x17,0x74,0xBD,0x51,0x6A,0x00,0xA8,0x18,0xDB,0x15,0xBE,0x17,0x48,0x1D};
 
 uint32_t netbufferv4_access_cm3_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -15671,21 +15804,21 @@ void swap(netbufferv4_access_cm3_tbl_entry_desc_t &a, netbufferv4_access_cm3_tbl
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_cm3_tbl_entry_desc_t::netbufferv4_access_cm3_tbl_entry_desc_t(const netbufferv4_access_cm3_tbl_entry_desc_t& other263) {
-  match_spec = other263.match_spec;
-  has_mbr_hdl = other263.has_mbr_hdl;
-  has_grp_hdl = other263.has_grp_hdl;
-  selector_grp_hdl = other263.selector_grp_hdl;
-  action_mbr_hdl = other263.action_mbr_hdl;
-  action_desc = other263.action_desc;
+netbufferv4_access_cm3_tbl_entry_desc_t::netbufferv4_access_cm3_tbl_entry_desc_t(const netbufferv4_access_cm3_tbl_entry_desc_t& other265) {
+  match_spec = other265.match_spec;
+  has_mbr_hdl = other265.has_mbr_hdl;
+  has_grp_hdl = other265.has_grp_hdl;
+  selector_grp_hdl = other265.selector_grp_hdl;
+  action_mbr_hdl = other265.action_mbr_hdl;
+  action_desc = other265.action_desc;
 }
-netbufferv4_access_cm3_tbl_entry_desc_t& netbufferv4_access_cm3_tbl_entry_desc_t::operator=(const netbufferv4_access_cm3_tbl_entry_desc_t& other264) {
-  match_spec = other264.match_spec;
-  has_mbr_hdl = other264.has_mbr_hdl;
-  has_grp_hdl = other264.has_grp_hdl;
-  selector_grp_hdl = other264.selector_grp_hdl;
-  action_mbr_hdl = other264.action_mbr_hdl;
-  action_desc = other264.action_desc;
+netbufferv4_access_cm3_tbl_entry_desc_t& netbufferv4_access_cm3_tbl_entry_desc_t::operator=(const netbufferv4_access_cm3_tbl_entry_desc_t& other266) {
+  match_spec = other266.match_spec;
+  has_mbr_hdl = other266.has_mbr_hdl;
+  has_grp_hdl = other266.has_grp_hdl;
+  selector_grp_hdl = other266.selector_grp_hdl;
+  action_mbr_hdl = other266.action_mbr_hdl;
+  action_desc = other266.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_cm3_tbl_entry_desc_t& obj) {
@@ -15730,8 +15863,8 @@ void netbufferv4_access_cm4_tbl_entry_desc_t::__set_action_desc(const netbufferv
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_cm4_tbl_entry_desc_t::ascii_fingerprint = "519EE782D4C9BAFD2638F0899B751312";
-const uint8_t netbufferv4_access_cm4_tbl_entry_desc_t::binary_fingerprint[16] = {0x51,0x9E,0xE7,0x82,0xD4,0xC9,0xBA,0xFD,0x26,0x38,0xF0,0x89,0x9B,0x75,0x13,0x12};
+const char* netbufferv4_access_cm4_tbl_entry_desc_t::ascii_fingerprint = "54CB1774BD516A00A818DB15BE17481D";
+const uint8_t netbufferv4_access_cm4_tbl_entry_desc_t::binary_fingerprint[16] = {0x54,0xCB,0x17,0x74,0xBD,0x51,0x6A,0x00,0xA8,0x18,0xDB,0x15,0xBE,0x17,0x48,0x1D};
 
 uint32_t netbufferv4_access_cm4_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -15876,21 +16009,21 @@ void swap(netbufferv4_access_cm4_tbl_entry_desc_t &a, netbufferv4_access_cm4_tbl
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_cm4_tbl_entry_desc_t::netbufferv4_access_cm4_tbl_entry_desc_t(const netbufferv4_access_cm4_tbl_entry_desc_t& other265) {
-  match_spec = other265.match_spec;
-  has_mbr_hdl = other265.has_mbr_hdl;
-  has_grp_hdl = other265.has_grp_hdl;
-  selector_grp_hdl = other265.selector_grp_hdl;
-  action_mbr_hdl = other265.action_mbr_hdl;
-  action_desc = other265.action_desc;
+netbufferv4_access_cm4_tbl_entry_desc_t::netbufferv4_access_cm4_tbl_entry_desc_t(const netbufferv4_access_cm4_tbl_entry_desc_t& other267) {
+  match_spec = other267.match_spec;
+  has_mbr_hdl = other267.has_mbr_hdl;
+  has_grp_hdl = other267.has_grp_hdl;
+  selector_grp_hdl = other267.selector_grp_hdl;
+  action_mbr_hdl = other267.action_mbr_hdl;
+  action_desc = other267.action_desc;
 }
-netbufferv4_access_cm4_tbl_entry_desc_t& netbufferv4_access_cm4_tbl_entry_desc_t::operator=(const netbufferv4_access_cm4_tbl_entry_desc_t& other266) {
-  match_spec = other266.match_spec;
-  has_mbr_hdl = other266.has_mbr_hdl;
-  has_grp_hdl = other266.has_grp_hdl;
-  selector_grp_hdl = other266.selector_grp_hdl;
-  action_mbr_hdl = other266.action_mbr_hdl;
-  action_desc = other266.action_desc;
+netbufferv4_access_cm4_tbl_entry_desc_t& netbufferv4_access_cm4_tbl_entry_desc_t::operator=(const netbufferv4_access_cm4_tbl_entry_desc_t& other268) {
+  match_spec = other268.match_spec;
+  has_mbr_hdl = other268.has_mbr_hdl;
+  has_grp_hdl = other268.has_grp_hdl;
+  selector_grp_hdl = other268.selector_grp_hdl;
+  action_mbr_hdl = other268.action_mbr_hdl;
+  action_desc = other268.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_cm4_tbl_entry_desc_t& obj) {
@@ -15935,8 +16068,8 @@ void netbufferv4_access_deleted_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_deleted_tbl_entry_desc_t::ascii_fingerprint = "218F351C3A7BD0D1894F63B8337D2C87";
-const uint8_t netbufferv4_access_deleted_tbl_entry_desc_t::binary_fingerprint[16] = {0x21,0x8F,0x35,0x1C,0x3A,0x7B,0xD0,0xD1,0x89,0x4F,0x63,0xB8,0x33,0x7D,0x2C,0x87};
+const char* netbufferv4_access_deleted_tbl_entry_desc_t::ascii_fingerprint = "E4152BD27D3D59B20CE430C2D1FB7FC8";
+const uint8_t netbufferv4_access_deleted_tbl_entry_desc_t::binary_fingerprint[16] = {0xE4,0x15,0x2B,0xD2,0x7D,0x3D,0x59,0xB2,0x0C,0xE4,0x30,0xC2,0xD1,0xFB,0x7F,0xC8};
 
 uint32_t netbufferv4_access_deleted_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -16081,21 +16214,21 @@ void swap(netbufferv4_access_deleted_tbl_entry_desc_t &a, netbufferv4_access_del
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_deleted_tbl_entry_desc_t::netbufferv4_access_deleted_tbl_entry_desc_t(const netbufferv4_access_deleted_tbl_entry_desc_t& other267) {
-  match_spec = other267.match_spec;
-  has_mbr_hdl = other267.has_mbr_hdl;
-  has_grp_hdl = other267.has_grp_hdl;
-  selector_grp_hdl = other267.selector_grp_hdl;
-  action_mbr_hdl = other267.action_mbr_hdl;
-  action_desc = other267.action_desc;
+netbufferv4_access_deleted_tbl_entry_desc_t::netbufferv4_access_deleted_tbl_entry_desc_t(const netbufferv4_access_deleted_tbl_entry_desc_t& other269) {
+  match_spec = other269.match_spec;
+  has_mbr_hdl = other269.has_mbr_hdl;
+  has_grp_hdl = other269.has_grp_hdl;
+  selector_grp_hdl = other269.selector_grp_hdl;
+  action_mbr_hdl = other269.action_mbr_hdl;
+  action_desc = other269.action_desc;
 }
-netbufferv4_access_deleted_tbl_entry_desc_t& netbufferv4_access_deleted_tbl_entry_desc_t::operator=(const netbufferv4_access_deleted_tbl_entry_desc_t& other268) {
-  match_spec = other268.match_spec;
-  has_mbr_hdl = other268.has_mbr_hdl;
-  has_grp_hdl = other268.has_grp_hdl;
-  selector_grp_hdl = other268.selector_grp_hdl;
-  action_mbr_hdl = other268.action_mbr_hdl;
-  action_desc = other268.action_desc;
+netbufferv4_access_deleted_tbl_entry_desc_t& netbufferv4_access_deleted_tbl_entry_desc_t::operator=(const netbufferv4_access_deleted_tbl_entry_desc_t& other270) {
+  match_spec = other270.match_spec;
+  has_mbr_hdl = other270.has_mbr_hdl;
+  has_grp_hdl = other270.has_grp_hdl;
+  selector_grp_hdl = other270.selector_grp_hdl;
+  action_mbr_hdl = other270.action_mbr_hdl;
+  action_desc = other270.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_deleted_tbl_entry_desc_t& obj) {
@@ -16140,8 +16273,8 @@ void netbufferv4_access_latest_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_latest_tbl_entry_desc_t::ascii_fingerprint = "519EE782D4C9BAFD2638F0899B751312";
-const uint8_t netbufferv4_access_latest_tbl_entry_desc_t::binary_fingerprint[16] = {0x51,0x9E,0xE7,0x82,0xD4,0xC9,0xBA,0xFD,0x26,0x38,0xF0,0x89,0x9B,0x75,0x13,0x12};
+const char* netbufferv4_access_latest_tbl_entry_desc_t::ascii_fingerprint = "54CB1774BD516A00A818DB15BE17481D";
+const uint8_t netbufferv4_access_latest_tbl_entry_desc_t::binary_fingerprint[16] = {0x54,0xCB,0x17,0x74,0xBD,0x51,0x6A,0x00,0xA8,0x18,0xDB,0x15,0xBE,0x17,0x48,0x1D};
 
 uint32_t netbufferv4_access_latest_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -16286,21 +16419,21 @@ void swap(netbufferv4_access_latest_tbl_entry_desc_t &a, netbufferv4_access_late
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_latest_tbl_entry_desc_t::netbufferv4_access_latest_tbl_entry_desc_t(const netbufferv4_access_latest_tbl_entry_desc_t& other269) {
-  match_spec = other269.match_spec;
-  has_mbr_hdl = other269.has_mbr_hdl;
-  has_grp_hdl = other269.has_grp_hdl;
-  selector_grp_hdl = other269.selector_grp_hdl;
-  action_mbr_hdl = other269.action_mbr_hdl;
-  action_desc = other269.action_desc;
+netbufferv4_access_latest_tbl_entry_desc_t::netbufferv4_access_latest_tbl_entry_desc_t(const netbufferv4_access_latest_tbl_entry_desc_t& other271) {
+  match_spec = other271.match_spec;
+  has_mbr_hdl = other271.has_mbr_hdl;
+  has_grp_hdl = other271.has_grp_hdl;
+  selector_grp_hdl = other271.selector_grp_hdl;
+  action_mbr_hdl = other271.action_mbr_hdl;
+  action_desc = other271.action_desc;
 }
-netbufferv4_access_latest_tbl_entry_desc_t& netbufferv4_access_latest_tbl_entry_desc_t::operator=(const netbufferv4_access_latest_tbl_entry_desc_t& other270) {
-  match_spec = other270.match_spec;
-  has_mbr_hdl = other270.has_mbr_hdl;
-  has_grp_hdl = other270.has_grp_hdl;
-  selector_grp_hdl = other270.selector_grp_hdl;
-  action_mbr_hdl = other270.action_mbr_hdl;
-  action_desc = other270.action_desc;
+netbufferv4_access_latest_tbl_entry_desc_t& netbufferv4_access_latest_tbl_entry_desc_t::operator=(const netbufferv4_access_latest_tbl_entry_desc_t& other272) {
+  match_spec = other272.match_spec;
+  has_mbr_hdl = other272.has_mbr_hdl;
+  has_grp_hdl = other272.has_grp_hdl;
+  selector_grp_hdl = other272.selector_grp_hdl;
+  action_mbr_hdl = other272.action_mbr_hdl;
+  action_desc = other272.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_latest_tbl_entry_desc_t& obj) {
@@ -16345,8 +16478,8 @@ void netbufferv4_access_savedseq_tbl_entry_desc_t::__set_action_desc(const netbu
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_savedseq_tbl_entry_desc_t::ascii_fingerprint = "4DAE7DFBB5D061119F93C26CE90220D4";
-const uint8_t netbufferv4_access_savedseq_tbl_entry_desc_t::binary_fingerprint[16] = {0x4D,0xAE,0x7D,0xFB,0xB5,0xD0,0x61,0x11,0x9F,0x93,0xC2,0x6C,0xE9,0x02,0x20,0xD4};
+const char* netbufferv4_access_savedseq_tbl_entry_desc_t::ascii_fingerprint = "99218E4FFDDA814249D867BA3D5722ED";
+const uint8_t netbufferv4_access_savedseq_tbl_entry_desc_t::binary_fingerprint[16] = {0x99,0x21,0x8E,0x4F,0xFD,0xDA,0x81,0x42,0x49,0xD8,0x67,0xBA,0x3D,0x57,0x22,0xED};
 
 uint32_t netbufferv4_access_savedseq_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -16491,21 +16624,21 @@ void swap(netbufferv4_access_savedseq_tbl_entry_desc_t &a, netbufferv4_access_sa
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_savedseq_tbl_entry_desc_t::netbufferv4_access_savedseq_tbl_entry_desc_t(const netbufferv4_access_savedseq_tbl_entry_desc_t& other271) {
-  match_spec = other271.match_spec;
-  has_mbr_hdl = other271.has_mbr_hdl;
-  has_grp_hdl = other271.has_grp_hdl;
-  selector_grp_hdl = other271.selector_grp_hdl;
-  action_mbr_hdl = other271.action_mbr_hdl;
-  action_desc = other271.action_desc;
+netbufferv4_access_savedseq_tbl_entry_desc_t::netbufferv4_access_savedseq_tbl_entry_desc_t(const netbufferv4_access_savedseq_tbl_entry_desc_t& other273) {
+  match_spec = other273.match_spec;
+  has_mbr_hdl = other273.has_mbr_hdl;
+  has_grp_hdl = other273.has_grp_hdl;
+  selector_grp_hdl = other273.selector_grp_hdl;
+  action_mbr_hdl = other273.action_mbr_hdl;
+  action_desc = other273.action_desc;
 }
-netbufferv4_access_savedseq_tbl_entry_desc_t& netbufferv4_access_savedseq_tbl_entry_desc_t::operator=(const netbufferv4_access_savedseq_tbl_entry_desc_t& other272) {
-  match_spec = other272.match_spec;
-  has_mbr_hdl = other272.has_mbr_hdl;
-  has_grp_hdl = other272.has_grp_hdl;
-  selector_grp_hdl = other272.selector_grp_hdl;
-  action_mbr_hdl = other272.action_mbr_hdl;
-  action_desc = other272.action_desc;
+netbufferv4_access_savedseq_tbl_entry_desc_t& netbufferv4_access_savedseq_tbl_entry_desc_t::operator=(const netbufferv4_access_savedseq_tbl_entry_desc_t& other274) {
+  match_spec = other274.match_spec;
+  has_mbr_hdl = other274.has_mbr_hdl;
+  has_grp_hdl = other274.has_grp_hdl;
+  selector_grp_hdl = other274.selector_grp_hdl;
+  action_mbr_hdl = other274.action_mbr_hdl;
+  action_desc = other274.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_savedseq_tbl_entry_desc_t& obj) {
@@ -16550,8 +16683,8 @@ void netbufferv4_access_seq_tbl_entry_desc_t::__set_action_desc(const netbufferv
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_seq_tbl_entry_desc_t::ascii_fingerprint = "2676025AD7BB9656C6C520AC762E3A26";
-const uint8_t netbufferv4_access_seq_tbl_entry_desc_t::binary_fingerprint[16] = {0x26,0x76,0x02,0x5A,0xD7,0xBB,0x96,0x56,0xC6,0xC5,0x20,0xAC,0x76,0x2E,0x3A,0x26};
+const char* netbufferv4_access_seq_tbl_entry_desc_t::ascii_fingerprint = "8348525221B29B0EF6384DFE4627154F";
+const uint8_t netbufferv4_access_seq_tbl_entry_desc_t::binary_fingerprint[16] = {0x83,0x48,0x52,0x52,0x21,0xB2,0x9B,0x0E,0xF6,0x38,0x4D,0xFE,0x46,0x27,0x15,0x4F};
 
 uint32_t netbufferv4_access_seq_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -16696,21 +16829,21 @@ void swap(netbufferv4_access_seq_tbl_entry_desc_t &a, netbufferv4_access_seq_tbl
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_seq_tbl_entry_desc_t::netbufferv4_access_seq_tbl_entry_desc_t(const netbufferv4_access_seq_tbl_entry_desc_t& other273) {
-  match_spec = other273.match_spec;
-  has_mbr_hdl = other273.has_mbr_hdl;
-  has_grp_hdl = other273.has_grp_hdl;
-  selector_grp_hdl = other273.selector_grp_hdl;
-  action_mbr_hdl = other273.action_mbr_hdl;
-  action_desc = other273.action_desc;
+netbufferv4_access_seq_tbl_entry_desc_t::netbufferv4_access_seq_tbl_entry_desc_t(const netbufferv4_access_seq_tbl_entry_desc_t& other275) {
+  match_spec = other275.match_spec;
+  has_mbr_hdl = other275.has_mbr_hdl;
+  has_grp_hdl = other275.has_grp_hdl;
+  selector_grp_hdl = other275.selector_grp_hdl;
+  action_mbr_hdl = other275.action_mbr_hdl;
+  action_desc = other275.action_desc;
 }
-netbufferv4_access_seq_tbl_entry_desc_t& netbufferv4_access_seq_tbl_entry_desc_t::operator=(const netbufferv4_access_seq_tbl_entry_desc_t& other274) {
-  match_spec = other274.match_spec;
-  has_mbr_hdl = other274.has_mbr_hdl;
-  has_grp_hdl = other274.has_grp_hdl;
-  selector_grp_hdl = other274.selector_grp_hdl;
-  action_mbr_hdl = other274.action_mbr_hdl;
-  action_desc = other274.action_desc;
+netbufferv4_access_seq_tbl_entry_desc_t& netbufferv4_access_seq_tbl_entry_desc_t::operator=(const netbufferv4_access_seq_tbl_entry_desc_t& other276) {
+  match_spec = other276.match_spec;
+  has_mbr_hdl = other276.has_mbr_hdl;
+  has_grp_hdl = other276.has_grp_hdl;
+  selector_grp_hdl = other276.selector_grp_hdl;
+  action_mbr_hdl = other276.action_mbr_hdl;
+  action_desc = other276.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_seq_tbl_entry_desc_t& obj) {
@@ -16755,8 +16888,8 @@ void netbufferv4_access_validvalue_tbl_entry_desc_t::__set_action_desc(const net
   this->action_desc = val;
 }
 
-const char* netbufferv4_access_validvalue_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_access_validvalue_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_access_validvalue_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_access_validvalue_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_access_validvalue_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -16901,21 +17034,21 @@ void swap(netbufferv4_access_validvalue_tbl_entry_desc_t &a, netbufferv4_access_
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_access_validvalue_tbl_entry_desc_t::netbufferv4_access_validvalue_tbl_entry_desc_t(const netbufferv4_access_validvalue_tbl_entry_desc_t& other275) {
-  match_spec = other275.match_spec;
-  has_mbr_hdl = other275.has_mbr_hdl;
-  has_grp_hdl = other275.has_grp_hdl;
-  selector_grp_hdl = other275.selector_grp_hdl;
-  action_mbr_hdl = other275.action_mbr_hdl;
-  action_desc = other275.action_desc;
+netbufferv4_access_validvalue_tbl_entry_desc_t::netbufferv4_access_validvalue_tbl_entry_desc_t(const netbufferv4_access_validvalue_tbl_entry_desc_t& other277) {
+  match_spec = other277.match_spec;
+  has_mbr_hdl = other277.has_mbr_hdl;
+  has_grp_hdl = other277.has_grp_hdl;
+  selector_grp_hdl = other277.selector_grp_hdl;
+  action_mbr_hdl = other277.action_mbr_hdl;
+  action_desc = other277.action_desc;
 }
-netbufferv4_access_validvalue_tbl_entry_desc_t& netbufferv4_access_validvalue_tbl_entry_desc_t::operator=(const netbufferv4_access_validvalue_tbl_entry_desc_t& other276) {
-  match_spec = other276.match_spec;
-  has_mbr_hdl = other276.has_mbr_hdl;
-  has_grp_hdl = other276.has_grp_hdl;
-  selector_grp_hdl = other276.selector_grp_hdl;
-  action_mbr_hdl = other276.action_mbr_hdl;
-  action_desc = other276.action_desc;
+netbufferv4_access_validvalue_tbl_entry_desc_t& netbufferv4_access_validvalue_tbl_entry_desc_t::operator=(const netbufferv4_access_validvalue_tbl_entry_desc_t& other278) {
+  match_spec = other278.match_spec;
+  has_mbr_hdl = other278.has_mbr_hdl;
+  has_grp_hdl = other278.has_grp_hdl;
+  selector_grp_hdl = other278.selector_grp_hdl;
+  action_mbr_hdl = other278.action_mbr_hdl;
+  action_desc = other278.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_access_validvalue_tbl_entry_desc_t& obj) {
@@ -16964,8 +17097,8 @@ void netbufferv4_add_and_remove_value_header_tbl_entry_desc_t::__set_action_desc
   this->action_desc = val;
 }
 
-const char* netbufferv4_add_and_remove_value_header_tbl_entry_desc_t::ascii_fingerprint = "267C4FFC640C408765D65A3891BC0800";
-const uint8_t netbufferv4_add_and_remove_value_header_tbl_entry_desc_t::binary_fingerprint[16] = {0x26,0x7C,0x4F,0xFC,0x64,0x0C,0x40,0x87,0x65,0xD6,0x5A,0x38,0x91,0xBC,0x08,0x00};
+const char* netbufferv4_add_and_remove_value_header_tbl_entry_desc_t::ascii_fingerprint = "A68F4537B216B84BD3E5DC927FB00077";
+const uint8_t netbufferv4_add_and_remove_value_header_tbl_entry_desc_t::binary_fingerprint[16] = {0xA6,0x8F,0x45,0x37,0xB2,0x16,0xB8,0x4B,0xD3,0xE5,0xDC,0x92,0x7F,0xB0,0x00,0x77};
 
 uint32_t netbufferv4_add_and_remove_value_header_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -17126,23 +17259,23 @@ void swap(netbufferv4_add_and_remove_value_header_tbl_entry_desc_t &a, netbuffer
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_add_and_remove_value_header_tbl_entry_desc_t::netbufferv4_add_and_remove_value_header_tbl_entry_desc_t(const netbufferv4_add_and_remove_value_header_tbl_entry_desc_t& other277) {
-  match_spec = other277.match_spec;
-  has_mbr_hdl = other277.has_mbr_hdl;
-  has_grp_hdl = other277.has_grp_hdl;
-  selector_grp_hdl = other277.selector_grp_hdl;
-  action_mbr_hdl = other277.action_mbr_hdl;
-  priority = other277.priority;
-  action_desc = other277.action_desc;
+netbufferv4_add_and_remove_value_header_tbl_entry_desc_t::netbufferv4_add_and_remove_value_header_tbl_entry_desc_t(const netbufferv4_add_and_remove_value_header_tbl_entry_desc_t& other279) {
+  match_spec = other279.match_spec;
+  has_mbr_hdl = other279.has_mbr_hdl;
+  has_grp_hdl = other279.has_grp_hdl;
+  selector_grp_hdl = other279.selector_grp_hdl;
+  action_mbr_hdl = other279.action_mbr_hdl;
+  priority = other279.priority;
+  action_desc = other279.action_desc;
 }
-netbufferv4_add_and_remove_value_header_tbl_entry_desc_t& netbufferv4_add_and_remove_value_header_tbl_entry_desc_t::operator=(const netbufferv4_add_and_remove_value_header_tbl_entry_desc_t& other278) {
-  match_spec = other278.match_spec;
-  has_mbr_hdl = other278.has_mbr_hdl;
-  has_grp_hdl = other278.has_grp_hdl;
-  selector_grp_hdl = other278.selector_grp_hdl;
-  action_mbr_hdl = other278.action_mbr_hdl;
-  priority = other278.priority;
-  action_desc = other278.action_desc;
+netbufferv4_add_and_remove_value_header_tbl_entry_desc_t& netbufferv4_add_and_remove_value_header_tbl_entry_desc_t::operator=(const netbufferv4_add_and_remove_value_header_tbl_entry_desc_t& other280) {
+  match_spec = other280.match_spec;
+  has_mbr_hdl = other280.has_mbr_hdl;
+  has_grp_hdl = other280.has_grp_hdl;
+  selector_grp_hdl = other280.selector_grp_hdl;
+  action_mbr_hdl = other280.action_mbr_hdl;
+  priority = other280.priority;
+  action_desc = other280.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_add_and_remove_value_header_tbl_entry_desc_t& obj) {
@@ -17188,8 +17321,8 @@ void netbufferv4_cache_lookup_tbl_entry_desc_t::__set_action_desc(const netbuffe
   this->action_desc = val;
 }
 
-const char* netbufferv4_cache_lookup_tbl_entry_desc_t::ascii_fingerprint = "434B81C369A8709F003C121CC2A58288";
-const uint8_t netbufferv4_cache_lookup_tbl_entry_desc_t::binary_fingerprint[16] = {0x43,0x4B,0x81,0xC3,0x69,0xA8,0x70,0x9F,0x00,0x3C,0x12,0x1C,0xC2,0xA5,0x82,0x88};
+const char* netbufferv4_cache_lookup_tbl_entry_desc_t::ascii_fingerprint = "19CB2600492A5F2ABC3593DF5BBAD266";
+const uint8_t netbufferv4_cache_lookup_tbl_entry_desc_t::binary_fingerprint[16] = {0x19,0xCB,0x26,0x00,0x49,0x2A,0x5F,0x2A,0xBC,0x35,0x93,0xDF,0x5B,0xBA,0xD2,0x66};
 
 uint32_t netbufferv4_cache_lookup_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -17334,21 +17467,21 @@ void swap(netbufferv4_cache_lookup_tbl_entry_desc_t &a, netbufferv4_cache_lookup
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_cache_lookup_tbl_entry_desc_t::netbufferv4_cache_lookup_tbl_entry_desc_t(const netbufferv4_cache_lookup_tbl_entry_desc_t& other279) {
-  match_spec = other279.match_spec;
-  has_mbr_hdl = other279.has_mbr_hdl;
-  has_grp_hdl = other279.has_grp_hdl;
-  selector_grp_hdl = other279.selector_grp_hdl;
-  action_mbr_hdl = other279.action_mbr_hdl;
-  action_desc = other279.action_desc;
+netbufferv4_cache_lookup_tbl_entry_desc_t::netbufferv4_cache_lookup_tbl_entry_desc_t(const netbufferv4_cache_lookup_tbl_entry_desc_t& other281) {
+  match_spec = other281.match_spec;
+  has_mbr_hdl = other281.has_mbr_hdl;
+  has_grp_hdl = other281.has_grp_hdl;
+  selector_grp_hdl = other281.selector_grp_hdl;
+  action_mbr_hdl = other281.action_mbr_hdl;
+  action_desc = other281.action_desc;
 }
-netbufferv4_cache_lookup_tbl_entry_desc_t& netbufferv4_cache_lookup_tbl_entry_desc_t::operator=(const netbufferv4_cache_lookup_tbl_entry_desc_t& other280) {
-  match_spec = other280.match_spec;
-  has_mbr_hdl = other280.has_mbr_hdl;
-  has_grp_hdl = other280.has_grp_hdl;
-  selector_grp_hdl = other280.selector_grp_hdl;
-  action_mbr_hdl = other280.action_mbr_hdl;
-  action_desc = other280.action_desc;
+netbufferv4_cache_lookup_tbl_entry_desc_t& netbufferv4_cache_lookup_tbl_entry_desc_t::operator=(const netbufferv4_cache_lookup_tbl_entry_desc_t& other282) {
+  match_spec = other282.match_spec;
+  has_mbr_hdl = other282.has_mbr_hdl;
+  has_grp_hdl = other282.has_grp_hdl;
+  selector_grp_hdl = other282.selector_grp_hdl;
+  action_mbr_hdl = other282.action_mbr_hdl;
+  action_desc = other282.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_cache_lookup_tbl_entry_desc_t& obj) {
@@ -17393,8 +17526,8 @@ void netbufferv4_drop_tbl_entry_desc_t::__set_action_desc(const netbufferv4_acti
   this->action_desc = val;
 }
 
-const char* netbufferv4_drop_tbl_entry_desc_t::ascii_fingerprint = "2676025AD7BB9656C6C520AC762E3A26";
-const uint8_t netbufferv4_drop_tbl_entry_desc_t::binary_fingerprint[16] = {0x26,0x76,0x02,0x5A,0xD7,0xBB,0x96,0x56,0xC6,0xC5,0x20,0xAC,0x76,0x2E,0x3A,0x26};
+const char* netbufferv4_drop_tbl_entry_desc_t::ascii_fingerprint = "8348525221B29B0EF6384DFE4627154F";
+const uint8_t netbufferv4_drop_tbl_entry_desc_t::binary_fingerprint[16] = {0x83,0x48,0x52,0x52,0x21,0xB2,0x9B,0x0E,0xF6,0x38,0x4D,0xFE,0x46,0x27,0x15,0x4F};
 
 uint32_t netbufferv4_drop_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -17539,21 +17672,21 @@ void swap(netbufferv4_drop_tbl_entry_desc_t &a, netbufferv4_drop_tbl_entry_desc_
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_drop_tbl_entry_desc_t::netbufferv4_drop_tbl_entry_desc_t(const netbufferv4_drop_tbl_entry_desc_t& other281) {
-  match_spec = other281.match_spec;
-  has_mbr_hdl = other281.has_mbr_hdl;
-  has_grp_hdl = other281.has_grp_hdl;
-  selector_grp_hdl = other281.selector_grp_hdl;
-  action_mbr_hdl = other281.action_mbr_hdl;
-  action_desc = other281.action_desc;
+netbufferv4_drop_tbl_entry_desc_t::netbufferv4_drop_tbl_entry_desc_t(const netbufferv4_drop_tbl_entry_desc_t& other283) {
+  match_spec = other283.match_spec;
+  has_mbr_hdl = other283.has_mbr_hdl;
+  has_grp_hdl = other283.has_grp_hdl;
+  selector_grp_hdl = other283.selector_grp_hdl;
+  action_mbr_hdl = other283.action_mbr_hdl;
+  action_desc = other283.action_desc;
 }
-netbufferv4_drop_tbl_entry_desc_t& netbufferv4_drop_tbl_entry_desc_t::operator=(const netbufferv4_drop_tbl_entry_desc_t& other282) {
-  match_spec = other282.match_spec;
-  has_mbr_hdl = other282.has_mbr_hdl;
-  has_grp_hdl = other282.has_grp_hdl;
-  selector_grp_hdl = other282.selector_grp_hdl;
-  action_mbr_hdl = other282.action_mbr_hdl;
-  action_desc = other282.action_desc;
+netbufferv4_drop_tbl_entry_desc_t& netbufferv4_drop_tbl_entry_desc_t::operator=(const netbufferv4_drop_tbl_entry_desc_t& other284) {
+  match_spec = other284.match_spec;
+  has_mbr_hdl = other284.has_mbr_hdl;
+  has_grp_hdl = other284.has_grp_hdl;
+  selector_grp_hdl = other284.selector_grp_hdl;
+  action_mbr_hdl = other284.action_mbr_hdl;
+  action_desc = other284.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_drop_tbl_entry_desc_t& obj) {
@@ -17598,8 +17731,8 @@ void netbufferv4_eg_port_forward_tbl_entry_desc_t::__set_action_desc(const netbu
   this->action_desc = val;
 }
 
-const char* netbufferv4_eg_port_forward_tbl_entry_desc_t::ascii_fingerprint = "24DBDFCFC8B4681A9AC17DE2394A0DA9";
-const uint8_t netbufferv4_eg_port_forward_tbl_entry_desc_t::binary_fingerprint[16] = {0x24,0xDB,0xDF,0xCF,0xC8,0xB4,0x68,0x1A,0x9A,0xC1,0x7D,0xE2,0x39,0x4A,0x0D,0xA9};
+const char* netbufferv4_eg_port_forward_tbl_entry_desc_t::ascii_fingerprint = "606F94C86C1A33AF5C1F2D2D22BF1636";
+const uint8_t netbufferv4_eg_port_forward_tbl_entry_desc_t::binary_fingerprint[16] = {0x60,0x6F,0x94,0xC8,0x6C,0x1A,0x33,0xAF,0x5C,0x1F,0x2D,0x2D,0x22,0xBF,0x16,0x36};
 
 uint32_t netbufferv4_eg_port_forward_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -17744,21 +17877,21 @@ void swap(netbufferv4_eg_port_forward_tbl_entry_desc_t &a, netbufferv4_eg_port_f
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_eg_port_forward_tbl_entry_desc_t::netbufferv4_eg_port_forward_tbl_entry_desc_t(const netbufferv4_eg_port_forward_tbl_entry_desc_t& other283) {
-  match_spec = other283.match_spec;
-  has_mbr_hdl = other283.has_mbr_hdl;
-  has_grp_hdl = other283.has_grp_hdl;
-  selector_grp_hdl = other283.selector_grp_hdl;
-  action_mbr_hdl = other283.action_mbr_hdl;
-  action_desc = other283.action_desc;
+netbufferv4_eg_port_forward_tbl_entry_desc_t::netbufferv4_eg_port_forward_tbl_entry_desc_t(const netbufferv4_eg_port_forward_tbl_entry_desc_t& other285) {
+  match_spec = other285.match_spec;
+  has_mbr_hdl = other285.has_mbr_hdl;
+  has_grp_hdl = other285.has_grp_hdl;
+  selector_grp_hdl = other285.selector_grp_hdl;
+  action_mbr_hdl = other285.action_mbr_hdl;
+  action_desc = other285.action_desc;
 }
-netbufferv4_eg_port_forward_tbl_entry_desc_t& netbufferv4_eg_port_forward_tbl_entry_desc_t::operator=(const netbufferv4_eg_port_forward_tbl_entry_desc_t& other284) {
-  match_spec = other284.match_spec;
-  has_mbr_hdl = other284.has_mbr_hdl;
-  has_grp_hdl = other284.has_grp_hdl;
-  selector_grp_hdl = other284.selector_grp_hdl;
-  action_mbr_hdl = other284.action_mbr_hdl;
-  action_desc = other284.action_desc;
+netbufferv4_eg_port_forward_tbl_entry_desc_t& netbufferv4_eg_port_forward_tbl_entry_desc_t::operator=(const netbufferv4_eg_port_forward_tbl_entry_desc_t& other286) {
+  match_spec = other286.match_spec;
+  has_mbr_hdl = other286.has_mbr_hdl;
+  has_grp_hdl = other286.has_grp_hdl;
+  selector_grp_hdl = other286.selector_grp_hdl;
+  action_mbr_hdl = other286.action_mbr_hdl;
+  action_desc = other286.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_eg_port_forward_tbl_entry_desc_t& obj) {
@@ -17803,8 +17936,8 @@ void netbufferv4_hash_for_cm1_tbl_entry_desc_t::__set_action_desc(const netbuffe
   this->action_desc = val;
 }
 
-const char* netbufferv4_hash_for_cm1_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_hash_for_cm1_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_hash_for_cm1_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_hash_for_cm1_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_hash_for_cm1_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -17949,21 +18082,21 @@ void swap(netbufferv4_hash_for_cm1_tbl_entry_desc_t &a, netbufferv4_hash_for_cm1
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_hash_for_cm1_tbl_entry_desc_t::netbufferv4_hash_for_cm1_tbl_entry_desc_t(const netbufferv4_hash_for_cm1_tbl_entry_desc_t& other285) {
-  match_spec = other285.match_spec;
-  has_mbr_hdl = other285.has_mbr_hdl;
-  has_grp_hdl = other285.has_grp_hdl;
-  selector_grp_hdl = other285.selector_grp_hdl;
-  action_mbr_hdl = other285.action_mbr_hdl;
-  action_desc = other285.action_desc;
+netbufferv4_hash_for_cm1_tbl_entry_desc_t::netbufferv4_hash_for_cm1_tbl_entry_desc_t(const netbufferv4_hash_for_cm1_tbl_entry_desc_t& other287) {
+  match_spec = other287.match_spec;
+  has_mbr_hdl = other287.has_mbr_hdl;
+  has_grp_hdl = other287.has_grp_hdl;
+  selector_grp_hdl = other287.selector_grp_hdl;
+  action_mbr_hdl = other287.action_mbr_hdl;
+  action_desc = other287.action_desc;
 }
-netbufferv4_hash_for_cm1_tbl_entry_desc_t& netbufferv4_hash_for_cm1_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_cm1_tbl_entry_desc_t& other286) {
-  match_spec = other286.match_spec;
-  has_mbr_hdl = other286.has_mbr_hdl;
-  has_grp_hdl = other286.has_grp_hdl;
-  selector_grp_hdl = other286.selector_grp_hdl;
-  action_mbr_hdl = other286.action_mbr_hdl;
-  action_desc = other286.action_desc;
+netbufferv4_hash_for_cm1_tbl_entry_desc_t& netbufferv4_hash_for_cm1_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_cm1_tbl_entry_desc_t& other288) {
+  match_spec = other288.match_spec;
+  has_mbr_hdl = other288.has_mbr_hdl;
+  has_grp_hdl = other288.has_grp_hdl;
+  selector_grp_hdl = other288.selector_grp_hdl;
+  action_mbr_hdl = other288.action_mbr_hdl;
+  action_desc = other288.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_hash_for_cm1_tbl_entry_desc_t& obj) {
@@ -18008,8 +18141,8 @@ void netbufferv4_hash_for_cm2_tbl_entry_desc_t::__set_action_desc(const netbuffe
   this->action_desc = val;
 }
 
-const char* netbufferv4_hash_for_cm2_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_hash_for_cm2_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_hash_for_cm2_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_hash_for_cm2_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_hash_for_cm2_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -18154,21 +18287,21 @@ void swap(netbufferv4_hash_for_cm2_tbl_entry_desc_t &a, netbufferv4_hash_for_cm2
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_hash_for_cm2_tbl_entry_desc_t::netbufferv4_hash_for_cm2_tbl_entry_desc_t(const netbufferv4_hash_for_cm2_tbl_entry_desc_t& other287) {
-  match_spec = other287.match_spec;
-  has_mbr_hdl = other287.has_mbr_hdl;
-  has_grp_hdl = other287.has_grp_hdl;
-  selector_grp_hdl = other287.selector_grp_hdl;
-  action_mbr_hdl = other287.action_mbr_hdl;
-  action_desc = other287.action_desc;
+netbufferv4_hash_for_cm2_tbl_entry_desc_t::netbufferv4_hash_for_cm2_tbl_entry_desc_t(const netbufferv4_hash_for_cm2_tbl_entry_desc_t& other289) {
+  match_spec = other289.match_spec;
+  has_mbr_hdl = other289.has_mbr_hdl;
+  has_grp_hdl = other289.has_grp_hdl;
+  selector_grp_hdl = other289.selector_grp_hdl;
+  action_mbr_hdl = other289.action_mbr_hdl;
+  action_desc = other289.action_desc;
 }
-netbufferv4_hash_for_cm2_tbl_entry_desc_t& netbufferv4_hash_for_cm2_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_cm2_tbl_entry_desc_t& other288) {
-  match_spec = other288.match_spec;
-  has_mbr_hdl = other288.has_mbr_hdl;
-  has_grp_hdl = other288.has_grp_hdl;
-  selector_grp_hdl = other288.selector_grp_hdl;
-  action_mbr_hdl = other288.action_mbr_hdl;
-  action_desc = other288.action_desc;
+netbufferv4_hash_for_cm2_tbl_entry_desc_t& netbufferv4_hash_for_cm2_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_cm2_tbl_entry_desc_t& other290) {
+  match_spec = other290.match_spec;
+  has_mbr_hdl = other290.has_mbr_hdl;
+  has_grp_hdl = other290.has_grp_hdl;
+  selector_grp_hdl = other290.selector_grp_hdl;
+  action_mbr_hdl = other290.action_mbr_hdl;
+  action_desc = other290.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_hash_for_cm2_tbl_entry_desc_t& obj) {
@@ -18213,8 +18346,8 @@ void netbufferv4_hash_for_cm3_tbl_entry_desc_t::__set_action_desc(const netbuffe
   this->action_desc = val;
 }
 
-const char* netbufferv4_hash_for_cm3_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_hash_for_cm3_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_hash_for_cm3_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_hash_for_cm3_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_hash_for_cm3_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -18359,21 +18492,21 @@ void swap(netbufferv4_hash_for_cm3_tbl_entry_desc_t &a, netbufferv4_hash_for_cm3
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_hash_for_cm3_tbl_entry_desc_t::netbufferv4_hash_for_cm3_tbl_entry_desc_t(const netbufferv4_hash_for_cm3_tbl_entry_desc_t& other289) {
-  match_spec = other289.match_spec;
-  has_mbr_hdl = other289.has_mbr_hdl;
-  has_grp_hdl = other289.has_grp_hdl;
-  selector_grp_hdl = other289.selector_grp_hdl;
-  action_mbr_hdl = other289.action_mbr_hdl;
-  action_desc = other289.action_desc;
+netbufferv4_hash_for_cm3_tbl_entry_desc_t::netbufferv4_hash_for_cm3_tbl_entry_desc_t(const netbufferv4_hash_for_cm3_tbl_entry_desc_t& other291) {
+  match_spec = other291.match_spec;
+  has_mbr_hdl = other291.has_mbr_hdl;
+  has_grp_hdl = other291.has_grp_hdl;
+  selector_grp_hdl = other291.selector_grp_hdl;
+  action_mbr_hdl = other291.action_mbr_hdl;
+  action_desc = other291.action_desc;
 }
-netbufferv4_hash_for_cm3_tbl_entry_desc_t& netbufferv4_hash_for_cm3_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_cm3_tbl_entry_desc_t& other290) {
-  match_spec = other290.match_spec;
-  has_mbr_hdl = other290.has_mbr_hdl;
-  has_grp_hdl = other290.has_grp_hdl;
-  selector_grp_hdl = other290.selector_grp_hdl;
-  action_mbr_hdl = other290.action_mbr_hdl;
-  action_desc = other290.action_desc;
+netbufferv4_hash_for_cm3_tbl_entry_desc_t& netbufferv4_hash_for_cm3_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_cm3_tbl_entry_desc_t& other292) {
+  match_spec = other292.match_spec;
+  has_mbr_hdl = other292.has_mbr_hdl;
+  has_grp_hdl = other292.has_grp_hdl;
+  selector_grp_hdl = other292.selector_grp_hdl;
+  action_mbr_hdl = other292.action_mbr_hdl;
+  action_desc = other292.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_hash_for_cm3_tbl_entry_desc_t& obj) {
@@ -18418,8 +18551,8 @@ void netbufferv4_hash_for_cm4_tbl_entry_desc_t::__set_action_desc(const netbuffe
   this->action_desc = val;
 }
 
-const char* netbufferv4_hash_for_cm4_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_hash_for_cm4_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_hash_for_cm4_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_hash_for_cm4_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_hash_for_cm4_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -18564,21 +18697,21 @@ void swap(netbufferv4_hash_for_cm4_tbl_entry_desc_t &a, netbufferv4_hash_for_cm4
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_hash_for_cm4_tbl_entry_desc_t::netbufferv4_hash_for_cm4_tbl_entry_desc_t(const netbufferv4_hash_for_cm4_tbl_entry_desc_t& other291) {
-  match_spec = other291.match_spec;
-  has_mbr_hdl = other291.has_mbr_hdl;
-  has_grp_hdl = other291.has_grp_hdl;
-  selector_grp_hdl = other291.selector_grp_hdl;
-  action_mbr_hdl = other291.action_mbr_hdl;
-  action_desc = other291.action_desc;
+netbufferv4_hash_for_cm4_tbl_entry_desc_t::netbufferv4_hash_for_cm4_tbl_entry_desc_t(const netbufferv4_hash_for_cm4_tbl_entry_desc_t& other293) {
+  match_spec = other293.match_spec;
+  has_mbr_hdl = other293.has_mbr_hdl;
+  has_grp_hdl = other293.has_grp_hdl;
+  selector_grp_hdl = other293.selector_grp_hdl;
+  action_mbr_hdl = other293.action_mbr_hdl;
+  action_desc = other293.action_desc;
 }
-netbufferv4_hash_for_cm4_tbl_entry_desc_t& netbufferv4_hash_for_cm4_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_cm4_tbl_entry_desc_t& other292) {
-  match_spec = other292.match_spec;
-  has_mbr_hdl = other292.has_mbr_hdl;
-  has_grp_hdl = other292.has_grp_hdl;
-  selector_grp_hdl = other292.selector_grp_hdl;
-  action_mbr_hdl = other292.action_mbr_hdl;
-  action_desc = other292.action_desc;
+netbufferv4_hash_for_cm4_tbl_entry_desc_t& netbufferv4_hash_for_cm4_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_cm4_tbl_entry_desc_t& other294) {
+  match_spec = other294.match_spec;
+  has_mbr_hdl = other294.has_mbr_hdl;
+  has_grp_hdl = other294.has_grp_hdl;
+  selector_grp_hdl = other294.selector_grp_hdl;
+  action_mbr_hdl = other294.action_mbr_hdl;
+  action_desc = other294.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_hash_for_cm4_tbl_entry_desc_t& obj) {
@@ -18623,8 +18756,8 @@ void netbufferv4_hash_for_partition_tbl_entry_desc_t::__set_action_desc(const ne
   this->action_desc = val;
 }
 
-const char* netbufferv4_hash_for_partition_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_hash_for_partition_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_hash_for_partition_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_hash_for_partition_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_hash_for_partition_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -18769,21 +18902,21 @@ void swap(netbufferv4_hash_for_partition_tbl_entry_desc_t &a, netbufferv4_hash_f
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_hash_for_partition_tbl_entry_desc_t::netbufferv4_hash_for_partition_tbl_entry_desc_t(const netbufferv4_hash_for_partition_tbl_entry_desc_t& other293) {
-  match_spec = other293.match_spec;
-  has_mbr_hdl = other293.has_mbr_hdl;
-  has_grp_hdl = other293.has_grp_hdl;
-  selector_grp_hdl = other293.selector_grp_hdl;
-  action_mbr_hdl = other293.action_mbr_hdl;
-  action_desc = other293.action_desc;
+netbufferv4_hash_for_partition_tbl_entry_desc_t::netbufferv4_hash_for_partition_tbl_entry_desc_t(const netbufferv4_hash_for_partition_tbl_entry_desc_t& other295) {
+  match_spec = other295.match_spec;
+  has_mbr_hdl = other295.has_mbr_hdl;
+  has_grp_hdl = other295.has_grp_hdl;
+  selector_grp_hdl = other295.selector_grp_hdl;
+  action_mbr_hdl = other295.action_mbr_hdl;
+  action_desc = other295.action_desc;
 }
-netbufferv4_hash_for_partition_tbl_entry_desc_t& netbufferv4_hash_for_partition_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_partition_tbl_entry_desc_t& other294) {
-  match_spec = other294.match_spec;
-  has_mbr_hdl = other294.has_mbr_hdl;
-  has_grp_hdl = other294.has_grp_hdl;
-  selector_grp_hdl = other294.selector_grp_hdl;
-  action_mbr_hdl = other294.action_mbr_hdl;
-  action_desc = other294.action_desc;
+netbufferv4_hash_for_partition_tbl_entry_desc_t& netbufferv4_hash_for_partition_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_partition_tbl_entry_desc_t& other296) {
+  match_spec = other296.match_spec;
+  has_mbr_hdl = other296.has_mbr_hdl;
+  has_grp_hdl = other296.has_grp_hdl;
+  selector_grp_hdl = other296.selector_grp_hdl;
+  action_mbr_hdl = other296.action_mbr_hdl;
+  action_desc = other296.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_hash_for_partition_tbl_entry_desc_t& obj) {
@@ -18828,8 +18961,8 @@ void netbufferv4_hash_for_seq_tbl_entry_desc_t::__set_action_desc(const netbuffe
   this->action_desc = val;
 }
 
-const char* netbufferv4_hash_for_seq_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_hash_for_seq_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_hash_for_seq_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_hash_for_seq_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_hash_for_seq_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -18974,21 +19107,21 @@ void swap(netbufferv4_hash_for_seq_tbl_entry_desc_t &a, netbufferv4_hash_for_seq
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_hash_for_seq_tbl_entry_desc_t::netbufferv4_hash_for_seq_tbl_entry_desc_t(const netbufferv4_hash_for_seq_tbl_entry_desc_t& other295) {
-  match_spec = other295.match_spec;
-  has_mbr_hdl = other295.has_mbr_hdl;
-  has_grp_hdl = other295.has_grp_hdl;
-  selector_grp_hdl = other295.selector_grp_hdl;
-  action_mbr_hdl = other295.action_mbr_hdl;
-  action_desc = other295.action_desc;
+netbufferv4_hash_for_seq_tbl_entry_desc_t::netbufferv4_hash_for_seq_tbl_entry_desc_t(const netbufferv4_hash_for_seq_tbl_entry_desc_t& other297) {
+  match_spec = other297.match_spec;
+  has_mbr_hdl = other297.has_mbr_hdl;
+  has_grp_hdl = other297.has_grp_hdl;
+  selector_grp_hdl = other297.selector_grp_hdl;
+  action_mbr_hdl = other297.action_mbr_hdl;
+  action_desc = other297.action_desc;
 }
-netbufferv4_hash_for_seq_tbl_entry_desc_t& netbufferv4_hash_for_seq_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_seq_tbl_entry_desc_t& other296) {
-  match_spec = other296.match_spec;
-  has_mbr_hdl = other296.has_mbr_hdl;
-  has_grp_hdl = other296.has_grp_hdl;
-  selector_grp_hdl = other296.selector_grp_hdl;
-  action_mbr_hdl = other296.action_mbr_hdl;
-  action_desc = other296.action_desc;
+netbufferv4_hash_for_seq_tbl_entry_desc_t& netbufferv4_hash_for_seq_tbl_entry_desc_t::operator=(const netbufferv4_hash_for_seq_tbl_entry_desc_t& other298) {
+  match_spec = other298.match_spec;
+  has_mbr_hdl = other298.has_mbr_hdl;
+  has_grp_hdl = other298.has_grp_hdl;
+  selector_grp_hdl = other298.selector_grp_hdl;
+  action_mbr_hdl = other298.action_mbr_hdl;
+  action_desc = other298.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_hash_for_seq_tbl_entry_desc_t& obj) {
@@ -19037,8 +19170,8 @@ void netbufferv4_hash_partition_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_hash_partition_tbl_entry_desc_t::ascii_fingerprint = "62EDB1FAEC3B754B9C0141498CE8AEE9";
-const uint8_t netbufferv4_hash_partition_tbl_entry_desc_t::binary_fingerprint[16] = {0x62,0xED,0xB1,0xFA,0xEC,0x3B,0x75,0x4B,0x9C,0x01,0x41,0x49,0x8C,0xE8,0xAE,0xE9};
+const char* netbufferv4_hash_partition_tbl_entry_desc_t::ascii_fingerprint = "94A7C8F37D62F032DD70E1269F2CB186";
+const uint8_t netbufferv4_hash_partition_tbl_entry_desc_t::binary_fingerprint[16] = {0x94,0xA7,0xC8,0xF3,0x7D,0x62,0xF0,0x32,0xDD,0x70,0xE1,0x26,0x9F,0x2C,0xB1,0x86};
 
 uint32_t netbufferv4_hash_partition_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -19199,23 +19332,23 @@ void swap(netbufferv4_hash_partition_tbl_entry_desc_t &a, netbufferv4_hash_parti
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_hash_partition_tbl_entry_desc_t::netbufferv4_hash_partition_tbl_entry_desc_t(const netbufferv4_hash_partition_tbl_entry_desc_t& other297) {
-  match_spec = other297.match_spec;
-  has_mbr_hdl = other297.has_mbr_hdl;
-  has_grp_hdl = other297.has_grp_hdl;
-  selector_grp_hdl = other297.selector_grp_hdl;
-  action_mbr_hdl = other297.action_mbr_hdl;
-  priority = other297.priority;
-  action_desc = other297.action_desc;
+netbufferv4_hash_partition_tbl_entry_desc_t::netbufferv4_hash_partition_tbl_entry_desc_t(const netbufferv4_hash_partition_tbl_entry_desc_t& other299) {
+  match_spec = other299.match_spec;
+  has_mbr_hdl = other299.has_mbr_hdl;
+  has_grp_hdl = other299.has_grp_hdl;
+  selector_grp_hdl = other299.selector_grp_hdl;
+  action_mbr_hdl = other299.action_mbr_hdl;
+  priority = other299.priority;
+  action_desc = other299.action_desc;
 }
-netbufferv4_hash_partition_tbl_entry_desc_t& netbufferv4_hash_partition_tbl_entry_desc_t::operator=(const netbufferv4_hash_partition_tbl_entry_desc_t& other298) {
-  match_spec = other298.match_spec;
-  has_mbr_hdl = other298.has_mbr_hdl;
-  has_grp_hdl = other298.has_grp_hdl;
-  selector_grp_hdl = other298.selector_grp_hdl;
-  action_mbr_hdl = other298.action_mbr_hdl;
-  priority = other298.priority;
-  action_desc = other298.action_desc;
+netbufferv4_hash_partition_tbl_entry_desc_t& netbufferv4_hash_partition_tbl_entry_desc_t::operator=(const netbufferv4_hash_partition_tbl_entry_desc_t& other300) {
+  match_spec = other300.match_spec;
+  has_mbr_hdl = other300.has_mbr_hdl;
+  has_grp_hdl = other300.has_grp_hdl;
+  selector_grp_hdl = other300.selector_grp_hdl;
+  action_mbr_hdl = other300.action_mbr_hdl;
+  priority = other300.priority;
+  action_desc = other300.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_hash_partition_tbl_entry_desc_t& obj) {
@@ -19261,8 +19394,8 @@ void netbufferv4_ig_port_forward_tbl_entry_desc_t::__set_action_desc(const netbu
   this->action_desc = val;
 }
 
-const char* netbufferv4_ig_port_forward_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_ig_port_forward_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_ig_port_forward_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_ig_port_forward_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_ig_port_forward_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -19407,21 +19540,21 @@ void swap(netbufferv4_ig_port_forward_tbl_entry_desc_t &a, netbufferv4_ig_port_f
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_ig_port_forward_tbl_entry_desc_t::netbufferv4_ig_port_forward_tbl_entry_desc_t(const netbufferv4_ig_port_forward_tbl_entry_desc_t& other299) {
-  match_spec = other299.match_spec;
-  has_mbr_hdl = other299.has_mbr_hdl;
-  has_grp_hdl = other299.has_grp_hdl;
-  selector_grp_hdl = other299.selector_grp_hdl;
-  action_mbr_hdl = other299.action_mbr_hdl;
-  action_desc = other299.action_desc;
+netbufferv4_ig_port_forward_tbl_entry_desc_t::netbufferv4_ig_port_forward_tbl_entry_desc_t(const netbufferv4_ig_port_forward_tbl_entry_desc_t& other301) {
+  match_spec = other301.match_spec;
+  has_mbr_hdl = other301.has_mbr_hdl;
+  has_grp_hdl = other301.has_grp_hdl;
+  selector_grp_hdl = other301.selector_grp_hdl;
+  action_mbr_hdl = other301.action_mbr_hdl;
+  action_desc = other301.action_desc;
 }
-netbufferv4_ig_port_forward_tbl_entry_desc_t& netbufferv4_ig_port_forward_tbl_entry_desc_t::operator=(const netbufferv4_ig_port_forward_tbl_entry_desc_t& other300) {
-  match_spec = other300.match_spec;
-  has_mbr_hdl = other300.has_mbr_hdl;
-  has_grp_hdl = other300.has_grp_hdl;
-  selector_grp_hdl = other300.selector_grp_hdl;
-  action_mbr_hdl = other300.action_mbr_hdl;
-  action_desc = other300.action_desc;
+netbufferv4_ig_port_forward_tbl_entry_desc_t& netbufferv4_ig_port_forward_tbl_entry_desc_t::operator=(const netbufferv4_ig_port_forward_tbl_entry_desc_t& other302) {
+  match_spec = other302.match_spec;
+  has_mbr_hdl = other302.has_mbr_hdl;
+  has_grp_hdl = other302.has_grp_hdl;
+  selector_grp_hdl = other302.selector_grp_hdl;
+  action_mbr_hdl = other302.action_mbr_hdl;
+  action_desc = other302.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_ig_port_forward_tbl_entry_desc_t& obj) {
@@ -19466,8 +19599,8 @@ void netbufferv4_ipv4_forward_tbl_entry_desc_t::__set_action_desc(const netbuffe
   this->action_desc = val;
 }
 
-const char* netbufferv4_ipv4_forward_tbl_entry_desc_t::ascii_fingerprint = "D807DB2F5E4306E6DEF10DCBD91D2F09";
-const uint8_t netbufferv4_ipv4_forward_tbl_entry_desc_t::binary_fingerprint[16] = {0xD8,0x07,0xDB,0x2F,0x5E,0x43,0x06,0xE6,0xDE,0xF1,0x0D,0xCB,0xD9,0x1D,0x2F,0x09};
+const char* netbufferv4_ipv4_forward_tbl_entry_desc_t::ascii_fingerprint = "7992D7132C9D084390B255F37609B914";
+const uint8_t netbufferv4_ipv4_forward_tbl_entry_desc_t::binary_fingerprint[16] = {0x79,0x92,0xD7,0x13,0x2C,0x9D,0x08,0x43,0x90,0xB2,0x55,0xF3,0x76,0x09,0xB9,0x14};
 
 uint32_t netbufferv4_ipv4_forward_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -19612,21 +19745,21 @@ void swap(netbufferv4_ipv4_forward_tbl_entry_desc_t &a, netbufferv4_ipv4_forward
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_ipv4_forward_tbl_entry_desc_t::netbufferv4_ipv4_forward_tbl_entry_desc_t(const netbufferv4_ipv4_forward_tbl_entry_desc_t& other301) {
-  match_spec = other301.match_spec;
-  has_mbr_hdl = other301.has_mbr_hdl;
-  has_grp_hdl = other301.has_grp_hdl;
-  selector_grp_hdl = other301.selector_grp_hdl;
-  action_mbr_hdl = other301.action_mbr_hdl;
-  action_desc = other301.action_desc;
+netbufferv4_ipv4_forward_tbl_entry_desc_t::netbufferv4_ipv4_forward_tbl_entry_desc_t(const netbufferv4_ipv4_forward_tbl_entry_desc_t& other303) {
+  match_spec = other303.match_spec;
+  has_mbr_hdl = other303.has_mbr_hdl;
+  has_grp_hdl = other303.has_grp_hdl;
+  selector_grp_hdl = other303.selector_grp_hdl;
+  action_mbr_hdl = other303.action_mbr_hdl;
+  action_desc = other303.action_desc;
 }
-netbufferv4_ipv4_forward_tbl_entry_desc_t& netbufferv4_ipv4_forward_tbl_entry_desc_t::operator=(const netbufferv4_ipv4_forward_tbl_entry_desc_t& other302) {
-  match_spec = other302.match_spec;
-  has_mbr_hdl = other302.has_mbr_hdl;
-  has_grp_hdl = other302.has_grp_hdl;
-  selector_grp_hdl = other302.selector_grp_hdl;
-  action_mbr_hdl = other302.action_mbr_hdl;
-  action_desc = other302.action_desc;
+netbufferv4_ipv4_forward_tbl_entry_desc_t& netbufferv4_ipv4_forward_tbl_entry_desc_t::operator=(const netbufferv4_ipv4_forward_tbl_entry_desc_t& other304) {
+  match_spec = other304.match_spec;
+  has_mbr_hdl = other304.has_mbr_hdl;
+  has_grp_hdl = other304.has_grp_hdl;
+  selector_grp_hdl = other304.selector_grp_hdl;
+  action_mbr_hdl = other304.action_mbr_hdl;
+  action_desc = other304.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_ipv4_forward_tbl_entry_desc_t& obj) {
@@ -19671,8 +19804,8 @@ void netbufferv4_is_hot_tbl_entry_desc_t::__set_action_desc(const netbufferv4_ac
   this->action_desc = val;
 }
 
-const char* netbufferv4_is_hot_tbl_entry_desc_t::ascii_fingerprint = "32CFECEB493F23BC7AA057FA8A3C0177";
-const uint8_t netbufferv4_is_hot_tbl_entry_desc_t::binary_fingerprint[16] = {0x32,0xCF,0xEC,0xEB,0x49,0x3F,0x23,0xBC,0x7A,0xA0,0x57,0xFA,0x8A,0x3C,0x01,0x77};
+const char* netbufferv4_is_hot_tbl_entry_desc_t::ascii_fingerprint = "7B12B19FC0801AFDE2DA5AC7A157A760";
+const uint8_t netbufferv4_is_hot_tbl_entry_desc_t::binary_fingerprint[16] = {0x7B,0x12,0xB1,0x9F,0xC0,0x80,0x1A,0xFD,0xE2,0xDA,0x5A,0xC7,0xA1,0x57,0xA7,0x60};
 
 uint32_t netbufferv4_is_hot_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -19817,21 +19950,21 @@ void swap(netbufferv4_is_hot_tbl_entry_desc_t &a, netbufferv4_is_hot_tbl_entry_d
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_is_hot_tbl_entry_desc_t::netbufferv4_is_hot_tbl_entry_desc_t(const netbufferv4_is_hot_tbl_entry_desc_t& other303) {
-  match_spec = other303.match_spec;
-  has_mbr_hdl = other303.has_mbr_hdl;
-  has_grp_hdl = other303.has_grp_hdl;
-  selector_grp_hdl = other303.selector_grp_hdl;
-  action_mbr_hdl = other303.action_mbr_hdl;
-  action_desc = other303.action_desc;
+netbufferv4_is_hot_tbl_entry_desc_t::netbufferv4_is_hot_tbl_entry_desc_t(const netbufferv4_is_hot_tbl_entry_desc_t& other305) {
+  match_spec = other305.match_spec;
+  has_mbr_hdl = other305.has_mbr_hdl;
+  has_grp_hdl = other305.has_grp_hdl;
+  selector_grp_hdl = other305.selector_grp_hdl;
+  action_mbr_hdl = other305.action_mbr_hdl;
+  action_desc = other305.action_desc;
 }
-netbufferv4_is_hot_tbl_entry_desc_t& netbufferv4_is_hot_tbl_entry_desc_t::operator=(const netbufferv4_is_hot_tbl_entry_desc_t& other304) {
-  match_spec = other304.match_spec;
-  has_mbr_hdl = other304.has_mbr_hdl;
-  has_grp_hdl = other304.has_grp_hdl;
-  selector_grp_hdl = other304.selector_grp_hdl;
-  action_mbr_hdl = other304.action_mbr_hdl;
-  action_desc = other304.action_desc;
+netbufferv4_is_hot_tbl_entry_desc_t& netbufferv4_is_hot_tbl_entry_desc_t::operator=(const netbufferv4_is_hot_tbl_entry_desc_t& other306) {
+  match_spec = other306.match_spec;
+  has_mbr_hdl = other306.has_mbr_hdl;
+  has_grp_hdl = other306.has_grp_hdl;
+  selector_grp_hdl = other306.selector_grp_hdl;
+  action_mbr_hdl = other306.action_mbr_hdl;
+  action_desc = other306.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_is_hot_tbl_entry_desc_t& obj) {
@@ -19876,8 +20009,8 @@ void netbufferv4_l2l3_forward_tbl_entry_desc_t::__set_action_desc(const netbuffe
   this->action_desc = val;
 }
 
-const char* netbufferv4_l2l3_forward_tbl_entry_desc_t::ascii_fingerprint = "827A301717BD6359BBC43D9B0BBE4F4C";
-const uint8_t netbufferv4_l2l3_forward_tbl_entry_desc_t::binary_fingerprint[16] = {0x82,0x7A,0x30,0x17,0x17,0xBD,0x63,0x59,0xBB,0xC4,0x3D,0x9B,0x0B,0xBE,0x4F,0x4C};
+const char* netbufferv4_l2l3_forward_tbl_entry_desc_t::ascii_fingerprint = "0F4EA9DCDD03D9C3976FB1A2051585E7";
+const uint8_t netbufferv4_l2l3_forward_tbl_entry_desc_t::binary_fingerprint[16] = {0x0F,0x4E,0xA9,0xDC,0xDD,0x03,0xD9,0xC3,0x97,0x6F,0xB1,0xA2,0x05,0x15,0x85,0xE7};
 
 uint32_t netbufferv4_l2l3_forward_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -20022,21 +20155,21 @@ void swap(netbufferv4_l2l3_forward_tbl_entry_desc_t &a, netbufferv4_l2l3_forward
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_l2l3_forward_tbl_entry_desc_t::netbufferv4_l2l3_forward_tbl_entry_desc_t(const netbufferv4_l2l3_forward_tbl_entry_desc_t& other305) {
-  match_spec = other305.match_spec;
-  has_mbr_hdl = other305.has_mbr_hdl;
-  has_grp_hdl = other305.has_grp_hdl;
-  selector_grp_hdl = other305.selector_grp_hdl;
-  action_mbr_hdl = other305.action_mbr_hdl;
-  action_desc = other305.action_desc;
+netbufferv4_l2l3_forward_tbl_entry_desc_t::netbufferv4_l2l3_forward_tbl_entry_desc_t(const netbufferv4_l2l3_forward_tbl_entry_desc_t& other307) {
+  match_spec = other307.match_spec;
+  has_mbr_hdl = other307.has_mbr_hdl;
+  has_grp_hdl = other307.has_grp_hdl;
+  selector_grp_hdl = other307.selector_grp_hdl;
+  action_mbr_hdl = other307.action_mbr_hdl;
+  action_desc = other307.action_desc;
 }
-netbufferv4_l2l3_forward_tbl_entry_desc_t& netbufferv4_l2l3_forward_tbl_entry_desc_t::operator=(const netbufferv4_l2l3_forward_tbl_entry_desc_t& other306) {
-  match_spec = other306.match_spec;
-  has_mbr_hdl = other306.has_mbr_hdl;
-  has_grp_hdl = other306.has_grp_hdl;
-  selector_grp_hdl = other306.selector_grp_hdl;
-  action_mbr_hdl = other306.action_mbr_hdl;
-  action_desc = other306.action_desc;
+netbufferv4_l2l3_forward_tbl_entry_desc_t& netbufferv4_l2l3_forward_tbl_entry_desc_t::operator=(const netbufferv4_l2l3_forward_tbl_entry_desc_t& other308) {
+  match_spec = other308.match_spec;
+  has_mbr_hdl = other308.has_mbr_hdl;
+  has_grp_hdl = other308.has_grp_hdl;
+  selector_grp_hdl = other308.selector_grp_hdl;
+  action_mbr_hdl = other308.action_mbr_hdl;
+  action_desc = other308.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_l2l3_forward_tbl_entry_desc_t& obj) {
@@ -20081,8 +20214,8 @@ void netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::__set_action_desc(con
   this->action_desc = val;
 }
 
-const char* netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::ascii_fingerprint = "D37634C1944DE98B30E4E9C24C64725D";
-const uint8_t netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::binary_fingerprint[16] = {0xD3,0x76,0x34,0xC1,0x94,0x4D,0xE9,0x8B,0x30,0xE4,0xE9,0xC2,0x4C,0x64,0x72,0x5D};
+const char* netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::ascii_fingerprint = "6DA7FA5EEDA8AE5607CAF56CE48AAB52";
+const uint8_t netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::binary_fingerprint[16] = {0x6D,0xA7,0xFA,0x5E,0xED,0xA8,0xAE,0x56,0x07,0xCA,0xF5,0x6C,0xE4,0x8A,0xAB,0x52};
 
 uint32_t netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -20227,21 +20360,21 @@ void swap(netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t &a, netbufferv4_l
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t(const netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t& other307) {
-  match_spec = other307.match_spec;
-  has_mbr_hdl = other307.has_mbr_hdl;
-  has_grp_hdl = other307.has_grp_hdl;
-  selector_grp_hdl = other307.selector_grp_hdl;
-  action_mbr_hdl = other307.action_mbr_hdl;
-  action_desc = other307.action_desc;
+netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t(const netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t& other309) {
+  match_spec = other309.match_spec;
+  has_mbr_hdl = other309.has_mbr_hdl;
+  has_grp_hdl = other309.has_grp_hdl;
+  selector_grp_hdl = other309.selector_grp_hdl;
+  action_mbr_hdl = other309.action_mbr_hdl;
+  action_desc = other309.action_desc;
 }
-netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t& netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::operator=(const netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t& other308) {
-  match_spec = other308.match_spec;
-  has_mbr_hdl = other308.has_mbr_hdl;
-  has_grp_hdl = other308.has_grp_hdl;
-  selector_grp_hdl = other308.selector_grp_hdl;
-  action_mbr_hdl = other308.action_mbr_hdl;
-  action_desc = other308.action_desc;
+netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t& netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t::operator=(const netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t& other310) {
+  match_spec = other310.match_spec;
+  has_mbr_hdl = other310.has_mbr_hdl;
+  has_grp_hdl = other310.has_grp_hdl;
+  selector_grp_hdl = other310.selector_grp_hdl;
+  action_mbr_hdl = other310.action_mbr_hdl;
+  action_desc = other310.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_lastclone_lastscansplit_tbl_entry_desc_t& obj) {
@@ -20286,8 +20419,8 @@ void netbufferv4_need_recirculate_tbl_entry_desc_t::__set_action_desc(const netb
   this->action_desc = val;
 }
 
-const char* netbufferv4_need_recirculate_tbl_entry_desc_t::ascii_fingerprint = "D37634C1944DE98B30E4E9C24C64725D";
-const uint8_t netbufferv4_need_recirculate_tbl_entry_desc_t::binary_fingerprint[16] = {0xD3,0x76,0x34,0xC1,0x94,0x4D,0xE9,0x8B,0x30,0xE4,0xE9,0xC2,0x4C,0x64,0x72,0x5D};
+const char* netbufferv4_need_recirculate_tbl_entry_desc_t::ascii_fingerprint = "6DA7FA5EEDA8AE5607CAF56CE48AAB52";
+const uint8_t netbufferv4_need_recirculate_tbl_entry_desc_t::binary_fingerprint[16] = {0x6D,0xA7,0xFA,0x5E,0xED,0xA8,0xAE,0x56,0x07,0xCA,0xF5,0x6C,0xE4,0x8A,0xAB,0x52};
 
 uint32_t netbufferv4_need_recirculate_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -20432,21 +20565,21 @@ void swap(netbufferv4_need_recirculate_tbl_entry_desc_t &a, netbufferv4_need_rec
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_need_recirculate_tbl_entry_desc_t::netbufferv4_need_recirculate_tbl_entry_desc_t(const netbufferv4_need_recirculate_tbl_entry_desc_t& other309) {
-  match_spec = other309.match_spec;
-  has_mbr_hdl = other309.has_mbr_hdl;
-  has_grp_hdl = other309.has_grp_hdl;
-  selector_grp_hdl = other309.selector_grp_hdl;
-  action_mbr_hdl = other309.action_mbr_hdl;
-  action_desc = other309.action_desc;
+netbufferv4_need_recirculate_tbl_entry_desc_t::netbufferv4_need_recirculate_tbl_entry_desc_t(const netbufferv4_need_recirculate_tbl_entry_desc_t& other311) {
+  match_spec = other311.match_spec;
+  has_mbr_hdl = other311.has_mbr_hdl;
+  has_grp_hdl = other311.has_grp_hdl;
+  selector_grp_hdl = other311.selector_grp_hdl;
+  action_mbr_hdl = other311.action_mbr_hdl;
+  action_desc = other311.action_desc;
 }
-netbufferv4_need_recirculate_tbl_entry_desc_t& netbufferv4_need_recirculate_tbl_entry_desc_t::operator=(const netbufferv4_need_recirculate_tbl_entry_desc_t& other310) {
-  match_spec = other310.match_spec;
-  has_mbr_hdl = other310.has_mbr_hdl;
-  has_grp_hdl = other310.has_grp_hdl;
-  selector_grp_hdl = other310.selector_grp_hdl;
-  action_mbr_hdl = other310.action_mbr_hdl;
-  action_desc = other310.action_desc;
+netbufferv4_need_recirculate_tbl_entry_desc_t& netbufferv4_need_recirculate_tbl_entry_desc_t::operator=(const netbufferv4_need_recirculate_tbl_entry_desc_t& other312) {
+  match_spec = other312.match_spec;
+  has_mbr_hdl = other312.has_mbr_hdl;
+  has_grp_hdl = other312.has_grp_hdl;
+  selector_grp_hdl = other312.selector_grp_hdl;
+  action_mbr_hdl = other312.action_mbr_hdl;
+  action_desc = other312.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_need_recirculate_tbl_entry_desc_t& obj) {
@@ -20491,8 +20624,8 @@ void netbufferv4_prepare_for_cachehit_tbl_entry_desc_t::__set_action_desc(const 
   this->action_desc = val;
 }
 
-const char* netbufferv4_prepare_for_cachehit_tbl_entry_desc_t::ascii_fingerprint = "97520ED0369E0094D52E321EED1A0C0E";
-const uint8_t netbufferv4_prepare_for_cachehit_tbl_entry_desc_t::binary_fingerprint[16] = {0x97,0x52,0x0E,0xD0,0x36,0x9E,0x00,0x94,0xD5,0x2E,0x32,0x1E,0xED,0x1A,0x0C,0x0E};
+const char* netbufferv4_prepare_for_cachehit_tbl_entry_desc_t::ascii_fingerprint = "7992D7132C9D084390B255F37609B914";
+const uint8_t netbufferv4_prepare_for_cachehit_tbl_entry_desc_t::binary_fingerprint[16] = {0x79,0x92,0xD7,0x13,0x2C,0x9D,0x08,0x43,0x90,0xB2,0x55,0xF3,0x76,0x09,0xB9,0x14};
 
 uint32_t netbufferv4_prepare_for_cachehit_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -20637,21 +20770,21 @@ void swap(netbufferv4_prepare_for_cachehit_tbl_entry_desc_t &a, netbufferv4_prep
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_prepare_for_cachehit_tbl_entry_desc_t::netbufferv4_prepare_for_cachehit_tbl_entry_desc_t(const netbufferv4_prepare_for_cachehit_tbl_entry_desc_t& other311) {
-  match_spec = other311.match_spec;
-  has_mbr_hdl = other311.has_mbr_hdl;
-  has_grp_hdl = other311.has_grp_hdl;
-  selector_grp_hdl = other311.selector_grp_hdl;
-  action_mbr_hdl = other311.action_mbr_hdl;
-  action_desc = other311.action_desc;
+netbufferv4_prepare_for_cachehit_tbl_entry_desc_t::netbufferv4_prepare_for_cachehit_tbl_entry_desc_t(const netbufferv4_prepare_for_cachehit_tbl_entry_desc_t& other313) {
+  match_spec = other313.match_spec;
+  has_mbr_hdl = other313.has_mbr_hdl;
+  has_grp_hdl = other313.has_grp_hdl;
+  selector_grp_hdl = other313.selector_grp_hdl;
+  action_mbr_hdl = other313.action_mbr_hdl;
+  action_desc = other313.action_desc;
 }
-netbufferv4_prepare_for_cachehit_tbl_entry_desc_t& netbufferv4_prepare_for_cachehit_tbl_entry_desc_t::operator=(const netbufferv4_prepare_for_cachehit_tbl_entry_desc_t& other312) {
-  match_spec = other312.match_spec;
-  has_mbr_hdl = other312.has_mbr_hdl;
-  has_grp_hdl = other312.has_grp_hdl;
-  selector_grp_hdl = other312.selector_grp_hdl;
-  action_mbr_hdl = other312.action_mbr_hdl;
-  action_desc = other312.action_desc;
+netbufferv4_prepare_for_cachehit_tbl_entry_desc_t& netbufferv4_prepare_for_cachehit_tbl_entry_desc_t::operator=(const netbufferv4_prepare_for_cachehit_tbl_entry_desc_t& other314) {
+  match_spec = other314.match_spec;
+  has_mbr_hdl = other314.has_mbr_hdl;
+  has_grp_hdl = other314.has_grp_hdl;
+  selector_grp_hdl = other314.selector_grp_hdl;
+  action_mbr_hdl = other314.action_mbr_hdl;
+  action_desc = other314.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_prepare_for_cachehit_tbl_entry_desc_t& obj) {
@@ -20696,8 +20829,8 @@ void netbufferv4_recirculate_tbl_entry_desc_t::__set_action_desc(const netbuffer
   this->action_desc = val;
 }
 
-const char* netbufferv4_recirculate_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_recirculate_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_recirculate_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_recirculate_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_recirculate_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -20842,21 +20975,21 @@ void swap(netbufferv4_recirculate_tbl_entry_desc_t &a, netbufferv4_recirculate_t
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_recirculate_tbl_entry_desc_t::netbufferv4_recirculate_tbl_entry_desc_t(const netbufferv4_recirculate_tbl_entry_desc_t& other313) {
-  match_spec = other313.match_spec;
-  has_mbr_hdl = other313.has_mbr_hdl;
-  has_grp_hdl = other313.has_grp_hdl;
-  selector_grp_hdl = other313.selector_grp_hdl;
-  action_mbr_hdl = other313.action_mbr_hdl;
-  action_desc = other313.action_desc;
+netbufferv4_recirculate_tbl_entry_desc_t::netbufferv4_recirculate_tbl_entry_desc_t(const netbufferv4_recirculate_tbl_entry_desc_t& other315) {
+  match_spec = other315.match_spec;
+  has_mbr_hdl = other315.has_mbr_hdl;
+  has_grp_hdl = other315.has_grp_hdl;
+  selector_grp_hdl = other315.selector_grp_hdl;
+  action_mbr_hdl = other315.action_mbr_hdl;
+  action_desc = other315.action_desc;
 }
-netbufferv4_recirculate_tbl_entry_desc_t& netbufferv4_recirculate_tbl_entry_desc_t::operator=(const netbufferv4_recirculate_tbl_entry_desc_t& other314) {
-  match_spec = other314.match_spec;
-  has_mbr_hdl = other314.has_mbr_hdl;
-  has_grp_hdl = other314.has_grp_hdl;
-  selector_grp_hdl = other314.selector_grp_hdl;
-  action_mbr_hdl = other314.action_mbr_hdl;
-  action_desc = other314.action_desc;
+netbufferv4_recirculate_tbl_entry_desc_t& netbufferv4_recirculate_tbl_entry_desc_t::operator=(const netbufferv4_recirculate_tbl_entry_desc_t& other316) {
+  match_spec = other316.match_spec;
+  has_mbr_hdl = other316.has_mbr_hdl;
+  has_grp_hdl = other316.has_grp_hdl;
+  selector_grp_hdl = other316.selector_grp_hdl;
+  action_mbr_hdl = other316.action_mbr_hdl;
+  action_desc = other316.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_recirculate_tbl_entry_desc_t& obj) {
@@ -20901,8 +21034,8 @@ void netbufferv4_sample_tbl_entry_desc_t::__set_action_desc(const netbufferv4_ac
   this->action_desc = val;
 }
 
-const char* netbufferv4_sample_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_sample_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_sample_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_sample_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_sample_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -21047,21 +21180,21 @@ void swap(netbufferv4_sample_tbl_entry_desc_t &a, netbufferv4_sample_tbl_entry_d
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_sample_tbl_entry_desc_t::netbufferv4_sample_tbl_entry_desc_t(const netbufferv4_sample_tbl_entry_desc_t& other315) {
-  match_spec = other315.match_spec;
-  has_mbr_hdl = other315.has_mbr_hdl;
-  has_grp_hdl = other315.has_grp_hdl;
-  selector_grp_hdl = other315.selector_grp_hdl;
-  action_mbr_hdl = other315.action_mbr_hdl;
-  action_desc = other315.action_desc;
+netbufferv4_sample_tbl_entry_desc_t::netbufferv4_sample_tbl_entry_desc_t(const netbufferv4_sample_tbl_entry_desc_t& other317) {
+  match_spec = other317.match_spec;
+  has_mbr_hdl = other317.has_mbr_hdl;
+  has_grp_hdl = other317.has_grp_hdl;
+  selector_grp_hdl = other317.selector_grp_hdl;
+  action_mbr_hdl = other317.action_mbr_hdl;
+  action_desc = other317.action_desc;
 }
-netbufferv4_sample_tbl_entry_desc_t& netbufferv4_sample_tbl_entry_desc_t::operator=(const netbufferv4_sample_tbl_entry_desc_t& other316) {
-  match_spec = other316.match_spec;
-  has_mbr_hdl = other316.has_mbr_hdl;
-  has_grp_hdl = other316.has_grp_hdl;
-  selector_grp_hdl = other316.selector_grp_hdl;
-  action_mbr_hdl = other316.action_mbr_hdl;
-  action_desc = other316.action_desc;
+netbufferv4_sample_tbl_entry_desc_t& netbufferv4_sample_tbl_entry_desc_t::operator=(const netbufferv4_sample_tbl_entry_desc_t& other318) {
+  match_spec = other318.match_spec;
+  has_mbr_hdl = other318.has_mbr_hdl;
+  has_grp_hdl = other318.has_grp_hdl;
+  selector_grp_hdl = other318.selector_grp_hdl;
+  action_mbr_hdl = other318.action_mbr_hdl;
+  action_desc = other318.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_sample_tbl_entry_desc_t& obj) {
@@ -21106,8 +21239,8 @@ void netbufferv4_save_client_udpport_tbl_entry_desc_t::__set_action_desc(const n
   this->action_desc = val;
 }
 
-const char* netbufferv4_save_client_udpport_tbl_entry_desc_t::ascii_fingerprint = "2676025AD7BB9656C6C520AC762E3A26";
-const uint8_t netbufferv4_save_client_udpport_tbl_entry_desc_t::binary_fingerprint[16] = {0x26,0x76,0x02,0x5A,0xD7,0xBB,0x96,0x56,0xC6,0xC5,0x20,0xAC,0x76,0x2E,0x3A,0x26};
+const char* netbufferv4_save_client_udpport_tbl_entry_desc_t::ascii_fingerprint = "8348525221B29B0EF6384DFE4627154F";
+const uint8_t netbufferv4_save_client_udpport_tbl_entry_desc_t::binary_fingerprint[16] = {0x83,0x48,0x52,0x52,0x21,0xB2,0x9B,0x0E,0xF6,0x38,0x4D,0xFE,0x46,0x27,0x15,0x4F};
 
 uint32_t netbufferv4_save_client_udpport_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -21252,21 +21385,21 @@ void swap(netbufferv4_save_client_udpport_tbl_entry_desc_t &a, netbufferv4_save_
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_save_client_udpport_tbl_entry_desc_t::netbufferv4_save_client_udpport_tbl_entry_desc_t(const netbufferv4_save_client_udpport_tbl_entry_desc_t& other317) {
-  match_spec = other317.match_spec;
-  has_mbr_hdl = other317.has_mbr_hdl;
-  has_grp_hdl = other317.has_grp_hdl;
-  selector_grp_hdl = other317.selector_grp_hdl;
-  action_mbr_hdl = other317.action_mbr_hdl;
-  action_desc = other317.action_desc;
+netbufferv4_save_client_udpport_tbl_entry_desc_t::netbufferv4_save_client_udpport_tbl_entry_desc_t(const netbufferv4_save_client_udpport_tbl_entry_desc_t& other319) {
+  match_spec = other319.match_spec;
+  has_mbr_hdl = other319.has_mbr_hdl;
+  has_grp_hdl = other319.has_grp_hdl;
+  selector_grp_hdl = other319.selector_grp_hdl;
+  action_mbr_hdl = other319.action_mbr_hdl;
+  action_desc = other319.action_desc;
 }
-netbufferv4_save_client_udpport_tbl_entry_desc_t& netbufferv4_save_client_udpport_tbl_entry_desc_t::operator=(const netbufferv4_save_client_udpport_tbl_entry_desc_t& other318) {
-  match_spec = other318.match_spec;
-  has_mbr_hdl = other318.has_mbr_hdl;
-  has_grp_hdl = other318.has_grp_hdl;
-  selector_grp_hdl = other318.selector_grp_hdl;
-  action_mbr_hdl = other318.action_mbr_hdl;
-  action_desc = other318.action_desc;
+netbufferv4_save_client_udpport_tbl_entry_desc_t& netbufferv4_save_client_udpport_tbl_entry_desc_t::operator=(const netbufferv4_save_client_udpport_tbl_entry_desc_t& other320) {
+  match_spec = other320.match_spec;
+  has_mbr_hdl = other320.has_mbr_hdl;
+  has_grp_hdl = other320.has_grp_hdl;
+  selector_grp_hdl = other320.selector_grp_hdl;
+  action_mbr_hdl = other320.action_mbr_hdl;
+  action_desc = other320.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_save_client_udpport_tbl_entry_desc_t& obj) {
@@ -21307,8 +21440,8 @@ void netbufferv4_set_hot_threshold_tbl_entry_desc_t::__set_action_desc(const net
   this->action_desc = val;
 }
 
-const char* netbufferv4_set_hot_threshold_tbl_entry_desc_t::ascii_fingerprint = "F2C8EE54A094770DE14D8ABAD2E213F1";
-const uint8_t netbufferv4_set_hot_threshold_tbl_entry_desc_t::binary_fingerprint[16] = {0xF2,0xC8,0xEE,0x54,0xA0,0x94,0x77,0x0D,0xE1,0x4D,0x8A,0xBA,0xD2,0xE2,0x13,0xF1};
+const char* netbufferv4_set_hot_threshold_tbl_entry_desc_t::ascii_fingerprint = "E85351DDF8CA974DB5967A1328850A67";
+const uint8_t netbufferv4_set_hot_threshold_tbl_entry_desc_t::binary_fingerprint[16] = {0xE8,0x53,0x51,0xDD,0xF8,0xCA,0x97,0x4D,0xB5,0x96,0x7A,0x13,0x28,0x85,0x0A,0x67};
 
 uint32_t netbufferv4_set_hot_threshold_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -21437,19 +21570,19 @@ void swap(netbufferv4_set_hot_threshold_tbl_entry_desc_t &a, netbufferv4_set_hot
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_set_hot_threshold_tbl_entry_desc_t::netbufferv4_set_hot_threshold_tbl_entry_desc_t(const netbufferv4_set_hot_threshold_tbl_entry_desc_t& other319) {
-  has_mbr_hdl = other319.has_mbr_hdl;
-  has_grp_hdl = other319.has_grp_hdl;
-  selector_grp_hdl = other319.selector_grp_hdl;
-  action_mbr_hdl = other319.action_mbr_hdl;
-  action_desc = other319.action_desc;
+netbufferv4_set_hot_threshold_tbl_entry_desc_t::netbufferv4_set_hot_threshold_tbl_entry_desc_t(const netbufferv4_set_hot_threshold_tbl_entry_desc_t& other321) {
+  has_mbr_hdl = other321.has_mbr_hdl;
+  has_grp_hdl = other321.has_grp_hdl;
+  selector_grp_hdl = other321.selector_grp_hdl;
+  action_mbr_hdl = other321.action_mbr_hdl;
+  action_desc = other321.action_desc;
 }
-netbufferv4_set_hot_threshold_tbl_entry_desc_t& netbufferv4_set_hot_threshold_tbl_entry_desc_t::operator=(const netbufferv4_set_hot_threshold_tbl_entry_desc_t& other320) {
-  has_mbr_hdl = other320.has_mbr_hdl;
-  has_grp_hdl = other320.has_grp_hdl;
-  selector_grp_hdl = other320.selector_grp_hdl;
-  action_mbr_hdl = other320.action_mbr_hdl;
-  action_desc = other320.action_desc;
+netbufferv4_set_hot_threshold_tbl_entry_desc_t& netbufferv4_set_hot_threshold_tbl_entry_desc_t::operator=(const netbufferv4_set_hot_threshold_tbl_entry_desc_t& other322) {
+  has_mbr_hdl = other322.has_mbr_hdl;
+  has_grp_hdl = other322.has_grp_hdl;
+  selector_grp_hdl = other322.selector_grp_hdl;
+  action_mbr_hdl = other322.action_mbr_hdl;
+  action_desc = other322.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_set_hot_threshold_tbl_entry_desc_t& obj) {
@@ -21493,8 +21626,8 @@ void netbufferv4_snapshot_flag_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_snapshot_flag_tbl_entry_desc_t::ascii_fingerprint = "7504C86215B26B2C6D18E79B82F0843C";
-const uint8_t netbufferv4_snapshot_flag_tbl_entry_desc_t::binary_fingerprint[16] = {0x75,0x04,0xC8,0x62,0x15,0xB2,0x6B,0x2C,0x6D,0x18,0xE7,0x9B,0x82,0xF0,0x84,0x3C};
+const char* netbufferv4_snapshot_flag_tbl_entry_desc_t::ascii_fingerprint = "3CF014F1B15A4192469A9F0783256FE5";
+const uint8_t netbufferv4_snapshot_flag_tbl_entry_desc_t::binary_fingerprint[16] = {0x3C,0xF0,0x14,0xF1,0xB1,0x5A,0x41,0x92,0x46,0x9A,0x9F,0x07,0x83,0x25,0x6F,0xE5};
 
 uint32_t netbufferv4_snapshot_flag_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -21639,21 +21772,21 @@ void swap(netbufferv4_snapshot_flag_tbl_entry_desc_t &a, netbufferv4_snapshot_fl
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_snapshot_flag_tbl_entry_desc_t::netbufferv4_snapshot_flag_tbl_entry_desc_t(const netbufferv4_snapshot_flag_tbl_entry_desc_t& other321) {
-  match_spec = other321.match_spec;
-  has_mbr_hdl = other321.has_mbr_hdl;
-  has_grp_hdl = other321.has_grp_hdl;
-  selector_grp_hdl = other321.selector_grp_hdl;
-  action_mbr_hdl = other321.action_mbr_hdl;
-  action_desc = other321.action_desc;
+netbufferv4_snapshot_flag_tbl_entry_desc_t::netbufferv4_snapshot_flag_tbl_entry_desc_t(const netbufferv4_snapshot_flag_tbl_entry_desc_t& other323) {
+  match_spec = other323.match_spec;
+  has_mbr_hdl = other323.has_mbr_hdl;
+  has_grp_hdl = other323.has_grp_hdl;
+  selector_grp_hdl = other323.selector_grp_hdl;
+  action_mbr_hdl = other323.action_mbr_hdl;
+  action_desc = other323.action_desc;
 }
-netbufferv4_snapshot_flag_tbl_entry_desc_t& netbufferv4_snapshot_flag_tbl_entry_desc_t::operator=(const netbufferv4_snapshot_flag_tbl_entry_desc_t& other322) {
-  match_spec = other322.match_spec;
-  has_mbr_hdl = other322.has_mbr_hdl;
-  has_grp_hdl = other322.has_grp_hdl;
-  selector_grp_hdl = other322.selector_grp_hdl;
-  action_mbr_hdl = other322.action_mbr_hdl;
-  action_desc = other322.action_desc;
+netbufferv4_snapshot_flag_tbl_entry_desc_t& netbufferv4_snapshot_flag_tbl_entry_desc_t::operator=(const netbufferv4_snapshot_flag_tbl_entry_desc_t& other324) {
+  match_spec = other324.match_spec;
+  has_mbr_hdl = other324.has_mbr_hdl;
+  has_grp_hdl = other324.has_grp_hdl;
+  selector_grp_hdl = other324.selector_grp_hdl;
+  action_mbr_hdl = other324.action_mbr_hdl;
+  action_desc = other324.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_snapshot_flag_tbl_entry_desc_t& obj) {
@@ -21698,8 +21831,8 @@ void netbufferv4_update_ipmac_srcport_tbl_entry_desc_t::__set_action_desc(const 
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_ipmac_srcport_tbl_entry_desc_t::ascii_fingerprint = "D37634C1944DE98B30E4E9C24C64725D";
-const uint8_t netbufferv4_update_ipmac_srcport_tbl_entry_desc_t::binary_fingerprint[16] = {0xD3,0x76,0x34,0xC1,0x94,0x4D,0xE9,0x8B,0x30,0xE4,0xE9,0xC2,0x4C,0x64,0x72,0x5D};
+const char* netbufferv4_update_ipmac_srcport_tbl_entry_desc_t::ascii_fingerprint = "6DA7FA5EEDA8AE5607CAF56CE48AAB52";
+const uint8_t netbufferv4_update_ipmac_srcport_tbl_entry_desc_t::binary_fingerprint[16] = {0x6D,0xA7,0xFA,0x5E,0xED,0xA8,0xAE,0x56,0x07,0xCA,0xF5,0x6C,0xE4,0x8A,0xAB,0x52};
 
 uint32_t netbufferv4_update_ipmac_srcport_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -21844,21 +21977,21 @@ void swap(netbufferv4_update_ipmac_srcport_tbl_entry_desc_t &a, netbufferv4_upda
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_ipmac_srcport_tbl_entry_desc_t::netbufferv4_update_ipmac_srcport_tbl_entry_desc_t(const netbufferv4_update_ipmac_srcport_tbl_entry_desc_t& other323) {
-  match_spec = other323.match_spec;
-  has_mbr_hdl = other323.has_mbr_hdl;
-  has_grp_hdl = other323.has_grp_hdl;
-  selector_grp_hdl = other323.selector_grp_hdl;
-  action_mbr_hdl = other323.action_mbr_hdl;
-  action_desc = other323.action_desc;
+netbufferv4_update_ipmac_srcport_tbl_entry_desc_t::netbufferv4_update_ipmac_srcport_tbl_entry_desc_t(const netbufferv4_update_ipmac_srcport_tbl_entry_desc_t& other325) {
+  match_spec = other325.match_spec;
+  has_mbr_hdl = other325.has_mbr_hdl;
+  has_grp_hdl = other325.has_grp_hdl;
+  selector_grp_hdl = other325.selector_grp_hdl;
+  action_mbr_hdl = other325.action_mbr_hdl;
+  action_desc = other325.action_desc;
 }
-netbufferv4_update_ipmac_srcport_tbl_entry_desc_t& netbufferv4_update_ipmac_srcport_tbl_entry_desc_t::operator=(const netbufferv4_update_ipmac_srcport_tbl_entry_desc_t& other324) {
-  match_spec = other324.match_spec;
-  has_mbr_hdl = other324.has_mbr_hdl;
-  has_grp_hdl = other324.has_grp_hdl;
-  selector_grp_hdl = other324.selector_grp_hdl;
-  action_mbr_hdl = other324.action_mbr_hdl;
-  action_desc = other324.action_desc;
+netbufferv4_update_ipmac_srcport_tbl_entry_desc_t& netbufferv4_update_ipmac_srcport_tbl_entry_desc_t::operator=(const netbufferv4_update_ipmac_srcport_tbl_entry_desc_t& other326) {
+  match_spec = other326.match_spec;
+  has_mbr_hdl = other326.has_mbr_hdl;
+  has_grp_hdl = other326.has_grp_hdl;
+  selector_grp_hdl = other326.selector_grp_hdl;
+  action_mbr_hdl = other326.action_mbr_hdl;
+  action_desc = other326.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_ipmac_srcport_tbl_entry_desc_t& obj) {
@@ -21907,8 +22040,8 @@ void netbufferv4_update_pktlen_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_pktlen_tbl_entry_desc_t::ascii_fingerprint = "267C4FFC640C408765D65A3891BC0800";
-const uint8_t netbufferv4_update_pktlen_tbl_entry_desc_t::binary_fingerprint[16] = {0x26,0x7C,0x4F,0xFC,0x64,0x0C,0x40,0x87,0x65,0xD6,0x5A,0x38,0x91,0xBC,0x08,0x00};
+const char* netbufferv4_update_pktlen_tbl_entry_desc_t::ascii_fingerprint = "A68F4537B216B84BD3E5DC927FB00077";
+const uint8_t netbufferv4_update_pktlen_tbl_entry_desc_t::binary_fingerprint[16] = {0xA6,0x8F,0x45,0x37,0xB2,0x16,0xB8,0x4B,0xD3,0xE5,0xDC,0x92,0x7F,0xB0,0x00,0x77};
 
 uint32_t netbufferv4_update_pktlen_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -22069,23 +22202,23 @@ void swap(netbufferv4_update_pktlen_tbl_entry_desc_t &a, netbufferv4_update_pktl
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_pktlen_tbl_entry_desc_t::netbufferv4_update_pktlen_tbl_entry_desc_t(const netbufferv4_update_pktlen_tbl_entry_desc_t& other325) {
-  match_spec = other325.match_spec;
-  has_mbr_hdl = other325.has_mbr_hdl;
-  has_grp_hdl = other325.has_grp_hdl;
-  selector_grp_hdl = other325.selector_grp_hdl;
-  action_mbr_hdl = other325.action_mbr_hdl;
-  priority = other325.priority;
-  action_desc = other325.action_desc;
+netbufferv4_update_pktlen_tbl_entry_desc_t::netbufferv4_update_pktlen_tbl_entry_desc_t(const netbufferv4_update_pktlen_tbl_entry_desc_t& other327) {
+  match_spec = other327.match_spec;
+  has_mbr_hdl = other327.has_mbr_hdl;
+  has_grp_hdl = other327.has_grp_hdl;
+  selector_grp_hdl = other327.selector_grp_hdl;
+  action_mbr_hdl = other327.action_mbr_hdl;
+  priority = other327.priority;
+  action_desc = other327.action_desc;
 }
-netbufferv4_update_pktlen_tbl_entry_desc_t& netbufferv4_update_pktlen_tbl_entry_desc_t::operator=(const netbufferv4_update_pktlen_tbl_entry_desc_t& other326) {
-  match_spec = other326.match_spec;
-  has_mbr_hdl = other326.has_mbr_hdl;
-  has_grp_hdl = other326.has_grp_hdl;
-  selector_grp_hdl = other326.selector_grp_hdl;
-  action_mbr_hdl = other326.action_mbr_hdl;
-  priority = other326.priority;
-  action_desc = other326.action_desc;
+netbufferv4_update_pktlen_tbl_entry_desc_t& netbufferv4_update_pktlen_tbl_entry_desc_t::operator=(const netbufferv4_update_pktlen_tbl_entry_desc_t& other328) {
+  match_spec = other328.match_spec;
+  has_mbr_hdl = other328.has_mbr_hdl;
+  has_grp_hdl = other328.has_grp_hdl;
+  selector_grp_hdl = other328.selector_grp_hdl;
+  action_mbr_hdl = other328.action_mbr_hdl;
+  priority = other328.priority;
+  action_desc = other328.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_pktlen_tbl_entry_desc_t& obj) {
@@ -22131,8 +22264,8 @@ void netbufferv4_update_valhi10_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi10_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi10_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi10_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi10_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi10_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -22277,21 +22410,21 @@ void swap(netbufferv4_update_valhi10_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi10_tbl_entry_desc_t::netbufferv4_update_valhi10_tbl_entry_desc_t(const netbufferv4_update_valhi10_tbl_entry_desc_t& other327) {
-  match_spec = other327.match_spec;
-  has_mbr_hdl = other327.has_mbr_hdl;
-  has_grp_hdl = other327.has_grp_hdl;
-  selector_grp_hdl = other327.selector_grp_hdl;
-  action_mbr_hdl = other327.action_mbr_hdl;
-  action_desc = other327.action_desc;
+netbufferv4_update_valhi10_tbl_entry_desc_t::netbufferv4_update_valhi10_tbl_entry_desc_t(const netbufferv4_update_valhi10_tbl_entry_desc_t& other329) {
+  match_spec = other329.match_spec;
+  has_mbr_hdl = other329.has_mbr_hdl;
+  has_grp_hdl = other329.has_grp_hdl;
+  selector_grp_hdl = other329.selector_grp_hdl;
+  action_mbr_hdl = other329.action_mbr_hdl;
+  action_desc = other329.action_desc;
 }
-netbufferv4_update_valhi10_tbl_entry_desc_t& netbufferv4_update_valhi10_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi10_tbl_entry_desc_t& other328) {
-  match_spec = other328.match_spec;
-  has_mbr_hdl = other328.has_mbr_hdl;
-  has_grp_hdl = other328.has_grp_hdl;
-  selector_grp_hdl = other328.selector_grp_hdl;
-  action_mbr_hdl = other328.action_mbr_hdl;
-  action_desc = other328.action_desc;
+netbufferv4_update_valhi10_tbl_entry_desc_t& netbufferv4_update_valhi10_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi10_tbl_entry_desc_t& other330) {
+  match_spec = other330.match_spec;
+  has_mbr_hdl = other330.has_mbr_hdl;
+  has_grp_hdl = other330.has_grp_hdl;
+  selector_grp_hdl = other330.selector_grp_hdl;
+  action_mbr_hdl = other330.action_mbr_hdl;
+  action_desc = other330.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi10_tbl_entry_desc_t& obj) {
@@ -22336,8 +22469,8 @@ void netbufferv4_update_valhi11_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi11_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi11_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi11_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi11_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi11_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -22482,21 +22615,21 @@ void swap(netbufferv4_update_valhi11_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi11_tbl_entry_desc_t::netbufferv4_update_valhi11_tbl_entry_desc_t(const netbufferv4_update_valhi11_tbl_entry_desc_t& other329) {
-  match_spec = other329.match_spec;
-  has_mbr_hdl = other329.has_mbr_hdl;
-  has_grp_hdl = other329.has_grp_hdl;
-  selector_grp_hdl = other329.selector_grp_hdl;
-  action_mbr_hdl = other329.action_mbr_hdl;
-  action_desc = other329.action_desc;
+netbufferv4_update_valhi11_tbl_entry_desc_t::netbufferv4_update_valhi11_tbl_entry_desc_t(const netbufferv4_update_valhi11_tbl_entry_desc_t& other331) {
+  match_spec = other331.match_spec;
+  has_mbr_hdl = other331.has_mbr_hdl;
+  has_grp_hdl = other331.has_grp_hdl;
+  selector_grp_hdl = other331.selector_grp_hdl;
+  action_mbr_hdl = other331.action_mbr_hdl;
+  action_desc = other331.action_desc;
 }
-netbufferv4_update_valhi11_tbl_entry_desc_t& netbufferv4_update_valhi11_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi11_tbl_entry_desc_t& other330) {
-  match_spec = other330.match_spec;
-  has_mbr_hdl = other330.has_mbr_hdl;
-  has_grp_hdl = other330.has_grp_hdl;
-  selector_grp_hdl = other330.selector_grp_hdl;
-  action_mbr_hdl = other330.action_mbr_hdl;
-  action_desc = other330.action_desc;
+netbufferv4_update_valhi11_tbl_entry_desc_t& netbufferv4_update_valhi11_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi11_tbl_entry_desc_t& other332) {
+  match_spec = other332.match_spec;
+  has_mbr_hdl = other332.has_mbr_hdl;
+  has_grp_hdl = other332.has_grp_hdl;
+  selector_grp_hdl = other332.selector_grp_hdl;
+  action_mbr_hdl = other332.action_mbr_hdl;
+  action_desc = other332.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi11_tbl_entry_desc_t& obj) {
@@ -22541,8 +22674,8 @@ void netbufferv4_update_valhi12_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi12_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi12_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi12_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi12_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi12_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -22687,21 +22820,21 @@ void swap(netbufferv4_update_valhi12_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi12_tbl_entry_desc_t::netbufferv4_update_valhi12_tbl_entry_desc_t(const netbufferv4_update_valhi12_tbl_entry_desc_t& other331) {
-  match_spec = other331.match_spec;
-  has_mbr_hdl = other331.has_mbr_hdl;
-  has_grp_hdl = other331.has_grp_hdl;
-  selector_grp_hdl = other331.selector_grp_hdl;
-  action_mbr_hdl = other331.action_mbr_hdl;
-  action_desc = other331.action_desc;
+netbufferv4_update_valhi12_tbl_entry_desc_t::netbufferv4_update_valhi12_tbl_entry_desc_t(const netbufferv4_update_valhi12_tbl_entry_desc_t& other333) {
+  match_spec = other333.match_spec;
+  has_mbr_hdl = other333.has_mbr_hdl;
+  has_grp_hdl = other333.has_grp_hdl;
+  selector_grp_hdl = other333.selector_grp_hdl;
+  action_mbr_hdl = other333.action_mbr_hdl;
+  action_desc = other333.action_desc;
 }
-netbufferv4_update_valhi12_tbl_entry_desc_t& netbufferv4_update_valhi12_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi12_tbl_entry_desc_t& other332) {
-  match_spec = other332.match_spec;
-  has_mbr_hdl = other332.has_mbr_hdl;
-  has_grp_hdl = other332.has_grp_hdl;
-  selector_grp_hdl = other332.selector_grp_hdl;
-  action_mbr_hdl = other332.action_mbr_hdl;
-  action_desc = other332.action_desc;
+netbufferv4_update_valhi12_tbl_entry_desc_t& netbufferv4_update_valhi12_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi12_tbl_entry_desc_t& other334) {
+  match_spec = other334.match_spec;
+  has_mbr_hdl = other334.has_mbr_hdl;
+  has_grp_hdl = other334.has_grp_hdl;
+  selector_grp_hdl = other334.selector_grp_hdl;
+  action_mbr_hdl = other334.action_mbr_hdl;
+  action_desc = other334.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi12_tbl_entry_desc_t& obj) {
@@ -22746,8 +22879,8 @@ void netbufferv4_update_valhi13_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi13_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi13_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi13_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi13_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi13_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -22892,21 +23025,21 @@ void swap(netbufferv4_update_valhi13_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi13_tbl_entry_desc_t::netbufferv4_update_valhi13_tbl_entry_desc_t(const netbufferv4_update_valhi13_tbl_entry_desc_t& other333) {
-  match_spec = other333.match_spec;
-  has_mbr_hdl = other333.has_mbr_hdl;
-  has_grp_hdl = other333.has_grp_hdl;
-  selector_grp_hdl = other333.selector_grp_hdl;
-  action_mbr_hdl = other333.action_mbr_hdl;
-  action_desc = other333.action_desc;
+netbufferv4_update_valhi13_tbl_entry_desc_t::netbufferv4_update_valhi13_tbl_entry_desc_t(const netbufferv4_update_valhi13_tbl_entry_desc_t& other335) {
+  match_spec = other335.match_spec;
+  has_mbr_hdl = other335.has_mbr_hdl;
+  has_grp_hdl = other335.has_grp_hdl;
+  selector_grp_hdl = other335.selector_grp_hdl;
+  action_mbr_hdl = other335.action_mbr_hdl;
+  action_desc = other335.action_desc;
 }
-netbufferv4_update_valhi13_tbl_entry_desc_t& netbufferv4_update_valhi13_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi13_tbl_entry_desc_t& other334) {
-  match_spec = other334.match_spec;
-  has_mbr_hdl = other334.has_mbr_hdl;
-  has_grp_hdl = other334.has_grp_hdl;
-  selector_grp_hdl = other334.selector_grp_hdl;
-  action_mbr_hdl = other334.action_mbr_hdl;
-  action_desc = other334.action_desc;
+netbufferv4_update_valhi13_tbl_entry_desc_t& netbufferv4_update_valhi13_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi13_tbl_entry_desc_t& other336) {
+  match_spec = other336.match_spec;
+  has_mbr_hdl = other336.has_mbr_hdl;
+  has_grp_hdl = other336.has_grp_hdl;
+  selector_grp_hdl = other336.selector_grp_hdl;
+  action_mbr_hdl = other336.action_mbr_hdl;
+  action_desc = other336.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi13_tbl_entry_desc_t& obj) {
@@ -22951,8 +23084,8 @@ void netbufferv4_update_valhi14_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi14_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi14_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi14_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi14_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi14_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -23097,21 +23230,21 @@ void swap(netbufferv4_update_valhi14_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi14_tbl_entry_desc_t::netbufferv4_update_valhi14_tbl_entry_desc_t(const netbufferv4_update_valhi14_tbl_entry_desc_t& other335) {
-  match_spec = other335.match_spec;
-  has_mbr_hdl = other335.has_mbr_hdl;
-  has_grp_hdl = other335.has_grp_hdl;
-  selector_grp_hdl = other335.selector_grp_hdl;
-  action_mbr_hdl = other335.action_mbr_hdl;
-  action_desc = other335.action_desc;
+netbufferv4_update_valhi14_tbl_entry_desc_t::netbufferv4_update_valhi14_tbl_entry_desc_t(const netbufferv4_update_valhi14_tbl_entry_desc_t& other337) {
+  match_spec = other337.match_spec;
+  has_mbr_hdl = other337.has_mbr_hdl;
+  has_grp_hdl = other337.has_grp_hdl;
+  selector_grp_hdl = other337.selector_grp_hdl;
+  action_mbr_hdl = other337.action_mbr_hdl;
+  action_desc = other337.action_desc;
 }
-netbufferv4_update_valhi14_tbl_entry_desc_t& netbufferv4_update_valhi14_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi14_tbl_entry_desc_t& other336) {
-  match_spec = other336.match_spec;
-  has_mbr_hdl = other336.has_mbr_hdl;
-  has_grp_hdl = other336.has_grp_hdl;
-  selector_grp_hdl = other336.selector_grp_hdl;
-  action_mbr_hdl = other336.action_mbr_hdl;
-  action_desc = other336.action_desc;
+netbufferv4_update_valhi14_tbl_entry_desc_t& netbufferv4_update_valhi14_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi14_tbl_entry_desc_t& other338) {
+  match_spec = other338.match_spec;
+  has_mbr_hdl = other338.has_mbr_hdl;
+  has_grp_hdl = other338.has_grp_hdl;
+  selector_grp_hdl = other338.selector_grp_hdl;
+  action_mbr_hdl = other338.action_mbr_hdl;
+  action_desc = other338.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi14_tbl_entry_desc_t& obj) {
@@ -23156,8 +23289,8 @@ void netbufferv4_update_valhi15_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi15_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi15_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi15_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi15_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi15_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -23302,21 +23435,21 @@ void swap(netbufferv4_update_valhi15_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi15_tbl_entry_desc_t::netbufferv4_update_valhi15_tbl_entry_desc_t(const netbufferv4_update_valhi15_tbl_entry_desc_t& other337) {
-  match_spec = other337.match_spec;
-  has_mbr_hdl = other337.has_mbr_hdl;
-  has_grp_hdl = other337.has_grp_hdl;
-  selector_grp_hdl = other337.selector_grp_hdl;
-  action_mbr_hdl = other337.action_mbr_hdl;
-  action_desc = other337.action_desc;
+netbufferv4_update_valhi15_tbl_entry_desc_t::netbufferv4_update_valhi15_tbl_entry_desc_t(const netbufferv4_update_valhi15_tbl_entry_desc_t& other339) {
+  match_spec = other339.match_spec;
+  has_mbr_hdl = other339.has_mbr_hdl;
+  has_grp_hdl = other339.has_grp_hdl;
+  selector_grp_hdl = other339.selector_grp_hdl;
+  action_mbr_hdl = other339.action_mbr_hdl;
+  action_desc = other339.action_desc;
 }
-netbufferv4_update_valhi15_tbl_entry_desc_t& netbufferv4_update_valhi15_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi15_tbl_entry_desc_t& other338) {
-  match_spec = other338.match_spec;
-  has_mbr_hdl = other338.has_mbr_hdl;
-  has_grp_hdl = other338.has_grp_hdl;
-  selector_grp_hdl = other338.selector_grp_hdl;
-  action_mbr_hdl = other338.action_mbr_hdl;
-  action_desc = other338.action_desc;
+netbufferv4_update_valhi15_tbl_entry_desc_t& netbufferv4_update_valhi15_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi15_tbl_entry_desc_t& other340) {
+  match_spec = other340.match_spec;
+  has_mbr_hdl = other340.has_mbr_hdl;
+  has_grp_hdl = other340.has_grp_hdl;
+  selector_grp_hdl = other340.selector_grp_hdl;
+  action_mbr_hdl = other340.action_mbr_hdl;
+  action_desc = other340.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi15_tbl_entry_desc_t& obj) {
@@ -23361,8 +23494,8 @@ void netbufferv4_update_valhi16_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi16_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi16_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi16_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi16_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi16_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -23507,21 +23640,21 @@ void swap(netbufferv4_update_valhi16_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi16_tbl_entry_desc_t::netbufferv4_update_valhi16_tbl_entry_desc_t(const netbufferv4_update_valhi16_tbl_entry_desc_t& other339) {
-  match_spec = other339.match_spec;
-  has_mbr_hdl = other339.has_mbr_hdl;
-  has_grp_hdl = other339.has_grp_hdl;
-  selector_grp_hdl = other339.selector_grp_hdl;
-  action_mbr_hdl = other339.action_mbr_hdl;
-  action_desc = other339.action_desc;
+netbufferv4_update_valhi16_tbl_entry_desc_t::netbufferv4_update_valhi16_tbl_entry_desc_t(const netbufferv4_update_valhi16_tbl_entry_desc_t& other341) {
+  match_spec = other341.match_spec;
+  has_mbr_hdl = other341.has_mbr_hdl;
+  has_grp_hdl = other341.has_grp_hdl;
+  selector_grp_hdl = other341.selector_grp_hdl;
+  action_mbr_hdl = other341.action_mbr_hdl;
+  action_desc = other341.action_desc;
 }
-netbufferv4_update_valhi16_tbl_entry_desc_t& netbufferv4_update_valhi16_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi16_tbl_entry_desc_t& other340) {
-  match_spec = other340.match_spec;
-  has_mbr_hdl = other340.has_mbr_hdl;
-  has_grp_hdl = other340.has_grp_hdl;
-  selector_grp_hdl = other340.selector_grp_hdl;
-  action_mbr_hdl = other340.action_mbr_hdl;
-  action_desc = other340.action_desc;
+netbufferv4_update_valhi16_tbl_entry_desc_t& netbufferv4_update_valhi16_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi16_tbl_entry_desc_t& other342) {
+  match_spec = other342.match_spec;
+  has_mbr_hdl = other342.has_mbr_hdl;
+  has_grp_hdl = other342.has_grp_hdl;
+  selector_grp_hdl = other342.selector_grp_hdl;
+  action_mbr_hdl = other342.action_mbr_hdl;
+  action_desc = other342.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi16_tbl_entry_desc_t& obj) {
@@ -23566,8 +23699,8 @@ void netbufferv4_update_valhi1_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi1_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi1_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi1_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi1_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi1_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -23712,21 +23845,21 @@ void swap(netbufferv4_update_valhi1_tbl_entry_desc_t &a, netbufferv4_update_valh
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi1_tbl_entry_desc_t::netbufferv4_update_valhi1_tbl_entry_desc_t(const netbufferv4_update_valhi1_tbl_entry_desc_t& other341) {
-  match_spec = other341.match_spec;
-  has_mbr_hdl = other341.has_mbr_hdl;
-  has_grp_hdl = other341.has_grp_hdl;
-  selector_grp_hdl = other341.selector_grp_hdl;
-  action_mbr_hdl = other341.action_mbr_hdl;
-  action_desc = other341.action_desc;
+netbufferv4_update_valhi1_tbl_entry_desc_t::netbufferv4_update_valhi1_tbl_entry_desc_t(const netbufferv4_update_valhi1_tbl_entry_desc_t& other343) {
+  match_spec = other343.match_spec;
+  has_mbr_hdl = other343.has_mbr_hdl;
+  has_grp_hdl = other343.has_grp_hdl;
+  selector_grp_hdl = other343.selector_grp_hdl;
+  action_mbr_hdl = other343.action_mbr_hdl;
+  action_desc = other343.action_desc;
 }
-netbufferv4_update_valhi1_tbl_entry_desc_t& netbufferv4_update_valhi1_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi1_tbl_entry_desc_t& other342) {
-  match_spec = other342.match_spec;
-  has_mbr_hdl = other342.has_mbr_hdl;
-  has_grp_hdl = other342.has_grp_hdl;
-  selector_grp_hdl = other342.selector_grp_hdl;
-  action_mbr_hdl = other342.action_mbr_hdl;
-  action_desc = other342.action_desc;
+netbufferv4_update_valhi1_tbl_entry_desc_t& netbufferv4_update_valhi1_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi1_tbl_entry_desc_t& other344) {
+  match_spec = other344.match_spec;
+  has_mbr_hdl = other344.has_mbr_hdl;
+  has_grp_hdl = other344.has_grp_hdl;
+  selector_grp_hdl = other344.selector_grp_hdl;
+  action_mbr_hdl = other344.action_mbr_hdl;
+  action_desc = other344.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi1_tbl_entry_desc_t& obj) {
@@ -23771,8 +23904,8 @@ void netbufferv4_update_valhi2_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi2_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi2_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi2_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi2_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi2_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -23917,21 +24050,21 @@ void swap(netbufferv4_update_valhi2_tbl_entry_desc_t &a, netbufferv4_update_valh
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi2_tbl_entry_desc_t::netbufferv4_update_valhi2_tbl_entry_desc_t(const netbufferv4_update_valhi2_tbl_entry_desc_t& other343) {
-  match_spec = other343.match_spec;
-  has_mbr_hdl = other343.has_mbr_hdl;
-  has_grp_hdl = other343.has_grp_hdl;
-  selector_grp_hdl = other343.selector_grp_hdl;
-  action_mbr_hdl = other343.action_mbr_hdl;
-  action_desc = other343.action_desc;
+netbufferv4_update_valhi2_tbl_entry_desc_t::netbufferv4_update_valhi2_tbl_entry_desc_t(const netbufferv4_update_valhi2_tbl_entry_desc_t& other345) {
+  match_spec = other345.match_spec;
+  has_mbr_hdl = other345.has_mbr_hdl;
+  has_grp_hdl = other345.has_grp_hdl;
+  selector_grp_hdl = other345.selector_grp_hdl;
+  action_mbr_hdl = other345.action_mbr_hdl;
+  action_desc = other345.action_desc;
 }
-netbufferv4_update_valhi2_tbl_entry_desc_t& netbufferv4_update_valhi2_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi2_tbl_entry_desc_t& other344) {
-  match_spec = other344.match_spec;
-  has_mbr_hdl = other344.has_mbr_hdl;
-  has_grp_hdl = other344.has_grp_hdl;
-  selector_grp_hdl = other344.selector_grp_hdl;
-  action_mbr_hdl = other344.action_mbr_hdl;
-  action_desc = other344.action_desc;
+netbufferv4_update_valhi2_tbl_entry_desc_t& netbufferv4_update_valhi2_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi2_tbl_entry_desc_t& other346) {
+  match_spec = other346.match_spec;
+  has_mbr_hdl = other346.has_mbr_hdl;
+  has_grp_hdl = other346.has_grp_hdl;
+  selector_grp_hdl = other346.selector_grp_hdl;
+  action_mbr_hdl = other346.action_mbr_hdl;
+  action_desc = other346.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi2_tbl_entry_desc_t& obj) {
@@ -23976,8 +24109,8 @@ void netbufferv4_update_valhi3_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi3_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi3_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi3_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi3_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi3_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -24122,21 +24255,21 @@ void swap(netbufferv4_update_valhi3_tbl_entry_desc_t &a, netbufferv4_update_valh
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi3_tbl_entry_desc_t::netbufferv4_update_valhi3_tbl_entry_desc_t(const netbufferv4_update_valhi3_tbl_entry_desc_t& other345) {
-  match_spec = other345.match_spec;
-  has_mbr_hdl = other345.has_mbr_hdl;
-  has_grp_hdl = other345.has_grp_hdl;
-  selector_grp_hdl = other345.selector_grp_hdl;
-  action_mbr_hdl = other345.action_mbr_hdl;
-  action_desc = other345.action_desc;
+netbufferv4_update_valhi3_tbl_entry_desc_t::netbufferv4_update_valhi3_tbl_entry_desc_t(const netbufferv4_update_valhi3_tbl_entry_desc_t& other347) {
+  match_spec = other347.match_spec;
+  has_mbr_hdl = other347.has_mbr_hdl;
+  has_grp_hdl = other347.has_grp_hdl;
+  selector_grp_hdl = other347.selector_grp_hdl;
+  action_mbr_hdl = other347.action_mbr_hdl;
+  action_desc = other347.action_desc;
 }
-netbufferv4_update_valhi3_tbl_entry_desc_t& netbufferv4_update_valhi3_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi3_tbl_entry_desc_t& other346) {
-  match_spec = other346.match_spec;
-  has_mbr_hdl = other346.has_mbr_hdl;
-  has_grp_hdl = other346.has_grp_hdl;
-  selector_grp_hdl = other346.selector_grp_hdl;
-  action_mbr_hdl = other346.action_mbr_hdl;
-  action_desc = other346.action_desc;
+netbufferv4_update_valhi3_tbl_entry_desc_t& netbufferv4_update_valhi3_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi3_tbl_entry_desc_t& other348) {
+  match_spec = other348.match_spec;
+  has_mbr_hdl = other348.has_mbr_hdl;
+  has_grp_hdl = other348.has_grp_hdl;
+  selector_grp_hdl = other348.selector_grp_hdl;
+  action_mbr_hdl = other348.action_mbr_hdl;
+  action_desc = other348.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi3_tbl_entry_desc_t& obj) {
@@ -24181,8 +24314,8 @@ void netbufferv4_update_valhi4_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi4_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi4_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi4_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi4_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi4_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -24327,21 +24460,21 @@ void swap(netbufferv4_update_valhi4_tbl_entry_desc_t &a, netbufferv4_update_valh
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi4_tbl_entry_desc_t::netbufferv4_update_valhi4_tbl_entry_desc_t(const netbufferv4_update_valhi4_tbl_entry_desc_t& other347) {
-  match_spec = other347.match_spec;
-  has_mbr_hdl = other347.has_mbr_hdl;
-  has_grp_hdl = other347.has_grp_hdl;
-  selector_grp_hdl = other347.selector_grp_hdl;
-  action_mbr_hdl = other347.action_mbr_hdl;
-  action_desc = other347.action_desc;
+netbufferv4_update_valhi4_tbl_entry_desc_t::netbufferv4_update_valhi4_tbl_entry_desc_t(const netbufferv4_update_valhi4_tbl_entry_desc_t& other349) {
+  match_spec = other349.match_spec;
+  has_mbr_hdl = other349.has_mbr_hdl;
+  has_grp_hdl = other349.has_grp_hdl;
+  selector_grp_hdl = other349.selector_grp_hdl;
+  action_mbr_hdl = other349.action_mbr_hdl;
+  action_desc = other349.action_desc;
 }
-netbufferv4_update_valhi4_tbl_entry_desc_t& netbufferv4_update_valhi4_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi4_tbl_entry_desc_t& other348) {
-  match_spec = other348.match_spec;
-  has_mbr_hdl = other348.has_mbr_hdl;
-  has_grp_hdl = other348.has_grp_hdl;
-  selector_grp_hdl = other348.selector_grp_hdl;
-  action_mbr_hdl = other348.action_mbr_hdl;
-  action_desc = other348.action_desc;
+netbufferv4_update_valhi4_tbl_entry_desc_t& netbufferv4_update_valhi4_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi4_tbl_entry_desc_t& other350) {
+  match_spec = other350.match_spec;
+  has_mbr_hdl = other350.has_mbr_hdl;
+  has_grp_hdl = other350.has_grp_hdl;
+  selector_grp_hdl = other350.selector_grp_hdl;
+  action_mbr_hdl = other350.action_mbr_hdl;
+  action_desc = other350.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi4_tbl_entry_desc_t& obj) {
@@ -24386,8 +24519,8 @@ void netbufferv4_update_valhi5_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi5_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi5_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi5_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi5_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi5_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -24532,21 +24665,21 @@ void swap(netbufferv4_update_valhi5_tbl_entry_desc_t &a, netbufferv4_update_valh
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi5_tbl_entry_desc_t::netbufferv4_update_valhi5_tbl_entry_desc_t(const netbufferv4_update_valhi5_tbl_entry_desc_t& other349) {
-  match_spec = other349.match_spec;
-  has_mbr_hdl = other349.has_mbr_hdl;
-  has_grp_hdl = other349.has_grp_hdl;
-  selector_grp_hdl = other349.selector_grp_hdl;
-  action_mbr_hdl = other349.action_mbr_hdl;
-  action_desc = other349.action_desc;
+netbufferv4_update_valhi5_tbl_entry_desc_t::netbufferv4_update_valhi5_tbl_entry_desc_t(const netbufferv4_update_valhi5_tbl_entry_desc_t& other351) {
+  match_spec = other351.match_spec;
+  has_mbr_hdl = other351.has_mbr_hdl;
+  has_grp_hdl = other351.has_grp_hdl;
+  selector_grp_hdl = other351.selector_grp_hdl;
+  action_mbr_hdl = other351.action_mbr_hdl;
+  action_desc = other351.action_desc;
 }
-netbufferv4_update_valhi5_tbl_entry_desc_t& netbufferv4_update_valhi5_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi5_tbl_entry_desc_t& other350) {
-  match_spec = other350.match_spec;
-  has_mbr_hdl = other350.has_mbr_hdl;
-  has_grp_hdl = other350.has_grp_hdl;
-  selector_grp_hdl = other350.selector_grp_hdl;
-  action_mbr_hdl = other350.action_mbr_hdl;
-  action_desc = other350.action_desc;
+netbufferv4_update_valhi5_tbl_entry_desc_t& netbufferv4_update_valhi5_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi5_tbl_entry_desc_t& other352) {
+  match_spec = other352.match_spec;
+  has_mbr_hdl = other352.has_mbr_hdl;
+  has_grp_hdl = other352.has_grp_hdl;
+  selector_grp_hdl = other352.selector_grp_hdl;
+  action_mbr_hdl = other352.action_mbr_hdl;
+  action_desc = other352.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi5_tbl_entry_desc_t& obj) {
@@ -24591,8 +24724,8 @@ void netbufferv4_update_valhi6_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi6_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi6_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi6_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi6_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi6_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -24737,21 +24870,21 @@ void swap(netbufferv4_update_valhi6_tbl_entry_desc_t &a, netbufferv4_update_valh
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi6_tbl_entry_desc_t::netbufferv4_update_valhi6_tbl_entry_desc_t(const netbufferv4_update_valhi6_tbl_entry_desc_t& other351) {
-  match_spec = other351.match_spec;
-  has_mbr_hdl = other351.has_mbr_hdl;
-  has_grp_hdl = other351.has_grp_hdl;
-  selector_grp_hdl = other351.selector_grp_hdl;
-  action_mbr_hdl = other351.action_mbr_hdl;
-  action_desc = other351.action_desc;
+netbufferv4_update_valhi6_tbl_entry_desc_t::netbufferv4_update_valhi6_tbl_entry_desc_t(const netbufferv4_update_valhi6_tbl_entry_desc_t& other353) {
+  match_spec = other353.match_spec;
+  has_mbr_hdl = other353.has_mbr_hdl;
+  has_grp_hdl = other353.has_grp_hdl;
+  selector_grp_hdl = other353.selector_grp_hdl;
+  action_mbr_hdl = other353.action_mbr_hdl;
+  action_desc = other353.action_desc;
 }
-netbufferv4_update_valhi6_tbl_entry_desc_t& netbufferv4_update_valhi6_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi6_tbl_entry_desc_t& other352) {
-  match_spec = other352.match_spec;
-  has_mbr_hdl = other352.has_mbr_hdl;
-  has_grp_hdl = other352.has_grp_hdl;
-  selector_grp_hdl = other352.selector_grp_hdl;
-  action_mbr_hdl = other352.action_mbr_hdl;
-  action_desc = other352.action_desc;
+netbufferv4_update_valhi6_tbl_entry_desc_t& netbufferv4_update_valhi6_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi6_tbl_entry_desc_t& other354) {
+  match_spec = other354.match_spec;
+  has_mbr_hdl = other354.has_mbr_hdl;
+  has_grp_hdl = other354.has_grp_hdl;
+  selector_grp_hdl = other354.selector_grp_hdl;
+  action_mbr_hdl = other354.action_mbr_hdl;
+  action_desc = other354.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi6_tbl_entry_desc_t& obj) {
@@ -24796,8 +24929,8 @@ void netbufferv4_update_valhi7_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi7_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi7_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi7_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi7_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi7_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -24942,21 +25075,21 @@ void swap(netbufferv4_update_valhi7_tbl_entry_desc_t &a, netbufferv4_update_valh
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi7_tbl_entry_desc_t::netbufferv4_update_valhi7_tbl_entry_desc_t(const netbufferv4_update_valhi7_tbl_entry_desc_t& other353) {
-  match_spec = other353.match_spec;
-  has_mbr_hdl = other353.has_mbr_hdl;
-  has_grp_hdl = other353.has_grp_hdl;
-  selector_grp_hdl = other353.selector_grp_hdl;
-  action_mbr_hdl = other353.action_mbr_hdl;
-  action_desc = other353.action_desc;
+netbufferv4_update_valhi7_tbl_entry_desc_t::netbufferv4_update_valhi7_tbl_entry_desc_t(const netbufferv4_update_valhi7_tbl_entry_desc_t& other355) {
+  match_spec = other355.match_spec;
+  has_mbr_hdl = other355.has_mbr_hdl;
+  has_grp_hdl = other355.has_grp_hdl;
+  selector_grp_hdl = other355.selector_grp_hdl;
+  action_mbr_hdl = other355.action_mbr_hdl;
+  action_desc = other355.action_desc;
 }
-netbufferv4_update_valhi7_tbl_entry_desc_t& netbufferv4_update_valhi7_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi7_tbl_entry_desc_t& other354) {
-  match_spec = other354.match_spec;
-  has_mbr_hdl = other354.has_mbr_hdl;
-  has_grp_hdl = other354.has_grp_hdl;
-  selector_grp_hdl = other354.selector_grp_hdl;
-  action_mbr_hdl = other354.action_mbr_hdl;
-  action_desc = other354.action_desc;
+netbufferv4_update_valhi7_tbl_entry_desc_t& netbufferv4_update_valhi7_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi7_tbl_entry_desc_t& other356) {
+  match_spec = other356.match_spec;
+  has_mbr_hdl = other356.has_mbr_hdl;
+  has_grp_hdl = other356.has_grp_hdl;
+  selector_grp_hdl = other356.selector_grp_hdl;
+  action_mbr_hdl = other356.action_mbr_hdl;
+  action_desc = other356.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi7_tbl_entry_desc_t& obj) {
@@ -25001,8 +25134,8 @@ void netbufferv4_update_valhi8_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi8_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi8_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi8_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi8_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi8_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -25147,21 +25280,21 @@ void swap(netbufferv4_update_valhi8_tbl_entry_desc_t &a, netbufferv4_update_valh
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi8_tbl_entry_desc_t::netbufferv4_update_valhi8_tbl_entry_desc_t(const netbufferv4_update_valhi8_tbl_entry_desc_t& other355) {
-  match_spec = other355.match_spec;
-  has_mbr_hdl = other355.has_mbr_hdl;
-  has_grp_hdl = other355.has_grp_hdl;
-  selector_grp_hdl = other355.selector_grp_hdl;
-  action_mbr_hdl = other355.action_mbr_hdl;
-  action_desc = other355.action_desc;
+netbufferv4_update_valhi8_tbl_entry_desc_t::netbufferv4_update_valhi8_tbl_entry_desc_t(const netbufferv4_update_valhi8_tbl_entry_desc_t& other357) {
+  match_spec = other357.match_spec;
+  has_mbr_hdl = other357.has_mbr_hdl;
+  has_grp_hdl = other357.has_grp_hdl;
+  selector_grp_hdl = other357.selector_grp_hdl;
+  action_mbr_hdl = other357.action_mbr_hdl;
+  action_desc = other357.action_desc;
 }
-netbufferv4_update_valhi8_tbl_entry_desc_t& netbufferv4_update_valhi8_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi8_tbl_entry_desc_t& other356) {
-  match_spec = other356.match_spec;
-  has_mbr_hdl = other356.has_mbr_hdl;
-  has_grp_hdl = other356.has_grp_hdl;
-  selector_grp_hdl = other356.selector_grp_hdl;
-  action_mbr_hdl = other356.action_mbr_hdl;
-  action_desc = other356.action_desc;
+netbufferv4_update_valhi8_tbl_entry_desc_t& netbufferv4_update_valhi8_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi8_tbl_entry_desc_t& other358) {
+  match_spec = other358.match_spec;
+  has_mbr_hdl = other358.has_mbr_hdl;
+  has_grp_hdl = other358.has_grp_hdl;
+  selector_grp_hdl = other358.selector_grp_hdl;
+  action_mbr_hdl = other358.action_mbr_hdl;
+  action_desc = other358.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi8_tbl_entry_desc_t& obj) {
@@ -25206,8 +25339,8 @@ void netbufferv4_update_valhi9_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_valhi9_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_valhi9_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_valhi9_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_valhi9_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_valhi9_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -25352,21 +25485,21 @@ void swap(netbufferv4_update_valhi9_tbl_entry_desc_t &a, netbufferv4_update_valh
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_valhi9_tbl_entry_desc_t::netbufferv4_update_valhi9_tbl_entry_desc_t(const netbufferv4_update_valhi9_tbl_entry_desc_t& other357) {
-  match_spec = other357.match_spec;
-  has_mbr_hdl = other357.has_mbr_hdl;
-  has_grp_hdl = other357.has_grp_hdl;
-  selector_grp_hdl = other357.selector_grp_hdl;
-  action_mbr_hdl = other357.action_mbr_hdl;
-  action_desc = other357.action_desc;
+netbufferv4_update_valhi9_tbl_entry_desc_t::netbufferv4_update_valhi9_tbl_entry_desc_t(const netbufferv4_update_valhi9_tbl_entry_desc_t& other359) {
+  match_spec = other359.match_spec;
+  has_mbr_hdl = other359.has_mbr_hdl;
+  has_grp_hdl = other359.has_grp_hdl;
+  selector_grp_hdl = other359.selector_grp_hdl;
+  action_mbr_hdl = other359.action_mbr_hdl;
+  action_desc = other359.action_desc;
 }
-netbufferv4_update_valhi9_tbl_entry_desc_t& netbufferv4_update_valhi9_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi9_tbl_entry_desc_t& other358) {
-  match_spec = other358.match_spec;
-  has_mbr_hdl = other358.has_mbr_hdl;
-  has_grp_hdl = other358.has_grp_hdl;
-  selector_grp_hdl = other358.selector_grp_hdl;
-  action_mbr_hdl = other358.action_mbr_hdl;
-  action_desc = other358.action_desc;
+netbufferv4_update_valhi9_tbl_entry_desc_t& netbufferv4_update_valhi9_tbl_entry_desc_t::operator=(const netbufferv4_update_valhi9_tbl_entry_desc_t& other360) {
+  match_spec = other360.match_spec;
+  has_mbr_hdl = other360.has_mbr_hdl;
+  has_grp_hdl = other360.has_grp_hdl;
+  selector_grp_hdl = other360.selector_grp_hdl;
+  action_mbr_hdl = other360.action_mbr_hdl;
+  action_desc = other360.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_valhi9_tbl_entry_desc_t& obj) {
@@ -25411,8 +25544,8 @@ void netbufferv4_update_vallen_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallen_tbl_entry_desc_t::ascii_fingerprint = "4DAE7DFBB5D061119F93C26CE90220D4";
-const uint8_t netbufferv4_update_vallen_tbl_entry_desc_t::binary_fingerprint[16] = {0x4D,0xAE,0x7D,0xFB,0xB5,0xD0,0x61,0x11,0x9F,0x93,0xC2,0x6C,0xE9,0x02,0x20,0xD4};
+const char* netbufferv4_update_vallen_tbl_entry_desc_t::ascii_fingerprint = "99218E4FFDDA814249D867BA3D5722ED";
+const uint8_t netbufferv4_update_vallen_tbl_entry_desc_t::binary_fingerprint[16] = {0x99,0x21,0x8E,0x4F,0xFD,0xDA,0x81,0x42,0x49,0xD8,0x67,0xBA,0x3D,0x57,0x22,0xED};
 
 uint32_t netbufferv4_update_vallen_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -25557,21 +25690,21 @@ void swap(netbufferv4_update_vallen_tbl_entry_desc_t &a, netbufferv4_update_vall
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallen_tbl_entry_desc_t::netbufferv4_update_vallen_tbl_entry_desc_t(const netbufferv4_update_vallen_tbl_entry_desc_t& other359) {
-  match_spec = other359.match_spec;
-  has_mbr_hdl = other359.has_mbr_hdl;
-  has_grp_hdl = other359.has_grp_hdl;
-  selector_grp_hdl = other359.selector_grp_hdl;
-  action_mbr_hdl = other359.action_mbr_hdl;
-  action_desc = other359.action_desc;
+netbufferv4_update_vallen_tbl_entry_desc_t::netbufferv4_update_vallen_tbl_entry_desc_t(const netbufferv4_update_vallen_tbl_entry_desc_t& other361) {
+  match_spec = other361.match_spec;
+  has_mbr_hdl = other361.has_mbr_hdl;
+  has_grp_hdl = other361.has_grp_hdl;
+  selector_grp_hdl = other361.selector_grp_hdl;
+  action_mbr_hdl = other361.action_mbr_hdl;
+  action_desc = other361.action_desc;
 }
-netbufferv4_update_vallen_tbl_entry_desc_t& netbufferv4_update_vallen_tbl_entry_desc_t::operator=(const netbufferv4_update_vallen_tbl_entry_desc_t& other360) {
-  match_spec = other360.match_spec;
-  has_mbr_hdl = other360.has_mbr_hdl;
-  has_grp_hdl = other360.has_grp_hdl;
-  selector_grp_hdl = other360.selector_grp_hdl;
-  action_mbr_hdl = other360.action_mbr_hdl;
-  action_desc = other360.action_desc;
+netbufferv4_update_vallen_tbl_entry_desc_t& netbufferv4_update_vallen_tbl_entry_desc_t::operator=(const netbufferv4_update_vallen_tbl_entry_desc_t& other362) {
+  match_spec = other362.match_spec;
+  has_mbr_hdl = other362.has_mbr_hdl;
+  has_grp_hdl = other362.has_grp_hdl;
+  selector_grp_hdl = other362.selector_grp_hdl;
+  action_mbr_hdl = other362.action_mbr_hdl;
+  action_desc = other362.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallen_tbl_entry_desc_t& obj) {
@@ -25616,8 +25749,8 @@ void netbufferv4_update_vallo10_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo10_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo10_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo10_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo10_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo10_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -25762,21 +25895,21 @@ void swap(netbufferv4_update_vallo10_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo10_tbl_entry_desc_t::netbufferv4_update_vallo10_tbl_entry_desc_t(const netbufferv4_update_vallo10_tbl_entry_desc_t& other361) {
-  match_spec = other361.match_spec;
-  has_mbr_hdl = other361.has_mbr_hdl;
-  has_grp_hdl = other361.has_grp_hdl;
-  selector_grp_hdl = other361.selector_grp_hdl;
-  action_mbr_hdl = other361.action_mbr_hdl;
-  action_desc = other361.action_desc;
+netbufferv4_update_vallo10_tbl_entry_desc_t::netbufferv4_update_vallo10_tbl_entry_desc_t(const netbufferv4_update_vallo10_tbl_entry_desc_t& other363) {
+  match_spec = other363.match_spec;
+  has_mbr_hdl = other363.has_mbr_hdl;
+  has_grp_hdl = other363.has_grp_hdl;
+  selector_grp_hdl = other363.selector_grp_hdl;
+  action_mbr_hdl = other363.action_mbr_hdl;
+  action_desc = other363.action_desc;
 }
-netbufferv4_update_vallo10_tbl_entry_desc_t& netbufferv4_update_vallo10_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo10_tbl_entry_desc_t& other362) {
-  match_spec = other362.match_spec;
-  has_mbr_hdl = other362.has_mbr_hdl;
-  has_grp_hdl = other362.has_grp_hdl;
-  selector_grp_hdl = other362.selector_grp_hdl;
-  action_mbr_hdl = other362.action_mbr_hdl;
-  action_desc = other362.action_desc;
+netbufferv4_update_vallo10_tbl_entry_desc_t& netbufferv4_update_vallo10_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo10_tbl_entry_desc_t& other364) {
+  match_spec = other364.match_spec;
+  has_mbr_hdl = other364.has_mbr_hdl;
+  has_grp_hdl = other364.has_grp_hdl;
+  selector_grp_hdl = other364.selector_grp_hdl;
+  action_mbr_hdl = other364.action_mbr_hdl;
+  action_desc = other364.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo10_tbl_entry_desc_t& obj) {
@@ -25821,8 +25954,8 @@ void netbufferv4_update_vallo11_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo11_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo11_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo11_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo11_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo11_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -25967,21 +26100,21 @@ void swap(netbufferv4_update_vallo11_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo11_tbl_entry_desc_t::netbufferv4_update_vallo11_tbl_entry_desc_t(const netbufferv4_update_vallo11_tbl_entry_desc_t& other363) {
-  match_spec = other363.match_spec;
-  has_mbr_hdl = other363.has_mbr_hdl;
-  has_grp_hdl = other363.has_grp_hdl;
-  selector_grp_hdl = other363.selector_grp_hdl;
-  action_mbr_hdl = other363.action_mbr_hdl;
-  action_desc = other363.action_desc;
+netbufferv4_update_vallo11_tbl_entry_desc_t::netbufferv4_update_vallo11_tbl_entry_desc_t(const netbufferv4_update_vallo11_tbl_entry_desc_t& other365) {
+  match_spec = other365.match_spec;
+  has_mbr_hdl = other365.has_mbr_hdl;
+  has_grp_hdl = other365.has_grp_hdl;
+  selector_grp_hdl = other365.selector_grp_hdl;
+  action_mbr_hdl = other365.action_mbr_hdl;
+  action_desc = other365.action_desc;
 }
-netbufferv4_update_vallo11_tbl_entry_desc_t& netbufferv4_update_vallo11_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo11_tbl_entry_desc_t& other364) {
-  match_spec = other364.match_spec;
-  has_mbr_hdl = other364.has_mbr_hdl;
-  has_grp_hdl = other364.has_grp_hdl;
-  selector_grp_hdl = other364.selector_grp_hdl;
-  action_mbr_hdl = other364.action_mbr_hdl;
-  action_desc = other364.action_desc;
+netbufferv4_update_vallo11_tbl_entry_desc_t& netbufferv4_update_vallo11_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo11_tbl_entry_desc_t& other366) {
+  match_spec = other366.match_spec;
+  has_mbr_hdl = other366.has_mbr_hdl;
+  has_grp_hdl = other366.has_grp_hdl;
+  selector_grp_hdl = other366.selector_grp_hdl;
+  action_mbr_hdl = other366.action_mbr_hdl;
+  action_desc = other366.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo11_tbl_entry_desc_t& obj) {
@@ -26026,8 +26159,8 @@ void netbufferv4_update_vallo12_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo12_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo12_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo12_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo12_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo12_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -26172,21 +26305,21 @@ void swap(netbufferv4_update_vallo12_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo12_tbl_entry_desc_t::netbufferv4_update_vallo12_tbl_entry_desc_t(const netbufferv4_update_vallo12_tbl_entry_desc_t& other365) {
-  match_spec = other365.match_spec;
-  has_mbr_hdl = other365.has_mbr_hdl;
-  has_grp_hdl = other365.has_grp_hdl;
-  selector_grp_hdl = other365.selector_grp_hdl;
-  action_mbr_hdl = other365.action_mbr_hdl;
-  action_desc = other365.action_desc;
+netbufferv4_update_vallo12_tbl_entry_desc_t::netbufferv4_update_vallo12_tbl_entry_desc_t(const netbufferv4_update_vallo12_tbl_entry_desc_t& other367) {
+  match_spec = other367.match_spec;
+  has_mbr_hdl = other367.has_mbr_hdl;
+  has_grp_hdl = other367.has_grp_hdl;
+  selector_grp_hdl = other367.selector_grp_hdl;
+  action_mbr_hdl = other367.action_mbr_hdl;
+  action_desc = other367.action_desc;
 }
-netbufferv4_update_vallo12_tbl_entry_desc_t& netbufferv4_update_vallo12_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo12_tbl_entry_desc_t& other366) {
-  match_spec = other366.match_spec;
-  has_mbr_hdl = other366.has_mbr_hdl;
-  has_grp_hdl = other366.has_grp_hdl;
-  selector_grp_hdl = other366.selector_grp_hdl;
-  action_mbr_hdl = other366.action_mbr_hdl;
-  action_desc = other366.action_desc;
+netbufferv4_update_vallo12_tbl_entry_desc_t& netbufferv4_update_vallo12_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo12_tbl_entry_desc_t& other368) {
+  match_spec = other368.match_spec;
+  has_mbr_hdl = other368.has_mbr_hdl;
+  has_grp_hdl = other368.has_grp_hdl;
+  selector_grp_hdl = other368.selector_grp_hdl;
+  action_mbr_hdl = other368.action_mbr_hdl;
+  action_desc = other368.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo12_tbl_entry_desc_t& obj) {
@@ -26231,8 +26364,8 @@ void netbufferv4_update_vallo13_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo13_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo13_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo13_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo13_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo13_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -26377,21 +26510,21 @@ void swap(netbufferv4_update_vallo13_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo13_tbl_entry_desc_t::netbufferv4_update_vallo13_tbl_entry_desc_t(const netbufferv4_update_vallo13_tbl_entry_desc_t& other367) {
-  match_spec = other367.match_spec;
-  has_mbr_hdl = other367.has_mbr_hdl;
-  has_grp_hdl = other367.has_grp_hdl;
-  selector_grp_hdl = other367.selector_grp_hdl;
-  action_mbr_hdl = other367.action_mbr_hdl;
-  action_desc = other367.action_desc;
+netbufferv4_update_vallo13_tbl_entry_desc_t::netbufferv4_update_vallo13_tbl_entry_desc_t(const netbufferv4_update_vallo13_tbl_entry_desc_t& other369) {
+  match_spec = other369.match_spec;
+  has_mbr_hdl = other369.has_mbr_hdl;
+  has_grp_hdl = other369.has_grp_hdl;
+  selector_grp_hdl = other369.selector_grp_hdl;
+  action_mbr_hdl = other369.action_mbr_hdl;
+  action_desc = other369.action_desc;
 }
-netbufferv4_update_vallo13_tbl_entry_desc_t& netbufferv4_update_vallo13_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo13_tbl_entry_desc_t& other368) {
-  match_spec = other368.match_spec;
-  has_mbr_hdl = other368.has_mbr_hdl;
-  has_grp_hdl = other368.has_grp_hdl;
-  selector_grp_hdl = other368.selector_grp_hdl;
-  action_mbr_hdl = other368.action_mbr_hdl;
-  action_desc = other368.action_desc;
+netbufferv4_update_vallo13_tbl_entry_desc_t& netbufferv4_update_vallo13_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo13_tbl_entry_desc_t& other370) {
+  match_spec = other370.match_spec;
+  has_mbr_hdl = other370.has_mbr_hdl;
+  has_grp_hdl = other370.has_grp_hdl;
+  selector_grp_hdl = other370.selector_grp_hdl;
+  action_mbr_hdl = other370.action_mbr_hdl;
+  action_desc = other370.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo13_tbl_entry_desc_t& obj) {
@@ -26436,8 +26569,8 @@ void netbufferv4_update_vallo14_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo14_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo14_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo14_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo14_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo14_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -26582,21 +26715,21 @@ void swap(netbufferv4_update_vallo14_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo14_tbl_entry_desc_t::netbufferv4_update_vallo14_tbl_entry_desc_t(const netbufferv4_update_vallo14_tbl_entry_desc_t& other369) {
-  match_spec = other369.match_spec;
-  has_mbr_hdl = other369.has_mbr_hdl;
-  has_grp_hdl = other369.has_grp_hdl;
-  selector_grp_hdl = other369.selector_grp_hdl;
-  action_mbr_hdl = other369.action_mbr_hdl;
-  action_desc = other369.action_desc;
+netbufferv4_update_vallo14_tbl_entry_desc_t::netbufferv4_update_vallo14_tbl_entry_desc_t(const netbufferv4_update_vallo14_tbl_entry_desc_t& other371) {
+  match_spec = other371.match_spec;
+  has_mbr_hdl = other371.has_mbr_hdl;
+  has_grp_hdl = other371.has_grp_hdl;
+  selector_grp_hdl = other371.selector_grp_hdl;
+  action_mbr_hdl = other371.action_mbr_hdl;
+  action_desc = other371.action_desc;
 }
-netbufferv4_update_vallo14_tbl_entry_desc_t& netbufferv4_update_vallo14_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo14_tbl_entry_desc_t& other370) {
-  match_spec = other370.match_spec;
-  has_mbr_hdl = other370.has_mbr_hdl;
-  has_grp_hdl = other370.has_grp_hdl;
-  selector_grp_hdl = other370.selector_grp_hdl;
-  action_mbr_hdl = other370.action_mbr_hdl;
-  action_desc = other370.action_desc;
+netbufferv4_update_vallo14_tbl_entry_desc_t& netbufferv4_update_vallo14_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo14_tbl_entry_desc_t& other372) {
+  match_spec = other372.match_spec;
+  has_mbr_hdl = other372.has_mbr_hdl;
+  has_grp_hdl = other372.has_grp_hdl;
+  selector_grp_hdl = other372.selector_grp_hdl;
+  action_mbr_hdl = other372.action_mbr_hdl;
+  action_desc = other372.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo14_tbl_entry_desc_t& obj) {
@@ -26641,8 +26774,8 @@ void netbufferv4_update_vallo15_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo15_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo15_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo15_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo15_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo15_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -26787,21 +26920,21 @@ void swap(netbufferv4_update_vallo15_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo15_tbl_entry_desc_t::netbufferv4_update_vallo15_tbl_entry_desc_t(const netbufferv4_update_vallo15_tbl_entry_desc_t& other371) {
-  match_spec = other371.match_spec;
-  has_mbr_hdl = other371.has_mbr_hdl;
-  has_grp_hdl = other371.has_grp_hdl;
-  selector_grp_hdl = other371.selector_grp_hdl;
-  action_mbr_hdl = other371.action_mbr_hdl;
-  action_desc = other371.action_desc;
+netbufferv4_update_vallo15_tbl_entry_desc_t::netbufferv4_update_vallo15_tbl_entry_desc_t(const netbufferv4_update_vallo15_tbl_entry_desc_t& other373) {
+  match_spec = other373.match_spec;
+  has_mbr_hdl = other373.has_mbr_hdl;
+  has_grp_hdl = other373.has_grp_hdl;
+  selector_grp_hdl = other373.selector_grp_hdl;
+  action_mbr_hdl = other373.action_mbr_hdl;
+  action_desc = other373.action_desc;
 }
-netbufferv4_update_vallo15_tbl_entry_desc_t& netbufferv4_update_vallo15_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo15_tbl_entry_desc_t& other372) {
-  match_spec = other372.match_spec;
-  has_mbr_hdl = other372.has_mbr_hdl;
-  has_grp_hdl = other372.has_grp_hdl;
-  selector_grp_hdl = other372.selector_grp_hdl;
-  action_mbr_hdl = other372.action_mbr_hdl;
-  action_desc = other372.action_desc;
+netbufferv4_update_vallo15_tbl_entry_desc_t& netbufferv4_update_vallo15_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo15_tbl_entry_desc_t& other374) {
+  match_spec = other374.match_spec;
+  has_mbr_hdl = other374.has_mbr_hdl;
+  has_grp_hdl = other374.has_grp_hdl;
+  selector_grp_hdl = other374.selector_grp_hdl;
+  action_mbr_hdl = other374.action_mbr_hdl;
+  action_desc = other374.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo15_tbl_entry_desc_t& obj) {
@@ -26846,8 +26979,8 @@ void netbufferv4_update_vallo16_tbl_entry_desc_t::__set_action_desc(const netbuf
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo16_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo16_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo16_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo16_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo16_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -26992,21 +27125,21 @@ void swap(netbufferv4_update_vallo16_tbl_entry_desc_t &a, netbufferv4_update_val
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo16_tbl_entry_desc_t::netbufferv4_update_vallo16_tbl_entry_desc_t(const netbufferv4_update_vallo16_tbl_entry_desc_t& other373) {
-  match_spec = other373.match_spec;
-  has_mbr_hdl = other373.has_mbr_hdl;
-  has_grp_hdl = other373.has_grp_hdl;
-  selector_grp_hdl = other373.selector_grp_hdl;
-  action_mbr_hdl = other373.action_mbr_hdl;
-  action_desc = other373.action_desc;
+netbufferv4_update_vallo16_tbl_entry_desc_t::netbufferv4_update_vallo16_tbl_entry_desc_t(const netbufferv4_update_vallo16_tbl_entry_desc_t& other375) {
+  match_spec = other375.match_spec;
+  has_mbr_hdl = other375.has_mbr_hdl;
+  has_grp_hdl = other375.has_grp_hdl;
+  selector_grp_hdl = other375.selector_grp_hdl;
+  action_mbr_hdl = other375.action_mbr_hdl;
+  action_desc = other375.action_desc;
 }
-netbufferv4_update_vallo16_tbl_entry_desc_t& netbufferv4_update_vallo16_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo16_tbl_entry_desc_t& other374) {
-  match_spec = other374.match_spec;
-  has_mbr_hdl = other374.has_mbr_hdl;
-  has_grp_hdl = other374.has_grp_hdl;
-  selector_grp_hdl = other374.selector_grp_hdl;
-  action_mbr_hdl = other374.action_mbr_hdl;
-  action_desc = other374.action_desc;
+netbufferv4_update_vallo16_tbl_entry_desc_t& netbufferv4_update_vallo16_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo16_tbl_entry_desc_t& other376) {
+  match_spec = other376.match_spec;
+  has_mbr_hdl = other376.has_mbr_hdl;
+  has_grp_hdl = other376.has_grp_hdl;
+  selector_grp_hdl = other376.selector_grp_hdl;
+  action_mbr_hdl = other376.action_mbr_hdl;
+  action_desc = other376.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo16_tbl_entry_desc_t& obj) {
@@ -27051,8 +27184,8 @@ void netbufferv4_update_vallo1_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo1_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo1_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo1_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo1_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo1_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -27197,21 +27330,21 @@ void swap(netbufferv4_update_vallo1_tbl_entry_desc_t &a, netbufferv4_update_vall
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo1_tbl_entry_desc_t::netbufferv4_update_vallo1_tbl_entry_desc_t(const netbufferv4_update_vallo1_tbl_entry_desc_t& other375) {
-  match_spec = other375.match_spec;
-  has_mbr_hdl = other375.has_mbr_hdl;
-  has_grp_hdl = other375.has_grp_hdl;
-  selector_grp_hdl = other375.selector_grp_hdl;
-  action_mbr_hdl = other375.action_mbr_hdl;
-  action_desc = other375.action_desc;
+netbufferv4_update_vallo1_tbl_entry_desc_t::netbufferv4_update_vallo1_tbl_entry_desc_t(const netbufferv4_update_vallo1_tbl_entry_desc_t& other377) {
+  match_spec = other377.match_spec;
+  has_mbr_hdl = other377.has_mbr_hdl;
+  has_grp_hdl = other377.has_grp_hdl;
+  selector_grp_hdl = other377.selector_grp_hdl;
+  action_mbr_hdl = other377.action_mbr_hdl;
+  action_desc = other377.action_desc;
 }
-netbufferv4_update_vallo1_tbl_entry_desc_t& netbufferv4_update_vallo1_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo1_tbl_entry_desc_t& other376) {
-  match_spec = other376.match_spec;
-  has_mbr_hdl = other376.has_mbr_hdl;
-  has_grp_hdl = other376.has_grp_hdl;
-  selector_grp_hdl = other376.selector_grp_hdl;
-  action_mbr_hdl = other376.action_mbr_hdl;
-  action_desc = other376.action_desc;
+netbufferv4_update_vallo1_tbl_entry_desc_t& netbufferv4_update_vallo1_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo1_tbl_entry_desc_t& other378) {
+  match_spec = other378.match_spec;
+  has_mbr_hdl = other378.has_mbr_hdl;
+  has_grp_hdl = other378.has_grp_hdl;
+  selector_grp_hdl = other378.selector_grp_hdl;
+  action_mbr_hdl = other378.action_mbr_hdl;
+  action_desc = other378.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo1_tbl_entry_desc_t& obj) {
@@ -27256,8 +27389,8 @@ void netbufferv4_update_vallo2_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo2_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo2_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo2_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo2_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo2_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -27402,21 +27535,21 @@ void swap(netbufferv4_update_vallo2_tbl_entry_desc_t &a, netbufferv4_update_vall
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo2_tbl_entry_desc_t::netbufferv4_update_vallo2_tbl_entry_desc_t(const netbufferv4_update_vallo2_tbl_entry_desc_t& other377) {
-  match_spec = other377.match_spec;
-  has_mbr_hdl = other377.has_mbr_hdl;
-  has_grp_hdl = other377.has_grp_hdl;
-  selector_grp_hdl = other377.selector_grp_hdl;
-  action_mbr_hdl = other377.action_mbr_hdl;
-  action_desc = other377.action_desc;
+netbufferv4_update_vallo2_tbl_entry_desc_t::netbufferv4_update_vallo2_tbl_entry_desc_t(const netbufferv4_update_vallo2_tbl_entry_desc_t& other379) {
+  match_spec = other379.match_spec;
+  has_mbr_hdl = other379.has_mbr_hdl;
+  has_grp_hdl = other379.has_grp_hdl;
+  selector_grp_hdl = other379.selector_grp_hdl;
+  action_mbr_hdl = other379.action_mbr_hdl;
+  action_desc = other379.action_desc;
 }
-netbufferv4_update_vallo2_tbl_entry_desc_t& netbufferv4_update_vallo2_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo2_tbl_entry_desc_t& other378) {
-  match_spec = other378.match_spec;
-  has_mbr_hdl = other378.has_mbr_hdl;
-  has_grp_hdl = other378.has_grp_hdl;
-  selector_grp_hdl = other378.selector_grp_hdl;
-  action_mbr_hdl = other378.action_mbr_hdl;
-  action_desc = other378.action_desc;
+netbufferv4_update_vallo2_tbl_entry_desc_t& netbufferv4_update_vallo2_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo2_tbl_entry_desc_t& other380) {
+  match_spec = other380.match_spec;
+  has_mbr_hdl = other380.has_mbr_hdl;
+  has_grp_hdl = other380.has_grp_hdl;
+  selector_grp_hdl = other380.selector_grp_hdl;
+  action_mbr_hdl = other380.action_mbr_hdl;
+  action_desc = other380.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo2_tbl_entry_desc_t& obj) {
@@ -27461,8 +27594,8 @@ void netbufferv4_update_vallo3_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo3_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo3_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo3_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo3_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo3_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -27607,21 +27740,21 @@ void swap(netbufferv4_update_vallo3_tbl_entry_desc_t &a, netbufferv4_update_vall
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo3_tbl_entry_desc_t::netbufferv4_update_vallo3_tbl_entry_desc_t(const netbufferv4_update_vallo3_tbl_entry_desc_t& other379) {
-  match_spec = other379.match_spec;
-  has_mbr_hdl = other379.has_mbr_hdl;
-  has_grp_hdl = other379.has_grp_hdl;
-  selector_grp_hdl = other379.selector_grp_hdl;
-  action_mbr_hdl = other379.action_mbr_hdl;
-  action_desc = other379.action_desc;
+netbufferv4_update_vallo3_tbl_entry_desc_t::netbufferv4_update_vallo3_tbl_entry_desc_t(const netbufferv4_update_vallo3_tbl_entry_desc_t& other381) {
+  match_spec = other381.match_spec;
+  has_mbr_hdl = other381.has_mbr_hdl;
+  has_grp_hdl = other381.has_grp_hdl;
+  selector_grp_hdl = other381.selector_grp_hdl;
+  action_mbr_hdl = other381.action_mbr_hdl;
+  action_desc = other381.action_desc;
 }
-netbufferv4_update_vallo3_tbl_entry_desc_t& netbufferv4_update_vallo3_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo3_tbl_entry_desc_t& other380) {
-  match_spec = other380.match_spec;
-  has_mbr_hdl = other380.has_mbr_hdl;
-  has_grp_hdl = other380.has_grp_hdl;
-  selector_grp_hdl = other380.selector_grp_hdl;
-  action_mbr_hdl = other380.action_mbr_hdl;
-  action_desc = other380.action_desc;
+netbufferv4_update_vallo3_tbl_entry_desc_t& netbufferv4_update_vallo3_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo3_tbl_entry_desc_t& other382) {
+  match_spec = other382.match_spec;
+  has_mbr_hdl = other382.has_mbr_hdl;
+  has_grp_hdl = other382.has_grp_hdl;
+  selector_grp_hdl = other382.selector_grp_hdl;
+  action_mbr_hdl = other382.action_mbr_hdl;
+  action_desc = other382.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo3_tbl_entry_desc_t& obj) {
@@ -27666,8 +27799,8 @@ void netbufferv4_update_vallo4_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo4_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo4_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo4_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo4_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo4_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -27812,21 +27945,21 @@ void swap(netbufferv4_update_vallo4_tbl_entry_desc_t &a, netbufferv4_update_vall
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo4_tbl_entry_desc_t::netbufferv4_update_vallo4_tbl_entry_desc_t(const netbufferv4_update_vallo4_tbl_entry_desc_t& other381) {
-  match_spec = other381.match_spec;
-  has_mbr_hdl = other381.has_mbr_hdl;
-  has_grp_hdl = other381.has_grp_hdl;
-  selector_grp_hdl = other381.selector_grp_hdl;
-  action_mbr_hdl = other381.action_mbr_hdl;
-  action_desc = other381.action_desc;
+netbufferv4_update_vallo4_tbl_entry_desc_t::netbufferv4_update_vallo4_tbl_entry_desc_t(const netbufferv4_update_vallo4_tbl_entry_desc_t& other383) {
+  match_spec = other383.match_spec;
+  has_mbr_hdl = other383.has_mbr_hdl;
+  has_grp_hdl = other383.has_grp_hdl;
+  selector_grp_hdl = other383.selector_grp_hdl;
+  action_mbr_hdl = other383.action_mbr_hdl;
+  action_desc = other383.action_desc;
 }
-netbufferv4_update_vallo4_tbl_entry_desc_t& netbufferv4_update_vallo4_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo4_tbl_entry_desc_t& other382) {
-  match_spec = other382.match_spec;
-  has_mbr_hdl = other382.has_mbr_hdl;
-  has_grp_hdl = other382.has_grp_hdl;
-  selector_grp_hdl = other382.selector_grp_hdl;
-  action_mbr_hdl = other382.action_mbr_hdl;
-  action_desc = other382.action_desc;
+netbufferv4_update_vallo4_tbl_entry_desc_t& netbufferv4_update_vallo4_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo4_tbl_entry_desc_t& other384) {
+  match_spec = other384.match_spec;
+  has_mbr_hdl = other384.has_mbr_hdl;
+  has_grp_hdl = other384.has_grp_hdl;
+  selector_grp_hdl = other384.selector_grp_hdl;
+  action_mbr_hdl = other384.action_mbr_hdl;
+  action_desc = other384.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo4_tbl_entry_desc_t& obj) {
@@ -27871,8 +28004,8 @@ void netbufferv4_update_vallo5_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo5_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo5_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo5_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo5_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo5_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -28017,21 +28150,21 @@ void swap(netbufferv4_update_vallo5_tbl_entry_desc_t &a, netbufferv4_update_vall
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo5_tbl_entry_desc_t::netbufferv4_update_vallo5_tbl_entry_desc_t(const netbufferv4_update_vallo5_tbl_entry_desc_t& other383) {
-  match_spec = other383.match_spec;
-  has_mbr_hdl = other383.has_mbr_hdl;
-  has_grp_hdl = other383.has_grp_hdl;
-  selector_grp_hdl = other383.selector_grp_hdl;
-  action_mbr_hdl = other383.action_mbr_hdl;
-  action_desc = other383.action_desc;
+netbufferv4_update_vallo5_tbl_entry_desc_t::netbufferv4_update_vallo5_tbl_entry_desc_t(const netbufferv4_update_vallo5_tbl_entry_desc_t& other385) {
+  match_spec = other385.match_spec;
+  has_mbr_hdl = other385.has_mbr_hdl;
+  has_grp_hdl = other385.has_grp_hdl;
+  selector_grp_hdl = other385.selector_grp_hdl;
+  action_mbr_hdl = other385.action_mbr_hdl;
+  action_desc = other385.action_desc;
 }
-netbufferv4_update_vallo5_tbl_entry_desc_t& netbufferv4_update_vallo5_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo5_tbl_entry_desc_t& other384) {
-  match_spec = other384.match_spec;
-  has_mbr_hdl = other384.has_mbr_hdl;
-  has_grp_hdl = other384.has_grp_hdl;
-  selector_grp_hdl = other384.selector_grp_hdl;
-  action_mbr_hdl = other384.action_mbr_hdl;
-  action_desc = other384.action_desc;
+netbufferv4_update_vallo5_tbl_entry_desc_t& netbufferv4_update_vallo5_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo5_tbl_entry_desc_t& other386) {
+  match_spec = other386.match_spec;
+  has_mbr_hdl = other386.has_mbr_hdl;
+  has_grp_hdl = other386.has_grp_hdl;
+  selector_grp_hdl = other386.selector_grp_hdl;
+  action_mbr_hdl = other386.action_mbr_hdl;
+  action_desc = other386.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo5_tbl_entry_desc_t& obj) {
@@ -28076,8 +28209,8 @@ void netbufferv4_update_vallo6_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo6_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo6_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo6_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo6_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo6_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -28222,21 +28355,21 @@ void swap(netbufferv4_update_vallo6_tbl_entry_desc_t &a, netbufferv4_update_vall
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo6_tbl_entry_desc_t::netbufferv4_update_vallo6_tbl_entry_desc_t(const netbufferv4_update_vallo6_tbl_entry_desc_t& other385) {
-  match_spec = other385.match_spec;
-  has_mbr_hdl = other385.has_mbr_hdl;
-  has_grp_hdl = other385.has_grp_hdl;
-  selector_grp_hdl = other385.selector_grp_hdl;
-  action_mbr_hdl = other385.action_mbr_hdl;
-  action_desc = other385.action_desc;
+netbufferv4_update_vallo6_tbl_entry_desc_t::netbufferv4_update_vallo6_tbl_entry_desc_t(const netbufferv4_update_vallo6_tbl_entry_desc_t& other387) {
+  match_spec = other387.match_spec;
+  has_mbr_hdl = other387.has_mbr_hdl;
+  has_grp_hdl = other387.has_grp_hdl;
+  selector_grp_hdl = other387.selector_grp_hdl;
+  action_mbr_hdl = other387.action_mbr_hdl;
+  action_desc = other387.action_desc;
 }
-netbufferv4_update_vallo6_tbl_entry_desc_t& netbufferv4_update_vallo6_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo6_tbl_entry_desc_t& other386) {
-  match_spec = other386.match_spec;
-  has_mbr_hdl = other386.has_mbr_hdl;
-  has_grp_hdl = other386.has_grp_hdl;
-  selector_grp_hdl = other386.selector_grp_hdl;
-  action_mbr_hdl = other386.action_mbr_hdl;
-  action_desc = other386.action_desc;
+netbufferv4_update_vallo6_tbl_entry_desc_t& netbufferv4_update_vallo6_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo6_tbl_entry_desc_t& other388) {
+  match_spec = other388.match_spec;
+  has_mbr_hdl = other388.has_mbr_hdl;
+  has_grp_hdl = other388.has_grp_hdl;
+  selector_grp_hdl = other388.selector_grp_hdl;
+  action_mbr_hdl = other388.action_mbr_hdl;
+  action_desc = other388.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo6_tbl_entry_desc_t& obj) {
@@ -28281,8 +28414,8 @@ void netbufferv4_update_vallo7_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo7_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo7_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo7_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo7_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo7_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -28427,21 +28560,21 @@ void swap(netbufferv4_update_vallo7_tbl_entry_desc_t &a, netbufferv4_update_vall
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo7_tbl_entry_desc_t::netbufferv4_update_vallo7_tbl_entry_desc_t(const netbufferv4_update_vallo7_tbl_entry_desc_t& other387) {
-  match_spec = other387.match_spec;
-  has_mbr_hdl = other387.has_mbr_hdl;
-  has_grp_hdl = other387.has_grp_hdl;
-  selector_grp_hdl = other387.selector_grp_hdl;
-  action_mbr_hdl = other387.action_mbr_hdl;
-  action_desc = other387.action_desc;
+netbufferv4_update_vallo7_tbl_entry_desc_t::netbufferv4_update_vallo7_tbl_entry_desc_t(const netbufferv4_update_vallo7_tbl_entry_desc_t& other389) {
+  match_spec = other389.match_spec;
+  has_mbr_hdl = other389.has_mbr_hdl;
+  has_grp_hdl = other389.has_grp_hdl;
+  selector_grp_hdl = other389.selector_grp_hdl;
+  action_mbr_hdl = other389.action_mbr_hdl;
+  action_desc = other389.action_desc;
 }
-netbufferv4_update_vallo7_tbl_entry_desc_t& netbufferv4_update_vallo7_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo7_tbl_entry_desc_t& other388) {
-  match_spec = other388.match_spec;
-  has_mbr_hdl = other388.has_mbr_hdl;
-  has_grp_hdl = other388.has_grp_hdl;
-  selector_grp_hdl = other388.selector_grp_hdl;
-  action_mbr_hdl = other388.action_mbr_hdl;
-  action_desc = other388.action_desc;
+netbufferv4_update_vallo7_tbl_entry_desc_t& netbufferv4_update_vallo7_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo7_tbl_entry_desc_t& other390) {
+  match_spec = other390.match_spec;
+  has_mbr_hdl = other390.has_mbr_hdl;
+  has_grp_hdl = other390.has_grp_hdl;
+  selector_grp_hdl = other390.selector_grp_hdl;
+  action_mbr_hdl = other390.action_mbr_hdl;
+  action_desc = other390.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo7_tbl_entry_desc_t& obj) {
@@ -28486,8 +28619,8 @@ void netbufferv4_update_vallo8_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo8_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo8_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo8_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo8_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo8_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -28632,21 +28765,21 @@ void swap(netbufferv4_update_vallo8_tbl_entry_desc_t &a, netbufferv4_update_vall
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo8_tbl_entry_desc_t::netbufferv4_update_vallo8_tbl_entry_desc_t(const netbufferv4_update_vallo8_tbl_entry_desc_t& other389) {
-  match_spec = other389.match_spec;
-  has_mbr_hdl = other389.has_mbr_hdl;
-  has_grp_hdl = other389.has_grp_hdl;
-  selector_grp_hdl = other389.selector_grp_hdl;
-  action_mbr_hdl = other389.action_mbr_hdl;
-  action_desc = other389.action_desc;
+netbufferv4_update_vallo8_tbl_entry_desc_t::netbufferv4_update_vallo8_tbl_entry_desc_t(const netbufferv4_update_vallo8_tbl_entry_desc_t& other391) {
+  match_spec = other391.match_spec;
+  has_mbr_hdl = other391.has_mbr_hdl;
+  has_grp_hdl = other391.has_grp_hdl;
+  selector_grp_hdl = other391.selector_grp_hdl;
+  action_mbr_hdl = other391.action_mbr_hdl;
+  action_desc = other391.action_desc;
 }
-netbufferv4_update_vallo8_tbl_entry_desc_t& netbufferv4_update_vallo8_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo8_tbl_entry_desc_t& other390) {
-  match_spec = other390.match_spec;
-  has_mbr_hdl = other390.has_mbr_hdl;
-  has_grp_hdl = other390.has_grp_hdl;
-  selector_grp_hdl = other390.selector_grp_hdl;
-  action_mbr_hdl = other390.action_mbr_hdl;
-  action_desc = other390.action_desc;
+netbufferv4_update_vallo8_tbl_entry_desc_t& netbufferv4_update_vallo8_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo8_tbl_entry_desc_t& other392) {
+  match_spec = other392.match_spec;
+  has_mbr_hdl = other392.has_mbr_hdl;
+  has_grp_hdl = other392.has_grp_hdl;
+  selector_grp_hdl = other392.selector_grp_hdl;
+  action_mbr_hdl = other392.action_mbr_hdl;
+  action_desc = other392.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo8_tbl_entry_desc_t& obj) {
@@ -28691,8 +28824,8 @@ void netbufferv4_update_vallo9_tbl_entry_desc_t::__set_action_desc(const netbuff
   this->action_desc = val;
 }
 
-const char* netbufferv4_update_vallo9_tbl_entry_desc_t::ascii_fingerprint = "95270DA473FD0CE42B76B0D99D880721";
-const uint8_t netbufferv4_update_vallo9_tbl_entry_desc_t::binary_fingerprint[16] = {0x95,0x27,0x0D,0xA4,0x73,0xFD,0x0C,0xE4,0x2B,0x76,0xB0,0xD9,0x9D,0x88,0x07,0x21};
+const char* netbufferv4_update_vallo9_tbl_entry_desc_t::ascii_fingerprint = "6710308B5288A3BCC2647CE2E9164863";
+const uint8_t netbufferv4_update_vallo9_tbl_entry_desc_t::binary_fingerprint[16] = {0x67,0x10,0x30,0x8B,0x52,0x88,0xA3,0xBC,0xC2,0x64,0x7C,0xE2,0xE9,0x16,0x48,0x63};
 
 uint32_t netbufferv4_update_vallo9_tbl_entry_desc_t::read(::apache::thrift::protocol::TProtocol* iprot) {
 
@@ -28837,21 +28970,21 @@ void swap(netbufferv4_update_vallo9_tbl_entry_desc_t &a, netbufferv4_update_vall
   swap(a.action_desc, b.action_desc);
 }
 
-netbufferv4_update_vallo9_tbl_entry_desc_t::netbufferv4_update_vallo9_tbl_entry_desc_t(const netbufferv4_update_vallo9_tbl_entry_desc_t& other391) {
-  match_spec = other391.match_spec;
-  has_mbr_hdl = other391.has_mbr_hdl;
-  has_grp_hdl = other391.has_grp_hdl;
-  selector_grp_hdl = other391.selector_grp_hdl;
-  action_mbr_hdl = other391.action_mbr_hdl;
-  action_desc = other391.action_desc;
+netbufferv4_update_vallo9_tbl_entry_desc_t::netbufferv4_update_vallo9_tbl_entry_desc_t(const netbufferv4_update_vallo9_tbl_entry_desc_t& other393) {
+  match_spec = other393.match_spec;
+  has_mbr_hdl = other393.has_mbr_hdl;
+  has_grp_hdl = other393.has_grp_hdl;
+  selector_grp_hdl = other393.selector_grp_hdl;
+  action_mbr_hdl = other393.action_mbr_hdl;
+  action_desc = other393.action_desc;
 }
-netbufferv4_update_vallo9_tbl_entry_desc_t& netbufferv4_update_vallo9_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo9_tbl_entry_desc_t& other392) {
-  match_spec = other392.match_spec;
-  has_mbr_hdl = other392.has_mbr_hdl;
-  has_grp_hdl = other392.has_grp_hdl;
-  selector_grp_hdl = other392.selector_grp_hdl;
-  action_mbr_hdl = other392.action_mbr_hdl;
-  action_desc = other392.action_desc;
+netbufferv4_update_vallo9_tbl_entry_desc_t& netbufferv4_update_vallo9_tbl_entry_desc_t::operator=(const netbufferv4_update_vallo9_tbl_entry_desc_t& other394) {
+  match_spec = other394.match_spec;
+  has_mbr_hdl = other394.has_mbr_hdl;
+  has_grp_hdl = other394.has_grp_hdl;
+  selector_grp_hdl = other394.selector_grp_hdl;
+  action_mbr_hdl = other394.action_mbr_hdl;
+  action_desc = other394.action_desc;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const netbufferv4_update_vallo9_tbl_entry_desc_t& obj) {
@@ -28940,13 +29073,13 @@ void swap(InvalidTableOperation &a, InvalidTableOperation &b) {
   swap(a.__isset, b.__isset);
 }
 
-InvalidTableOperation::InvalidTableOperation(const InvalidTableOperation& other393) : TException() {
-  code = other393.code;
-  __isset = other393.__isset;
+InvalidTableOperation::InvalidTableOperation(const InvalidTableOperation& other395) : TException() {
+  code = other395.code;
+  __isset = other395.__isset;
 }
-InvalidTableOperation& InvalidTableOperation::operator=(const InvalidTableOperation& other394) {
-  code = other394.code;
-  __isset = other394.__isset;
+InvalidTableOperation& InvalidTableOperation::operator=(const InvalidTableOperation& other396) {
+  code = other396.code;
+  __isset = other396.__isset;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const InvalidTableOperation& obj) {
@@ -29030,13 +29163,13 @@ void swap(InvalidLearnOperation &a, InvalidLearnOperation &b) {
   swap(a.__isset, b.__isset);
 }
 
-InvalidLearnOperation::InvalidLearnOperation(const InvalidLearnOperation& other395) : TException() {
-  code = other395.code;
-  __isset = other395.__isset;
+InvalidLearnOperation::InvalidLearnOperation(const InvalidLearnOperation& other397) : TException() {
+  code = other397.code;
+  __isset = other397.__isset;
 }
-InvalidLearnOperation& InvalidLearnOperation::operator=(const InvalidLearnOperation& other396) {
-  code = other396.code;
-  __isset = other396.__isset;
+InvalidLearnOperation& InvalidLearnOperation::operator=(const InvalidLearnOperation& other398) {
+  code = other398.code;
+  __isset = other398.__isset;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const InvalidLearnOperation& obj) {
@@ -29120,13 +29253,13 @@ void swap(InvalidDbgOperation &a, InvalidDbgOperation &b) {
   swap(a.__isset, b.__isset);
 }
 
-InvalidDbgOperation::InvalidDbgOperation(const InvalidDbgOperation& other397) : TException() {
-  code = other397.code;
-  __isset = other397.__isset;
+InvalidDbgOperation::InvalidDbgOperation(const InvalidDbgOperation& other399) : TException() {
+  code = other399.code;
+  __isset = other399.__isset;
 }
-InvalidDbgOperation& InvalidDbgOperation::operator=(const InvalidDbgOperation& other398) {
-  code = other398.code;
-  __isset = other398.__isset;
+InvalidDbgOperation& InvalidDbgOperation::operator=(const InvalidDbgOperation& other400) {
+  code = other400.code;
+  __isset = other400.__isset;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const InvalidDbgOperation& obj) {
@@ -29210,13 +29343,13 @@ void swap(InvalidSnapshotOperation &a, InvalidSnapshotOperation &b) {
   swap(a.__isset, b.__isset);
 }
 
-InvalidSnapshotOperation::InvalidSnapshotOperation(const InvalidSnapshotOperation& other399) : TException() {
-  code = other399.code;
-  __isset = other399.__isset;
+InvalidSnapshotOperation::InvalidSnapshotOperation(const InvalidSnapshotOperation& other401) : TException() {
+  code = other401.code;
+  __isset = other401.__isset;
 }
-InvalidSnapshotOperation& InvalidSnapshotOperation::operator=(const InvalidSnapshotOperation& other400) {
-  code = other400.code;
-  __isset = other400.__isset;
+InvalidSnapshotOperation& InvalidSnapshotOperation::operator=(const InvalidSnapshotOperation& other402) {
+  code = other402.code;
+  __isset = other402.__isset;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const InvalidSnapshotOperation& obj) {
@@ -29300,13 +29433,13 @@ void swap(InvalidCounterOperation &a, InvalidCounterOperation &b) {
   swap(a.__isset, b.__isset);
 }
 
-InvalidCounterOperation::InvalidCounterOperation(const InvalidCounterOperation& other401) : TException() {
-  code = other401.code;
-  __isset = other401.__isset;
+InvalidCounterOperation::InvalidCounterOperation(const InvalidCounterOperation& other403) : TException() {
+  code = other403.code;
+  __isset = other403.__isset;
 }
-InvalidCounterOperation& InvalidCounterOperation::operator=(const InvalidCounterOperation& other402) {
-  code = other402.code;
-  __isset = other402.__isset;
+InvalidCounterOperation& InvalidCounterOperation::operator=(const InvalidCounterOperation& other404) {
+  code = other404.code;
+  __isset = other404.__isset;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const InvalidCounterOperation& obj) {
@@ -29390,13 +29523,13 @@ void swap(InvalidRegisterOperation &a, InvalidRegisterOperation &b) {
   swap(a.__isset, b.__isset);
 }
 
-InvalidRegisterOperation::InvalidRegisterOperation(const InvalidRegisterOperation& other403) : TException() {
-  code = other403.code;
-  __isset = other403.__isset;
+InvalidRegisterOperation::InvalidRegisterOperation(const InvalidRegisterOperation& other405) : TException() {
+  code = other405.code;
+  __isset = other405.__isset;
 }
-InvalidRegisterOperation& InvalidRegisterOperation::operator=(const InvalidRegisterOperation& other404) {
-  code = other404.code;
-  __isset = other404.__isset;
+InvalidRegisterOperation& InvalidRegisterOperation::operator=(const InvalidRegisterOperation& other406) {
+  code = other406.code;
+  __isset = other406.__isset;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const InvalidRegisterOperation& obj) {
@@ -29480,13 +29613,13 @@ void swap(InvalidMeterOperation &a, InvalidMeterOperation &b) {
   swap(a.__isset, b.__isset);
 }
 
-InvalidMeterOperation::InvalidMeterOperation(const InvalidMeterOperation& other405) : TException() {
-  code = other405.code;
-  __isset = other405.__isset;
+InvalidMeterOperation::InvalidMeterOperation(const InvalidMeterOperation& other407) : TException() {
+  code = other407.code;
+  __isset = other407.__isset;
 }
-InvalidMeterOperation& InvalidMeterOperation::operator=(const InvalidMeterOperation& other406) {
-  code = other406.code;
-  __isset = other406.__isset;
+InvalidMeterOperation& InvalidMeterOperation::operator=(const InvalidMeterOperation& other408) {
+  code = other408.code;
+  __isset = other408.__isset;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const InvalidMeterOperation& obj) {
@@ -29570,13 +29703,13 @@ void swap(InvalidLPFOperation &a, InvalidLPFOperation &b) {
   swap(a.__isset, b.__isset);
 }
 
-InvalidLPFOperation::InvalidLPFOperation(const InvalidLPFOperation& other407) : TException() {
-  code = other407.code;
-  __isset = other407.__isset;
+InvalidLPFOperation::InvalidLPFOperation(const InvalidLPFOperation& other409) : TException() {
+  code = other409.code;
+  __isset = other409.__isset;
 }
-InvalidLPFOperation& InvalidLPFOperation::operator=(const InvalidLPFOperation& other408) {
-  code = other408.code;
-  __isset = other408.__isset;
+InvalidLPFOperation& InvalidLPFOperation::operator=(const InvalidLPFOperation& other410) {
+  code = other410.code;
+  __isset = other410.__isset;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const InvalidLPFOperation& obj) {
@@ -29660,13 +29793,13 @@ void swap(InvalidWREDOperation &a, InvalidWREDOperation &b) {
   swap(a.__isset, b.__isset);
 }
 
-InvalidWREDOperation::InvalidWREDOperation(const InvalidWREDOperation& other409) : TException() {
-  code = other409.code;
-  __isset = other409.__isset;
+InvalidWREDOperation::InvalidWREDOperation(const InvalidWREDOperation& other411) : TException() {
+  code = other411.code;
+  __isset = other411.__isset;
 }
-InvalidWREDOperation& InvalidWREDOperation::operator=(const InvalidWREDOperation& other410) {
-  code = other410.code;
-  __isset = other410.__isset;
+InvalidWREDOperation& InvalidWREDOperation::operator=(const InvalidWREDOperation& other412) {
+  code = other412.code;
+  __isset = other412.__isset;
   return *this;
 }
 std::ostream& operator<<(std::ostream& out, const InvalidWREDOperation& obj) {
