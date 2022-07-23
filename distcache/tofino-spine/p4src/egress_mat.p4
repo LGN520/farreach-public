@@ -543,68 +543,65 @@ table update_ipmac_srcport_tbl {
 /*
 // CACHE_POP_INSWITCH_ACK, GETREQ (cloned by NETCACHE_GETREQ_POP), WARMUPACK (cloned by NETCACHE_WARMUPREQ_INSWITCH_POP), NETCACHE_VALUEUPDATE_ACK
 action update_onlyop_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 1(debug_hdr)
-	//modify_field(udp_hdr.hdrlen, 27);
-	//modify_field(ipv4_hdr.totalLen, 47);
-	modify_field(udp_hdr.hdrlen, 26);
-	modify_field(ipv4_hdr.totalLen, 46);
+	// [20(iphdr)] + 8(udphdr) + 20(ophdr)
+	modify_field(udp_hdr.hdrlen, 28);
+	modify_field(ipv4_hdr.totalLen, 48);
 }
 
 // GETRES
 action update_val_stat_pktlen(aligned_vallen) {
-	// 20[iphdr] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(stat) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 35);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 55);
-	add(udp_hdr.hdrlen, aligned_vallen, 34);
-	add(ipv4_hdr.totalLen, aligned_vallen, 54);
+	// 20[iphdr] + 8(udphdr) + 20(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(stat)
+	add(udp_hdr.hdrlen, aligned_vallen, 36);
+	add(ipv4_hdr.totalLen, aligned_vallen, 56);
 }
 
 // PUTREQ_SEQ, NETCACHE_PUTREQ_SEQ_CACHED
 action update_val_seq_pktlen(aligned_vallen) {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq) + 1(debug_hdr)
-	//add(udp_hdr.hdrlen, aligned_vallen, 35);
-	//add(ipv4_hdr.totalLen, aligned_vallen, 55);
-	add(udp_hdr.hdrlen, aligned_vallen, 34);
-	add(ipv4_hdr.totalLen, aligned_vallen, 54);
+	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 2(vallen) + aligned_vallen(val) + 2(shadowtype) + 4(seq)
+	add(udp_hdr.hdrlen, aligned_vallen, 36);
+	add(ipv4_hdr.totalLen, aligned_vallen, 56);
 }
 
-// PUTRES, DELRES
+// PUTRES, DELRES (DistCache does NOT need)
 action update_stat_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 4(stat) + 1(debug_hdr)
-	//modify_field(udp_hdr.hdrlen, 33);
-	//modify_field(ipv4_hdr.totalLen, 53);
-	modify_field(udp_hdr.hdrlen, 32);
-	modify_field(ipv4_hdr.totalLen, 52);
+	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 2(shadowtype) + 4(stat)
+	modify_field(udp_hdr.hdrlen, 34);
+	modify_field(ipv4_hdr.totalLen, 54);
 }
 
 // DELREQ_SEQ, NETCACHE_DELREQ_SEQ_CACHED
 action update_seq_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 4(seq) + 1(debug_hdr)
-	//modify_field(udp_hdr.hdrlen, 33);
-	/modify_field(ipv4_hdr.totalLen, 53);
-	modify_field(udp_hdr.hdrlen, 32);
-	modify_field(ipv4_hdr.totalLen, 52);
+	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 2(shadowtype) + 4(seq) 
+	modify_field(udp_hdr.hdrlen, 34);
+	modify_field(ipv4_hdr.totalLen, 54);
 }
  
 // SCANREQ_SPLIT
 action update_scanreqsplit_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 16(endkey) + 7(split_hdr)
-	modify_field(udp_hdr.hdrlen, 49);
-	modify_field(ipv4_hdr.totalLen, 69);
+	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 16(endkey) + 11(split_hdr)
+	modify_field(udp_hdr.hdrlen, 55);
+	modify_field(ipv4_hdr.totalLen, 75);
+}
+ 
+// CACHE_EVICT_LOADFREQ_INSWITCH_ACK
+action update_frequency_pktlen() {
+	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 4(frequency)
+	modify_field(udp_hdr.hdrlen, 32);
+	modify_field(ipv4_hdr.totalLen, 52);
 }
 
 // NETCACHE_GETREQ_POP
 action update_ophdr_clonehdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 18(clonehdr)
-	modify_field(udp_hdr.hdrlen, 44);
-	modify_field(ipv4_hdr.totalLen, 64);
+	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 18(clonehdr)
+	modify_field(udp_hdr.hdrlen, 46);
+	modify_field(ipv4_hdr.totalLen, 66);
 }
 
 // NETCACHE_WARMUPREQ_INSWITCH_POP
 action update_ophdr_inswitchhdr_clonehdr_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 18(ophdr) + 2(shadowtype) + 28(inswitchhdr) + 18(clonehdr)
-	modify_field(udp_hdr.hdrlen, 74);
-	modify_field(ipv4_hdr.totalLen, 94);
+	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 2(shadowtype) + 28(inswitchhdr) + 18(clonehdr)
+	modify_field(udp_hdr.hdrlen, 76);
+	modify_field(ipv4_hdr.totalLen, 96);
 }
 */
 

@@ -1100,23 +1100,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     vallen_start = (i-1)*8+1 # 1, 9, ..., 121
                     vallen_end = (i-1)*8+8 # 8, 16, ..., 128
                     aligned_vallen = vallen_end # 8, 16, ..., 128
-                ## DEPRECATED: including 1B debug_hdr
-                #val_stat_udplen = aligned_vallen + 34
-                #val_stat_iplen = aligned_vallen + 54
-                #val_seq_inswitch_stat_clone_udplen = aligned_vallen + 47
-                #val_seq_inswitch_stat_clone_iplen = aligned_vallen + 67
-                #val_seq_udplen = aligned_vallen + 35
-                #val_seq_iplen = aligned_vallen + 55
-                val_stat_udplen = aligned_vallen + 34
-                val_stat_iplen = aligned_vallen + 54
-                val_seq_inswitch_stat_clone_udplen = aligned_vallen + 68
-                val_seq_inswitch_stat_clone_iplen = aligned_vallen + 88
-                val_seq_udplen = aligned_vallen + 34
-                val_seq_iplen = aligned_vallen + 54
-                val_seq_stat_udplen = aligned_vallen + 38
-                val_seq_stat_iplen = aligned_vallen + 58
-                val_seq_inswitch_stat_udplen = aligned_vallen + 54
-                val_seq_inswitch_stat_iplen = aligned_vallen + 74
+                val_stat_udplen = aligned_vallen + 36
+                val_stat_iplen = aligned_vallen + 56
+                val_seq_inswitch_stat_clone_udplen = aligned_vallen + 70
+                val_seq_inswitch_stat_clone_iplen = aligned_vallen + 90
+                val_seq_udplen = aligned_vallen + 36
+                val_seq_iplen = aligned_vallen + 56
+                val_seq_stat_udplen = aligned_vallen + 40
+                val_seq_stat_iplen = aligned_vallen + 60
+                val_seq_inswitch_stat_udplen = aligned_vallen + 56
+                val_seq_inswitch_stat_iplen = aligned_vallen + 76
                 matchspec0 = distfarreachspine_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=GETRES,
                         vallen_hdr_vallen_start=vallen_start,
@@ -1132,7 +1125,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     actnspec0 = distfarreachspine_update_pktlen_action_spec_t(val_seq_inswitch_stat_clone_udplen, val_seq_inswitch_stat_clone_iplen)
                     self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-                for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ]:
+                #for tmpoptype in [PUTREQ_SEQ, PUTREQ_POP_SEQ]:
+                for tmpoptype in [PUTREQ_SEQ]:
                     matchspec0 = distfarreachspine_update_pktlen_tbl_match_spec_t(\
                             op_hdr_optype=tmpoptype,
                             vallen_hdr_vallen_start=vallen_start,
@@ -1154,23 +1148,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 actnspec0 = distfarreachspine_update_pktlen_action_spec_t(val_seq_inswitch_stat_udplen, val_seq_inswitch_stat_iplen)
                 self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                         self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-            ## DEPRECATED: including 1B debug_hdr
-            #onlyop_udplen = 27
-            #onlyop_iplen = 47
-            #stat_udplen = 33
-            #stat_iplen = 53
-            #seq_udplen = 33
-            #seq_iplen = 53
-            onlyop_udplen = 26
-            onlyop_iplen = 46
-            stat_udplen = 32
-            stat_iplen = 52
-            seq_udplen = 32
-            seq_iplen = 52
-            scanreqsplit_udplen = 49
-            scanreqsplit_iplen = 69
-            frequency_udplen = 30
-            frequency_iplen = 50
+            onlyop_udplen = 28
+            onlyop_iplen = 48
+            stat_udplen = 34
+            stat_iplen = 54
+            seq_udplen = 34
+            seq_iplen = 54
+            scanreqsplit_udplen = 55
+            scanreqsplit_iplen = 75
+            frequency_udplen = 32
+            frequency_iplen = 52
             matchspec0 = distfarreachspine_update_pktlen_tbl_match_spec_t(\
                     op_hdr_optype=CACHE_POP_INSWITCH_ACK,
                     vallen_hdr_vallen_start=0,

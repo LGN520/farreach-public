@@ -895,16 +895,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     vallen_start = (i-1)*8+1 # 1, 9, ..., 121
                     vallen_end = (i-1)*8+8 # 8, 16, ..., 128
                     aligned_vallen = vallen_end # 8, 16, ..., 128
-                val_stat_udplen = aligned_vallen + 34
-                val_stat_iplen = aligned_vallen + 54
-                #val_seq_inswitch_stat_clone_udplen = aligned_vallen + 57
-                #val_seq_inswitch_stat_clone_iplen = aligned_vallen + 77
-                val_seq_udplen = aligned_vallen + 34
-                val_seq_iplen = aligned_vallen + 54
-                #val_seq_stat_udplen = aligned_vallen + 38
-                #val_seq_stat_iplen = aligned_vallen + 58
-                #val_seq_inswitch_stat_udplen = aligned_vallen + 54
-                #val_seq_inswitch_stat_iplen = aligned_vallen + 74
+                val_stat_udplen = aligned_vallen + 36
+                val_stat_iplen = aligned_vallen + 56
+                val_seq_udplen = aligned_vallen + 36
+                val_seq_iplen = aligned_vallen + 56
                 matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=GETRES,
                         vallen_hdr_vallen_start=vallen_start,
@@ -920,20 +914,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     actnspec0 = distcachespine_update_pktlen_action_spec_t(val_seq_udplen, val_seq_iplen)
                     self.client.update_pktlen_tbl_table_add_with_update_pktlen(\
                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
-            onlyop_udplen = 26
-            onlyop_iplen = 46
-            #stat_udplen = 32
-            #stat_iplen = 52
-            seq_udplen = 32
-            seq_iplen = 52
-            scanreqsplit_udplen = 49
-            scanreqsplit_iplen = 69
-            frequency_udplen = 30
-            frequency_iplen = 50
-            op_clone_udplen = 44
-            op_clone_iplen = 64
-            op_inswitch_clone_udplen = 74
-            op_inswitch_clone_iplen = 94
+            onlyop_udplen = 28
+            onlyop_iplen = 48
+            seq_udplen = 34
+            seq_iplen = 54
+            scanreqsplit_udplen = 55
+            scanreqsplit_iplen = 75
+            frequency_udplen = 32
+            frequency_iplen = 52
+            op_clone_udplen = 46
+            op_clone_iplen = 66
+            op_inswitch_clone_udplen = 76
+            op_inswitch_clone_iplen = 96
             for tmpoptype in [CACHE_POP_INSWITCH_ACK, GETREQ, WARMUPACK, NETCACHE_VALUEUPDATE_ACK]:
                 matchspec0 = distcachespine_update_pktlen_tbl_match_spec_t(\
                         op_hdr_optype=tmpoptype,
