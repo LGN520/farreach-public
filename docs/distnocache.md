@@ -100,6 +100,15 @@
 
 ## Simple test
 
+- NOTE: set switch_kv_bucket_num, KV_BUCKET_COUNT, CM_BUCKET_COUNT, HH_THRESHOLD, SEQ_BUCKET_COUNT as 1 before test
+- Test cases of normal operations: see directory of "testcases/normal"
+	+ Case 1: single read (GETREQ arrives at server)
+	+ Case 2: single write (PUTREQ arrives at server)
+	+ Case 3: single delete (DELREQ arrives at server)
+	+ Case 4: single load (LOADREQ arrives at server)
+	+ Case 5: single scan (SCANREQ_SPLIT arrives at server)
+- NOTE: no testcases for cache population/eviction/hit and crash-consistent snapshot
+
 ## Deprecated staff
 
 + DEPRECATED design for cache population/eviction in DistFarReach

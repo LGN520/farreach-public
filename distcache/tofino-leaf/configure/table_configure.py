@@ -446,15 +446,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 exit(-1)
 
                             # Get key_start and key_end for match_spec_t
+                            key_start = valid_key_start + j * key_range_per_server
+                            key_end = key_start + key_range_per_server - 1
                             if j == 0:
                                 key_start = 0
-                                key_end = valid_key_start + key_range_per_server
+                                #key_end = valid_key_start + key_range_per_server - 1
                             elif j == servernum_per_leafswitch - 1:
-                                key_start = valid_key_start + j * key_range_per_server
+                                #key_start = valid_key_start + j * key_range_per_server
                                 key_end = pow(2, 16) - 1
-                            else:
-                                key_start = valid_key_start + j * key_range_per_server
-                                key_end = key_start + key_range_per_server
 
                             # NOTE: both start and end are included
                             matchspec0 = distcacheleaf_range_partition_tbl_match_spec_t(\
@@ -477,7 +476,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                 #udp_dstport = server_worker_port_start + global_server_logical_idx
                                 udp_dstport = server_worker_port_start + local_server_logical_idx
                                 eport = self.server_devports[server_physical_idx]
-                                if tmpoptype != SCANREQ:
+                                if tmpoptype != SCANREQ_SPLIT:
                                     actnspec0 = distcacheleaf_range_partition_action_spec_t(udp_dstport, eport)
                                     self.client.range_partition_tbl_table_add_with_range_partition(\
                                             self.sess_hdl, self.dev_tgt, matchspec0, 0, actnspec0) # 0 is priority (range may be overlapping)
