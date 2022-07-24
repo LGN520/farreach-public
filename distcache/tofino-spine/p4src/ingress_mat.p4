@@ -335,8 +335,9 @@ action update_netcache_valueupdate_to_netcache_valueupdate_inswitch() {
 	swap(udp_hdr.srcPort, udp_hdr.dstPort);
 }
 
-update loadreq_to_loadreq_spine() {
+action update_loadreq_to_loadreq_spine() {
 	modify_field(op_hdr.optype, LOADREQ_SPINE);
+	modify_field(shadowtype_hdr.shadowtype, LOADREQ_SPINE);
 }
 
 @pragma stage 8

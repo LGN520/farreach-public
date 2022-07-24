@@ -5,11 +5,11 @@
 
 // Uncomment it if support range query, or comment it otherwise
 // Change distnocachespine.p4, common.py, and helper.h accordingly
-//#define RANGE_SUPPORT
+#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
-//#define DEBUG
+#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
 // NOTE: we keep all optypes for distnocachespine, but only a few of them will be used

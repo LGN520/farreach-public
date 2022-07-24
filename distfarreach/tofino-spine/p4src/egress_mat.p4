@@ -5,13 +5,13 @@
 #ifdef RANGE_SUPPORT
 action process_scanreq_split(server_sid) {
 	modify_field(meta.server_sid, server_sid); // clone to server-leaf for next SCANREQ_SPLIT
-	subtract(meta.remain_scannum, split_hdr.max_scanswichnum, split_hdr.cur_scanswitchidx);
+	subtract(meta.remain_scannum, split_hdr.max_scanswitchnum, split_hdr.cur_scanswitchidx);
 	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
 action process_cloned_scanreq_split(server_sid) {
 	add_to_field(op_hdr.globalswitchidx, 1); // CANNOT be placed in eg_port_forward_tbl as server-leaf needs globalswitchidx for cache lookup and scanreq split
 	modify_field(meta.server_sid, server_sid); // clone to server-leaf for next SCANREQ_SPLIT
-	subtract(meta.remain_scannum, split_hdr.max_scanswichnum, split_hdr.cur_scanswitchidx);
+	subtract(meta.remain_scannum, split_hdr.max_scanswitchnum, split_hdr.cur_scanswitchidx);
 	modify_field(clone_hdr.clonenum_for_pktloss, 0);
 }
 action reset_meta_serversid_remainscannum() {

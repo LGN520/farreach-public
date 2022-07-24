@@ -204,7 +204,6 @@ action update_distnocache_delreq_spine_to_delreq() {
 
 action update_getres_server_to_getres() {
 	modify_field(op_hdr.optype, GETRES);
-	modify_field(shadowtype_hdr.shadowtype, GETRES);
 }
 
 action update_scanres_split_server_to_scanres_split() {
@@ -213,17 +212,14 @@ action update_scanres_split_server_to_scanres_split() {
 
 action update_putres_server_to_putres() {
 	modify_field(op_hdr.optype, PUTRES);
-	modify_field(shadowtype_hdr.shadowtype, PUTRES);
 }
 
 action update_delres_server_to_delres() {
 	modify_field(op_hdr.optype, DELRES);
-	modify_field(shadowtype_hdr.shadowtype, DELRES);
 }
 
 action update_loadreq_spine_to_loadreq() {
 	modify_field(op_hdr.optype, LOADREQ);
-	modify_field(shadowtype_hdr.shadowtype, LOADREQ);
 }
 
 action update_loadack_server_to_loadack() {
@@ -243,8 +239,8 @@ table ig_port_forward_tbl {
 		update_scanres_split_server_to_scanres_split;
 		update_putres_server_to_putres;
 		update_delres_server_to_delres;
-		update loadreq_spine_to_loadreq;
-		update_loadackserver_to_loadack;
+		update_loadreq_spine_to_loadreq;
+		update_loadack_server_to_loadack;
 		nop;
 	}
 	default_action: nop();

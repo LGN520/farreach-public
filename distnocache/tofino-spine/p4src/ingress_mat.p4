@@ -144,15 +144,15 @@ table ipv4_forward_tbl {
 
 // Stage 4
 
-update update_getreq_to_getreq_spine() {
+action update_getreq_to_getreq_spine() {
 	modify_field(op_hdr.optype, GETREQ_SPINE);
 }
 
-update update_putreq_to_distnocache_putreq_spine() {
+action update_putreq_to_distnocache_putreq_spine() {
 	modify_field(op_hdr.optype, DISTNOCACHE_PUTREQ_SPINE);
 }
 
-update update_delreq_to_distnocache_delreq_spine() {
+action update_delreq_to_distnocache_delreq_spine() {
 	modify_field(op_hdr.optype, DISTNOCACHE_DELREQ_SPINE);
 }
 
@@ -163,7 +163,7 @@ action update_scanreq_to_scanreq_split() {
 }
 #endif
 
-update update_loadreq_to_loadreq_spine() {
+action update_loadreq_to_loadreq_spine() {
 	modify_field(op_hdr.optype, LOADREQ_SPINE);
 }
 

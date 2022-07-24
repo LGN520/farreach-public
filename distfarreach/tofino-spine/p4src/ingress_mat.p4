@@ -414,8 +414,9 @@ update_warmupreq_to_warmupreq_spine() {
 	modify_field(op_hdr.optype, WARMUPREQ_SPINE);
 }
 
-update loadreq_to_loadreq_spine() {
+action update_loadreq_to_loadreq_spine() {
 	modify_field(op_hdr.optype, LOADREQ_SPINE);
+	modify_field(shadowtype_hdr.shadowtype, LOADREQ_SPINE);
 }
 
 action update_putreq_seq_to_putreq_seq_inswitch() {

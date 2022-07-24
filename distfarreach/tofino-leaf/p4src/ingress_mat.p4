@@ -581,9 +581,9 @@ table ig_port_forward_tbl {
 		update_putres_server_to_putres;
 		update_delres_server_to_delres;
 		update_warmupreq_spine_to_warmupreq;
-		update loadreq_spine_to_loadreq;
+		update_loadreq_spine_to_loadreq;
 		update_warmupack_server_to_warmupack;
-		update_loadackserver_to_loadack;
+		update_loadack_server_to_loadack;
 		update_getres_latest_seq_server_inswitch_to_getres_latest_seq_inswitch;
 		update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch;
 		nop;

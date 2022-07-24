@@ -46,9 +46,9 @@
 	+ `./split_workload load linenum` -> workloada-load-{split_num}/\*-\*.out
 	+ `./split_workload run linenum` -> workloada-run-{server_num}/\*.out
 - Change partition method (hash/range partition)
-	+ RANGE_SUPPORT in tofino/netbufferv4.p4
+	+ RANGE_SUPPORT in tofino-*/netbufferv4.p4
 	+ USE_HASH/RANGE in helper.h
-	+ RANGE_SUPPORT in tofino/common.py
+	+ RANGE_SUPPORT in tofino-*/common.py
 - Local loading phase
 	- `./loader` to launch loaders in end host
 	- If using ycsb, after ycsb loading phase, run `./loadfinish_client` in each physical server

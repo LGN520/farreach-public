@@ -532,8 +532,8 @@ table ig_port_forward_tbl {
 		update_scanres_split_server_to_scanres_split;
 		update_putres_server_to_putres;
 		update_delres_server_to_delres;
-		update loadreq_spine_to_loadreq;
-		update_loadackserver_to_loadack;
+		update_loadreq_spine_to_loadreq;
+		update_loadack_server_to_loadack;
 		nop;
 	}
 	default_action: nop();
