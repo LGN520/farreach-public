@@ -340,6 +340,14 @@ action update_loadreq_to_loadreq_spine() {
 	modify_field(shadowtype_hdr.shadowtype, LOADREQ_SPINE);
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter ig_port_forward_counter {
+	type : packets_and_bytes;
+	direct: ig_port_forward_tbl;
+}
+#endif
+
 @pragma stage 8
 table ig_port_forward_tbl {
 	reads {

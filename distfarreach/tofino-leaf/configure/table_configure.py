@@ -59,8 +59,8 @@ case1_list = [0, 1]
 access_val_mode_list = [0, 1, 2, 3]
 
 reflector_ip_for_switchos = leaf_reflector_ip_for_switchos
-reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_devport
-reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_devport
+reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_port
+reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_port
 
 if test_param_get("arch") == "tofino":
   MIR_SESS_COUNT = 1024

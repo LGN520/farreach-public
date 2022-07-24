@@ -11,6 +11,6 @@ ssh ssy@dl16 "rm -rf projects/NetBuffer/$DIRNAME"
 
 rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" ./$DIRNAME ssy@bf1:~/NetBuffer
 rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" ./$DIRNAME ssy@bf3:~/NetBuffer
-#rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" ./$DIRNAME ssy@dl13:~/projects/NetBuffer
-#rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" ./$DIRNAME ssy@dl15:~/projects/NetBuffer
-#rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" ./$DIRNAME ssy@dl16:~/projects/NetBuffer
+rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" ./$DIRNAME ssy@dl13:~/projects/NetBuffer
+rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" ./$DIRNAME ssy@dl15:~/projects/NetBuffer
+rsync -av -e ssh --exclude "*.out*" --exclude "*.bak" --exclude "*.o" --exclude "*.d" ./$DIRNAME ssy@dl16:~/projects/NetBuffer

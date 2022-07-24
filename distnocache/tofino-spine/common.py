@@ -26,19 +26,19 @@ spineswitch_total_logical_num = int(config.get("switch", "spineswitch_total_logi
 leafswitch_total_logical_num = int(config.get("switch", "leafswitch_total_logical_num"))
 
 # spineswitch
-tmpstr = str(config.get("spineswitch:switch_logical_idxes"))
+tmpstr = str(config.get("spineswitch", "switch_logical_idxes"))
 spineswitch_logical_idxes = tmpstr.split(':')
 for i in range(len(spineswitch_logical_idxes)):
     spineswitch_logical_idxes[i] = int(spineswitch_logical_idxes[i])
-spineswitch_fpport_to_leaf = str(config.get("spineswitch:spineswitch_fpport_to_leaf"))
+spineswitch_fpport_to_leaf = str(config.get("spineswitch", "spineswitch_fpport_to_leaf"))
 
 # leafswitch
-tmpstr = str(config.get("leafswitch:switch_logical_idxes"))
+tmpstr = str(config.get("leafswitch", "switch_logical_idxes"))
 leafswitch_logical_idxes = tmpstr.split(':')
 for i in range(len(leafswitch_logical_idxes)):
     leafswitch_logical_idxes[i] = int(leafswitch_logical_idxes[i])
-leafswitch_fpport_to_spine = str(config.get("leafswitch:leafswitch_fpport_to_spine"))
-leafswitch_pipeidx = int(config.get("leafswitch:leafswitch_pipeidx"))
+leafswitch_fpport_to_spine = str(config.get("leafswitch", "leafswitch_fpport_to_spine"))
+leafswitch_pipeidx = int(config.get("leafswitch", "leafswitch_pipeidx"))
 
 # reflector_for_leaf port
 leaf_reflector_ip_for_switchos = str(config.get("reflector_for_leaf", "reflector_ip_for_switchos"))

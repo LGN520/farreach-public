@@ -564,6 +564,14 @@ action update_getres_deleted_seq_server_inswitch_to_getres_deleted_seq_inswitch(
 	//add_header(inswitch_hdr);
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter ig_port_forward_counter {
+	type : packets_and_bytes;
+	direct: ig_port_forward_tbl;
+}
+#endif
+
 @pragma stage 6
 table ig_port_forward_tbl {
 	reads {

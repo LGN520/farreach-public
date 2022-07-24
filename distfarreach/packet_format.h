@@ -689,7 +689,7 @@ class LoadAckServer : public LoadAck<key_t> { // ophdr
 
 // APIs
 static uint32_t serialize_packet_type(optype_t type, char * data, uint32_t maxsize);
-static uint32_t dynamic_serialize_packet_type(optype_t type, dynamic_array_t &dynamic_data);
+static uint32_t dynamic_serialize_packet_type(optype_t type, dynamic_array_t &dynamic_data, int off);
 static packet_type_t get_packet_type(const char * data, uint32_t recv_size);
 static uint32_t deserialize_packet_type(optype_t &type, const char * data, uint32_t recvsize);
 static uint32_t serialize_switchidx(switchidx_t switchidx, char *data, uint32_t maxsize);

@@ -58,8 +58,8 @@ case1_list = [0, 1]
 access_val_mode_list = [0, 1, 2, 3]
 
 reflector_ip_for_switchos = leaf_reflector_ip_for_switchos
-reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_devport
-reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_devport
+reflector_dp2cpserver_port = leaf_reflector_dp2cpserver_port
+reflector_cp2dpserver_port = leaf_reflector_cp2dpserver_port
 
 if test_param_get("arch") == "tofino":
   MIR_SESS_COUNT = 1024
@@ -214,10 +214,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                      pal_port_speed_t.BF_SPEED_40G,
                                      pal_fec_type_t.BF_FEC_TYP_NONE)
                self.pal.pal_port_enable(0, i)
-           self.pal.pal_port_add(0, self.spineswitch_devport,
+            self.pal.pal_port_add(0, self.spineswitch_devport,
                                  pal_port_speed_t.BF_SPEED_40G,
                                  pal_fec_type_t.BF_FEC_TYP_NONE)
-           self.pal.pal_port_enable(0, self.spineswitch_devport)
+            self.pal.pal_port_enable(0, self.spineswitch_devport)
 
             # Add special ports
             speed_10g = 2
@@ -533,8 +533,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                 matchspec0 = distnocacheleaf_ipv4_forward_tbl_match_spec_t(\
                         op_hdr_optype = convert_u16_to_i16(tmpoptype),
                         ipv4_hdr_dstAddr = ipv4addr0,
-                        ipv4_hdr_dstAddr_prefix_length = 32,
-                        meta_need_recirculate = 0) # NOTE: meta.need_recirculate must be 0 for those packets
+                        ipv4_hdr_dstAddr_prefix_length = 32)
                 actnspec0 = distnocacheleaf_forward_normal_response_action_spec_t(eport)
                 self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
