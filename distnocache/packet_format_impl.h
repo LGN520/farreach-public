@@ -40,7 +40,7 @@ uint32_t Packet<key_t>::serialize_ophdr(char * const data, uint32_t max_size) {
 	char *begin = data;
 	uint32_t tmp_typesize = serialize_packet_type(this->_type, begin, max_size);
 	begin += tmp_typesize;
-	uint32_t tmp_switchidxsize = serialize_switchidx(this->_globalswitchidx, being, max_size - tmp_typesize);
+	uint32_t tmp_switchidxsize = serialize_switchidx(this->_globalswitchidx, begin, max_size - tmp_typesize);
 	begin += tmp_switchidxsize;
 	uint32_t tmp_keysize = this->_key.serialize(begin, max_size - tmp_typesize - tmp_switchidxsize);
 	begin += tmp_keysize;
@@ -67,7 +67,7 @@ uint32_t Packet<key_t>::deserialize_ophdr(const char * data, uint32_t recv_size)
 	const char *begin = data;
 	uint32_t tmp_typesize = deserialize_packet_type(this->_type, begin, recv_size);
 	begin += tmp_typesize;
-	uint32_t tmp_switchidxsize = deserialize_switchidx(this->_globalswitchidx, being, recvsize - tmp_keysize);
+	uint32_t tmp_switchidxsize = deserialize_switchidx(this->_globalswitchidx, begin, recv_size - tmp_typesize);
 	begin += tmp_switchidxsize;
 	uint32_t tmp_keysize = this->_key.deserialize(begin, recv_size - tmp_typesize - tmp_switchidxsize);
 	begin += tmp_keysize;
@@ -158,9 +158,9 @@ uint32_t PutRequest<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size - tmp_ophdrsize);
 	begin += tmp_valsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize - tmp_valsize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
 	return tmp_ophdrsize + tmp_valsize + tmp_shadowtypesize;
 	//begin += tmp_shadowtypesize;
 }
@@ -172,7 +172,7 @@ void PutRequest<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size-tmp_typesize-tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size-tmp_ophdrsize);
 	UNUSED(tmp_valsize);
 	// deserialize shadowtype
 }
@@ -268,7 +268,7 @@ uint32_t ScanRequest<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_endkeysize = this->_endkey.serialize(begin, max_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_endkeysize = this->_endkey.serialize(begin, max_size - tmp_ophdrsize);
 	//memcpy(begin, (void *)&this->_num, sizeof(uint32_t));
 	return tmp_ophdrsize + tmp_endkeysize; // + sizeof(uint32_t);
 }
@@ -280,7 +280,7 @@ void ScanRequest<key_t>::deserialize(const char * data, uint32_t recv_size) {
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - tmp_ophdrsize);
 	UNUSED(tmp_endkeysize);
 	//begin += tmp_endkeysize;
 	//memcpy((void *)&this->_num, begin, sizeof(uint32_t));
@@ -334,9 +334,9 @@ uint32_t GetResponse<key_t, val_t>::serialize(char * const data, uint32_t max_si
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_typesize-tmp_keysize);
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_ophdrsize);
 	begin += tmp_valsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize - tmp_valsize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
 	begin += tmp_shadowtypesize;
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
@@ -354,7 +354,7 @@ void GetResponse<key_t, val_t>::deserialize(const char * data, uint32_t recv_siz
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_ophdrsize);
 	begin += tmp_valsize;
 	begin += sizeof(optype_t); // deserialize shadowtype
 	memcpy((void *)&this->_stat, begin, sizeof(bool));
@@ -410,7 +410,7 @@ uint32_t PutResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize); // shadowtype
 	begin += tmp_shadowtypesize;
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
@@ -482,7 +482,7 @@ uint32_t DelResponse<key_t>::serialize(char * const data, uint32_t max_size) {
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize); // shadowtype
 	begin += tmp_shadowtypesize;
 	memcpy(begin, (void *)&this->_stat, sizeof(bool));
 	begin += sizeof(bool);
@@ -576,7 +576,7 @@ uint32_t ScanResponseSplit<key_t, val_t>::serialize(char * const data, uint32_t 
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_endkeysize = this->_endkey.serialize(begin, max_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_endkeysize = this->_endkey.serialize(begin, max_size - tmp_ophdrsize);
 	begin += tmp_endkeysize;
 	//memcpy(begin, (void *)&this->_num, sizeof(uint32_t));
 	//begin += sizeof(uint32_t);
@@ -662,7 +662,7 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - tmp_ophdrsize);
 	begin += tmp_endkeysize;
 	//memcpy((void *)&this->_num, begin, sizeof(uint32_t));
 	//begin += sizeof(uint32_t);
@@ -823,9 +823,9 @@ uint32_t GetResponseLatestSeq<key_t, val_t>::serialize(char * const data, uint32
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_typesize-tmp_keysize);
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_ophdrsize);
 	begin += tmp_valsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize - tmp_valsize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
 	begin += tmp_shadowtypesize;
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
@@ -920,9 +920,9 @@ uint32_t GetResponseLatestSeqInswitchCase1<key_t, val_t>::serialize(char * const
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_typesize-tmp_keysize);
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_ophdrsize);
 	begin += tmp_valsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize - tmp_valsize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
 	begin += tmp_shadowtypesize;
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t));
@@ -949,7 +949,7 @@ void GetResponseLatestSeqInswitchCase1<key_t, val_t>::deserialize(const char * d
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_ophdrsize);
 	begin += tmp_valsize;
 	begin += sizeof(optype_t); // deserialize shadowtype
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
@@ -1062,7 +1062,7 @@ void PutRequestSeq<key_t, val_t>::deserialize(const char * data, uint32_t recv_s
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_ophdrsize);
 	begin += tmp_valsize;
 	begin += sizeof(optype_t); // deserialize shadowtype
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
@@ -1284,7 +1284,7 @@ void ScanRequestSplit<key_t>::deserialize(const char * data, uint32_t recv_size)
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_endkeysize = this->_endkey.deserialize(begin, recv_size - tmp_ophdrsize);
 	begin += tmp_endkeysize;
 	//memcpy((void *)&this->_num, begin, sizeof(uint32_t));
 	//begin += sizeof(uint32_t);
@@ -1331,7 +1331,7 @@ uint32_t CachePop<key_t, val_t>::serialize(char * const data, uint32_t max_size)
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_typesize-tmp_keysize);
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_ophdrsize);
 	begin += tmp_valsize;
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
@@ -1366,7 +1366,7 @@ void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_ophdrsize);
 	begin += tmp_valsize;
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq); // Big-endian to little-endian
@@ -1396,9 +1396,9 @@ uint32_t CachePopInswitch<key_t, val_t>::serialize(char * const data, uint32_t m
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_typesize-tmp_keysize);
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_ophdrsize);
 	begin += tmp_valsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize - tmp_valsize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize - tmp_valsize); // shadowtype
 	begin += tmp_shadowtypesize;
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t)); // little-endian to big-endian
@@ -1501,7 +1501,7 @@ uint32_t CacheEvict<key_t, val_t>::serialize(char * const data, uint32_t max_siz
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_typesize-tmp_keysize);
+	uint32_t tmp_valsize = this->_val.serialize(begin, max_size-tmp_ophdrsize);
 	begin += tmp_valsize;
 	uint32_t bigendian_seq = htonl(this->_seq);
 	memcpy(begin, (void *)&bigendian_seq, sizeof(uint32_t));
@@ -1520,7 +1520,7 @@ void CacheEvict<key_t, val_t>::deserialize(const char * data, uint32_t recv_size
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_ophdrsize);
 	begin += tmp_valsize;
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
 	this->_seq = ntohl(this->_seq);
@@ -1670,7 +1670,7 @@ uint32_t CacheEvictLoadfreqInswitch<key_t>::serialize(char * const data, uint32_
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize); // shadowtype
 	begin += tmp_shadowtypesize;
 	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
 	begin += INSWITCH_PREV_BYTES;
@@ -1778,7 +1778,7 @@ void CacheEvictLoaddataInswitchAck<key_t, val_t>::deserialize(const char * data,
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_ophdrsize);
 	begin += tmp_valsize;
 	begin += sizeof(optype_t); // deserialize shadowtype
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
@@ -1832,7 +1832,7 @@ void LoadsnapshotdataInswitchAck<key_t, val_t>::deserialize(const char * data, u
 	const char *begin = data;
 	uint32_t tmp_ophdrsize = this->deserialize_ophdr(begin, recv_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_typesize - tmp_keysize);
+	uint32_t tmp_valsize = this->_val.deserialize(begin, recv_size - tmp_ophdrsize);
 	begin += tmp_valsize;
 	begin += sizeof(optype_t); // deserialize shadowtype
 	memcpy((void *)&this->_seq, begin, sizeof(uint32_t));
@@ -1865,7 +1865,7 @@ uint32_t SetvalidInswitch<key_t>::serialize(char * const data, uint32_t max_size
 	char *begin = data;
 	uint32_t tmp_ophdrsize = this->serialize_ophdr(begin, max_size);
 	begin += tmp_ophdrsize;
-	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_typesize - tmp_keysize); // shadowtype
+	uint32_t tmp_shadowtypesize = serialize_packet_type(this->_type, begin, max_size - tmp_ophdrsize); // shadowtype
 	begin += tmp_shadowtypesize;
 	memset(begin, 0, INSWITCH_PREV_BYTES); // the first bytes of inswitch_hdr
 	begin += INSWITCH_PREV_BYTES;

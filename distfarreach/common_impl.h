@@ -160,7 +160,7 @@ const char *spineswitch_fpport_to_leaf = nullptr;
 // leafswitch
 std::vector<uint16_t> leafswitch_logical_idxes;
 const char *leafswitchos_ip = nullptr;
-const char *leafswitch_fpport_to_leaf = nullptr;
+const char *leafswitch_fpport_to_spine = nullptr;
 uint32_t leafswitch_pipeidx;
 
 // reflector_for_leaf
@@ -449,7 +449,7 @@ inline void parse_ini(const char* config_file) {
 	spineswitch_fpport_to_leaf = ini.get_spineswitch_fpport_to_leaf();
 	printf("spineswitch_logical_idxes: ");
 	for (size_t i = 0; i < spineswitch_logical_idxes.size(); i++) {
-		printf("%d ". spineswitch_logical_idxes[i]);
+		printf("%d ", spineswitch_logical_idxes[i]);
 	}
 	printf("\n");
 	printf("spineswitchos_ip: %s\n", spineswitchos_ip);
@@ -463,7 +463,7 @@ inline void parse_ini(const char* config_file) {
 	leafswitch_pipeidx = ini.get_leafswitch_pipeidx();
 	printf("leafswitch_logical_idxes: ");
 	for (size_t i = 0; i < leafswitch_logical_idxes.size(); i++) {
-		printf("%d ". leafswitch_logical_idxes[i]);
+		printf("%d ", leafswitch_logical_idxes[i]);
 	}
 	printf("\n");
 	printf("leafswitchos_ip: %s\n", leafswitchos_ip);

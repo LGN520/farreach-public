@@ -230,7 +230,7 @@ template<class key_t, class val_t>
 class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(endkey) + splithdr(isclone+curscanidx+maxscannum+curscanswitchidx+maxscanswitchnum) + nodeidx_foreval(not processed by switch) + snapshotid(not processed by switch) + pairs
 	public: 
 		//ScanResponseSplit(key_t key, key_t endkey, uint32_t num, uint16_t cur_scanidx, uint16_t max_scannum, int32_t pairnum, std::vector<std::pair<key_t, val_t>> pairs);
-		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<key_t, snapshot_record_t>> pairs);
+		ScanResponseSplit(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t cur_scanswitchidx, uint16_t max_scanswitchnum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<key_t, snapshot_record_t>> pairs);
 		ScanResponseSplit(const char * data, uint32_t recv_size);
 
 		uint16_t nodeidx_foreval() const;
@@ -270,7 +270,7 @@ class ScanResponseSplit : public ScanRequestSplit<key_t> { // ophdr + scanhdr(en
 template<class key_t, class val_t>
 class ScanResponseSplitServer : public ScanResponseSplit<key_t, val_t> { // ophdr + scanhdr(endkey) + splithdr(isclone+curscanidx+maxscannum+curscanswitchidx+maxscanswitchnum) + nodeidx_foreval(not processed by switch) + snapshotid(not processed by switch) + pairs
 	public:
-		ScanResponseSplitServer(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<key_t, snapshot_record_t>> pairs);
+		ScanResponseSplitServer(key_t key, key_t endkey, uint16_t cur_scanidx, uint16_t max_scannum, uint16_t cur_scanswitchidx, uint16_t max_scanswitchnum, uint16_t nodeidx_foreval, int snapshotid, int32_t parinum, std::vector<std::pair<key_t, snapshot_record_t>> pairs);
 };
 
 template<class key_t>
@@ -676,13 +676,13 @@ class SetvalidInswitchAck : public GetRequest<key_t> { // ophdr
 };
 
 template<class key_t>
-class WarmupAckServer : public WarmupAckkey_t> { // ophdr
+class WarmupAckServer : public WarmupAck<key_t> { // ophdr
 	public: 
 		WarmupAckServer(key_t key);
 };
 
 template<class key_t>
-class LoadAckServer : public LoadAckServer<key_t> { // ophdr
+class LoadAckServer : public LoadAck<key_t> { // ophdr
 	public: 
 		LoadAckServer(key_t key);
 };
