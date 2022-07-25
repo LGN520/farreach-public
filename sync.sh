@@ -1,7 +1,8 @@
 #DIRNAME="netreach-v4-lsm"
 #DIRNAME="nocache"
 #DIRNAME="netcache"
-DIRNAME="distnocache"
+#DIRNAME="distnocache"
+DIRNAME="distfarreach"
 
 ssh ssy@bf1 "rm -rf NetBuffer/$DIRNAME"
 ssh ssy@bf3 "rm -rf NetBuffer/$DIRNAME"

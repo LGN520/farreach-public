@@ -5,11 +5,11 @@
 
 // Uncomment it if support range query, or comment it otherwise
 // Change distfarreachleaf.p4, common.py, and helper.h accordingly
-//#define RANGE_SUPPORT
+#define RANGE_SUPPORT
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
-//#define DEBUG
+#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
 // 0b0001
@@ -202,6 +202,7 @@
 
 // registers and MATs
 #include "p4src/regs/cm.p4"
+#include "p4src/regs/seq.p4"
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/validvalue.p4"
 #include "p4src/regs/latest.p4"
@@ -228,7 +229,6 @@ control ingress {
 
 	// Stage 1
 	apply(recirculate_tbl); // recirculate for atomic snapshot (NOTE: recirculate will collide with modifying egress port)
-	apply(spineselect_tbl); // forward requests from client to spine switch
 
 	/* else if meta.need_recirculate == 0 */
 
@@ -237,7 +237,10 @@ control ingress {
 	apply(hash_for_partition_tbl); // for hash partition (including startkey of SCANREQ)
 #endif
 
-	// Stage 2 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
+	// Stage 2
+	apply(spineselect_tbl); // forward requests from client to spine switch
+
+	// Stage 3 (not sure why we cannot place cache_lookup_tbl, hash_for_cm_tbl, and hash_for_seq_tbl in stage 1; follow automatic placement of tofino compiler)
 #ifdef RANGE_SUPPORT
 	apply(range_partition_tbl); // for range partition (GET/PUT/DEL)
 #else
@@ -249,22 +252,22 @@ control ingress {
 	apply(cache_lookup_tbl); // managed by controller (access inswitch_hdr.is_cached, inswitch_hdr.idx)
 	apply(hash_for_cm1_tbl); // for CM (access inswitch_hdr.hashval_for_cm1)
 
-	// Stage 3
+	// Stage 4
 #ifdef RANGE_SUPPORT
 	apply(range_partition_for_scan_endkey_tbl); // perform range partition for endkey of SCANREQ
 #endif
 	apply(hash_for_cm2_tbl); // for CM (access inswitch_hdr.hashval_for_cm2)
 
-	// Stage 4
+	// Stage 5
 	apply(hash_for_cm3_tbl); // for CM (access inswitch_hdr.hashval_for_cm3)
 	apply(snapshot_flag_tbl); // for snapshot (access inswitch_hdr.snapshot_flag)
 
-	// Stage 5
+	// Stage 6
 	apply(hash_for_cm4_tbl); // for CM (access inswitch_hdr.hashval_for_cm4)
 	apply(prepare_for_cachehit_tbl); // for response of cache hit (access inswitch_hdr.client_sid)
 	apply(ipv4_forward_tbl); // update egress_port for normal/speical response packets
 
-	// Stage 6
+	// Stage 7
 	apply(sample_tbl); // for CM and cache_frequency (access inswitch_hdr.is_sampled)
 	apply(ig_port_forward_tbl); // update op_hdr.optype
 }

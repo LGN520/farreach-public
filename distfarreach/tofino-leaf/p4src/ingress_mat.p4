@@ -121,7 +121,7 @@ table hash_for_spineselect_tbl {
 // Stage 1 (need_recirculate = 1)
 
 action recirculate_pkt(eport) {
-	modify_field(ig_intr_md_for_tm.ucase_egress_port, eport); // forward to the first spine switch
+	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport); // forward to the first spine switch
 }
 
 @pragma stage 1
@@ -162,16 +162,18 @@ table hash_for_partition_tbl {
 }
 #endif
 
+// Stage 2
+
 action spineselect(eport, globalswitchidx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(op_hdr.globalswitchidx, globalswitchidx);
 }
 
 action spineselect_for_special_response(globalswitchidx) {
-	modify_field(meta.spineswitchidx, globalswitchdx);
+	modify_field(meta.spineswitchidx, globalswitchidx);
 }
 
-@pragma stage 1
+@pragma stage 2
 table spineselect_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -180,14 +182,14 @@ table spineselect_tbl {
 	}
 	actions {
 		spineselect;
-		spineselect_for_speical_response;
+		spineselect_for_special_response;
 		nop;
 	}
 	default_action: nop();
 	size: SPINESELECT_ENTRY_NUM;
 }
 
-// Stage 2
+// Stage 3
 
 #ifdef RANGE_SUPPORT
 action range_partition(udpport, eport) {
@@ -202,7 +204,7 @@ action range_partition_for_scan(udpport, eport, start_globalserveridx) {
 action range_partition_for_special_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
-@pragma stage 2
+@pragma stage 3
 table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -227,7 +229,7 @@ action hash_partition(udpport, eport) {
 action hash_partition_for_special_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
-@pragma stage 2
+@pragma stage 3
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -256,7 +258,7 @@ action uncached_action() {
 	modify_field(inswitch_hdr.is_cached, 0);
 }
 
-@pragma stage 2
+@pragma stage 3
 table cache_lookup_tbl {
 	reads {
 		op_hdr.keylolo: exact;
@@ -280,7 +282,7 @@ action hash_for_cm1() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm1, 0, hash_calc, CM_BUCKET_COUNT);
 }
 
-@pragma stage 2
+@pragma stage 3
 table hash_for_cm1_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -294,7 +296,7 @@ table hash_for_cm1_tbl {
 	size: 2;
 }
 
-// Stage 3
+// Stage 4
 
 #ifdef RANGE_SUPPORT
 action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
@@ -303,7 +305,7 @@ action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
 	subtract(split_hdr.max_scannum, end_globalserveridx_plus_one, split_hdr.globalserveridx);
 }
 
-@pragma stage 3
+@pragma stage 4
 table range_partition_for_scan_endkey_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -324,7 +326,7 @@ action hash_for_cm2() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm2, 0, hash_calc2, CM_BUCKET_COUNT);
 }
 
-@pragma stage 3
+@pragma stage 4
 table hash_for_cm2_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -338,13 +340,13 @@ table hash_for_cm2_tbl {
 	size: 2;
 }
 
-// Stage 4
+// Stage 5
 
 action hash_for_cm3() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm3, 0, hash_calc3, CM_BUCKET_COUNT);
 }
 
-@pragma stage 4
+@pragma stage 5
 table hash_for_cm3_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -366,7 +368,7 @@ action reset_snapshot_flag() {
 	modify_field(inswitch_hdr.snapshot_flag, 0);
 }
 
-@pragma stage 4
+@pragma stage 5
 table snapshot_flag_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -380,13 +382,13 @@ table snapshot_flag_tbl {
 	size: 8;
 }
 
-// Stage 5
+// Stage 6
 
 action hash_for_cm4() {
 	modify_field_with_hash_based_offset(inswitch_hdr.hashval_for_cm4, 0, hash_calc4, CM_BUCKET_COUNT);
 }
 
-@pragma stage 5
+@pragma stage 6
 table hash_for_cm4_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -413,7 +415,7 @@ action set_client_sid(client_sid) {
 	modify_field(inswitch_hdr.client_sid, client_sid);
 }
 
-@pragma stage 5
+@pragma stage 6
 table prepare_for_cachehit_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -446,7 +448,7 @@ action forward_special_get_response_to_spine(eport) {
 	modify_field(op_hdr.globalswitchidx, meta.spineswitchidx);
 }
 
-@pragma stage 5
+@pragma stage 6
 table ipv4_forward_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -464,14 +466,14 @@ table ipv4_forward_tbl {
 	size: 256;
 }
 
-// Stage 6
+// Stage 7
 
 action sample() {
 	//modify_field_with_hash_based_offset(inswitch_hdr.is_sampled, 0, hash_calc, 2); // WRONG: we should not sample key
 	modify_field_rng_uniform(inswitch_hdr.is_sampled, 0, 1); // generate a random value in [0, 1] to sample packet
 }
 
-@pragma stage 6
+@pragma stage 7
 table sample_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -572,7 +574,7 @@ counter ig_port_forward_counter {
 }
 #endif
 
-@pragma stage 6
+@pragma stage 7
 table ig_port_forward_tbl {
 	reads {
 		op_hdr.optype: exact;

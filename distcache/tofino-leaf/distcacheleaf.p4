@@ -166,6 +166,7 @@
 
 // registers and MATs
 #include "p4src/regs/cm.p4"
+#include "p4src/regs/seq.p4"
 #include "p4src/regs/bf.p4"
 #include "p4src/regs/cache_frequency.p4"
 #include "p4src/regs/latest.p4"
