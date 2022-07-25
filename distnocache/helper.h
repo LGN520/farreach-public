@@ -49,8 +49,8 @@
 
 /***** Workload *****/
 
-//#define USE_HASH
-#define USE_RANGE
+#define USE_HASH
+//#define USE_RANGE
 
 //#define SERVER_ROTATION
 
