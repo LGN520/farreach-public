@@ -511,7 +511,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 4
 
-            # Table: ipv4_forward_tbl (default: nop; size: 5*client_physical_num=10 < 5*8=40)
+            # Table: ipv4_forward_tbl (default: nop; size: 10*client_physical_num=20 < 10*8=80)
             print "Configuring ipv4_forward_tbl"
             for tmp_client_physical_idx in range(client_physical_num):
                 ipv4addr0 = ipv4Addr_to_i32(client_ips[tmp_client_physical_idx])
@@ -525,16 +525,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     actnspec0 = distnocacheleaf_forward_normal_response_action_spec_t(eport)
                     self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-            eport = self.spineswitch_devport
-            tmpsid = self.spineswitch_sid
-            for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER, LOADACK_SERVER]:
-                matchspec0 = distnocacheleaf_ipv4_forward_tbl_match_spec_t(\
-                        op_hdr_optype = convert_u16_to_i16(tmpoptype),
-                        ipv4_hdr_dstAddr = ipv4addr0,
-                        ipv4_hdr_dstAddr_prefix_length = 32)
-                actnspec0 = distnocacheleaf_forward_normal_response_action_spec_t(eport)
-                self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
-                        self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                eport = self.spineswitch_devport
+                tmpsid = self.spineswitch_sid
+                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER, LOADACK_SERVER]:
+                    matchspec0 = distnocacheleaf_ipv4_forward_tbl_match_spec_t(\
+                            op_hdr_optype = convert_u16_to_i16(tmpoptype),
+                            ipv4_hdr_dstAddr = ipv4addr0,
+                            ipv4_hdr_dstAddr_prefix_length = 32)
+                    actnspec0 = distnocacheleaf_forward_normal_response_action_spec_t(eport)
+                    self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
+                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Stage 5
 

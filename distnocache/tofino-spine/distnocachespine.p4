@@ -9,7 +9,7 @@
 
 // Uncomment it before evaluation
 // NOTE: update config.ini accordingly
-#define DEBUG
+//#define DEBUG
 
 // NOTE: 1B optype does not need endian conversion
 // NOTE: we keep all optypes for distnocachespine, but only a few of them will be used

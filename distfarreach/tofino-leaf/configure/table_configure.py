@@ -651,7 +651,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                     self.client.prepare_for_cachehit_tbl_table_add_with_set_client_sid(\
                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
-            # Table: ipv4_forward_tbl (default: nop; size: 2*(6*client_physical_num+8)=40 < 112)
+            # Table: ipv4_forward_tbl (default: nop; size: 2*(16*client_physical_num)=64 < 256)
             print "Configuring ipv4_forward_tbl"
             for is_cached in cached_list:
                 for tmp_client_physical_idx in range(client_physical_num):
@@ -668,33 +668,33 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         actnspec0 = distfarreachleaf_forward_normal_response_action_spec_t(eport)
                         self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                eport = self.spineswitch_devport
-                tmpsid = self.spineswitch_sid
-                for tmpoptype in [GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
-                    matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
-                            op_hdr_optype = tmpoptype,
-                            ipv4_hdr_dstAddr = ipv4addr0,
-                            ipv4_hdr_dstAddr_prefix_length = 32,
-                            inswitch_hdr_is_cached = is_cached,
-                            meta_need_recirculate = 0)
-                    if is_cached == 0:
-                        actnspec0 = distfarreachleaf_forward_special_get_response_to_spine_action_spec_t(eport)
-                        self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response_to_spine(\
+                    eport = self.spineswitch_devport
+                    tmpsid = self.spineswitch_sid
+                    for tmpoptype in [GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
+                        matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
+                                op_hdr_optype = tmpoptype,
+                                ipv4_hdr_dstAddr = ipv4addr0,
+                                ipv4_hdr_dstAddr_prefix_length = 32,
+                                inswitch_hdr_is_cached = is_cached,
+                                meta_need_recirculate = 0)
+                        if is_cached == 0:
+                            actnspec0 = distfarreachleaf_forward_special_get_response_to_spine_action_spec_t(eport)
+                            self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response_to_spine(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                        elif is_cached == 1:
+                            actnspec0 = distfarreachleaf_forward_special_get_response_to_server_and_clone_to_spine_action_spec_t(tmpsid)
+                            self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response_to_server_and_clone_to_spine(\
+                                    self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
+                    for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER, WARMUPACK_SERVER, LOADACK_SERVER]:
+                        matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
+                                op_hdr_optype = convert_u16_to_i16(tmpoptype),
+                                ipv4_hdr_dstAddr = ipv4addr0,
+                                ipv4_hdr_dstAddr_prefix_length = 32,
+                                inswitch_hdr_is_cached = is_cached,
+                                meta_need_recirculate = 0) # NOTE: meta.need_recirculate must be 0 for those packets
+                        actnspec0 = distfarreachleaf_forward_normal_response_action_spec_t(eport)
+                        self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
                                 self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                    elif is_cached == 1:
-                        actnspec0 = distfarreachleaf_forward_special_get_response_to_server_and_clone_to_spine_action_spec_t(tmpsid)
-                        self.client.ipv4_forward_tbl_table_add_with_forward_special_get_response_to_server_and_clone_to_spine(\
-                                self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                for tmpoptype in [GETRES_SERVER, SCANRES_SPLIT_SERVER, PUTRES_SERVER, DELRES_SERVER, WARMUPACK_SERVER, LOADACK_SERVER]:
-                    matchspec0 = distfarreachleaf_ipv4_forward_tbl_match_spec_t(\
-                            op_hdr_optype = convert_u16_to_i16(tmpoptype),
-                            ipv4_hdr_dstAddr = ipv4addr0,
-                            ipv4_hdr_dstAddr_prefix_length = 32,
-                            inswitch_hdr_is_cached = is_cached,
-                            meta_need_recirculate = 0) # NOTE: meta.need_recirculate must be 0 for those packets
-                    actnspec0 = distfarreachleaf_forward_normal_response_action_spec_t(eport)
-                    self.client.ipv4_forward_tbl_table_add_with_forward_normal_response(\
-                            self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
             # Stage 4
 
