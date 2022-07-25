@@ -257,18 +257,18 @@ bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>>
 		INVARIANT(size_t(frag_recvsize) >= final_frag_hdrsize);
 
 		if (isfilter) {
+			//printf("received optype: %x, expected optype: %x\n", int(get_packet_type(fragbuf, frag_recvsize)), int(optype));
 			if (optype_t(get_packet_type(fragbuf, frag_recvsize)) != optype) {
 				continue; // filter the unmatched packet
 			}
-			tmpkey.deserialize(fragbuf + sizeof(optype_t), frag_recvsize - sizeof(optype_t));
+			tmpkey.deserialize(fragbuf + sizeof(optype_t) + sizeof(switchidx_t), frag_recvsize - sizeof(optype_t) - sizeof(switchidx_t));
+			//printf("received key: %x, expected key: %x\n", tmpkey.keyhihi, targetkey.keyhihi);
 			if (tmpkey != targetkey) {
 				continue;
 			}
 		}
 
 		if (global_isfirst) { // first packet in global -> get switchnum
-			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize);
-
 			size_t max_srcswitchnum = 0;
 			memcpy(&max_srcswitchnum, fragbuf + srcswitchnum_off, srcswitchnum_len);
 			if (srcswitchnum_conversion && srcswitchnum_len == 2) max_srcswitchnum = size_t(ntohs(uint16_t(max_srcswitchnum)));
@@ -284,6 +284,8 @@ bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>>
 			perswitch_perserver_cur_fragnums.resize(max_srcswitchnum);
 
 			global_isfirst = false;
+
+			//printf("frag_hdrsize: %d, final_frag_hdrsize: %d, frag_maxsize: %d, frag_bodysize: %d, max_srcswitchnum: %d\n", frag_hdrsize, final_frag_hdrsize, frag_maxsize, frag_bodysize, max_srcswitchnum);
 		}
 
 		// get switchidx
@@ -294,6 +296,8 @@ bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>>
 		INVARIANT(tmpsrcswitchid > 0 && tmpsrcswitchid <= perswitch_perserver_bufs.size());
 		int tmp_switchidx = tmpsrcswitchid - 1; // [1, max_srcswitchnum] -> [0, max_srcswitchnum-1]
 
+		//printf("tmpsrcswitchid: %d, tmp_switchidx: %d\n", tmpsrcswitchid, tmp_switchidx);
+
 		if (perswitch_perserver_bufs[tmp_switchidx].size() == 0) { // first packet from the leaf switch -> get servernum for the switch
 			size_t max_srcnum = 0;
 			memcpy(&max_srcnum, fragbuf + srcnum_off, srcnum_len);
@@ -303,10 +307,15 @@ bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>>
 
 			// initialize
 			perswitch_perserver_bufs[tmp_switchidx].resize(max_srcnum);
+			for (size_t i = 0; i < max_srcnum; i++) {
+				perswitch_perserver_bufs[tmp_switchidx][i].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
+			}
 			perswitch_perserver_addrs[tmp_switchidx].resize(max_srcnum);
 			perswitch_perserver_addrlens[tmp_switchidx].resize(max_srcnum, sizeof(struct sockaddr_in));
 			perswitch_perserver_max_fragnums[tmp_switchidx].resize(max_srcnum, 0);
 			perswitch_perserver_cur_fragnums[tmp_switchidx].resize(max_srcnum, 0);
+
+			//printf("max_srcnum: %d\n", max_srcnum);
 		}
 
 		// get serveridx
@@ -317,6 +326,8 @@ bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>>
 		//printf("tmpsrcid: %d, max_srcnum: %d, bufnum: %d\n", tmpsrcid, max_srcnum, bufnum);
 		INVARIANT(tmpsrcid > 0 && tmpsrcid <= perswitch_perserver_bufs[tmp_switchidx].size());
 		int tmp_bufidx = tmpsrcid - 1; // [1, max_srcnum] -> [0, max_srcnum-1]
+
+		//printf("tmpsrcid: %d, tmp_bufidx: %d\n", tmpsrcid, tmp_bufidx);
 
 		// get dynamic array for the switch and the server
 		dynamic_array_t &tmpbuf = perswitch_perserver_bufs[tmp_switchidx][tmp_bufidx];
@@ -331,6 +342,8 @@ bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>>
 			perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx] = max_fragnum;
 
 			tmpbuf.dynamic_memcpy(0, fragbuf, frag_hdrsize);
+
+			//printf("max_fragnum: %d\n", max_fragnum);
 		}
 
 		uint16_t cur_fragidx = 0;
@@ -339,6 +352,8 @@ bool udprecvlarge_multisrc(int sockfd, std::vector<std::vector<dynamic_array_t>>
 		//printf("cur_fragidx: %d, max_fragnum: %d, frag_recvsize: %d, buf_offset: %d, copy_size: %d\n", cur_fragidx, max_fragnums[tmp_bufidx], frag_recvsize, cur_fragidx * frag_bodysize, frag_recvsize - final_frag_hdrsize);
 
 		tmpbuf.dynamic_memcpy(frag_hdrsize + cur_fragidx * frag_bodysize, fragbuf + final_frag_hdrsize, frag_recvsize - final_frag_hdrsize);
+
+		//printf("cur_fragidx; %d\n");
 
 		perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] += 1;
 		INVARIANT(perswitch_perserver_cur_fragnums[tmp_switchidx][tmp_bufidx] <= perswitch_perserver_max_fragnums[tmp_switchidx][tmp_bufidx]);

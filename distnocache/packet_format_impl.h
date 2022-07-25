@@ -374,7 +374,7 @@ GetResponseServer<key_t, val_t>::GetResponseServer(key_t key, val_t val, bool st
 	this->_type = optype_t(packet_type_t::GETRES_SERVER);
 }
 
-// PutResponse (value must be any size)
+// PutResponse
 
 template<class key_t>
 PutResponse<key_t>::PutResponse(key_t key, bool stat, uint16_t nodeidx_foreval) 
@@ -634,6 +634,12 @@ uint32_t ScanResponseSplit<key_t, val_t>::dynamic_serialize(dynamic_array_t &dyn
 	uint16_t bigendian_max_scannum = htons(uint16_t(this->_max_scannum));
 	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_max_scannum, sizeof(uint16_t));
 	tmpoff += sizeof(uint16_t);
+	uint16_t bigendian_cur_scanswitchidx = htons(uint16_t(this->_cur_scanswitchidx));
+	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_cur_scanswitchidx, sizeof(uint16_t));
+	tmpoff += sizeof(uint16_t);
+	uint16_t bigendian_max_scanswitchnum = htons(uint16_t(this->_max_scanswitchnum));
+	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_max_scanswitchnum, sizeof(uint16_t));
+	tmpoff += sizeof(uint16_t);
 	uint16_t bigendian_nodeidx_foreval = htons(this->_nodeidx_foreval);
 	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_nodeidx_foreval, sizeof(uint16_t));
 	tmpoff += sizeof(uint16_t);
@@ -643,7 +649,7 @@ uint32_t ScanResponseSplit<key_t, val_t>::dynamic_serialize(dynamic_array_t &dyn
 	uint32_t bigendian_pairnum = htonl(uint32_t(this->_pairnum));
 	dynamic_data.dynamic_memcpy(tmpoff, (char *)&bigendian_pairnum, sizeof(int32_t));
 	tmpoff += sizeof(int32_t);
-	uint32_t totalsize = tmp_ophdrsize + tmp_endkeysize + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int) + sizeof(int32_t);
+	uint32_t totalsize = tmp_ophdrsize + tmp_endkeysize + SPLIT_PREV_BYTES + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(int) + sizeof(int32_t);
 	for (uint32_t pair_i = 0; pair_i < this->_pairs.size(); pair_i++) {
 		uint32_t tmp_pair_keysize = this->_pairs[pair_i].first.dynamic_serialize(dynamic_data, tmpoff);
 		tmpoff += tmp_pair_keysize;
@@ -672,6 +678,12 @@ void ScanResponseSplit<key_t, val_t>::deserialize(const char * data, uint32_t re
 	begin += sizeof(uint16_t);
 	memcpy((void *)&this->_max_scannum, begin, sizeof(uint16_t));
 	this->_max_scannum = ntohs(this->_max_scannum);
+	begin += sizeof(uint16_t);
+	memcpy((void *)&this->_cur_scanswitchidx, begin, sizeof(uint16_t));
+	this->_cur_scanswitchidx = ntohs(this->_cur_scanswitchidx);
+	begin += sizeof(uint16_t);
+	memcpy((void *)&this->_max_scanswitchnum, begin, sizeof(uint16_t));
+	this->_max_scanswitchnum = ntohs(this->_max_scanswitchnum);
 	begin += sizeof(uint16_t);
 	memcpy(&this->_nodeidx_foreval, begin, sizeof(uint16_t));
 	this->_nodeidx_foreval = ntohs(this->_nodeidx_foreval);

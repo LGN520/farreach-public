@@ -478,7 +478,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             if j == 0:
                                 key_start = 0
                                 #key_end = valid_key_start + key_range_per_server - 1
-                            elif j == servernum_per_leafswitch - 1:
+                            if j == servernum_per_leafswitch - 1:
                                 #key_start = valid_key_start + j * key_range_per_server
                                 key_end = pow(2, 16) - 1
 
@@ -588,19 +588,18 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                             exit(-1)
 
                         # Get endkey_start and endkey_end for match_spec_t
+                        endkey_start = valid_key_start + j * key_range_per_server
+                        endkey_end = endkey_start + key_range_per_server - 1
                         if j == 0:
                             endkey_start = 0
-                            endkey_end = valid_key_start + key_range_per_server
-                        elif j == servernum_per_leafswitch - 1:
-                            endkey_start = valid_key_start + j * key_range_per_server
+                            #endkey_end = valid_key_start + key_range_per_server - 1
+                        if j == servernum_per_leafswitch - 1:
+                            #endkey_start = valid_key_start + j * key_range_per_server
                             endkey_end = pow(2, 16) - 1
-                        else:
-                            endkey_start = valid_key_start + j * key_range_per_server
-                            endkey_end = endkey_start + key_range_per_server
 
                         # NOTE: both start and end are included
                         matchspec0 = distfarreachleaf_range_partition_for_scan_endkey_tbl_match_spec_t(\
-                                op_hdr_optype = SCANREQ,
+                                op_hdr_optype = SCANREQ_SPLIT,
                                 scan_hdr_keyhihihi_start = convert_u16_to_i16(endkey_start),
                                 scan_hdr_keyhihihi_end = convert_u16_to_i16(endkey_end),
                                 op_hdr_globalswitchidx = convert_u16_to_i16(global_leafswitch_logical_idx),
@@ -1396,8 +1395,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             stat_iplen = 54
             seq_udplen = 34
             seq_iplen = 54
-            scanreqsplit_udplen = 55
-            scanreqsplit_iplen = 75
+            scanreqsplit_udplen = 56
+            scanreqsplit_iplen = 76
             frequency_udplen = 32
             frequency_iplen = 52
             matchspec0 = distfarreachleaf_update_pktlen_tbl_match_spec_t(\

@@ -19,7 +19,7 @@
 #define CLONE_BYTES 14
 
 // # of bytes before cur_scanidx&max_scannum&cur_scanswitchidx&max_scanswitchnum in split_hdr
-#define SPLIT_PREV_BYTES 3
+#define SPLIT_PREV_BYTES 4
 
 // # of padding bytes in stat_hdr
 #define STAT_PADDING_BYTES 1

@@ -613,9 +613,9 @@ action update_seq_pktlen() {
  
 // SCANREQ_SPLIT
 action update_scanreqsplit_pktlen() {
-	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 16(endkey) + 11(split_hdr)
-	modify_field(udp_hdr.hdrlen, 55);
-	modify_field(ipv4_hdr.totalLen, 75);
+	// [20(iphdr)] + 8(udphdr) + 20(ophdr) + 16(endkey) + 12(split_hdr)
+	modify_field(udp_hdr.hdrlen, 56);
+	modify_field(ipv4_hdr.totalLen, 76);
 }
  
 // CACHE_EVICT_LOADFREQ_INSWITCH_ACK

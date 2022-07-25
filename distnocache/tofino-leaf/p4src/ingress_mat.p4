@@ -108,6 +108,13 @@ action range_partition_for_scan(udpport, eport, start_globalserveridx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(split_hdr.globalserveridx, start_globalserveridx);
 }
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter range_partition_counter {
+	type : packets_and_bytes;
+	direct: range_partition_tbl;
+}
+#endif
 @pragma stage 2
 table range_partition_tbl {
 	reads {
@@ -151,6 +158,14 @@ action range_partition_for_scan_endkey(end_globalserveridx_plus_one) {
 	modify_field(split_hdr.cur_scanidx, 0);
 	subtract(split_hdr.max_scannum, end_globalserveridx_plus_one, split_hdr.globalserveridx);
 }
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter range_partition_for_scan_endkey_counter {
+	type : packets_and_bytes;
+	direct: range_partition_for_scan_endkey_tbl;
+}
+#endif
 
 @pragma stage 3
 table range_partition_for_scan_endkey_tbl {

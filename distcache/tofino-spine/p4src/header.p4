@@ -62,7 +62,7 @@ header_type scan_t {
 }
 header_type split_t {
 	fields {
-		is_clone: 8;
+		is_clone: 16;
 		// used for servers
 		globalserveridx: 16;
 		cur_scanidx: 16;

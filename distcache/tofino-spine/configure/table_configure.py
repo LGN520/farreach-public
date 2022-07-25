@@ -921,8 +921,8 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             onlyop_iplen = 48
             seq_udplen = 34
             seq_iplen = 54
-            scanreqsplit_udplen = 55
-            scanreqsplit_iplen = 75
+            scanreqsplit_udplen = 56
+            scanreqsplit_iplen = 76
             frequency_udplen = 32
             frequency_iplen = 52
             op_clone_udplen = 46
