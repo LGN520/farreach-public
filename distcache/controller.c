@@ -65,7 +65,7 @@ int controller_evictserver_evictclient_udpsock = -1;
 void prepare_controller();
 void *run_controller_popserver(void *param); // Receive NETCACHE_CACHE_POP from switchos
 void *run_controller_victimserver(void *param); // receive DISTCACHE_CACHE_EVICT_VICTIM from spine switchos
-void validate_switchidx(key_t key); // validate spine/leaf switchidx for the give key
+void validate_switchidx(netreach_key_t key); // validate spine/leaf switchidx for the give key
 void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
 void close_controller();
 
@@ -357,7 +357,7 @@ void *run_controller_victimserver(void *param) {
 	pthread_exit(nullptr);
 }
 
-void validate_switchidx(key_t key) {
+void validate_switchidx(netreach_key_t key) {
 	uint32_t tmp_spineswitchidx = key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num);
 	bool tmp_valid = false;
 	for (size_t i = 0; i < spineswitch_total_logical_num; i++) {

@@ -266,10 +266,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                      pal_port_speed_t.BF_SPEED_40G,
                                      pal_fec_type_t.BF_FEC_TYP_NONE)
                self.pal.pal_port_enable(0, i)
-           self.pal.pal_port_add(0, self.spineswitch_devport,
+            self.pal.pal_port_add(0, self.spineswitch_devport,
                                  pal_port_speed_t.BF_SPEED_40G,
                                  pal_fec_type_t.BF_FEC_TYP_NONE)
-           self.pal.pal_port_enable(0, self.spineswitch_devport)
+            self.pal.pal_port_enable(0, self.spineswitch_devport)
 
             # Add special ports
             speed_10g = 2

@@ -133,7 +133,7 @@ void prepare_switchos();
 void recover();
 void *run_switchos_popserver(void *param);
 void *run_switchos_popworker(void *param);
-uint16_t calculate_switchidx(key_t key);
+uint16_t calculate_switchidx(netreach_key_t key);
 void *run_switchos_snapshotserver(void *param);
 void *run_switchos_specialcaseserver(void *param);
 void process_specialcase(const uint16_t &tmpidx, const netreach_key_t &tmpkey, const val_t &tmpval, const uint32_t &tmpseq, const bool &tmpstat);
@@ -521,7 +521,7 @@ void *run_switchos_popworker(void *param) {
 				if (strcmp(switchos_role, "spine") == 0) {
 					tmp_pipeidx = leafswitch_pipeidx;
 				}
-				elif (strcmp(switchos_role, "leaf") == 0) {
+				else if (strcmp(switchos_role, "leaf") == 0) {
 					int tmp_server_physical_idx = -1;
 					for (int i = 0; i < server_physical_num; i++) {
 						for (int j = 0; j < server_logical_idxes_list[i].size(); j++) {
@@ -899,7 +899,7 @@ void *run_switchos_popworker(void *param) {
 	pthread_exit(nullptr);
 }
 
-uint16_t calculate_switchidx(key_t key) {
+uint16_t calculate_switchidx(netreach_key_t key) {
 	uint16_t tmp_switchidx = 0;
 	if (strcmp(switchos_role, "spine") == 0) {
 		tmp_switchidx = uint16_t(key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));

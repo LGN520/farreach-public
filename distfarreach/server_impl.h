@@ -379,7 +379,7 @@ void *run_server_worker(void * param) {
 				dump_buf(buf, recv_size);
 #endif
 
-				uint16_t tmp_leafswitchidx = req.key().get_leafswitch_idx(switch_partition_count, max_server_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
+				uint16_t tmp_leafswitchidx = req.key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
 				if (tmp_stat) { // key exists
 					get_response_latest_seq_server_t rsp(tmp_leafswitchidx, req.key(), tmp_val, tmp_seq, global_server_logical_idx);
 					rsp_size = rsp.serialize(buf, MAX_BUFSIZE);

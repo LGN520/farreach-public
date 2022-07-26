@@ -1880,7 +1880,7 @@ void LoadsnapshotdataInswitchAck<key_t, val_t>::deserialize(const char * data, u
 
 template<class key_t>
 SetvalidInswitch<key_t>::SetvalidInswitch(key_t key, uint16_t idx, uint8_t validvalue)
-	: Packet<key_t>(PacketType::SETVALID_INSWITCH, key), _idx(idx), _validvalue(validvalue)
+	: Packet<key_t>(PacketType::SETVALID_INSWITCH, 0, key), _idx(idx), _validvalue(validvalue)
 {
 	INVARIANT(idx >= 0);
 	INVARIANT(validvalue == 0 || validvalue == 1 || validvalue == 3);

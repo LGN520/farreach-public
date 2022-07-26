@@ -177,7 +177,7 @@ table hash_for_cm1_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 4;
 }
 
 // Stage 2
@@ -222,7 +222,7 @@ table hash_for_cm2_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 4;
 }
 
 action set_snapshot_flag() {
@@ -293,7 +293,7 @@ table hash_for_cm3_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 4;
 }
 
 // Stage 4
@@ -313,7 +313,7 @@ table hash_for_cm4_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 4;
 }
 
 /*action set_client_sid(client_sid, eport) {
@@ -484,7 +484,7 @@ table sample_tbl {
 		nop;
 	}
 	default_action: nop();
-	size: 2;
+	size: 4;
 }
 
 action update_getreq_spine_to_getreq_inswitch() {

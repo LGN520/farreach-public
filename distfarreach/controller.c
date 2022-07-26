@@ -76,7 +76,7 @@ dynamic_array_t *controller_snapshotclient_for_server_databuf_list = NULL;
 
 void prepare_controller();
 void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
-void validate_switchidx(key_t key); // validate spine/leaf switchidx for the give key
+void validate_switchidx(netreach_key_t key); // validate spine/leaf switchidx for the give key
 void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
 void controller_load_snapshotid(); // retrieve latest snapshot id
 void controller_update_snapshotid(); // store latest snapshotid and inswitch snapshot data
@@ -196,7 +196,7 @@ void prepare_controller() {
 	controller_popserver_popclient_for_leaf_udpsock_list = new int[max_server_total_logical_num];
 	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 		prepare_udpserver(controller_popserver_udpsock_list[tmp_global_server_logical_idx], false, controller_popserver_port_start + tmp_global_server_logical_idx, "controller.popserver");
-		create_udpsock(controller_popserver_popclient__for_spine_udpsock_list[tmp_global_server_logical_idx], true, "controller.popserver.popclient_for_spine");
+		create_udpsock(controller_popserver_popclient_for_spine_udpsock_list[tmp_global_server_logical_idx], true, "controller.popserver.popclient_for_spine");
 		create_udpsock(controller_popserver_popclient_for_leaf_udpsock_list[tmp_global_server_logical_idx], true, "controller.popserver.popclient_for_leaf");
 	}
 
@@ -356,7 +356,7 @@ void *run_controller_popserver(void *param) {
 	pthread_exit(nullptr);
 }
 
-void validate_switchidx(key_t key) {
+void validate_switchidx(netreach_key_t key) {
 	uint32_t tmp_spineswitchidx = key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num);
 	bool tmp_valid = false;
 	for (size_t i = 0; i < spineswitch_total_logical_num; i++) {
@@ -468,7 +468,8 @@ void *run_controller_snapshotclient(void *param) {
 	}
 
 	struct sockaddr_in switchos_snapshotserver_addr;
-	set_sockaddr(switchos_snapshotserver_addr, inet_addr(switchos_ip), switchos_snapshotserver_port);
+	// TODO: we should get snapshot from both spine and server-leaf switchos
+	set_sockaddr(switchos_snapshotserver_addr, inet_addr(spineswitchos_ip), switchos_snapshotserver_port);
 	socklen_t switchos_snapshotserver_addrlen = sizeof(struct sockaddr_in);
 
 	struct sockaddr_in server_snapshotserver_addr_list[max_server_total_logical_num];

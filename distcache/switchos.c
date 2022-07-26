@@ -86,7 +86,7 @@ void prepare_switchos();
 void *run_switchos_dppopserver(void *param);
 void *run_switchos_cppopserver(void *param);
 void *run_switchos_popworker(void *param);
-uint16_t calculate_switchidx(key_t key);
+uint16_t calculate_switchidx(netreach_key_t key);
 void close_switchos();
 
 // switchos <-> ptf.popserver
@@ -787,7 +787,7 @@ void *run_switchos_popworker(void *param) {
 	pthread_exit(nullptr);
 }
 
-uint16_t calculate_switchidx(key_t key) {
+uint16_t calculate_switchidx(netreach_key_t key) {
 	uint16_t tmp_switchidx = 0;
 	if (strcmp(switchos_role, "spine") == 0) {
 		tmp_switchidx = uint16_t(key.get_spineswitch_idx(switch_partition_count, spineswitch_total_logical_num));

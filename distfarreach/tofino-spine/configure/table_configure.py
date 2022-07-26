@@ -330,7 +330,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                         op_hdr_optype = tmpoptype,
                         meta_need_recirculate = 1)
                 # recirculate to the pipeline of the first physical client for atomicity of setting snapshot flag
-                actnspec0 = distfarreachspine_recirculate_pkt_action_spec_t(self.recirPorts[leafswitch_pipeidx])
+                actnspec0 = distfarreachspine_recirculate_pkt_action_spec_t(convert_u8_to_i8(self.recirPorts[leafswitch_pipeidx]))
                 self.client.recirculate_tbl_table_add_with_recirculate_pkt(\
                         self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
 
@@ -969,12 +969,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("lo10")
 
             # Table: update_vallo11_tbl (default: nop; 14)
-            print "Configuring update_vallo11_tbl"
-            self.configure_update_val_tbl("lo11")
+            #print "Configuring update_vallo11_tbl"
+            #self.configure_update_val_tbl("lo11")
 
             # Table: update_vallo12_tbl (default: nop; 14)
-            print "Configuring update_vallo12_tbl"
-            self.configure_update_val_tbl("lo12")
+            #print "Configuring update_vallo12_tbl"
+            #self.configure_update_val_tbl("lo12")
 
             # Table: update_vallo13_tbl (default: nop; 14)
             print "Configuring update_vallo13_tbl"
@@ -1033,12 +1033,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("hi10")
 
             # Table: update_valhi11_tbl (default: nop; 14)
-            print "Configuring update_valhi11_tbl"
-            self.configure_update_val_tbl("hi11")
+            #print "Configuring update_valhi11_tbl"
+            #self.configure_update_val_tbl("hi11")
 
             # Table: update_valhi12_tbl (default: nop; 14)
-            print "Configuring update_valhi12_tbl"
-            self.configure_update_val_tbl("hi12")
+            #print "Configuring update_valhi12_tbl"
+            #self.configure_update_val_tbl("hi12")
 
             # Table: update_valhi13_tbl (default: nop; 14)
             print "Configuring update_valhi13_tbl"

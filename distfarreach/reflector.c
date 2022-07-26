@@ -1,3 +1,4 @@
+#include <atomic>
 #include <stdio.h>
 #include <ifaddrs.h>
 #include <netinet/in.h>
@@ -15,8 +16,6 @@
 
 #include "common_impl.h"
 
-#include "reflector_impl.h"
-
 char reflector_role[256];
 
 char reflector_ip_for_switchos[256];
@@ -29,6 +28,8 @@ int server_physical_idx = -1;
 bool volatile reflector_running = false;
 std::atomic<size_t> reflector_ready_threads(0);
 size_t reflector_expected_ready_threads = 2;
+
+#include "reflector_impl.h"
 
 bool volatile killed = false;
 void kill(int signum);
@@ -145,6 +146,7 @@ int main(int argc, char **argv) {
 
 	reflector_running = false;
 
+	void *status;
 	printf("wait for reflector.cp2dpserver\n");
 	int rc = pthread_join(reflector_cp2dpserver_thread, &status);
 	if (rc) {
