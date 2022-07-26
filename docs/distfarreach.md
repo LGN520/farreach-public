@@ -407,6 +407,26 @@
 				* Generate CASE1 for GETRES_LATEST/DELETED_SEQ_INSWITCH as in single-switch
 				* Generate CASE1 and CASE3 for PUT/DELREQ_SEQ_INSWITCH instead of PUT/DELREQ_INSWITCH (files: tofino-leaf/p4src/egress_mat.p4, tofino-leaf/configure/table_configure.py)
 
+## Implementation log after finishing most code
+
++ Other implementation details
+	* Update update_pktlen_tbl accordingly (files: tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py)
+		- DistFarReach/DistNoCache: op_hdr.globalswitchidx, split_hdr.cur_scanswitchidx, split_hdr.max_scanswitchnum
+		- DistCache: op_hdr.globalswitchidx, split_hdr.cur_scanswitchidx, split_hdr.max_scanswitchnum, clone_hdr.server_sid, clone_hdr.server_udpport, inswitch_hdr.hashval_for_bfX
+		- TODO: Update ycsb client library accordingly
+	* Retrieve setting udp.srcport = server_worker_iort_start in eg_port_forward_tbl for DistFarReach/DistCache (files: tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py)
+		- NOTE: udp.dstport has been set as client.udpport, if NOT set srcport as server.worker.udpport, pkt will be dropped by parser/deparser due to NO reserved udp ports
+		- NOTE: although pkt type has been changed (e.g., GETREQ_INSWITCH -> GETRES, PUTREQ_SEQ_INSWITCH_CASE1 -> PUTRES), as the current devport is server/reflector.devport instead of client.devport, it will NOT access update_ipmac_srcport_tbl for server2client to change udp.srcport
+		- DistFarReach spine/leaf: GET/PUT/DELREQ -> GET/PUT/DELRES; PUT/DELREQ_SEQ_INSWITCH_CASE1 -> PUT/DELRES
+		- DistCache spine/leaf: GETREQ -> GETRES, NETCACHE_WARAMUPREQ_INSWITCH_POP -> WARMUPACK
+	* Update_ipmac_srcport_tbl
+		- DistFarReach: add PUT/DELREQ_SEQ_INSWITCH_CASE1 for switch2switchos as in FarReach
+	* Update add_and_remove_value_header_tbl
+		- DistFarReach/DistCache leaf: add PUTREQ for client-leaf
+	* Check all possible packet types from spine switch to server-leaf switch (e.g., GETREQ_NLATEST)
+		- For GETREQ_NLATEST from spine switch in DistFarReach, server-leaf directly forwards it to server by accessing partition_tbl and update_ipmac_srcport_tbl as client2server (files: tofino-leaf/configure/table_configure.py)
+		- NOTE: for NETCACHE_PUT/DELREQ_SEQ_CACHED from spine switch in DistCache, server-leaf ingress processes it as PUT/DELREQ_SEQ, i.e., converting it into PUT/DELREQ_SEQ_INSWITCH, which will be converted as NETCACHE_PUT/DELREQ_SEQ_CACHED to server (NOTE: if spine caches the key, server-leaf must also cache the key)
+
 ## Run
 
 - Hardware configure
@@ -498,26 +518,6 @@
 	- Analyze throughput result files: dynamic/static/rotation_calculate_thpt.py
 	- sync_file.sh: sync one file (filepath relateive to netreach-v4-lsm/) to all other machines
 	- ../sync.sh: sync entire netreach-v4-lsm directory to other machines (NOTE: old directory of other machines will be deleted first)
-
-## Implementation log after finishing most code
-
-+ Other implementation details
-	* Update update_pktlen_tbl accordingly (files: tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py)
-		- DistFarReach/DistNoCache: op_hdr.globalswitchidx, split_hdr.cur_scanswitchidx, split_hdr.max_scanswitchnum
-		- DistCache: op_hdr.globalswitchidx, split_hdr.cur_scanswitchidx, split_hdr.max_scanswitchnum, clone_hdr.server_sid, clone_hdr.server_udpport, inswitch_hdr.hashval_for_bfX
-		- TODO: Update ycsb client library accordingly
-	* Retrieve setting udp.srcport = server_worker_iort_start in eg_port_forward_tbl for DistFarReach/DistCache (files: tofino-*/p4src/egress_mat.p4, tofino-*/configure/table_configure.py)
-		- NOTE: udp.dstport has been set as client.udpport, if NOT set srcport as server.worker.udpport, pkt will be dropped by parser/deparser due to NO reserved udp ports
-		- NOTE: although pkt type has been changed (e.g., GETREQ_INSWITCH -> GETRES, PUTREQ_SEQ_INSWITCH_CASE1 -> PUTRES), as the current devport is server/reflector.devport instead of client.devport, it will NOT access update_ipmac_srcport_tbl for server2client to change udp.srcport
-		- DistFarReach spine/leaf: GET/PUT/DELREQ -> GET/PUT/DELRES; PUT/DELREQ_SEQ_INSWITCH_CASE1 -> PUT/DELRES
-		- DistCache spine/leaf: GETREQ -> GETRES, NETCACHE_WARAMUPREQ_INSWITCH_POP -> WARMUPACK
-	* Update_ipmac_srcport_tbl
-		- DistFarReach: add PUT/DELREQ_SEQ_INSWITCH_CASE1 for switch2switchos as in FarReach
-	* Update add_and_remove_value_header_tbl
-		- DistFarReach/DistCache leaf: add PUTREQ for client-leaf
-	* Check all possible packet types from spine switch to server-leaf switch (e.g., GETREQ_NLATEST)
-		- For GETREQ_NLATEST from spine switch in DistFarReach, server-leaf directly forwards it to server by accessing partition_tbl and update_ipmac_srcport_tbl as client2server (files: tofino-leaf/configure/table_configure.py)
-		- NOTE: for NETCACHE_PUT/DELREQ_SEQ_CACHED from spine switch in DistCache, server-leaf ingress processes it as PUT/DELREQ_SEQ, i.e., converting it into PUT/DELREQ_SEQ_INSWITCH, which will be converted as NETCACHE_PUT/DELREQ_SEQ_CACHED to server (NOTE: if spine caches the key, server-leaf must also cache the key)
 
 ## Simple test
 

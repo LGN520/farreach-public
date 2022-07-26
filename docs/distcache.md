@@ -46,6 +46,99 @@
 				* NOTE: as the key MUST be cached in server-leaf switch here, the pkt must become NETCACHE_PUT/DELREQ_SEQ_CACHED to server
 				* NOTE: even if the key is NOT cached in server-leaf due to rare reason (e.g., nearly impossible fast cache eviction) and the pkt is not marked as XXX_CACHED to server, server can still perform correctly based on its inswitch cache metadata (i.e., beingcached/cached/beingupdated keyset)
 
+## Implementation log
+
++ Implement DistCache
+	* Copy netcache to distcache
+	* See [dist-farrech.md](./dist-farreach.md) for changes which are synced to DistCache
+	* Normal request/response
+		- Remove BF-related MATs in spine switch including access_bfX_tbl and hash_for_bfX_tbl (files: tofino-spine/main.p4, tofino-spine/p4src/regs/bf.p4, tofino-spine/configure/table_configure.py, tofino-spine/p4src/ingress_mat.p4)
+			+ NOTE: meta.is_hot/is_report MUST be set as 0 by default actions in is_hot_tbl and is_report_tbl for eg_port_forward_tbl in spine switch (files: tofino-spine/configure/table_configure.py)
+		- server-leaf processes NETCACHE_PUT/DELREQ_SEQ_CACHED as PUT/DELREQ_SEQ from spine switch (files: tofino-leaf/configure/table_configure.py, tofino-leaf/p4src/ingress_mat.p4)
+	* Cache population/eviction
+		* For GETREQ of cache population
+			- Server-leaf converts GETREQ_INSWITCH as NETCACHE_GETREQ_POP for cache population as in single-switch
+				+ Server-leaf clones NETCACHE_GETREQ_POP to reflector_for_leaf.sid/port (files: tofino-leaf/configure/table_configure.py)
+		* For WARMUPREQ of cache population
+			- Client-leaf switch forwards WARMUPREQ to spine switch
+			- NOTE: DistCache spine switch converts WARMUPREQ (from client-leaf) into NETCACHE_WARMUPREQ_INSWITCH instead of WARMUPREQ_SPINE
+			- Spine switch converts WARMUPREQ as NETCACHE_WARMUPREQ_INSWITCH/_POP for cache population, and clones WARMUPACK w/ client info to client-leaf switch (files: tofino-spine/p4src/ingress_mat.p4, tofino-spine/configure/table_configure.py)
+				+ Spine switch clones NETCACHE_WARMUPREQ_INSWITCH_POP to reflector_for_spine.sid/udpport/devport/ip/mac (files: tofino-spine/configure/table_configure.py)
+				+ Remove update_warmupreq_to_warmupreq_spine() in ig_port_forward_tbl of spine switch
+				+ Remove WARMUPREQ_SPINE-related MAT entries in egress pipeline
+			- Client-leaf switch forwards WARMACK to client
+			- NOTE: server-leaf switch will NOT process WARMUPREQ or WARMUPREQ_SPINE for cache population
+				+ Remove update_warmupreq_to_netcache_warmupreq_inswitch() and update_warmupreq_spine_to_warmupreq() in ig_port_forward_tbl of server-leaf switch (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
+				+ For server-leaf switch, remove WARMUPREQ_SPINE-related MAT entries in ingress pipeline; remove WARMUPREQ/NETCACHE_WARMUPREQ_INSWITCH-related MAT entires in egress pipeline (files: tofino-leaf/configure/table_configure.py)
+		* For cache population/eviction in control plane -> sync to distfarreach/distcache if necessary
+			- spine/leafswitchos.dppopserver processes NETCACHE_WARMUPREQ_INSWITCH_POP/NETCACHE_GETREQ_POP from data plane
+				+ Add switchos.dp/cppopserver_port in configuration (ONLY used by DistCache) (files: config.ini, configs/*, iniparser/iniparser_wrapper.*, common_impl.h)
+				+ spine/leafreflector.dp2cpserver sends pkt to spine/leafswitchos.dppopserver (ONLY used by DistCache) (files: reflector_impl.h)
+				+ spine/leafswitchos.dppopserver fixes duplicate cache population from data plane as in single-switch
+				+ If the key is not cached, spine/leafswitchos.dppopserver.popclient_for_controller sends NETCACHE_CACHE_POP to controller.popserver, which forwards the pkt to correspondings server further (files: switchos.c, controller.c)
+				+ controller.popserver receives NETCACHE_CACHE_POP_ACK from server.popserver and validates spine/leaf switchidx (files: controller.c)
+				+ controller.popserver.popclient_for_spine/leaf send CACHE_POPs to spine/leafswitchos.cppopserver; and wait for CACHEPOP_ACKs (files: controller.c)
+				+ controller.popserver receives two CACHE_POP_ACKs, and sends NETCACHE_CACHE_POP_ACK to original switchos.dppopserver (files: controller.c)
+				+ spine/leafsiwtchos.cppopserver receives CACHE_POP, sends CACHE_POP_ACK to controller.popserver.popclient_for_spine/leaf, and passes CACHE_POP to switchos.popworker (files: switchos.c)
+				+ DEPRECATED: spine/leafswitchos.cppopserver fixes duplicate cache population from controller.popserver due to timeout-and-retry of switchos.dppopperver (files: switchos.c)
+					* NOTE: we resort switchos.popworker to fix duplicate CACHE_POPs as in FarReach/DistFarReach
+				+ To avoid inconsistent victim between spine/leaf for the same newly-populcated key
+					* spine.popworker chooses victim by CACHE_EVICT_LOADFREQ_INSWITCH/_ACK (files: switchos.c)
+					* leaf.popworker does NOT choose victim; instead leaf.popworker.victimserver waits for DISTCACHE_CACHE_EVICT_VICTIM (files: switchos.c)
+						- Add switch:leafvictimserver_port and controller:victimserver_port in configuration (ONLY for DistCache) (files: config.ini, configs/*, iniparser/iniparser_wrapper.*, common_impl.h)
+					* Add packet type of DISTCACHE_CACHE_EVICT_VICTIM/_ACK (files: tofino-*/main.p4, tofino-*/common.py, tofino-*/p4src/parser.p4, packet_format.\*, common_impl.h)
+					* spine.popworker.victimclient_for_controlelr sends DISTCACHE_CACHE_EVICT_VICTIM (including newkey, victim.key, and victim.idx) to controller.victimserver, and waits for DISTCACHE_CACHE_EVICT_VICTIM_ACK (files: switchos.c)
+					* controller.victimserver.victimclient_for_leaf validates spine/leafswitchidx, sends DISTCACHE_CACHE_EVICT_VICTIM to corresponding leaf.popworker.victimserver, waits for DISTCACHE_CACHE_EVICT_VICTIM_ACK (files: controller.c)
+					* leaf.popworker.victimserver receives DISTCACHE_CACHE_EVICT_VICTIM, validates victim.key and victim.idx, and sends DISTCACHE_CACHE_EVICT_VICTIM_ACK to controller.victimserver.victimclient_for_leaf, which forwards ack to spine (files: switchos.c, controller.c)
+			- Consider duplicate NETCACHE_CACHE_POP / NETCACHE_CACHE_POP_FINISH / NETCACHE_CACHE_EVICT in server (files: server_impl.h)
+
+## Implementation log after reviewing DistCache paper
+
+## Simple test
+
+## Deprecated staff
+
++ DEPRECATED design for cache population/eviction in DistFarReach
+	* NOTE: DistFarReach triggers cache population by servers -> key of CACHE_POP must NOT be cached -> key MUST be cached at most ONCE and hence in at most ONE switch
+	* NOTE: to keep stateless controller, controller sends CACHE_POP_ACK to server only if receive CACHE_POP_ACK from spine/leaf, which means that some switchos.popworker has performed cache population/eviction for the key
+		- TODO: server sends CACNE_POP to controller by server.popclient
+			+ NOTE: wait time for CACHE_POP_ACK in distributed scenario becomes larger than single-switch -> using server.popclient can avoid from affecting server.worker performance for normal requests
+			+ TODO: Now we still use server.worker.popclient instead of server.popclient as cache eviction is rare compared with normal requests
+	* controller.popserver receives CACHE_POP from server.popclient
+		- controller.popserver calculates logical spineswitchidx based on the key to find physical spine switch
+			+ NOTE: as we only have one physical spine switch, we validate the logical spineswitchidx
+		- TODO: controller.popserver.popclient_for_spine forwards CACHE_POP to switchos.popserver of corresponding spine switch
+		- TODO: controller.popserver.popclient_for_spine waits for CACHE_POP_ACK / CACHE_POP_FULL_ACK
+		- TODO: If receive CACHE_POP_ACK from spine switch, controller.popserver forwards CACHE_POP_ACK to server.popclient, and waits for next CACHE_POP from server.popclient
+		- If receive CACHE_POP_FULL_ACK from spine switch
+			+ controller.popserver calculates logical leafswitchidx based on the key to find physical server-leaf
+				* NOTE: as we only have one physical leaf switch, we validate the logical leafswitchidx
+			+ TODO: controller.popserver.popclient sends CACHE_POP to switchos.popserver of corresponding phyiscal leaf
+			+ TODO: controller.popserver.popclient waits for CACHE_POP_ACK / CACHE_POP_FULL_ACK
+			+ TODO: If receive CACHE_POP_ACK from leaf switch, controller.popserver forwards CACHE_POP_ACK to server.popclient, and waits for next CACHE_POP from server.popclient
+			+ If receive CACHE_POP_FULL_ACK from leaf switch
+				* NOTE: we do NOT need to find global victim by CACHE_POP_GETVICTIMs; instead, we still use sampling to reduce cache pop latency
+				* TODO: controller.popserver.popclient samples one switch from spine/leaf and sends CACHE_POP_FULL w/ new key to sampled switch
+				* TODO: controller receives CACHE_POP_ACK from sampled switch, and forwards it to server.popclient
+	* For each physical spine/leaf switchos, after receiving CACHE_POP from controller.popserver.popclient
+		- TODO: switchos.popserver checks inswitch cache size first
+			+ TODO: Maintain a mutex lock for switchos_cached_empty_index
+			+ TODO: If the current switch is not full, switchos.popserver sends CACHE_POP_ACK to controller.popserver.popclient, and pass CACHE_POP w/ new key to switchos.popworker for cache population
+			+ TODO: If the current switch is full, switchos.popserver sends CACHE_POP_FULL_ACK to controller.popserver.popclient, yet NOT pass CACHE_POP w/ new key to switchos.popworker for cache population
+	* For each physical spine/leaf switchos, after receiving CACHE_POP_FULL from controller.popserver.popclient
+		- TODO: switchos.popserver directly sends CACHE_POP_ACK w/ new key to controller.popserver.popclient, and pass CACHE_POP_FULL w/ new key to switchos.popworker for cache eviction
+		- TODO: NOTE: CACHE_POP_FULL is inherited from CACHE_POP
+		- TODO: NOTE: switchos_cached_empty_index must be full
++ DEPRECATED implementation of cache population/eviction in DistFarReach
+	+ TODO: controller.popsever.popclient_for_spine forwards CACHE_POP to spine.switchos.popserver and waits for CACHE_POP/_FULL_ACK (files: controller.c)
+		* NOTE: controller needs to communiate with both spine/leaf switchos -> need two sets of global variables; while reflector/switchos can update exclusive global variables based on its role (spine or leaf)
+		* TODO: Add packet type of CACHE_POP_FULL_ACK (files: tofino-*/main.p4, tofino-*/common,py, tofino-*/p4src/parser.p4, packet_format.*, common_impl.h)
+	+ spine/leafswitchos.popserver processes CACHE_POP from controller.popserver.popclient_for_spine/leaf
+		* TODO: Add mutex lock for inswitch cache metadata (writer: switchos.popworker; reader: switchos.popsever/snapshotserver) (files: switchos.c)
+		* TODO: switchos.popserver gets pipeidx based on role (spineswitchos -> leafswitch.pipeidx; leafswitchos -> server.pipeidx)
+		* TODO: If spine/leaf inswitch cache of the pipeidx is NOT full, switchos.popserver sends CACHE_POP_ACK to controller.popserver.popclient_for_spine/leaf, and passes CACHE_POP to switchos.popworker
+		* TODO: If spine/leaf inswitch cache of the pipeidx is full, switchos.popserver sends CACHE_POP_FULL_ACK to controller.popserver.popclient_for_spine/leaf
+
 ## Run
 
 - Hardware configure
@@ -134,94 +227,3 @@
 	- Analyze throughput result files: dynamic/static/rotation_calculate_thpt.py
 	- sync_file.sh: sync one file (filepath relateive to netreach-v4-lsm/) to all other machines
 	- ../sync.sh: sync entire netreach-v4-lsm directory to other machines (NOTE: old directory of other machines will be deleted first)
-
-## Implementation log
-
-+ Implement DistCache
-	* Copy netcache to distcache
-	* See [dist-farrech.md](./dist-farreach.md) for changes which are synced to DistCache
-	* Normal request/response
-		- Remove BF-related MATs in spine switch including access_bfX_tbl and hash_for_bfX_tbl (files: tofino-spine/main.p4, tofino-spine/p4src/regs/bf.p4, tofino-spine/configure/table_configure.py, tofino-spine/p4src/ingress_mat.p4)
-			+ NOTE: meta.is_hot/is_report MUST be set as 0 by default actions in is_hot_tbl and is_report_tbl for eg_port_forward_tbl in spine switch (files: tofino-spine/configure/table_configure.py)
-		- server-leaf processes NETCACHE_PUT/DELREQ_SEQ_CACHED as PUT/DELREQ_SEQ from spine switch (files: tofino-leaf/configure/table_configure.py, tofino-leaf/p4src/ingress_mat.p4)
-	* Cache population/eviction
-		* For GETREQ of cache population
-			- Server-leaf converts GETREQ_INSWITCH as NETCACHE_GETREQ_POP for cache population as in single-switch
-				+ Server-leaf clones NETCACHE_GETREQ_POP to reflector_for_leaf.sid/port (files: tofino-leaf/configure/table_configure.py)
-		* For WARMUPREQ of cache population
-			- Client-leaf switch forwards WARMUPREQ to spine switch
-			- NOTE: DistCache spine switch converts WARMUPREQ (from client-leaf) into NETCACHE_WARMUPREQ_INSWITCH instead of WARMUPREQ_SPINE
-			- Spine switch converts WARMUPREQ as NETCACHE_WARMUPREQ_INSWITCH/_POP for cache population, and clones WARMUPACK w/ client info to client-leaf switch (files: tofino-spine/p4src/ingress_mat.p4, tofino-spine/configure/table_configure.py)
-				+ Spine switch clones NETCACHE_WARMUPREQ_INSWITCH_POP to reflector_for_spine.sid/udpport/devport/ip/mac (files: tofino-spine/configure/table_configure.py)
-				+ Remove update_warmupreq_to_warmupreq_spine() in ig_port_forward_tbl of spine switch
-				+ Remove WARMUPREQ_SPINE-related MAT entries in egress pipeline
-			- Client-leaf switch forwards WARMACK to client
-			- NOTE: server-leaf switch will NOT process WARMUPREQ or WARMUPREQ_SPINE for cache population
-				+ Remove update_warmupreq_to_netcache_warmupreq_inswitch() and update_warmupreq_spine_to_warmupreq() in ig_port_forward_tbl of server-leaf switch (files: tofino-leaf/p4src/ingress_mat.p4, tofino-leaf/configure/table_configure.py)
-				+ For server-leaf switch, remove WARMUPREQ_SPINE-related MAT entries in ingress pipeline; remove WARMUPREQ/NETCACHE_WARMUPREQ_INSWITCH-related MAT entires in egress pipeline (files: tofino-leaf/configure/table_configure.py)
-		* For cache population/eviction in control plane -> sync to distfarreach/distcache if necessary
-			- spine/leafswitchos.dppopserver processes NETCACHE_WARMUPREQ_INSWITCH_POP/NETCACHE_GETREQ_POP from data plane
-				+ Add switchos.dp/cppopserver_port in configuration (ONLY used by DistCache) (files: config.ini, configs/*, iniparser/iniparser_wrapper.*, common_impl.h)
-				+ spine/leafreflector.dp2cpserver sends pkt to spine/leafswitchos.dppopserver (ONLY used by DistCache) (files: reflector_impl.h)
-				+ spine/leafswitchos.dppopserver fixes duplicate cache population from data plane as in single-switch
-				+ If the key is not cached, spine/leafswitchos.dppopserver.popclient_for_controller sends NETCACHE_CACHE_POP to controller.popserver, which forwards the pkt to correspondings server further (files: switchos.c, controller.c)
-				+ controller.popserver receives NETCACHE_CACHE_POP_ACK from server.popserver and validates spine/leaf switchidx (files: controller.c)
-				+ controller.popserver.popclient_for_spine/leaf send CACHE_POPs to spine/leafswitchos.cppopserver; and wait for CACHEPOP_ACKs (files: controller.c)
-				+ controller.popserver receives two CACHE_POP_ACKs, and sends NETCACHE_CACHE_POP_ACK to original switchos.dppopserver (files: controller.c)
-				+ spine/leafsiwtchos.cppopserver receives CACHE_POP, sends CACHE_POP_ACK to controller.popserver.popclient_for_spine/leaf, and passes CACHE_POP to switchos.popworker (files: switchos.c)
-				+ DEPRECATED: spine/leafswitchos.cppopserver fixes duplicate cache population from controller.popserver due to timeout-and-retry of switchos.dppopperver (files: switchos.c)
-					* NOTE: we resort switchos.popworker to fix duplicate CACHE_POPs as in FarReach/DistFarReach
-				+ To avoid inconsistent victim between spine/leaf for the same newly-populcated key
-					* spine.popworker chooses victim by CACHE_EVICT_LOADFREQ_INSWITCH/_ACK (files: switchos.c)
-					* leaf.popworker does NOT choose victim; instead leaf.popworker.victimserver waits for DISTCACHE_CACHE_EVICT_VICTIM (files: switchos.c)
-						- Add switch:leafvictimserver_port and controller:victimserver_port in configuration (ONLY for DistCache) (files: config.ini, configs/*, iniparser/iniparser_wrapper.*, common_impl.h)
-					* Add packet type of DISTCACHE_CACHE_EVICT_VICTIM/_ACK (files: tofino-*/main.p4, tofino-*/common.py, tofino-*/p4src/parser.p4, packet_format.\*, common_impl.h)
-					* spine.popworker.victimclient_for_controlelr sends DISTCACHE_CACHE_EVICT_VICTIM (including newkey, victim.key, and victim.idx) to controller.victimserver, and waits for DISTCACHE_CACHE_EVICT_VICTIM_ACK (files: switchos.c)
-					* controller.victimserver.victimclient_for_leaf validates spine/leafswitchidx, sends DISTCACHE_CACHE_EVICT_VICTIM to corresponding leaf.popworker.victimserver, waits for DISTCACHE_CACHE_EVICT_VICTIM_ACK (files: controller.c)
-					* leaf.popworker.victimserver receives DISTCACHE_CACHE_EVICT_VICTIM, validates victim.key and victim.idx, and sends DISTCACHE_CACHE_EVICT_VICTIM_ACK to controller.victimserver.victimclient_for_leaf, which forwards ack to spine (files: switchos.c, controller.c)
-			- Consider duplicate NETCACHE_CACHE_POP / NETCACHE_CACHE_POP_FINISH / NETCACHE_CACHE_EVICT in server (files: server_impl.h)
-
-## Simple test
-
-## Deprecated staff
-
-+ DEPRECATED design for cache population/eviction in DistFarReach
-	* NOTE: DistFarReach triggers cache population by servers -> key of CACHE_POP must NOT be cached -> key MUST be cached at most ONCE and hence in at most ONE switch
-	* NOTE: to keep stateless controller, controller sends CACHE_POP_ACK to server only if receive CACHE_POP_ACK from spine/leaf, which means that some switchos.popworker has performed cache population/eviction for the key
-		- TODO: server sends CACNE_POP to controller by server.popclient
-			+ NOTE: wait time for CACHE_POP_ACK in distributed scenario becomes larger than single-switch -> using server.popclient can avoid from affecting server.worker performance for normal requests
-			+ TODO: Now we still use server.worker.popclient instead of server.popclient as cache eviction is rare compared with normal requests
-	* controller.popserver receives CACHE_POP from server.popclient
-		- controller.popserver calculates logical spineswitchidx based on the key to find physical spine switch
-			+ NOTE: as we only have one physical spine switch, we validate the logical spineswitchidx
-		- TODO: controller.popserver.popclient_for_spine forwards CACHE_POP to switchos.popserver of corresponding spine switch
-		- TODO: controller.popserver.popclient_for_spine waits for CACHE_POP_ACK / CACHE_POP_FULL_ACK
-		- TODO: If receive CACHE_POP_ACK from spine switch, controller.popserver forwards CACHE_POP_ACK to server.popclient, and waits for next CACHE_POP from server.popclient
-		- If receive CACHE_POP_FULL_ACK from spine switch
-			+ controller.popserver calculates logical leafswitchidx based on the key to find physical server-leaf
-				* NOTE: as we only have one physical leaf switch, we validate the logical leafswitchidx
-			+ TODO: controller.popserver.popclient sends CACHE_POP to switchos.popserver of corresponding phyiscal leaf
-			+ TODO: controller.popserver.popclient waits for CACHE_POP_ACK / CACHE_POP_FULL_ACK
-			+ TODO: If receive CACHE_POP_ACK from leaf switch, controller.popserver forwards CACHE_POP_ACK to server.popclient, and waits for next CACHE_POP from server.popclient
-			+ If receive CACHE_POP_FULL_ACK from leaf switch
-				* NOTE: we do NOT need to find global victim by CACHE_POP_GETVICTIMs; instead, we still use sampling to reduce cache pop latency
-				* TODO: controller.popserver.popclient samples one switch from spine/leaf and sends CACHE_POP_FULL w/ new key to sampled switch
-				* TODO: controller receives CACHE_POP_ACK from sampled switch, and forwards it to server.popclient
-	* For each physical spine/leaf switchos, after receiving CACHE_POP from controller.popserver.popclient
-		- TODO: switchos.popserver checks inswitch cache size first
-			+ TODO: Maintain a mutex lock for switchos_cached_empty_index
-			+ TODO: If the current switch is not full, switchos.popserver sends CACHE_POP_ACK to controller.popserver.popclient, and pass CACHE_POP w/ new key to switchos.popworker for cache population
-			+ TODO: If the current switch is full, switchos.popserver sends CACHE_POP_FULL_ACK to controller.popserver.popclient, yet NOT pass CACHE_POP w/ new key to switchos.popworker for cache population
-	* For each physical spine/leaf switchos, after receiving CACHE_POP_FULL from controller.popserver.popclient
-		- TODO: switchos.popserver directly sends CACHE_POP_ACK w/ new key to controller.popserver.popclient, and pass CACHE_POP_FULL w/ new key to switchos.popworker for cache eviction
-		- TODO: NOTE: CACHE_POP_FULL is inherited from CACHE_POP
-		- TODO: NOTE: switchos_cached_empty_index must be full
-+ DEPRECATED implementation of cache population/eviction in DistFarReach
-	+ TODO: controller.popsever.popclient_for_spine forwards CACHE_POP to spine.switchos.popserver and waits for CACHE_POP/_FULL_ACK (files: controller.c)
-		* NOTE: controller needs to communiate with both spine/leaf switchos -> need two sets of global variables; while reflector/switchos can update exclusive global variables based on its role (spine or leaf)
-		* TODO: Add packet type of CACHE_POP_FULL_ACK (files: tofino-*/main.p4, tofino-*/common,py, tofino-*/p4src/parser.p4, packet_format.*, common_impl.h)
-	+ spine/leafswitchos.popserver processes CACHE_POP from controller.popserver.popclient_for_spine/leaf
-		* TODO: Add mutex lock for inswitch cache metadata (writer: switchos.popworker; reader: switchos.popsever/snapshotserver) (files: switchos.c)
-		* TODO: switchos.popserver gets pipeidx based on role (spineswitchos -> leafswitch.pipeidx; leafswitchos -> server.pipeidx)
-		* TODO: If spine/leaf inswitch cache of the pipeidx is NOT full, switchos.popserver sends CACHE_POP_ACK to controller.popserver.popclient_for_spine/leaf, and passes CACHE_POP to switchos.popworker
-		* TODO: If spine/leaf inswitch cache of the pipeidx is full, switchos.popserver sends CACHE_POP_FULL_ACK to controller.popserver.popclient_for_spine/leaf
