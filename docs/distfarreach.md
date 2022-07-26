@@ -521,6 +521,40 @@
 
 ## Simple test
 
+- Normal requests/responses
+	* Single READREQ
+	* Single PUTREQ
+	* Single DELREQ
+	* Single SCANREQ
+	* Single LOADREQ
+- Cache hit
+	* GET/PUT/DELREQ hit in spine switch
+	* GET/PUT/DELREQ hit in leaf switch
+- Cache population/eviction
+	* GETREQ_POP
+	* PUTREQ_POP
+	* WARMUPREQ
+- Conservative read
+	* GETRES_LATEST_SEQ_SERVER in leaf switch
+	* GETRES_DELETED_SEQ_SERVER in leaf switch
+	* GETRES_LATEST_SEQ in spine switch
+	* GETRES_DELETED_SEQ in leaf switch
+- Crash-consistent snapshot
+	* Snapshot loading by LOADSNAPSHOTDATA_INSWITCH
+	* Single path
+		- PUTREQ_SEQ_INSWITCH
+		- DELREQ_SEQ_INSWITCH
+		- GETRES_LATEST_SEQ_SERVER_INSWITCH
+		- GETRES_DELETED_SEQ_SERVER_INSWITCH
+	* Special cases
+		- PUTREQ_SEQ_INSWITCH_CASE1
+		- DELREQ_SEQ_INSWITCH_CASE1
+		- GETRES_LATEST_SEQ_INSWITCH_CASE1
+		- GETRES_DELETED_SEQ_INSWITCH_CASE1
+		- CACHE_EVICT_CASE2
+		- PUTREQ_SEQ_CASE3
+		- DELREQ_SEQ_CASE3
+
 ## Deprecated staff
 
 + DEPRECATED design for cache population/eviction in DistFarReach
