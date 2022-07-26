@@ -15,7 +15,7 @@
 #include "rocksdb_wrapper.h"
 #include "dynamic_array.h"
 
-//#define DUMP_BUF
+#define DUMP_BUF
 
 typedef DeletedSet<netreach_key_t, uint32_t> deleted_set_t;
 typedef ConcurrentSet<netreach_key_t> concurrent_set_t;

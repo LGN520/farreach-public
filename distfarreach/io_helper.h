@@ -24,7 +24,8 @@ void get_server_snapshotdeletedset_path(std::string &snapshotdeletedset_path, ui
 void get_server_inswitchsnapshot_path(std::string &inswitchsnapshot_path, uint16_t workerid, uint32_t snapshotid);
 
 void get_controller_snapshotid_path(std::string &snapshotid_path);
-void get_controller_snapshotdata_path(std::string &snapshotdata_path, int snapshotid);
+void get_controller_spinesnapshotdata_path(std::string &snapshotdata_path, int snapshotid);
+void get_controller_leafsnapshotdata_path(std::string &snapshotdata_path, int snapshotid);
 
 bool isexist(std::string path);
 uint32_t get_filesize(std::string path);

@@ -527,13 +527,13 @@
 	* Single DELREQ
 	* Single SCANREQ
 	* Single LOADREQ
+- Cache population/eviction
+	* WARMUPREQ
+	* GETREQ_POP
+	* PUTREQ_POP
 - Cache hit
 	* GET/PUT/DELREQ hit in spine switch
 	* GET/PUT/DELREQ hit in leaf switch
-- Cache population/eviction
-	* GETREQ_POP
-	* PUTREQ_POP
-	* WARMUPREQ
 - Conservative read
 	* GETRES_LATEST_SEQ_SERVER in leaf switch
 	* GETRES_DELETED_SEQ_SERVER in leaf switch

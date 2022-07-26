@@ -326,7 +326,12 @@ void recover() {
 	int controller_snapshotid = 0;
 	load_snapshotid(controller_snapshotid, snapshotid_path);
 	std::string snapshotdata_path;
-	get_controller_snapshotdata_path(snapshotdata_path, controller_snapshotid);
+	if (strcmp(switchos_role, "spine") == 0) {
+		get_controller_spinesnapshotdata_path(snapshotdata_path, controller_snapshotid);
+	}
+	else if (strcmp(switchos_role, "leaf") == 0) {
+		get_controller_leafsnapshotdata_path(snapshotdata_path, controller_snapshotid);
+	}
 	if (!isexist(snapshotdata_path)) {
 		printf("You need to copy inswitch snapshot data from controller to switchos before running with recover mode\n");
 		exit(-1);

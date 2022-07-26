@@ -44,8 +44,13 @@ void get_controller_snapshotid_path(std::string &snapshotid_path) {
 	return;
 }
 
-void get_controller_snapshotdata_path(std::string &snapshotdata_path, int snapshotid) {
-	GET_STRING(snapshotdata_path, "/tmp/distfarreach/controller.snapshotdata" << snapshotid);
+void get_controller_spinesnapshotdata_path(std::string &snapshotdata_path, int snapshotid) {
+	GET_STRING(snapshotdata_path, "/tmp/distfarreach/controller.spinesnapshotdata" << snapshotid);
+	return;
+}
+
+void get_controller_leafsnapshotdata_path(std::string &snapshotdata_path, int snapshotid) {
+	GET_STRING(snapshotdata_path, "/tmp/distfarreach/controller.leafsnapshotdata" << snapshotid);
 	return;
 }
 

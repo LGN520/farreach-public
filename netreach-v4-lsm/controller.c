@@ -77,7 +77,7 @@ void prepare_controller();
 void *run_controller_popserver(void *param); // Receive CACHE_POPs from each server
 void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
 void controller_load_snapshotid(); // retrieve latest snapshot id
-void controller_update_snapshotid(); // store latest snapshotid and inswitch snapshot data
+void controller_update_snapshotid(char *buf, int bufsize); // store latest snapshotid and inswitch snapshot data
 void *run_controller_snapshotclient(void *param); // Periodically notify switch os to launch snapshot
 void *run_controller_snapshotclient_cleanup_subthread(void *param);
 void *run_controller_snapshotclient_start_subthread(void *param);

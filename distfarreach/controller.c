@@ -68,8 +68,9 @@ int controller_evictserver_evictclient_udpsock = -1;
 
 int controller_snapshotid = 1; // server uses snapshot id 0 after loading phase
 
-// controller.snapshotclient <-> switchos/per-server.snapshotserver
-int controller_snapshotclient_for_switchos_udpsock = -1;
+// controller.snapshotclient <-> spine/leaf switchos/per-server.snapshotserver
+int controller_snapshotclient_for_spineswitchos_udpsock = -1;
+int controller_snapshotclient_for_leafswitchos_udpsock = -1;
 int *controller_snapshotclient_for_server_udpsock_list = NULL;
 // written by controller.snapshotclient; read by controller.snapshotclient.senddata_subthread to server.snapshotdataserver
 dynamic_array_t *controller_snapshotclient_for_server_databuf_list = NULL;
@@ -79,7 +80,7 @@ void *run_controller_popserver(void *param); // Receive CACHE_POPs from each ser
 void validate_switchidx(netreach_key_t key); // validate spine/leaf switchidx for the give key
 void *run_controller_evictserver(void *param); // Forward CACHE_EVICT to server and CACHE_EVICT_ACK to switchos in cache eviction
 void controller_load_snapshotid(); // retrieve latest snapshot id
-void controller_update_snapshotid(); // store latest snapshotid and inswitch snapshot data
+void controller_update_snapshotid(char *spinebuf, int spinebufsize, char *leafbuf, int leafbufsize); // store latest snapshotid and inswitch snapshot data
 void *run_controller_snapshotclient(void *param); // Periodically notify switch os to launch snapshot
 void *run_controller_snapshotclient_cleanup_subthread(void *param);
 void *run_controller_snapshotclient_start_subthread(void *param);
@@ -225,7 +226,8 @@ void prepare_controller() {
 	controller_load_snapshotid();
 
 	// prepare snapshotclient
-	create_udpsock(controller_snapshotclient_for_switchos_udpsock, true, "controller.snapshotclient_for_switchos", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
+	create_udpsock(controller_snapshotclient_for_spineswitchos_udpsock, true, "controller.snapshotclient_for_spineswitchos", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
+	create_udpsock(controller_snapshotclient_for_leafswitchos_udpsock, true, "controller.snapshotclient_for_leafswitchos", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 	controller_snapshotclient_for_server_udpsock_list = new int[max_server_total_logical_num];
 	controller_snapshotclient_for_server_databuf_list = new dynamic_array_t[max_server_total_logical_num];
 	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
@@ -251,11 +253,14 @@ void controller_load_snapshotid() {
 	return;
 }
 
-void controller_update_snapshotid(char *buf, int bufsize) {
+void controller_update_snapshotid(char *spinebuf, int spinebufsize, char *leafbuf, int leafbufsize) {
 	// TODO: store inswitch snapshot data for switch failure
-	std::string snapshotdata_path;
-	get_controller_snapshotdata_path(snapshotdata_path, controller_snapshotid);
-	store_buf(buf, bufsize, snapshotdata_path);
+	std::string spinesnapshotdata_path;
+	get_controller_spinesnapshotdata_path(spinesnapshotdata_path, controller_snapshotid);
+	store_buf(spinebuf, spinebufsize, spinesnapshotdata_path);
+	std::string leafsnapshotdata_path;
+	get_controller_leafsnapshotdata_path(leafsnapshotdata_path, controller_snapshotid);
+	store_buf(leafbuf, leafbufsize, leafsnapshotdata_path);
 	// store latest snapshot id for controller failure 
 	std::string snapshotid_path;
 	get_controller_snapshotid_path(snapshotid_path);
@@ -263,9 +268,12 @@ void controller_update_snapshotid(char *buf, int bufsize) {
 	// remove old-enough snapshot data
 	int old_snapshotid = controller_snapshotid - 1;
 	if (old_snapshotid > 0) {
-		std::string old_snapshotdata_path;
-		get_controller_snapshotdata_path(old_snapshotdata_path, old_snapshotid);
-		rmfiles(old_snapshotdata_path.c_str());
+		std::string old_spinesnapshotdata_path;
+		get_controller_spinesnapshotdata_path(old_spinesnapshotdata_path, old_snapshotid);
+		rmfiles(old_spinesnapshotdata_path.c_str());
+		std::string old_leafsnapshotdata_path;
+		get_controller_leafsnapshotdata_path(old_leafsnapshotdata_path, old_snapshotid);
+		rmfiles(old_leafsnapshotdata_path.c_str());
 	}
 
 	controller_snapshotid += 1;
@@ -467,10 +475,13 @@ void *run_controller_snapshotclient(void *param) {
 		}
 	}
 
-	struct sockaddr_in switchos_snapshotserver_addr;
-	// TODO: we should get snapshot from both spine and server-leaf switchos
-	set_sockaddr(switchos_snapshotserver_addr, inet_addr(spineswitchos_ip), switchos_snapshotserver_port);
-	socklen_t switchos_snapshotserver_addrlen = sizeof(struct sockaddr_in);
+	struct sockaddr_in spineswitchos_snapshotserver_addr;
+	set_sockaddr(spineswitchos_snapshotserver_addr, inet_addr(spineswitchos_ip), switchos_snapshotserver_port);
+	socklen_t spineswitchos_snapshotserver_addrlen = sizeof(struct sockaddr_in);
+
+	struct sockaddr_in leafswitchos_snapshotserver_addr;
+	set_sockaddr(leafswitchos_snapshotserver_addr, inet_addr(leafswitchos_ip), switchos_snapshotserver_port);
+	socklen_t leafswitchos_snapshotserver_addrlen = sizeof(struct sockaddr_in);
 
 	struct sockaddr_in server_snapshotserver_addr_list[max_server_total_logical_num];
 	socklen_t server_snapshotserver_addrlen_list[max_server_total_logical_num];
@@ -500,11 +511,16 @@ void *run_controller_snapshotclient(void *param) {
 	}
 
 	// prepare for concurrent SNAPSHOT_CLEANUP (param.serveridx not used)
-	pthread_t cleanup_subthread_for_switchos;
-	snapshotclient_subthread_param_t cleanup_subthread_param_for_switchos;
-	cleanup_subthread_param_for_switchos.udpsock = controller_snapshotclient_for_switchos_udpsock;
-	cleanup_subthread_param_for_switchos.dstaddr = switchos_snapshotserver_addr;
-	cleanup_subthread_param_for_switchos.dstaddrlen = switchos_snapshotserver_addrlen;
+	pthread_t cleanup_subthread_for_spineswitchos;
+	snapshotclient_subthread_param_t cleanup_subthread_param_for_spineswitchos;
+	cleanup_subthread_param_for_spineswitchos.udpsock = controller_snapshotclient_for_spineswitchos_udpsock;
+	cleanup_subthread_param_for_spineswitchos.dstaddr = spineswitchos_snapshotserver_addr;
+	cleanup_subthread_param_for_spineswitchos.dstaddrlen = spineswitchos_snapshotserver_addrlen;
+	pthread_t cleanup_subthread_for_leafswitchos;
+	snapshotclient_subthread_param_t cleanup_subthread_param_for_leafswitchos;
+	cleanup_subthread_param_for_leafswitchos.udpsock = controller_snapshotclient_for_leafswitchos_udpsock;
+	cleanup_subthread_param_for_leafswitchos.dstaddr = leafswitchos_snapshotserver_addr;
+	cleanup_subthread_param_for_leafswitchos.dstaddrlen = leafswitchos_snapshotserver_addrlen;
 	pthread_t cleanup_subthread_for_server_list[max_server_total_logical_num];
 	snapshotclient_subthread_param_t cleanup_subthread_param_for_server_list[max_server_total_logical_num];
 	for (int valid_idx = 0; valid_idx < valid_global_server_logical_idxes.size(); valid_idx++) {
@@ -516,11 +532,16 @@ void *run_controller_snapshotclient(void *param) {
 	}
 
 	// prepare for concurrent SNAPSHOT_START (param.serveridx not used)
-	pthread_t start_subthread_for_switchos;
-	snapshotclient_subthread_param_t start_subthread_param_for_switchos;
-	start_subthread_param_for_switchos.udpsock = controller_snapshotclient_for_switchos_udpsock;
-	start_subthread_param_for_switchos.dstaddr = switchos_snapshotserver_addr;
-	start_subthread_param_for_switchos.dstaddrlen = switchos_snapshotserver_addrlen;
+	pthread_t start_subthread_for_spineswitchos;
+	snapshotclient_subthread_param_t start_subthread_param_for_spineswitchos;
+	start_subthread_param_for_spineswitchos.udpsock = controller_snapshotclient_for_spineswitchos_udpsock;
+	start_subthread_param_for_spineswitchos.dstaddr = spineswitchos_snapshotserver_addr;
+	start_subthread_param_for_spineswitchos.dstaddrlen = spineswitchos_snapshotserver_addrlen;
+	pthread_t start_subthread_for_leafswitchos;
+	snapshotclient_subthread_param_t start_subthread_param_for_leafswitchos;
+	start_subthread_param_for_leafswitchos.udpsock = controller_snapshotclient_for_leafswitchos_udpsock;
+	start_subthread_param_for_leafswitchos.dstaddr = leafswitchos_snapshotserver_addr;
+	start_subthread_param_for_leafswitchos.dstaddrlen = leafswitchos_snapshotserver_addrlen;
 	pthread_t start_subthread_for_server_list[max_server_total_logical_num];
 	snapshotclient_subthread_param_t start_subthread_param_for_server_list[max_server_total_logical_num];
 	for (int valid_idx = 0; valid_idx < valid_global_server_logical_idxes.size(); valid_idx++) {
@@ -542,8 +563,11 @@ void *run_controller_snapshotclient(void *param) {
 		senddata_subthread_param_for_server_list[tmp_global_server_logical_idx].global_server_logical_idx = tmp_global_server_logical_idx;
 	}
 
-	// prepare for SNAPSHOT_GETDATA_ACK
-	dynamic_array_t databuf(MAX_BUFSIZE, MAX_LARGE_BUFSIZE);
+	// prepare for SNAPSHOT_GETDATA_ACK for spine and leaf switch
+	int total_switch_physical_num = 2;
+	dynamic_array_t databufs[total_switch_physical_num];
+	databufs[0].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE); // for spine switch
+	databufs[1].init(MAX_BUFSIZE, MAX_LARGE_BUFSIZE); // for leaf switch
 
 	printf("[controller.snapshotclient] ready\n");
 	controller_ready_threads++;
@@ -575,12 +599,14 @@ void *run_controller_snapshotclient(void *param) {
 
 		// (1) send SNAPSHOT_CLEANUP to each switchos and server concurrently
 		printf("[controller.snapshotclient] send SNAPSHOT_CLEANUPs to each switchos and server\n");
-		pthread_create(&cleanup_subthread_for_switchos, nullptr, run_controller_snapshotclient_cleanup_subthread, &cleanup_subthread_param_for_switchos);
+		pthread_create(&cleanup_subthread_for_spineswitchos, nullptr, run_controller_snapshotclient_cleanup_subthread, &cleanup_subthread_param_for_spineswitchos);
+		pthread_create(&cleanup_subthread_for_leafswitchos, nullptr, run_controller_snapshotclient_cleanup_subthread, &cleanup_subthread_param_for_leafswitchos);
 		for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
 			uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[i];
 			pthread_create(&cleanup_subthread_for_server_list[tmp_global_server_logical_idx], nullptr, run_controller_snapshotclient_cleanup_subthread, &cleanup_subthread_param_for_server_list[tmp_global_server_logical_idx]);
 		}
-		pthread_join(cleanup_subthread_for_switchos, NULL);
+		pthread_join(cleanup_subthread_for_spineswitchos, NULL);
+		pthread_join(cleanup_subthread_for_leafswitchos, NULL);
 		for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
 			uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[i];
 			pthread_join(cleanup_subthread_for_server_list[tmp_global_server_logical_idx], NULL);
@@ -590,11 +616,23 @@ void *run_controller_snapshotclient(void *param) {
 		printf("[controller.snapshotclient] send SNAPSHOT_PREPARE to each switchos\n");
 		memcpy(sendbuf, &SNAPSHOT_PREPARE, sizeof(int));
 		memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
+		udpsendto(controller_snapshotclient_for_spineswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &spineswitchos_snapshotserver_addr, spineswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_spineswitchos");
+		udpsendto(controller_snapshotclient_for_leafswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &leafswitchos_snapshotserver_addr, leafswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_leafswitchos");
 		while (true) {
-			udpsendto(controller_snapshotclient_for_switchos_udpsock, sendbuf, 2*sizeof(int), 0, &switchos_snapshotserver_addr, switchos_snapshotserver_addrlen, "controller.snapshotclient");
-
-			is_timeout = udprecvfrom(controller_snapshotclient_for_switchos_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient");
+			is_timeout = udprecvfrom(controller_snapshotclient_for_spineswitchos_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient_for_spineswitchos");
 			if (is_timeout) {
+				udpsendto(controller_snapshotclient_for_spineswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &spineswitchos_snapshotserver_addr, spineswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_spineswitchos");
+				continue;
+			}
+			else {
+				INVARIANT(recvsize == sizeof(int) && *((int *)recvbuf) == SNAPSHOT_PREPARE_ACK);
+				break;
+			}
+		}
+		while (true) {
+			is_timeout = udprecvfrom(controller_snapshotclient_for_leafswitchos_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient_for_leafswitchos");
+			if (is_timeout) {
+				udpsendto(controller_snapshotclient_for_leafswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &leafswitchos_snapshotserver_addr, leafswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_leafswitchos");
 				continue;
 			}
 			else {
@@ -613,11 +651,23 @@ void *run_controller_snapshotclient(void *param) {
 		printf("[controller.snapshotclient] send SNAPSHOT_SETFLAG to each switchos\n");
 		memcpy(sendbuf, &SNAPSHOT_SETFLAG, sizeof(int));
 		memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
+		udpsendto(controller_snapshotclient_for_spineswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &spineswitchos_snapshotserver_addr, spineswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_spineswitchos");
+		udpsendto(controller_snapshotclient_for_leafswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &leafswitchos_snapshotserver_addr, leafswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_leafswitchos");
 		while (true) {
-			udpsendto(controller_snapshotclient_for_switchos_udpsock, sendbuf, 2*sizeof(int), 0, &switchos_snapshotserver_addr, switchos_snapshotserver_addrlen, "controller.snapshotclient");
-
-			is_timeout = udprecvfrom(controller_snapshotclient_for_switchos_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient");
+			is_timeout = udprecvfrom(controller_snapshotclient_for_spineswitchos_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient_for_spineswitchos");
 			if (is_timeout) {
+				udpsendto(controller_snapshotclient_for_spineswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &spineswitchos_snapshotserver_addr, spineswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_spineswitchos");
+				continue;
+			}
+			else {
+				INVARIANT(recvsize == sizeof(int) && *((int *)recvbuf) == SNAPSHOT_SETFLAG_ACK);
+				break;
+			}
+		}
+		while (true) {
+			is_timeout = udprecvfrom(controller_snapshotclient_for_leafswitchos_udpsock, recvbuf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "controller.snapshotclient_for_leafswitchos");
+			if (is_timeout) {
+				udpsendto(controller_snapshotclient_for_leafswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &leafswitchos_snapshotserver_addr, leafswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_leafswitchos");
 				continue;
 			}
 			else {
@@ -628,12 +678,14 @@ void *run_controller_snapshotclient(void *param) {
 
 		// (4) send SNAPSHOT_START to each switchos and server concurrently
 		printf("[controller.snapshotclient] send SNAPSHOT_STARTs to each switchos and server\n");
-		pthread_create(&start_subthread_for_switchos, nullptr, run_controller_snapshotclient_start_subthread, &start_subthread_param_for_switchos);
+		pthread_create(&start_subthread_for_spineswitchos, nullptr, run_controller_snapshotclient_start_subthread, &start_subthread_param_for_spineswitchos);
+		pthread_create(&start_subthread_for_leafswitchos, nullptr, run_controller_snapshotclient_start_subthread, &start_subthread_param_for_leafswitchos);
 		for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
 			uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[i];
 			pthread_create(&start_subthread_for_server_list[tmp_global_server_logical_idx], nullptr, run_controller_snapshotclient_start_subthread, &start_subthread_param_for_server_list[tmp_global_server_logical_idx]);
 		}
-		pthread_join(start_subthread_for_switchos, NULL);
+		pthread_join(start_subthread_for_spineswitchos, NULL);
+		pthread_join(start_subthread_for_leafswitchos, NULL);
 		for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
 			uint16_t tmp_global_server_logical_idx = valid_global_server_logical_idxes[i];
 			pthread_join(start_subthread_for_server_list[tmp_global_server_logical_idx], NULL);
@@ -661,65 +713,82 @@ void *run_controller_snapshotclient(void *param) {
 
 		// (5) send SNAPSHOT_GETDATA to each switch os to get consistent snapshot data
 		printf("[controller.snapshotclient] send SNAPSHOT_GETDATA to each switchos\n");
+		databufs[1].clear();
 		memcpy(sendbuf, &SNAPSHOT_GETDATA, sizeof(int));
 		memcpy(sendbuf + sizeof(int), &controller_snapshotid, sizeof(int));
+		udpsendto(controller_snapshotclient_for_spineswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &spineswitchos_snapshotserver_addr, spineswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_spineswitchos");
+		udpsendto(controller_snapshotclient_for_leafswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &leafswitchos_snapshotserver_addr, leafswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_leafswitchos");
 		while (true) {
-			udpsendto(controller_snapshotclient_for_switchos_udpsock, sendbuf, 2*sizeof(int), 0, &switchos_snapshotserver_addr, switchos_snapshotserver_addrlen, "controller.snapshotclient");
-
-			databuf.clear();
-			is_timeout = udprecvlarge_udpfrag(controller_snapshotclient_for_switchos_udpsock, databuf, 0, NULL, NULL, "controller.snapshotclient");
+			databufs[0].clear();
+			is_timeout = udprecvlarge_udpfrag(controller_snapshotclient_for_spineswitchos_udpsock, databufs[0], 0, NULL, NULL, "controller.snapshotclient_for_spineswitchos");
 			if (is_timeout) {
+				udpsendto(controller_snapshotclient_for_spineswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &spineswitchos_snapshotserver_addr, spineswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_spineswitchos");
 				continue;
 			}
 			else {
-				// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes (including SNAPSHOT_GETDATA_ACK), per-server data>
-				// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
-				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
-				
-				INVARIANT(*((int *)databuf.array()) == SNAPSHOT_GETDATA_ACK);
-				int32_t total_bytes = *((int32_t *)(databuf.array() + sizeof(int)));
-				INVARIANT(databuf.size() == total_bytes);
-				
-				// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
-				// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
-				int tmp_offset = sizeof(int) + sizeof(int32_t); // SNAPSHOT_GETDATA_ACK + total_bytes
-				while (tmp_offset < total_bytes) {
-					int32_t tmp_serverbytes = *((int32_t *)(databuf.array() + tmp_offset));
-					int32_t effective_serverbytes = tmp_serverbytes - sizeof(int32_t) - sizeof(uint16_t) - sizeof(int32_t);
-					uint16_t tmp_serveridx = *((uint16_t *)(databuf.array() + tmp_offset + sizeof(int32_t)));
-					int32_t tmp_recordcnt = *((int32_t *)(databuf.array() + tmp_offset + sizeof(int32_t) + sizeof(uint16_t)));
+				break;
+			}
+		}
+		while (true) {
+			databufs[1].clear();
+			is_timeout = udprecvlarge_udpfrag(controller_snapshotclient_for_leafswitchos_udpsock, databufs[1], 0, NULL, NULL, "controller.snapshotclient_for_leafswitchos");
+			if (is_timeout) {
+				udpsendto(controller_snapshotclient_for_leafswitchos_udpsock, sendbuf, 2*sizeof(int), 0, &leafswitchos_snapshotserver_addr, leafswitchos_snapshotserver_addrlen, "controller.snapshotclient_for_leafswitchos");
+				continue;
+			}
+			else {
+				break;
+			}
+		}
+		for (size_t i = 0; i < total_switch_physical_num; i++) {
+			dynamic_array_t &databuf = databufs[i];
 
-					bool is_valid = false;
-					for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
-						if (tmp_serveridx == valid_global_server_logical_idxes[i]) {
-							is_valid = true;
-							break;
-						}
+			// snapshot data: <int SNAPSHOT_GETDATA_ACK, int32_t total_bytes (including SNAPSHOT_GETDATA_ACK), per-server data>
+			// per-server data: <int32_t perserver_bytes, uint16_t serveridx, int32_t recordcnt, per-record data>
+			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
+			
+			INVARIANT(*((int *)databuf.array()) == SNAPSHOT_GETDATA_ACK);
+			int32_t total_bytes = *((int32_t *)(databuf.array() + sizeof(int)));
+			INVARIANT(databuf.size() == total_bytes);
+			
+			// per-server snapshot data: <int SNAPSHOT_SENDDATA, int snapshotid, int32_t perserver_bytes (including SNAPSHOT_SENDDATA), uint16_t serveridx, int32_t record_cnt, per-record data>
+			// per-record data: <16B key, uint16_t vallen, value (w/ padding), uint32_t seq, bool stat>
+			int tmp_offset = sizeof(int) + sizeof(int32_t); // SNAPSHOT_GETDATA_ACK + total_bytes
+			while (tmp_offset < total_bytes) {
+				int32_t tmp_serverbytes = *((int32_t *)(databuf.array() + tmp_offset));
+				int32_t effective_serverbytes = tmp_serverbytes - sizeof(int32_t) - sizeof(uint16_t) - sizeof(int32_t);
+				uint16_t tmp_serveridx = *((uint16_t *)(databuf.array() + tmp_offset + sizeof(int32_t)));
+				int32_t tmp_recordcnt = *((int32_t *)(databuf.array() + tmp_offset + sizeof(int32_t) + sizeof(uint16_t)));
+
+				bool is_valid = false;
+				for (int i = 0; i < valid_global_server_logical_idxes.size(); i++) {
+					if (tmp_serveridx == valid_global_server_logical_idxes[i]) {
+						is_valid = true;
+						break;
 					}
+				}
 #ifdef SERVER_ROTATION
-					if (is_valid == false) {
-						tmp_offset += tmp_serverbytes;
-						continue;
-					}
+				if (is_valid == false) {
+					tmp_offset += tmp_serverbytes;
+					continue;
+				}
 #else
-					INVARIANT(is_valid == true);
+				INVARIANT(is_valid == true);
 #endif
 
-					// increase perserver_bytes and record_cnt in SNAPSHOT_SENDDATA header
-					int32_t old_serverbytes = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx].array() + sizeof(int) + sizeof(int)));
-					int32_t old_recordcnt = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx].array() + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
-					int32_t new_serverbytes = old_serverbytes + effective_serverbytes;
-					int32_t new_recordcnt = old_recordcnt + tmp_recordcnt;
-					controller_snapshotclient_for_server_databuf_list[tmp_serveridx].dynamic_memcpy(0 + sizeof(int) + sizeof(int), (char *)&new_serverbytes, sizeof(int32_t));
-					controller_snapshotclient_for_server_databuf_list[tmp_serveridx].dynamic_memcpy(0 + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), (char *)&new_recordcnt, sizeof(int32_t));
-					
-					// copy per-record data in SNAPSHOT_SENDDATA body
-					int tmp_databuflen = controller_snapshotclient_for_server_databuf_list[tmp_serveridx].size();
-					controller_snapshotclient_for_server_databuf_list[tmp_serveridx].dynamic_memcpy(0 + tmp_databuflen, databuf.array() + tmp_offset + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t), effective_serverbytes);
+				// increase perserver_bytes and record_cnt in SNAPSHOT_SENDDATA header
+				int32_t old_serverbytes = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx].array() + sizeof(int) + sizeof(int)));
+				int32_t old_recordcnt = *((int *)(controller_snapshotclient_for_server_databuf_list[tmp_serveridx].array() + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t)));
+				int32_t new_serverbytes = old_serverbytes + effective_serverbytes;
+				int32_t new_recordcnt = old_recordcnt + tmp_recordcnt;
+				controller_snapshotclient_for_server_databuf_list[tmp_serveridx].dynamic_memcpy(0 + sizeof(int) + sizeof(int), (char *)&new_serverbytes, sizeof(int32_t));
+				controller_snapshotclient_for_server_databuf_list[tmp_serveridx].dynamic_memcpy(0 + sizeof(int) + sizeof(int) + sizeof(int32_t) + sizeof(uint16_t), (char *)&new_recordcnt, sizeof(int32_t));
+				
+				// copy per-record data in SNAPSHOT_SENDDATA body
+				int tmp_databuflen = controller_snapshotclient_for_server_databuf_list[tmp_serveridx].size();
+				controller_snapshotclient_for_server_databuf_list[tmp_serveridx].dynamic_memcpy(0 + tmp_databuflen, databuf.array() + tmp_offset + sizeof(int32_t) + sizeof(uint16_t) + sizeof(int32_t), effective_serverbytes);
 
-					tmp_offset += tmp_serverbytes;
-				}
-				break;
+				tmp_offset += tmp_serverbytes;
 			}
 		}
 
@@ -739,11 +808,12 @@ void *run_controller_snapshotclient(void *param) {
 		DELTA_TIME(snapshot_t2, snapshot_t1, snapshot_t3);
 		printf("Time of making consistent system snapshot: %f s\n", GET_MICROSECOND(snapshot_t3) / 1000.0 / 1000.0);
 		
-		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databuf) for controller failure recovery
-		controller_update_snapshotid(databuf.array(), databuf.size());
+		// (7) save per-switch SNAPSHOT_GETDATA_ACK (databufs) for controller failure recovery
+		controller_update_snapshotid(databufs[0].array(), databufs[0].size(), databufs[1].array(), databufs[1].size());
 	}
 
-	close(controller_snapshotclient_for_switchos_udpsock);
+	close(controller_snapshotclient_for_spineswitchos_udpsock);
+	close(controller_snapshotclient_for_leafswitchos_udpsock);
 	for (uint16_t tmp_global_server_logical_idx = 0; tmp_global_server_logical_idx < max_server_total_logical_num; tmp_global_server_logical_idx++) {
 		close(controller_snapshotclient_for_server_udpsock_list[tmp_global_server_logical_idx]);
 	}
