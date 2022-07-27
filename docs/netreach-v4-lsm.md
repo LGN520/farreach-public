@@ -1940,16 +1940,25 @@
 		+ Run `su` to enter root account
 		+ Run `bash compile.sh` to compile p4 into binary code
 		+ Run `bash start_switch.sh` to launch Tofino
-	- Launch switchos in local control plane of Tofino
-		+ Create a new terminal and run `./switchos`
-		+ Create a new terminal and run `bash ptf_popserver.sh`
-		+ Create a new terminal and run `bash ptf_snapshotserver.sh`
-		+ Create a new terminal and run `bash configure.sh` to configure data plane, then run `bash ptf_cleaner.sh`
-	- Launch controller in end host
-		+ `./controller`
-	- Launch servers in end host
-		+ `./server server_physical_idx`
-		+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
+	- Maunual way to launch testbed (out-of-date)
+		- Launch switchos in local control plane of Tofino
+			+ Create a new terminal and run `./switchos`
+			+ Create a new terminal and run `bash ptf_popserver.sh`
+			+ Create a new terminal and run `bash ptf_snapshotserver.sh`
+			+ Create a new terminal and run `bash configure.sh` to configure data plane, then run `bash ptf_cleaner.sh`
+		- Launch controller in end host
+			+ `./controller`
+		- Launch servers in end host
+			+ `./server server_physical_idx`
+			+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
+	- Automatic way to launch testbed (latest)
+		+ In each switch
+			* Run `su` to enter root account
+			* Run `bash localscripts/launchswitchostestbed.sh` to configure switch, launch switchos and ptf_pop/snapshotserver/cleaner
+				- Run `bash localscripts/stopswitchostestbed.sh` to stop switch, switchos, and ptf_XXX
+		+ In client 0 (dl11)
+			* Run `bash remotescripts/launchservertestbed.sh` to launch controller, server w/ reflector
+				- Run `bash remotescripts/stopservertestbed.sh` to stop contoller, server w/ reflector
 	- Launch clients in end host
 		- Warmup phase: `./warmup_client`
 		- Before transaction phase: `./preparefinish_client` to make server-side snapshot and start in-switch snapshot

@@ -311,7 +311,7 @@ class GetResponseLatestSeq : public PutRequestSeq<key_t, val_t> { // ophdr + val
 template<class key_t, class val_t>
 class GetResponseLatestSeqServer : public GetResponseLatestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + stat_hdr (stat=true)
 	public: 
-		GetResponseLatestSeqServer(switchidx_t, switchidx, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
+		GetResponseLatestSeqServer(switchidx_t switchidx, key_t key, val_t val, uint32_t seq, uint16_t nodeidx_foreval);
 };
 
 template<class key_t, class val_t>
@@ -482,7 +482,7 @@ class CachePop : public PutRequestSeq<key_t, val_t> { // ophdr + val + seq + sta
 template<class key_t, class val_t>
 class CachePopInswitch : public PutRequestSeq<key_t, val_t> { // ophdr + val + shadowtype + seq + inswitch_hdr + stat_hdr
 	public: 
-		CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat);
+		CachePopInswitch(switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat);
 
 		virtual uint32_t serialize(char * const data, uint32_t max_size);
 
@@ -586,7 +586,7 @@ template<class key_t>
 class CacheEvictLoadfreqInswitch : public Packet<key_t> { // ophdr + shadowtype + inswitch_hdr
 	public: 
 		CacheEvictLoadfreqInswitch();
-		CacheEvictLoadfreqInswitch(key_t key, uint16_t evictidx);
+		CacheEvictLoadfreqInswitch(switchidx_t leafswitchidx, key_t key, uint16_t evictidx);
 
 		uint16_t evictidx() const;
 
@@ -615,7 +615,7 @@ class CacheEvictLoadfreqInswitchAck : public Packet<key_t> { // ophdr + frequenc
 template<class key_t>
 class CacheEvictLoaddataInswitch : public CacheEvictLoadfreqInswitch<key_t> { // ophdr + shadowtype + inswitch_hdr
 	public: 
-		CacheEvictLoaddataInswitch(key_t key, uint16_t evictidx);
+		CacheEvictLoaddataInswitch(switchidx_t leafswitchidx, key_t key, uint16_t evictidx);
 };
 
 template<class key_t, class val_t>
@@ -639,7 +639,7 @@ class CacheEvictLoaddataInswitchAck : public Packet<key_t> { // ophdr + val + sh
 template<class key_t>
 class LoadsnapshotdataInswitch : public CacheEvictLoadfreqInswitch<key_t> { // ophdr + shadowtype + inswitch_hdr
 	public: 
-		LoadsnapshotdataInswitch(key_t key, uint16_t loadidx);
+		LoadsnapshotdataInswitch(switchidx_t leafswitchidx, key_t key, uint16_t loadidx);
 
 		uint16_t loadidx() const;
 };
@@ -656,7 +656,7 @@ class LoadsnapshotdataInswitchAck : public GetResponseLatestSeqInswitchCase1<key
 template<class key_t>
 class SetvalidInswitch : public Packet<key_t> { // ophdr + shadowtype + inswitch_hdr + validvalue_hdr
 	public: 
-		SetvalidInswitch(key_t key, uint16_t idx, uint8_t validvalue);
+		SetvalidInswitch(switchidx_t leafswitchidx, key_t key, uint16_t idx, uint8_t validvalue);
 
 		uint16_t idx() const; // freeidx or evictidx
 		uint8_t validvalue() const;

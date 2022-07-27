@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
 
 	// find physical server if any based on reflector_ip_for_switchos
 	for (int i = 0; i < server_physical_num; i++) {
-		if (strcmp(reflector_ip_for_switchos, server_ips[i]) == 0){
+		if (strcmp(reflector_ip_for_switchos, server_ips[i]) == 0) {
 			server_physical_idx = i;
 			break;
 		}
@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
 	if (ret) {
 		COUT_N_EXIT("Error of launching reflector.cp2dpserver: " << ret);
 	}
-	if (server_physical_idx != 0) { // if deployed in physical server
+	if (server_physical_idx != -1) { // if deployed in physical server
 		ret = pthread_setaffinity_np(reflector_cp2dpserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
 		if (ret) {
 			printf("Error of setaffinity for reflector.cp2dpserver; errno: %d\n", errno);
@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
 	if (ret) {
 		COUT_N_EXIT("Error of launching reflector.dp2cpserver: " << ret);
 	}
-	if (server_physical_idx != 0) { // if deployed in physical server
+	if (server_physical_idx != -1) { // if deployed in physical server
 		ret = pthread_setaffinity_np(reflector_dp2cpserver_thread, sizeof(nonserverworker_cpuset), &nonserverworker_cpuset);
 		if (ret) {
 			printf("Error of setaffinity for reflector.dp2cpserver; errno: %d\n", errno);
@@ -176,18 +176,19 @@ bool validate_reflector_ip() {
 
 	// get addr info of all interfaces
 	getifaddrs(&ifAddrStruct);
+	struct ifaddrs *cur_ifaddrstruct_ptr = ifAddrStruct;
 
-    while (ifAddrStruct != NULL) {
-		if (ifAddrStruct->ifa_addr->sa_family==AF_INET) {
-			tmpAddrPtr = &((struct sockaddr_in *)ifAddrStruct->ifa_addr)->sin_addr;
+    while (cur_ifaddrstruct_ptr != NULL) {
+		if (cur_ifaddrstruct_ptr->ifa_addr->sa_family==AF_INET) {
+			tmpAddrPtr = &((struct sockaddr_in *)cur_ifaddrstruct_ptr->ifa_addr)->sin_addr;
 			inet_ntop(AF_INET, tmpAddrPtr, ip, INET_ADDRSTRLEN);
-			//printf("%s IP Address:%s\n", ifAddrStruct->ifa_name, ip);
+			//printf("%s IP Address:%s\n", cur_ifaddrstruct_ptr->ifa_name, ip);
 			if (strcmp(reflector_ip_for_switchos, ip) == 0) {
 				result = true;
 				break;
 			}
 		}
-		ifAddrStruct = ifAddrStruct->ifa_next;
+		cur_ifaddrstruct_ptr = cur_ifaddrstruct_ptr->ifa_next;
 	}
 
 	//free ifaddrs

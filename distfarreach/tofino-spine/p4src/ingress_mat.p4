@@ -258,6 +258,14 @@ action forward_special_get_response(client_sid) {
 	clone_ingress_pkt_to_egress(client_sid); // Cloned packet enter the egress pipeline to corresponding client
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter ipv4_forward_counter {
+	type : packets_and_bytes;
+	direct: ipv4_forward_tbl;
+}
+#endif
+
 @pragma stage 3
 table ipv4_forward_tbl {
 	reads {

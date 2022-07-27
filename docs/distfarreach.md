@@ -465,20 +465,29 @@
 	- Spine switch (bf3/bf2; we use bf3 now) and leaf switch (bf1)
 		- Run `cd tofino`
 		+ Run `su` to enter root account
-		+ Run `bash compile.sh` to compile p4 into binary code
+		+ Run `bash compile.sh` to compile p4 into binary code (IMPORTANT: NOT execute unless you change p4 code)
 		+ Run `bash start_switch.sh` to launch Tofino
-	- Launch two switchoses (in spine or leaf switch) in local control plane of Tofino
-		+ Create a new terminal and run `./switchos spine/leaf`
-		+ Create a new terminal and run `bash ptf_popserver.sh`
-		+ Create a new terminal and run `bash ptf_snapshotserver.sh`
-		+ Create a new terminal and run `bash configure.sh` to configure data plane, then run `bash ptf_cleaner.sh`
-	- Launch controller in end host
-		+ `./controller`
-	- Launch two reflectors (for spine or leaf switch) in corresponding end hosts
-		+ `./reflector spine/leaf`
-	- Launch servers in end host
-		+ `./server server_physical_idx`
-		+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
+	- Maunual way to launch testbed (out-of-date)
+		- Launch two switchoses (in spine or leaf switch) in local control plane of Tofino
+			+ Create a new terminal and run `./switchos spine/leaf`
+			+ Create a new terminal and run `bash ptf_popserver.sh`
+			+ Create a new terminal and run `bash ptf_snapshotserver.sh`
+			+ Create a new terminal and run `bash configure.sh` to configure data plane, then run `bash ptf_cleaner.sh`
+		- Launch controller in end host
+			+ `./controller`
+		- Launch two reflectors (for spine or leaf switch) in corresponding end hosts
+			+ `./reflector spine/leaf`
+		- Launch servers in end host
+			+ `./server server_physical_idx`
+			+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
+	- Automatic way to launch testbed (latest)
+		+ In each switch
+			* Run `su` to enter root account
+			* Run `bash localscripts/launchswitchostestbed.sh` to configure switch, launch switchos and ptf_pop/snapshotserver/cleaner
+				- Run `bash localscripts/stopswitchostestbed.sh` to stop switch, switchos, and ptf_XXX
+		+ In client 0 (dl11)
+			* Run `bash remotescripts/launchservertestbed.sh` to launch controller, server, and reflector if any
+				- Run `bash remotescripts/stopservertestbed.sh` to stop contoller, server, and reflector if any
 	- Launch clients in end host
 		- Warmup phase: `./warmup_client`
 		- Before transaction phase: `./preparefinish_client` to make server-side snapshot and start in-switch snapshot
@@ -528,9 +537,8 @@
 	* Single SCANREQ
 	* Single LOADREQ
 - Cache population/eviction
-	* WARMUPREQ
-	* GETREQ_POP
-	* PUTREQ_POP
+	* WARMUPREQ/PUTREQ_POP/DELREQ_POP in spine switch
+	* WARMUPREQ/PUTREQ_POP/DELREQ_POP in leaf switch
 - Cache hit
 	* GET/PUT/DELREQ hit in spine switch
 	* GET/PUT/DELREQ hit in leaf switch

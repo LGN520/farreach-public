@@ -451,6 +451,8 @@ void *run_switchos_popworker(void *param) {
 				exit(-1);
 			}
 
+			uint16_t leafswitchidx_for_tmp_cache_pop_key = tmp_cache_pop_ptr->key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
+
 			// find corresponding pipeline idx
 			uint32_t tmp_pipeidx = 0;
 			if (strcmp(switchos_role, "spine") == 0) {
@@ -506,7 +508,8 @@ void *run_switchos_popworker(void *param) {
 					while (true) {
 						//printf("send %d CACHE_EVICT_LOADFREQ_INSWITCHs to reflector\n", switchos_sample_cnt);
 						for (size_t i = 0; i < switchos_sample_cnt; i++) {
-							cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
+							uint16_t leafswitchidx_for_sampled_key = static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]]).get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
+							cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(leafswitchidx_for_sampled_key, switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
 							pktsize = tmp_cache_evict_loadfreq_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 							udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 						}
@@ -687,7 +690,7 @@ void *run_switchos_popworker(void *param) {
 			//printf("[switchos.popworker] switchos_perpipeline_cached_empty_index[%d]: %d, switchos_freeidx: %d\n", tmp_pipeidx, int(switchos_perpipeline_cached_empty_index[tmp_pipeidx]), int(switchos_freeidx)); // TMPDEBUG
 
 			// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
-			cache_pop_inswitch_t tmp_cache_pop_inswitch(tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
+			cache_pop_inswitch_t tmp_cache_pop_inswitch(leafswitchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
 			pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 
 			while (true) {

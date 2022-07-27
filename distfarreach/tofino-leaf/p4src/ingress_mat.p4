@@ -362,6 +362,14 @@ action forward_special_get_response_to_spine(eport) {
 	modify_field(op_hdr.globalswitchidx, meta.spineswitchidx);
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter ipv4_forward_counter {
+	type : packets_and_bytes;
+	direct: ipv4_forward_tbl;
+}
+#endif
+
 @pragma stage 4
 table ipv4_forward_tbl {
 	reads {

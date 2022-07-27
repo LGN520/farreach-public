@@ -1392,10 +1392,11 @@ void CachePop<key_t, val_t>::deserialize(const char * data, uint32_t recv_size)
 // CachePopInswitch (value must <= 128B)
 
 template<class key_t, class val_t>
-CachePopInswitch<key_t, val_t>::CachePopInswitch(key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat)
+CachePopInswitch<key_t, val_t>::CachePopInswitch(switchidx_t leafswitchidx, key_t key, val_t val, uint32_t seq, uint16_t freeidx, bool stat)
 	: PutRequestSeq<key_t, val_t>(key, val, seq), _freeidx(freeidx), _stat(stat)
 {
 	this->_type = static_cast<optype_t>(PacketType::CACHE_POP_INSWITCH);
+	this->_globalswitchidx = leafswitchidx;
 	INVARIANT(this->_val.val_length <= val_t::SWITCH_MAX_VALLEN);
 	INVARIANT(seq >= 0);
 	INVARIANT(freeidx >= 0);
@@ -1669,8 +1670,8 @@ CachePopAck<key_t>::CachePopAck(const char * data, uint32_t recv_size) {
 // CacheEvictLoadfreqInswitch
 
 template<class key_t>
-CacheEvictLoadfreqInswitch<key_t>::CacheEvictLoadfreqInswitch(key_t key, uint16_t evictidx)
-	: Packet<key_t>(PacketType::CACHE_EVICT_LOADFREQ_INSWITCH, 0, key), _evictidx(evictidx)
+CacheEvictLoadfreqInswitch<key_t>::CacheEvictLoadfreqInswitch(switchidx_t leafswitchidx, key_t key, uint16_t evictidx)
+	: Packet<key_t>(PacketType::CACHE_EVICT_LOADFREQ_INSWITCH, leafswitchidx, key), _evictidx(evictidx)
 {
 	INVARIANT(evictidx >= 0);
 }
@@ -1746,8 +1747,8 @@ uint32_t CacheEvictLoadfreqInswitchAck<key_t>::serialize(char * const data, uint
 // CacheEvictLoaddataInswitch
 
 template<class key_t>
-CacheEvictLoaddataInswitch<key_t>::CacheEvictLoaddataInswitch(key_t key, uint16_t evictidx)
-	: CacheEvictLoadfreqInswitch<key_t>(key, evictidx)
+CacheEvictLoaddataInswitch<key_t>::CacheEvictLoaddataInswitch(switchidx_t leafswitchidx, key_t key, uint16_t evictidx)
+	: CacheEvictLoadfreqInswitch<key_t>(leafswitchidx, key, evictidx)
 {
 	this->_type = optype_t(packet_type_t::CACHE_EVICT_LOADDATA_INSWITCH);
 	INVARIANT(evictidx >= 0);
@@ -1810,8 +1811,8 @@ uint32_t CacheEvictLoaddataInswitchAck<key_t, val_t>::serialize(char * const dat
 // LoadsnapshotdataInswich
 
 template<class key_t>
-LoadsnapshotdataInswitch<key_t>::LoadsnapshotdataInswitch(key_t key, uint16_t loadidx)
-	: CacheEvictLoadfreqInswitch<key_t>(key, loadidx)
+LoadsnapshotdataInswitch<key_t>::LoadsnapshotdataInswitch(switchidx_t leafswitchidx, key_t key, uint16_t loadidx)
+	: CacheEvictLoadfreqInswitch<key_t>(leafswitchidx, key, loadidx)
 {
 	this->_type = optype_t(packet_type_t::LOADSNAPSHOTDATA_INSWITCH);
 	INVARIANT(loadidx >= 0);
@@ -1863,8 +1864,8 @@ void LoadsnapshotdataInswitchAck<key_t, val_t>::deserialize(const char * data, u
 // SetvalidInswitch
 
 template<class key_t>
-SetvalidInswitch<key_t>::SetvalidInswitch(key_t key, uint16_t idx, uint8_t validvalue)
-	: Packet<key_t>(PacketType::SETVALID_INSWITCH, 0, key), _idx(idx), _validvalue(validvalue)
+SetvalidInswitch<key_t>::SetvalidInswitch(switchidx_t leafswitchidx, key_t key, uint16_t idx, uint8_t validvalue)
+	: Packet<key_t>(PacketType::SETVALID_INSWITCH, leafswitchidx, key), _idx(idx), _validvalue(validvalue)
 {
 	INVARIANT(idx >= 0);
 	INVARIANT(validvalue == 0 || validvalue == 1 || validvalue == 3);

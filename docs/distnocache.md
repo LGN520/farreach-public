@@ -58,11 +58,20 @@
 		+ Run `su` to enter root account
 		+ Run `bash compile.sh` to compile p4 into binary code
 		+ Run `bash start_switch.sh` to launch Tofino
-	- Launch two switchoses (in spine or leaf switch) in local control plane of Tofino
-		+ Create a new terminal and run `bash configure.sh` to configure data plane
-	- Launch servers in end host
-		+ `./server server_physical_idx`
-		+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
+	- Maunual way to launch testbed (out-of-date)
+		- Launch two switchoses (in spine or leaf switch) in local control plane of Tofino
+			+ Create a new terminal and run `bash configure.sh` to configure data plane
+		- Launch servers in end host
+			+ `./server server_physical_idx`
+			+ NOTE: to close server, use `sudo kill -15` to send SIGKILL
+	- Automatic way to launch testbed (latest)
+		+ In each switch
+			* Run `su` to enter root account
+			* Run `bash localscripts/launchswitchostestbed.sh` to configure switch
+				- Run `bash localscripts/stopswitchostestbed.sh` to stop switch
+		+ In client 0 (dl11)
+			* Run `bash remotescripts/launchservertestbed.sh` to launch server
+				- Run `bash remotescripts/stopservertestbed.sh` to stop server
 	- Launch clients in end host
 		- Transaction phase: `./remote_client client_physical_idx`
 - Server rotation for static workload

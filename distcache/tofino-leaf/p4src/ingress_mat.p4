@@ -326,6 +326,14 @@ action forward_normal_response(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter ipv4_forward_counter {
+	type : packets_and_bytes;
+	direct: ipv4_forward_tbl;
+}
+#endif
+
 @pragma stage 5
 table ipv4_forward_tbl {
 	reads {
