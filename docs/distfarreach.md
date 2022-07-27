@@ -483,7 +483,7 @@
 	- Automatic way to launch testbed (latest)
 		+ In each switch
 			* Run `su` to enter root account
-			* Run `bash localscripts/launchswitchostestbed.sh` to configure switch, launch switchos and ptf_pop/snapshotserver/cleaner
+			* Run `bash localscripts/launchswitchostestbed.sh spine/leaf` to configure switch, launch switchos and ptf_pop/snapshotserver/cleaner
 				- Run `bash localscripts/stopswitchostestbed.sh` to stop switch, switchos, and ptf_XXX
 		+ In client 0 (dl11)
 			* Run `bash remotescripts/launchservertestbed.sh` to launch controller, server, and reflector if any

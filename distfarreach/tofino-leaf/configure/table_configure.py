@@ -1651,13 +1651,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
                                                             self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                     self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                            # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ
+                                            # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ_SERVER
                                             # NOTE: we use sid == self.sids[0] to avoid duplicate entry; we use inswitch_hdr_client_sid = 0 to match the default value of inswitch_hdr.client_sid
                                             # size: 1
                                             #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
                                             if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
-                                                    op_hdr_optype = GETRES_LATEST_SEQ,
+                                                    op_hdr_optype = GETRES_LATEST_SEQ_SERVER,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
                                                     validvalue_hdr_validvalue = validvalue,
@@ -1668,9 +1668,27 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                     inswitch_hdr_snapshot_flag = snapshot_flag,
                                                     meta_is_case1 = is_case1)
-                                                # TODO: check if we need to set egress port for packet cloned by clone_i2e
-                                                # Update GETRES_LATEST_SEQ (by clone_i2e) as GETRES to client
-                                                self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres(\
+                                                # Update GETRES_LATEST_SEQ_SERVER (by clone_i2e) as GETRES to client
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_server_to_getres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                            # size: 4
+                                            # NOTE: for GETRES_LATEST_SEQ_SERVER_INSWITCH, inswitch_hdr is set by spine switch
+                                            # tmp_client_sid = 0 (spine NOT set client_sid in prepare_for_cachehit_tbl for GETRES_LATEST_SEQ_SERVER); yet spine switch could set is_cached and snapshot_flag for GETRES_LATEST_SEQ_SERVER, which is changed as GETRES_LATEST_SEQ_SERVER_INSWITCH to leaf switch
+                                            if is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0:
+                                                matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = GETRES_LATEST_SEQ_SERVER_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    validvalue_hdr_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    inswitch_hdr_client_sid = tmp_client_sid,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                # Update GETRES_LATEST_SEQ_SERVER_INSWITCH (by clone_i2e) as GETRES to client
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_server_inswitch_to_getres(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                             # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), tmp_client_sid=0 (not need mirroring for res), is_lastclone_for_pktloss should be 0 for GETRES_LATEST_SEQ_INSWITCH
                                             # size: 128 -> 2
@@ -1732,12 +1750,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                     # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                     pass
-                                            # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_DELETED_SEQ
+                                            # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_DELETED_SEQ_SERVER
                                             # size: 1
                                             #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
                                             if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
                                                 matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
-                                                    op_hdr_optype = GETRES_DELETED_SEQ,
+                                                    op_hdr_optype = GETRES_DELETED_SEQ_SERVER,
                                                     inswitch_hdr_is_cached = is_cached,
                                                     meta_is_hot = is_hot,
                                                     validvalue_hdr_validvalue = validvalue,
@@ -1748,9 +1766,27 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                     meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
                                                     inswitch_hdr_snapshot_flag = snapshot_flag,
                                                     meta_is_case1 = is_case1)
-                                                # TODO: check if we need to set egress port for packet cloned by clone_i2e
-                                                # Update GETRES_DELETED_SEQ (by clone_i2e) as GETRES to client
-                                                self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres(\
+                                                # Update GETRES_DELETED_SEQ_SERVER (by clone_i2e) as GETRES to client
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_to_getres(\
+                                                        self.sess_hdl, self.dev_tgt, matchspec0)
+                                            # size: 4
+                                            # NOTE: for GETRES_DELETED_SEQ_SERVER_INSWITCH, inswitch_hdr is set by spine switch
+                                            # tmp_client_sid = 0 (spine NOT set client_sid in prepare_for_cachehit_tbl for GETRES_DELETED_SEQ_SERVER); yet spine switch could set is_cached and snapshot_flag for GETRES_DELETED_SEQ_SERVER, which is changed as GETRES_DELETED_SEQ_SERVER_INSWITCH to leaf switch
+                                            if is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0:
+                                                matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
+                                                    op_hdr_optype = GETRES_DELETED_SEQ_SERVER_INSWITCH,
+                                                    inswitch_hdr_is_cached = is_cached,
+                                                    meta_is_hot = is_hot,
+                                                    validvalue_hdr_validvalue = validvalue,
+                                                    meta_is_latest = is_latest,
+                                                    meta_is_deleted = is_deleted,
+                                                    #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                    inswitch_hdr_client_sid = tmp_client_sid,
+                                                    meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                    inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                    meta_is_case1 = is_case1)
+                                                # Update GETRES_DELETED_SEQ_SERVER_INSWITCH (by clone_i2e) as GETRES to client
+                                                self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_inswitch_to_getres(\
                                                         self.sess_hdl, self.dev_tgt, matchspec0)
                                             # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), tmp_client_sid=0 (not need mirroring for res), is_lastclone_for_pktloss should be 0 for GETRES_DELETED_SEQ_INSWITCH
                                             # size: 128 -> 2
@@ -2265,14 +2301,14 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                                     actnspec0 = distfarreachleaf_update_getreq_inswitch_to_getres_by_mirroring_action_spec_t(tmp_client_sid, server_worker_port_start, tmpstat)
                                                                     self.client.eg_port_forward_tbl_table_add_with_update_getreq_inswitch_to_getres_by_mirroring(\
                                                                             self.sess_hdl, self.dev_tgt, matchspec0, actnspec0)
-                                                    # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ
+                                                    # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_LATEST_SEQ_SERVER
                                                     # is_last_scansplit and tmp_server_sid must be 0
                                                     # NOTE: we use sid == self.sids[0] to avoid duplicate entry; we use inswitch_hdr_client_sid = 0 to match the default value of inswitch_hdr.client_sid
                                                     # size: 1
                                                     #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
                                                     if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
-                                                            op_hdr_optype = GETRES_LATEST_SEQ,
+                                                            op_hdr_optype = GETRES_LATEST_SEQ_SERVER,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
                                                             validvalue_hdr_validvalue = validvalue,
@@ -2285,9 +2321,29 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             meta_is_case1 = is_case1,
                                                             meta_is_last_scansplit = is_last_scansplit,
                                                             meta_server_sid = tmp_server_sid)
-                                                        # TODO: check if we need to set egress port for packet cloned by clone_i2e
-                                                        # Update GETRES_LATEST_SEQ (by clone_i2e) as GETRES to client
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_to_getres(\
+                                                        # Update GETRES_LATEST_SEQ_SERVER (by clone_i2e) as GETRES to client
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_server_to_getres(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    # size: 4
+                                                    # NOTE: for GETRES_LATEST_SEQ_SERVER_INSWITCH, inswitch_hdr is set by spine switch
+                                                    # tmp_client_sid = 0 (spine NOT set client_sid in prepare_for_cachehit_tbl for GETRES_LATEST_SEQ_SERVER); yet spine switch could set is_cached and snapshot_flag for GETRES_LATEST_SEQ_SERVER, which is changed as GETRES_LATEST_SEQ_SERVER_INSWITCH to leaf switch
+                                                    if is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                        matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
+                                                            op_hdr_optype = GETRES_LATEST_SEQ_SERVER_INSWITCH,
+                                                            inswitch_hdr_is_cached = is_cached,
+                                                            meta_is_hot = is_hot,
+                                                            validvalue_hdr_validvalue = validvalue,
+                                                            meta_is_latest = is_latest,
+                                                            meta_is_deleted = is_deleted,
+                                                            #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                            inswitch_hdr_client_sid = tmp_client_sid,
+                                                            meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                            inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                            meta_is_case1 = is_case1,
+                                                            meta_is_last_scansplit = is_last_scansplit,
+                                                            meta_server_sid = tmp_server_sid)
+                                                        # Update GETRES_LATEST_SEQ_SERVER_INSWITCH (by clone_i2e) as GETRES to client
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getres_latest_seq_server_inswitch_to_getres(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                     # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), tmp_client_sid=0 (not need mirroring for res), is_lastclone_for_pktloss should be 0 for GETRES_LATEST_SEQ_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0
@@ -2355,13 +2411,13 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             #        self.sess_hdl, self.dev_tgt, matchspec0)
                                                             # NOTE: default action is nop -> forward the packet to sid set by clone_e2e
                                                             pass
-                                                    # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_DELETED_SEQ
+                                                    # is_cached (no inswitch_hdr due to no field list when clone_i2e), is_hot (cm_predicate=1), validvalue, is_latest, is_deleted, is_wrong_pipeline (no inswitch_hdr), tmp_client_sid=0 (no inswitch_hdr), is_lastclone_for_pktloss, snapshot_flag (no inswitch_hdr), is_case1 should be 0 for GETRES_DELETED_SEQ_SERVER
                                                     # is_last_scansplit and tmp_server_sid must be 0
                                                     # size: 1
                                                     #if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and is_wrong_pipeline == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0:
                                                     if is_cached == 0 and is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and snapshot_flag == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
                                                         matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
-                                                            op_hdr_optype = GETRES_DELETED_SEQ,
+                                                            op_hdr_optype = GETRES_DELETED_SEQ_SERVER,
                                                             inswitch_hdr_is_cached = is_cached,
                                                             meta_is_hot = is_hot,
                                                             validvalue_hdr_validvalue = validvalue,
@@ -2375,8 +2431,29 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
                                                             meta_is_last_scansplit = is_last_scansplit,
                                                             meta_server_sid = tmp_server_sid)
                                                         # TODO: check if we need to set egress port for packet cloned by clone_i2e
-                                                        # Update GETRES_DELETED_SEQ (by clone_i2e) as GETRES to client
-                                                        self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_to_getres(\
+                                                        # Update GETRES_DELETED_SEQ_SERVER (by clone_i2e) as GETRES to client
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_to_getres(\
+                                                                self.sess_hdl, self.dev_tgt, matchspec0)
+                                                    # size: 4
+                                                    # NOTE: for GETRES_DELETED_SEQ_SERVER_INSWITCH, inswitch_hdr is set by spine switch
+                                                    # tmp_client_sid = 0 (spine NOT set client_sid in prepare_for_cachehit_tbl for GETRES_DELETED_SEQ_SERVER); yet spine switch could set is_cached and snapshot_flag for GETRES_DELETED_SEQ_SERVER, which is changed as GETRES_DELETED_SEQ_SERVER_INSWITCH to leaf switch
+                                                    if is_hot == 0 and validvalue == 0 and is_latest == 0 and is_deleted == 0 and tmp_client_sid == 0 and is_lastclone_for_pktloss == 0 and is_case1 == 0 and is_last_scansplit == 0 and tmp_server_sid == 0:
+                                                        matchspec0 = distfarreachleaf_eg_port_forward_tbl_match_spec_t(\
+                                                            op_hdr_optype = GETRES_DELETED_SEQ_SERVER_INSWITCH,
+                                                            inswitch_hdr_is_cached = is_cached,
+                                                            meta_is_hot = is_hot,
+                                                            validvalue_hdr_validvalue = validvalue,
+                                                            meta_is_latest = is_latest,
+                                                            meta_is_deleted = is_deleted,
+                                                            #inswitch_hdr_is_wrong_pipeline = is_wrong_pipeline,
+                                                            inswitch_hdr_client_sid = tmp_client_sid,
+                                                            meta_is_lastclone_for_pktloss = is_lastclone_for_pktloss,
+                                                            inswitch_hdr_snapshot_flag = snapshot_flag,
+                                                            meta_is_case1 = is_case1,
+                                                            meta_is_last_scansplit = is_last_scansplit,
+                                                            meta_server_sid = tmp_server_sid)
+                                                        # Update GETRES_DELETED_SEQ_SERVER_INSWITCH (by clone_i2e) as GETRES to client
+                                                        self.client.eg_port_forward_tbl_table_add_with_update_getres_deleted_seq_server_inswitch_to_getres(\
                                                                 self.sess_hdl, self.dev_tgt, matchspec0)
                                                     # is_hot (cm_predicate=1), is_wrong_pipeline (not need range/hash partition), tmp_client_sid=0 (not need mirroring for res), is_lastclone_for_pktloss should be 0 for GETRES_DELETED_SEQ_INSWITCH
                                                     # is_last_scansplit and tmp_server_sid must be 0

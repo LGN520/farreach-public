@@ -67,7 +67,7 @@
 	- Automatic way to launch testbed (latest)
 		+ In each switch
 			* Run `su` to enter root account
-			* Run `bash localscripts/launchswitchostestbed.sh` to configure switch
+			* Run `bash localscripts/launchswitchostestbed.sh spine/leaf` to configure switch
 				- Run `bash localscripts/stopswitchostestbed.sh` to stop switch
 		+ In client 0 (dl11)
 			* Run `bash remotescripts/launchservertestbed.sh` to launch server
