@@ -484,7 +484,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].get(req.key(), tmp_val, tmp_seq);
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
 				
-				get_response_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
+				get_response_server_t rsp(req.key(), tmp_val, tmp_stat, global_server_logical_idx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -568,7 +568,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				UNUSED(tmp_stat);
 				//put_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				put_response_t rsp(req.key(), true, global_server_logical_idx);
+				put_response_server_t rsp(req.key(), true, global_server_logical_idx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -591,7 +591,7 @@ void *run_server_worker(void * param) {
 				//COUT_THIS("[server] key = " << req.key().to_string())
 				bool tmp_stat = db_wrappers[local_server_logical_idx].put(req.key(), req.val(), req.seq());
 				//COUT_THIS("[server] val = " << tmp_val.to_string())
-				put_response_t rsp(req.key(), true, global_server_logical_idx);
+				put_response_server_t rsp(req.key(), true, global_server_logical_idx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif
@@ -631,7 +631,7 @@ void *run_server_worker(void * param) {
 				bool tmp_stat = db_wrappers[local_server_logical_idx].remove(req.key(), req.seq());
 				UNUSED(tmp_stat);
 				//del_response_case3_t rsp(req.hashidx(), req.key(), serveridx, tmp_stat); // no case3_reg in switch
-				del_response_t rsp(req.key(), true, global_server_logical_idx);
+				del_response_server_t rsp(req.key(), true, global_server_logical_idx);
 #ifdef DUMP_BUF
 				dump_buf(buf, recv_size);
 #endif

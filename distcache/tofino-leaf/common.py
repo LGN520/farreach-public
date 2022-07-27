@@ -44,6 +44,8 @@ leafswitch_pipeidx = int(config.get("leafswitch", "leafswitch_pipeidx"))
 leaf_reflector_ip_for_switchos = str(config.get("reflector_for_leaf", "reflector_ip_for_switchos"))
 leaf_reflector_dp2cpserver_port = int(config.get("reflector_for_leaf", "reflector_dp2cpserver_port"))
 leaf_reflector_cp2dpserver_port = int(config.get("reflector_for_leaf", "reflector_cp2dpserver_port"))
+leaf_reflector_cp2dp_dstip = str(config.get("reflector_for_leaf", "reflector_cp2dp_dstip"))
+leaf_reflector_cp2dp_dstmac = str(config.get("reflector_for_leaf", "reflector_cp2dp_dstmac"))
 
 # reflector_for_spine port
 spine_reflector_ip_for_switchos = str(config.get("reflector_for_spine", "reflector_ip_for_switchos"))
@@ -52,6 +54,8 @@ spine_reflector_cp2dpserver_port = int(config.get("reflector_for_spine", "reflec
 spine_reflector_ip_for_switch = str(config.get("reflector_for_spine", "reflector_ip_for_switch"))
 spine_reflector_mac_for_switch = str(config.get("reflector_for_spine", "reflector_mac_for_switch"))
 spine_reflector_fpport_for_switch = str(config.get("reflector_for_spine", "reflector_fpport_for_switch"))
+spine_reflector_cp2dp_dstip = str(config.get("reflector_for_spine", "reflector_cp2dp_dstip"))
+spine_reflector_cp2dp_dstmac = str(config.get("reflector_for_spine", "reflector_cp2dp_dstmac"))
 
 # Front Panel Ports
 #   List of front panel ports to use. Each front panel port has 4 channels.

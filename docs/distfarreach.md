@@ -537,16 +537,16 @@
 	* Single SCANREQ
 	* Single LOADREQ
 - Cache population/eviction
-	* WARMUPREQ/PUTREQ_POP/DELREQ_POP in spine switch
 	* WARMUPREQ/PUTREQ_POP/DELREQ_POP in leaf switch
+	* WARMUPREQ/PUTREQ_POP/DELREQ_POP in spine switch
 - Cache hit
-	* GET/PUT/DELREQ hit in spine switch
 	* GET/PUT/DELREQ hit in leaf switch
+	* GET/PUT/DELREQ hit in spine switch
 - Conservative read
 	* GETRES_LATEST_SEQ_SERVER in leaf switch
 	* GETRES_DELETED_SEQ_SERVER in leaf switch
 	* GETRES_LATEST_SEQ in spine switch
-	* GETRES_DELETED_SEQ in leaf switch
+	* GETRES_DELETED_SEQ in spine switch
 - Crash-consistent snapshot
 	* Snapshot loading by LOADSNAPSHOTDATA_INSWITCH
 	* Single path

@@ -36,6 +36,7 @@ void prepare_reflector() {
 	printf("[reflector] prepare start\n");
 
 	// prepare worker socket
+	COUT_VAR(reflector_dp2cpserver_port);
 	prepare_udpserver(reflector_dp2cpserver_udpsock, true, reflector_dp2cpserver_port, "reflector.dp2cpserver", SOCKET_TIMEOUT, 0, 2*UDP_LARGE_RCVBUFSIZE);
 
 	// prepare popserver socket
@@ -145,6 +146,7 @@ void *run_reflector_dp2cpserver(void *param) {
 		INVARIANT(recvsize > 0);
 
 		packet_type_t pkt_type = get_packet_type(buf, recvsize);
+		COUT_VAR(optype_t(pkt_type));
 		switch (pkt_type) {
 			case packet_type_t::CACHE_POP_INSWITCH_ACK:
 			case packet_type_t::CACHE_EVICT_LOADFREQ_INSWITCH_ACK:

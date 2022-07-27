@@ -60,6 +60,8 @@ access_val_mode_list = [0, 1, 2, 3]
 reflector_ip_for_switchos = spine_reflector_ip_for_switchos
 reflector_dp2cpserver_port = spine_reflector_dp2cpserver_port
 reflector_cp2dpserver_port = spine_reflector_cp2dpserver_port
+reflector_cp2dp_dstip = spine_reflector_cp2dp_dstip
+reflector_cp2dp_dstmac = spine_reflector_cp2dp_dstmac
 
 
 if test_param_get("arch") == "tofino":

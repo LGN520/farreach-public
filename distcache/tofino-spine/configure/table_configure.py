@@ -58,6 +58,8 @@ access_val_mode_list = [0, 1, 2, 3]
 reflector_ip_for_switchos = spine_reflector_ip_for_switchos
 reflector_dp2cpserver_port = spine_reflector_dp2cpserver_port
 reflector_cp2dpserver_port = spine_reflector_cp2dpserver_port
+reflector_cp2dp_dstip = spine_reflector_cp2dp_dstip
+reflector_cp2dp_dstmac = spine_reflector_cp2dp_dstmac
 
 if test_param_get("arch") == "tofino":
   MIR_SESS_COUNT = 1024
@@ -999,8 +1001,10 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             # (3) eg_intr_md.egress_port of the first ACK for cache population/eviction is set by partition_tbl in ingress pipeline, which will be finally dropped -> update ip/mac/srcport or not is not important
             # (4) eg_intr_md.egress_port of the cloned ACK for cache population/eviction is set by clone_e2e, which must be the devport towards switchos (aka reflector)
             tmp_devport = self.reflector_devport
-            tmp_client_ip = client_ips[0]
-            tmp_client_mac = client_macs[0]
+            #tmp_client_ip = client_ips[0]
+            #tmp_client_mac = client_macs[0]
+            tmp_client_ip = reflector_cp2dp_dstip
+            tmp_client_mac = reflector_cp2dp_dstmac
             tmp_client_port = 123 # not cared by servers
             actnspec2 = distcachespine_update_ipmac_srcport_switch2switchos_action_spec_t(\
                     macAddr_to_string(tmp_client_mac), \

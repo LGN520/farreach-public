@@ -177,6 +177,8 @@ reflector_dp2cpserver_port=5008
 reflector_cp2dpserver_port=5009
 ; NOTE: cp2dp_dstip CANNOT be the same as the ip of NIC in deployed physical machine (i.e., 10.0.1.16)
 reflector_cp2dp_dstip=10.0.1.11
+; ONLY used by ptf to configure data plane for pkt of switch2switchos
+reflector_cp2dp_dstmac=3c:fd:fe:bb:ca:79
 
 ; NOTE: we place reflector_for_spine at the corresponding physical machine, which must connect with switch
 [reflector_for_spine]
@@ -196,3 +198,5 @@ reflector_dp2cpserver_port=5018
 reflector_cp2dpserver_port=5019
 ; NOTE: cp2dp_dstip CANNOT be the same as the ip of NIC in deployed physical machine (i.e., 10.0.2.11/16)
 reflector_cp2dp_dstip=10.0.2.15
+; ONLY used by ptf to configure data plane for pkt of switch2switchos
+reflector_cp2dp_dstmac=3c:fd:fe:b5:28:58
