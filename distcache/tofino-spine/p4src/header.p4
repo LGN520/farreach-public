@@ -180,6 +180,16 @@ header udp_t udp_hdr;
 header op_t op_hdr;
 #ifdef RANGE_SUPPORT
 header scan_t scan_hdr;
+// NOTE: NOT share PHV of split_hdr.cur_scanswitchidx with other fields
+//@pragma pa_solitary ingress split_hdr.cur_scanswitchidx
+//@pragma pa_solitary egress split_hdr.cur_scanswitchidx
+//@pragma pa_solitary ingress split_hdr.max_scanswitchnum
+//@pragma pa_solitary egress split_hdr.max_scanswitchnum
+// NOTE: NOT overlay PHV of split_hdr.cur_scanswitchidx with other fields
+@pragma pa_no_overlay ingress split_hdr.cur_scanswitchidx
+@pragma pa_no_overlay egress split_hdr.cur_scanswitchidx
+@pragma pa_no_overlay ingress split_hdr.max_scanswitchnum
+@pragma pa_no_overlay egress split_hdr.max_scanswitchnum
 header split_t split_hdr;
 #endif
 header vallen_t vallen_hdr;

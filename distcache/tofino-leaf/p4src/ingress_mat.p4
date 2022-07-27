@@ -352,7 +352,8 @@ action range_partition_for_scan(udpport, eport, start_globalserveridx) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 	modify_field(split_hdr.globalserveridx, start_globalserveridx);
 }
-//@pragma stage 6
+//@pragma stage 6 2048
+//@pragma stage 7
 table range_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
@@ -379,7 +380,8 @@ action hash_partition(udpport, eport) {
 	modify_field(udp_hdr.dstPort, udpport);
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport);
 }
-//@pragma stage 6
+@pragma stage 6
+@pragma stage 7
 table hash_partition_tbl {
 	reads {
 		op_hdr.optype: exact;
