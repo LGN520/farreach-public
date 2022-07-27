@@ -270,14 +270,14 @@ control ingress {
 control egress {
 
 	// Stage 0
+#ifdef RANGE_SUPPORT
+	apply(process_scanreq_split_tbl);
+#endif
 
 	// Stage 1
 	apply(access_cache_frequency_tbl);
 	apply(access_validvalue_tbl);
 	apply(access_seq_tbl);
-#ifdef RANGE_SUPPORT
-	apply(process_scanreq_split_tbl);
-#endif
 
 	// Stage 2
 	apply(access_latest_tbl);

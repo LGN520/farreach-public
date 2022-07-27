@@ -1,6 +1,6 @@
 /* Ingress Processing (Normal Operation) */
 
-// Stage 1
+// Stage 0
 
 #ifdef RANGE_SUPPORT
 action process_scanreq_split(server_sid) {
@@ -18,7 +18,7 @@ action reset_meta_serversid_remainscannum() {
 	modify_field(meta.server_sid, 0);
 	modify_field(meta.remain_scannum, 0);
 }
-@pragma stage 1
+@pragma stage 0
 table process_scanreq_split_tbl {
 	reads {
 		op_hdr.optype: exact;
