@@ -9,4 +9,4 @@ ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_server.sh
 
 echo "stop reflectors"
 ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; bash localscripts/stop_reflector.sh >/dev/null 2>&1"
-bash localscripts/stop_reflector.sh
+sudo bash localscripts/stop_reflector.sh

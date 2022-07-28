@@ -3,6 +3,336 @@
 #include <arpa/inet.h> // inetaddr conversion; endianess conversion
 #include <netinet/tcp.h> // TCP_NODELAY
 
+// utils for raw socket
+
+uint16_t checksum (uint16_t *addr, int len) {
+	int count = len;
+	register uint32_t sum = 0;
+	uint16_t answer = 0;
+
+	// Sum up 2-byte values until none or only one byte left.
+	while (count > 1) {
+		sum += *(addr++);
+		count -= 2;
+	}
+
+	// Add left-over byte, if any.
+	if (count > 0) {
+		sum += *(uint8_t *) addr;
+	}
+
+	// Fold 32-bit sum into 16 bits; we lose information by doing this,
+	// increasing the chances of a collision.
+	// sum = (lower 16 bits) + (upper 16 bits shifted right 16 bits)
+	while (sum >> 16) {
+		sum = (sum & 0xffff) + (sum >> 16);
+	}
+
+	// Checksum is one's compliment of sum.
+	answer = ~sum;
+
+	return (answer);
+}
+
+uint16_t udp_checksum (struct iphdr* iph, struct udphdr* udph, const void *payload, int payloadlen) {
+	char buf[1024];
+	char *ptr;
+	int chksumlen = 0;
+	int i;
+
+	ptr = &buf[0];  // ptr points to beginning of buffer buf
+
+	// Copy source IP address into buf (32 bits)
+	memcpy (ptr, &iph->saddr, sizeof (struct in_addr));
+	ptr += sizeof (struct in_addr);
+	chksumlen += sizeof (struct in_addr);
+
+	// Copy destination IP address into buf (32 bits)
+	memcpy (ptr, &iph->daddr, sizeof (struct in_addr));
+	ptr += sizeof (struct in_addr);
+	chksumlen += sizeof (struct in_addr);
+
+	// Copy zero field to buf (8 bits)
+	*ptr = 0; 
+	ptr++;
+	chksumlen += 1;
+
+	// Copy transport layer protocol to buf (8 bits)
+	memcpy (ptr, &iph->protocol, sizeof (iph->protocol));
+	ptr += sizeof (iph->protocol);
+	chksumlen += sizeof (iph->protocol);
+
+	// Copy UDP length to buf (16 bits)
+	memcpy (ptr, &udph->len, sizeof (udph->len));
+	ptr += sizeof (udph->len);
+	chksumlen += sizeof (udph->len);
+
+	// Copy UDP source port to buf (16 bits)
+	memcpy (ptr, &udph->source, sizeof (udph->source));
+	ptr += sizeof (udph->source);
+	chksumlen += sizeof (udph->source);
+
+	// Copy UDP destination port to buf (16 bits)
+	memcpy (ptr, &udph->dest, sizeof (udph->dest));
+	ptr += sizeof (udph->dest);
+	chksumlen += sizeof (udph->dest);
+
+	// Copy UDP length again to buf (16 bits)
+	memcpy (ptr, &udph->len, sizeof (udph->len));
+	ptr += sizeof (udph->len);
+	chksumlen += sizeof (udph->len);
+
+	// Copy UDP checksum to buf (16 bits)
+	// Zero, since we don't know it yet
+	*ptr = 0; ptr++;
+	*ptr = 0; ptr++;
+	chksumlen += 2;
+
+	// Copy payload to buf
+	memcpy (ptr, payload, payloadlen);
+	ptr += payloadlen;
+	chksumlen += payloadlen;
+
+	// Pad to the next 16-bit boundary
+	for (i=0; i<payloadlen%2; i++, ptr++) {
+		*ptr = 0;
+		ptr++;
+		chksumlen++;
+	}
+
+	return checksum ((uint16_t *) buf, chksumlen);
+}
+
+int lookup_if(int sockfd, std::string ifname, uint8_t *src_macaddr)
+{
+	struct ifreq ifr;
+    memset(&ifr, 0, sizeof(struct ifreq));
+    strncpy(ifr.ifr_name, ifname.c_str(), IFNAMSIZ-1);
+	// lookup ifidx and macaddr based on ifname
+	if (ioctl(sockfd, SIOCGIFINDEX, &ifr) < 0) { 
+		perror("SIOCGIFINDEX");
+	}
+	int ifidx = ifr.ifr_ifindex;
+	if (src_macaddr != NULL) {
+		memcpy(src_macaddr, ifr.ifr_hwaddr.sa_data, 6 * sizeof (uint8_t));
+	}
+	return ifidx;
+}
+
+// AF_PACKET raw socket
+#ifdef AF_PACKET_RAW
+size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_macaddr, const char *src_ipaddr, const char *dst_ipaddr, short src_port, short dst_port, const void *payload, uint32_t payload_size) {
+#else
+// AF_INET raw socket
+size_t init_buf(char *buf, uint32_t maxsize, const char* src_ipaddr, const char* dst_ipaddr, short src_port, short dst_port, const void *payload, uint32_t payload_size) {
+#endif
+	assert(buf != NULL);
+	memset(buf, 0, maxsize);
+	size_t tx_len = 0;
+
+	// Ethernet header
+#ifdef AF_PACKET_RAW
+	struct ether_header *eh = (struct ether_header *) buf;
+    eh->ether_shost[0] = src_macaddr[0];
+    eh->ether_shost[1] = src_macaddr[1];
+    eh->ether_shost[2] = src_macaddr[2];
+    eh->ether_shost[3] = src_macaddr[3];
+    eh->ether_shost[4] = src_macaddr[4];
+    eh->ether_shost[5] = src_macaddr[5];
+    eh->ether_dhost[0] = dst_macaddr[0];
+    eh->ether_dhost[1] = dst_macaddr[1];
+    eh->ether_dhost[2] = dst_macaddr[2];
+    eh->ether_dhost[3] = dst_macaddr[3];
+    eh->ether_dhost[4] = dst_macaddr[4];
+    eh->ether_dhost[5] = dst_macaddr[5];
+    eh->ether_type = htons(ETH_P_IP);
+    tx_len += sizeof(struct ether_header);
+#endif
+
+	// IP Header
+    struct iphdr *iph = (struct iphdr *) (buf + sizeof(struct ether_header));
+    iph->ihl = 5; // 5 * 32-bit words in IP header
+    iph->version = 4;
+    iph->tos = 0; // Low delay
+    iph->id = htons(1); // the first IP packet for UDP flow
+    iph->frag_off = 0x00;
+    //iph->ttl = 0xff; // hops
+    iph->ttl = 0x40; // hops
+    //iph->protocol = IPPROTO_TCP;
+    iph->protocol = IPPROTO_UDP; // UDP packet
+    /* Source IP address */
+    iph->saddr = inet_addr(src_ipaddr);
+    /* Destination IP address */
+    iph->daddr = inet_addr(dst_ipaddr);
+    tx_len += sizeof(struct iphdr);
+
+	// UDP header
+    struct udphdr *udph = (struct udphdr *) (buf + tx_len);
+    udph->source = htons(src_port);
+    udph->dest = htons(dst_port);
+    udph->check = 0; // skip
+    tx_len += sizeof(struct udphdr);
+
+	// Payload
+	memcpy(buf + tx_len, payload, payload_size);
+	tx_len += payload_size;
+
+	// Set sizes
+	udph->len = htons(sizeof(struct udphdr) + payload_size);
+#ifdef AF_PACKET_RAW
+	iph->tot_len = htons(tx_len - sizeof(struct ether_header)); // AF_PACKET socket
+#else
+	iph->tot_len = htons(tx_len); // AF_INET socket
+#endif
+
+	// Set IP checksum
+	iph->check = 0;
+	iph->check = checksum((uint16_t *)iph, sizeof(iphdr));
+	udph->check = udp_checksum(iph, udph, payload, payload_size);
+
+	//dump_buf(buf, tx_len);
+	return tx_len;
+}
+
+// raw socket
+
+void set_rawsockaddr(int sockfd, sockaddr_ll &addr, const char *ifname) {
+	INVARIANT(ifname != NULL);
+
+	// lookup interface to get ifidx and mac
+	uint8_t macaddr[6];
+	int ifidx = lookup_if(sockfd, ifname, macaddr);
+
+	memset(&addr, 0, sizeof(struct sockaddr_ll));
+#ifdef AF_PACKET_RAW
+	addr.sll_family = AF_PACKET;
+	addr.sll_protocol = htons(ETH_P_ALL);
+#else
+	addr.sll_family = AF_INET;
+	addr.sll_protocol = htons(IPPROTO_RAW);
+#endif
+	addr.sll_ifindex = ifidx; 
+    addr.sll_halen = ETH_ALEN; // 48-bit address
+    addr.sll_addr[0] = macaddr[0];
+    addr.sll_addr[1] = macaddr[1];
+    addr.sll_addr[2] = macaddr[2];
+    addr.sll_addr[3] = macaddr[3];
+    addr.sll_addr[4] = macaddr[4];
+    addr.sll_addr[5] = macaddr[5];
+}
+
+void create_rawsock(int &sockfd, bool need_timeout, const char* role, int timeout_sec, int timeout_usec, int raw_rcvbufsize) {
+#ifdef AF_PACKET_RAW
+	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+#else
+	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+#endif
+	if (sockfd == -1) {
+		printf("[%s] fail to create raw socket, errno: %d!\n", role, errno);
+		exit(-1);
+	}
+	// Set timeout for recvfrom/accept of udp/tcp
+	if (need_timeout) {
+		set_recvtimeout(sockfd, timeout_sec, timeout_usec);
+	}
+	// set rawsock receive buffer size
+	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &raw_rcvbufsize, sizeof(int)) == -1) {
+		printf("[%s] fail to set rawsock receive bufsize as %d, errno: %d\n", role, raw_rcvbufsize, errno);
+		exit(-1);
+	}
+}
+
+#ifdef AF_PACKET_RAW
+void rawsendto(int sockfd, const void *buf, size_t len, int flags, uint8_t *src_mac, uint8_t *dst_mac, const char *src_ip, const char *dst_ip, short src_port, short dst_port, const struct sockaddr_ll *dest_addr, socklen_t addrlen, const char* role) {
+#else
+void rawsendto(int sockfd, const void *buf, size_t len, int flags, const char *src_ip, const char *dst_ip, short src_port, short dst_port, const struct sockaddr_ll *dest_addr, socklen_t addrlen, const char* role) {
+#endif
+	// add ethernet, ip, and udp header before buf
+	char finalbuf[MAX_BUFSIZE];
+#ifdef AF_PACKET_RAW
+	size_t finallen = init_buf(finalbuf, MAX_BUFSIZE, src_mac, dst_mac, src_ip, dst_ip, src_port, dst_port, buf, len);
+#else
+	size_t finallen = init_buf(finalbuf, MAX_BUFSIZE, src_ip, dst_ip, src_port, dst_port, buf, len);
+#endif
+
+	int res = sendto(sockfd, finalbuf, finallen, flags, (struct sockaddr *)dest_addr, addrlen);
+	if (res < 0) {
+		printf("[%s] sendto of udp socket fails, errno: %d!\n", role, errno);
+		exit(-1);
+	}
+}
+
+bool rawrecvfrom(int sockfd, void *buf, size_t len, int flags, char **src_ip, const char *dst_ip, short &src_port, const short &dst_port, struct sockaddr_ll *src_addr, socklen_t *addrlen, int &recvsize, const char* role) {
+	bool need_timeout = false;
+	struct timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec =  0;
+	socklen_t tvsz = sizeof(tv);
+	int res = getsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, &tvsz);
+	UNUSED(res);
+	if (tv.tv_sec != 0 || tv.tv_usec != 0) {
+		need_timeout = true;
+	}
+
+	bool is_timeout = false;
+	char totalbuf[MAX_BUFSIZE];
+	int totalsize = 0;
+	while (true) {
+		totalsize = recvfrom(sockfd, totalbuf, MAX_BUFSIZE, flags, (struct sockaddr *)src_addr, addrlen);
+		if (totalsize < 0) {
+			if (need_timeout && (errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN)) {
+				recvsize = 0;
+				is_timeout = true;
+				break;
+			}
+			else {
+				printf("[%s] error of recvfrom, errno: %d!\n", role, errno);
+				exit(-1);
+			}
+		}
+
+		// extract ip and port 
+		struct ether_header *eh = (struct ether_header *) totalbuf;
+		if (eh->ether_type == htons(ETH_P_IP)) {
+			struct iphdr *iph = (struct iphdr *) (totalbuf + sizeof(struct ether_header));
+			if (iph->protocol == IPPROTO_UDP && iph->daddr == inet_addr(dst_ip)) {
+				struct udphdr *udph = (struct udphdr *) (totalbuf + sizeof(struct ether_header) + sizeof(struct iphdr));
+				if (ntohs(udph->dest) == dst_port) {
+					if (src_ip != NULL) {
+						struct in_addr tmp_sin_addr;
+						tmp_sin_addr.s_addr = iph->saddr;
+						*src_ip = inet_ntoa(tmp_sin_addr);
+					}
+					src_port = ntohs(udph->source);
+					COUT_VAR(ntohs(udph->dest));
+
+					int headersize = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr);
+					recvsize = totalsize - headersize;
+					INVARIANT(recvsize <= len);
+					memcpy(buf, totalbuf + headersize, recvsize);
+					dump_buf((char *)buf, recvsize);
+					break;
+				}
+			}
+		}
+		//continue;
+	}
+
+	return is_timeout;
+}
+
+void prepare_rawserver(int &sockfd, bool need_timeout, const char * ifname, const char* role, int timeout_sec, int timeout_usec, int raw_rcvbufsize) {
+	INVARIANT(ifname != NULL && role != NULL);
+
+	// create socket
+	create_rawsock(sockfd, need_timeout, role, timeout_sec, timeout_usec, raw_rcvbufsize);
+	// Set listen interface
+	if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname)) != 0) {
+		printf("[%s] fail to bind raw socket on interface %s, errno: %d!\n", role, ifname, errno);
+		exit(-1);
+	}
+}
+
 // udp/tcp sockaddr
 
 void set_sockaddr(sockaddr_in &addr, uint32_t bigendian_saddr, short littleendian_port) {
