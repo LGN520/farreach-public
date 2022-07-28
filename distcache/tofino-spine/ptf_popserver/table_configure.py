@@ -248,7 +248,7 @@ class RegisterUpdate(pd_base_tests.ThriftInterfaceDataPlane):
 #                switchos_ptf_popserver_udpsock.sendto(sendbuf, switchos_addr)
             elif control_type == SWITCHOS_REMOVE_CACHE_LOOKUP:
                 # parse key
-                keylolo, keylohi, keyhilo, keyhihilo, keyhihihi = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
+                keylolo, keylohi, keyhilo, keyhihilo, keyhihihi, recvbuf = struct.unpack("!3I2H{}s".format(len(recvbuf)-16), recvbuf)
                 globalswitchidx = struct.unpack("=H", recvbuf)[0]
 
                 # remove key from cache_lookup_tbl
