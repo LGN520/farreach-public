@@ -8,4 +8,4 @@ ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; rm tmp_server.out"
 
 echo "launch servers"
 ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp_server.out 2>&1 &"
-#ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >tmp_server.out 2>&1 &"
+ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >tmp_server.out 2>&1 &"

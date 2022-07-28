@@ -966,12 +966,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("lo10")
 
             # Table: update_vallo11_tbl (default: nop; 14)
-            #print "Configuring update_vallo11_tbl"
-            #self.configure_update_val_tbl("lo11")
+            print "Configuring update_vallo11_tbl"
+            self.configure_update_val_tbl("lo11")
 
             # Table: update_vallo12_tbl (default: nop; 14)
-            #print "Configuring update_vallo12_tbl"
-            #self.configure_update_val_tbl("lo12")
+            print "Configuring update_vallo12_tbl"
+            self.configure_update_val_tbl("lo12")
 
             # Table: update_vallo13_tbl (default: nop; 14)
             print "Configuring update_vallo13_tbl"
@@ -1030,12 +1030,12 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             self.configure_update_val_tbl("hi10")
 
             # Table: update_valhi11_tbl (default: nop; 14)
-            #print "Configuring update_valhi11_tbl"
-            #self.configure_update_val_tbl("hi11")
+            print "Configuring update_valhi11_tbl"
+            self.configure_update_val_tbl("hi11")
 
             # Table: update_valhi12_tbl (default: nop; 14)
-            #print "Configuring update_valhi12_tbl"
-            #self.configure_update_val_tbl("hi12")
+            print "Configuring update_valhi12_tbl"
+            self.configure_update_val_tbl("hi12")
 
             # Table: update_valhi13_tbl (default: nop; 14)
             print "Configuring update_valhi13_tbl"

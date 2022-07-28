@@ -521,8 +521,6 @@ void *run_switchos_popworker(void *param) {
 					exit(-1);
 				}
 
-				uint16_t leafswitchidx_for_tmp_cache_pop_key = tmp_cache_pop_ptr->key().get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
-
 				// find corresponding pipeline idx
 				uint32_t tmp_pipeidx = 0;
 				if (strcmp(switchos_role, "spine") == 0) {
@@ -579,8 +577,8 @@ void *run_switchos_popworker(void *param) {
 					while (true) {
 						//printf("send %d CACHE_EVICT_LOADFREQ_INSWITCHs to reflector\n", switchos_sample_cnt);
 						for (size_t i = 0; i < switchos_sample_cnt; i++) {
-							uint16_t leafswitchidx_for_sampled_key = static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]]).get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
-							cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(leafswitchidx_for_sampled_key, switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
+							uint16_t switchidx_for_sampled_key = calculate_switchidx(static_cast<netreach_key_t>(switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]]));
+							cache_evict_loadfreq_inswitch_t tmp_cache_evict_loadfreq_inswitch_req(switchidx_for_sampled_key, switchos_perpipeline_cached_keyarray[tmp_pipeidx][sampled_idxes[i]], sampled_idxes[i]);
 							pktsize = tmp_cache_evict_loadfreq_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 							udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 						}
@@ -633,7 +631,7 @@ void *run_switchos_popworker(void *param) {
 					// validate switchos_evictidx and cur_evictkey
 					INVARIANT(switchos_evictidx >= 0 && switchos_evictidx < switch_kv_bucket_num);
 					netreach_key_t cur_evictkey = switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_evictidx];
-					uint16_t leafswitchidx_for_cur_evictkey = cur_evictkey.get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
+					uint16_t switchidx_for_cur_evictkey = calculate_switchidx(cur_evictkey);
 					if (switchos_cached_keyidx_map.find(cur_evictkey) == switchos_cached_keyidx_map.end()) {
 						printf("Evicted key %x at kvidx %d is not cached\n", switchos_perpipeline_cached_keyarray[tmp_pipeidx][switchos_evictidx].keyhihi, switchos_evictidx);
 						exit(-1);
@@ -647,7 +645,7 @@ void *run_switchos_popworker(void *param) {
 					
 					// set valid = 3 through reflector
 					while (true) {
-						setvalid_inswitch_t tmp_setvalid_req(leafswitchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx, 3);
+						setvalid_inswitch_t tmp_setvalid_req(switchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx, 3);
 						pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
 						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
@@ -665,7 +663,7 @@ void *run_switchos_popworker(void *param) {
 					// load evicted data of victim from data plane and set valid=3 at the same time for availability of latest value
 					while (true) {
 						//printf("send CACHE_EVICT_LOADDATA_INSWITCH to reflector\n");
-						cache_evict_loaddata_inswitch_t tmp_cache_evict_loaddata_inswitch_req(leafswitchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx);
+						cache_evict_loaddata_inswitch_t tmp_cache_evict_loaddata_inswitch_req(switchidx_for_cur_evictkey, cur_evictkey, switchos_evictidx);
 						pktsize = tmp_cache_evict_loaddata_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 						udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
@@ -732,13 +730,10 @@ void *run_switchos_popworker(void *param) {
 								uint32_t(switchos_evictseq), bool(switchos_evictstat));
 					}
 
-					// calculate correpsonding switchidx
-					uint16_t tmp_evictswitchidx = calculate_switchidx(cur_evictkey);
-
 					//CUR_TIME(evict_remove_t1);
 					// remove evicted data from cache_lookup_tbl
 					//system("bash tofino/remove_cache_lookup.sh");
-					ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, cur_evictkey, tmp_evictswitchidx);
+					ptf_sendsize = serialize_remove_cache_lookup(ptfbuf, cur_evictkey, switchidx_for_cur_evictkey);
 					udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 					udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 					INVARIANT(*((int *)ptfbuf) == SWITCHOS_REMOVE_CACHE_LOOKUP_ACK); // wait for SWITCHOS_REMOVE_CACHE_LOOKUP_ACK
@@ -778,6 +773,9 @@ void *run_switchos_popworker(void *param) {
 					}*/
 				}
 
+				// calculate corresponding switchidx based on role
+				uint16_t switchidx_for_tmp_cache_pop_key = calculate_switchidx(tmp_cache_pop_ptr->key());
+
 				/* cache population for new record */
 
 				INVARIANT(switchos_freeidx >= 0 && switchos_freeidx < switch_kv_bucket_num);
@@ -793,7 +791,7 @@ void *run_switchos_popworker(void *param) {
 				// set valid = 0 through reflector
 				// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
 				while (true) {
-					setvalid_inswitch_t tmp_setvalid_req(leafswitchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), switchos_freeidx, 0);
+					setvalid_inswitch_t tmp_setvalid_req(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), switchos_freeidx, 0);
 					pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
 					udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
@@ -813,7 +811,7 @@ void *run_switchos_popworker(void *param) {
 				}
 
 				// send CACHE_POP_INSWITCH to reflector (TODO: try internal pcie port)
-				cache_pop_inswitch_t tmp_cache_pop_inswitch(leafswitchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
+				cache_pop_inswitch_t tmp_cache_pop_inswitch(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), tmp_cache_pop_ptr->val(), tmp_cache_pop_ptr->seq(), switchos_freeidx, tmp_cache_pop_ptr->stat());
 				pktsize = tmp_cache_pop_inswitch.serialize(pktbuf, MAX_BUFSIZE);
 
 				while (true) {
@@ -843,13 +841,10 @@ void *run_switchos_popworker(void *param) {
 					}
 				}
 
-				// calculate corresponding switchidx based on role
-				uint16_t tmp_switchidx = calculate_switchidx(tmp_cache_pop_ptr->key());
-
 				// (1) add new <key, value> pair into cache_lookup_tbl; DEPRECATED: (2) and set valid=1 to enable the entry
 				////system("bash tofino/add_cache_lookup_setvalid1.sh");
 				//ptf_sendsize = serialize_add_cache_lookup_setvalid1(ptfbuf, tmp_cache_pop_ptr->key(), switchos_freeidx, tmp_pipeidx);
-				ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_cache_pop_ptr->key(), tmp_switchidx, switchos_freeidx);
+				ptf_sendsize = serialize_add_cache_lookup(ptfbuf, tmp_cache_pop_ptr->key(), switchidx_for_tmp_cache_pop_key, switchos_freeidx);
 				udpsendto(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, ptf_sendsize, 0, &ptf_popserver_addr, ptf_popserver_addr_len, "switchos.popworker.popclient_for_ptf");
 				udprecvfrom(switchos_popworker_popclient_for_ptf_udpsock, ptfbuf, MAX_BUFSIZE, 0, NULL, NULL, ptf_recvsize, "switchos.popworker.popclient_for_ptf");
 				//INVARIANT(*((int *)ptfbuf) == SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK); // wait for SWITCHOS_ADD_CACHE_LOOKUP_SETVALID1_ACK
@@ -858,7 +853,7 @@ void *run_switchos_popworker(void *param) {
 				// set valid = 1 through reflector
 				// NOTE: newkey will be partitioned into the same pipeline as evictkey if any
 				while (true) {
-					setvalid_inswitch_t tmp_setvalid_req(leafswitchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), switchos_freeidx, 1);
+					setvalid_inswitch_t tmp_setvalid_req(switchidx_for_tmp_cache_pop_key, tmp_cache_pop_ptr->key(), switchos_freeidx, 1);
 					pktsize = tmp_setvalid_req.serialize(pktbuf, MAX_BUFSIZE);
 					udpsendto(switchos_popworker_popclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.popworker.popclient_for_reflector");
 
@@ -1198,8 +1193,8 @@ void *run_switchos_snapshotserver(void *param) {
 					// TODO: we can send LOADSNAPSHOTDATA_INSWITCH reqs batch by batch (e.g., 1000 pkts each time) if necessary
 					// NOTE: each ingress pipeline of data plane can inject the packet into the corresponding egress pipeline by key-based partition
 					for (uint32_t tmp_loadsnapshotdata_idx = 0; tmp_loadsnapshotdata_idx < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; tmp_loadsnapshotdata_idx++) {
-						uint16_t leafswitchidx_for_snapshotdata_key = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmp_loadsnapshotdata_idx].get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
-						loadsnapshotdata_inswitch_t tmp_loadsnapshotdata_inswitch_req(leafswitchidx_for_snapshotdata_key, switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmp_loadsnapshotdata_idx], tmp_loadsnapshotdata_idx);
+						uint16_t switchidx_for_snapshotdata_key = calculate_switchidx(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmp_loadsnapshotdata_idx]);
+						loadsnapshotdata_inswitch_t tmp_loadsnapshotdata_inswitch_req(switchidx_for_snapshotdata_key, switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][tmp_loadsnapshotdata_idx], tmp_loadsnapshotdata_idx);
 						pktsize = tmp_loadsnapshotdata_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 						udpsendto(switchos_snapshotserver_snapshotclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.snapshotserver.snapshotclient_for_reflector");
 					}
@@ -1215,8 +1210,8 @@ void *run_switchos_snapshotserver(void *param) {
 							// send all unreceived packets once again
 							for (uint32_t unreceived_idx = 0; unreceived_idx < switchos_perpipeline_cached_empty_index_backup[tmp_pipeidx]; unreceived_idx++) {
 								if (received_bitmap[unreceived_idx] == false) {
-									uint16_t leafswitchidx_for_snapshotdata_key = switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][unreceived_idx].get_leafswitch_idx(switch_partition_count, max_server_total_logical_num, leafswitch_total_logical_num, spineswitch_total_logical_num);
-									loadsnapshotdata_inswitch_t tmp_loadsnapshotdata_inswitch_req(leafswitchidx_for_snapshotdata_key, switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][unreceived_idx], unreceived_idx);
+									uint16_t switchidx_for_snapshotdata_key = calculate_switchidx(switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][unreceived_idx]);
+									loadsnapshotdata_inswitch_t tmp_loadsnapshotdata_inswitch_req(switchidx_for_snapshotdata_key, switchos_perpipeline_cached_keyarray_backup[tmp_pipeidx][unreceived_idx], unreceived_idx);
 									pktsize = tmp_loadsnapshotdata_inswitch_req.serialize(pktbuf, MAX_BUFSIZE);
 									udpsendto(switchos_snapshotserver_snapshotclient_for_reflector_udpsock, pktbuf, pktsize, 0, &reflector_cp2dpserver_addr, reflector_cp2dpserver_addr_len, "switchos.snapshotserver.snapshotclient_for_reflector");
 								}

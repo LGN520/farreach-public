@@ -11,7 +11,7 @@ ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./controller >tmp_controll
 
 echo "launch servers"
 ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp_server.out 2>&1 &"
-#ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >tmp_server.out 2>&1 &"
+ssh ssy@dl13 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 1 >tmp_server.out 2>&1 &"
 
 #echo "launch reflector"
 #ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./reflector >tmp_reflector.out 2>&1 &"
