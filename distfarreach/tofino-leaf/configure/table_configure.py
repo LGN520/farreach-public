@@ -633,6 +633,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
             print "Configuring snapshot_flag_tbl"
             # See ptf_snapshotserver/table_configure.py for details, where we set snapshot_flag for PUT/DELREQ and GETRES_LATEST/GETRES_DELETED_SEQ_SERVER
             # NOTE: we explicitly invoke nop() for these pkts to avoid from overwriting inswitch_hdr.snapshot_flag set by spine switch
+            # NOTE: update initial_entrynum_for_snapshot_flag in ptf_snapshotserver accordingly
             for tmpoptype in [PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
                 matchspec0 = distfarreachleaf_snapshot_flag_tbl_match_spec_t(\
                         op_hdr_optype = tmpoptype,

@@ -482,8 +482,16 @@ uint32_t Key::dynamic_serialize(dynamic_array_t& buf, int offset) {
 
 uint32_t Key::get_hashpartition_idx(uint32_t partitionnum, uint32_t servernum) {
 	char buf[16];
-	uint32_t tmp_keysize = this->serialize(buf, 16);
-	uint32_t hashresult = crc32((unsigned char *)buf, tmp_keysize) % partitionnum;
+
+	// crc32
+	//uint32_t tmp_keysize = this->serialize(buf, 16);
+	//uint32_t hashresult = crc32((unsigned char *)buf, tmp_keysize) % partitionnum;
+
+	// identity	
+	uint16_t keyhihilo = uint16_t(keyhihi & 0xFFFF);
+	uint16_t keyhihihi = uint16_t((keyhihi >> 16) & 0xFFFF);
+	uint32_t targetidx = ((uint32_t(keyhihilo) << 16) | uint32_t(keyhihihi)) % partitionnum;
+
 	uint32_t targetidx = hashresult / (partitionnum / servernum);
 	//printf("key: %x, crc32 result: %u, targetidx: %d\n", keyhihi, hashresult, targetidx);
 	INVARIANT(targetidx >=0 && targetidx < servernum);

@@ -102,7 +102,9 @@ table set_hot_threshold_tbl {
 }
 
 action hash_for_spineselect() {
-	modify_field_with_hash_based_offset(meta.hashval_for_spineselect, 0, hash_calc, PARTITION_COUNT);
+	//modify_field_with_hash_based_offset(meta.hashval_for_spineselect, 0, hash_calc, PARTITION_COUNT);
+	// NOTE: we use a different hash function to simulate independent hashing
+	modify_field_with_hash_based_offset(meta.hashval_for_spineselect, 0, hash_calc3, PARTITION_COUNT);
 }
 
 @pragma stage 0
@@ -122,7 +124,16 @@ table hash_for_spineselect_tbl {
 
 action recirculate_pkt(eport) {
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, eport); // forward to the first spine switch
+	bypass_egress(); // bypass egress pipeline (especially for GETRES_LATEST/DELETED_SEQ_SERVER)
 }
+
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter recirculate_counter {
+	type : packets_and_bytes;
+	direct: recirculate_tbl;
+}
+#endif
 
 @pragma stage 1
 table recirculate_tbl {

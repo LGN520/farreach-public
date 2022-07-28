@@ -59,7 +59,9 @@ table hash_for_partition_tbl {
 #endif
 
 action hash_for_spineselect() {
-	modify_field_with_hash_based_offset(meta.hashval_for_spineselect, 0, hash_calc, PARTITION_COUNT);
+	//modify_field_with_hash_based_offset(meta.hashval_for_spineselect, 0, hash_calc, PARTITION_COUNT);
+	// NOTE: we use a different hash function to simulate independent hashing
+	modify_field_with_hash_based_offset(meta.hashval_for_spineselect, 0, hash_calc3, PARTITION_COUNT);
 }
 
 @pragma stage 0

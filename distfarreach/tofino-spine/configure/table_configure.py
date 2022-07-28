@@ -474,12 +474,7 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=4)
             #print "Configuring snapshot_flag_tbl"
-            #for tmpoptype in [PUTREQ, DELREQ, GETRES_LATEST_SEQ, GETRES_DELETED_SEQ, PUTREQ_SEQ, DELREQ_SEQ]:
-            #    matchspec0 = distfarreachspine_snapshot_flag_tbl_match_spec_t(\
-            #            op_hdr_optype = tmpoptype,
-            #            meta_need_recirculate = 0)
-            #    self.client.snapshot_flag_tbl_table_add_with_reset_snapshot_flag(\
-            #            self.sess_hdl, self.dev_tgt, matchspec0)
+            # See details in ptf_snapshotserver/table_configure,py, where we set snapshot_flag for PUT/DELREQ/_SEQ, GETRES_LATEST/DELETED_SEQ/_SERVER
 
             # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 3*client_physical_num=6 < 3*8=24 < 32)
             print "Configuring prepare_for_cachehit_tbl"

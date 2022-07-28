@@ -108,6 +108,14 @@ action recirculate_pkt(port) {
 	recirculate(port);
 }
 
+#ifdef DEBUG
+// Only used for debugging (comment 1 stateful ALU in the same stage of egress pipeline if necessary)
+counter recirculate_counter {
+	type : packets_and_bytes;
+	direct: recirculate_tbl;
+}
+#endif
+
 @pragma stage 1
 table recirculate_tbl {
 	reads {
