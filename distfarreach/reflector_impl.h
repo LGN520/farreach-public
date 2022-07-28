@@ -36,7 +36,6 @@ void prepare_reflector() {
 	printf("[reflector] prepare start\n");
 
 	// prepare worker socket
-	COUT_VAR(reflector_dp2cpserver_port);
 	if (strcmp(reflector_role, "spine") == 0) {
 		prepare_rawserver(reflector_dp2cpserver_udpsock, true, "enp129s0f0", "reflector.dp2cpserver", SOCKET_TIMEOUT, 0, 2*UDP_LARGE_RCVBUFSIZE);
 	}
@@ -149,7 +148,6 @@ void *run_reflector_dp2cpserver(void *param) {
 
 		if (strcmp(reflector_role, "spine") == 0) {
 			is_timeout = rawrecvfrom(reflector_dp2cpserver_udpsock, buf, MAX_BUFSIZE, 0, &srcip, "10.0.2.11", srcport, reflector_dp2cpserver_port, NULL, NULL, recvsize, "reflector.dp2cpserver");
-			COUT_VAR(is_timeout);
 		}
 		else {
 			is_timeout = udprecvfrom(reflector_dp2cpserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.dp2cpserver");
@@ -159,9 +157,7 @@ void *run_reflector_dp2cpserver(void *param) {
 		}
 		INVARIANT(recvsize > 0);
 
-		printf("here\n");
 		packet_type_t pkt_type = get_packet_type(buf, recvsize);
-		COUT_VAR(optype_t(pkt_type));
 		switch (pkt_type) {
 			case packet_type_t::CACHE_POP_INSWITCH_ACK:
 			case packet_type_t::CACHE_EVICT_LOADFREQ_INSWITCH_ACK:

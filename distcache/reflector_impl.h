@@ -24,7 +24,12 @@ void prepare_reflector() {
 	printf("[reflector] prepare start\n");
 
 	// prepare worker socket
-	prepare_udpserver(reflector_dp2cpserver_udpsock, true, reflector_dp2cpserver_port, "reflector.dp2cpserver", SOCKET_TIMEOUT, 0, 2*UDP_LARGE_RCVBUFSIZE);
+	if (strcmp(reflector_role, "spine") == 0) {
+		prepare_rawserver(reflector_dp2cpserver_udpsock, true, "enp129s0f0", "reflector.dp2cpserver", SOCKET_TIMEOUT, 0, 2*UDP_LARGE_RCVBUFSIZE);
+	}
+	else {
+		prepare_udpserver(reflector_dp2cpserver_udpsock, true, reflector_dp2cpserver_port, "reflector.dp2cpserver", SOCKET_TIMEOUT, 0, 2*UDP_LARGE_RCVBUFSIZE);
+	}
 
 	// prepare popserver socket
 	prepare_udpserver(reflector_cp2dpserver_udpsock, true, reflector_cp2dpserver_port, "reflector.cp2dpserver", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
@@ -104,9 +109,17 @@ void *run_reflector_dp2cpserver(void *param) {
 
 	while (!reflector_running) {}
 
+	bool is_timeout = false;
+	char *srcip = NULL;
+	short srcport = 0;
 	while (reflector_running) {
 
-		bool is_timeout = udprecvfrom(reflector_dp2cpserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.dp2cpserver");
+		if (strcmp(reflector_role, "spine") == 0) {
+			is_timeout = rawrecvfrom(reflector_dp2cpserver_udpsock, buf, MAX_BUFSIZE, 0, &srcip, "10.0.2.11", srcport, reflector_dp2cpserver_port, NULL, NULL, recvsize, "reflector.dp2cpserver");
+		}
+		else {
+			is_timeout = udprecvfrom(reflector_dp2cpserver_udpsock, buf, MAX_BUFSIZE, 0, NULL, NULL, recvsize, "reflector.dp2cpserver");
+		}
 		if (is_timeout) {
 			continue;
 		}

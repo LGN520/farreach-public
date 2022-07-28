@@ -629,14 +629,16 @@ class TableConfigure(pd_base_tests.ThriftInterfaceDataPlane):
 
             # Stage 3
 
-            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: <=4)
-            #print "Configuring snapshot_flag_tbl"
-            #for tmpoptype in [PUTREQ_SEQ, DELREQ_SEQ, GETRES_LATEST_SEQ_SERVER, GETRES_DELETED_SEQ_SERVER]:
-            #    matchspec0 = distfarreachleaf_snapshot_flag_tbl_match_spec_t(\
-            #            op_hdr_optype = tmpoptype,
-            #            meta_need_recirculate = 0)
-            #    self.client.snapshot_flag_tbl_table_add_with_reset_snapshot_flag(\
-            #            self.sess_hdl, self.dev_tgt, matchspec0)
+            # Table: snapshot_flag_tbl (default: reset_snapshot_flag; size: 8)
+            print "Configuring snapshot_flag_tbl"
+            # See ptf_snapshotserver/table_configure.py for details, where we set snapshot_flag for PUT/DELREQ and GETRES_LATEST/GETRES_DELETED_SEQ_SERVER
+            # NOTE: we explicitly invoke nop() for these pkts to avoid from overwriting inswitch_hdr.snapshot_flag set by spine switch
+            for tmpoptype in [PUTREQ_SEQ_INSWITCH, DELREQ_SEQ_INSWITCH, GETRES_LATEST_SEQ_SERVER_INSWITCH, GETRES_DELETED_SEQ_SERVER_INSWITCH]:
+                matchspec0 = distfarreachleaf_snapshot_flag_tbl_match_spec_t(\
+                        op_hdr_optype = tmpoptype,
+                        meta_need_recirculate = 0)
+                self.client.snapshot_flag_tbl_table_add_with_nop(\
+                        self.sess_hdl, self.dev_tgt, matchspec0)
 
             # Table: prepare_for_cachehit_tbl (default: set_client_sid(0); size: 5*client_physical_num=10 < 5*8=40 < 64)
             print "Configuring prepare_for_cachehit_tbl"

@@ -676,6 +676,12 @@ void *run_controller_snapshotclient(void *param) {
 			}
 		}
 
+#ifdef DEBUG_SNAPSHOT
+		// TMPDEBUG
+		printf("Type to start snapshot...\n");
+		getchar();
+#endif
+
 		// (4) send SNAPSHOT_START to each switchos and server concurrently
 		printf("[controller.snapshotclient] send SNAPSHOT_STARTs to each switchos and server\n");
 		pthread_create(&start_subthread_for_spineswitchos, nullptr, run_controller_snapshotclient_start_subthread, &start_subthread_param_for_spineswitchos);

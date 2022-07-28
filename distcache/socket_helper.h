@@ -5,13 +5,20 @@
 #include <netinet/in.h> // struct sockaddr_in_in
 #include <errno.h> // errno
 #include <net/if.h> // struct ifreq; ifname -> ifidx
-//#include <sys/ioctl.h> // ioctl
+#include <netinet/ether.h> // ether_header
+#include <linux/ip.h> // iphdr
+#include <linux/udp.h> // udphdr
+#include <sys/ioctl.h> // ioctl
 #include <netpacket/packet.h> // sockaddr_ll
+#include <arpa/inet.h> // htons htonl
 
 #include "helper.h"
 #include "dynamic_array.h"
 #include "key.h"
 #include "packet_format_impl.h"
+
+// use AF_PACKET or AF_INET for raw socket
+#define AF_PACKET_RAW
 
 #define SOCKET_TIMEOUT 5 // 5s
 // for limited effect on system thpt of normal request timeout
@@ -31,10 +38,33 @@
 // max payload size to avoid ipv4 fragmentation (manual ipv4 fragmentation)
 #define IP_FRAGMENT_MAXSIZE 1472
 
+// raw client: create_rawsock -> set_rawsockaddr -> rawsendto
+// raw server: prepare_rawserver -> rawrecvfrom
 // udp client: create_udpsock -> set_sockaddr -> udpsendto
 // udp server: prepare_udpserver -> udprecvfrom
 // tcp client: create_tcpsock -> tcpconnect -> tcpsend
 // tcp server: prepare_tcpserver -> tcpaccept -> tcprecv
+
+// utils for raw socket
+uint16_t checksum (uint16_t *addr, int len);
+uint16_t udp_checksum (struct iphdr* iph, struct udphdr* udph, char *payload, int payloadlen);
+int lookup_if(int sockfd, std::string ifname, uint8_t *src_macaddr);
+#ifdef AF_PACKET_RAW
+size_t init_buf(char *buf, uint32_t maxsize, uint8_t *src_macaddr, uint8_t *dst_macaddr, const char *src_ipaddr, const char *dst_ipaddr, short src_port, short dst_port, const void *payload, uint32_t payload_size);
+#else
+size_t init_buf(char *buf, uint32_t maxsize, const char* src_ipaddr, const char* dst_ipaddr, short src_port, short dst_port, char *payload, uint32_t payload_size);
+#endif
+
+// raw socket
+void set_rawsockaddr(int sockfd, sockaddr_ll &addr, const char *ifname);
+void create_rawsock(int &sockfd, bool need_timeout, const char* role, int timeout_sec, int timeout_usec, int raw_rcvbufsize);
+#ifdef AF_PACKET_RAW
+void rawsendto(int sockfd, const void *buf, size_t len, int flags, uint8_t *src_mac, uint8_t *dst_mac, const char *src_ip, const char *dst_ip, short src_port, short dst_port, const struct sockaddr_ll *dest_addr, socklen_t addrlen, const char* role);
+#else
+void rawsendto(int sockfd, const void *buf, size_t len, int flags, const char *src_ip, const char *dst_ip, short src_port, short dst_port, const struct sockaddr_ll *dest_addr, socklen_t addrlen, const char* role);
+#endif
+bool rawrecvfrom(int sockfd, void *buf, size_t len, int flags, char **src_ip, const char *dst_ip, short &src_port, const short &dst_port, struct sockaddr_ll *src_addr, socklen_t *addrlen, int &recvsize, const char* role);
+void prepare_rawserver(int &sockfd, bool need_timeout, const char * ifname, const char* role, int timeout_sec, int timeout_usec, int raw_rcvbufsize);
 
 // NOTE: we use uint32_t for ipaddr due to htonl(INADDR_ANY)
 void set_sockaddr(sockaddr_in &addr, uint32_t bigendian_saddr, short littleendian_port);

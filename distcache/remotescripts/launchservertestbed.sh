@@ -16,4 +16,4 @@ ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./server 0 >tmp_server.out
 
 echo "launch reflectors"
 ssh ssy@dl16 "cd projects/NetBuffer/${DIRNAME}; nohup ./reflector leaf >tmp_reflector.out 2>&1 &"
-nohup ./reflector spine >tmp_reflector.out 2>&1 &
+nohup sudo ./reflector spine >tmp_reflector.out 2>&1 &

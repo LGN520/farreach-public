@@ -242,6 +242,7 @@ table snapshot_flag_tbl {
 	actions {
 		set_snapshot_flag;
 		reset_snapshot_flag;
+		nop;
 	}
 	default_action: reset_snapshot_flag();
 	size: 8;
