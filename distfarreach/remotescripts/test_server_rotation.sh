@@ -34,7 +34,7 @@ echo "retrieve bottleneck partition back to the state after loading phase"
 
 echo "prepare and sync config.ini"
 cp configs/config.ini.rotation-transaction1p.dl16dl13 config.tmp
-sed -e '78s/server_logical_idxes=95/server_logical_idxes='${bottleneck_serveridx}'/g' config.tmp > config.ini
+sed -e '87s/server_logical_idxes=123/server_logical_idxes='${bottleneck_serveridx}'/g' config.tmp > config.ini
 rm config.tmp
 bash sync_file.sh config.ini
 
@@ -83,7 +83,7 @@ do
 
 	echo "prepare and sync config.ini"
 	cp configs/config.ini.rotation-transaction2p.dl16dl13 config.tmp
-	sed -e '78s/server_logical_idxes=95/server_logical_idxes='${bottleneck_serveridx}'/g' -e '98s/server_logical_idxes=0/server_logical_idxes='${rotateidx}'/g' config.tmp > config.ini
+	sed -e '87s/server_logical_idxes=123/server_logical_idxes='${bottleneck_serveridx}'/g' -e '107s/server_logical_idxes=0/server_logical_idxes='${rotateidx}'/g' config.tmp > config.ini
 	rm config.tmp
 	bash sync_file.sh config.ini
 

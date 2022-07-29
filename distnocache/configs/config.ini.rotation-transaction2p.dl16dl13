@@ -23,6 +23,8 @@ client_total_logical_num=128
 server_total_logical_num=2
 ; only used by remote_client for server rotation under static workload
 server_total_logical_num_for_rotation=128
+; bottleneck server logical idx (bottleneck partition) for server rotation (change test_server_rotation.sh accordingly)
+bottleneck_serveridx_for_rotation=123
 
 [client]
 ; a single port (the first physical client uses the port the receive rotation data from other physical clients)

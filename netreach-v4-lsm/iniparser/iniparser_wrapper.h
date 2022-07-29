@@ -29,6 +29,7 @@ class IniparserWrapper {
 		uint32_t get_client_total_logical_num();
 		uint32_t get_server_total_logical_num();
 		uint32_t get_server_total_logical_num_for_rotation();
+		uint16_t get_bottleneck_serveridx_for_rotation();
 
 		// client common configuration
 		short get_client_rotationdataserver_port();

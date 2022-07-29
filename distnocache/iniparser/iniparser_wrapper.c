@@ -125,6 +125,15 @@ uint32_t IniparserWrapper::get_server_total_logical_num_for_rotation() {
 	return uint32_t(tmp);
 }
 
+uint16_t IniparserWrapper::get_bottleneck_serveridx_for_rotation() {
+	int tmp = iniparser_getint(ini, "global:bottleneck_serveridx_for_rotation", -1);
+	if (tmp == -1) {
+		printf("Invalid entry of [global:bottleneck_serveridx_for_rotation]: %d\n", tmp);
+		exit(-1);
+	}
+	return uint16_t(tmp);
+}
+
 // common client configuration
 
 short IniparserWrapper::get_client_rotationdataserver_port() {

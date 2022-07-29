@@ -75,8 +75,23 @@ void prepare_server() {
 	server_worker_udpsock_list = new int[current_server_logical_num];
 	for (size_t tmp_local_server_logical_idx = 0; tmp_local_server_logical_idx < current_server_logical_num; tmp_local_server_logical_idx++) {
 		uint16_t tmp_global_server_logical_idx = server_logical_idxes_list[server_physical_idx][tmp_local_server_logical_idx];
-		//prepare_udpserver(server_worker_udpsock_list[tmp_local_server_logical_idx], true, server_worker_port_start + tmp_global_server_logical_idx, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
-		prepare_udpserver(server_worker_udpsock_list[tmp_local_server_logical_idx], true, server_worker_port_start + tmp_local_server_logical_idx, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
+		//short tmp_server_worker_port = server_worker_port_start + tmp_global_server_logical_idx;
+#ifndef SERVER_ROTATION
+		short tmp_server_worker_port = server_worker_port_start + tmp_local_server_logical_idx;
+#else
+		short tmp_server_worker_port = 0;
+		if (tmp_global_server_logical_idx == bottleneck_serveridx_for_rotation) {
+			INVARIANT(tmp_local_server_logical_idx == 0);
+			tmp_server_worker_port = server_worker_port_start;
+		}
+		else {
+			tmp_server_worker_port = server_worker_port_start + tmp_global_server_logical_idx;
+			if (tmp_global_server_logical_idx > bottleneck_serveridx_for_rotation) {
+				tmp_server_worker_port -= 1;
+			}
+		}
+#endif
+		prepare_udpserver(server_worker_udpsock_list[tmp_local_server_logical_idx], true, tmp_server_worker_port, "server.worker", SOCKET_TIMEOUT, 0, UDP_LARGE_RCVBUFSIZE);
 		printf("prepare udp socket for server.worker %d-%d on port %d\n", tmp_local_server_logical_idx, tmp_global_server_logical_idx, server_worker_port_start + tmp_local_server_logical_idx);
 	}
 	server_worker_lwpid_list = new int[current_server_logical_num];

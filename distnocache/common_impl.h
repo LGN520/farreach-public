@@ -96,6 +96,7 @@ uint32_t server_total_logical_num = 0;
 uint32_t server_total_logical_num_for_rotation = 0;
 // NOTE: even under server rotation, max_server_total_logical_num = server_total_logical_num in prepare/load/warmup phase; max_server_total_logical_num != server_total_logical_num ONLY in transaction phase; (prepare phase: launch and configure switch and switchos; ONLY controller and server restart for each time of experiment under server rotation)
 uint32_t max_server_total_logical_num = 0;
+uint16_t bottleneck_serveridx_for_rotation = 0;
 
 // common client configuration
 short client_rotationdataserver_port = 0;
@@ -267,6 +268,8 @@ inline void parse_ini(const char* config_file) {
 #else
 	max_server_total_logical_num = server_total_logical_num;
 #endif
+	bottleneck_serveridx_for_rotation = ini.get_bottleneck_serveridx_for_rotation();
+	INVARIANT(bottleneck_serveridx_for_rotation < server_total_logical_num_for_rotation);
 
 	/*if (workload_mode == 0) { // static workload
 #ifndef SERVER_ROTATION
